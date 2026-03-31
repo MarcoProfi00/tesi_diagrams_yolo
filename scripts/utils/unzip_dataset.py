@@ -5,7 +5,7 @@ import zipfile
 # CONFIGURAZIONE
 # =========================================================
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 SRC_ZIP = PROJECT_ROOT / "data" / "dataset_v3" / "rf_yolo_1024_rgb.zip"
 OUT_DIR = PROJECT_ROOT / "data" / "dataset_v3"
