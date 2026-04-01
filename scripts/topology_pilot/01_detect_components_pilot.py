@@ -1,8 +1,10 @@
-# Per ogni file JSON in "outputs/topology/01_detect_components/" 
-#   1. legge i componenti rilevati
-#   2. li raggruppa per class_id
-#   3. assegna le singole istanze
-#   4. salva il nuovo json in "outputs/topology/02_assig_:instances/"
+# Per ogni immagine nella cartella di input:
+#   1. carica il modello YOLO
+#   2. legge metadata/class_terminals_v1.yaml
+#   3. seleziona le classi da rilevare
+#   4. esegue la detection
+#   5. salva un JSON per immagine
+#   6. salva un'immagine debug con i bounding box
 
 from pathlib import Path
 import json
@@ -28,7 +30,7 @@ MODEL_PATH = (
 )
 
 # === METADATI CLASSI ===
-CLASS_TERMINALS_PATH = PROJECT_ROOT / "metadata" / "class_terminals.yaml"
+CLASS_TERMINALS_PATH = PROJECT_ROOT / "metadata" / "class_terminals_pilot.yaml"
 
 # === INPUT ===
 INPUT_MODE = "single"   # "single" oppure "folder"
