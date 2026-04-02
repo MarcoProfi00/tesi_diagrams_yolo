@@ -161,6 +161,8 @@ Nella batch v1, invece, l’orientazione può essere stimata misurando il foregr
 - lato sinistro o destro
 
 e confrontando i punteggi dei due assi.  
+
+Per **foreground** si intende l’insieme dei pixel che appartengono agli elementi grafici del diagramma, come simboli, fili e terminali, in contrapposizione al background, che rappresenta lo sfondo dell’immagine, ad esempio se vicino al lato destro di un componente trovi molti pixel di foreground, vuol dire che lì probabilmente passa un collegamento reale.
 Questa logica è implementata tramite:
 
 - `get_side_scores(...)`
@@ -181,13 +183,13 @@ Nel batch v1 non si analizzano più solo bande laterali ampie, ma anche **probe 
 - left
 - right 
 
-Questi probe servono a capire quale coppia di lati è più compatibile con la connessione reale del simbolo.
+Questi probe sono delle finestre locali con cui il metodo campiona l’immagine e servono a capire quale coppia di lati è più compatibile con la connessione reale del simbolo.
 
 Questa scelta rende il sistema molto più robusto nei casi in cui:
 - il bbox è rumoroso;
 - ci sono scritte o elementi vicini;
 - il simbolo è sottile o sbilanciato;
-- il contatto reale è localizzato in una zona specifica del lato. :contentReference[oaicite:19]{index=19}
+- il contatto reale è localizzato in una zona specifica del lato.
 
 ---
 
@@ -274,7 +276,7 @@ Questa scelta ha due vantaggi pratici:
 #### 11. Arricchimento del JSON di output
 Nel pilot il passo 03 salvava principalmente:
 - i terminali stimati;
-- l’orientazione eventualmente dedotta. :contentReference[oaicite:34]{index=34}
+- l’orientazione eventualmente dedotta.
 
 Nel batch v1 l’output viene arricchito con nuove informazioni diagnostiche utili per i passi successivi e per il debug:
 
@@ -291,7 +293,7 @@ Questo rende il passo 03 non più solo un generatore di terminali, ma anche un p
 La differenza principale tra pilot e batch v1 può essere riassunta così:
 
 - **pilot**: il terminale è una proprietà quasi interamente derivata da metadata + bbox;
-- **batch v1**: il terminale è una proprietà derivata da metadata + bbox + analisi locale del contenuto grafico vicino ai lati del simbolo. :contentReference[oaicite:36]{index=36} :contentReference[oaicite:37]{index=37}
+- **batch v1**: il terminale è una proprietà derivata da metadata + bbox + analisi locale del contenuto grafico vicino ai lati del simbolo. 
 
 Quindi il passo 03 della batch v1 non è una semplice rifinitura del pilot:  
 è una **evoluzione strutturale** che rende la stima dei terminali molto più aderente alla geometria reale dei diagrammi.
@@ -307,10 +309,10 @@ In entrambe le versioni lo script:
 1. legge l’immagine originale;
 2. maschera i componenti da rimuovere;
 3. preserva una piccola zona attorno ai terminali stimati;
-4. binarizza l’immagine;
-5. applica una chiusura morfologica;
+4. **binarizza l’immagine**: processo con cui l’immagine viene trasformata in una rappresentazione a due classi, foreground e background, così da isolare i tratti grafici rilevanti dal resto dell’immagine (wire e tratti 1, sfondo 0);
+5. applica una **chiusura morfologica**: operazione applicata all’immagine binaria per chiudere piccole interruzioni e rendere più continui i tratti del wire;
 6. rimuove opzionalmente piccoli componenti connessi;
-7. produce lo skeleton finale dei wire.
+7. produce lo **skeleton finale** dei wire: La **skeletonization** è un’operazione applicata all’immagine binaria che riduce i tratti del wire alla loro linea mediana, producendo una rappresentazione molto sottile della rete di connessioni, pur preservandone la struttura topologica.
 
 La differenza sostanziale non riguarda quindi la sequenza dei passi, ma **il modo in cui vengono preservate le connessioni locali in prossimità dei terminali**.
 
@@ -327,10 +329,9 @@ In pratica, ogni terminale proteggeva solo un intorno isotropo locale, senza ten
 ---
 
 ### Limite emerso nel passaggio al batch v1
-Con la nuova versione del passo 03, i terminali non sono più semplicemente “punti sul bordo del bbox”, ma anchor geometrici più robusti, spesso posizionati leggermente all’esterno del componente e determinati usando anche informazione locale dell’immagine.
+Con la nuova versione del passo 03, i terminali non sono più semplicemente “punti sul bordo del bbox”, ma **anchor geometrici** più robusti, spesso posizionati leggermente all’esterno del componente e determinati usando anche informazione locale dell’immagine.
 
-Questa evoluzione rende il passo 03 più corretto dal punto di vista topologico, ma introduce un effetto collaterale importante per il passo 04:  
-**il terminale stimato non cade sempre esattamente sul pixel del wire**.
+Questa evoluzione rende il passo 03 più corretto dal punto di vista topologico, ma introduce un effetto collaterale importante per il passo 04:  **il terminale stimato non cade sempre esattamente sul pixel del wire**.
 
 Di conseguenza, la preservazione tramite solo cerchio locale del pilot può diventare troppo fragile:
 
@@ -348,12 +349,9 @@ La batch v1 mantiene invariati i blocchi principali del pilot:
 
 - conversione in grayscale;
 - applicazione della maschera componenti;
-- sogliatura inversa con Otsu;
 - closing morfologico;
 - filtro opzionale per piccoli componenti connessi;
 - skeletonization finale. 
-
-Questa continuità è importante: il passo 04 non viene riscritto da zero, ma viene **reso più robusto nel punto critico della preservazione terminali**.
 
 ---
 
@@ -444,7 +442,7 @@ Questo output è molto utile perché rende immediatamente visibile:
 ![Effetto della preservazione terminale sull'estrazione dei wire](/outputs/topology_v1/04_extract_wires/skeleton/spider_images_14477_png.rf.411d3d74021bf4ebb4f40824f716c0a9_skeleton.png)
 
 **Figura 4.2 — Effetto della preservazione locale sull’estrazione dei wire.**  
-Le immagini mostra come la riapertura direzionata della maschera in prossimità dei terminali consenta di mantenere il tratto di collegamento locale tra simbolo e wire durante il masking dei componenti. Questo migliora la continuità del wire nelle immagini binarie e nello skeleton finale, riducendo il rischio che il contatto venga interrotto.
+Le immagini mostrano come la riapertura direzionata della maschera in prossimità dei terminali consenta di mantenere il tratto di collegamento locale tra simbolo e wire durante il masking dei componenti. Questo migliora la continuità del wire nelle immagini binarie e nello skeleton finale, riducendo il rischio che il contatto venga interrotto.
 
 ---
 
@@ -542,7 +540,6 @@ Di conseguenza, nel passo 05 il solo approccio “finestra quadrata attorno al t
 - terminali laterali di uno **switch**;
 - componenti allungati o sottili;
 - terminali verticali/orizzontali leggermente fuori asse rispetto al wire;
-- casi in cui il contatto corretto è meglio descritto da una direzione prevalente piuttosto che da una semplice prossimità isotropa.
 
 ---
 
@@ -1020,9 +1017,9 @@ e da archi di tipo:
 - `HAS_COMPONENT`
 - `HAS_NET`
 - `HAS_TERMINAL`
-- `CONNECTED_TO` :contentReference[oaicite:2]{index=2} :contentReference[oaicite:3]{index=3}
+- `CONNECTED_TO`
 
-La logica concettuale di base è già presente nel pilot e rimane invariata nella batch v1: il passo 07 non costruisce nuova topologia, ma **esporta** in forma di grafo la struttura già prodotta dai passi precedenti. La differenza principale è che nella batch v1 l’esportazione diventa più robusta, più ricca di attributi e più adatta a un uso batch e a un successivo caricamento in un graph database. :contentReference[oaicite:4]{index=4} :contentReference[oaicite:5]{index=5}
+La logica concettuale di base è già presente nel pilot e rimane invariata nella batch v1: il passo 07 non costruisce nuova topologia, ma **esporta** in forma di grafo la struttura già prodotta dai passi precedenti. La differenza principale è che nella batch v1 l’esportazione diventa più robusta, più ricca di attributi e più adatta a un uso batch e a un successivo caricamento in un graph database.
 
 ---
 
@@ -1039,7 +1036,7 @@ Nel pilot lo script:
 4. salva:
    - un file `graph.json` per diagramma;
    - un file `nodes.csv` per diagramma;
-   - un file `edges.csv` per diagramma. :contentReference[oaicite:6]{index=6}
+   - un file `edges.csv` per diagramma. 
 
 Questa struttura è già sufficiente a rappresentare il diagramma come grafo navigabile.
 
@@ -1052,7 +1049,7 @@ La batch v1 mantiene invariata la struttura concettuale del grafo:
 
 - stessi quattro tipi di nodo;
 - stessi quattro tipi di relazione;
-- stessa costruzione a partire dall’output del passo 06. :contentReference[oaicite:7]{index=7} :contentReference[oaicite:8]{index=8}
+- stessa costruzione a partire dall’output del passo 06.
 
 Questa continuità è importante: il passo 07 non cambia il modello logico del grafo, ma ne migliora l’esportazione.
 
@@ -1064,7 +1061,7 @@ Questa è una delle differenze più importanti.
 Nel pilot, gli identificativi dei nodi non includevano sempre il `diagram_id`. Per esempio:
 - `component:{instance_id}`
 - `terminal:{terminal_id}`
-- `net:{net_id}` :contentReference[oaicite:9]{index=9}
+- `net:{net_id}`
 
 Questo approccio funzionava bene per singoli diagrammi, ma in un batch multi-immagine poteva generare collisioni tra nodi con lo stesso nome provenienti da diagrammi diversi.
 
@@ -1073,14 +1070,14 @@ Nella batch v1 vengono introdotti ID univoci a livello batch:
 - `diagram:{diagram_id}`
 - `component:{diagram_id}:{instance_id}`
 - `terminal:{diagram_id}:{terminal_id}`
-- `net:{diagram_id}:{net_id}` :contentReference[oaicite:10]{index=10}
+- `net:{diagram_id}:{net_id}`
 
 Questa modifica è fondamentale per rendere l’export compatibile con un graph database popolato con più diagrammi contemporaneamente.
 
 ---
 
 #### 3. Arricchimento dei nodi esportati
-Nel pilot i nodi contenevano già gli attributi essenziali del diagramma, dei componenti, dei terminali e delle net. :contentReference[oaicite:11]{index=11}
+Nel pilot i nodi contenevano già gli attributi essenziali del diagramma, dei componenti, dei terminali e delle net.
 
 Nella batch v1 i nodi vengono arricchiti con ulteriori proprietà provenienti dai passi precedenti. In particolare:
 
@@ -1089,11 +1086,11 @@ Nella batch v1 i nodi vengono arricchiti con ulteriori proprietà provenienti da
   - `n_terminals_estimated`
   - `n_nets`
   - `n_connections`
-  - `source_json_stage` :contentReference[oaicite:12]{index=12}
+  - `source_json_stage` 
 
 - il nodo `Component` include anche:
   - `estimated_connection_side`
-  - `n_terminals` :contentReference[oaicite:13]{index=13}
+  - `n_terminals`
 
 - il nodo `Terminal` include anche:
   - `preferred_net_id_from_05`
@@ -1105,13 +1102,12 @@ Nella batch v1 i nodi vengono arricchiti con ulteriori proprietà provenienti da
   - `search_kind`
   - `search_window`
   - `snap_x`
-  - `snap_y` :contentReference[oaicite:14]{index=14}
+  - `snap_y`
 
 - il nodo `Net` include anche:
   - `source_label`
-  - `connected_terminal_ids` :contentReference[oaicite:15]{index=15}
+  - `connected_terminal_ids`
 
-In questo modo la batch v1 non esporta solo la struttura del grafo, ma anche una parte consistente della diagnostica prodotta nei passi 05 e 06.
 
 ---
 
@@ -1120,16 +1116,15 @@ Nel pilot gli archi `CONNECTED_TO` contenevano principalmente:
 - `terminal_id`
 - `net_id`
 - `match_status`
-- `match_distance_px` :contentReference[oaicite:16]{index=16}
+- `match_distance_px`
 
 Nella batch v1 questi archi vengono estesi con:
 - `component_class_name`
 - `match_confidence`
 - `match_warnings`
 - `is_suspicious_match`
-- `snap_point` :contentReference[oaicite:17]{index=17}
+- `snap_point`
 
-Questo rende il grafo più espressivo: non rappresenta solo il fatto che un terminale è connesso a una net, ma anche **con quale qualità** è stata stimata questa connessione.
 
 ---
 
@@ -1138,11 +1133,11 @@ Nel pilot il `graph_summary` conteneva i conteggi principali di nodi e archi per
 - numero totale di nodi;
 - numero totale di archi;
 - numero di nodi per tipo;
-- numero di archi per tipo. :contentReference[oaicite:18]{index=18}
+- numero di archi per tipo.
 
 Nella batch v1 il summary viene esteso con:
 - `n_suspicious_terminal_matches`
-- `terminal_match_confidence_counts` con conteggi per `high`, `medium`, `low`, `none` :contentReference[oaicite:19]{index=19}
+- `terminal_match_confidence_counts` con conteggi per `high`, `medium`, `low`, `none`
 
 Questa modifica è coerente con l’evoluzione del passo 06 e permette di avere, per ogni diagramma, una misura sintetica della qualità complessiva del matching terminale→net.
 
@@ -1152,13 +1147,13 @@ Questa modifica è coerente con l’evoluzione del passo 06 e permette di avere,
 Nel pilot vengono esportati solo:
 - `graph_json` per diagramma;
 - `nodes.csv` per diagramma;
-- `edges.csv` per diagramma. :contentReference[oaicite:20]{index=20}
+- `edges.csv` per diagramma.
 
 Nella batch v1, oltre a questi file, viene introdotta anche una cartella `combined_csv` con tre esportazioni batch:
 
 - `all_nodes.csv`
 - `all_edges.csv`
-- `graph_summaries.csv` :contentReference[oaicite:21]{index=21}
+- `graph_summaries.csv`
 
 Questa è una differenza pratica molto importante, perché rende molto più semplice:
 - analizzare l’intero batch in modo tabellare;
@@ -1168,16 +1163,16 @@ Questa è una differenza pratica molto importante, perché rende molto più semp
 ---
 
 #### 7. Serializzazione esplicita di liste e dizionari nei CSV
-Nel pilot la funzione `save_csv(...)` scriveva direttamente i dizionari nei CSV, assumendo valori semplici. :contentReference[oaicite:22]{index=22}
+Nel pilot la funzione `save_csv(...)` scriveva direttamente i dizionari nei CSV, assumendo valori semplici.
 
-Nella batch v1 viene introdotta la funzione `jsonable(...)`, che converte automaticamente liste e dizionari in stringhe JSON prima della scrittura nel CSV. :contentReference[oaicite:23]{index=23}
+Nella batch v1 viene introdotta la funzione `jsonable(...)`, che converte automaticamente liste e dizionari in stringhe JSON prima della scrittura nel CSV.
 
 Questo è importante perché molti attributi nuovi sono strutture non scalari, ad esempio:
 - `match_warnings`
 - `connected_terminal_ids`
 - `search_window`
 - `snap_point`
-- `terminal_match_confidence_counts` :contentReference[oaicite:24]{index=24}
+- `terminal_match_confidence_counts`
 
 Di conseguenza, nei CSV della batch v1 questi campi compaiono come testo JSON serializzato all’interno della cella.
 
@@ -1186,7 +1181,7 @@ Di conseguenza, nei CSV della batch v1 questi campi compaiono come testo JSON se
 ### Cosa descrivono esattamente i CSV
 
 #### 1. `nodes_csv/<diagramma>_nodes.csv`
-Questo file contiene **un record per ogni nodo del grafo relativo a un singolo diagramma**. :contentReference[oaicite:25]{index=25} :contentReference[oaicite:26]{index=26}
+Questo file contiene **un record per ogni nodo del grafo relativo a un singolo diagramma**.
 
 Le righe possono rappresentare quattro tipi diversi di nodo:
 
@@ -1195,7 +1190,7 @@ Le righe possono rappresentare quattro tipi diversi di nodo:
 - `Terminal`
 - `Net`
 
-La colonna chiave per distinguerli è `node_type`. :contentReference[oaicite:27]{index=27} :contentReference[oaicite:28]{index=28}
+La colonna chiave per distinguerli è `node_type`.
 
 In pratica, questo CSV descrive **l’insieme completo delle entità del diagramma**:
 - il diagramma stesso;
@@ -1205,12 +1200,12 @@ In pratica, questo CSV descrive **l’insieme completo delle entità del diagram
 
 Le colonne presenti sono l’unione di tutti gli attributi usati dai diversi tipi di nodo. Questo significa che:
 - alcune colonne sono valorizzate solo per certi tipi di nodo;
-- per gli altri tipi rimangono vuote. :contentReference[oaicite:29]{index=29}
+- per gli altri tipi rimangono vuote. 
 
 ---
 
 #### 2. `edges_csv/<diagramma>_edges.csv`
-Questo file contiene **un record per ogni arco del grafo relativo a un singolo diagramma**. :contentReference[oaicite:30]{index=30} :contentReference[oaicite:31]{index=31}
+Questo file contiene **un record per ogni arco del grafo relativo a un singolo diagramma**.
 
 La colonna chiave è `relation_type`, che può assumere uno di questi valori:
 
@@ -1225,12 +1220,12 @@ In pratica, questo CSV descrive **come le entità del diagramma sono collegate t
 - quali terminali appartengono a ciascun componente;
 - a quale net è collegato ciascun terminale.
 
-È quindi il file che rappresenta in modo esplicito la **topologia del grafo**. :contentReference[oaicite:32]{index=32} :contentReference[oaicite:33]{index=33}
+È quindi il file che rappresenta in modo esplicito la **topologia del grafo**. 
 
 ---
 
 #### 3. `combined_csv/all_nodes.csv`
-Questo file contiene **la concatenazione di tutti i nodi di tutti i diagrammi del batch**. :contentReference[oaicite:34]{index=34}
+Questo file contiene **la concatenazione di tutti i nodi di tutti i diagrammi del batch**
 
 Ogni riga rappresenta comunque un singolo nodo, ma qui i nodi di diagrammi diversi convivono nello stesso file.  
 Per questo motivo diventano essenziali:
@@ -1240,12 +1235,12 @@ Per questo motivo diventano essenziali:
 Questo CSV è utile quando si vuole:
 - analizzare tutto il batch insieme;
 - esportare verso strumenti esterni;
-- fare import massivo in un graph database. :contentReference[oaicite:35]{index=35}
+- fare import massivo in un graph database.
 
 ---
 
 #### 4. `combined_csv/all_edges.csv`
-Questo file contiene **la concatenazione di tutti gli archi di tutti i diagrammi del batch**. :contentReference[oaicite:36]{index=36}
+Questo file contiene **la concatenazione di tutti gli archi di tutti i diagrammi del batch**. 
 
 Ogni riga rappresenta un singolo arco del grafo, con:
 - nodo sorgente (`source`)
@@ -1258,7 +1253,7 @@ Questo è il CSV che descrive, a livello batch, **tutte le relazioni topologiche
 ---
 
 #### 5. `combined_csv/graph_summaries.csv`
-Questo file contiene **un record per diagramma**, non per nodo o per arco. :contentReference[oaicite:37]{index=37}
+Questo file contiene **un record per diagramma**, non per nodo o per arco.
 
 Ogni riga è un riepilogo statistico del grafo del singolo diagramma, con informazioni come:
 - numero totale di nodi;
@@ -1266,7 +1261,7 @@ Ogni riga è un riepilogo statistico del grafo del singolo diagramma, con inform
 - numero di nodi `Component`, `Terminal`, `Net`;
 - numero di archi per tipo;
 - numero di match sospetti;
-- distribuzione della confidence dei terminali. :contentReference[oaicite:38]{index=38}
+- distribuzione della confidence dei terminali.
 
 Quindi questo CSV non descrive il grafo in dettaglio, ma ne fornisce una **vista riassuntiva per immagine**.
 
@@ -1278,7 +1273,7 @@ Dal punto di vista interpretativo:
 - `nodes.csv` descrive **quali entità esistono** nel grafo;
 - `edges.csv` descrive **come queste entità sono collegate**;
 - `all_nodes.csv` e `all_edges.csv` estendono la stessa logica all’intero batch;
-- `graph_summaries.csv` descrive **le statistiche aggregate** del grafo per ciascun diagramma. :contentReference[oaicite:39]{index=39}
+- `graph_summaries.csv` descrive **le statistiche aggregate** del grafo per ciascun diagramma. 
 
 In altre parole:
 - i CSV `nodes` e `edges` sono una rappresentazione tabellare del grafo;
@@ -1290,6 +1285,6 @@ In altre parole:
 La differenza principale tra pilot e batch v1 nel passo 07 può essere riassunta così:
 
 - **pilot**: esportazione del grafo per singolo diagramma, con nodi e archi essenziali;
-- **batch v1**: esportazione del grafo più ricca, con ID univoci a livello batch, attributi diagnostici aggiuntivi, summary della qualità dei match e CSV aggregati per l’intero batch. :contentReference[oaicite:40]{index=40} :contentReference[oaicite:41]{index=41}
+- **batch v1**: esportazione del grafo più ricca, con ID univoci a livello batch, attributi diagnostici aggiuntivi, summary della qualità dei match e CSV aggregati per l’intero batch. 
 
 Il passo 07 della batch v1 non modifica la topologia del grafo, ma ne migliora in modo sostanziale la **portabilità**, la **leggibilità** e l’uso successivo in analisi batch o in un graph database.

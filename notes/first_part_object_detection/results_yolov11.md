@@ -37,6 +37,7 @@ Questo documento raccoglie gli esperimenti svolti con **YOLOv11** sul dataset de
 | exp11  | RGB       | aug_v1         |    100 |     4 |    0.9436 | 0.9004 |   0.9215 |  0.9513 |       0.6552 |         63 | Augmentation Lieve   |
 | exp12  | RGB       | aug_v2_compose |    100 |     4 |    0.9201 | 0.8389 |   0.8776 |  0.9146 |       0.6442 |         34 | Compose of diagrams  |
 | exp11b | RGB       | aug_v3 strong  |    100 |     4 |    0.9404 | 0.9049 |   0.9223 |  0.9476 |       0.6665 |         97 | Augmentation forte   |
+| exp11b1 | RGB       | aug_v3 strong_dataset_sistemato  |    100 |     4 |    0.9379 | 0.8967 |   0.9168 |  0.9559 |       0.6687 |         59 | Augmentation forte + dataset sistemato   |
 
 ---
 
