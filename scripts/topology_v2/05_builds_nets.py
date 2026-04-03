@@ -1,17 +1,33 @@
+"""
+05_build_nets.py
+
+Scopo:
+    Costruire le net candidate a partire dallo skeleton del passo 04.
+
+Pipeline:
+    1. connected components dello skeleton
+    2. matching locale terminale -> label candidata
+    3. costruzione candidate nets
+    4. filtraggio candidate
+    5. rilabeling delle net mantenute
+    6. salvataggio label map e debug images
+"""
 from pathlib import Path
 import json
 import cv2
 import numpy as np
 
 # =========================================================
-# CONFIGURAZIONE
+# PATHS / INPUT-OUTPUT
 # =========================================================
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v2" / "04_extract_wires"
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v2" / "05_build_nets"
 
+# =========================================================
+# TERMINAL -> LABEL MATCHING
+# =========================================================
 LABEL_MAP_DIR = OUTPUT_DIR / "label_maps"
 NET_MAP_DIR = OUTPUT_DIR / "net_map"
 OVERLAY_DIR = OUTPUT_DIR / "overlay"
@@ -21,10 +37,15 @@ TERMINAL_DEBUG_DIR = OUTPUT_DIR / "terminal_debug"
 TERMINAL_SEARCH_RADIUS = 12
 TERMINAL_DIRECTIONAL_HALFSPAN = 5
 
-# Filtro candidate nets
+# =========================================================
+# NET FILTERING
+# =========================================================
 MIN_NET_PIXELS = 8
 MIN_CONNECTED_TERMINALS = 1
 
+# =========================================================
+# NET SORTING / VISUALIZATION
+# =========================================================
 # Ordinamento net:
 # "xy" = da sinistra a destra, poi dall'alto verso il basso
 # "yx" = dall'alto verso il basso, poi da sinistra a destra
@@ -46,7 +67,7 @@ NET_COLORS = [
     (128, 255, 0),
 ]
 
-
+# utility base
 def load_binary_image(path: Path):
     img = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
     if img is None:
@@ -65,14 +86,6 @@ def get_sort_key(item, sort_order="xy"):
         return (yc, xc)
     return (xc, yc)
 
-
-def find_connected_components(skeleton_binary: np.ndarray):
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
-        skeleton_binary, connectivity=8
-    )
-    return num_labels, labels, stats, centroids
-
-
 def clamp_window(x1, y1, x2, y2, w, h):
     return (
         max(0, min(w, x1)),
@@ -81,6 +94,12 @@ def clamp_window(x1, y1, x2, y2, w, h):
         max(0, min(h, y2)),
     )
 
+# connected components + terminal matching
+def find_connected_components(skeleton_binary: np.ndarray):
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
+        skeleton_binary, connectivity=8
+    )
+    return num_labels, labels, stats, centroids
 
 def get_directional_window(term: dict, labels_shape, radius=12, halfspan=5):
     h, w = labels_shape[:2]
@@ -101,20 +120,17 @@ def get_directional_window(term: dict, labels_shape, radius=12, halfspan=5):
 
     return x1, y1, x2, y2
 
-
 def get_square_window(term: dict, labels_shape, radius=12):
     h, w = labels_shape[:2]
     x = int(round(term["x"]))
     y = int(round(term["y"]))
     return clamp_window(x - radius, y - radius, x + radius + 1, y + radius + 1, w, h)
 
-
 def collect_labels_in_window(labels: np.ndarray, window):
     x1, y1, x2, y2 = window
     roi = labels[y1:y2, x1:x2]
     unique_labels = np.unique(roi)
     return [int(v) for v in unique_labels if int(v) > 0]
-
 
 def find_nearest_labeled_pixel(labels: np.ndarray, term: dict, window):
     x1, y1, x2, y2 = window
@@ -142,7 +158,6 @@ def find_nearest_labeled_pixel(labels: np.ndarray, term: dict, window):
         "snap_point": [px, py],
         "snap_distance": round(dist, 3),
     }
-
 
 def terminal_to_candidate_labels(labels: np.ndarray, terminals, radius=12, directional_halfspan=5):
     """
@@ -199,7 +214,7 @@ def terminal_to_candidate_labels(labels: np.ndarray, terminals, radius=12, direc
 
     return primary_label_to_terminal_ids, terminal_debug
 
-
+# candidate nets
 def build_candidate_nets(stats, label_to_terminal_ids):
     candidates = []
     num_labels = stats.shape[0]
@@ -223,7 +238,6 @@ def build_candidate_nets(stats, label_to_terminal_ids):
         candidates.append(candidate)
 
     return candidates
-
 
 def filter_candidate_nets(candidates):
     kept = []
@@ -251,7 +265,6 @@ def filter_candidate_nets(candidates):
 
     return kept, rejected
 
-
 def relabel_kept_nets(original_labels: np.ndarray, kept_candidates, sort_order="xy"):
     kept_sorted = sorted(kept_candidates, key=lambda x: get_sort_key(x, sort_order=sort_order))
 
@@ -275,7 +288,7 @@ def relabel_kept_nets(original_labels: np.ndarray, kept_candidates, sort_order="
 
     return relabeled, nets
 
-
+# debug / visualization
 def draw_net_map(relabeled_map: np.ndarray, nets):
     h, w = relabeled_map.shape
     canvas = np.zeros((h, w, 3), dtype=np.uint8)
@@ -380,7 +393,7 @@ def draw_terminal_debug(image_bgr, terminals, terminal_debug, relabeled_map, net
 
     return out
 
-
+# main
 def main() -> None:
     if not INPUT_DIR.exists():
         raise FileNotFoundError(f"Cartella input non trovata: {INPUT_DIR}")
@@ -416,7 +429,7 @@ def main() -> None:
         skeleton_binary = load_binary_image(skeleton_path)
         terminals = data.get("terminals", [])
 
-        num_labels, labels, stats, centroids = find_connected_components(skeleton_binary)
+        num_labels, labels, stats, _ = find_connected_components(skeleton_binary)
 
         label_to_terminal_ids, terminal_to_labels = terminal_to_candidate_labels(
             labels,

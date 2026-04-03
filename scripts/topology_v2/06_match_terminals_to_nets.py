@@ -1,18 +1,39 @@
+"""
+06_match_terminals_to_nets.py
+
+Scopo:
+    Assegnare a ogni terminale una net finale, a partire dalla label map del passo 05.
+
+Pipeline:
+    1. carica label_map e nets
+    2. costruisce la preferred net dal passo 05
+    3. prova una sequenza di search stages:
+       - directional_primary
+       - circle_primary
+       - directional_fallback
+       - circle_fallback
+    4. sceglie la net migliore
+    5. assegna confidence e warning
+    6. aggiorna components / terminals / connections
+"""
+
 from pathlib import Path
 import json
 import cv2
 import numpy as np
 
 # =========================================================
-# CONFIGURAZIONE
+# PATHS / INPUT-OUTPUT
 # =========================================================
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v2" / "05_build_nets"
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v2" / "06_match_terminals_to_nets"
 DEBUG_DIR = OUTPUT_DIR / "debug_images"
 
+# =========================================================
+# BASE SEARCH PARAMETERS
+# =========================================================
 # Ricerca base attorno al terminale.
 # Idea: non usare solo un cerchio, ma prima una ricerca direzionale coerente
 # con il lato del terminale (left/right/top/bottom), poi fallback circolari.
@@ -21,7 +42,11 @@ BASE_DIRECTIONAL_HALFSPAN = 6
 BASE_CIRCLE_RADIUS = 10
 BASE_FALLBACK_RADIUS = 24
 
-# Per classi più difficili conviene cercare più lontano.
+# =========================================================
+# CLASS-SPECIFIC SEARCH OVERRIDES
+# =========================================================
+# Override per classi in cui il terminale può essere più lontano dal wire
+# o il match è più ambiguo.
 CLASS_SEARCH_OVERRIDES = {
     "Switch": {
         "directional_len": 30,
@@ -55,24 +80,26 @@ CLASS_SEARCH_OVERRIDES = {
     },
 }
 
+# =========================================================
+# MATCH CONFIDENCE THRESHOLDS
+# =========================================================
 # Qualità del match.
 CONFIDENT_DISTANCE_HIGH = 6.0
 CONFIDENT_DISTANCE_MEDIUM = 12.0
 LOW_CONFIDENCE_DISTANCE = 12.0
 VERY_LOW_CONFIDENCE_DISTANCE = 24.0
 
+#DEBUG
 SAVE_DEBUG_IMAGES = True
 
 
 # ---------------------------------------------------------
 # Utility base
 # ---------------------------------------------------------
-
 def load_label_map(path: Path) -> np.ndarray:
     if not path.exists():
         raise FileNotFoundError(f"Label map non trovata: {path}")
     return np.load(path)
-
 
 def build_net_index_map(nets):
     out = {}
@@ -80,13 +107,11 @@ def build_net_index_map(nets):
         out[int(net["net_index"])] = net
     return out
 
-
 def build_source_label_to_net_index_map(nets):
     out = {}
     for net in nets:
         out[int(net["source_label"])] = int(net["net_index"])
     return out
-
 
 def clamp_window(x1, y1, x2, y2, w, h):
     return (
@@ -95,7 +120,6 @@ def clamp_window(x1, y1, x2, y2, w, h):
         max(0, min(w, x2)),
         max(0, min(h, y2)),
     )
-
 
 def get_class_search_params(term: dict):
     params = {
@@ -107,11 +131,9 @@ def get_class_search_params(term: dict):
     params.update(CLASS_SEARCH_OVERRIDES.get(term.get("component_class_name"), {}))
     return params
 
-
 # ---------------------------------------------------------
-# Finestre / maschere di ricerca
+# search geometry / search plan
 # ---------------------------------------------------------
-
 def build_directional_rect(term: dict, shape, radius: int, halfspan: int):
     h, w = shape[:2]
     x = int(round(term["x"]))
@@ -124,14 +146,12 @@ def build_directional_rect(term: dict, shape, radius: int, halfspan: int):
         return clamp_window(x - halfspan, y - radius, x + halfspan + 1, y + radius + 1, w, h)
     return clamp_window(x - radius, y - radius, x + radius + 1, y + radius + 1, w, h)
 
-
 def collect_labels_in_rect(label_map: np.ndarray, rect):
     x1, y1, x2, y2 = rect
     roi = label_map[y1:y2, x1:x2]
     labels = np.unique(roi)
     labels = [int(v) for v in labels if int(v) > 0]
     return labels
-
 
 def collect_labels_in_circle(label_map: np.ndarray, x: int, y: int, radius: int):
     h, w = label_map.shape[:2]
@@ -149,11 +169,41 @@ def collect_labels_in_circle(label_map: np.ndarray, x: int, y: int, radius: int)
     labels = [int(v) for v in labels if int(v) > 0]
     return labels, [x1, y1, x2, y2]
 
+def build_search_plan(term: dict):
+    params = get_class_search_params(term)
+    directional_len = int(params["directional_len"])
+    directional_halfspan = int(params["directional_halfspan"])
+    circle_radius = int(params["circle_radius"])
+    fallback_radius = int(params["fallback_radius"])
+
+    return [
+        {
+            "name": "directional_primary",
+            "kind": "directional",
+            "radius": directional_len,
+            "halfspan": directional_halfspan,
+        },
+        {
+            "name": "circle_primary",
+            "kind": "circle",
+            "radius": circle_radius,
+        },
+        {
+            "name": "directional_fallback",
+            "kind": "directional",
+            "radius": max(directional_len + 8, fallback_radius),
+            "halfspan": directional_halfspan + 3,
+        },
+        {
+            "name": "circle_fallback",
+            "kind": "circle",
+            "radius": fallback_radius,
+        },
+    ]
 
 # ---------------------------------------------------------
-# Distanze / snap
+# snap / label choice
 # ---------------------------------------------------------
-
 def nearest_label_by_pixel_distance(label_map: np.ndarray, x: int, y: int, candidate_labels, rect=None, radius=None):
     if rect is not None:
         x1, y1, x2, y2 = rect
@@ -188,7 +238,6 @@ def nearest_label_by_pixel_distance(label_map: np.ndarray, x: int, y: int, candi
 
     return best_label, best_distance, best_point
 
-
 def choose_best_label(label_map: np.ndarray, x: int, y: int, candidate_labels, preferred_label=None, rect=None, radius=None):
     if not candidate_labels:
         return None, None, None, None
@@ -211,56 +260,6 @@ def choose_best_label(label_map: np.ndarray, x: int, y: int, candidate_labels, p
         label_map, x, y, candidate_labels, rect=rect, radius=radius
     )
     return chosen_lbl, dist, point, "nearest_candidate"
-
-
-# ---------------------------------------------------------
-# Confidence / warning del match
-# ---------------------------------------------------------
-
-def classify_match_confidence(match_status: str, distance_px, search_stage: str, preferred_net_index, component_class_name: str):
-    if match_status == "unmatched":
-        return "none", ["unmatched_terminal"]
-
-    warnings = []
-    distance = None if distance_px is None else float(distance_px)
-
-    if match_status == "matched_preferred" and distance is not None and distance <= CONFIDENT_DISTANCE_HIGH:
-        confidence = "high"
-    elif distance is not None and distance <= CONFIDENT_DISTANCE_MEDIUM:
-        confidence = "medium"
-    else:
-        confidence = "low"
-
-    if preferred_net_index is None:
-        warnings.append("no_preferred_net_from_05")
-    if match_status != "matched_preferred":
-        warnings.append("matched_without_preferred_label")
-    if search_stage in {"directional_fallback", "circle_fallback"}:
-        warnings.append("used_fallback_search")
-    if search_stage == "circle_primary":
-        warnings.append("used_circle_search")
-    if distance is not None and distance > LOW_CONFIDENCE_DISTANCE:
-        warnings.append("large_snap_distance")
-    if distance is not None and distance > VERY_LOW_CONFIDENCE_DISTANCE:
-        warnings.append("very_large_snap_distance")
-    if component_class_name in {"Switch", "Inductor"} and distance is not None and distance > CONFIDENT_DISTANCE_MEDIUM:
-        warnings.append("sensitive_class_large_distance")
-
-    return confidence, warnings
-
-
-# ---------------------------------------------------------
-# Matching terminale -> net
-# ---------------------------------------------------------
-
-def get_preferred_net_index(term: dict, source_label_to_net_index: dict, net_building_terminal_debug: dict):
-    term_id = term["terminal_id"]
-    debug = net_building_terminal_debug.get(term_id, {})
-    source_label = debug.get("primary_label")
-    if source_label is None:
-        return None
-    return source_label_to_net_index.get(int(source_label))
-
 
 def run_search_stage(label_map: np.ndarray, term: dict, stage: dict, preferred_net_index=None):
     x = int(round(term["x"]))
@@ -311,38 +310,39 @@ def run_search_stage(label_map: np.ndarray, term: dict, stage: dict, preferred_n
     }
 
 
-def build_search_plan(term: dict):
-    params = get_class_search_params(term)
-    directional_len = int(params["directional_len"])
-    directional_halfspan = int(params["directional_halfspan"])
-    circle_radius = int(params["circle_radius"])
-    fallback_radius = int(params["fallback_radius"])
+# ---------------------------------------------------------
+# Confidence / warning del match
+# ---------------------------------------------------------
+def classify_match_confidence(match_status: str, distance_px, search_stage: str, preferred_net_index, component_class_name: str):
+    if match_status == "unmatched":
+        return "none", ["unmatched_terminal"]
 
-    return [
-        {
-            "name": "directional_primary",
-            "kind": "directional",
-            "radius": directional_len,
-            "halfspan": directional_halfspan,
-        },
-        {
-            "name": "circle_primary",
-            "kind": "circle",
-            "radius": circle_radius,
-        },
-        {
-            "name": "directional_fallback",
-            "kind": "directional",
-            "radius": max(directional_len + 8, fallback_radius),
-            "halfspan": directional_halfspan + 3,
-        },
-        {
-            "name": "circle_fallback",
-            "kind": "circle",
-            "radius": fallback_radius,
-        },
-    ]
+    warnings = []
+    distance = None if distance_px is None else float(distance_px)
 
+    if match_status == "matched_preferred" and distance is not None and distance <= CONFIDENT_DISTANCE_HIGH:
+        confidence = "high"
+    elif distance is not None and distance <= CONFIDENT_DISTANCE_MEDIUM:
+        confidence = "medium"
+    else:
+        confidence = "low"
+
+    if preferred_net_index is None:
+        warnings.append("no_preferred_net_from_05")
+    if match_status != "matched_preferred":
+        warnings.append("matched_without_preferred_label")
+    if search_stage in {"directional_fallback", "circle_fallback"}:
+        warnings.append("used_fallback_search")
+    if search_stage == "circle_primary":
+        warnings.append("used_circle_search")
+    if distance is not None and distance > LOW_CONFIDENCE_DISTANCE:
+        warnings.append("large_snap_distance")
+    if distance is not None and distance > VERY_LOW_CONFIDENCE_DISTANCE:
+        warnings.append("very_large_snap_distance")
+    if component_class_name in {"Switch", "Inductor"} and distance is not None and distance > CONFIDENT_DISTANCE_MEDIUM:
+        warnings.append("sensitive_class_large_distance")
+
+    return confidence, warnings
 
 def finalize_match_result(result: dict):
     confidence, warnings = classify_match_confidence(
@@ -357,6 +357,16 @@ def finalize_match_result(result: dict):
     result["is_suspicious_match"] = confidence == "low"
     return result
 
+# ---------------------------------------------------------
+# Matching terminal -> net
+# ---------------------------------------------------------
+def get_preferred_net_index(term: dict, source_label_to_net_index: dict, net_building_terminal_debug: dict):
+    term_id = term["terminal_id"]
+    debug = net_building_terminal_debug.get(term_id, {})
+    source_label = debug.get("primary_label")
+    if source_label is None:
+        return None
+    return source_label_to_net_index.get(int(source_label))
 
 def match_terminal_to_net(term: dict, label_map: np.ndarray, net_index_map: dict, source_label_to_net_index: dict, net_building_terminal_debug: dict):
     preferred_net_index = get_preferred_net_index(term, source_label_to_net_index, net_building_terminal_debug)
@@ -425,7 +435,6 @@ def match_terminal_to_net(term: dict, label_map: np.ndarray, net_index_map: dict
 # ---------------------------------------------------------
 # Update strutture output
 # ---------------------------------------------------------
-
 def update_components_with_terminal_matches(components, terminal_match_map):
     updated_components = []
 
@@ -460,7 +469,6 @@ def update_components_with_terminal_matches(components, terminal_match_map):
 
     return updated_components
 
-
 def build_connections(terminals_with_matches):
     connections = []
     for term in terminals_with_matches:
@@ -482,11 +490,9 @@ def build_connections(terminals_with_matches):
         })
     return connections
 
-
 # ---------------------------------------------------------
 # Debug images
 # ---------------------------------------------------------
-
 def get_debug_color(term: dict):
     if term.get("matched_net_id") is None:
         return (0, 0, 255)
@@ -497,7 +503,6 @@ def get_debug_color(term: dict):
     if confidence == "medium":
         return (0, 255, 255)
     return (0, 140, 255)
-
 
 def draw_debug_overlay(image_bgr, terminals_with_matches):
     out = image_bgr.copy()
@@ -540,7 +545,6 @@ def draw_debug_overlay(image_bgr, terminals_with_matches):
 # ---------------------------------------------------------
 # Main
 # ---------------------------------------------------------
-
 def main() -> None:
     if not INPUT_DIR.exists():
         raise FileNotFoundError(f"Cartella input non trovata: {INPUT_DIR}")

@@ -1,29 +1,51 @@
+"""
+07_export_graph.py
+
+Scopo:
+    Esportare il risultato topologico del passo 06 come grafo strutturato.
+
+Output:
+    - graph_json per diagramma
+    - nodes.csv per diagramma
+    - edges.csv per diagramma
+    - CSV batch combinati
+
+Modello del grafo:
+    Diagram -> HAS_COMPONENT -> Component
+    Diagram -> HAS_NET -> Net
+    Component -> HAS_TERMINAL -> Terminal
+    Terminal -> CONNECTED_TO -> Net
+"""
 from pathlib import Path
 import json
 import csv
 from typing import Any
 
 # =========================================================
-# CONFIGURAZIONE
+# PATHS / INPUT-OUTPUT
 # =========================================================
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v2" / "06_match_terminals_to_nets"
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v2" / "07_export_graph"
 
+# =========================================================
+# OUTPUT SUBDIRECTORIES
+# =========================================================
 GRAPH_JSON_DIR = OUTPUT_DIR / "graph_json"
 NODES_CSV_DIR = OUTPUT_DIR / "nodes_csv"
 EDGES_CSV_DIR = OUTPUT_DIR / "edges_csv"
 COMBINED_DIR = OUTPUT_DIR / "combined_csv"
 
+# =========================================================
+# FLAGS
+# =========================================================
 SAVE_COMBINED_CSV = True
 
 
 # =========================================================
 # UTILITY
 # =========================================================
-
 def infer_source_stage(data: dict) -> str:
     if "terminal_net_matching" in data:
         matching = data.get("terminal_net_matching", {})
@@ -32,12 +54,10 @@ def infer_source_stage(data: dict) -> str:
         return "06_match_terminals_to_nets"
     return "unknown"
 
-
 def jsonable(value: Any):
     if isinstance(value, (list, dict)):
         return json.dumps(value, ensure_ascii=False)
     return value
-
 
 def save_csv(rows: list[dict], out_path: Path):
     if not rows:
@@ -57,27 +77,22 @@ def save_csv(rows: list[dict], out_path: Path):
 # =========================================================
 # COSTRUZIONE ID UNIVOCI NEL BATCH
 # =========================================================
-
 def diagram_node_id(diagram_id: str) -> str:
     return f"diagram:{diagram_id}"
-
 
 def component_node_id(diagram_id: str, instance_id: str) -> str:
     return f"component:{diagram_id}:{instance_id}"
 
-
 def terminal_node_id(diagram_id: str, terminal_id: str) -> str:
     return f"terminal:{diagram_id}:{terminal_id}"
-
 
 def net_node_id(diagram_id: str, net_id: str) -> str:
     return f"net:{diagram_id}:{net_id}"
 
 
 # =========================================================
-# NODI
+# NODE BUILDER
 # =========================================================
-
 def make_diagram_node(data: dict) -> dict:
     diagram_id = data["image_id"]
     return {
@@ -95,7 +110,6 @@ def make_diagram_node(data: dict) -> dict:
         "n_connections": data.get("n_connections"),
         "source_json_stage": infer_source_stage(data),
     }
-
 
 
 def make_component_node(component: dict, diagram_id: str) -> dict:
@@ -120,8 +134,6 @@ def make_component_node(component: dict, diagram_id: str) -> dict:
         "use_for_masking": component.get("use_for_masking"),
         "n_terminals": len(component.get("terminals", [])),
     }
-
-
 
 def make_terminal_node(terminal: dict, diagram_id: str) -> dict:
     snap_point = terminal.get("snap_point") or [None, None]
@@ -157,8 +169,6 @@ def make_terminal_node(terminal: dict, diagram_id: str) -> dict:
         "snap_y": snap_point[1],
     }
 
-
-
 def make_net_node(net: dict, diagram_id: str) -> dict:
     bbox = net.get("bbox", [None, None, None, None])
     return {
@@ -180,9 +190,8 @@ def make_net_node(net: dict, diagram_id: str) -> dict:
 
 
 # =========================================================
-# ARCHI
+# EDGE BUILDERS
 # =========================================================
-
 def make_edge(edge_id: str, source: str, target: str, relation_type: str, diagram_id: str, **attrs) -> dict:
     edge = {
         "edge_id": edge_id,
@@ -194,11 +203,9 @@ def make_edge(edge_id: str, source: str, target: str, relation_type: str, diagra
     edge.update(attrs)
     return edge
 
-
 # =========================================================
 # BUILD GRAPH
 # =========================================================
-
 def build_graph(data: dict):
     diagram_id = data["image_id"]
 
@@ -334,8 +341,8 @@ def build_graph(data: dict):
 # =========================================================
 # MAIN
 # =========================================================
-
 def main() -> None:
+    # 1. load input json
     if not INPUT_DIR.exists():
         raise FileNotFoundError(f"Cartella input non trovata: {INPUT_DIR}")
 
@@ -354,10 +361,12 @@ def main() -> None:
     print(f"Output directory: {OUTPUT_DIR}")
     print(f"File trovati    : {len(json_files)}\\n")
 
+    # 2. build graph
     all_nodes: list[dict] = []
     all_edges: list[dict] = []
     graph_summaries: list[dict] = []
 
+    # 3. save per-diagram outputs
     for i, json_path in enumerate(json_files, start=1):
         with open(json_path, "r", encoding="utf-8") as f:
             data = json.load(f)

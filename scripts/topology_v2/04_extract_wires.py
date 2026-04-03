@@ -1,3 +1,19 @@
+"""
+04_extract_wires.py
+
+Scopo:
+    Estrarre i wire dal diagramma mascherando i componenti
+    e preservando localmente le zone dei terminali.
+
+Output principali:
+    - component_mask
+    - masked_gray
+    - binary
+    - closed
+    - filtered
+    - skeleton
+"""
+
 from pathlib import Path
 import json
 import cv2
@@ -5,14 +21,16 @@ import numpy as np
 from skimage.morphology import skeletonize
 
 # =========================================================
-# CONFIGURAZIONE
+# PATHS / INPUT-OUTPUT
 # =========================================================
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v2" / "03_estimate_terminals"
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v2" / "04_extract_wires"
 
+# =========================================================
+# COMPONENT MASKING
+# =========================================================
 MASK_DEBUG_DIR = OUTPUT_DIR / "mask_debug"
 COMPONENT_MASK_DIR = OUTPUT_DIR / "component_mask"
 TERMINAL_KEEP_DEBUG_DIR = OUTPUT_DIR / "terminal_keep_debug"
@@ -22,25 +40,30 @@ CLOSED_DIR = OUTPUT_DIR / "closed"
 FILTERED_DIR = OUTPUT_DIR / "filtered"
 SKELETON_DIR = OUTPUT_DIR / "skeleton"
 
-# Mascheramento componenti
+
 MASK_SHRINK_FACTOR = 0.88
 
-# Preservazione terminali: non solo un cerchio, ma una piccola "capsula"
-# direzionata lungo il lato stimato del terminale.
+# =========================================================
+# TERMINAL KEEP ZONES
+# =========================================================
 TERMINAL_KEEP_RADIUS = 10
 TERMINAL_KEEP_LINE_THICKNESS = 7
 TERMINAL_KEEP_INWARD_LEN = 14
 TERMINAL_KEEP_OUTWARD_LEN = 12
 
-# Morfologia
+# =========================================================
+# MORPHOLOGY
+# =========================================================
 CLOSING_KERNEL_SIZE = 3
 CLOSING_ITERATIONS = 1
 
-# Filtro opzionale per piccoli componenti connessi
+# =========================================================
+# SMALL COMPONENT FILTER
+# =========================================================
 ENABLE_SMALL_COMPONENT_FILTER = True
 MIN_COMPONENT_AREA = 40
 
-
+# utility geometriche
 def clamp_point(x, y, w, h):
     x = max(0, min(w - 1, int(round(x))))
     y = max(0, min(h - 1, int(round(y))))
@@ -62,8 +85,7 @@ def shrink_bbox(bbox, shrink_factor=0.88):
 
     return [new_x1, new_y1, new_x2, new_y2]
 
-
-
+# costruzione maschere
 def build_base_component_mask(image_shape, components):
     h, w = image_shape[:2]
     mask = np.zeros((h, w), dtype=np.uint8)
@@ -83,7 +105,6 @@ def build_base_component_mask(image_shape, components):
         cv2.rectangle(mask, (x1, y1), (x2, y2), 255, thickness=-1)
 
     return mask
-
 
 
 def terminal_keep_segment(term):
@@ -111,7 +132,6 @@ def terminal_keep_segment(term):
     return p1, p2
 
 
-
 def carve_terminal_keep_zones(mask, terminals):
     h, w = mask.shape[:2]
     keep_debug = np.zeros_like(mask)
@@ -134,14 +154,12 @@ def carve_terminal_keep_zones(mask, terminals):
     return mask, keep_debug
 
 
-
 def build_component_mask(image_shape, components, terminals):
     mask = build_base_component_mask(image_shape, components)
     mask, keep_debug = carve_terminal_keep_zones(mask, terminals)
     return mask, keep_debug
 
-
-
+# debug outputs
 def save_mask_debug(image_bgr, mask, out_path: Path):
     overlay = image_bgr.copy()
     red_layer = np.zeros_like(image_bgr)
@@ -154,7 +172,6 @@ def save_mask_debug(image_bgr, mask, out_path: Path):
     )
 
     cv2.imwrite(str(out_path), overlay)
-
 
 
 def save_terminal_keep_debug(image_bgr, keep_debug, out_path: Path):
@@ -170,8 +187,7 @@ def save_terminal_keep_debug(image_bgr, keep_debug, out_path: Path):
 
     cv2.imwrite(str(out_path), overlay)
 
-
-
+# post-processing wires
 def remove_small_connected_components(binary_img, min_area=40):
     num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(binary_img, connectivity=8)
 
@@ -191,21 +207,25 @@ def remove_small_connected_components(binary_img, min_area=40):
     return filtered, kept_components, removed_components
 
 
-
 def extract_wires_from_image(image_bgr, components, terminals):
+    # 1. grayscale
     gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
 
+    # 2. component mask + terminal keep zones
     component_mask, terminal_keep_debug = build_component_mask(
         image_bgr.shape, components, terminals
     )
 
+    # 3. apply mask
     masked_gray = gray.copy()
     masked_gray[component_mask > 0] = 255
 
+    # 4. threshold
     _, binary = cv2.threshold(
         masked_gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
     )
 
+    # 5. closing
     kernel = cv2.getStructuringElement(
         cv2.MORPH_RECT, (CLOSING_KERNEL_SIZE, CLOSING_KERNEL_SIZE)
     )
@@ -216,6 +236,7 @@ def extract_wires_from_image(image_bgr, components, terminals):
         iterations=CLOSING_ITERATIONS,
     )
 
+    # 6. small component filter
     if ENABLE_SMALL_COMPONENT_FILTER:
         filtered, kept_components, removed_components = remove_small_connected_components(
             closed,
@@ -226,6 +247,7 @@ def extract_wires_from_image(image_bgr, components, terminals):
         kept_components = None
         removed_components = None
 
+    # 7. skeletonization
     skeleton_bool = skeletonize(filtered > 0)
     skeleton = (skeleton_bool.astype(np.uint8)) * 255
 
@@ -256,8 +278,7 @@ def extract_wires_from_image(image_bgr, components, terminals):
         keep_info,
     )
 
-
-
+# main
 def main() -> None:
     if not INPUT_DIR.exists():
         raise FileNotFoundError(f"Cartella input non trovata: {INPUT_DIR}")

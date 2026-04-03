@@ -1,3 +1,20 @@
+"""
+08_visualize_graph.py
+
+Scopo:
+    Generare visualizzazioni del grafo esportato dal passo 07.
+
+Viste prodotte:
+    - full graph
+    - component -> net
+    - overlay sul diagramma
+    - index.html batch
+
+Output:
+    - PNG statiche
+    - HTML interattive
+    - dashboard index.html
+"""
 from __future__ import annotations
 
 import json
@@ -9,20 +26,25 @@ import networkx as nx
 import plotly.graph_objects as go
 
 # =========================================================
-# CONFIGURAZIONE
+# PATHS / INPUT-OUTPUT
 # =========================================================
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v2" / "07_export_graph" / "graph_json"
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v2" / "08_visualize_graph"
 
+# =========================================================
+# OUTPUT SUBDIRECTORIES
+# =========================================================
 FULL_PNG_DIR = OUTPUT_DIR / "full_png"
 FULL_HTML_DIR = OUTPUT_DIR / "full_html"
 COMPONENT_NET_PNG_DIR = OUTPUT_DIR / "component_net_png"
 COMPONENT_NET_HTML_DIR = OUTPUT_DIR / "component_net_html"
 OVERLAY_DIR = OUTPUT_DIR / "overlay"
 
+# =========================================================
+# SAVE FLAGS
+# =========================================================
 SAVE_FULL_PNG = True
 SAVE_FULL_HTML = True
 SAVE_COMPONENT_NET_PNG = True
@@ -30,14 +52,16 @@ SAVE_COMPONENT_NET_HTML = True
 SAVE_OVERLAY = True
 SAVE_INDEX_HTML = True
 
+# =========================================================
+# VIEW OPTIONS
+# =========================================================
 # Alleggerisce la vista completa: i terminali restano nel grafo ma il testo può stare solo in hover.
 SHOW_TERMINAL_LABELS_IN_FULL_PNG = False
 SHOW_TERMINAL_LABELS_IN_FULL_HTML = False
 
 # =========================================================
-# STILE
+# STYLE CONSTANTS
 # =========================================================
-
 NODE_COLORS = {
     "Diagram": "#4C78A8",
     "Component": "#54A24B",
@@ -70,11 +94,9 @@ REL_POS_ORDER = {
 # =========================================================
 # IO / UTILITY
 # =========================================================
-
 def load_graph_json(path: Path) -> dict[str, Any]:
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
-
 
 def short_diagram_name(diagram_id: str) -> str:
     if "_png" in diagram_id:
@@ -83,13 +105,11 @@ def short_diagram_name(diagram_id: str) -> str:
         return diagram_id.split(".png", 1)[0]
     return diagram_id[:24]
 
-
 def safe_float(value: Any, default: float = 0.0) -> float:
     try:
         return float(value)
     except Exception:
         return default
-
 
 def bbox_center(node: dict[str, Any]) -> tuple[float, float]:
     x1 = safe_float(node.get("bbox_x1"), 0.0)
@@ -98,7 +118,9 @@ def bbox_center(node: dict[str, Any]) -> tuple[float, float]:
     y2 = safe_float(node.get("bbox_y2"), y1)
     return ((x1 + x2) / 2.0, (y1 + y2) / 2.0)
 
-
+# =========================================================
+# hover / labels / sorting
+# =========================================================
 def make_node_hover(node: dict[str, Any]) -> str:
     keys = [
         "node_type",
@@ -125,7 +147,6 @@ def make_node_hover(node: dict[str, Any]) -> str:
         parts.append("match_warnings: " + ", ".join(map(str, warnings)))
     return "<br>".join(parts)
 
-
 def make_edge_hover(edge: dict[str, Any]) -> str:
     keys = [
         "relation_type",
@@ -149,10 +170,6 @@ def make_edge_hover(edge: dict[str, Any]) -> str:
     return "<br>".join(parts)
 
 
-# =========================================================
-# LABEL / ORDINAMENTO
-# =========================================================
-
 def compact_node_label(node: dict[str, Any], *, show_terminal_labels: bool) -> str:
     node_type = node.get("node_type")
     if node_type == "Diagram":
@@ -167,14 +184,11 @@ def compact_node_label(node: dict[str, Any], *, show_terminal_labels: bool) -> s
         return str(node.get("net_id", node.get("label", "net")))
     return str(node.get("label", node.get("node_id", "node")))
 
-
 def sort_components_spatial(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(nodes, key=lambda n: (bbox_center(n)[1], bbox_center(n)[0], str(n.get("instance_id", ""))))
 
-
 def sort_nets(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(nodes, key=lambda n: (safe_float(n.get("net_index"), 9999.0), str(n.get("net_id", ""))))
-
 
 def sort_terminals(nodes: list[dict[str, Any]], component_order: dict[str, int]) -> list[dict[str, Any]]:
     def key(n: dict[str, Any]) -> tuple[Any, ...]:
@@ -190,9 +204,8 @@ def sort_terminals(nodes: list[dict[str, Any]], component_order: dict[str, int])
 
 
 # =========================================================
-# COSTRUZIONE GRAFI
+# graph preparation
 # =========================================================
-
 def build_nx_graph(graph_data: dict[str, Any]) -> nx.DiGraph:
     G = nx.DiGraph()
     for node in graph_data["nodes"]:
@@ -200,7 +213,6 @@ def build_nx_graph(graph_data: dict[str, Any]) -> nx.DiGraph:
     for edge in graph_data["edges"]:
         G.add_edge(edge["source"], edge["target"], **edge)
     return G
-
 
 def compute_layered_positions(graph_data: dict[str, Any]) -> dict[str, tuple[float, float]]:
     by_type: dict[str, list[dict[str, Any]]] = {
@@ -240,7 +252,6 @@ def compute_layered_positions(graph_data: dict[str, Any]) -> dict[str, tuple[flo
         for node, y in zip(nodes, ys):
             positions[node["node_id"]] = (x, y)
     return positions
-
 
 def derive_component_net_graph(graph_data: dict[str, Any]) -> dict[str, Any]:
     component_nodes = [n for n in graph_data["nodes"] if n.get("node_type") == "Component"]
@@ -319,7 +330,6 @@ def derive_component_net_graph(graph_data: dict[str, Any]) -> dict[str, Any]:
         "edges": edges,
     }
 
-
 def compute_component_net_positions(graph_data: dict[str, Any]) -> dict[str, tuple[float, float]]:
     components = sort_components_spatial([n for n in graph_data["nodes"] if n.get("viz_node_type") == "Component"])
     nets = sort_nets([n for n in graph_data["nodes"] if n.get("viz_node_type") == "Net"])
@@ -341,9 +351,8 @@ def compute_component_net_positions(graph_data: dict[str, Any]) -> dict[str, tup
 
 
 # =========================================================
-# FULL GRAPH - PNG / HTML
+# RNDERING FULL GRAPH - PNG / HTML
 # =========================================================
-
 def draw_full_png(graph_data: dict[str, Any], out_png: Path) -> None:
     G = build_nx_graph(graph_data)
     pos = compute_layered_positions(graph_data)
@@ -407,7 +416,6 @@ def draw_full_png(graph_data: dict[str, Any], out_png: Path) -> None:
     plt.tight_layout()
     fig.savefig(out_png, dpi=220, bbox_inches="tight")
     plt.close(fig)
-
 
 def draw_full_html(graph_data: dict[str, Any], out_html: Path) -> None:
     G = build_nx_graph(graph_data)
@@ -500,9 +508,8 @@ def draw_full_html(graph_data: dict[str, Any], out_html: Path) -> None:
 
 
 # =========================================================
-# COMPONENT -> NET VIEW
+# RENDERING COMPONENT -> NET VIEW
 # =========================================================
-
 def draw_component_net_png(graph_data: dict[str, Any], out_png: Path) -> None:
     simple = derive_component_net_graph(graph_data)
     G = nx.Graph()
@@ -558,7 +565,6 @@ def draw_component_net_png(graph_data: dict[str, Any], out_png: Path) -> None:
     plt.tight_layout()
     fig.savefig(out_png, dpi=220, bbox_inches="tight")
     plt.close(fig)
-
 
 def draw_component_net_html(graph_data: dict[str, Any], out_html: Path) -> None:
     simple = derive_component_net_graph(graph_data)
@@ -648,9 +654,8 @@ def draw_component_net_html(graph_data: dict[str, Any], out_html: Path) -> None:
 
 
 # =========================================================
-# OVERLAY SUL DIAGRAMMA
+# REDENRING OVERLAY SUL DIAGRAMMA
 # =========================================================
-
 def draw_overlay(graph_data: dict[str, Any], out_png: Path) -> None:
     meta = graph_data.get("graph_metadata", {})
     image_path = meta.get("image_path")
@@ -753,9 +758,8 @@ def draw_overlay(graph_data: dict[str, Any], out_png: Path) -> None:
 
 
 # =========================================================
-# INDEX HTML
+# DASHBOARD INDEX HTML
 # =========================================================
-
 def save_index_html(index_rows: list[dict[str, Any]], out_path: Path) -> None:
     rows_sorted = sorted(
         index_rows,
@@ -1143,7 +1147,6 @@ def save_index_html(index_rows: list[dict[str, Any]], out_path: Path) -> None:
 # =========================================================
 # MAIN
 # =========================================================
-
 def main() -> None:
     if not INPUT_DIR.exists():
         raise FileNotFoundError(f"Cartella input non trovata: {INPUT_DIR}")

@@ -1,8 +1,28 @@
+"""
+03_estimate_terminals.py
+
+Scopo:
+    Stimare i terminali dei componenti rilevati nel passo 02.
+
+Strategie principali:
+    - fixed
+    - auto_by_aspect_ratio
+    - one_terminal_by_orientation
+    - two_terminal_by_connection_axis
+    - terminal_auto_one_or_two
+
+Casi speciali:
+    - Capacitor / Polarized_Capacitor
+    - Switch
+    - Terminal
+"""
+
 from pathlib import Path
 import json
 import yaml
 import cv2
 
+#PATH / INPUT-OUTPUT
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v2" / "02_assign_instances"
@@ -11,17 +31,22 @@ DEBUG_IMAGES_DIR = OUTPUT_DIR / "debug_images"
 
 CLASS_TERMINALS_PATH = PROJECT_ROOT / "metadata" / "class_terminals_v1.yaml"
 
+#DEBUG / VISUALIZATION
 SAVE_DEBUG_IMAGES = True
 TERMINAL_RADIUS = 6
-TERMINAL_OUTWARD_OFFSET = 4
 
-ASPECT_RATIO_THRESHOLD = 1.10
-
+# COARSE SIDE SAMPLING
 SIDE_SAMPLE_THICKNESS = 10
 SIDE_CENTER_RATIO = 0.35
 SIDE_SCORE_MIN_PIXELS = 5
 AXIS_SCORE_MARGIN = 1.15
 
+
+# GENERIC TERMINAL GEOMETRY
+TERMINAL_OUTWARD_OFFSET = 4
+ASPECT_RATIO_THRESHOLD = 1.10
+
+# LOCAL PROBES FOR GENERIC TWO-TERMINAL COMPONENTS
 TERMINAL_PROBE_OUT_LEN = 12
 TERMINAL_PROBE_INSET = 2
 TERMINAL_PROBE_HALFSPAN_RATIO = 0.22
@@ -32,18 +57,64 @@ TERMINAL_PROBE_MIN_SIDE_SCORE = 3
 
 SWITCH_ANCHOR_RATIOS = (0.30, 0.50, 0.70)
 
+# SPECIAL HEURISTICS FOR CLASS "Terminal"
+# Probe locali vicini al bbox
+TERMINAL_CLASS_PROBE_OUT_LEN = 10
+TERMINAL_CLASS_PROBE_HALFSPAN_RATIO = 0.16
+TERMINAL_CLASS_PROBE_HALFSPAN_MIN = 2
+TERMINAL_CLASS_PROBE_HALFSPAN_MAX = 4
 
-def load_yaml(path: Path):
+# Decisione 1-vs-2 terminali
+TERMINAL_CLASS_TWO_SIDE_MIN = 5
+TERMINAL_CLASS_ONE_SIDE_MIN = 3
+TERMINAL_CLASS_TWO_AXIS_MARGIN = 1.35
+TERMINAL_CLASS_TWO_BALANCE_RATIO = 0.60
+
+# Bias per porte esterne / terminali vicino al bordo immagine
+TERMINAL_CLASS_BORDER_MARGIN = 14
+TERMINAL_BORDER_MARGIN_RATIO = 0.04
+TERMINAL_BORDER_MARGIN_MIN = 28
+
+# Probe più lontani dal bbox per confermare continuità reale del wire
+TERMINAL_CLASS_FAR_GAP = 3
+TERMINAL_CLASS_FAR_LEN = 10
+TERMINAL_CLASS_FAR_MIN = 2
+
+# =========================================================
+# I/O HELPERS
+# =========================================================
+def io_load_yaml(path: Path):
     with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
-def load_class_metadata(class_terminals_path: Path):
-    data = load_yaml(class_terminals_path)
+def io_load_class_metadata(class_terminals_path: Path):
+    data = io_load_yaml(class_terminals_path)
     return {int(k): v for k, v in data.items()}
 
+# =========================================================
+# GEOMETRY / IMAGE HELPERS
+# =========================================================
+def geom_clamp_bbox_to_image(bbox, image_shape):
+    h, w = image_shape[:2]
+    x1, y1, x2, y2 = bbox
+    x1 = int(max(0, min(w - 1, round(x1))))
+    y1 = int(max(0, min(h - 1, round(y1))))
+    x2 = int(max(0, min(w - 1, round(x2))))
+    y2 = int(max(0, min(h - 1, round(y2))))
+    return x1, y1, x2, y2
 
-def terminal_point_from_bbox(bbox, relative_position: str):
+def img_count_foreground_pixels(binary, x1, y1, x2, y2):
+    h, w = binary.shape[:2]
+    x1 = max(0, min(w, x1))
+    y1 = max(0, min(h, y1))
+    x2 = max(0, min(w, x2))
+    y2 = max(0, min(h, y2))
+    if x2 <= x1 or y2 <= y1:
+        return 0
+    return int(cv2.countNonZero(binary[y1:y2, x1:x2]))
+
+def geom_terminal_point_from_bbox(bbox, relative_position: str):
     x1, y1, x2, y2 = bbox
     xc = (x1 + x2) / 2.0
     yc = (y1 + y2) / 2.0
@@ -58,8 +129,7 @@ def terminal_point_from_bbox(bbox, relative_position: str):
         return [round(xc, 2), round(y2 + TERMINAL_OUTWARD_OFFSET, 2)]
     raise ValueError(f"relative_position non supportata: {relative_position}")
 
-
-def infer_orientation_from_bbox(bbox, default_orientation="horizontal"):
+def geom_infer_orientation_from_bbox(bbox, default_orientation="horizontal"):
     x1, y1, x2, y2 = bbox
     width = max(x2 - x1, 1e-6)
     height = max(y2 - y1, 1e-6)
@@ -71,72 +141,16 @@ def infer_orientation_from_bbox(bbox, default_orientation="horizontal"):
     return default_orientation
 
 
-def build_foreground_binary(image_bgr):
+def img_build_foreground_binary(image_bgr):
     gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
     _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
     return binary
 
-
-def clamp_bbox_to_image(bbox, image_shape):
-    h, w = image_shape[:2]
-    x1, y1, x2, y2 = bbox
-    x1 = int(max(0, min(w - 1, round(x1))))
-    y1 = int(max(0, min(h - 1, round(y1))))
-    x2 = int(max(0, min(w - 1, round(x2))))
-    y2 = int(max(0, min(h - 1, round(y2))))
-    return x1, y1, x2, y2
-
-
-def count_foreground_pixels(binary, x1, y1, x2, y2):
-    h, w = binary.shape[:2]
-    x1 = max(0, min(w, x1))
-    y1 = max(0, min(h, y1))
-    x2 = max(0, min(w, x2))
-    y2 = max(0, min(h, y2))
-    if x2 <= x1 or y2 <= y1:
-        return 0
-    return int(cv2.countNonZero(binary[y1:y2, x1:x2]))
-
-
-def detect_connected_side(binary, bbox):
-    x1, y1, x2, y2 = clamp_bbox_to_image(bbox, binary.shape)
-    xc = int(round((x1 + x2) / 2))
-    yc = int(round((y1 + y2) / 2))
-    width = max(x2 - x1, 1)
-    height = max(y2 - y1, 1)
-    half_band_x = max(4, int(width * SIDE_CENTER_RATIO / 2))
-    half_band_y = max(4, int(height * SIDE_CENTER_RATIO / 2))
-
-    side_scores = {
-        "top": count_foreground_pixels(binary, xc - half_band_x, y1 - SIDE_SAMPLE_THICKNESS, xc + half_band_x + 1, y1),
-        "bottom": count_foreground_pixels(binary, xc - half_band_x, y2 + 1, xc + half_band_x + 1, y2 + 1 + SIDE_SAMPLE_THICKNESS),
-        "left": count_foreground_pixels(binary, x1 - SIDE_SAMPLE_THICKNESS, yc - half_band_y, x1, yc + half_band_y + 1),
-        "right": count_foreground_pixels(binary, x2 + 1, yc - half_band_y, x2 + 1 + SIDE_SAMPLE_THICKNESS, yc + half_band_y + 1),
-    }
-    best_side = max(side_scores, key=side_scores.get)
-    if side_scores[best_side] < SIDE_SCORE_MIN_PIXELS:
-        return None, side_scores
-    return best_side, side_scores
-
-
-def resolve_one_terminal_orientation(meta: dict, connected_side: str):
-    orientations = meta.get("orientations", {})
-    for orientation_name, terminals_def in orientations.items():
-        for term_def in terminals_def:
-            if term_def.get("relative_position") == connected_side:
-                return terminals_def, orientation_name
-
-    default_orientation = meta.get("default_orientation")
-    if default_orientation is None:
-        raise ValueError("Impossibile risolvere one_terminal_by_orientation e manca default_orientation.")
-    terminals_def = orientations.get(default_orientation)
-    if terminals_def is None:
-        raise ValueError(f"Nessuna definizione terminali per default_orientation '{default_orientation}'")
-    return terminals_def, default_orientation
-
-
-def get_side_scores(binary, bbox):
-    x1, y1, x2, y2 = clamp_bbox_to_image(bbox, binary.shape)
+# =========================================================
+# PROBE HELPERS - GENERIC
+# =========================================================
+def probe_get_side_scores(binary, bbox):
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     xc = int(round((x1 + x2) / 2))
     yc = int(round((y1 + y2) / 2))
     width = max(x2 - x1, 1)
@@ -144,10 +158,10 @@ def get_side_scores(binary, bbox):
     half_band_x = max(4, int(width * SIDE_CENTER_RATIO / 2))
     half_band_y = max(4, int(height * SIDE_CENTER_RATIO / 2))
     return {
-        "top": count_foreground_pixels(binary, xc - half_band_x, y1 - SIDE_SAMPLE_THICKNESS, xc + half_band_x + 1, y1),
-        "bottom": count_foreground_pixels(binary, xc - half_band_x, y2 + 1, xc + half_band_x + 1, y2 + 1 + SIDE_SAMPLE_THICKNESS),
-        "left": count_foreground_pixels(binary, x1 - SIDE_SAMPLE_THICKNESS, yc - half_band_y, x1, yc + half_band_y + 1),
-        "right": count_foreground_pixels(binary, x2 + 1, yc - half_band_y, x2 + 1 + SIDE_SAMPLE_THICKNESS, yc + half_band_y + 1),
+        "top": img_count_foreground_pixels(binary, xc - half_band_x, y1 - SIDE_SAMPLE_THICKNESS, xc + half_band_x + 1, y1),
+        "bottom": img_count_foreground_pixels(binary, xc - half_band_x, y2 + 1, xc + half_band_x + 1, y2 + 1 + SIDE_SAMPLE_THICKNESS),
+        "left": img_count_foreground_pixels(binary, x1 - SIDE_SAMPLE_THICKNESS, yc - half_band_y, x1, yc + half_band_y + 1),
+        "right": img_count_foreground_pixels(binary, x2 + 1, yc - half_band_y, x2 + 1 + SIDE_SAMPLE_THICKNESS, yc + half_band_y + 1),
     }
 
 
@@ -160,7 +174,7 @@ def _probe_halfspan(width, height):
 
 
 def get_local_terminal_probe_scores_center(binary, bbox):
-    x1, y1, x2, y2 = clamp_bbox_to_image(bbox, binary.shape)
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     xc = int(round((x1 + x2) / 2))
     yc = int(round((y1 + y2) / 2))
     width = max(x2 - x1, 1)
@@ -168,10 +182,10 @@ def get_local_terminal_probe_scores_center(binary, bbox):
     halfspan = _probe_halfspan(width, height)
 
     return {
-        "top": count_foreground_pixels(binary, xc - halfspan, y1 - TERMINAL_PROBE_OUT_LEN, xc + halfspan + 1, y1 + TERMINAL_PROBE_INSET + 1),
-        "bottom": count_foreground_pixels(binary, xc - halfspan, y2 - TERMINAL_PROBE_INSET, xc + halfspan + 1, y2 + TERMINAL_PROBE_OUT_LEN + 1),
-        "left": count_foreground_pixels(binary, x1 - TERMINAL_PROBE_OUT_LEN, yc - halfspan, x1 + TERMINAL_PROBE_INSET + 1, yc + halfspan + 1),
-        "right": count_foreground_pixels(binary, x2 - TERMINAL_PROBE_INSET, yc - halfspan, x2 + TERMINAL_PROBE_OUT_LEN + 1, yc + halfspan + 1),
+        "top": img_count_foreground_pixels(binary, xc - halfspan, y1 - TERMINAL_PROBE_OUT_LEN, xc + halfspan + 1, y1 + TERMINAL_PROBE_INSET + 1),
+        "bottom": img_count_foreground_pixels(binary, xc - halfspan, y2 - TERMINAL_PROBE_INSET, xc + halfspan + 1, y2 + TERMINAL_PROBE_OUT_LEN + 1),
+        "left": img_count_foreground_pixels(binary, x1 - TERMINAL_PROBE_OUT_LEN, yc - halfspan, x1 + TERMINAL_PROBE_INSET + 1, yc + halfspan + 1),
+        "right": img_count_foreground_pixels(binary, x2 - TERMINAL_PROBE_INSET, yc - halfspan, x2 + TERMINAL_PROBE_OUT_LEN + 1, yc + halfspan + 1),
         "probe_halfspan": halfspan,
         "probe_out_len": TERMINAL_PROBE_OUT_LEN,
         "probe_inset": TERMINAL_PROBE_INSET,
@@ -180,7 +194,7 @@ def get_local_terminal_probe_scores_center(binary, bbox):
 
 
 def get_local_terminal_probe_scores_multi_anchor(binary, bbox, anchor_ratios=SWITCH_ANCHOR_RATIOS):
-    x1, y1, x2, y2 = clamp_bbox_to_image(bbox, binary.shape)
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     width = max(x2 - x1, 1)
     height = max(y2 - y1, 1)
     halfspan = _probe_halfspan(width, height)
@@ -189,19 +203,19 @@ def get_local_terminal_probe_scores_multi_anchor(binary, bbox, anchor_ratios=SWI
     y_anchors = [int(round(y1 + height * r)) for r in anchor_ratios]
 
     top_candidates = [
-        count_foreground_pixels(binary, xa - halfspan, y1 - TERMINAL_PROBE_OUT_LEN, xa + halfspan + 1, y1 + TERMINAL_PROBE_INSET + 1)
+        img_count_foreground_pixels(binary, xa - halfspan, y1 - TERMINAL_PROBE_OUT_LEN, xa + halfspan + 1, y1 + TERMINAL_PROBE_INSET + 1)
         for xa in x_anchors
     ]
     bottom_candidates = [
-        count_foreground_pixels(binary, xa - halfspan, y2 - TERMINAL_PROBE_INSET, xa + halfspan + 1, y2 + TERMINAL_PROBE_OUT_LEN + 1)
+        img_count_foreground_pixels(binary, xa - halfspan, y2 - TERMINAL_PROBE_INSET, xa + halfspan + 1, y2 + TERMINAL_PROBE_OUT_LEN + 1)
         for xa in x_anchors
     ]
     left_candidates = [
-        count_foreground_pixels(binary, x1 - TERMINAL_PROBE_OUT_LEN, ya - halfspan, x1 + TERMINAL_PROBE_INSET + 1, ya + halfspan + 1)
+        img_count_foreground_pixels(binary, x1 - TERMINAL_PROBE_OUT_LEN, ya - halfspan, x1 + TERMINAL_PROBE_INSET + 1, ya + halfspan + 1)
         for ya in y_anchors
     ]
     right_candidates = [
-        count_foreground_pixels(binary, x2 - TERMINAL_PROBE_INSET, ya - halfspan, x2 + TERMINAL_PROBE_OUT_LEN + 1, ya + halfspan + 1)
+        img_count_foreground_pixels(binary, x2 - TERMINAL_PROBE_INSET, ya - halfspan, x2 + TERMINAL_PROBE_OUT_LEN + 1, ya + halfspan + 1)
         for ya in y_anchors
     ]
 
@@ -218,7 +232,191 @@ def get_local_terminal_probe_scores_multi_anchor(binary, bbox, anchor_ratios=SWI
         "y_anchors": y_anchors,
     }
 
+# =========================================================
+# PROBE HELPERS - CLASS "Terminal"
+# =========================================================
+def _terminal_class_probe_halfspan(width, height):
+    min_dim = max(1, min(width, height))
+    halfspan = int(round(min_dim * TERMINAL_CLASS_PROBE_HALFSPAN_RATIO))
+    halfspan = max(TERMINAL_CLASS_PROBE_HALFSPAN_MIN, halfspan)
+    halfspan = min(TERMINAL_CLASS_PROBE_HALFSPAN_MAX, halfspan)
+    return halfspan
 
+
+def get_terminal_class_probe_scores(binary, bbox):
+    """
+    Probe stretti SOLO esterni al bbox, pensati per la classe Terminal.
+    Questo evita di far contaminare i punteggi dalla grafica interna del cerchietto.
+    """
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    xc = int(round((x1 + x2) / 2))
+    yc = int(round((y1 + y2) / 2))
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+    halfspan = _terminal_class_probe_halfspan(width, height)
+
+    scores = {
+        "top": img_count_foreground_pixels(
+            binary,
+            xc - halfspan,
+            y1 - TERMINAL_CLASS_PROBE_OUT_LEN,
+            xc + halfspan + 1,
+            y1
+        ),
+        "bottom": img_count_foreground_pixels(
+            binary,
+            xc - halfspan,
+            y2 + 1,
+            xc + halfspan + 1,
+            y2 + 1 + TERMINAL_CLASS_PROBE_OUT_LEN
+        ),
+        "left": img_count_foreground_pixels(
+            binary,
+            x1 - TERMINAL_CLASS_PROBE_OUT_LEN,
+            yc - halfspan,
+            x1,
+            yc + halfspan + 1
+        ),
+        "right": img_count_foreground_pixels(
+            binary,
+            x2 + 1,
+            yc - halfspan,
+            x2 + 1 + TERMINAL_CLASS_PROBE_OUT_LEN,
+            yc + halfspan + 1
+        ),
+    }
+
+    scores["probe_halfspan"] = halfspan
+    scores["probe_out_len"] = TERMINAL_CLASS_PROBE_OUT_LEN
+    scores["probe_mode"] = "terminal_outside_only"
+    return scores
+
+
+def get_terminal_class_far_probe_scores(binary, bbox):
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    xc = int(round((x1 + x2) / 2))
+    yc = int(round((y1 + y2) / 2))
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+    halfspan = _terminal_class_probe_halfspan(width, height)
+
+    gap = TERMINAL_CLASS_FAR_GAP
+    far_len = TERMINAL_CLASS_FAR_LEN
+
+    return {
+        "top": img_count_foreground_pixels(
+            binary,
+            xc - halfspan,
+            y1 - gap - far_len,
+            xc + halfspan + 1,
+            y1 - gap
+        ),
+        "bottom": img_count_foreground_pixels(
+            binary,
+            xc - halfspan,
+            y2 + 1 + gap,
+            xc + halfspan + 1,
+            y2 + 1 + gap + far_len
+        ),
+        "left": img_count_foreground_pixels(
+            binary,
+            x1 - gap - far_len,
+            yc - halfspan,
+            x1 - gap,
+            yc + halfspan + 1
+        ),
+        "right": img_count_foreground_pixels(
+            binary,
+            x2 + 1 + gap,
+            yc - halfspan,
+            x2 + 1 + gap + far_len,
+            yc + halfspan + 1
+        ),
+    }
+
+def get_terminal_border_preference(binary_shape, bbox, margin=TERMINAL_CLASS_BORDER_MARGIN):
+    """
+    Se il Terminal è vicino al bordo dell'immagine, favorisce il lato interno al diagramma.
+    Esempio:
+    - vicino al bordo sinistro -> preferisci 'right'
+    - vicino al bordo destro  -> preferisci 'left'
+    """
+    h, w = binary_shape[:2]
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, (h, w))
+
+    distances = {
+        "left": x1,
+        "right": (w - 1 - x2),
+        "top": y1,
+        "bottom": (h - 1 - y2),
+    }
+
+    nearest_side = min(distances, key=distances.get)
+    if distances[nearest_side] > margin:
+        return None
+
+    opposite = {
+        "left": "right",
+        "right": "left",
+        "top": "bottom",
+        "bottom": "top",
+    }
+    return opposite[nearest_side]
+
+
+def is_terminal_near_border(binary_shape, bbox):
+    h, w = binary_shape[:2]
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, (h, w))
+    margin = max(TERMINAL_BORDER_MARGIN_MIN, int(TERMINAL_BORDER_MARGIN_RATIO * min(h, w)))
+
+    return (
+        x1 <= margin or
+        y1 <= margin or
+        (w - 1 - x2) <= margin or
+        (h - 1 - y2) <= margin
+    )
+
+# =========================================================
+# STRATEGY: ONE-TERMINAL COMPONENTS
+# =========================================================
+def strategy_detect_connected_side(binary, bbox):
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    xc = int(round((x1 + x2) / 2))
+    yc = int(round((y1 + y2) / 2))
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+    half_band_x = max(4, int(width * SIDE_CENTER_RATIO / 2))
+    half_band_y = max(4, int(height * SIDE_CENTER_RATIO / 2))
+
+    side_scores = {
+        "top": img_count_foreground_pixels(binary, xc - half_band_x, y1 - SIDE_SAMPLE_THICKNESS, xc + half_band_x + 1, y1),
+        "bottom": img_count_foreground_pixels(binary, xc - half_band_x, y2 + 1, xc + half_band_x + 1, y2 + 1 + SIDE_SAMPLE_THICKNESS),
+        "left": img_count_foreground_pixels(binary, x1 - SIDE_SAMPLE_THICKNESS, yc - half_band_y, x1, yc + half_band_y + 1),
+        "right": img_count_foreground_pixels(binary, x2 + 1, yc - half_band_y, x2 + 1 + SIDE_SAMPLE_THICKNESS, yc + half_band_y + 1),
+    }
+    best_side = max(side_scores, key=side_scores.get)
+    if side_scores[best_side] < SIDE_SCORE_MIN_PIXELS:
+        return None, side_scores
+    return best_side, side_scores
+
+def resolve_one_terminal_orientation(meta: dict, connected_side: str):
+    orientations = meta.get("orientations", {})
+    for orientation_name, terminals_def in orientations.items():
+        for term_def in terminals_def:
+            if term_def.get("relative_position") == connected_side:
+                return terminals_def, orientation_name
+
+    default_orientation = meta.get("default_orientation")
+    if default_orientation is None:
+        raise ValueError("Impossibile risolvere one_terminal_by_orientation e manca default_orientation.")
+    terminals_def = orientations.get(default_orientation)
+    if terminals_def is None:
+        raise ValueError(f"Nessuna definizione terminali per default_orientation '{default_orientation}'")
+    return terminals_def, default_orientation
+
+# =========================================================
+# STRATEGY: TWO-TERMINAL COMPONENTS
+# =========================================================
 def _decide_axis_from_scores(side_scores):
     lr_pair = min(side_scores["left"], side_scores["right"])
     tb_pair = min(side_scores["top"], side_scores["bottom"])
@@ -231,15 +429,14 @@ def _decide_axis_from_scores(side_scores):
         return "vertical"
     return None
 
-
-def detect_two_terminal_orientation_generic(binary, bbox, default_orientation="horizontal"):
+def strategy_detect_two_terminal_orientation_generic(binary, bbox, default_orientation="horizontal"):
     side_scores = get_local_terminal_probe_scores_center(binary, bbox)
     orientation = _decide_axis_from_scores(side_scores)
     if orientation is not None:
         side_scores["decision_mode"] = "local_terminal_probes_center"
         return orientation, side_scores
 
-    coarse_scores = get_side_scores(binary, bbox)
+    coarse_scores = probe_get_side_scores(binary, bbox)
     coarse_orientation = None
     lr_score = coarse_scores["left"] + coarse_scores["right"]
     tb_score = coarse_scores["top"] + coarse_scores["bottom"]
@@ -255,7 +452,7 @@ def detect_two_terminal_orientation_generic(binary, bbox, default_orientation="h
         return coarse_orientation, merged
 
     side_scores["decision_mode"] = "bbox_fallback_after_local_probes"
-    return infer_orientation_from_bbox(bbox, default_orientation=default_orientation), side_scores
+    return geom_infer_orientation_from_bbox(bbox, default_orientation=default_orientation), side_scores
 
 
 def detect_two_terminal_orientation_capacitor(binary, bbox, default_orientation="horizontal"):
@@ -265,7 +462,7 @@ def detect_two_terminal_orientation_capacitor(binary, bbox, default_orientation=
         side_scores["decision_mode"] = "capacitor_center_probes"
         return orientation, side_scores
 
-    coarse_scores = get_side_scores(binary, bbox)
+    coarse_scores = probe_get_side_scores(binary, bbox)
     lr_score = coarse_scores["left"] + coarse_scores["right"]
     tb_score = coarse_scores["top"] + coarse_scores["bottom"]
     if coarse_scores["left"] >= SIDE_SCORE_MIN_PIXELS and coarse_scores["right"] >= SIDE_SCORE_MIN_PIXELS and lr_score > tb_score * AXIS_SCORE_MARGIN:
@@ -280,17 +477,17 @@ def detect_two_terminal_orientation_capacitor(binary, bbox, default_orientation=
         return "vertical", merged
 
     side_scores["decision_mode"] = "capacitor_bbox_fallback"
-    return infer_orientation_from_bbox(bbox, default_orientation=default_orientation), side_scores
+    return geom_infer_orientation_from_bbox(bbox, default_orientation=default_orientation), side_scores
 
 
-def detect_two_terminal_orientation_switch(binary, bbox, default_orientation="horizontal"):
+def strategy_detect_two_terminal_orientation_switch(binary, bbox, default_orientation="horizontal"):
     side_scores = get_local_terminal_probe_scores_multi_anchor(binary, bbox)
     orientation = _decide_axis_from_scores(side_scores)
     if orientation is not None:
         side_scores["decision_mode"] = "switch_multi_anchor_probes"
         return orientation, side_scores
 
-    coarse_scores = get_side_scores(binary, bbox)
+    coarse_scores = probe_get_side_scores(binary, bbox)
     lr_score = coarse_scores["left"] + coarse_scores["right"]
     tb_score = coarse_scores["top"] + coarse_scores["bottom"]
     if coarse_scores["left"] >= SIDE_SCORE_MIN_PIXELS and coarse_scores["right"] >= SIDE_SCORE_MIN_PIXELS and lr_score > tb_score * AXIS_SCORE_MARGIN:
@@ -308,27 +505,130 @@ def detect_two_terminal_orientation_switch(binary, bbox, default_orientation="ho
     side_scores["decision_mode"] = "switch_default_orientation_fallback"
     return default_orientation, side_scores
 
+# =========================================================
+# STRATEGY: VARIABLE TERMINAL CLASS ("Terminal")
+# =========================================================
+def classify_terminal_cardinality(binary, bbox, default_side="right"):
+    local_scores = get_terminal_class_probe_scores(binary, bbox)
+    far_scores = get_terminal_class_far_probe_scores(binary, bbox)
+    border_pref = get_terminal_border_preference(binary.shape, bbox)
+
+    # -------------------------------------------------
+    # 1) Porta esterna: vicino al bordo -> forza 1 lato
+    # -------------------------------------------------
+    if is_terminal_near_border(binary.shape, bbox):
+        local_scores["far_scores"] = far_scores
+        local_scores["decision_mode"] = "terminal_cardinality_border_forced_one"
+        local_scores["border_preference"] = border_pref
+        return 1, border_pref if border_pref is not None else default_side, local_scores
+
+    # Lato attivo solo se confermato anche dal probe far
+    active = {}
+    for side in ("top", "bottom", "left", "right"):
+        active[side] = (
+            local_scores[side] >= TERMINAL_CLASS_ONE_SIDE_MIN and
+            far_scores[side] >= TERMINAL_CLASS_FAR_MIN
+        )
+
+    left_val = local_scores["left"]
+    right_val = local_scores["right"]
+    top_val = local_scores["top"]
+    bottom_val = local_scores["bottom"]
+
+    lr_pair = min(left_val, right_val)
+    tb_pair = min(top_val, bottom_val)
+    lr_score = left_val + right_val
+    tb_score = top_val + bottom_val
+
+    # -------------------------------------------------
+    # 2) Due terminali solo se davvero molto chiaro
+    # -------------------------------------------------
+    if (
+        active["left"] and active["right"] and
+        lr_pair >= TERMINAL_CLASS_TWO_SIDE_MIN and
+        lr_score > tb_score * TERMINAL_CLASS_TWO_AXIS_MARGIN and
+        min(left_val, right_val) >= TERMINAL_CLASS_TWO_BALANCE_RATIO * max(left_val, right_val) and
+        not active["top"] and not active["bottom"]
+    ):
+        local_scores["far_scores"] = far_scores
+        local_scores["decision_mode"] = "terminal_cardinality_two_horizontal"
+        return 2, "horizontal", local_scores
+
+    if (
+        active["top"] and active["bottom"] and
+        tb_pair >= TERMINAL_CLASS_TWO_SIDE_MIN and
+        tb_score > lr_score * TERMINAL_CLASS_TWO_AXIS_MARGIN and
+        min(top_val, bottom_val) >= TERMINAL_CLASS_TWO_BALANCE_RATIO * max(top_val, bottom_val) and
+        not active["left"] and not active["right"]
+    ):
+        local_scores["far_scores"] = far_scores
+        local_scores["decision_mode"] = "terminal_cardinality_two_vertical"
+        return 2, "vertical", local_scores
+
+    # -------------------------------------------------
+    # 3) Altrimenti uno
+    # -------------------------------------------------
+    candidate_sides = [s for s in ("top", "bottom", "left", "right") if active[s]]
+    if candidate_sides:
+        best_side = max(candidate_sides, key=lambda s: local_scores[s])
+    else:
+        best_side = max(("top", "bottom", "left", "right"), key=lambda s: local_scores[s])
+
+    local_scores["far_scores"] = far_scores
+    local_scores["decision_mode"] = "terminal_cardinality_default_one"
+    return 1, best_side, local_scores
+
+def detect_terminal_one_side(binary, bbox, default_side="right", precomputed_scores=None):
+    scores = precomputed_scores if precomputed_scores is not None else get_terminal_class_probe_scores(binary, bbox)
+
+    border_pref = get_terminal_border_preference(binary.shape, bbox)
+    if border_pref is not None:
+        return [{"name": "t1", "relative_position": border_pref}], border_pref
+
+    best_side = max(("top", "bottom", "left", "right"), key=lambda s: scores[s])
+    if scores[best_side] >= TERMINAL_CLASS_ONE_SIDE_MIN:
+        return [{"name": "t1", "relative_position": best_side}], best_side
+
+    return [{"name": "t1", "relative_position": default_side}], default_side
+
+def detect_terminal_two_sides(binary, bbox, precomputed_scores=None):
+    scores = precomputed_scores if precomputed_scores is not None else get_terminal_class_probe_scores(binary, bbox)
+
+    lr_score = scores["left"] + scores["right"]
+    tb_score = scores["top"] + scores["bottom"]
+
+    if lr_score >= tb_score:
+        return [
+            {"name": "t1", "relative_position": "left"},
+            {"name": "t2", "relative_position": "right"},
+        ], "horizontal"
+
+    return [
+        {"name": "t1", "relative_position": "top"},
+        {"name": "t2", "relative_position": "bottom"},
+    ], "vertical"
+
 
 def detect_terminal_auto_one_or_two(binary, bbox, default_side="right"):
-    side_scores = get_side_scores(binary, bbox)
-    left_ok = side_scores["left"] >= SIDE_SCORE_MIN_PIXELS
-    right_ok = side_scores["right"] >= SIDE_SCORE_MIN_PIXELS
-    top_ok = side_scores["top"] >= SIDE_SCORE_MIN_PIXELS
-    bottom_ok = side_scores["bottom"] >= SIDE_SCORE_MIN_PIXELS
-    lr_score = side_scores["left"] + side_scores["right"]
-    tb_score = side_scores["top"] + side_scores["bottom"]
+    cardinality, mode, scores = classify_terminal_cardinality(binary, bbox, default_side=default_side)
 
-    if left_ok and right_ok and lr_score >= tb_score * AXIS_SCORE_MARGIN:
-        return [{"name": "t1", "relative_position": "left"}, {"name": "t2", "relative_position": "right"}], "horizontal", side_scores
-    if top_ok and bottom_ok and tb_score >= lr_score * AXIS_SCORE_MARGIN:
-        return [{"name": "t1", "relative_position": "top"}, {"name": "t2", "relative_position": "bottom"}], "vertical", side_scores
+    if cardinality == 1:
+        terminals_def, orientation = detect_terminal_one_side(
+            binary, bbox, default_side=default_side, precomputed_scores=scores
+        )
+        scores["final_mode"] = "one_terminal"
+        return terminals_def, orientation, scores
 
-    best_side = max(side_scores, key=side_scores.get)
-    if side_scores[best_side] >= SIDE_SCORE_MIN_PIXELS:
-        return [{"name": "t1", "relative_position": best_side}], best_side, side_scores
-    return [{"name": "t1", "relative_position": default_side}], default_side, side_scores
+    terminals_def, orientation = detect_terminal_two_sides(
+        binary, bbox, precomputed_scores=scores
+    )
+    scores["final_mode"] = "two_terminal"
+    return terminals_def, orientation, scores
 
 
+# =========================================================
+# STRATEGY DISPATCHER
+# =========================================================
 def get_terminals_definition(meta: dict, bbox, image_binary=None):
     strategy = meta.get("terminal_strategy", "fixed")
 
@@ -337,7 +637,7 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
 
     if strategy == "auto_by_aspect_ratio":
         default_orientation = meta.get("default_orientation", "horizontal")
-        orientation = infer_orientation_from_bbox(bbox, default_orientation=default_orientation)
+        orientation = geom_infer_orientation_from_bbox(bbox, default_orientation=default_orientation)
         terminals_def = meta.get("orientations", {}).get(orientation)
         if terminals_def is None:
             raise ValueError(f"Nessuna definizione terminali per orientazione '{orientation}'")
@@ -346,7 +646,7 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
     if strategy == "one_terminal_by_orientation":
         if image_binary is None:
             raise ValueError("one_terminal_by_orientation richiede image_binary.")
-        connected_side, side_scores = detect_connected_side(image_binary, bbox)
+        connected_side, side_scores = strategy_detect_connected_side(image_binary, bbox)
         if connected_side is not None:
             terminals_def, orientation = resolve_one_terminal_orientation(meta, connected_side)
             return terminals_def, orientation, connected_side, side_scores
@@ -364,9 +664,9 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
         if strategy == "two_terminal_capacitor" or class_name in {"Capacitor", "Polarized_Capacitor"}:
             orientation, side_scores = detect_two_terminal_orientation_capacitor(image_binary, bbox, default_orientation=default_orientation)
         elif strategy == "two_terminal_switch" or class_name == "Switch":
-            orientation, side_scores = detect_two_terminal_orientation_switch(image_binary, bbox, default_orientation=default_orientation)
+            orientation, side_scores = strategy_detect_two_terminal_orientation_switch(image_binary, bbox, default_orientation=default_orientation)
         else:
-            orientation, side_scores = detect_two_terminal_orientation_generic(image_binary, bbox, default_orientation=default_orientation)
+            orientation, side_scores = strategy_detect_two_terminal_orientation_generic(image_binary, bbox, default_orientation=default_orientation)
         terminals_def = meta.get("orientations", {}).get(orientation)
         if terminals_def is None:
             raise ValueError(f"Nessuna definizione terminali per orientazione '{orientation}'")
@@ -381,7 +681,9 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
 
     raise ValueError(f"Strategia terminali non supportata: {strategy}")
 
-
+# =========================================================
+# COMPONENT PROCESSING
+# =========================================================
 def estimate_terminals_for_component(component: dict, class_meta: dict, image_binary):
     class_id = component["class_id"]
     meta = class_meta.get(class_id, {})
@@ -396,7 +698,7 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
     for term_def in terminals_def:
         term_name = term_def["name"]
         rel_pos = term_def["relative_position"]
-        x, y = terminal_point_from_bbox(bbox, rel_pos)
+        x, y = geom_terminal_point_from_bbox(bbox, rel_pos)
         terminals.append({
             "terminal_id": f"{instance_id}:{term_name}",
             "instance_id": instance_id,
@@ -411,7 +713,9 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
         })
     return terminals, estimated_orientation, connected_side, side_scores
 
-
+# =========================================================
+# DEBUG DRAWING
+# =========================================================
 def draw_terminals(image_bgr, components, terminals):
     out = image_bgr.copy()
     for comp in components:
@@ -429,7 +733,9 @@ def draw_terminals(image_bgr, components, terminals):
         cv2.putText(out, term["terminal_id"], (x + 8, max(y - 8, 0)), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 1, cv2.LINE_AA)
     return out
 
-
+# =========================================================
+# MAIN
+# =========================================================
 def main() -> None:
     if not INPUT_DIR.exists():
         raise FileNotFoundError(f"Cartella input non trovata: {INPUT_DIR}")
@@ -438,7 +744,7 @@ def main() -> None:
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     DEBUG_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
-    class_meta = load_class_metadata(CLASS_TERMINALS_PATH)
+    class_meta = io_load_class_metadata(CLASS_TERMINALS_PATH)
     json_files = sorted(INPUT_DIR.glob("*.json"))
     if not json_files:
         raise FileNotFoundError(f"Nessun file JSON trovato in: {INPUT_DIR}")
@@ -458,7 +764,7 @@ def main() -> None:
             print(f"Attenzione: immagine non leggibile -> {image_path}")
             continue
 
-        image_binary = build_foreground_binary(image_bgr)
+        image_binary = img_build_foreground_binary(image_bgr)
         components = data.get("components", [])
         all_terminals = []
         updated_components = []
