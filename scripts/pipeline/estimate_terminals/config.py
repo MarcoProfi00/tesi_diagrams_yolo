@@ -149,9 +149,28 @@ MOSFET_GATE_CENTER_Y1_RATIO = 0.30
 MOSFET_GATE_CENTER_Y2_RATIO = 0.70
 MOSFET_GATE_INSIDE_WEIGHT = 0.55
 MOSFET_FORCE_LATERAL_GATE = True
+MOSFET_LATERAL_MARGIN = 1.10
 
 # Validazione finale dell'orientazione del Mosfet tramite supporto locale
 # attorno ai 3 terminali stimati.
 MOSFET_POINT_SUPPORT_RADIUS = 4
 MOSFET_ORIENTATION_VALIDATION_MARGIN = 1.18
 MOSFET_SINGLE_TERMINAL_WEIGHT = 1.35
+
+# =========================================================
+# ROUND SOURCES / METERS - STIMA ORIENTAZIONE
+# =========================================================
+# Simboli rotondi: Signal_Source, Voltage_Source, Current_Source, Meter
+# Usiamo probe stretti SOLO esterni al bbox e una conferma "far".
+ROUND_SOURCE_PROBE_OUT_LEN = 12
+ROUND_SOURCE_CENTER_BAND_RATIO = 0.18
+
+ROUND_SOURCE_FAR_GAP = 3
+ROUND_SOURCE_FAR_LEN = 10
+ROUND_SOURCE_FAR_WEIGHT = 1.0
+
+ROUND_SOURCE_MIN_SIDE_SCORE = 2
+ROUND_SOURCE_AXIS_MARGIN = 1.10
+
+# fallback su aspect ratio solo se il bbox non è quasi quadrato
+ROUND_SOURCE_BBOX_RATIO_MARGIN = 1.12

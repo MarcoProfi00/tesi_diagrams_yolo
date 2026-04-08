@@ -27,8 +27,8 @@ import numpy as np
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v3.1_mosfet_transistor" / "05_build_nets"
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v3.1_mosfet_transistor" / "06_match_terminals_to_nets"
+INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v4_source_mosfet_transistor" / "05_build_nets"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v4_source_mosfet_transistor" / "06_match_terminals_to_nets"
 DEBUG_DIR = OUTPUT_DIR / "debug_images"
 
 # =========================================================
@@ -96,28 +96,19 @@ CLASS_SEARCH_OVERRIDES = {
 # =========================================================
 # MATCH CONFIDENCE THRESHOLDS
 # =========================================================
-# Qualità del match.
-CONFIDENT_DISTANCE_HIGH = 6.0
-CONFIDENT_DISTANCE_MEDIUM = 12.0
-LOW_CONFIDENCE_DISTANCE = 12.0
-VERY_LOW_CONFIDENCE_DISTANCE = 24.0
-
+MAX_OK_DISTANCE = 18.0
 #DEBUG
 SAVE_DEBUG_IMAGES = True
 DEBUG_FONT_SCALE = 0.48
 DEBUG_FONT_THICKNESS = 1
 
-DEBUG_TEXT_COLOR_HIGH = (120, 40, 0)      # blu scuro / marrone
-DEBUG_TEXT_COLOR_MEDIUM = (0, 120, 180)   # arancio scuro
-DEBUG_TEXT_COLOR_LOW = (0, 0, 180)        # rosso scuro
+
 DEBUG_TEXT_COLOR_NONE = (80, 80, 80)      # grigio scuro
 
 DEBUG_BOX_COLOR = (210, 255, 255)         # giallo chiaro
 DEBUG_BOX_BORDER_COLOR = (120, 160, 160)
 
-DEBUG_POINT_COLOR_HIGH = (0, 180, 0)
-DEBUG_POINT_COLOR_MEDIUM = (0, 200, 255)
-DEBUG_POINT_COLOR_LOW = (0, 0, 255)
+
 DEBUG_POINT_COLOR_NONE = (90, 90, 90)
 
 DEBUG_SNAP_POINT_COLOR = (255, 0, 0)      # blu
@@ -420,14 +411,13 @@ def run_search_stage(label_map: np.ndarray, term: dict, stage: dict, preferred_n
 # ---------------------------------------------------------
 # Confidence / warning del match
 # ---------------------------------------------------------
-def classify_match_confidence(match_status: str, distance_px, search_stage: str, preferred_net_index, component_class_name: str):
+def classify_match_confidence(match_status: str, distance_px, search_stage: str, preferred_net_index):
     if match_status == "unmatched":
         return "unmatched", ["unmatched_terminal"]
 
     warnings = []
     distance = None if distance_px is None else float(distance_px)
 
-    MAX_OK_DISTANCE = 18.0
 
     if distance is None or distance > MAX_OK_DISTANCE:
         return "unmatched", ["distance_too_large"]
@@ -732,10 +722,8 @@ def main() -> None:
         n_matched = sum(1 for t in terminals_with_matches if t.get("matched_net_id") is not None)
         n_unmatched = len(terminals_with_matches) - n_matched
         confidence_counts = {
-            "high": sum(1 for t in terminals_with_matches if t.get("match_confidence") == "high"),
-            "medium": sum(1 for t in terminals_with_matches if t.get("match_confidence") == "medium"),
-            "low": sum(1 for t in terminals_with_matches if t.get("match_confidence") == "low"),
-            "none": sum(1 for t in terminals_with_matches if t.get("match_confidence") == "none"),
+            "ok": sum(1 for t in terminals_with_matches if t.get("match_confidence") == "ok"),
+            "unmatched": sum(1 for t in terminals_with_matches if t.get("match_confidence") == "unmatched"),
         }
         suspicious_terminal_ids = [
             t["terminal_id"]
@@ -749,25 +737,18 @@ def main() -> None:
         output_data["connections"] = connections
         output_data["n_connections"] = len(connections)
         output_data["terminal_net_matching"] = {
-            "notes": "Versione topology_v3_three_terminals con confidence del match. Il matching usa prima la net preferita suggerita dal 05 se esiste, poi ricerca direzionale coerente col lato del terminale e infine fallback circolari più ampi. Ogni terminale viene etichettato come high/medium/low confidence per evidenziare i match deboli.",
+            "notes": "Matching con esito finale ok/unmatched. Prima usa la net preferita del 05, poi ricerca direzionale e fallback circolari.",
+            "n_ok_matches": confidence_counts["ok"],
+            "n_unmatched_matches": confidence_counts["unmatched"],
             "base_directional_outward": BASE_DIRECTIONAL_OUTWARD,
             "base_directional_inward": BASE_DIRECTIONAL_INWARD,
             "base_directional_halfspan": BASE_DIRECTIONAL_HALFSPAN,
             "base_circle_radius": BASE_CIRCLE_RADIUS,
             "base_fallback_radius": BASE_FALLBACK_RADIUS,
             "class_search_overrides": CLASS_SEARCH_OVERRIDES,
-            "confidence_rules": {
-                "high": "matched_preferred con distanza <= 6 px",
-                "medium": "altri match con distanza <= 12 px",
-                "low": "distanza > 12 px oppure match senza preferred net / con fallback pesante",
-            },
             "n_terminals": len(terminals_with_matches),
             "n_matched_terminals": n_matched,
             "n_unmatched_terminals": n_unmatched,
-            "n_high_confidence": confidence_counts["high"],
-            "n_medium_confidence": confidence_counts["medium"],
-            "n_low_confidence": confidence_counts["low"],
-            "n_none_confidence": confidence_counts["none"],
             "n_suspicious_matches": len(suspicious_terminal_ids),
             "suspicious_terminal_ids": suspicious_terminal_ids,
         }
@@ -785,7 +766,6 @@ def main() -> None:
         print(
             f"[{i}/{len(json_files)}] {json_path.name} -> "
             f"matched={n_matched}, unmatched={n_unmatched}, "
-            f"high={confidence_counts['high']}, medium={confidence_counts['medium']}, low={confidence_counts['low']}"
         )
 
     print("\nCompletato.")

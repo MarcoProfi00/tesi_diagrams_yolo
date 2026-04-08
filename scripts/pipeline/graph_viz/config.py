@@ -1,21 +1,5 @@
 from pathlib import Path
 
-# =========================================================
-# PATHS / INPUT-OUTPUT
-# =========================================================
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-
-INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v3.1_mosfet_transistor" / "07_export_graph" / "graph_json"
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v3.1_mosfet_transistor" / "08_visualize_graph"
-
-# =========================================================
-# OUTPUT SUBDIRECTORIES
-# =========================================================
-FULL_PNG_DIR = OUTPUT_DIR / "full_png"
-FULL_HTML_DIR = OUTPUT_DIR / "full_html"
-COMPONENT_NET_PNG_DIR = OUTPUT_DIR / "component_net_png"
-COMPONENT_NET_HTML_DIR = OUTPUT_DIR / "component_net_html"
-OVERLAY_DIR = OUTPUT_DIR / "overlay"
 
 # =========================================================
 # SAVE FLAGS

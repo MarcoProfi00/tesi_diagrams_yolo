@@ -26,8 +26,8 @@ from typing import Any
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v3.1_mosfet_transistor" / "06_match_terminals_to_nets"
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v3.1_mosfet_transistor" / "07_export_graph"
+INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v4_source_mosfet_transistor" / "06_match_terminals_to_nets"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v4_source_mosfet_transistor" / "07_export_graph"
 
 # =========================================================
 # OUTPUT SUBDIRECTORIES

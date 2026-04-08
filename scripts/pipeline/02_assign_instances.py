@@ -16,8 +16,8 @@ import cv2
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v3.1_mosfet_transistor" / "01_detect_components"
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v3.1_mosfet_transistor" / "02_assign_instances"
+INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v4_source_mosfet_transistor" / "01_detect_components"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v4_source_mosfet_transistor" / "02_assign_instances"
 DEBUG_IMAGES_DIR = OUTPUT_DIR / "debug_images"
 
 # Ordinamento delle istanze:

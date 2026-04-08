@@ -1,6 +1,14 @@
 from .config import *
 from .geometry import geom_infer_orientation_from_bbox
-from .strategies_basic import detect_two_terminal_orientation_capacitor, detect_two_terminal_orientation_led, resolve_one_terminal_orientation, strategy_detect_connected_side, strategy_detect_two_terminal_orientation_generic, strategy_detect_two_terminal_orientation_switch
+from .strategies_basic import (
+    detect_two_terminal_orientation_capacitor,
+    detect_two_terminal_orientation_led,
+    detect_two_terminal_orientation_round_source,
+    resolve_one_terminal_orientation,
+    strategy_detect_connected_side,
+    strategy_detect_two_terminal_orientation_generic,
+    strategy_detect_two_terminal_orientation_switch,
+)
 from .strategies_terminal_class import detect_terminal_auto_one_or_two
 from .strategies_three_terminal import strategy_detect_three_terminal_orientation
 def resolve_terminal_point_mode(meta: dict):
@@ -55,6 +63,7 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
         "two_terminal_capacitor",
         "two_terminal_switch",
         "two_terminal_led",
+        "two_terminal_round_source",
     }:
         if image_binary is None:
             raise ValueError(f"{strategy} richiede image_binary.")
@@ -70,6 +79,13 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
             )
         elif strategy == "two_terminal_led" or class_name == "LED":
             orientation, side_scores = detect_two_terminal_orientation_led(
+                image_binary, bbox, default_orientation=default_orientation
+            )
+        elif (
+            strategy == "two_terminal_round_source" or
+            class_name in {"Signal_Source", "Voltage_Source", "Current_Source", "Meter"}
+        ):
+            orientation, side_scores = detect_two_terminal_orientation_round_source(
                 image_binary, bbox, default_orientation=default_orientation
             )
         else:

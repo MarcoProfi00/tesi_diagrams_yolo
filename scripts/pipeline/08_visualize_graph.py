@@ -20,14 +20,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+
 from graph_viz.config import (
-    INPUT_DIR,
-    OUTPUT_DIR,
-    FULL_PNG_DIR,
-    FULL_HTML_DIR,
-    COMPONENT_NET_PNG_DIR,
-    COMPONENT_NET_HTML_DIR,
-    OVERLAY_DIR,
     SAVE_FULL_PNG,
     SAVE_FULL_HTML,
     SAVE_COMPONENT_NET_PNG,
@@ -41,6 +35,22 @@ from graph_viz.render_overlay import draw_overlay
 from graph_viz.dashboard import save_index_html
 from graph_viz.render_full import draw_full_html, draw_full_png
 
+# =========================================================
+# PATHS / INPUT-OUTPUT
+# =========================================================
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v4_source_mosfet_transistor" / "07_export_graph" / "graph_json"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v4_source_mosfet_transistor" / "08_visualize_graph"
+
+# =========================================================
+# OUTPUT SUBDIRECTORIES
+# =========================================================
+FULL_PNG_DIR = OUTPUT_DIR / "full_png"
+FULL_HTML_DIR = OUTPUT_DIR / "full_html"
+COMPONENT_NET_PNG_DIR = OUTPUT_DIR / "component_net_png"
+COMPONENT_NET_HTML_DIR = OUTPUT_DIR / "component_net_html"
+OVERLAY_DIR = OUTPUT_DIR / "overlay"
 
 
 

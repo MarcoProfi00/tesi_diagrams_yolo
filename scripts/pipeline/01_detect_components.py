@@ -33,15 +33,15 @@ MODEL_PATH = (
 CLASS_TERMINALS_PATH = PROJECT_ROOT / "metadata" / "class_terminals_v1.yaml"
 
 # === INPUT ===
-INPUT_IMAGES_DIR = PROJECT_ROOT / "data" / "batch_v3.1_mosfet_transistor"
+INPUT_IMAGES_DIR = PROJECT_ROOT / "data" / "batch_v4_source_mosfet_transistor"
 
 # === OUTPUT ===
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v3.1_mosfet_transistor" / "01_detect_components"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v4_source_mosfet_transistor" / "01_detect_components"
 DEBUG_IMAGES_DIR = OUTPUT_DIR / "debug_images"
 
 # === PARAMETRI INFERENZA ===
 IMG_SIZE = 1024
-CONF_THRES = 0.55
+CONF_THRES = 0.40
 IOU_THRES = 0.45
 
 # === DEBUG ===

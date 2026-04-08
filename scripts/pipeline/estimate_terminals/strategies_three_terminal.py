@@ -10,6 +10,14 @@ from .probes import (
 
 def candidate_mosfet_orientations_from_bbox(bbox):
     """
+    Per ora testiamo sempre tutte e 4 le orientazioni.
+    È il modo più semplice per capire se il problema nasce
+    dal filtro iniziale sul bbox.
+    """
+    return ("left", "right", "top", "bottom")
+
+#def candidate_mosfet_orientations_from_bbox(bbox):
+    """
     Filtro morbido:
     - bbox chiaramente alto  -> gate laterale -> left/right
     - bbox chiaramente largo -> gate sopra/sotto -> top/bottom
@@ -127,6 +135,7 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
         single_side_source = "mosfet_near_far"
         single_side_min_score = MOSFET_SINGLE_SIDE_MIN_SCORE
         single_side_margin = MOSFET_SINGLE_SIDE_MARGIN
+
         lateral_scores = get_mosfet_lateral_gate_scores(binary, bbox)
     else:
         single_side_scores = get_local_terminal_probe_scores_center(binary, bbox)
@@ -151,6 +160,22 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
     second_side = ordered_single[1]
     best_score = single_side_scores[best_side]
     second_score = single_side_scores[second_side]
+
+    if class_name == "Mosfet" and lateral_scores is not None:
+        best_lateral_side = "left" if lateral_scores["left"] >= lateral_scores["right"] else "right"
+        best_lateral_score = lateral_scores[best_lateral_side]
+
+        best_vertical_side = "top" if single_side_scores["top"] >= single_side_scores["bottom"] else "bottom"
+        best_vertical_score = single_side_scores[best_vertical_side]
+
+        if (
+            MOSFET_FORCE_LATERAL_GATE and
+            best_lateral_score > best_vertical_score * MOSFET_LATERAL_MARGIN
+        ):
+            best_side = best_lateral_side
+            second_side = "right" if best_side == "left" else "left"
+            best_score = best_lateral_score
+            second_score = lateral_scores[second_side]
 
     # -------------------------------------------------
     # 2) Validazione finale specifica per Mosfet

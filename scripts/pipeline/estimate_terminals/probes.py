@@ -640,3 +640,107 @@ def score_mosfet_candidate_terminals(binary, terminals, single_side, single_weig
         })
 
     return total, details
+
+def get_round_source_probe_scores(binary, bbox):
+    """
+    Probe dedicati per simboli rotondi a 2 terminali:
+    Signal_Source, Voltage_Source, Current_Source, Meter.
+
+    Idea:
+    - bande strette centrate
+    - SOLO esterne al bbox
+    - così il cerchio interno pesa meno
+    """
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    xc = int(round((x1 + x2) / 2))
+    yc = int(round((y1 + y2) / 2))
+
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+
+    x_halfband = max(2, int(round(width * ROUND_SOURCE_CENTER_BAND_RATIO / 2)))
+    y_halfband = max(2, int(round(height * ROUND_SOURCE_CENTER_BAND_RATIO / 2)))
+
+    return {
+        "top": img_count_foreground_pixels(
+            binary,
+            xc - x_halfband,
+            y1 - ROUND_SOURCE_PROBE_OUT_LEN,
+            xc + x_halfband + 1,
+            y1
+        ),
+        "bottom": img_count_foreground_pixels(
+            binary,
+            xc - x_halfband,
+            y2 + 1,
+            xc + x_halfband + 1,
+            y2 + 1 + ROUND_SOURCE_PROBE_OUT_LEN
+        ),
+        "left": img_count_foreground_pixels(
+            binary,
+            x1 - ROUND_SOURCE_PROBE_OUT_LEN,
+            yc - y_halfband,
+            x1,
+            yc + y_halfband + 1
+        ),
+        "right": img_count_foreground_pixels(
+            binary,
+            x2 + 1,
+            yc - y_halfband,
+            x2 + 1 + ROUND_SOURCE_PROBE_OUT_LEN,
+            yc + y_halfband + 1
+        ),
+        "probe_out_len": ROUND_SOURCE_PROBE_OUT_LEN,
+        "center_band_ratio": ROUND_SOURCE_CENTER_BAND_RATIO,
+        "probe_mode": "round_source_near",
+    }
+
+
+def get_round_source_far_probe_scores(binary, bbox):
+    """
+    Probe più lontani per confermare la continuità del wire.
+    Servono soprattutto quando il bordo del cerchio sporca i probe near.
+    """
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    xc = int(round((x1 + x2) / 2))
+    yc = int(round((y1 + y2) / 2))
+
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+
+    x_halfband = max(2, int(round(width * ROUND_SOURCE_CENTER_BAND_RATIO / 2)))
+    y_halfband = max(2, int(round(height * ROUND_SOURCE_CENTER_BAND_RATIO / 2)))
+
+    gap = ROUND_SOURCE_FAR_GAP
+    far_len = ROUND_SOURCE_FAR_LEN
+
+    return {
+        "top": img_count_foreground_pixels(
+            binary,
+            xc - x_halfband,
+            y1 - gap - far_len,
+            xc + x_halfband + 1,
+            y1 - gap
+        ),
+        "bottom": img_count_foreground_pixels(
+            binary,
+            xc - x_halfband,
+            y2 + 1 + gap,
+            xc + x_halfband + 1,
+            y2 + 1 + gap + far_len
+        ),
+        "left": img_count_foreground_pixels(
+            binary,
+            x1 - gap - far_len,
+            yc - y_halfband,
+            x1 - gap,
+            yc + y_halfband + 1
+        ),
+        "right": img_count_foreground_pixels(
+            binary,
+            x2 + 1 + gap,
+            yc - y_halfband,
+            x2 + 1 + gap + far_len,
+            yc + y_halfband + 1
+        ),
+    }
