@@ -15,6 +15,7 @@ Casi speciali:
     - Capacitor / Polarized_Capacitor
     - Switch
     - Terminal
+    - Led
 
     Per i componenti a 3 terminali non basta dire su quale lato cade il terminale
     ma serve anche capire dove si trova realmente lungo quel lato.
@@ -30,8 +31,8 @@ import cv2
 #PATH / INPUT-OUTPUT
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v3_three_terminals" / "02_assign_instances"
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v3_three_terminals" / "03_estimate_terminals"
+INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v3.1_mosfet_transistor" / "02_assign_instances"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v3.1_mosfet_transistor" / "03_estimate_terminals"
 DEBUG_IMAGES_DIR = OUTPUT_DIR / "debug_images"
 
 CLASS_TERMINALS_PATH = PROJECT_ROOT / "metadata" / "class_terminals_v1.yaml"
@@ -68,6 +69,31 @@ TERMINAL_CLASS_PROBE_OUT_LEN = 10
 TERMINAL_CLASS_PROBE_HALFSPAN_RATIO = 0.16
 TERMINAL_CLASS_PROBE_HALFSPAN_MIN = 2
 TERMINAL_CLASS_PROBE_HALFSPAN_MAX = 4
+
+# =========================================================
+# LED - STIMA ORIENTAZIONE
+# =========================================================
+# Per il LED i probe generici possono essere disturbati dalle frecce luminose.
+# Usiamo quindi probe più stretti e centrati, così leggiamo soprattutto
+# le vere connessioni e meno la grafica laterale del simbolo.
+LED_PROBE_OUT_LEN = 12
+LED_PROBE_INSET = 1
+
+LED_PROBE_HALFSPAN_RATIO = 0.10
+LED_PROBE_HALFSPAN_MIN = 2
+LED_PROBE_HALFSPAN_MAX = 5
+
+LED_CENTER_BAND_RATIO = 0.22
+LED_MIN_SIDE_SCORE = 3
+LED_AXIS_MARGIN = 1.15
+# Probe "far" per il LED:
+# servono a distinguere i veri wire esterni dalle frecce del simbolo
+LED_FAR_GAP = 3
+LED_FAR_LEN = 10
+LED_FAR_WEIGHT = 1.0
+
+LED_FAR_MIN_SIDE_SCORE = 2
+LED_NEAR_FAR_AXIS_MARGIN = 1.10
 
 # Decisione 1-vs-2 terminali
 TERMINAL_CLASS_TWO_SIDE_MIN = 5
@@ -760,6 +786,179 @@ def get_local_terminal_probe_scores_multi_anchor(binary, bbox, anchor_ratios=SWI
         "x_anchors": x_anchors,
         "y_anchors": y_anchors,
     }
+
+def _led_probe_halfspan(width, height):
+    min_dim = max(1, min(width, height))
+    halfspan = int(round(min_dim * LED_PROBE_HALFSPAN_RATIO))
+    halfspan = max(LED_PROBE_HALFSPAN_MIN, halfspan)
+    halfspan = min(LED_PROBE_HALFSPAN_MAX, halfspan)
+    return halfspan
+
+
+def get_led_probe_scores(binary, bbox):
+    """
+    Probe dedicati per i LED.
+
+    Idea:
+    - usiamo bande molto strette e centrate
+    - così le frecce del LED pesano meno
+    - leggiamo soprattutto i punti in cui il wire entra davvero nel simbolo
+    """
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    xc = int(round((x1 + x2) / 2))
+    yc = int(round((y1 + y2) / 2))
+
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+
+    halfspan = _led_probe_halfspan(width, height)
+
+    x_halfband = max(2, int(round(width * LED_CENTER_BAND_RATIO / 2)))
+    y_halfband = max(2, int(round(height * LED_CENTER_BAND_RATIO / 2)))
+
+    return {
+        "top": img_count_foreground_pixels(
+            binary,
+            xc - x_halfband,
+            y1 - LED_PROBE_OUT_LEN,
+            xc + x_halfband + 1,
+            y1 + LED_PROBE_INSET + 1
+        ),
+        "bottom": img_count_foreground_pixels(
+            binary,
+            xc - x_halfband,
+            y2 - LED_PROBE_INSET,
+            xc + x_halfband + 1,
+            y2 + LED_PROBE_OUT_LEN + 1
+        ),
+        "left": img_count_foreground_pixels(
+            binary,
+            x1 - LED_PROBE_OUT_LEN,
+            yc - y_halfband,
+            x1 + LED_PROBE_INSET + 1,
+            yc + y_halfband + 1
+        ),
+        "right": img_count_foreground_pixels(
+            binary,
+            x2 - LED_PROBE_INSET,
+            yc - y_halfband,
+            x2 + LED_PROBE_OUT_LEN + 1,
+            yc + y_halfband + 1
+        ),
+        "probe_halfspan": halfspan,
+        "probe_out_len": LED_PROBE_OUT_LEN,
+        "probe_inset": LED_PROBE_INSET,
+        "probe_mode": "led_narrow_center_probes",
+    }
+
+def get_led_far_probe_scores(binary, bbox):
+    """
+    Probe più lontani dal bbox per confermare che da quel lato
+    esce davvero un wire e non solo la grafica interna del LED.
+    """
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    xc = int(round((x1 + x2) / 2))
+    yc = int(round((y1 + y2) / 2))
+
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+
+    x_halfband = max(2, int(round(width * LED_CENTER_BAND_RATIO / 2)))
+    y_halfband = max(2, int(round(height * LED_CENTER_BAND_RATIO / 2)))
+
+    gap = LED_FAR_GAP
+    far_len = LED_FAR_LEN
+
+    return {
+        "top": img_count_foreground_pixels(
+            binary,
+            xc - x_halfband,
+            y1 - gap - far_len,
+            xc + x_halfband + 1,
+            y1 - gap
+        ),
+        "bottom": img_count_foreground_pixels(
+            binary,
+            xc - x_halfband,
+            y2 + 1 + gap,
+            xc + x_halfband + 1,
+            y2 + 1 + gap + far_len
+        ),
+        "left": img_count_foreground_pixels(
+            binary,
+            x1 - gap - far_len,
+            yc - y_halfband,
+            x1 - gap,
+            yc + y_halfband + 1
+        ),
+        "right": img_count_foreground_pixels(
+            binary,
+            x2 + 1 + gap,
+            yc - y_halfband,
+            x2 + 1 + gap + far_len,
+            yc + y_halfband + 1
+        ),
+    }
+
+
+def detect_two_terminal_orientation_led(binary, bbox, default_orientation="vertical"):
+    """
+    Orientazione dedicata per il LED.
+
+    Heuristica semplice:
+    - nei LED verticali le frecce laterali allargano il bbox
+      -> bbox più largo => LED verticale
+    - nei LED orizzontali succede il contrario
+      -> bbox più alto => LED orizzontale
+
+    Se il bbox è quasi quadrato, fallback ai probe.
+    """
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    width = max(x2 - x1, 1e-6)
+    height = max(y2 - y1, 1e-6)
+
+    ratio_wh = width / height
+    ratio_hw = height / width
+
+    LED_BBOX_RATIO_MARGIN = 1.08
+
+    # euristica invertita specifica per LED
+    if ratio_wh >= LED_BBOX_RATIO_MARGIN:
+        return "vertical", {
+            "decision_mode": "led_reversed_bbox_vertical",
+            "bbox_width": round(width, 2),
+            "bbox_height": round(height, 2),
+            "bbox_ratio_wh": round(ratio_wh, 4),
+        }
+
+    if ratio_hw >= LED_BBOX_RATIO_MARGIN:
+        return "horizontal", {
+            "decision_mode": "led_reversed_bbox_horizontal",
+            "bbox_width": round(width, 2),
+            "bbox_height": round(height, 2),
+            "bbox_ratio_hw": round(ratio_hw, 4),
+        }
+
+    # fallback: probe multi-anchor, meglio dei probe centrati
+    side_scores = get_local_terminal_probe_scores_multi_anchor(
+        binary,
+        bbox,
+        anchor_ratios=(0.25, 0.50, 0.75)
+    )
+
+    orientation = _decide_axis_from_scores(side_scores)
+    if orientation is not None:
+        side_scores["decision_mode"] = "led_multi_anchor_fallback"
+        side_scores["bbox_width"] = round(width, 2)
+        side_scores["bbox_height"] = round(height, 2)
+        return orientation, side_scores
+
+    # ultimo fallback
+    side_scores["decision_mode"] = "led_default_fallback"
+    side_scores["bbox_width"] = round(width, 2)
+    side_scores["bbox_height"] = round(height, 2)
+    return default_orientation, side_scores
+
 
 def _mosfet_single_side_halfspan(width, height):
     """
@@ -1598,17 +1797,32 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
             raise ValueError(f"Nessuna definizione terminali per default_orientation '{default_orientation}'")
         return terminals_def, default_orientation, None, side_scores
 
-    if strategy in {"two_terminal_by_connection_axis", "two_terminal_capacitor", "two_terminal_switch"}:
+    if strategy in {
+        "two_terminal_by_connection_axis",
+        "two_terminal_capacitor",
+        "two_terminal_switch",
+        "two_terminal_led",
+    }:
         if image_binary is None:
             raise ValueError(f"{strategy} richiede image_binary.")
         default_orientation = meta.get("default_orientation", "horizontal")
         class_name = meta.get("name", "")
         if strategy == "two_terminal_capacitor" or class_name in {"Capacitor", "Polarized_Capacitor"}:
-            orientation, side_scores = detect_two_terminal_orientation_capacitor(image_binary, bbox, default_orientation=default_orientation)
+            orientation, side_scores = detect_two_terminal_orientation_capacitor(
+                image_binary, bbox, default_orientation=default_orientation
+            )
         elif strategy == "two_terminal_switch" or class_name == "Switch":
-            orientation, side_scores = strategy_detect_two_terminal_orientation_switch(image_binary, bbox, default_orientation=default_orientation)
+            orientation, side_scores = strategy_detect_two_terminal_orientation_switch(
+                image_binary, bbox, default_orientation=default_orientation
+            )
+        elif strategy == "two_terminal_led" or class_name == "LED":
+            orientation, side_scores = detect_two_terminal_orientation_led(
+                image_binary, bbox, default_orientation=default_orientation
+            )
         else:
-            orientation, side_scores = strategy_detect_two_terminal_orientation_generic(image_binary, bbox, default_orientation=default_orientation)
+            orientation, side_scores = strategy_detect_two_terminal_orientation_generic(
+                image_binary, bbox, default_orientation=default_orientation
+            )
         terminals_def = meta.get("orientations", {}).get(orientation)
         if terminals_def is None:
             raise ValueError(f"Nessuna definizione terminali per orientazione '{orientation}'")
