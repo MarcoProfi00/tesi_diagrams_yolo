@@ -393,69 +393,6 @@ def geom_terminal_point_three_terminal(binary, bbox, orientation: str, relative_
     debug["three_terminal_orientation"] = orientation
     return point, debug
 
-def score_point_local_support(binary, x, y, radius=MOSFET_POINT_SUPPORT_RADIUS):
-    """
-    Misura quanta evidenza di foreground/wire c'è attorno a un punto terminale stimato.
-    """
-    xi = int(round(x))
-    yi = int(round(y))
-    return img_count_foreground_pixels(
-        binary,
-        xi - radius,
-        yi - radius,
-        xi + radius + 1,
-        yi + radius + 1
-    )
-
-def score_point_directional_support(
-    binary,
-    x,
-    y,
-    relative_position,
-    outward=10,
-    inward=2,
-    halfspan=3,
-):
-    xi = int(round(x))
-    yi = int(round(y))
-
-    if relative_position == "left":
-        return img_count_foreground_pixels(
-            binary,
-            xi - outward,
-            yi - halfspan,
-            xi + inward + 1,
-            yi + halfspan + 1
-        )
-
-    if relative_position == "right":
-        return img_count_foreground_pixels(
-            binary,
-            xi - inward,
-            yi - halfspan,
-            xi + outward + 1,
-            yi + halfspan + 1
-        )
-
-    if relative_position == "top":
-        return img_count_foreground_pixels(
-            binary,
-            xi - halfspan,
-            yi - outward,
-            xi + halfspan + 1,
-            yi + inward + 1
-        )
-
-    if relative_position == "bottom":
-        return img_count_foreground_pixels(
-            binary,
-            xi - halfspan,
-            yi - inward,
-            xi + halfspan + 1,
-            yi + outward + 1
-        )
-
-    return 0
 
 def geom_infer_orientation_from_bbox(bbox, default_orientation="horizontal"):
     x1, y1, x2, y2 = bbox

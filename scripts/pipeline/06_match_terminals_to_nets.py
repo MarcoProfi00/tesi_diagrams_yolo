@@ -27,8 +27,8 @@ import numpy as np
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v4_source_mosfet_transistor" / "05_build_nets"
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v4_source_mosfet_transistor" / "06_match_terminals_to_nets"
+INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v5_various_two_terminals_components" / "05_build_nets"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v5_various_two_terminals_components" / "06_match_terminals_to_nets"
 DEBUG_DIR = OUTPUT_DIR / "debug_images"
 
 # =========================================================
@@ -115,6 +115,12 @@ DEBUG_SNAP_POINT_COLOR = (255, 0, 0)      # blu
 DEBUG_LINE_THICKNESS = 2
 DEBUG_TERMINAL_RADIUS = 4
 DEBUG_SNAP_RADIUS = 3
+
+DEBUG_TEXT_COLOR_OK = (0, 120, 0)
+DEBUG_TEXT_COLOR_SUSPICIOUS = (0, 140, 220)
+
+DEBUG_POINT_COLOR_OK = (0, 200, 0)
+DEBUG_POINT_COLOR_SUSPICIOUS = (0, 165, 255)
 
 
 # ---------------------------------------------------------
@@ -411,7 +417,12 @@ def run_search_stage(label_map: np.ndarray, term: dict, stage: dict, preferred_n
 # ---------------------------------------------------------
 # Confidence / warning del match
 # ---------------------------------------------------------
-def classify_match_confidence(match_status: str, distance_px, search_stage: str, preferred_net_index):
+def classify_match_confidence(
+    match_status: str,
+    distance_px,
+    search_stage: str,
+    preferred_net_index,
+):
     if match_status == "unmatched":
         return "unmatched", ["unmatched_terminal"]
 
@@ -439,7 +450,6 @@ def finalize_match_result(result: dict):
         distance_px=result["match_distance_px"],
         search_stage=result["search_stage"],
         preferred_net_index=result["preferred_net_index_from_05"],
-        component_class_name=result.get("component_class_name"),
     )
     result["match_confidence"] = confidence
     result["match_warnings"] = warnings
@@ -527,6 +537,27 @@ def match_terminal_to_net(term: dict, label_map: np.ndarray, net_index_map: dict
     return finalize_match_result(result)
 
 
+def apply_match_info_to_terminal(term: dict, match_info: dict):
+    term_copy = dict(term)
+
+    term_copy["candidate_net_ids"] = match_info.get("candidate_net_ids", [])
+    term_copy["candidate_net_indices"] = match_info.get("candidate_net_indices", [])
+    term_copy["preferred_net_index_from_05"] = match_info.get("preferred_net_index_from_05")
+    term_copy["preferred_net_id_from_05"] = match_info.get("preferred_net_id_from_05")
+    term_copy["matched_net_id"] = match_info.get("matched_net_id")
+    term_copy["matched_net_index"] = match_info.get("matched_net_index")
+    term_copy["match_status"] = match_info.get("match_status", "unmatched")
+    term_copy["match_distance_px"] = match_info.get("match_distance_px")
+    term_copy["snap_point"] = match_info.get("snap_point")
+    term_copy["search_stage"] = match_info.get("search_stage")
+    term_copy["search_window"] = match_info.get("search_window")
+    term_copy["search_kind"] = match_info.get("search_kind")
+    term_copy["match_confidence"] = match_info.get("match_confidence", "none")
+    term_copy["match_warnings"] = match_info.get("match_warnings", [])
+    term_copy["is_suspicious_match"] = match_info.get("is_suspicious_match", False)
+
+    return term_copy
+
 # ---------------------------------------------------------
 # Update strutture output
 # ---------------------------------------------------------
@@ -538,25 +569,8 @@ def update_components_with_terminal_matches(components, terminal_match_map):
         updated_terminals = []
 
         for term in comp.get("terminals", []):
-            term_copy = dict(term)
             match_info = terminal_match_map.get(term["terminal_id"], {})
-
-            term_copy["candidate_net_ids"] = match_info.get("candidate_net_ids", [])
-            term_copy["candidate_net_indices"] = match_info.get("candidate_net_indices", [])
-            term_copy["preferred_net_index_from_05"] = match_info.get("preferred_net_index_from_05")
-            term_copy["preferred_net_id_from_05"] = match_info.get("preferred_net_id_from_05")
-            term_copy["matched_net_id"] = match_info.get("matched_net_id")
-            term_copy["matched_net_index"] = match_info.get("matched_net_index")
-            term_copy["match_status"] = match_info.get("match_status", "unmatched")
-            term_copy["match_distance_px"] = match_info.get("match_distance_px")
-            term_copy["snap_point"] = match_info.get("snap_point")
-            term_copy["search_stage"] = match_info.get("search_stage")
-            term_copy["search_window"] = match_info.get("search_window")
-            term_copy["search_kind"] = match_info.get("search_kind")
-            term_copy["match_confidence"] = match_info.get("match_confidence", "none")
-            term_copy["match_warnings"] = match_info.get("match_warnings", [])
-            term_copy["is_suspicious_match"] = match_info.get("is_suspicious_match", False)
-
+            term_copy = apply_match_info_to_terminal(term, match_info)
             updated_terminals.append(term_copy)
 
         comp_copy["terminals"] = updated_terminals
@@ -592,15 +606,15 @@ def get_debug_color(term: dict):
     if term.get("matched_net_id") is None:
         return DEBUG_POINT_COLOR_NONE
     if term.get("match_confidence") == "ok":
-        return DEBUG_POINT_COLOR_HIGH
-    return DEBUG_POINT_COLOR_LOW
+        return DEBUG_POINT_COLOR_OK
+    return DEBUG_POINT_COLOR_SUSPICIOUS
 
 def get_debug_text_color(term: dict):
     if term.get("matched_net_id") is None:
         return DEBUG_TEXT_COLOR_NONE
     if term.get("match_confidence") == "ok":
-        return DEBUG_TEXT_COLOR_HIGH
-    return DEBUG_TEXT_COLOR_LOW
+        return DEBUG_TEXT_COLOR_OK
+    return DEBUG_TEXT_COLOR_SUSPICIOUS
 
 def draw_debug_overlay(image_bgr, terminals_with_matches):
     out = image_bgr.copy()
@@ -691,24 +705,7 @@ def main() -> None:
                 net_building_terminal_debug,
             )
 
-            term_copy = dict(term)
-            term_copy.update({
-                "candidate_net_ids": match_info["candidate_net_ids"],
-                "candidate_net_indices": match_info["candidate_net_indices"],
-                "preferred_net_index_from_05": match_info["preferred_net_index_from_05"],
-                "preferred_net_id_from_05": match_info["preferred_net_id_from_05"],
-                "matched_net_id": match_info["matched_net_id"],
-                "matched_net_index": match_info["matched_net_index"],
-                "match_status": match_info["match_status"],
-                "match_distance_px": match_info["match_distance_px"],
-                "snap_point": match_info["snap_point"],
-                "search_stage": match_info["search_stage"],
-                "search_window": match_info["search_window"],
-                "search_kind": match_info["search_kind"],
-                "match_confidence": match_info["match_confidence"],
-                "match_warnings": match_info["match_warnings"],
-                "is_suspicious_match": match_info["is_suspicious_match"],
-            })
+            term_copy = apply_match_info_to_terminal(term, match_info)
 
             terminals_with_matches.append(term_copy)
             terminal_match_map[term["terminal_id"]] = match_info

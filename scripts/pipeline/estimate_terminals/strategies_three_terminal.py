@@ -16,27 +16,6 @@ def candidate_mosfet_orientations_from_bbox(bbox):
     """
     return ("left", "right", "top", "bottom")
 
-#def candidate_mosfet_orientations_from_bbox(bbox):
-    """
-    Filtro morbido:
-    - bbox chiaramente alto  -> gate laterale -> left/right
-    - bbox chiaramente largo -> gate sopra/sotto -> top/bottom
-    - bbox ambiguo           -> tutte e 4
-    """
-    x1, y1, x2, y2 = bbox
-    width = max(x2 - x1, 1e-6)
-    height = max(y2 - y1, 1e-6)
-
-    strong_ratio = 1.30
-
-    if height / width >= strong_ratio:
-        return ("left", "right")
-
-    if width / height >= strong_ratio:
-        return ("top", "bottom")
-
-    return ("left", "right", "top", "bottom")
-
 
 def score_mosfet_orientation_by_terminal_points(binary, bbox, orientation):
     """

@@ -1,17 +1,93 @@
+import numpy as np
 from .config import *
-from .geometry import geom_clamp_bbox_to_image, geom_infer_orientation_from_bbox
+from .geometry import (
+    geom_clamp_bbox_to_image,
+    geom_infer_orientation_from_bbox,
+    geom_terminal_point_by_side_peak,
+)
 from .probes import (
     get_local_terminal_probe_scores_center,
     get_local_terminal_probe_scores_multi_anchor,
     get_round_source_probe_scores,
     get_round_source_far_probe_scores,
+    get_led_probe_scores,
+    get_led_far_probe_scores,
     img_count_foreground_pixels,
     probe_get_side_scores,
+    score_point_directional_support,
 )
+
 # =========================================================
 # STRATEGY: ONE-TERMINAL COMPONENTS
 # =========================================================
+def _score_one_terminal_candidate_side(binary, bbox, side):
+    """
+    Valuta un lato candidato per componenti a 1 terminale
+    usando:
+    1) side-peak sul lato
+    2) supporto direzionale quasi solo esterno al bbox
+    """
+    point, peak_debug = geom_terminal_point_by_side_peak(binary, bbox, side)
+    px, py = point
+
+    dir_score = score_point_directional_support(
+        binary,
+        px,
+        py,
+        side,
+        outward=12,
+        inward=0,
+        halfspan=2,
+    )
+
+    return dir_score, point, peak_debug
+
+
 def strategy_detect_connected_side(binary, bbox):
+    # -------------------------------------------------
+    # 1) Validazione diretta sui 4 lati candidati
+    # -------------------------------------------------
+    point_scores = {}
+    point_debug = {}
+
+    for side in ("top", "bottom", "left", "right"):
+        score, point, peak_debug = _score_one_terminal_candidate_side(
+            binary, bbox, side
+        )
+        point_scores[side] = score
+        point_debug[side] = {
+            "point": point,
+            "directional_support": score,
+            "peak_debug": peak_debug,
+        }
+
+    ordered = sorted(
+        ("top", "bottom", "left", "right"),
+        key=lambda s: point_scores[s],
+        reverse=True
+    )
+
+    best_side = ordered[0]
+    second_side = ordered[1]
+    best_score = point_scores[best_side]
+    second_score = point_scores[second_side]
+
+    POINT_MIN_SIDE_SCORE = 2
+    POINT_MARGIN = 1.15
+
+    if best_score >= POINT_MIN_SIDE_SCORE and best_score > second_score * POINT_MARGIN:
+        debug_scores = dict(point_scores)
+        debug_scores["decision_mode"] = "one_terminal_point_validation"
+        debug_scores["best_side"] = best_side
+        debug_scores["best_score"] = best_score
+        debug_scores["second_side"] = second_side
+        debug_scores["second_side_score"] = second_score
+        debug_scores["point_debug"] = point_debug
+        return best_side, debug_scores
+
+    # -------------------------------------------------
+    # 2) Fallback: vecchia strategia a bande centrali
+    # -------------------------------------------------
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     xc = int(round((x1 + x2) / 2))
     yc = int(round((y1 + y2) / 2))
@@ -21,15 +97,45 @@ def strategy_detect_connected_side(binary, bbox):
     half_band_y = max(4, int(height * SIDE_CENTER_RATIO / 2))
 
     side_scores = {
-        "top": img_count_foreground_pixels(binary, xc - half_band_x, y1 - SIDE_SAMPLE_THICKNESS, xc + half_band_x + 1, y1),
-        "bottom": img_count_foreground_pixels(binary, xc - half_band_x, y2 + 1, xc + half_band_x + 1, y2 + 1 + SIDE_SAMPLE_THICKNESS),
-        "left": img_count_foreground_pixels(binary, x1 - SIDE_SAMPLE_THICKNESS, yc - half_band_y, x1, yc + half_band_y + 1),
-        "right": img_count_foreground_pixels(binary, x2 + 1, yc - half_band_y, x2 + 1 + SIDE_SAMPLE_THICKNESS, yc + half_band_y + 1),
+        "top": img_count_foreground_pixels(
+            binary,
+            xc - half_band_x,
+            y1 - SIDE_SAMPLE_THICKNESS,
+            xc + half_band_x + 1,
+            y1
+        ),
+        "bottom": img_count_foreground_pixels(
+            binary,
+            xc - half_band_x,
+            y2 + 1,
+            xc + half_band_x + 1,
+            y2 + 1 + SIDE_SAMPLE_THICKNESS
+        ),
+        "left": img_count_foreground_pixels(
+            binary,
+            x1 - SIDE_SAMPLE_THICKNESS,
+            yc - half_band_y,
+            x1,
+            yc + half_band_y + 1
+        ),
+        "right": img_count_foreground_pixels(
+            binary,
+            x2 + 1,
+            yc - half_band_y,
+            x2 + 1 + SIDE_SAMPLE_THICKNESS,
+            yc + half_band_y + 1
+        ),
     }
-    best_side = max(side_scores, key=side_scores.get)
-    if side_scores[best_side] < SIDE_SCORE_MIN_PIXELS:
+
+    coarse_best_side = max(side_scores, key=side_scores.get)
+    side_scores["point_scores"] = point_scores
+    side_scores["point_debug"] = point_debug
+    side_scores["decision_mode"] = "one_terminal_coarse_center_fallback"
+
+    if side_scores[coarse_best_side] < SIDE_SCORE_MIN_PIXELS:
         return None, side_scores
-    return best_side, side_scores
+
+    return coarse_best_side, side_scores
 
 def resolve_one_terminal_orientation(meta: dict, connected_side: str):
     orientations = meta.get("orientations", {})
@@ -137,63 +243,171 @@ def strategy_detect_two_terminal_orientation_switch(binary, bbox, default_orient
     side_scores["decision_mode"] = "switch_default_orientation_fallback"
     return default_orientation, side_scores
 
+def _score_two_terminal_candidate_by_points(binary, bbox, orientation):
+    """
+    Valuta una orientazione candidata usando i due terminali stimati
+    e il supporto reale del wire attorno a ciascun terminale.
+    """
+    if orientation == "horizontal":
+        sides = ("left", "right")
+    else:
+        sides = ("top", "bottom")
+
+    total_score = 0
+    side_scores = {}
+    point_debug = {}
+
+    for side in sides:
+        point, peak_debug = geom_terminal_point_by_side_peak(
+            binary,
+            bbox,
+            side
+        )
+        px, py = point
+
+        dir_score = score_point_directional_support(
+            binary,
+            px,
+            py,
+            side,
+            outward=12,
+            inward=2,
+            halfspan=3,
+        )
+
+        side_scores[side] = dir_score
+        total_score += dir_score
+
+        point_debug[side] = {
+            "point": point,
+            "directional_support": dir_score,
+            "peak_debug": peak_debug,
+        }
+
+    return total_score, side_scores, point_debug
+
 def detect_two_terminal_orientation_led(binary, bbox, default_orientation="vertical"):
     """
-    Orientazione dedicata per il LED.
+    Strategia dedicata per LED / diode-like symbols.
 
-    Heuristica semplice:
-    - nei LED verticali le frecce laterali allargano il bbox
-      -> bbox più largo => LED verticale
-    - nei LED orizzontali succede il contrario
-      -> bbox più alto => LED orizzontale
-
-    Se il bbox è quasi quadrato, fallback ai probe.
+    Ordine:
+    1. validazione diretta delle 2 orientazioni candidate tramite i terminali stimati
+    2. probe LED near/far
+    3. fallback bbox invertito specifico LED
+    4. fallback finale YAML
     """
+
+    # -------------------------------------------------
+    # 1) Validazione diretta tramite terminali candidati
+    # -------------------------------------------------
+    horizontal_total, horizontal_side_scores, horizontal_point_debug = _score_two_terminal_candidate_by_points(
+        binary, bbox, "horizontal"
+    )
+    vertical_total, vertical_side_scores, vertical_point_debug = _score_two_terminal_candidate_by_points(
+        binary, bbox, "vertical"
+    )
+
+    LED_POINT_VALIDATION_MARGIN = 1.15
+    LED_POINT_MIN_SIDE_SCORE = 2
+
+    if (
+        min(horizontal_side_scores["left"], horizontal_side_scores["right"]) >= LED_POINT_MIN_SIDE_SCORE
+        and horizontal_total > vertical_total * LED_POINT_VALIDATION_MARGIN
+    ):
+        return "horizontal", {
+            "decision_mode": "led_terminal_point_validation_horizontal",
+            "horizontal_total": horizontal_total,
+            "vertical_total": vertical_total,
+            "horizontal_side_scores": horizontal_side_scores,
+            "vertical_side_scores": vertical_side_scores,
+            "horizontal_point_debug": horizontal_point_debug,
+            "vertical_point_debug": vertical_point_debug,
+        }
+
+    if (
+        min(vertical_side_scores["top"], vertical_side_scores["bottom"]) >= LED_POINT_MIN_SIDE_SCORE
+        and vertical_total > horizontal_total * LED_POINT_VALIDATION_MARGIN
+    ):
+        return "vertical", {
+            "decision_mode": "led_terminal_point_validation_vertical",
+            "horizontal_total": horizontal_total,
+            "vertical_total": vertical_total,
+            "horizontal_side_scores": horizontal_side_scores,
+            "vertical_side_scores": vertical_side_scores,
+            "horizontal_point_debug": horizontal_point_debug,
+            "vertical_point_debug": vertical_point_debug,
+        }
+
+    # -------------------------------------------------
+    # 2) Probe LED near/far
+    # -------------------------------------------------
+    near_scores = get_led_probe_scores(binary, bbox)
+    far_scores = get_led_far_probe_scores(binary, bbox)
+
+    combined_scores = {
+        "top": near_scores["top"] + LED_FAR_WEIGHT * far_scores["top"],
+        "bottom": near_scores["bottom"] + LED_FAR_WEIGHT * far_scores["bottom"],
+        "left": near_scores["left"] + LED_FAR_WEIGHT * far_scores["left"],
+        "right": near_scores["right"] + LED_FAR_WEIGHT * far_scores["right"],
+        "near_scores": near_scores,
+        "far_scores": far_scores,
+        "probe_mode": "led_near_far",
+        "horizontal_total": horizontal_total,
+        "vertical_total": vertical_total,
+        "horizontal_side_scores": horizontal_side_scores,
+        "vertical_side_scores": vertical_side_scores,
+        "horizontal_point_debug": horizontal_point_debug,
+        "vertical_point_debug": vertical_point_debug,
+    }
+
+    lr_pair = min(combined_scores["left"], combined_scores["right"])
+    tb_pair = min(combined_scores["top"], combined_scores["bottom"])
+    lr_score = combined_scores["left"] + combined_scores["right"]
+    tb_score = combined_scores["top"] + combined_scores["bottom"]
+
+    if (
+        lr_pair >= LED_FAR_MIN_SIDE_SCORE and
+        lr_score > tb_score * LED_NEAR_FAR_AXIS_MARGIN
+    ):
+        combined_scores["decision_mode"] = "led_near_far_horizontal"
+        return "horizontal", combined_scores
+
+    if (
+        tb_pair >= LED_FAR_MIN_SIDE_SCORE and
+        tb_score > lr_score * LED_NEAR_FAR_AXIS_MARGIN
+    ):
+        combined_scores["decision_mode"] = "led_near_far_vertical"
+        return "vertical", combined_scores
+
+    # -------------------------------------------------
+    # 3) Fallback bbox invertito specifico LED
+    # -------------------------------------------------
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     width = max(x2 - x1, 1e-6)
     height = max(y2 - y1, 1e-6)
 
     ratio_wh = width / height
     ratio_hw = height / width
-
     LED_BBOX_RATIO_MARGIN = 1.08
 
-    # euristica invertita specifica per LED
+    combined_scores["bbox_width"] = round(width, 2)
+    combined_scores["bbox_height"] = round(height, 2)
+
     if ratio_wh >= LED_BBOX_RATIO_MARGIN:
-        return "vertical", {
-            "decision_mode": "led_reversed_bbox_vertical",
-            "bbox_width": round(width, 2),
-            "bbox_height": round(height, 2),
-            "bbox_ratio_wh": round(ratio_wh, 4),
-        }
+        combined_scores["decision_mode"] = "led_reversed_bbox_vertical"
+        combined_scores["bbox_ratio_wh"] = round(ratio_wh, 4)
+        return "vertical", combined_scores
 
     if ratio_hw >= LED_BBOX_RATIO_MARGIN:
-        return "horizontal", {
-            "decision_mode": "led_reversed_bbox_horizontal",
-            "bbox_width": round(width, 2),
-            "bbox_height": round(height, 2),
-            "bbox_ratio_hw": round(ratio_hw, 4),
-        }
+        combined_scores["decision_mode"] = "led_reversed_bbox_horizontal"
+        combined_scores["bbox_ratio_hw"] = round(ratio_hw, 4)
+        return "horizontal", combined_scores
 
-    # fallback: probe multi-anchor, meglio dei probe centrati
-    side_scores = get_local_terminal_probe_scores_multi_anchor(
-        binary,
-        bbox,
-        anchor_ratios=(0.25, 0.50, 0.75)
-    )
-
-    orientation = _decide_axis_from_scores(side_scores)
-    if orientation is not None:
-        side_scores["decision_mode"] = "led_multi_anchor_fallback"
-        side_scores["bbox_width"] = round(width, 2)
-        side_scores["bbox_height"] = round(height, 2)
-        return orientation, side_scores
-
-    # ultimo fallback
-    side_scores["decision_mode"] = "led_default_fallback"
-    side_scores["bbox_width"] = round(width, 2)
-    side_scores["bbox_height"] = round(height, 2)
-    return default_orientation, side_scores
+    # -------------------------------------------------
+    # 4) Ultimo fallback
+    # -------------------------------------------------
+    combined_scores["decision_mode"] = "led_default_fallback"
+    return default_orientation, combined_scores
 
 def detect_two_terminal_orientation_round_source(binary, bbox, default_orientation="vertical"):
     """
@@ -264,3 +478,185 @@ def detect_two_terminal_orientation_round_source(binary, bbox, default_orientati
 
     combined_scores["decision_mode"] = "round_source_default_fallback"
     return default_orientation, combined_scores
+
+def _score_variable_resistor_candidate_by_points(binary, bbox, orientation):
+    """
+    Valuta una orientazione candidata usando i due terminali stimati
+    e leggendo supporto quasi solo ESTERNO al bbox.
+    """
+    if orientation == "horizontal":
+        sides = ("left", "right")
+    else:
+        sides = ("top", "bottom")
+
+    total_score = 0
+    side_scores = {}
+    point_debug = {}
+
+    for side in sides:
+        point, peak_debug = geom_terminal_point_by_side_peak(binary, bbox, side)
+        px, py = point
+
+        dir_score = score_point_directional_support(
+            binary,
+            px,
+            py,
+            side,
+            outward=10,
+            inward=0,   # quasi solo esterno: meno influenza da grafica interna
+            halfspan=2,
+        )
+
+        side_scores[side] = dir_score
+        total_score += dir_score
+
+        point_debug[side] = {
+            "point": point,
+            "directional_support": dir_score,
+            "peak_debug": peak_debug,
+        }
+
+    return total_score, side_scores, point_debug
+
+
+def detect_two_terminal_orientation_variable_resistor(binary, bbox, default_orientation="horizontal"):
+    """
+    Strategia dedicata per Variable_Resistor / Photoresistor.
+
+    Ordine:
+    1) validazione diretta delle 2 orientazioni candidate tramite terminali stimati
+    2) bande esterne molto strette
+    3) fallback generic
+    """
+
+    # -------------------------------------------------
+    # 1) Validazione diretta tramite terminali candidati
+    # -------------------------------------------------
+    horizontal_total, horizontal_side_scores, horizontal_point_debug = (
+        _score_variable_resistor_candidate_by_points(binary, bbox, "horizontal")
+    )
+    vertical_total, vertical_side_scores, vertical_point_debug = (
+        _score_variable_resistor_candidate_by_points(binary, bbox, "vertical")
+    )
+
+    POINT_MARGIN = 1.15
+    POINT_MIN_SIDE_SCORE = 2
+
+    if (
+        min(vertical_side_scores["top"], vertical_side_scores["bottom"]) >= POINT_MIN_SIDE_SCORE
+        and vertical_total > horizontal_total * POINT_MARGIN
+    ):
+        return "vertical", {
+            "decision_mode": "variable_resistor_point_validation_vertical",
+            "horizontal_total": horizontal_total,
+            "vertical_total": vertical_total,
+            "horizontal_side_scores": horizontal_side_scores,
+            "vertical_side_scores": vertical_side_scores,
+            "horizontal_point_debug": horizontal_point_debug,
+            "vertical_point_debug": vertical_point_debug,
+        }
+
+    if (
+        min(horizontal_side_scores["left"], horizontal_side_scores["right"]) >= POINT_MIN_SIDE_SCORE
+        and horizontal_total > vertical_total * POINT_MARGIN
+    ):
+        return "horizontal", {
+            "decision_mode": "variable_resistor_point_validation_horizontal",
+            "horizontal_total": horizontal_total,
+            "vertical_total": vertical_total,
+            "horizontal_side_scores": horizontal_side_scores,
+            "vertical_side_scores": vertical_side_scores,
+            "horizontal_point_debug": horizontal_point_debug,
+            "vertical_point_debug": vertical_point_debug,
+        }
+
+    # -------------------------------------------------
+    # 2) Bande esterne strette, meno sensibili al testo vicino
+    # -------------------------------------------------
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+
+    w = max(1, x2 - x1)
+    h = max(1, y2 - y1)
+    xc = int(round((x1 + x2) / 2))
+    yc = int(round((y1 + y2) / 2))
+
+    half_band_x = min(6, max(2, int(round(w * 0.10))))
+    half_band_y = min(6, max(2, int(round(h * 0.10))))
+
+    gap = 2
+    thick = max(2, int(round(min(w, h) * 0.08)))
+
+    side_scores = {
+        "top": img_count_foreground_pixels(
+            binary,
+            xc - half_band_x,
+            y1 - gap - thick,
+            xc + half_band_x + 1,
+            y1 - gap
+        ),
+        "bottom": img_count_foreground_pixels(
+            binary,
+            xc - half_band_x,
+            y2 + gap,
+            xc + half_band_x + 1,
+            y2 + gap + thick
+        ),
+        "left": img_count_foreground_pixels(
+            binary,
+            x1 - gap - thick,
+            yc - half_band_y,
+            x1 - gap,
+            yc + half_band_y + 1
+        ),
+        "right": img_count_foreground_pixels(
+            binary,
+            x2 + gap,
+            yc - half_band_y,
+            x2 + gap + thick,
+            yc + half_band_y + 1
+        ),
+    }
+
+    horizontal_score = side_scores["left"] + side_scores["right"]
+    vertical_score = side_scores["top"] + side_scores["bottom"]
+    horizontal_pair = min(side_scores["left"], side_scores["right"])
+    vertical_pair = min(side_scores["top"], side_scores["bottom"])
+
+    debug_scores = {
+        **side_scores,
+        "horizontal_score": horizontal_score,
+        "vertical_score": vertical_score,
+        "bbox_width": w,
+        "bbox_height": h,
+        "horizontal_total": horizontal_total,
+        "vertical_total": vertical_total,
+        "horizontal_side_scores": horizontal_side_scores,
+        "vertical_side_scores": vertical_side_scores,
+        "horizontal_point_debug": horizontal_point_debug,
+        "vertical_point_debug": vertical_point_debug,
+    }
+
+    min_side = 2
+    axis_margin = 1.20
+
+    if vertical_pair >= min_side and vertical_score > horizontal_score * axis_margin:
+        debug_scores["decision_mode"] = "variable_resistor_external_wire_vertical"
+        return "vertical", debug_scores
+
+    if horizontal_pair >= min_side and horizontal_score > vertical_score * axis_margin:
+        debug_scores["decision_mode"] = "variable_resistor_external_wire_horizontal"
+        return "horizontal", debug_scores
+
+    # -------------------------------------------------
+    # 3) Fallback finale
+    # -------------------------------------------------
+    orientation, generic_scores = strategy_detect_two_terminal_orientation_generic(
+        binary,
+        bbox,
+        default_orientation=default_orientation,
+    )
+
+    generic_scores["external_wire_scores"] = debug_scores
+    generic_scores["decision_mode"] = "variable_resistor_generic_fallback"
+    return orientation, generic_scores
+

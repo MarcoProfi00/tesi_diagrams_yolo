@@ -26,8 +26,8 @@ from typing import Any
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v4_source_mosfet_transistor" / "06_match_terminals_to_nets"
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v4_source_mosfet_transistor" / "07_export_graph"
+INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v5_various_two_terminals_components" / "06_match_terminals_to_nets"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v5_various_two_terminals_components" / "07_export_graph"
 
 # =========================================================
 # OUTPUT SUBDIRECTORIES
@@ -49,9 +49,9 @@ SAVE_COMBINED_CSV = True
 def infer_source_stage(data: dict) -> str:
     if "terminal_net_matching" in data:
         matching = data.get("terminal_net_matching", {})
-        if "confidence_counts" in matching:
-            return "06_match_terminals_to_nets_v3_confidence"
-        return "06_match_terminals_to_nets_v3"
+        if "n_ok_matches" in matching or "n_unmatched_matches" in matching:
+            return "06_match_terminals_to_nets"
+        return "06_match_terminals_to_nets"
     return "unknown"
 
 def jsonable(value: Any):
@@ -302,9 +302,8 @@ def build_graph(data: dict):
         )
 
     confidence_counts = {
-        "high": sum(1 for t in terminals if t.get("match_confidence") == "high"),
-        "medium": sum(1 for t in terminals if t.get("match_confidence") == "medium"),
-        "low": sum(1 for t in terminals if t.get("match_confidence") == "low"),
+        "ok": sum(1 for t in terminals if t.get("match_confidence") == "ok"),
+        "unmatched": sum(1 for t in terminals if t.get("match_confidence") == "unmatched"),
         "none": sum(1 for t in terminals if t.get("match_confidence") == "none"),
     }
 
@@ -321,7 +320,7 @@ def build_graph(data: dict):
         "n_has_terminal_edges": sum(len(comp.get("terminals", [])) for comp in components),
         "n_connected_to_edges": len(connections),
         "n_suspicious_terminal_matches": sum(1 for t in terminals if t.get("is_suspicious_match", False)),
-        "terminal_match_confidence_counts": confidence_counts,
+        "terminal_match_status_counts": confidence_counts,
         "n_terminals_matched": sum(1 for t in terminals if t.get("matched_net_id") is not None),
         "n_terminals_unmatched": sum(1 for t in terminals if t.get("matched_net_id") is None),
     }
@@ -332,8 +331,8 @@ def build_graph(data: dict):
             "image_name": data.get("image_name"),
             "image_path": data.get("image_path"),
             "source_json_stage": infer_source_stage(data),
-            "topology_stage_input": "06_match_terminals_to_nets_v3",
-            "pipeline_variant": "topology_v3_three_terminals",
+            "topology_stage_input": "06_match_terminals_to_nets",
+            "pipeline_variant": "topology_v5_various_two_terminals_components",
         },
         "graph_summary": graph_summary,
         "nodes": nodes,

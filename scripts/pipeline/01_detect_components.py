@@ -33,10 +33,10 @@ MODEL_PATH = (
 CLASS_TERMINALS_PATH = PROJECT_ROOT / "metadata" / "class_terminals_v1.yaml"
 
 # === INPUT ===
-INPUT_IMAGES_DIR = PROJECT_ROOT / "data" / "batch_v4_source_mosfet_transistor"
+INPUT_IMAGES_DIR = PROJECT_ROOT / "data" / "batch_v5_various_two_terminals_components"
 
 # === OUTPUT ===
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v4_source_mosfet_transistor" / "01_detect_components"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v5_various_two_terminals_components" / "01_detect_components"
 DEBUG_IMAGES_DIR = OUTPUT_DIR / "debug_images"
 
 # === PARAMETRI INFERENZA ===
@@ -179,9 +179,13 @@ def predict_components_on_image(
 
             meta = class_meta.get(class_id, {})
 
+            yaml_class_name = meta.get("name", f"class_{class_id}")
+            model_class_name = model_names.get(class_id, f"class_{class_id}")
+
             components.append({
                 "class_id": class_id,
-                "class_name": model_names.get(class_id, f"class_{class_id}"),
+                "class_name": yaml_class_name,
+                "model_class_name": model_class_name,
                 "conf": round(float(conf), 4),
                 "bbox": [
                     round(float(x1), 2),

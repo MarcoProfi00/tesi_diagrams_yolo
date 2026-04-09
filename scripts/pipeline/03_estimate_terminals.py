@@ -35,8 +35,8 @@ from estimate_terminals.config import SAVE_DEBUG_IMAGES
 #PATH / INPUT-OUTPUT
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v4_source_mosfet_transistor" / "02_assign_instances"
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v4_source_mosfet_transistor" / "03_estimate_terminals"
+INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v5_various_two_terminals_components" / "02_assign_instances"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v5_various_two_terminals_components" / "03_estimate_terminals"
 DEBUG_IMAGES_DIR = OUTPUT_DIR / "debug_images"
 
 CLASS_TERMINALS_PATH = PROJECT_ROOT / "metadata" / "class_terminals_v1.yaml"

@@ -1,5 +1,5 @@
 """
-05_build_nets.py
+05_builds_nets.py
 
 Scopo:
     Costruire le net candidate a partire dallo skeleton del passo 04.
@@ -22,8 +22,8 @@ import numpy as np
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v4_source_mosfet_transistor" / "04_extract_wires"
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v4_source_mosfet_transistor" / "05_build_nets"
+INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v5_various_two_terminals_components" / "04_extract_wires"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v5_various_two_terminals_components" / "05_build_nets"
 
 # =========================================================
 # TERMINAL -> LABEL MATCHING
@@ -36,6 +36,8 @@ TERMINAL_DEBUG_DIR = OUTPUT_DIR / "terminal_debug"
 # Terminale -> componente connessa sullo skeleton
 TERMINAL_SEARCH_OUTWARD = 16
 TERMINAL_SEARCH_INWARD = 4
+
+#Terminal Matching Params
 TERMINAL_DIRECTIONAL_HALFSPAN = 5
 TERMINAL_SQUARE_FALLBACK_RADIUS = 12
 
@@ -363,26 +365,42 @@ def terminal_to_candidate_labels(labels: np.ndarray, terminals, radius=12, direc
 
 # candidate nets
 def build_candidate_nets(stats, label_to_terminal_ids):
+    """
+    Costruisce le candidate nets a partire dalle connected components
+    dello skeleton e dalla mappa label -> terminal_id connessi.
+
+    Parameters
+    ----------
+    stats : np.ndarray
+        Output stats di cv2.connectedComponentsWithStats.
+        Riga 0 = background.
+    label_to_terminal_ids : dict[int, set[str]]
+        Mappa da source_label a insieme di terminal_id agganciati.
+
+    Returns
+    -------
+    list[dict]
+        Lista di candidate nets.
+    """
     candidates = []
-    num_labels = stats.shape[0]
 
-    for lbl in range(1, num_labels):  # 0 = background
-        x = int(stats[lbl, cv2.CC_STAT_LEFT])
-        y = int(stats[lbl, cv2.CC_STAT_TOP])
-        w = int(stats[lbl, cv2.CC_STAT_WIDTH])
-        h = int(stats[lbl, cv2.CC_STAT_HEIGHT])
-        area = int(stats[lbl, cv2.CC_STAT_AREA])
+    for lbl, stat_row in enumerate(stats[1:], start=1):  # salto background
+        x = int(stat_row[cv2.CC_STAT_LEFT])
+        y = int(stat_row[cv2.CC_STAT_TOP])
+        w = int(stat_row[cv2.CC_STAT_WIDTH])
+        h = int(stat_row[cv2.CC_STAT_HEIGHT])
+        area = int(stat_row[cv2.CC_STAT_AREA])
 
-        connected_terminal_ids = sorted(list(label_to_terminal_ids.get(lbl, set())))
+        connected_terminal_ids = sorted(label_to_terminal_ids.get(lbl, set()))
+        bbox = [x, y, x + w - 1, y + h - 1]
 
-        candidate = {
-            "source_label": int(lbl),
+        candidates.append({
+            "source_label": lbl,
             "pixel_count": area,
-            "bbox": [x, y, x + w - 1, y + h - 1],
+            "bbox": bbox,
             "connected_terminal_ids": connected_terminal_ids,
             "n_connected_terminals": len(connected_terminal_ids),
-        }
-        candidates.append(candidate)
+        })
 
     return candidates
 
@@ -622,7 +640,6 @@ def main() -> None:
         output_data["nets"] = nets
         output_data["n_nets"] = len(nets)
         output_data["net_building"] = {
-            "notes": "Versione topology_v1. Le candidate nets vengono ricavate dalle connected components dello skeleton del 04. L'associazione terminale->net usa prima una ricerca direzionale coerente col lato del terminale, poi fallback a una finestra quadrata locale.",
             "terminal_search_outward": TERMINAL_SEARCH_OUTWARD,
             "terminal_search_inward": TERMINAL_SEARCH_INWARD,
             "terminal_square_fallback_radius": TERMINAL_SQUARE_FALLBACK_RADIUS,

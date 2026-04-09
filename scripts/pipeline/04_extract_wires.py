@@ -25,8 +25,8 @@ from skimage.morphology import skeletonize
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v4_source_mosfet_transistor" / "03_estimate_terminals"
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v4_source_mosfet_transistor" / "04_extract_wires"
+INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v5_various_two_terminals_components" / "03_estimate_terminals"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v5_various_two_terminals_components" / "04_extract_wires"
 
 # =========================================================
 # COMPONENT MASKING
@@ -349,11 +349,6 @@ def main() -> None:
 
         output_data = dict(data)
         output_data["wire_extraction"] = {
-            "notes": (
-                "Versione topology_v3_three_terminals. Maschera i componenti e preserva per ogni terminale "
-                "una zona locale direzionata, in modo da tollerare terminali stimati non "
-                "perfettamente appoggiati sul cavo. Il testo non è ancora rimosso esplicitamente."
-            ),
             "mask_shrink_factor": MASK_SHRINK_FACTOR,
             "terminal_keep": keep_info,
             "closing_kernel_size": CLOSING_KERNEL_SIZE,

@@ -40,8 +40,8 @@ from graph_viz.render_full import draw_full_html, draw_full_png
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v4_source_mosfet_transistor" / "07_export_graph" / "graph_json"
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v4_source_mosfet_transistor" / "08_visualize_graph"
+INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v5_various_two_terminals_components" / "07_export_graph" / "graph_json"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v5_various_two_terminals_components" / "08_visualize_graph"
 
 # =========================================================
 # OUTPUT SUBDIRECTORIES
