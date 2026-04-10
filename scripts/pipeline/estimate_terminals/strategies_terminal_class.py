@@ -1,181 +1,23 @@
 from .config import *
 from .geometry import geom_terminal_point_by_side_peak
 from .probes import (
-    get_terminal_border_preference,
     get_terminal_class_far_probe_scores,
     get_terminal_class_probe_scores,
-    is_terminal_near_border,
     score_point_directional_support,
 )
 
 # =========================================================
 # STRATEGY: VARIABLE TERMINAL CLASS ("Terminal")
+# Filosofia:
+# - default = 1 terminale
+# - 2 terminali solo se l'evidenza è davvero forte
+# - nessun forcing dal bordo immagine
 # =========================================================
-def _score_terminal_two_side_candidate_by_points(binary, bbox, orientation):
-    """
-    Valuta una candidata orientazione a 2 terminali usando
-    i due punti terminali stimati sui lati opposti.
-    """
-    if orientation == "horizontal":
-        sides = ("left", "right")
-    else:
-        sides = ("top", "bottom")
-
-    total_score = 0
-    side_scores = {}
-    point_debug = {}
-
-    for side in sides:
-        point, peak_debug = geom_terminal_point_by_side_peak(binary, bbox, side)
-        px, py = point
-
-        dir_score = score_point_directional_support(
-            binary,
-            px,
-            py,
-            side,
-            outward=10,
-            inward=0,
-            halfspan=2,
-        )
-
-        side_scores[side] = dir_score
-        total_score += dir_score
-
-        point_debug[side] = {
-            "point": point,
-            "directional_support": dir_score,
-            "peak_debug": peak_debug,
-        }
-
-    return total_score, side_scores, point_debug
-
-
-def classify_terminal_cardinality(binary, bbox, default_side="right"):
-    local_scores = get_terminal_class_probe_scores(binary, bbox)
-    far_scores = get_terminal_class_far_probe_scores(binary, bbox)
-    border_pref = get_terminal_border_preference(binary.shape, bbox)
-    
-
-    # -------------------------------------------------
-    # 1) Prima validazione diretta a 2 terminali con point-scoring
-    # -------------------------------------------------
-    horizontal_total, horizontal_side_scores, horizontal_point_debug = (
-        _score_terminal_two_side_candidate_by_points(binary, bbox, "horizontal")
-    )
-    vertical_total, vertical_side_scores, vertical_point_debug = (
-        _score_terminal_two_side_candidate_by_points(binary, bbox, "vertical")
-    )
-
-    POINT_MIN_SIDE_SCORE = 2
-    POINT_MARGIN = 1.15
-
-    if (
-        min(vertical_side_scores["top"], vertical_side_scores["bottom"]) >= POINT_MIN_SIDE_SCORE
-        and vertical_total > horizontal_total * POINT_MARGIN
-    ):
-        local_scores["far_scores"] = far_scores
-        local_scores["decision_mode"] = "terminal_cardinality_point_validation_vertical"
-        local_scores["point_validation"] = {
-            "horizontal_total": horizontal_total,
-            "vertical_total": vertical_total,
-            "horizontal_side_scores": horizontal_side_scores,
-            "vertical_side_scores": vertical_side_scores,
-            "horizontal_point_debug": horizontal_point_debug,
-            "vertical_point_debug": vertical_point_debug,
-        }
-        return 2, "vertical", local_scores
-
-    if (
-        min(horizontal_side_scores["left"], horizontal_side_scores["right"]) >= POINT_MIN_SIDE_SCORE
-        and horizontal_total > vertical_total * POINT_MARGIN
-    ):
-        local_scores["far_scores"] = far_scores
-        local_scores["decision_mode"] = "terminal_cardinality_point_validation_horizontal"
-        local_scores["point_validation"] = {
-            "horizontal_total": horizontal_total,
-            "vertical_total": vertical_total,
-            "horizontal_side_scores": horizontal_side_scores,
-            "vertical_side_scores": vertical_side_scores,
-            "horizontal_point_debug": horizontal_point_debug,
-            "vertical_point_debug": vertical_point_debug,
-        }
-        return 2, "horizontal", local_scores
-
-    # lato attivo solo se confermato anche dal probe far
-    active = {}
-    for side in ("top", "bottom", "left", "right"):
-        active[side] = (
-            local_scores[side] >= TERMINAL_CLASS_ONE_SIDE_MIN and
-            far_scores[side] >= TERMINAL_CLASS_FAR_MIN
-        )
-
-    left_val = local_scores["left"]
-    right_val = local_scores["right"]
-    top_val = local_scores["top"]
-    bottom_val = local_scores["bottom"]
-
-    lr_pair = min(left_val, right_val)
-    tb_pair = min(top_val, bottom_val)
-    lr_score = left_val + right_val
-    tb_score = top_val + bottom_val
-
-    # -------------------------------------------------
-    # 2) Fallback classico: due terminali solo se molto chiaro
-    # -------------------------------------------------
-    clear_two_horizontal = (
-        active["left"] and active["right"] and
-        lr_pair >= TERMINAL_CLASS_TWO_SIDE_MIN and
-        lr_score > tb_score * TERMINAL_CLASS_TWO_AXIS_MARGIN and
-        min(left_val, right_val) >= TERMINAL_CLASS_TWO_BALANCE_RATIO * max(left_val, right_val) and
-        not active["top"] and not active["bottom"]
-    )
-
-    clear_two_vertical = (
-        active["top"] and active["bottom"] and
-        tb_pair >= TERMINAL_CLASS_TWO_SIDE_MIN and
-        tb_score > lr_score * TERMINAL_CLASS_TWO_AXIS_MARGIN and
-        min(top_val, bottom_val) >= TERMINAL_CLASS_TWO_BALANCE_RATIO * max(top_val, bottom_val) and
-        not active["left"] and not active["right"]
-    )
-
-    if clear_two_horizontal:
-        local_scores["far_scores"] = far_scores
-        local_scores["decision_mode"] = "terminal_cardinality_two_horizontal"
-        return 2, "horizontal", local_scores
-
-    if clear_two_vertical:
-        local_scores["far_scores"] = far_scores
-        local_scores["decision_mode"] = "terminal_cardinality_two_vertical"
-        return 2, "vertical", local_scores
-
-    # -------------------------------------------------
-    # 3) Solo se NON è chiaramente a 2, bordo => 1
-    # -------------------------------------------------
-    if is_terminal_near_border(binary.shape, bbox):
-        local_scores["far_scores"] = far_scores
-        local_scores["decision_mode"] = "terminal_cardinality_border_forced_one"
-        local_scores["border_preference"] = border_pref
-        return 1, border_pref if border_pref is not None else default_side, local_scores
-
-    # -------------------------------------------------
-    # 4) Altrimenti uno
-    # -------------------------------------------------
-    candidate_sides = [s for s in ("top", "bottom", "left", "right") if active[s]]
-    if candidate_sides:
-        best_side = max(candidate_sides, key=lambda s: local_scores[s])
-    else:
-        best_side = max(("top", "bottom", "left", "right"), key=lambda s: local_scores[s])
-
-    local_scores["far_scores"] = far_scores
-    local_scores["decision_mode"] = "terminal_cardinality_default_one"
-    return 1, best_side, local_scores
 
 def _score_terminal_one_side_candidate_by_points(binary, bbox, side):
     """
-    Valuta un lato candidato per un Terminal mono-terminale
-    usando il punto terminale stimato sul lato e supporto direzionale
-    quasi solo esterno al bbox.
+    Valuta un lato candidato usando un punto stimato sul bordo
+    e misurando il supporto direzionale verso l'esterno.
     """
     point, peak_debug = geom_terminal_point_by_side_peak(binary, bbox, side)
     px, py = point
@@ -193,85 +35,326 @@ def _score_terminal_one_side_candidate_by_points(binary, bbox, side):
     return dir_score, point, peak_debug
 
 
-def detect_terminal_one_side(binary, bbox, default_side="right", precomputed_scores=None, preferred_side=None):
-    # Se la classificazione ha già deciso in modo affidabile il lato, usalo.
-    if preferred_side in {"top", "bottom", "left", "right"}:
-        return [{"name": "t1", "relative_position": preferred_side}], preferred_side
+def _combined_side_scores(local_scores, far_scores):
+    return {
+        side: float(local_scores.get(side, 0)) + 1.2 * float(far_scores.get(side, 0))
+        for side in ("top", "bottom", "left", "right")
+    }
 
+
+def _best_single_side(local_scores, far_scores):
+    combined = _combined_side_scores(local_scores, far_scores)
+    best_side = max(combined, key=combined.get)
+    ordered = sorted(combined.items(), key=lambda kv: kv[1], reverse=True)
+
+    second_side = ordered[1][0]
+    second_score = ordered[1][1]
+
+    return {
+        "best_side": best_side,
+        "best_score": combined[best_side],
+        "second_side": second_side,
+        "second_score": second_score,
+        "combined_scores": combined,
+    }
+
+
+def _horizontal_two_side_evidence(local_scores, far_scores):
+    left_local = local_scores["left"]
+    right_local = local_scores["right"]
+    top_local = local_scores["top"]
+    bottom_local = local_scores["bottom"]
+
+    left_far = far_scores["left"]
+    right_far = far_scores["right"]
+    top_far = far_scores["top"]
+    bottom_far = far_scores["bottom"]
+
+    pair_local_min = min(left_local, right_local)
+    pair_far_min = min(left_far, right_far)
+
+    pair_score = (
+        left_local + right_local
+        + 1.0 * (left_far + right_far)
+    )
+
+    perpendicular_score = (
+        top_local + bottom_local
+        + 0.8 * (top_far + bottom_far)
+    )
+
+    valid = (
+        pair_local_min >= TERMINAL_CLASS_TWO_SIDE_MIN
+        and pair_far_min >= TERMINAL_CLASS_FAR_MIN
+        and pair_score > perpendicular_score * TERMINAL_CLASS_TWO_AXIS_MARGIN
+        and min(left_local, right_local) >= TERMINAL_CLASS_TWO_BALANCE_RATIO * max(left_local, right_local)
+    )
+
+    return {
+        "valid": valid,
+        "orientation": "horizontal",
+        "pair_score": float(pair_score),
+        "perpendicular_score": float(perpendicular_score),
+        "pair_local_min": float(pair_local_min),
+        "pair_far_min": float(pair_far_min),
+    }
+
+
+def _vertical_two_side_evidence(local_scores, far_scores):
+    left_local = local_scores["left"]
+    right_local = local_scores["right"]
+    top_local = local_scores["top"]
+    bottom_local = local_scores["bottom"]
+
+    left_far = far_scores["left"]
+    right_far = far_scores["right"]
+    top_far = far_scores["top"]
+    bottom_far = far_scores["bottom"]
+
+    pair_local_min = min(top_local, bottom_local)
+    pair_far_min = min(top_far, bottom_far)
+
+    pair_score = (
+        top_local + bottom_local
+        + 1.0 * (top_far + bottom_far)
+    )
+
+    perpendicular_score = (
+        left_local + right_local
+        + 0.8 * (left_far + right_far)
+    )
+
+    valid = (
+        pair_local_min >= TERMINAL_CLASS_TWO_SIDE_MIN
+        and pair_far_min >= TERMINAL_CLASS_FAR_MIN
+        and pair_score > perpendicular_score * TERMINAL_CLASS_TWO_AXIS_MARGIN
+        and min(top_local, bottom_local) >= TERMINAL_CLASS_TWO_BALANCE_RATIO * max(top_local, bottom_local)
+    )
+
+    return {
+        "valid": valid,
+        "orientation": "vertical",
+        "pair_score": float(pair_score),
+        "perpendicular_score": float(perpendicular_score),
+        "pair_local_min": float(pair_local_min),
+        "pair_far_min": float(pair_far_min),
+    }
+
+
+def classify_terminal_cardinality(binary, bbox, default_side="right"):
+    local_scores = get_terminal_class_probe_scores(binary, bbox)
+    far_scores = get_terminal_class_far_probe_scores(binary, bbox)
+
+    single_eval = _best_single_side(local_scores, far_scores)
+    horiz_eval = _horizontal_two_side_evidence(local_scores, far_scores)
+    vert_eval = _vertical_two_side_evidence(local_scores, far_scores)
+
+    local_scores["far_scores"] = far_scores
+    local_scores["single_side_evaluation"] = single_eval
+    local_scores["two_side_evaluations"] = {
+        "horizontal": horiz_eval,
+        "vertical": vert_eval,
+    }
+
+    # 2 terminali solo se batte chiaramente la migliore ipotesi mono-terminale
+    TWO_VS_ONE_MIN_ADVANTAGE = 2.0
+    TWO_SIDE_MARGIN = 1.10
+
+    horiz_beats_one = horiz_eval["pair_score"] >= single_eval["best_score"] + TWO_VS_ONE_MIN_ADVANTAGE
+    vert_beats_one = vert_eval["pair_score"] >= single_eval["best_score"] + TWO_VS_ONE_MIN_ADVANTAGE
+
+    if (
+        horiz_eval["valid"]
+        and horiz_beats_one
+        and (
+            not vert_eval["valid"]
+            or horiz_eval["pair_score"] > vert_eval["pair_score"] * TWO_SIDE_MARGIN
+        )
+    ):
+        local_scores["decision_mode"] = "terminal_cardinality_two_horizontal"
+        return 2, "horizontal", local_scores
+
+    if (
+        vert_eval["valid"]
+        and vert_beats_one
+        and (
+            not horiz_eval["valid"]
+            or vert_eval["pair_score"] > horiz_eval["pair_score"] * TWO_SIDE_MARGIN
+        )
+    ):
+        local_scores["decision_mode"] = "terminal_cardinality_two_vertical"
+        return 2, "vertical", local_scores
+
+    local_scores["decision_mode"] = "terminal_cardinality_default_one"
+    return 1, single_eval["best_side"], local_scores
+
+def _opposite_side(side):
+    return {
+        "top": "bottom",
+        "bottom": "top",
+        "left": "right",
+        "right": "left",
+    }[side]
+
+
+def _score_terminal_one_side_candidate_by_through_support(binary, bbox, side):
+    """
+    Misura quanto un lato sembri una vera connessione passante:
+    supporto fuori dal bbox + un po' di continuità dentro il simbolo.
+    Questo aiuta a scartare testo ('+', 'cc', ecc.).
+    """
+    point, peak_debug = geom_terminal_point_by_side_peak(binary, bbox, side)
+    px, py = point
+
+    outside = score_point_directional_support(
+        binary,
+        px,
+        py,
+        side,
+        outward=12,
+        inward=0,
+        halfspan=1,
+    )
+
+    inside = score_point_directional_support(
+        binary,
+        px,
+        py,
+        _opposite_side(side),
+        outward=6,
+        inward=0,
+        halfspan=1,
+    )
+
+    return {
+        "point": point,
+        "outside": float(outside),
+        "inside": float(inside),
+        "through_score": float(outside + 0.9 * inside),
+        "peak_debug": peak_debug,
+    }
+
+
+def detect_terminal_one_side(binary, bbox, default_side="right", precomputed_scores=None):
     scores = precomputed_scores if precomputed_scores is not None else get_terminal_class_probe_scores(binary, bbox)
-    far_scores = scores.get("far_scores", {})
+    far_scores = scores.get("far_scores")
+    if far_scores is None:
+        far_scores = get_terminal_class_far_probe_scores(binary, bbox)
 
-    border_pref = get_terminal_border_preference(binary.shape, bbox)
-    if border_pref is not None:
-        return [{"name": "t1", "relative_position": border_pref}], border_pref
+    combined = _combined_side_scores(scores, far_scores)
+    ordered = sorted(combined.items(), key=lambda kv: kv[1], reverse=True)
+
+    best_side, best_score = ordered[0]
+    second_side, second_score = ordered[1]
+
+    CLEAR_MARGIN = 1.75
+    CLEAR_SECOND_MAX = 12.0
+
+    THROUGH_MARGIN = 1.20
+    THROUGH_MIN_OUTSIDE = 4.0
+
+    POINT_MARGIN = 1.15
+    POINT_MIN_SCORE = 2
+    POINT_FAR_WEIGHT = 0.6
 
     # -------------------------------------------------
-    # 1) Prima prova: point validation sui 4 lati
+    # 1) Caso davvero chiaro: solo se il secondo lato è molto basso
+    # -------------------------------------------------
+    if (
+        far_scores.get(best_side, 0) >= TERMINAL_CLASS_FAR_MIN
+        and second_score <= CLEAR_SECOND_MAX
+        and best_score > max(8.0, second_score * CLEAR_MARGIN)
+    ):
+        return [{"name": "t1", "relative_position": best_side}], best_side
+
+    # -------------------------------------------------
+    # 2) Tie-break principale: continuità fuori+dentro sullo stesso asse
+    # -------------------------------------------------
+    candidate_sides = [
+        side
+        for side, score in combined.items()
+        if score >= max(10.0, 0.35 * best_score)
+    ]
+
+    through_debug = {}
+    for side in candidate_sides:
+        through_debug[side] = _score_terminal_one_side_candidate_by_through_support(
+            binary,
+            bbox,
+            side,
+        )
+
+    scores["through_support_debug"] = through_debug
+
+    if through_debug:
+        ordered_through = sorted(
+            through_debug.items(),
+            key=lambda kv: kv[1]["through_score"],
+            reverse=True,
+        )
+
+        best_through_side, best_through = ordered_through[0]
+        second_through_score = (
+            ordered_through[1][1]["through_score"]
+            if len(ordered_through) > 1 else 0.0
+        )
+
+        if (
+            best_through["outside"] >= THROUGH_MIN_OUTSIDE
+            and best_through["through_score"] > second_through_score * THROUGH_MARGIN
+        ):
+            return [{"name": "t1", "relative_position": best_through_side}], best_through_side
+
+    # -------------------------------------------------
+    # 3) Tie-break secondario: validazione point-based
     # -------------------------------------------------
     point_scores = {}
     point_debug = {}
 
     for side in ("top", "bottom", "left", "right"):
-        score, point, peak_debug = _score_terminal_one_side_candidate_by_points(binary, bbox, side)
-        point_scores[side] = score
+        p_score, point, peak_debug = _score_terminal_one_side_candidate_by_points(
+            binary,
+            bbox,
+            side,
+        )
+        point_scores[side] = p_score
         point_debug[side] = {
             "point": point,
-            "directional_support": score,
+            "directional_support": p_score,
             "peak_debug": peak_debug,
         }
 
-    ordered = sorted(
-        ("top", "bottom", "left", "right"),
-        key=lambda s: point_scores[s],
-        reverse=True
-    )
+    scores["point_debug_one_side"] = point_debug
 
-    best_side = ordered[0]
-    second_side = ordered[1]
-    best_score = point_scores[best_side]
-    second_score = point_scores[second_side]
+    point_combined = {
+        side: point_scores[side] + POINT_FAR_WEIGHT * far_scores.get(side, 0)
+        for side in ("top", "bottom", "left", "right")
+    }
 
-    POINT_MIN_SIDE_SCORE = 2
-    POINT_MARGIN = 1.15
+    ordered_point = sorted(point_combined.items(), key=lambda kv: kv[1], reverse=True)
+    best_point_side, best_point_score = ordered_point[0]
+    second_point_score = ordered_point[1][1]
 
-    if best_score >= POINT_MIN_SIDE_SCORE and best_score > second_score * POINT_MARGIN:
-        return [{"name": "t1", "relative_position": best_side}], best_side
+    if (
+        point_scores.get(best_point_side, 0) >= POINT_MIN_SCORE
+        and best_point_score > second_point_score * POINT_MARGIN
+    ):
+        return [{"name": "t1", "relative_position": best_point_side}], best_point_side
 
     # -------------------------------------------------
-    # 2) Fallback: usa solo lati confermati anche dai far_scores
+    # 4) Fallback: migliore lato combinato
     # -------------------------------------------------
-    candidate_sides = []
-    for side in ("top", "bottom", "left", "right"):
-        local_ok = scores.get(side, 0) >= TERMINAL_CLASS_ONE_SIDE_MIN
-        far_ok = far_scores.get(side, 0) >= TERMINAL_CLASS_FAR_MIN if far_scores else True
-        if local_ok and far_ok:
-            candidate_sides.append(side)
-
-    if candidate_sides:
-        best_side = max(candidate_sides, key=lambda s: scores.get(s, 0))
-        return [{"name": "t1", "relative_position": best_side}], best_side
-
-    best_side = max(("top", "bottom", "left", "right"), key=lambda s: scores.get(s, 0))
     return [{"name": "t1", "relative_position": best_side}], best_side
 
 
-def detect_terminal_two_sides(binary, bbox, precomputed_scores=None, preferred_orientation=None):
-    if preferred_orientation == "horizontal":
-        return [
-            {"name": "t1", "relative_position": "left"},
-            {"name": "t2", "relative_position": "right"},
-        ], "horizontal"
-
-    if preferred_orientation == "vertical":
-        return [
-            {"name": "t1", "relative_position": "top"},
-            {"name": "t2", "relative_position": "bottom"},
-        ], "vertical"
-
+def detect_terminal_two_sides(binary, bbox, precomputed_scores=None):
     scores = precomputed_scores if precomputed_scores is not None else get_terminal_class_probe_scores(binary, bbox)
+    far_scores = scores.get("far_scores")
+    if far_scores is None:
+        far_scores = get_terminal_class_far_probe_scores(binary, bbox)
 
-    lr_score = scores["left"] + scores["right"]
-    tb_score = scores["top"] + scores["bottom"]
+    lr_score = scores["left"] + scores["right"] + 1.0 * (far_scores["left"] + far_scores["right"])
+    tb_score = scores["top"] + scores["bottom"] + 1.0 * (far_scores["top"] + far_scores["bottom"])
 
     if lr_score >= tb_score:
         return [
@@ -289,21 +372,11 @@ def detect_terminal_auto_one_or_two(binary, bbox, default_side="right"):
     cardinality, mode, scores = classify_terminal_cardinality(binary, bbox, default_side=default_side)
 
     if cardinality == 1:
-        decision_mode = scores.get("decision_mode", "")
-
-        # Usa il lato già deciso SOLO quando è una decisione davvero affidabile.
-        # Se è "default_one", lasciamo che detect_terminal_one_side faccia
-        # border preference + point validation.
-        preferred_side = None
-        if decision_mode == "terminal_cardinality_border_forced_one":
-            preferred_side = mode
-
         terminals_def, orientation = detect_terminal_one_side(
             binary,
             bbox,
             default_side=default_side,
             precomputed_scores=scores,
-            preferred_side=preferred_side,
         )
         scores["final_mode"] = "one_terminal"
         return terminals_def, orientation, scores
@@ -312,7 +385,6 @@ def detect_terminal_auto_one_or_two(binary, bbox, default_side="right"):
         binary,
         bbox,
         precomputed_scores=scores,
-        preferred_orientation=mode,
     )
     scores["final_mode"] = "two_terminal"
     return terminals_def, orientation, scores

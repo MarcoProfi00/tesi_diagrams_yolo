@@ -33,10 +33,10 @@ MODEL_PATH = (
 CLASS_TERMINALS_PATH = PROJECT_ROOT / "metadata" / "class_terminals_v1.yaml"
 
 # === INPUT ===
-INPUT_IMAGES_DIR = PROJECT_ROOT / "data" / "batch_v5_various_two_terminals_components"
+INPUT_IMAGES_DIR = PROJECT_ROOT / "data" / "batch_v6_operational_amplifier"
 
 # === OUTPUT ===
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v5_various_two_terminals_components" / "01_detect_components"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v6_opamp" / "01_detect_components"
 DEBUG_IMAGES_DIR = OUTPUT_DIR / "debug_images"
 
 # === PARAMETRI INFERENZA ===

@@ -12,6 +12,7 @@ from .strategies_basic import (
 )
 from .strategies_terminal_class import detect_terminal_auto_one_or_two
 from .strategies_three_terminal import strategy_detect_three_terminal_orientation
+from .strategies_opamp import detect_opamp_terminals
 
 
 def _get_oriented_terminals(meta: dict, orientation: str):
@@ -32,6 +33,9 @@ def resolve_terminal_point_mode(meta: dict):
     if strategy == "three_terminal_by_side_pattern":
         return THREE_TERMINAL_POINT_MODE
 
+    if strategy == "opamp_by_orientation_and_optional_supply":
+        return OPAMP_POINT_MODE
+
     if strategy in {
         "two_terminal_led",
         "two_terminal_variable_resistor",
@@ -39,7 +43,6 @@ def resolve_terminal_point_mode(meta: dict):
     }:
         return "two_terminal_side_peak"
 
-    # fallback di compatibilità: idealmente Diode andrebbe esplicitato nello YAML
     if class_name in {"LED", "Diode"}:
         return "two_terminal_side_peak"
 
@@ -122,7 +125,7 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
         default_orientation = meta.get("default_orientation")
         if default_orientation is None:
             raise ValueError("Manca default_orientation per one_terminal_by_orientation.")
-
+        
         return _get_oriented_terminals(meta, default_orientation), default_orientation, None, side_scores
 
     if strategy in {
@@ -160,6 +163,19 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
             default_side=default_side,
         )
         return terminals_def, orientation, None, side_scores
+    
+    if strategy == "opamp_by_orientation_and_optional_supply":
+        if image_binary is None:
+            raise ValueError("opamp_by_orientation_and_optional_supply richiede image_binary.")
+
+        default_orientation = meta.get("default_orientation", "right")
+        terminals_def, orientation, side_scores = detect_opamp_terminals(
+            meta,
+            image_binary,
+            bbox,
+            default_orientation=default_orientation,
+        )
+        return terminals_def, orientation, None, side_scores
 
     if strategy == "three_terminal_by_side_pattern":
         if image_binary is None:
@@ -174,7 +190,6 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
             class_name=class_name,
             default_orientation=default_orientation,
         )
-
         return _get_oriented_terminals(meta, orientation), orientation, None, side_scores
 
     raise ValueError(f"Strategia terminali non supportata: {strategy}")

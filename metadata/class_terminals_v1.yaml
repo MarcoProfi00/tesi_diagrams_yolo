@@ -357,16 +357,114 @@
         relative_position: bottom
       - name: t2
         relative_position: left
-        relative_position: left
       - name: t3
         relative_position: right
 
 19:
   name: Operational_Amplifier
   symbol_type: multi_terminal
-  use_for_terminals: false
+  use_for_terminals: true
   use_for_masking: true
-  notes: "Per ora solo masking"
+  terminal_strategy: opamp_by_orientation_and_optional_supply
+  terminal_point_mode: opamp_structured
+  default_orientation: right
+  orientations:
+    right:
+      - name: in1
+        relative_position: left
+        terminal_role: input
+        slot: upper
+      - name: in2
+        relative_position: left
+        terminal_role: input
+        slot: lower
+      - name: out
+        relative_position: right
+        terminal_role: output
+        slot: center
+      - name: aux1
+        relative_position: top
+        terminal_role: auxiliary
+        slot: center
+        optional: true
+      - name: aux2
+        relative_position: bottom
+        terminal_role: auxiliary
+        slot: center
+        optional: true
+
+    left:
+      - name: in1
+        relative_position: right
+        terminal_role: input
+        slot: upper
+      - name: in2
+        relative_position: right
+        terminal_role: input
+        slot: lower
+      - name: out
+        relative_position: left
+        terminal_role: output
+        slot: center
+      - name: aux1
+        relative_position: top
+        terminal_role: auxiliary
+        slot: center
+        optional: true
+      - name: aux2
+        relative_position: bottom
+        terminal_role: auxiliary
+        slot: center
+        optional: true
+
+    top:
+      - name: in1
+        relative_position: bottom
+        terminal_role: input
+        slot: left
+      - name: in2
+        relative_position: bottom
+        terminal_role: input
+        slot: right
+      - name: out
+        relative_position: top
+        terminal_role: output
+        slot: center
+      - name: aux1
+        relative_position: left
+        terminal_role: auxiliary
+        slot: center
+        optional: true
+      - name: aux2
+        relative_position: right
+        terminal_role: auxiliary
+        slot: center
+        optional: true
+
+    bottom:
+      - name: in1
+        relative_position: top
+        terminal_role: input
+        slot: left
+      - name: in2
+        relative_position: top
+        terminal_role: input
+        slot: right
+      - name: out
+        relative_position: bottom
+        terminal_role: output
+        slot: center
+      - name: aux1
+        relative_position: left
+        terminal_role: auxiliary
+        slot: center
+        optional: true
+      - name: aux2
+        relative_position: right
+        terminal_role: auxiliary
+        slot: center
+        optional: true
+  notes: "OpAmp: 3 terminali obbligatori (2 input + 1 output) e fino a 2 pin opzionali di supply"
 
 20:
   name: Polarized_Capacitor

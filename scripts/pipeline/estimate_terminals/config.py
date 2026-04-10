@@ -174,3 +174,66 @@ ROUND_SOURCE_AXIS_MARGIN = 1.10
 
 # fallback su aspect ratio solo se il bbox non è quasi quadrato
 ROUND_SOURCE_BBOX_RATIO_MARGIN = 1.12
+
+
+# =========================================================
+# OPERATIONAL AMPLIFIER
+# =========================================================
+OPAMP_POINT_MODE = "opamp_structured"
+
+# Finestre di scansione per i terminali sul lato
+# "upper/lower" quando i 2 input stanno su left/right
+OPAMP_SLOT_UPPER_START_RATIO = 0.18
+OPAMP_SLOT_UPPER_END_RATIO = 0.42
+
+OPAMP_SLOT_LOWER_START_RATIO = 0.58
+OPAMP_SLOT_LOWER_END_RATIO = 0.82
+
+# "left/right" quando i 2 input stanno su top/bottom
+OPAMP_SLOT_LEFT_START_RATIO = 0.18
+OPAMP_SLOT_LEFT_END_RATIO = 0.42
+
+OPAMP_SLOT_RIGHT_START_RATIO = 0.58
+OPAMP_SLOT_RIGHT_END_RATIO = 0.82
+
+# centro del lato, per output e supply opzionali
+OPAMP_SLOT_CENTER_START_RATIO = 0.32
+OPAMP_SLOT_CENTER_END_RATIO = 0.68
+
+# scoring orientazione
+OPAMP_DIRECTIONAL_OUTWARD = 12
+OPAMP_DIRECTIONAL_INWARD = 1
+OPAMP_DIRECTIONAL_HALFSPAN = 3
+
+OPAMP_OUTPUT_WEIGHT = 1.20
+OPAMP_ORIENTATION_MARGIN = 1.10
+
+# attivazione pin opzionali
+OPAMP_OPTIONAL_MIN_SCORE = 2
+
+# attivazione pin opzionali opamp
+OPAMP_AUX_MIN_STEM_LENGTH = 5
+OPAMP_AUX_STRONG_STEM_LENGTH = 8
+OPAMP_AUX_MAX_BORDER_GAP = 4
+
+OPAMP_AUX_MIN_INTERNAL_SUPPORT = 5
+
+OPAMP_AUX_EXTERNAL_OUT_LEN = 10
+OPAMP_AUX_MIN_EXTERNAL_SUPPORT = 4
+
+OPAMP_AUX_CENTER_START_RATIO = 0.36
+OPAMP_AUX_CENTER_END_RATIO = 0.64
+OPAMP_AUX_EDGE_SKIP_RATIO = 0.04
+OPAMP_AUX_TOP_STRONG_STEM_LENGTH = 5
+OPAMP_AUX_CENTER_TOLERANCE = 3
+
+OPAMP_AUX_AXIS_LINE_LEN = 14
+OPAMP_AUX_AXIS_MIN_SUPPORT = 5
+OPAMP_AUX_SIDE_BRANCH_MIN_SUPPORT = 6
+OPAMP_AUX_MIN_DIAG_SUPPORT = 4
+
+# Seconda fase: dopo aver capito che l'aux esiste, rifiniamo il punto per
+# riportarlo sul giunto interno opamp e non sul simbolo eventualmente collegato
+# sopra/sotto (terminal, source, bubble, ecc.).
+OPAMP_AUX_JUNCTION_REFINE_X_RADIUS = 4
+OPAMP_AUX_JUNCTION_DIAG_RADIUS = 4

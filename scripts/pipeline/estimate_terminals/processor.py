@@ -4,6 +4,7 @@ from .geometry import (
     geom_terminal_point_from_bbox,
     geom_terminal_point_three_terminal,
     geom_terminal_point_by_side_peak,
+    geom_terminal_point_opamp,
 )
 # =========================================================
 # COMPONENT PROCESSING
@@ -46,6 +47,16 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
             )
             x, y = point
             point_debug.update(structured_debug)
+
+        elif point_mode == OPAMP_POINT_MODE:
+            point, opamp_debug = geom_terminal_point_opamp(
+                image_binary,
+                bbox,
+                estimated_orientation,
+                term_def,
+            )
+            x, y = point
+            point_debug.update(opamp_debug)
 
         elif point_mode == "two_terminal_side_peak":
             point, peak_debug = geom_terminal_point_by_side_peak(
