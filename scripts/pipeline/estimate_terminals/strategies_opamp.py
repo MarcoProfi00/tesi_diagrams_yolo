@@ -1,3 +1,4 @@
+
 from .config import *
 from .geometry import geom_terminal_point_opamp
 from .probes import score_point_directional_support
@@ -38,7 +39,6 @@ def _score_opamp_terminal(binary, bbox, orientation: str, term_def: dict):
         "relative_position": relative_position,
         "terminal_role": term_def.get("terminal_role"),
         "slot": term_def.get("slot"),
-        "optional": bool(term_def.get("optional", False)),
         "point": point,
         "directional_score": directional_score,
         "weight": weight,
@@ -47,42 +47,15 @@ def _score_opamp_terminal(binary, bbox, orientation: str, term_def: dict):
     }
 
 
-def _evaluate_opamp_optional_terminal(binary, bbox, point, point_debug, term_def):
-    """
-    Strategia unica: il terminale opzionale è attivo solo se la geometria
-    ha trovato una run verticale connessa al lato esterno e terminata
-    sulla diagonale corretta del triangolo.
-    """
-    run_len = int(point_debug.get("aux_stem_length", 0))
-    diag_support = int(point_debug.get("diag_support", 0))
-    orientation_supported = bool(point_debug.get("orientation_supported", True))
-    is_active = bool(point_debug.get("aux_detected", False))
-
-    debug = {
-        "name": term_def.get("name"),
-        "relative_position": term_def.get("relative_position"),
-        "terminal_role": term_def.get("terminal_role"),
-        "slot": term_def.get("slot"),
-        "optional": True,
-        "point": point,
-        "point_debug": point_debug,
-        "run_len": run_len,
-        "diag_support": diag_support,
-        "candidate_coord": point_debug.get("candidate_coord"),
-        "orientation_supported": orientation_supported,
-        "geometry_aux_detected": bool(point_debug.get("aux_detected", False)),
-        "is_active": is_active,
-    }
-
-    return is_active, debug
-
-
 def detect_opamp_terminals(meta: dict, binary, bbox, default_orientation="right"):
     """
-    Strategia opamp:
-    1) prova le 4 orientazioni candidate
-    2) sceglie quella con score migliore sui 3 terminali obbligatori
-    3) attiva i terminali opzionali (aux1/aux2) solo se hanno supporto reale
+    Reset strategico dell'opamp.
+
+    Fase attuale:
+    1) stimiamo l'orientazione usando SOLO i 3 terminali obbligatori
+    2) restituiamo SOLO i 3 terminali obbligatori
+    3) ignoriamo temporaneamente gli auxiliary, così non inquinano né
+       l'orientazione né la localizzazione dei pin principali
     """
     candidate_orientations = ("right", "left", "top", "bottom")
 
@@ -124,7 +97,7 @@ def detect_opamp_terminals(meta: dict, binary, bbox, default_orientation="right"
     second_score = orientation_scores[second_orientation]
 
     chosen_orientation = best_orientation
-    decision_mode = "opamp_orientation_point_validation"
+    decision_mode = "opamp_mandatory_only_orientation"
 
     if best_score <= second_score * OPAMP_ORIENTATION_MARGIN:
         chosen_orientation = (
@@ -141,7 +114,7 @@ def detect_opamp_terminals(meta: dict, binary, bbox, default_orientation="right"
 
     for term_def in chosen_defs:
         if not term_def.get("optional", False):
-            active_terminals.append(term_def)
+            active_terminals.append(dict(term_def))
             continue
 
         point, point_debug = geom_terminal_point_opamp(
@@ -151,15 +124,13 @@ def detect_opamp_terminals(meta: dict, binary, bbox, default_orientation="right"
             term_def,
         )
 
-        is_active, debug = _evaluate_opamp_optional_terminal(
-            binary,
-            bbox,
-            point,
-            point_debug,
-            term_def,
-        )
-
-        optional_debug[term_def["name"]] = debug
+        is_active = bool(point_debug.get("aux_detected", False))
+        optional_debug[term_def["name"]] = {
+            "name": term_def.get("name"),
+            "point": point,
+            "point_debug": point_debug,
+            "is_active": is_active,
+        }
 
         if is_active:
             active_terminals.append(dict(term_def))
@@ -176,6 +147,7 @@ def detect_opamp_terminals(meta: dict, binary, bbox, default_orientation="right"
         },
         "orientation_debug": orientation_debug,
         "optional_debug": optional_debug,
+        "optional_terminals_disabled": False,
         "active_terminal_names": [t["name"] for t in active_terminals],
     }
 

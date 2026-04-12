@@ -237,3 +237,83 @@ OPAMP_AUX_MIN_DIAG_SUPPORT = 4
 # sopra/sotto (terminal, source, bubble, ecc.).
 OPAMP_AUX_JUNCTION_REFINE_X_RADIUS = 4
 OPAMP_AUX_JUNCTION_DIAG_RADIUS = 4
+
+# Rifinitura del giunto aux: una volta scelto l'asse corretto,
+# cerchiamo solo la y dell'incrocio con la diagonale.
+OPAMP_AUX_REFINE_Y_MIN_RATIO = 0.16
+OPAMP_AUX_REFINE_Y_MAX_RATIO = 0.78
+OPAMP_AUX_REFINE_LOCAL_RADIUS = 2
+OPAMP_AUX_MIN_SEGMENT_DENSITY = 0.10
+
+# Run verticale aux: tolleranza a piccoli shift/gap del tratto verticale.
+OPAMP_AUX_RUN_HALFSPAN = 2
+OPAMP_AUX_RUN_GAP_TOLERANCE = 2
+
+# Se entrambi gli aux sono attivi e quasi allineati, imponiamo un asse x comune.
+OPAMP_AUX_AXIS_ALIGN_MAX_DELTA = 8
+
+
+# ---------------------------------------------------------
+# OPAMP RESET: fase 1 solo terminali obbligatori
+# ---------------------------------------------------------
+# La localizzazione di in1/in2/out usa probe stretti centrati sul bordo del bbox
+# ma con peso quasi tutto fuori dal bbox, così i numeri e i simboli interni
+# dell'opamp disturbano molto meno.
+OPAMP_MANDATORY_OUTWARD_OFFSET = 8
+OPAMP_MANDATORY_SCAN_HALFSPAN = 2
+OPAMP_MANDATORY_OUTWARD_LEN = 14
+OPAMP_MANDATORY_INWARD_LEN = 1
+OPAMP_MANDATORY_FAR_GAP = 2
+OPAMP_MANDATORY_FAR_LEN = 8
+OPAMP_MANDATORY_FAR_WEIGHT = 0.75
+
+OPAMP_MANDATORY_ROW_TOL = 1
+OPAMP_MANDATORY_KEEP_RATIO = 0.92
+OPAMP_MANDATORY_BORDER_WEIGHT = 0.35
+
+# ---------------------------------------------------------
+# OPAMP AUX V1: rilevamento strutturale dei pin di supply
+# ---------------------------------------------------------
+# Cerchiamo solo rami verticali connessi davvero al lato top/bottom
+# del bbox nella banda centrale dell'opamp.
+OPAMP_AUX_ENABLE_V1 = True
+
+OPAMP_AUX_SCAN_X_START_RATIO = 0.38
+OPAMP_AUX_SCAN_X_END_RATIO = 0.72
+
+OPAMP_AUX_RUN_HALFSPAN = 1
+OPAMP_AUX_RUN_MIN_FG = 1
+OPAMP_AUX_RUN_MAX_GAP = 1
+OPAMP_AUX_RUN_MAX_DEPTH_RATIO = 0.78
+OPAMP_AUX_MIN_RUN_LENGTH = 10
+
+# piccolo margine per non fermarci subito per antialiasing
+OPAMP_AUX_EDGE_BAND_RATIO = 0.05
+
+# ---------------------------------------------------------
+# OPAMP AUX V2: refine del punto sul lato obliquo
+# ---------------------------------------------------------
+OPAMP_AUX_DIAG_RADIUS = 4
+OPAMP_AUX_REFINE_MIN_DIAG_SUPPORT = 3
+OPAMP_AUX_REFINE_MIN_SEGMENT_DENSITY = 0.12
+
+# bande plausibili dove cercare il giunto con la diagonale
+OPAMP_AUX_REFINE_TOP_START_RATIO = 0.16
+OPAMP_AUX_REFINE_TOP_END_RATIO = 0.62
+
+OPAMP_AUX_REFINE_BOTTOM_START_RATIO = 0.38
+OPAMP_AUX_REFINE_BOTTOM_END_RATIO = 0.86
+
+# ---------------------------------------------------------
+# OPAMP AUX V3: refine locale della x dello stelo verticale
+# ---------------------------------------------------------
+OPAMP_AUX_X_REFINE_RADIUS = 4
+OPAMP_AUX_X_REFINE_HALFSPAN = 1
+
+# banda verticale dove misurare la densità dello stelo
+OPAMP_AUX_X_REFINE_TOP_END_RATIO = 0.40
+OPAMP_AUX_X_REFINE_BOTTOM_START_RATIO = 0.60
+
+OPAMP_AUX_X_REFINE_MIN_DENSITY = 0.18
+
+

@@ -394,6 +394,7 @@ def geom_terminal_point_three_terminal(binary, bbox, orientation: str, relative_
     return point, debug
 
 
+
 def _opamp_slot_scan_range(x1, y1, x2, y2, relative_position: str, slot: str):
     width = max(x2 - x1, 1)
     height = max(y2 - y1, 1)
@@ -429,405 +430,230 @@ def _opamp_slot_scan_range(x1, y1, x2, y2, relative_position: str, slot: str):
     raise ValueError(f"relative_position non supportata per opamp: {relative_position}")
 
 
-def _opamp_diagonal_support(binary, x, y, diag_kind, radius=4):
+def _opamp_mandatory_probe_score(binary, bbox, relative_position: str, coord: int):
     """
-    Supporto locale della diagonale del triangolo vicino al punto candidato.
+    Score 1D per i 3 terminali obbligatori dell'opamp.
 
-    diag_kind:
-      - "down_right"  -> linea tipo "\"
-      - "up_right"    -> linea tipo "/"
-    """
-    h, w = binary.shape[:2]
+    Obiettivo:
+    - leggere soprattutto il filo ESTERNO al bbox
+    - usare il bordo come conferma leggera
+    - non leggere quasi per niente la grafica interna dell'opamp
 
-    def sample(offset):
-        cnt = 0
-        for k in range(-radius, radius + 1):
-            xx = x + k
-            if diag_kind == "down_right":
-                yy = y + k + offset
-            else:
-                yy = y - k + offset
-
-            if 0 <= xx < w and 0 <= yy < h and binary[yy, xx] > 0:
-                cnt += 1
-        return cnt
-
-    return max(sample(-1), sample(0), sample(1))
-
-
-def _opamp_connected_vertical_run_from_side(binary, x, y1, y2, side, halfspan=1, min_fg=1):
-    """
-    Cerca una run verticale CONTIGUA connessa al lato alto o basso del bbox.
-
-    È la strategia unica per gli aux:
-    - il ramo deve partire davvero dal lato esterno del simbolo
-    - la giunzione è la fine di quella run, dove incontra il lato obliquo
-    """
-    h = binary.shape[0]
-    side_band = max(2, int(round(0.04 * max(y2 - y1, 1))))
-
-    def row_fg(y):
-        return img_count_foreground_pixels(
-            binary,
-            x - halfspan,
-            y,
-            x + halfspan + 1,
-            y + 1,
-        )
-
-    if side == "top":
-        start_candidates = [
-            y for y in range(y1, min(y2, y1 + side_band) + 1)
-            if row_fg(y) >= min_fg
-        ]
-        if not start_candidates:
-            return None
-
-        run_start = start_candidates[0]
-        run_end = run_start
-
-        max_y = min(y2, y1 + int(round(0.75 * max(y2 - y1, 1))))
-        for y in range(run_start + 1, max_y + 1):
-            if row_fg(y) >= min_fg:
-                run_end = y
-            else:
-                break
-
-        return {
-            "run_start": run_start,
-            "run_end": run_end,
-            "run_len": int(run_end - run_start + 1),
-            "side_band": side_band,
-        }
-
-    if side == "bottom":
-        start_candidates = [
-            y for y in range(y2, max(y1, y2 - side_band) - 1, -1)
-            if row_fg(y) >= min_fg
-        ]
-        if not start_candidates:
-            return None
-
-        run_start = start_candidates[0]
-        run_end = run_start
-
-        min_y = max(y1, y2 - int(round(0.75 * max(y2 - y1, 1))))
-        for y in range(run_start - 1, min_y - 1, -1):
-            if row_fg(y) >= min_fg:
-                run_end = y
-            else:
-                break
-
-        return {
-            "run_start": run_start,
-            "run_end": run_end,
-            "run_len": int(run_start - run_end + 1),
-            "side_band": side_band,
-        }
-
-    return None
-
-
-
-
-def _geom_opamp_refine_aux_junction(binary, bbox, orientation, relative_position, base_point, diag_kind):
-    """
-    Rifinisce il punto dell'aux DOPO l'attivazione geometrica.
-
-    La prima fase decide se l'aux esiste davvero partendo dal lato esterno.
-    Però, quando sopra/sotto all'opamp c'è anche un simbolo piccolo (es. terminal,
-    bubble, source), il punto trovato può fermarsi troppo presto: al bordo del
-    simbolo esterno, non al vero giunto tra branch verticale e diagonale del triangolo.
-
-    Qui facciamo una seconda fase locale:
-    - partiamo dal punto candidato già trovato
-    - proviamo una piccola finestra di x attorno al candidato
-    - per ogni x cerchiamo la fine del branch verticale interno
-    - scegliamo il candidato con miglior supporto della diagonale corretta
-
-    Così l'aux resta attivato solo quando esiste davvero, ma il punto finale
-    viene riportato sul corpo dell'opamp.
+    Così numeri e simboli interni (+, -, 1, 2, 3, 4, 5) disturbano molto meno.
     """
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
 
-    base_x = int(round(base_point[0]))
-    base_y = int(round(base_point[1]))
+    if relative_position == "left":
+        ys = range(coord - OPAMP_MANDATORY_ROW_TOL, coord + OPAMP_MANDATORY_ROW_TOL + 1)
 
-    x_radius = OPAMP_AUX_JUNCTION_REFINE_X_RADIUS
-
-    best = None
-    for x in range(max(x1, base_x - x_radius), min(x2, base_x + x_radius) + 1):
-        refined_point = _geom_opamp_internal_wire_triangle_junction(
-            binary,
-            bbox,
-            (float(x), float(base_y)),
-            relative_position,
+        near = max(
+            _opamp_count_horizontal_line(binary, x1 - OPAMP_MANDATORY_OUTWARD_LEN, x1, y)
+            for y in ys
         )
-        if refined_point is None:
-            continue
-
-        rx = int(round(refined_point[0]))
-        ry = int(round(refined_point[1]))
-        diag_support = _opamp_diagonal_support(
-            binary,
-            rx,
-            ry,
-            diag_kind=diag_kind,
-            radius=OPAMP_AUX_JUNCTION_DIAG_RADIUS,
+        far = max(
+            _opamp_count_horizontal_line(
+                binary,
+                x1 - OPAMP_MANDATORY_OUTWARD_LEN - OPAMP_MANDATORY_FAR_GAP - OPAMP_MANDATORY_FAR_LEN,
+                x1 - OPAMP_MANDATORY_OUTWARD_LEN - OPAMP_MANDATORY_FAR_GAP,
+                y,
+            )
+            for y in ys
+        )
+        border = max(
+            _opamp_count_horizontal_line(binary, x1 - 1, x1 + 2, y)
+            for y in ys
         )
 
-        travel = abs(ry - base_y) if relative_position in {"top", "bottom"} else abs(rx - base_x)
+        return near + OPAMP_MANDATORY_FAR_WEIGHT * far + OPAMP_MANDATORY_BORDER_WEIGHT * border
 
-        key = (
-            diag_support >= OPAMP_AUX_MIN_DIAG_SUPPORT,
-            diag_support,
-            travel,
-            -abs(x - base_x),
+    if relative_position == "right":
+        ys = range(coord - OPAMP_MANDATORY_ROW_TOL, coord + OPAMP_MANDATORY_ROW_TOL + 1)
+
+        near = max(
+            _opamp_count_horizontal_line(binary, x2 + 1, x2 + OPAMP_MANDATORY_OUTWARD_LEN + 1, y)
+            for y in ys
+        )
+        far = max(
+            _opamp_count_horizontal_line(
+                binary,
+                x2 + OPAMP_MANDATORY_OUTWARD_LEN + OPAMP_MANDATORY_FAR_GAP,
+                x2 + OPAMP_MANDATORY_OUTWARD_LEN + OPAMP_MANDATORY_FAR_GAP + OPAMP_MANDATORY_FAR_LEN + 1,
+                y,
+            )
+            for y in ys
+        )
+        border = max(
+            _opamp_count_horizontal_line(binary, x2 - 1, x2 + 2, y)
+            for y in ys
         )
 
-        if best is None or key > best["key"]:
-            best = {
-                "key": key,
-                "point": (float(rx), float(ry)),
-                "diag_support": diag_support,
-                "travel": travel,
-                "source_x": x,
-            }
+        return near + OPAMP_MANDATORY_FAR_WEIGHT * far + OPAMP_MANDATORY_BORDER_WEIGHT * border
 
-    if best is None:
-        return base_point, {
-            "refined": False,
-            "refine_source_x": base_x,
-            "refine_travel": 0,
-            "refined_diag_support": 0,
-        }
+    if relative_position == "top":
+        xs = range(coord - OPAMP_MANDATORY_ROW_TOL, coord + OPAMP_MANDATORY_ROW_TOL + 1)
 
-    return best["point"], {
-        "refined": best["point"] != base_point,
-        "refine_source_x": best["source_x"],
-        "refine_travel": best["travel"],
-        "refined_diag_support": best["diag_support"],
-    }
+        near = max(
+            _opamp_count_vertical_line(binary, x, y1 - OPAMP_MANDATORY_OUTWARD_LEN, y1)
+            for x in xs
+        )
+        far = max(
+            _opamp_count_vertical_line(
+                binary,
+                x,
+                y1 - OPAMP_MANDATORY_OUTWARD_LEN - OPAMP_MANDATORY_FAR_GAP - OPAMP_MANDATORY_FAR_LEN,
+                y1 - OPAMP_MANDATORY_OUTWARD_LEN - OPAMP_MANDATORY_FAR_GAP,
+            )
+            for x in xs
+        )
+        border = max(
+            _opamp_count_vertical_line(binary, x, y1 - 1, y1 + 2)
+            for x in xs
+        )
+
+        return near + OPAMP_MANDATORY_FAR_WEIGHT * far + OPAMP_MANDATORY_BORDER_WEIGHT * border
+
+    if relative_position == "bottom":
+        xs = range(coord - OPAMP_MANDATORY_ROW_TOL, coord + OPAMP_MANDATORY_ROW_TOL + 1)
+
+        near = max(
+            _opamp_count_vertical_line(binary, x, y2 + 1, y2 + OPAMP_MANDATORY_OUTWARD_LEN + 1)
+            for x in xs
+        )
+        far = max(
+            _opamp_count_vertical_line(
+                binary,
+                x,
+                y2 + OPAMP_MANDATORY_OUTWARD_LEN + OPAMP_MANDATORY_FAR_GAP,
+                y2 + OPAMP_MANDATORY_OUTWARD_LEN + OPAMP_MANDATORY_FAR_GAP + OPAMP_MANDATORY_FAR_LEN + 1,
+            )
+            for x in xs
+        )
+        border = max(
+            _opamp_count_vertical_line(binary, x, y2 - 1, y2 + 2)
+            for x in xs
+        )
+
+        return near + OPAMP_MANDATORY_FAR_WEIGHT * far + OPAMP_MANDATORY_BORDER_WEIGHT * border
+
+    raise ValueError(f"relative_position non supportata per opamp mandatory: {relative_position}")
 
 
-def _geom_opamp_aux_internal_junction(binary, bbox, orientation, relative_position, scan_start, scan_end, center_coord):
-    """
-    Strategia unica per gli auxiliary pin dell'opamp.
-
-    Cerchiamo SOLO una run verticale connessa al lato alto/basso del bbox
-    nella banda centrale dell'opamp. Il terminale viene posto alla fine della
-    run, ma solo se in quel punto troviamo anche supporto della diagonale
-    corretta del triangolo.
-
-    Questo evita di agganciarsi ai numeri interni (4, 5, ecc.), che possono
-    avere tratti verticali ma non sono connessi al lato esterno del simbolo.
-    """
+def _geom_opamp_mandatory_terminal(binary, bbox, relative_position: str, slot: str):
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    scan_start, scan_end, center_coord = _opamp_slot_scan_range(x1, y1, x2, y2, relative_position, slot)
+    halfspan = OPAMP_MANDATORY_SCAN_HALFSPAN
 
-    scan_start = int(round(scan_start))
-    scan_end = int(round(scan_end))
-    center_coord = int(round(center_coord))
+    if relative_position in {"left", "right"}:
+        start = max(y1, min(y2, int(round(scan_start))))
+        end = max(y1, min(y2, int(round(scan_end))))
+        if end < start:
+            start, end = y1, y2
+        coords = list(range(start, end + 1)) or [int(round((y1 + y2) / 2))]
 
-    # Questa versione gestisce in modo robusto gli opamp orizzontali.
-    # Per gli altri casi facciamo fallback pulito senza falsi positivi.
-    if orientation not in {"right", "left"} or relative_position not in {"top", "bottom"}:
-        fallback_point = (
-            float(center_coord),
-            float(y1 if relative_position == "top" else y2),
-        )
-        return fallback_point, {
-            "point_mode": "opamp_aux_side_connected_branch",
+        scores = [
+            _opamp_mandatory_probe_score(binary, bbox, relative_position, y)
+            for y in coords
+        ]
+        best_index, peak_info = _select_opamp_mandatory_best_index(scores, coords, center_coord)
+        best_coord = coords[best_index]
+
+        x = float(x1 - OPAMP_MANDATORY_OUTWARD_OFFSET if relative_position == "left" else x2 + OPAMP_MANDATORY_OUTWARD_OFFSET)
+        y = float(best_coord)
+        point = (x, y)
+        debug = {
+            "point_mode": "opamp_mandatory_wire_probe",
+            "relative_position": relative_position,
+            "scan_axis": "y",
+            "scan_start": start,
+            "scan_end": end,
+            "probe_halfspan": halfspan,
+            "probe_outward_len": OPAMP_MANDATORY_OUTWARD_LEN,
+            "probe_inward_len": OPAMP_MANDATORY_INWARD_LEN,
+            "probe_far_gap": OPAMP_MANDATORY_FAR_GAP,
+            "probe_far_len": OPAMP_MANDATORY_FAR_LEN,
+            "peak_coord": best_coord,
+            "raw_scores_max": round(float(max(scores) if scores else 0.0), 4),
+            **peak_info,
+        }
+        return point, debug
+
+    if relative_position in {"top", "bottom"}:
+        start = max(x1, min(x2, int(round(scan_start))))
+        end = max(x1, min(x2, int(round(scan_end))))
+        if end < start:
+            start, end = x1, x2
+        coords = list(range(start, end + 1)) or [int(round((x1 + x2) / 2))]
+
+        scores = [
+            _opamp_mandatory_probe_score(binary, bbox, relative_position, x)
+            for x in coords
+        ]
+        best_index, peak_info = _select_opamp_mandatory_best_index(scores, coords, center_coord)
+        best_coord = coords[best_index]
+
+        x = float(best_coord)
+        y = float(y1 - OPAMP_MANDATORY_OUTWARD_OFFSET if relative_position == "top" else y2 + OPAMP_MANDATORY_OUTWARD_OFFSET)
+        point = (x, y)
+        debug = {
+            "point_mode": "opamp_mandatory_wire_probe",
             "relative_position": relative_position,
             "scan_axis": "x",
-            "scan_start": scan_start,
-            "scan_end": scan_end,
-            "aux_detected": False,
-            "aux_stem_length": 0,
-            "diag_support": 0,
-            "junction_point": fallback_point,
-            "center_coord": center_coord,
-            "orientation_supported": False,
+            "scan_start": start,
+            "scan_end": end,
+            "probe_halfspan": halfspan,
+            "probe_outward_len": OPAMP_MANDATORY_OUTWARD_LEN,
+            "probe_inward_len": OPAMP_MANDATORY_INWARD_LEN,
+            "probe_far_gap": OPAMP_MANDATORY_FAR_GAP,
+            "probe_far_len": OPAMP_MANDATORY_FAR_LEN,
+            "peak_coord": best_coord,
+            "raw_scores_max": round(float(max(scores) if scores else 0.0), 4),
+            **peak_info,
         }
+        return point, debug
 
-    xs = list(range(max(x1, scan_start), min(x2, scan_end) + 1))
-    if not xs:
-        xs = [int(round((x1 + x2) / 2))]
-
-    if orientation == "right":
-        diag_kind = "down_right" if relative_position == "top" else "up_right"
-    else:
-        diag_kind = "up_right" if relative_position == "top" else "down_right"
-
-    best = None
-
-    for x in xs:
-        run = _opamp_connected_vertical_run_from_side(
-            binary,
-            x,
-            y1,
-            y2,
-            side=relative_position,
-            halfspan=1,
-            min_fg=1,
-        )
-        if run is None:
-            continue
-
-        junction_y = run["run_end"]
-        diag_support = _opamp_diagonal_support(
-            binary,
-            x,
-            junction_y,
-            diag_kind=diag_kind,
-            radius=4,
-        )
-
-        key = (
-            run["run_len"] >= OPAMP_AUX_MIN_STEM_LENGTH,
-            diag_support >= OPAMP_AUX_MIN_DIAG_SUPPORT,
-            run["run_len"],
-            diag_support,
-            -abs(x - center_coord),
-        )
-
-        if best is None or key > best["key"]:
-            best = {
-                "key": key,
-                "x": x,
-                "junction_y": junction_y,
-                "run_len": run["run_len"],
-                "run_start": run["run_start"],
-                "run_end": run["run_end"],
-                "diag_support": diag_support,
-                "diag_kind": diag_kind,
-                "side_band": run["side_band"],
-            }
-
-    if best is None:
-        fallback_point = (
-            float(center_coord),
-            float(y1 if relative_position == "top" else y2),
-        )
-        return fallback_point, {
-            "point_mode": "opamp_aux_side_connected_branch",
-            "relative_position": relative_position,
-            "scan_axis": "x",
-            "scan_start": scan_start,
-            "scan_end": scan_end,
-            "aux_detected": False,
-            "aux_stem_length": 0,
-            "diag_support": 0,
-            "junction_point": fallback_point,
-            "center_coord": center_coord,
-            "orientation_supported": True,
-        }
-
-    base_point = (float(best["x"]), float(best["junction_y"]))
-    refined_point, refine_debug = _geom_opamp_refine_aux_junction(
-        binary,
-        bbox,
-        orientation,
-        relative_position,
-        base_point,
-        diag_kind=best["diag_kind"],
-    )
-
-    point = refined_point
-    effective_diag_support = max(
-        int(best["diag_support"]),
-        int(refine_debug.get("refined_diag_support", 0)),
-    )
-
-    aux_detected = (
-        best["run_len"] >= OPAMP_AUX_MIN_STEM_LENGTH
-        and effective_diag_support >= OPAMP_AUX_MIN_DIAG_SUPPORT
-    )
-
-    return point, {
-        "point_mode": "opamp_aux_side_connected_branch",
-        "relative_position": relative_position,
-        "scan_axis": "x",
-        "scan_start": scan_start,
-        "scan_end": scan_end,
-        "candidate_coord": best["x"],
-        "stem_run_start": best["run_start"],
-        "stem_run_end": best["run_end"],
-        "aux_stem_length": best["run_len"],
-        "diag_support": effective_diag_support,
-        "base_diag_support": best["diag_support"],
-        "diag_kind": best["diag_kind"],
-        "side_band": best["side_band"],
-        "base_point": base_point,
-        "junction_point": point,
-        "aux_detected": aux_detected,
-        "center_coord": center_coord,
-        "orientation_supported": True,
-        **refine_debug,
-    }
+    raise ValueError(f"relative_position non supportata per opamp mandatory: {relative_position}")
 
 
 def geom_terminal_point_opamp(binary, bbox, orientation: str, term_def: dict):
     """
-    Localizzazione dei terminali di un opamp.
+    Nuova strategia semplificata per l'opamp.
 
-    - terminali obbligatori: lato bbox + slot
-    - terminali ausiliari: giunto tra ramo esterno e lato obliquo
+    In questa fase gestiamo BENE solo i 3 terminali obbligatori:
+    - in1
+    - in2
+    - out
+
+    Gli auxiliary vengono volutamente ignorati a livello di strategia e potranno
+    essere reintrodotti in una seconda fase separata.
     """
-    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
-
     relative_position = term_def["relative_position"]
     slot = term_def.get("slot", "center")
+    terminal_role = term_def.get("terminal_role")
 
-    scan_start, scan_end, center_coord = _opamp_slot_scan_range(
-        x1, y1, x2, y2, relative_position, slot
-    )
-
-    if term_def.get("terminal_role") == "auxiliary" and slot == "center":
-        width = max(x2 - x1, 1)
-        height = max(y2 - y1, 1)
-
-        if relative_position in {"top", "bottom"}:
-            scan_start = x1 + OPAMP_AUX_CENTER_START_RATIO * width
-            scan_end = x1 + OPAMP_AUX_CENTER_END_RATIO * width
-        else:
-            scan_start = y1 + OPAMP_AUX_CENTER_START_RATIO * height
-            scan_end = y1 + OPAMP_AUX_CENTER_END_RATIO * height
-
-        center_coord = int(round((scan_start + scan_end) / 2))
-
-    if term_def.get("terminal_role") == "auxiliary":
-        point, aux_debug = _geom_opamp_aux_internal_junction(
+    if terminal_role == "auxiliary":
+        point, debug = _geom_opamp_aux_terminal_v1(
             binary,
             bbox,
             orientation,
             relative_position,
-            scan_start,
-            scan_end,
-            center_coord,
         )
+        debug["opamp_orientation"] = orientation
+        debug["opamp_terminal_name"] = term_def.get("name")
+        debug["opamp_terminal_role"] = terminal_role
+        debug["opamp_slot"] = slot
+        return point, debug
 
-        aux_debug["opamp_orientation"] = orientation
-        aux_debug["opamp_terminal_name"] = term_def.get("name")
-        aux_debug["opamp_terminal_role"] = term_def.get("terminal_role")
-        aux_debug["opamp_slot"] = slot
-        return point, aux_debug
-
-    point, peak_debug = geom_terminal_point_by_side_peak(
+    point, debug = _geom_opamp_mandatory_terminal(
         binary,
         bbox,
         relative_position,
-        scan_start=scan_start,
-        scan_end=scan_end,
-        center_coord=center_coord,
+        slot,
     )
-
-    peak_debug["point_mode"] = OPAMP_POINT_MODE
-    peak_debug["opamp_orientation"] = orientation
-    peak_debug["opamp_terminal_name"] = term_def.get("name")
-    peak_debug["opamp_terminal_role"] = term_def.get("terminal_role")
-    peak_debug["opamp_slot"] = slot
-
-    return point, peak_debug
+    debug["opamp_orientation"] = orientation
+    debug["opamp_terminal_name"] = term_def.get("name")
+    debug["opamp_terminal_role"] = terminal_role
+    debug["opamp_slot"] = slot
+    return point, debug
 
 def geom_infer_orientation_from_bbox(bbox, default_orientation="horizontal"):
     x1, y1, x2, y2 = bbox
@@ -936,3 +762,541 @@ def _geom_opamp_internal_wire_triangle_junction(binary, bbox, base_point, relati
             return (float(run_end), float(yi))
 
     return base_point
+
+def _opamp_count_horizontal_line(binary, x_start, x_end, y):
+    h, w = binary.shape[:2]
+    y = max(0, min(h - 1, int(round(y))))
+
+    xa = int(round(min(x_start, x_end)))
+    xb = int(round(max(x_start, x_end)))
+
+    xa = max(0, min(w, xa))
+    xb = max(0, min(w, xb))
+
+    if xb <= xa:
+        return 0
+
+    return img_count_foreground_pixels(binary, xa, y, xb, y + 1)
+
+
+def _opamp_count_vertical_line(binary, x, y_start, y_end):
+    h, w = binary.shape[:2]
+    x = max(0, min(w - 1, int(round(x))))
+
+    ya = int(round(min(y_start, y_end)))
+    yb = int(round(max(y_start, y_end)))
+
+    ya = max(0, min(h, ya))
+    yb = max(0, min(h, yb))
+
+    if yb <= ya:
+        return 0
+
+    return img_count_foreground_pixels(binary, x, ya, x + 1, yb)
+
+
+def _select_opamp_mandatory_best_index(scores, coords, center_coord):
+    if not scores:
+        return 0, {
+            "max_score": 0,
+            "keep_threshold": 0,
+            "selected_coord": None,
+            "selected_distance_to_center": None,
+            "kept_candidates": 0,
+        }
+
+    max_score = max(scores)
+    keep_threshold = max_score * OPAMP_MANDATORY_KEEP_RATIO
+    kept = [i for i, s in enumerate(scores) if s >= keep_threshold]
+
+    if not kept:
+        best_idx = max(range(len(scores)), key=lambda i: scores[i])
+    else:
+        best_idx = min(
+            kept,
+            key=lambda i: (abs(coords[i] - center_coord), -scores[i])
+        )
+
+    return best_idx, {
+        "max_score": round(float(max_score), 4),
+        "keep_threshold": round(float(keep_threshold), 4),
+        "selected_coord": coords[best_idx],
+        "selected_distance_to_center": int(abs(coords[best_idx] - center_coord)),
+        "kept_candidates": len(kept),
+    }
+
+def _opamp_aux_scan_x_range(bbox):
+    x1, y1, x2, y2 = bbox
+    width = max(x2 - x1, 1)
+    start = x1 + int(round(OPAMP_AUX_SCAN_X_START_RATIO * width))
+    end = x1 + int(round(OPAMP_AUX_SCAN_X_END_RATIO * width))
+    if end < start:
+        start, end = start, start
+    return start, end
+
+
+def _opamp_vertical_run_from_edge(binary, bbox, x, side):
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    height = max(y2 - y1, 1)
+
+    halfspan = OPAMP_AUX_RUN_HALFSPAN
+    min_fg = OPAMP_AUX_RUN_MIN_FG
+    max_gap = OPAMP_AUX_RUN_MAX_GAP
+    max_depth = int(round(OPAMP_AUX_RUN_MAX_DEPTH_RATIO * height))
+    edge_band = max(2, int(round(OPAMP_AUX_EDGE_BAND_RATIO * height)))
+
+    def row_fg(y):
+        return img_count_foreground_pixels(
+            binary,
+            x - halfspan,
+            y,
+            x + halfspan + 1,
+            y + 1,
+        )
+
+    if side == "top":
+        start_candidates = [
+            y for y in range(y1, min(y2, y1 + edge_band) + 1)
+            if row_fg(y) >= min_fg
+        ]
+        if not start_candidates:
+            return None
+
+        run_start = start_candidates[0]
+        run_end = run_start
+        gaps = 0
+
+        stop_y = min(y2, y1 + max_depth)
+        for y in range(run_start + 1, stop_y + 1):
+            if row_fg(y) >= min_fg:
+                run_end = y
+                gaps = 0
+            else:
+                gaps += 1
+                if gaps > max_gap:
+                    break
+
+        return {
+            "run_start": run_start,
+            "run_end": run_end,
+            "run_len": int(run_end - run_start + 1),
+            "side": side,
+        }
+
+    if side == "bottom":
+        start_candidates = [
+            y for y in range(y2, max(y1, y2 - edge_band) - 1, -1)
+            if row_fg(y) >= min_fg
+        ]
+        if not start_candidates:
+            return None
+
+        run_start = start_candidates[0]
+        run_end = run_start
+        gaps = 0
+
+        stop_y = max(y1, y2 - max_depth)
+        for y in range(run_start - 1, stop_y - 1, -1):
+            if row_fg(y) >= min_fg:
+                run_end = y
+                gaps = 0
+            else:
+                gaps += 1
+                if gaps > max_gap:
+                    break
+
+        return {
+            "run_start": run_start,
+            "run_end": run_end,
+            "run_len": int(run_start - run_end + 1),
+            "side": side,
+        }
+
+    return None
+
+def _opamp_diagonal_support(binary, x, y, diag_kind, radius=4):
+    """
+    Conta quanto supporto c'è attorno al punto (x, y) lungo la diagonale corretta
+    del triangolo dell'opamp.
+    """
+    h, w = binary.shape[:2]
+
+    def sample(offset):
+        cnt = 0
+        for k in range(-radius, radius + 1):
+            xx = x + k
+            if diag_kind == "down_right":
+                yy = y + k + offset
+            else:
+                yy = y - k + offset
+
+            if 0 <= xx < w and 0 <= yy < h and binary[yy, xx] > 0:
+                cnt += 1
+        return cnt
+
+    return max(sample(-1), sample(0), sample(1))
+
+
+def _opamp_aux_segment_density(binary, x, y1, y2, side, y, halfspan=1):
+    """
+    Densità del ramo verticale tra il bordo esterno dell'opamp e il punto candidato.
+    Serve per evitare di scegliere punti sulla diagonale dove però non c'è davvero
+    continuità del ramo verticale.
+    """
+    h, w = binary.shape[:2]
+    xa = max(0, x - halfspan)
+    xb = min(w, x + halfspan + 1)
+
+    if side == "top":
+        ya = max(0, min(h - 1, y1))
+        yb = max(0, min(h - 1, y))
+    else:
+        ya = max(0, min(h - 1, y))
+        yb = max(0, min(h - 1, y2))
+
+    if yb < ya:
+        ya, yb = yb, ya
+
+    pixel_count = img_count_foreground_pixels(binary, xa, ya, xb, yb + 1)
+    area = max(1, (xb - xa) * (yb - ya + 1))
+    return float(pixel_count) / float(area)
+
+
+def _opamp_refine_aux_y_to_diagonal(binary, bbox, orientation, relative_position, x, base_y):
+    """
+    Raffina SOLO la y del punto aux.
+
+    Strategia nuova:
+    - scorriamo dal bordo esterno verso l'interno
+    - prendiamo il PRIMO punto valido che sembra davvero il giunto
+    - solo se non troviamo nulla facciamo fallback al best globale
+
+    Questo evita che i numeri interni (4, 5) vincano sul vero incrocio.
+    """
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    height = max(y2 - y1, 1)
+
+    if orientation == "right":
+        diag_kind = "down_right" if relative_position == "top" else "up_right"
+    else:
+        diag_kind = "up_right" if relative_position == "top" else "down_right"
+
+    if relative_position == "top":
+        search_start = max(
+            int(round(base_y)),
+            y1 + int(round(OPAMP_AUX_REFINE_TOP_START_RATIO * height)),
+        )
+        search_end = min(
+            y2,
+            y1 + int(round(OPAMP_AUX_REFINE_TOP_END_RATIO * height)),
+        )
+        ys = list(range(search_start, search_end + 1))   # dall'alto verso il basso
+    else:
+        search_start = max(
+            y1,
+            y1 + int(round(OPAMP_AUX_REFINE_BOTTOM_START_RATIO * height)),
+        )
+        search_end = min(
+            int(round(base_y)),
+            y1 + int(round(OPAMP_AUX_REFINE_BOTTOM_END_RATIO * height)),
+        )
+        ys = list(range(search_end, search_start - 1, -1))  # dal basso verso l'alto
+
+    if not ys:
+        return float(base_y), {
+            "refined": False,
+            "refined_y": float(base_y),
+            "refined_diag_support": 0,
+            "segment_density": 0.0,
+            "refine_mode": "empty_search",
+        }
+
+    # ---------------------------------------------------------
+    # 1) FIRST-HIT: primo giunto plausibile dal bordo verso dentro
+    # ---------------------------------------------------------
+    first_valid = None
+
+    for y in ys:
+        diag_support = _opamp_diagonal_support(
+            binary,
+            int(round(x)),
+            int(round(y)),
+            diag_kind=diag_kind,
+            radius=OPAMP_AUX_DIAG_RADIUS,
+        )
+        segment_density = _opamp_aux_segment_density(
+            binary,
+            int(round(x)),
+            y1,
+            y2,
+            relative_position,
+            int(round(y)),
+            halfspan=1,
+        )
+
+        if (
+            diag_support >= OPAMP_AUX_REFINE_MIN_DIAG_SUPPORT
+            and segment_density >= OPAMP_AUX_REFINE_MIN_SEGMENT_DENSITY
+        ):
+            first_valid = {
+                "y": float(y),
+                "diag_support": int(diag_support),
+                "segment_density": float(segment_density),
+            }
+            break
+
+    if first_valid is not None:
+        return first_valid["y"], {
+            "refined": first_valid["y"] != float(base_y),
+            "refined_y": first_valid["y"],
+            "refined_diag_support": first_valid["diag_support"],
+            "segment_density": round(first_valid["segment_density"], 4),
+            "refine_mode": "first_valid_from_edge",
+        }
+
+    # ---------------------------------------------------------
+    # 2) FALLBACK: se non troviamo nessun primo giunto valido,
+    #    usiamo il best globale come prima
+    # ---------------------------------------------------------
+    best = None
+    for y in ys:
+        diag_support = _opamp_diagonal_support(
+            binary,
+            int(round(x)),
+            int(round(y)),
+            diag_kind=diag_kind,
+            radius=OPAMP_AUX_DIAG_RADIUS,
+        )
+        segment_density = _opamp_aux_segment_density(
+            binary,
+            int(round(x)),
+            y1,
+            y2,
+            relative_position,
+            int(round(y)),
+            halfspan=1,
+        )
+
+        if relative_position == "top":
+            tie_break = y
+        else:
+            tie_break = -y
+
+        key = (
+            diag_support >= OPAMP_AUX_REFINE_MIN_DIAG_SUPPORT,
+            segment_density >= OPAMP_AUX_REFINE_MIN_SEGMENT_DENSITY,
+            diag_support,
+            segment_density,
+            tie_break,
+        )
+
+        if best is None or key > best["key"]:
+            best = {
+                "key": key,
+                "y": float(y),
+                "diag_support": int(diag_support),
+                "segment_density": float(segment_density),
+            }
+
+    return best["y"], {
+        "refined": best["y"] != float(base_y),
+        "refined_y": best["y"],
+        "refined_diag_support": best["diag_support"],
+        "segment_density": round(best["segment_density"], 4),
+        "refine_mode": "best_global_fallback",
+    }
+
+def _opamp_vertical_band_density(binary, x, y_start, y_end, halfspan=1):
+    h, w = binary.shape[:2]
+    xa = max(0, int(round(x)) - halfspan)
+    xb = min(w, int(round(x)) + halfspan + 1)
+
+    ya = max(0, min(h - 1, int(round(min(y_start, y_end)))))
+    yb = max(0, min(h - 1, int(round(max(y_start, y_end)))))
+
+    if yb < ya:
+        ya, yb = yb, ya
+
+    pixel_count = img_count_foreground_pixels(binary, xa, ya, xb, yb + 1)
+    area = max(1, (xb - xa) * (yb - ya + 1))
+    return float(pixel_count) / float(area)
+
+
+def _opamp_refine_aux_x_on_stem(binary, bbox, relative_position, base_x, base_y):
+    """
+    Raffina la x dello stelo verticale in una piccola finestra locale.
+    Non cerca in tutto il bbox: cerca solo vicino al candidate_x già trovato.
+    """
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+
+    radius = OPAMP_AUX_X_REFINE_RADIUS
+    halfspan = OPAMP_AUX_X_REFINE_HALFSPAN
+
+    xs = list(range(
+        max(x1, int(round(base_x)) - radius),
+        min(x2, int(round(base_x)) + radius) + 1
+    ))
+
+    if not xs:
+        return float(base_x), {
+            "x_refined": False,
+            "refined_x": float(base_x),
+            "stem_density": 0.0,
+            "edge_support": 0,
+        }
+
+    edge_band = max(2, int(round(OPAMP_AUX_EDGE_BAND_RATIO * height)))
+
+    if relative_position == "top":
+        band_y1 = y1
+        band_y2 = min(
+            int(round(base_y)),
+            y1 + int(round(OPAMP_AUX_X_REFINE_TOP_END_RATIO * height)),
+        )
+        edge_y1 = y1
+        edge_y2 = min(y2, y1 + edge_band)
+    else:
+        band_y1 = max(
+            int(round(base_y)),
+            y1 + int(round(OPAMP_AUX_X_REFINE_BOTTOM_START_RATIO * height)),
+        )
+        band_y2 = y2
+        edge_y1 = max(y1, y2 - edge_band)
+        edge_y2 = y2
+
+    best = None
+    for x in xs:
+        stem_density = _opamp_vertical_band_density(
+            binary,
+            x,
+            band_y1,
+            band_y2,
+            halfspan=halfspan,
+        )
+
+        edge_support = img_count_foreground_pixels(
+            binary,
+            x - halfspan,
+            edge_y1,
+            x + halfspan + 1,
+            edge_y2 + 1,
+        )
+
+        key = (
+            stem_density >= OPAMP_AUX_X_REFINE_MIN_DENSITY,
+            stem_density,
+            edge_support,
+            -abs(x - int(round(base_x))),
+        )
+
+        if best is None or key > best["key"]:
+            best = {
+                "key": key,
+                "x": float(x),
+                "stem_density": float(stem_density),
+                "edge_support": int(edge_support),
+            }
+
+    return best["x"], {
+        "x_refined": best["x"] != float(base_x),
+        "refined_x": best["x"],
+        "stem_density": round(best["stem_density"], 4),
+        "edge_support": best["edge_support"],
+    }
+
+
+def _geom_opamp_aux_terminal_v1(binary, bbox, orientation, relative_position):
+    """
+    V1:
+    - solo opamp orizzontali
+    - cerca un ramo verticale connesso al bordo top/bottom
+    - il punto finale è la fine della run
+    """
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+
+    if orientation not in {"right", "left"} or relative_position not in {"top", "bottom"}:
+        point = geom_terminal_point_from_bbox(bbox, relative_position)
+        return point, {
+            "point_mode": "opamp_aux_v1",
+            "aux_detected": False,
+            "orientation_supported": False,
+            "relative_position": relative_position,
+        }
+
+    scan_start, scan_end = _opamp_aux_scan_x_range((x1, y1, x2, y2))
+    xs = list(range(max(x1, scan_start), min(x2, scan_end) + 1))
+    if not xs:
+        xs = [int(round((x1 + x2) / 2))]
+
+    best = None
+    for x in xs:
+        run = _opamp_vertical_run_from_edge(binary, (x1, y1, x2, y2), x, relative_position)
+        if run is None:
+            continue
+
+        key = (
+            run["run_len"] >= OPAMP_AUX_MIN_RUN_LENGTH,
+            run["run_len"],
+            -abs(x - int(round((scan_start + scan_end) / 2))),
+        )
+
+        if best is None or key > best["key"]:
+            best = {
+                "key": key,
+                "x": x,
+                **run,
+            }
+
+    if best is None or best["run_len"] < OPAMP_AUX_MIN_RUN_LENGTH:
+        point = geom_terminal_point_from_bbox(bbox, relative_position)
+        return point, {
+            "point_mode": "opamp_aux_v1",
+            "aux_detected": False,
+            "orientation_supported": True,
+            "relative_position": relative_position,
+            "scan_start": scan_start,
+            "scan_end": scan_end,
+            "min_run_length": OPAMP_AUX_MIN_RUN_LENGTH,
+        }
+
+    base_x = float(best["x"])
+    base_y = float(best["run_end"])
+
+    refined_x, x_refine_debug = _opamp_refine_aux_x_on_stem(
+        binary,
+        (x1, y1, x2, y2),
+        relative_position,
+        base_x,
+        base_y,
+    )
+
+    refined_y, y_refine_debug = _opamp_refine_aux_y_to_diagonal(
+        binary,
+        (x1, y1, x2, y2),
+        orientation,
+        relative_position,
+        refined_x,
+        base_y,
+    )
+
+    point = (float(refined_x), float(refined_y))
+
+    return point, {
+        "point_mode": "opamp_aux_v1",
+        "aux_detected": True,
+        "orientation_supported": True,
+        "relative_position": relative_position,
+        "scan_start": scan_start,
+        "scan_end": scan_end,
+        "candidate_x": best["x"],
+        "run_start": best["run_start"],
+        "run_end": best["run_end"],
+        "run_len": best["run_len"],
+        "min_run_length": OPAMP_AUX_MIN_RUN_LENGTH,
+        "base_x": base_x,
+        "base_y": base_y,
+        **x_refine_debug,
+        **y_refine_debug,
+    }
