@@ -22,8 +22,8 @@ import numpy as np
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v5_various_two_terminals_components" / "04_extract_wires"
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v5_various_two_terminals_components" / "05_build_nets"
+INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v6_opamp" / "04_extract_wires"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v6_opamp" / "05_build_nets"
 
 # =========================================================
 # TERMINAL -> LABEL MATCHING
@@ -96,6 +96,19 @@ TERMINAL_TEXT_OUTLINE = (0, 0, 0)       # nero
 TERMINAL_TEXT_SCALE = 0.45
 TERMINAL_TEXT_THICKNESS = 1
 TERMINAL_TEXT_OUTLINE_THICKNESS = 3
+
+# Terminali auxiliary opamp: il punto del 03 è vicino al giunto interno,
+# ma il wire utile può stare più lontano lungo lo stelo verticale.
+OPAMP_AUX_SEARCH_OUTWARD = 40
+OPAMP_AUX_SEARCH_INWARD = 10
+OPAMP_AUX_DIRECTIONAL_HALFSPAN = 8
+OPAMP_AUX_SQUARE_FALLBACK_RADIUS = 24
+OPAMP_AUX_MATCH_OUTWARD = 46
+OPAMP_AUX_MATCH_INWARD = 6
+OPAMP_AUX_MATCH_X_TOL = 5
+OPAMP_AUX_MATCH_MIN_PIXELS = 2
+OPAMP_AUX_MATCH_X_PENALTY = 1.6
+OPAMP_AUX_MATCH_COUNT_WEIGHT = 0.35
 
 # utility base
 def load_binary_image(path: Path):
@@ -307,17 +320,187 @@ def find_nearest_labeled_pixel(labels: np.ndarray, term: dict, window):
         "snap_distance": round(dist, 3),
     }
 
+def is_opamp_aux_terminal(term: dict) -> bool:
+    name = str(term.get("name", "")).lower()
+    return name in {"aux1", "aux2"}
+
+
+def get_terminal_search_params(term: dict, default_radius=12, default_halfspan=5):
+    if is_opamp_aux_terminal(term):
+        return {
+            "outward": OPAMP_AUX_SEARCH_OUTWARD,
+            "inward": OPAMP_AUX_SEARCH_INWARD,
+            "halfspan": OPAMP_AUX_DIRECTIONAL_HALFSPAN,
+            "radius": OPAMP_AUX_SQUARE_FALLBACK_RADIUS,
+            "terminal_kind": "opamp_auxiliary",
+        }
+
+    return {
+        "outward": TERMINAL_SEARCH_OUTWARD,
+        "inward": TERMINAL_SEARCH_INWARD,
+        "halfspan": default_halfspan,
+        "radius": default_radius,
+        "terminal_kind": "standard",
+    }
+
+def is_opamp_aux_terminal(term: dict) -> bool:
+    name = str(term.get("name", "")).lower()
+    return name in {"aux1", "aux2"}
+
+
+def match_opamp_aux_vertical(labels: np.ndarray, term: dict):
+    """
+    Matcher dedicato agli auxiliary dell'opamp.
+
+    Idea:
+    - il punto del 03 è vicino al giunto interno sul triangolo
+    - la net utile però è spesso sullo stelo verticale verso Vcc / -Vcc
+    - quindi cerchiamo in una capsula verticale e scegliamo il label
+      che massimizza il progresso outward mantenendo x vicina al terminale
+    """
+    if not is_opamp_aux_terminal(term):
+        return None
+
+    rel = term.get("relative_position")
+    if rel not in {"top", "bottom"}:
+        return None
+
+    h, w = labels.shape[:2]
+    x = int(round(term["x"]))
+    y = int(round(term["y"]))
+
+    if rel == "top":
+        window = clamp_window(
+            x - OPAMP_AUX_MATCH_X_TOL,
+            y - OPAMP_AUX_MATCH_OUTWARD,
+            x + OPAMP_AUX_MATCH_X_TOL + 1,
+            y + OPAMP_AUX_MATCH_INWARD + 1,
+            w,
+            h,
+        )
+    else:
+        window = clamp_window(
+            x - OPAMP_AUX_MATCH_X_TOL,
+            y - OPAMP_AUX_MATCH_INWARD,
+            x + OPAMP_AUX_MATCH_X_TOL + 1,
+            y + OPAMP_AUX_MATCH_OUTWARD + 1,
+            w,
+            h,
+        )
+
+    x1, y1, x2, y2 = window
+    roi = labels[y1:y2, x1:x2]
+    candidate_labels = [int(v) for v in np.unique(roi) if int(v) > 0]
+
+    if not candidate_labels:
+        return {
+            "candidate_labels": [],
+            "primary_label": None,
+            "snap_point": None,
+            "snap_distance": None,
+            "search_window": [int(v) for v in window],
+            "match_mode": "opamp_aux_vertical_none",
+        }
+
+    best = None
+
+    for lbl in candidate_labels:
+        ys, xs = np.where(roi == lbl)
+        if len(xs) < OPAMP_AUX_MATCH_MIN_PIXELS:
+            continue
+
+        xs_global = xs + x1
+        ys_global = ys + y1
+
+        if rel == "top":
+            outward_progress = y - ys_global
+        else:
+            outward_progress = ys_global - y
+
+        x_penalty = np.abs(xs_global - x)
+        pixel_scores = outward_progress - OPAMP_AUX_MATCH_X_PENALTY * x_penalty
+
+        valid = np.where(outward_progress >= -1)[0]
+        if len(valid) == 0:
+            continue
+
+        best_idx_local = valid[int(np.argmax(pixel_scores[valid]))]
+
+        px = int(xs_global[best_idx_local])
+        py = int(ys_global[best_idx_local])
+        dist = float(np.sqrt((px - x) ** 2 + (py - y) ** 2))
+
+        label_score = float(
+            pixel_scores[best_idx_local] +
+            OPAMP_AUX_MATCH_COUNT_WEIGHT * len(valid)
+        )
+
+        cand = {
+            "label": int(lbl),
+            "snap_point": [px, py],
+            "snap_distance": round(dist, 3),
+            "label_score": label_score,
+        }
+
+        if best is None or cand["label_score"] > best["label_score"]:
+            best = cand
+
+    if best is None:
+        return {
+            "candidate_labels": candidate_labels,
+            "primary_label": None,
+            "snap_point": None,
+            "snap_distance": None,
+            "search_window": [int(v) for v in window],
+            "match_mode": "opamp_aux_vertical_no_valid_label",
+        }
+
+    return {
+        "candidate_labels": candidate_labels,
+        "primary_label": best["label"],
+        "snap_point": best["snap_point"],
+        "snap_distance": best["snap_distance"],
+        "search_window": [int(v) for v in window],
+        "match_mode": "opamp_aux_vertical_corridor",
+    }
+
 def terminal_to_candidate_labels(labels: np.ndarray, terminals, radius=12, directional_halfspan=5):
     """
-    Per ogni terminale prova prima un intorno direzionale coerente col lato del terminale,
-    poi fa fallback a una finestra quadrata. Salva sia i label candidati sia il label
-    principale ottenuto con snap al pixel di skeleton più vicino.
+    Matching terminale -> source label candidata.
+
+    Regola:
+    - terminali normali: finestra direzionale + fallback quadrato
+    - aux1/aux2 opamp: prima matcher verticale dedicato
     """
     primary_label_to_terminal_ids = {}
     terminal_debug = {}
 
     for term in terminals:
         term_id = term["terminal_id"]
+
+        aux_match = match_opamp_aux_vertical(labels, term)
+
+        if aux_match is not None and aux_match["primary_label"] is not None:
+            primary_label = int(aux_match["primary_label"])
+            snap_point = aux_match["snap_point"]
+            snap_distance = aux_match["snap_distance"]
+            candidate_labels = aux_match["candidate_labels"]
+            used_window = aux_match["search_window"]
+            match_mode = aux_match["match_mode"]
+
+            primary_label_to_terminal_ids.setdefault(primary_label, set()).add(term_id)
+
+            terminal_debug[term_id] = {
+                "candidate_labels": candidate_labels,
+                "primary_label": primary_label,
+                "match_mode": match_mode,
+                "search_window": [int(v) for v in used_window],
+                "snap_point": snap_point,
+                "snap_distance": snap_distance,
+                "relative_position": term.get("relative_position"),
+                "terminal_kind": "opamp_auxiliary",
+            }
+            continue
 
         dir_window = get_directional_window(
             term,
@@ -359,6 +542,7 @@ def terminal_to_candidate_labels(labels: np.ndarray, terminals, radius=12, direc
             "snap_point": snap_point,
             "snap_distance": snap_distance,
             "relative_position": term.get("relative_position"),
+            "terminal_kind": "standard",
         }
 
     return primary_label_to_terminal_ids, terminal_debug
@@ -644,6 +828,15 @@ def main() -> None:
             "terminal_search_inward": TERMINAL_SEARCH_INWARD,
             "terminal_square_fallback_radius": TERMINAL_SQUARE_FALLBACK_RADIUS,
             "terminal_directional_halfspan": TERMINAL_DIRECTIONAL_HALFSPAN,
+
+            "opamp_aux_search_outward": OPAMP_AUX_SEARCH_OUTWARD,
+            "opamp_aux_search_inward": OPAMP_AUX_SEARCH_INWARD,
+            "opamp_aux_directional_halfspan": OPAMP_AUX_DIRECTIONAL_HALFSPAN,
+            "opamp_aux_square_fallback_radius": OPAMP_AUX_SQUARE_FALLBACK_RADIUS,
+            "opamp_aux_match_outward": OPAMP_AUX_MATCH_OUTWARD,
+            "opamp_aux_match_inward": OPAMP_AUX_MATCH_INWARD,
+            "opamp_aux_match_x_tol": OPAMP_AUX_MATCH_X_TOL,
+
             "min_net_pixels": MIN_NET_PIXELS,
             "min_connected_terminals": MIN_CONNECTED_TERMINALS,
             "net_sort_order": NET_SORT_ORDER,

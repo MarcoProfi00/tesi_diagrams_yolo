@@ -1,5 +1,11 @@
+import cv2
+import numpy as np
+
 from .config import *
-from .geometry import geom_terminal_point_by_side_peak
+from .geometry import (
+    geom_terminal_point_by_side_peak,
+    geom_clamp_bbox_to_image,
+)
 from .probes import (
     get_terminal_class_far_probe_scores,
     get_terminal_class_probe_scores,
@@ -60,6 +66,64 @@ def _terminal_bbox_shape_info(bbox):
         "is_vertical": ratio_hw > TERMINAL_CLASS_NEAR_SQUARE_RATIO,
         "is_horizontal": ratio_wh > TERMINAL_CLASS_NEAR_SQUARE_RATIO,
     }
+
+def _build_terminal_text_suppressed_binary(binary, bbox):
+    """
+    Costruisce un binary locale pulito per la classe Terminal.
+
+    Idea:
+    - prendiamo una ROI un po' più grande del bbox
+    - troviamo le connected components del foreground
+    - teniamo SOLO le componenti che intersecano davvero il bbox del terminale
+      (pallino + eventuale wire collegato)
+    - scartiamo testo vicino come V, cc, Vo, ecc.
+    """
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    w = max(x2 - x1, 1)
+    h = max(y2 - y1, 1)
+
+    margin = max(8, int(round(0.8 * max(w, h))))
+
+    rx1 = max(0, x1 - margin)
+    ry1 = max(0, y1 - margin)
+    rx2 = min(binary.shape[1] - 1, x2 + margin)
+    ry2 = min(binary.shape[0] - 1, y2 + margin)
+
+    roi = binary[ry1:ry2 + 1, rx1:rx2 + 1]
+    roi_fg = (roi > 0).astype(np.uint8)
+
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(roi_fg, connectivity=8)
+
+    # seed = bbox originale leggermente dilatato
+    seed_pad = 2
+    sx1 = max(0, (x1 - rx1) - seed_pad)
+    sy1 = max(0, (y1 - ry1) - seed_pad)
+    sx2 = min(roi.shape[1] - 1, (x2 - rx1) + seed_pad)
+    sy2 = min(roi.shape[0] - 1, (y2 - ry1) + seed_pad)
+
+    seed_labels = np.unique(labels[sy1:sy2 + 1, sx1:sx2 + 1])
+
+    cleaned_roi = np.zeros_like(roi, dtype=np.uint8)
+    kept_labels = []
+
+    for lab in seed_labels:
+        if lab == 0:
+            continue
+        cleaned_roi[labels == lab] = 255
+        kept_labels.append(int(lab))
+
+    cleaned = binary.copy()
+    cleaned[ry1:ry2 + 1, rx1:rx2 + 1] = cleaned_roi
+
+    debug = {
+        "enabled": True,
+        "roi": [int(rx1), int(ry1), int(rx2), int(ry2)],
+        "seed_bbox_in_roi": [int(sx1), int(sy1), int(sx2), int(sy2)],
+        "connected_components": int(num_labels - 1),
+        "kept_labels": kept_labels,
+    }
+
+    return cleaned, debug
 
 def _apply_terminal_shape_prior(bbox, side_scores):
     """
@@ -448,11 +512,30 @@ def detect_terminal_two_sides(binary, bbox, precomputed_scores=None):
 
 
 def detect_terminal_auto_one_or_two(binary, bbox, default_side="right"):
-    cardinality, mode, scores = classify_terminal_cardinality(binary, bbox, default_side=default_side)
+    shape_info = _terminal_bbox_shape_info(bbox)
+
+    # Per la classe Terminal applichiamo SEMPRE la pulizia locale:
+    # il componente reale è il pallino/bubble + gli eventuali wire
+    # che lo toccano, non il testo vicino.
+    working_binary, text_suppression_debug = _build_terminal_text_suppressed_binary(
+        binary,
+        bbox,
+    )
+
+    text_suppression_debug["reason"] = "always_applied_for_terminal_class"
+
+    cardinality, mode, scores = classify_terminal_cardinality(
+        working_binary,
+        bbox,
+        default_side=default_side,
+    )
+
+    scores["bbox_shape_debug"] = shape_info
+    scores["terminal_text_suppression_debug"] = text_suppression_debug
 
     if cardinality == 1:
         terminals_def, orientation = detect_terminal_one_side(
-            binary,
+            working_binary,
             bbox,
             default_side=default_side,
             precomputed_scores=scores,
@@ -461,7 +544,7 @@ def detect_terminal_auto_one_or_two(binary, bbox, default_side="right"):
         return terminals_def, orientation, scores
 
     terminals_def, orientation = detect_terminal_two_sides(
-        binary,
+        working_binary,
         bbox,
         precomputed_scores=scores,
     )

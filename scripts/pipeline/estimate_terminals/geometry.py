@@ -1,7 +1,8 @@
 from .config import *
 from .image_ops import img_count_foreground_pixels
+
 # =========================================================
-# GEOMETRY / IMAGE HELPERS
+# GENERIC GEOMETRY
 # =========================================================
 def geom_clamp_bbox_to_image(bbox, image_shape):
     h, w = image_shape[:2]
@@ -34,6 +35,20 @@ def geom_terminal_point_from_bbox(bbox, relative_position: str):
         return [round(xc, 2), round(y2 + TERMINAL_OUTWARD_OFFSET, 2)]
     raise ValueError(f"relative_position non supportata: {relative_position}")
 
+def geom_infer_orientation_from_bbox(bbox, default_orientation="horizontal"):
+    x1, y1, x2, y2 = bbox
+    width = max(x2 - x1, 1e-6)
+    height = max(y2 - y1, 1e-6)
+
+    if height / width >= ASPECT_RATIO_THRESHOLD:
+        return "vertical"
+    if width / height >= ASPECT_RATIO_THRESHOLD:
+        return "horizontal"
+    return default_orientation
+
+# =========================================================
+# GENERIC SIDE-PEAK LOCALIZATION
+# =========================================================
 def _side_peak_halfspan(width, height):
     """
     Semi-larghezza della probe usata durante la scansione lungo il lato.
@@ -297,6 +312,89 @@ def geom_terminal_point_by_side_peak(binary, bbox, relative_position: str, scan_
 
     raise ValueError(f"relative_position non supportata: {relative_position}")
 
+# =========================================================
+# THREE-TERMINAL GEOMETRY
+# =========================================================
+def _three_terminal_pair_scan_window(x1, y1, x2, y2, orientation, same_side=False):
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+
+    def xr(r):
+        return x1 + r * width
+
+    def yr(r):
+        return y1 + r * height
+
+    # same_side=False  -> comportamento attuale
+    # same_side=True   -> versione specchiata
+
+    if orientation == "left":
+        if not same_side:
+            return xr(THREE_TERMINAL_OPPOSITE_NEAR_RATIO), xr(THREE_TERMINAL_OPPOSITE_FAR_RATIO)
+        return xr(1.0 - THREE_TERMINAL_OPPOSITE_FAR_RATIO), xr(1.0 - THREE_TERMINAL_OPPOSITE_NEAR_RATIO)
+
+    if orientation == "right":
+        if not same_side:
+            return xr(1.0 - THREE_TERMINAL_OPPOSITE_FAR_RATIO), xr(1.0 - THREE_TERMINAL_OPPOSITE_NEAR_RATIO)
+        return xr(THREE_TERMINAL_OPPOSITE_NEAR_RATIO), xr(THREE_TERMINAL_OPPOSITE_FAR_RATIO)
+
+    if orientation == "top":
+        if not same_side:
+            return yr(THREE_TERMINAL_OPPOSITE_NEAR_RATIO), yr(THREE_TERMINAL_OPPOSITE_FAR_RATIO)
+        return yr(1.0 - THREE_TERMINAL_OPPOSITE_FAR_RATIO), yr(1.0 - THREE_TERMINAL_OPPOSITE_NEAR_RATIO)
+
+    if orientation == "bottom":
+        if not same_side:
+            return yr(1.0 - THREE_TERMINAL_OPPOSITE_FAR_RATIO), yr(1.0 - THREE_TERMINAL_OPPOSITE_NEAR_RATIO)
+        return yr(THREE_TERMINAL_OPPOSITE_NEAR_RATIO), yr(THREE_TERMINAL_OPPOSITE_FAR_RATIO)
+
+    raise ValueError(f"orientation non supportata: {orientation}")
+
+def _resolve_three_terminal_pair_bias(binary, bbox, orientation):
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+
+    pair_positions = ("top", "bottom") if orientation in {"left", "right"} else ("left", "right")
+
+    def score_candidate(same_side):
+        total = 0.0
+        debug = {}
+
+        for rel_pos in pair_positions:
+            scan_start, scan_end = _three_terminal_pair_scan_window(
+                x1, y1, x2, y2,
+                orientation=orientation,
+                same_side=same_side,
+            )
+            center_coord = int(round((scan_start + scan_end) / 2))
+
+            _, term_debug = geom_terminal_point_by_side_peak(
+                binary,
+                (x1, y1, x2, y2),
+                rel_pos,
+                scan_start=scan_start,
+                scan_end=scan_end,
+                center_coord=center_coord,
+            )
+
+            local_score = (
+                float(term_debug.get("selected_run_score", 0.0)) +
+                0.25 * float(term_debug.get("max_score", 0.0))
+            )
+            total += local_score
+            debug[rel_pos] = {
+                "local_score": local_score,
+                **term_debug,
+            }
+
+        return total, debug
+
+    opposite_score, opposite_debug = score_candidate(same_side=False)
+    same_score, same_debug = score_candidate(same_side=True)
+
+    if same_score > opposite_score * 1.05:
+        return "same_side", same_debug
+
+    return "opposite_side", opposite_debug
 
 def geom_terminal_point_three_terminal(binary, bbox, orientation: str, relative_position: str):
     """
@@ -352,28 +450,31 @@ def geom_terminal_point_three_terminal(binary, bbox, orientation: str, relative_
         debug["three_terminal_role"] = "single_side_terminal"
         debug["three_terminal_orientation"] = orientation
         return point, debug
+    
+    pair_bias, pair_bias_debug = _resolve_three_terminal_pair_bias(
+        binary,
+        (x1, y1, x2, y2),
+        orientation,
+    )
+    same_side = (pair_bias == "same_side")
 
-    # -------------------------------------------------
-    # 2) Terminali della coppia opposta: cerca verso il lato opposto
-    # -------------------------------------------------
-    if orientation == "left" and relative_position in {"top", "bottom"}:
-        scan_start = x_from_ratio(THREE_TERMINAL_OPPOSITE_NEAR_RATIO)
-        scan_end = x_from_ratio(THREE_TERMINAL_OPPOSITE_FAR_RATIO)
+    if orientation in {"left", "right"} and relative_position in {"top", "bottom"}:
+        scan_start, scan_end = _three_terminal_pair_scan_window(
+            x1, y1, x2, y2,
+            orientation=orientation,
+            same_side=same_side,
+        )
         center_coord = int(round((scan_start + scan_end) / 2))
-    elif orientation == "right" and relative_position in {"top", "bottom"}:
-        scan_start = x_from_ratio(1.0 - THREE_TERMINAL_OPPOSITE_FAR_RATIO)
-        scan_end = x_from_ratio(1.0 - THREE_TERMINAL_OPPOSITE_NEAR_RATIO)
+
+    elif orientation in {"top", "bottom"} and relative_position in {"left", "right"}:
+        scan_start, scan_end = _three_terminal_pair_scan_window(
+            x1, y1, x2, y2,
+            orientation=orientation,
+            same_side=same_side,
+        )
         center_coord = int(round((scan_start + scan_end) / 2))
-    elif orientation == "top" and relative_position in {"left", "right"}:
-        scan_start = y_from_ratio(THREE_TERMINAL_OPPOSITE_NEAR_RATIO)
-        scan_end = y_from_ratio(THREE_TERMINAL_OPPOSITE_FAR_RATIO)
-        center_coord = int(round((scan_start + scan_end) / 2))
-    elif orientation == "bottom" and relative_position in {"left", "right"}:
-        scan_start = y_from_ratio(1.0 - THREE_TERMINAL_OPPOSITE_FAR_RATIO)
-        scan_end = y_from_ratio(1.0 - THREE_TERMINAL_OPPOSITE_NEAR_RATIO)
-        center_coord = int(round((scan_start + scan_end) / 2))
+
     else:
-        # Caso incoerente o inatteso: fallback alla side_peak standard.
         point, debug = geom_terminal_point_by_side_peak(binary, bbox, relative_position)
         debug["point_mode"] = "three_terminal_structured_fallback"
         debug["three_terminal_role"] = "fallback"
@@ -391,9 +492,75 @@ def geom_terminal_point_three_terminal(binary, bbox, orientation: str, relative_
     debug["point_mode"] = "three_terminal_structured"
     debug["three_terminal_role"] = "orthogonal_pair_terminal"
     debug["three_terminal_orientation"] = orientation
+    debug["three_terminal_pair_bias"] = pair_bias
+    debug["three_terminal_pair_bias_debug"] = pair_bias_debug
     return point, debug
 
 
+# =========================================================
+# OPAMP - LOW LEVEL HELPERS
+# =========================================================
+def _opamp_count_horizontal_line(binary, x_start, x_end, y):
+    h, w = binary.shape[:2]
+    y = max(0, min(h - 1, int(round(y))))
+
+    xa = int(round(min(x_start, x_end)))
+    xb = int(round(max(x_start, x_end)))
+
+    xa = max(0, min(w, xa))
+    xb = max(0, min(w, xb))
+
+    if xb <= xa:
+        return 0
+
+    return img_count_foreground_pixels(binary, xa, y, xb, y + 1)
+
+
+def _opamp_count_vertical_line(binary, x, y_start, y_end):
+    h, w = binary.shape[:2]
+    x = max(0, min(w - 1, int(round(x))))
+
+    ya = int(round(min(y_start, y_end)))
+    yb = int(round(max(y_start, y_end)))
+
+    ya = max(0, min(h, ya))
+    yb = max(0, min(h, yb))
+
+    if yb <= ya:
+        return 0
+
+    return img_count_foreground_pixels(binary, x, ya, x + 1, yb)
+
+
+def _select_opamp_mandatory_best_index(scores, coords, center_coord):
+    if not scores:
+        return 0, {
+            "max_score": 0,
+            "keep_threshold": 0,
+            "selected_coord": None,
+            "selected_distance_to_center": None,
+            "kept_candidates": 0,
+        }
+
+    max_score = max(scores)
+    keep_threshold = max_score * OPAMP_MANDATORY_KEEP_RATIO
+    kept = [i for i, s in enumerate(scores) if s >= keep_threshold]
+
+    if not kept:
+        best_idx = max(range(len(scores)), key=lambda i: scores[i])
+    else:
+        best_idx = min(
+            kept,
+            key=lambda i: (abs(coords[i] - center_coord), -scores[i])
+        )
+
+    return best_idx, {
+        "max_score": round(float(max_score), 4),
+        "keep_threshold": round(float(keep_threshold), 4),
+        "selected_coord": coords[best_idx],
+        "selected_distance_to_center": int(abs(coords[best_idx] - center_coord)),
+        "kept_candidates": len(kept),
+    }
 
 def _opamp_slot_scan_range(x1, y1, x2, y2, relative_position: str, slot: str):
     width = max(x2 - x1, 1)
@@ -429,7 +596,9 @@ def _opamp_slot_scan_range(x1, y1, x2, y2, relative_position: str, slot: str):
 
     raise ValueError(f"relative_position non supportata per opamp: {relative_position}")
 
-
+# =========================================================
+# OPAMP - MANDATORY TERMINALS
+# =========================================================
 def _opamp_mandatory_probe_score(binary, bbox, relative_position: str, coord: int):
     """
     Score 1D per i 3 terminali obbligatori dell'opamp.
@@ -613,218 +782,9 @@ def _geom_opamp_mandatory_terminal(binary, bbox, relative_position: str, slot: s
 
     raise ValueError(f"relative_position non supportata per opamp mandatory: {relative_position}")
 
-
-def geom_terminal_point_opamp(binary, bbox, orientation: str, term_def: dict):
-    """
-    Nuova strategia semplificata per l'opamp.
-
-    In questa fase gestiamo BENE solo i 3 terminali obbligatori:
-    - in1
-    - in2
-    - out
-
-    Gli auxiliary vengono volutamente ignorati a livello di strategia e potranno
-    essere reintrodotti in una seconda fase separata.
-    """
-    relative_position = term_def["relative_position"]
-    slot = term_def.get("slot", "center")
-    terminal_role = term_def.get("terminal_role")
-
-    if terminal_role == "auxiliary":
-        point, debug = _geom_opamp_aux_terminal_v1(
-            binary,
-            bbox,
-            orientation,
-            relative_position,
-        )
-        debug["opamp_orientation"] = orientation
-        debug["opamp_terminal_name"] = term_def.get("name")
-        debug["opamp_terminal_role"] = terminal_role
-        debug["opamp_slot"] = slot
-        return point, debug
-
-    point, debug = _geom_opamp_mandatory_terminal(
-        binary,
-        bbox,
-        relative_position,
-        slot,
-    )
-    debug["opamp_orientation"] = orientation
-    debug["opamp_terminal_name"] = term_def.get("name")
-    debug["opamp_terminal_role"] = terminal_role
-    debug["opamp_slot"] = slot
-    return point, debug
-
-def geom_infer_orientation_from_bbox(bbox, default_orientation="horizontal"):
-    x1, y1, x2, y2 = bbox
-    width = max(x2 - x1, 1e-6)
-    height = max(y2 - y1, 1e-6)
-
-    if height / width >= ASPECT_RATIO_THRESHOLD:
-        return "vertical"
-    if width / height >= ASPECT_RATIO_THRESHOLD:
-        return "horizontal"
-    return default_orientation
-
-def _geom_opamp_internal_wire_triangle_junction(binary, bbox, base_point, relative_position):
-    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
-
-    xi = int(round(base_point[0]))
-    yi = int(round(base_point[1]))
-
-    halfspan = 2
-    min_fg = 3
-
-    def row_fg(y):
-        return img_count_foreground_pixels(
-            binary,
-            xi - halfspan,
-            y,
-            xi + halfspan + 1,
-            y + 1,
-        )
-
-    def col_fg(x):
-        return img_count_foreground_pixels(
-            binary,
-            x,
-            yi - halfspan,
-            x + 1,
-            yi + halfspan + 1,
-        )
-
-    if relative_position == "top":
-        y_start = max(y1, yi)
-        y_stop = min(y2, y1 + int(0.70 * (y2 - y1)))
-        run_start = None
-        run_end = None
-
-        for y in range(y_start, y_stop + 1):
-            if row_fg(y) >= min_fg:
-                if run_start is None:
-                    run_start = y
-                run_end = y
-            elif run_start is not None:
-                break
-
-        if run_start is not None:
-            return (float(xi), float(run_end))
-
-    elif relative_position == "bottom":
-        y_start = min(y2, yi)
-        y_stop = max(y1, y2 - int(0.70 * (y2 - y1)))
-        run_start = None
-        run_end = None
-
-        for y in range(y_start, y_stop - 1, -1):
-            if row_fg(y) >= min_fg:
-                if run_start is None:
-                    run_start = y
-                run_end = y
-            elif run_start is not None:
-                break
-
-        if run_start is not None:
-            return (float(xi), float(run_end))
-
-    elif relative_position == "left":
-        x_start = max(x1, xi)
-        x_stop = min(x2, x1 + int(0.70 * (x2 - x1)))
-        run_start = None
-        run_end = None
-
-        for x in range(x_start, x_stop + 1):
-            if col_fg(x) >= min_fg:
-                if run_start is None:
-                    run_start = x
-                run_end = x
-            elif run_start is not None:
-                break
-
-        if run_start is not None:
-            return (float(run_end), float(yi))
-
-    elif relative_position == "right":
-        x_start = min(x2, xi)
-        x_stop = max(x1, x2 - int(0.70 * (x2 - x1)))
-        run_start = None
-        run_end = None
-
-        for x in range(x_start, x_stop - 1, -1):
-            if col_fg(x) >= min_fg:
-                if run_start is None:
-                    run_start = x
-                run_end = x
-            elif run_start is not None:
-                break
-
-        if run_start is not None:
-            return (float(run_end), float(yi))
-
-    return base_point
-
-def _opamp_count_horizontal_line(binary, x_start, x_end, y):
-    h, w = binary.shape[:2]
-    y = max(0, min(h - 1, int(round(y))))
-
-    xa = int(round(min(x_start, x_end)))
-    xb = int(round(max(x_start, x_end)))
-
-    xa = max(0, min(w, xa))
-    xb = max(0, min(w, xb))
-
-    if xb <= xa:
-        return 0
-
-    return img_count_foreground_pixels(binary, xa, y, xb, y + 1)
-
-
-def _opamp_count_vertical_line(binary, x, y_start, y_end):
-    h, w = binary.shape[:2]
-    x = max(0, min(w - 1, int(round(x))))
-
-    ya = int(round(min(y_start, y_end)))
-    yb = int(round(max(y_start, y_end)))
-
-    ya = max(0, min(h, ya))
-    yb = max(0, min(h, yb))
-
-    if yb <= ya:
-        return 0
-
-    return img_count_foreground_pixels(binary, x, ya, x + 1, yb)
-
-
-def _select_opamp_mandatory_best_index(scores, coords, center_coord):
-    if not scores:
-        return 0, {
-            "max_score": 0,
-            "keep_threshold": 0,
-            "selected_coord": None,
-            "selected_distance_to_center": None,
-            "kept_candidates": 0,
-        }
-
-    max_score = max(scores)
-    keep_threshold = max_score * OPAMP_MANDATORY_KEEP_RATIO
-    kept = [i for i, s in enumerate(scores) if s >= keep_threshold]
-
-    if not kept:
-        best_idx = max(range(len(scores)), key=lambda i: scores[i])
-    else:
-        best_idx = min(
-            kept,
-            key=lambda i: (abs(coords[i] - center_coord), -scores[i])
-        )
-
-    return best_idx, {
-        "max_score": round(float(max_score), 4),
-        "keep_threshold": round(float(keep_threshold), 4),
-        "selected_coord": coords[best_idx],
-        "selected_distance_to_center": int(abs(coords[best_idx] - center_coord)),
-        "kept_candidates": len(kept),
-    }
-
+# =========================================================
+# OPAMP - AUXILIARY TERMINALS
+# =========================================================
 def _opamp_aux_scan_x_range(bbox):
     x1, y1, x2, y2 = bbox
     width = max(x2 - x1, 1)
@@ -1122,129 +1082,6 @@ def _opamp_vertical_band_density(binary, x, y_start, y_end, halfspan=1):
     return float(pixel_count) / float(area)
 
 
-def _opamp_refine_aux_x_on_stem(binary, bbox, orientation, relative_position, base_x, base_y):
-    """
-    Raffina la x dello stelo verticale in una piccola finestra locale.
-
-    Idea:
-    - valutiamo tutti gli x candidati vicino a base_x
-    - teniamo quelli quasi migliori
-    - per opamp "right" scegliamo il candidato più a SINISTRA
-      tra quelli buoni
-    - per opamp "left" scegliamo il candidato più a DESTRA
-
-    Così evitiamo che aux1 resti spostato verso destra per colpa
-    del bias iniziale di base_x.
-    """
-    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
-    height = max(y2 - y1, 1)
-
-    radius = OPAMP_AUX_X_REFINE_RADIUS
-    halfspan = OPAMP_AUX_X_REFINE_HALFSPAN
-
-    xs = list(range(
-        max(x1, int(round(base_x)) - radius),
-        min(x2, int(round(base_x)) + radius) + 1
-    ))
-
-    if not xs:
-        return float(base_x), {
-            "x_refined": False,
-            "refined_x": float(base_x),
-            "stem_density": 0.0,
-            "edge_support": 0,
-            "x_refine_mode": "empty_search",
-        }
-
-    edge_band = max(2, int(round(OPAMP_AUX_EDGE_BAND_RATIO * height)))
-
-    if relative_position == "top":
-        band_y1 = y1
-        band_y2 = min(
-            int(round(base_y)),
-            y1 + int(round(OPAMP_AUX_X_REFINE_TOP_END_RATIO * height)),
-        )
-        edge_y1 = y1
-        edge_y2 = min(y2, y1 + edge_band)
-    else:
-        band_y1 = max(
-            int(round(base_y)),
-            y1 + int(round(OPAMP_AUX_X_REFINE_BOTTOM_START_RATIO * height)),
-        )
-        band_y2 = y2
-        edge_y1 = max(y1, y2 - edge_band)
-        edge_y2 = y2
-
-    candidates = []
-    for x in xs:
-        stem_density = _opamp_vertical_band_density(
-            binary,
-            x,
-            band_y1,
-            band_y2,
-            halfspan=halfspan,
-        )
-
-        edge_support = img_count_foreground_pixels(
-            binary,
-            x - halfspan,
-            edge_y1,
-            x + halfspan + 1,
-            edge_y2 + 1,
-        )
-
-        candidates.append({
-            "x": float(x),
-            "stem_density": float(stem_density),
-            "edge_support": int(edge_support),
-        })
-
-    max_density = max(c["stem_density"] for c in candidates)
-    keep_threshold = max(OPAMP_AUX_X_REFINE_MIN_DENSITY, max_density * OPAMP_AUX_X_KEEP_RATIO)
-
-    kept = [
-        c for c in candidates
-        if c["stem_density"] >= keep_threshold and c["edge_support"] > 0
-    ]
-
-    if not kept:
-        # fallback conservativo
-        best = max(
-            candidates,
-            key=lambda c: (
-                c["stem_density"] >= OPAMP_AUX_X_REFINE_MIN_DENSITY,
-                c["stem_density"],
-                c["edge_support"],
-                -abs(c["x"] - float(base_x)),
-            )
-        )
-        return best["x"], {
-            "x_refined": best["x"] != float(base_x),
-            "refined_x": best["x"],
-            "stem_density": round(best["stem_density"], 4),
-            "edge_support": best["edge_support"],
-            "x_refine_mode": "fallback_best_density",
-            "kept_candidates": 0,
-            "keep_threshold": round(float(keep_threshold), 4),
-        }
-
-    if orientation == "right":
-        # scegli il più a sinistra tra quelli quasi migliori
-        best = min(kept, key=lambda c: c["x"])
-    else:
-        # opamp "left": simmetrico
-        best = max(kept, key=lambda c: c["x"])
-
-    return best["x"], {
-        "x_refined": best["x"] != float(base_x),
-        "refined_x": best["x"],
-        "stem_density": round(best["stem_density"], 4),
-        "edge_support": best["edge_support"],
-        "x_refine_mode": "kept_candidates_inner_side",
-        "kept_candidates": len(kept),
-        "keep_threshold": round(float(keep_threshold), 4),
-    }
-
 def _opamp_aux_make_refine_binary(binary, bbox, orientation):
     """
     Restituisce una copia locale del binary in cui i numeri interni
@@ -1324,8 +1161,6 @@ def _opamp_aux_make_refine_binary(binary, bbox, orientation):
         "mask_bottom_y2": int(bottom_y2),
         "mask_orientation_supported": True,
     }
-
-
 
 def _geom_opamp_aux_terminal_v1(binary, bbox, orientation, relative_position):
     """
@@ -1457,3 +1292,50 @@ def _geom_opamp_aux_terminal_v1(binary, bbox, orientation, relative_position):
         **x_refine_debug,
         **y_refine_debug,
     }
+
+# =========================================================
+# OPAMP - PUBLIC API
+# =========================================================
+def geom_terminal_point_opamp(binary, bbox, orientation: str, term_def: dict):
+    """
+    Nuova strategia semplificata per l'opamp.
+
+    In questa fase gestiamo BENE solo i 3 terminali obbligatori:
+    - in1
+    - in2
+    - out
+
+    Gli auxiliary vengono volutamente ignorati a livello di strategia e potranno
+    essere reintrodotti in una seconda fase separata.
+    """
+    relative_position = term_def["relative_position"]
+    slot = term_def.get("slot", "center")
+    terminal_role = term_def.get("terminal_role")
+
+    if terminal_role == "auxiliary":
+        point, debug = _geom_opamp_aux_terminal_v1(
+            binary,
+            bbox,
+            orientation,
+            relative_position,
+        )
+        debug["opamp_orientation"] = orientation
+        debug["opamp_terminal_name"] = term_def.get("name")
+        debug["opamp_terminal_role"] = terminal_role
+        debug["opamp_slot"] = slot
+        return point, debug
+
+    point, debug = _geom_opamp_mandatory_terminal(
+        binary,
+        bbox,
+        relative_position,
+        slot,
+    )
+    debug["opamp_orientation"] = orientation
+    debug["opamp_terminal_name"] = term_def.get("name")
+    debug["opamp_terminal_role"] = terminal_role
+    debug["opamp_slot"] = slot
+    return point, debug
+
+
+

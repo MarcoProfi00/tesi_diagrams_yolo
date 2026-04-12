@@ -1,5 +1,9 @@
 from .config import *
-from .geometry import geom_terminal_point_three_terminal
+from .geometry import (
+    geom_terminal_point_three_terminal,
+    geom_clamp_bbox_to_image,
+)
+from .image_ops import img_count_foreground_pixels
 from .probes import (
     get_local_terminal_probe_scores_center,
     get_local_terminal_probe_scores_multi_anchor,
@@ -89,6 +93,38 @@ def _resolve_specular_tie(side_a, side_b, lateral_scores, single_side_scores):
 
     # Caso top/bottom: usa gli score del lato singolo già calcolati
     return side_a if single_side_scores[side_a] >= single_side_scores[side_b] else side_b
+
+def get_bjt_base_side_scores(binary, bbox):
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+
+    band_y1 = y1 + int(round(0.20 * height))
+    band_y2 = y1 + int(round(0.80 * height))
+
+    strip_w = max(2, int(round(0.14 * width)))
+    inset = max(1, int(round(0.05 * width)))
+
+    left_score = img_count_foreground_pixels(
+        binary,
+        x1 + inset,
+        band_y1,
+        x1 + inset + strip_w,
+        band_y2 + 1,
+    )
+
+    right_score = img_count_foreground_pixels(
+        binary,
+        x2 - inset - strip_w,
+        band_y1,
+        x2 - inset,
+        band_y2 + 1,
+    )
+
+    return {
+        "left": float(left_score),
+        "right": float(right_score),
+    }
 
 
 def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", default_orientation="right"):
@@ -297,6 +333,16 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
             generic_orientation_scores[cand] = cand_score
             generic_orientation_point_debug[cand] = cand_debug
 
+            bjt_base_side_scores = None
+            if class_name == "NPN_Transistor":
+                bjt_base_side_scores = get_bjt_base_side_scores(binary, bbox)
+
+                if "left" in generic_orientation_scores:
+                    generic_orientation_scores["left"] += 0.8 * bjt_base_side_scores["left"]
+
+                if "right" in generic_orientation_scores:
+                    generic_orientation_scores["right"] += 0.8 * bjt_base_side_scores["right"]
+
         ordered_candidates = sorted(
             candidate_orientations,
             key=lambda o: generic_orientation_scores[o],
@@ -349,6 +395,8 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
             )
             debug_scores["three_terminal_orientation_scores"] = generic_orientation_scores
             debug_scores["three_terminal_orientation_point_debug"] = generic_orientation_point_debug
+            if bjt_base_side_scores is not None:
+                debug_scores["bjt_base_side_scores"] = bjt_base_side_scores
 
             return cand_best, debug_scores
 
