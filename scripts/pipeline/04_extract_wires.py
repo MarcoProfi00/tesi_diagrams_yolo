@@ -25,8 +25,8 @@ from skimage.morphology import skeletonize
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v5_various_two_terminals_components" / "03_estimate_terminals"
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v5_various_two_terminals_components" / "04_extract_wires"
+INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v6_opamp" / "03_estimate_terminals"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v6_opamp" / "04_extract_wires"
 
 # =========================================================
 # COMPONENT MASKING
@@ -50,6 +50,10 @@ TERMINAL_KEEP_RADIUS = 10
 TERMINAL_KEEP_LINE_THICKNESS = 7
 TERMINAL_KEEP_INWARD_LEN = 14
 TERMINAL_KEEP_OUTWARD_LEN = 12
+OPAMP_AUX_KEEP_RADIUS = 5
+OPAMP_AUX_KEEP_LINE_THICKNESS = 5
+OPAMP_AUX_KEEP_INWARD_LEN = 0
+OPAMP_AUX_KEEP_OUTWARD_LEN = 12
 
 # =========================================================
 # MORPHOLOGY
@@ -106,26 +110,47 @@ def build_base_component_mask(image_shape, components):
 
     return mask
 
+def terminal_keep_params(term):
+    name = str(term.get("name", "")).lower()
+
+    if name in {"aux1", "aux2"}:
+        return {
+            "radius": OPAMP_AUX_KEEP_RADIUS,
+            "thickness": OPAMP_AUX_KEEP_LINE_THICKNESS,
+            "inward_len": OPAMP_AUX_KEEP_INWARD_LEN,
+            "outward_len": OPAMP_AUX_KEEP_OUTWARD_LEN,
+        }
+
+    return {
+        "radius": TERMINAL_KEEP_RADIUS,
+        "thickness": TERMINAL_KEEP_LINE_THICKNESS,
+        "inward_len": TERMINAL_KEEP_INWARD_LEN,
+        "outward_len": TERMINAL_KEEP_OUTWARD_LEN,
+    }
+
 
 def terminal_keep_segment(term):
     x = float(term["x"])
     y = float(term["y"])
     rel = term.get("relative_position")
+    params = terminal_keep_params(term)
+
+    inward_len = params["inward_len"]
+    outward_len = params["outward_len"]
 
     if rel == "left":
-        p1 = (x - TERMINAL_KEEP_OUTWARD_LEN, y)
-        p2 = (x + TERMINAL_KEEP_INWARD_LEN, y)
+        p1 = (x - outward_len, y)
+        p2 = (x + inward_len, y)
     elif rel == "right":
-        p1 = (x - TERMINAL_KEEP_INWARD_LEN, y)
-        p2 = (x + TERMINAL_KEEP_OUTWARD_LEN, y)
+        p1 = (x - inward_len, y)
+        p2 = (x + outward_len, y)
     elif rel == "top":
-        p1 = (x, y - TERMINAL_KEEP_OUTWARD_LEN)
-        p2 = (x, y + TERMINAL_KEEP_INWARD_LEN)
+        p1 = (x, y - outward_len)
+        p2 = (x, y + inward_len)
     elif rel == "bottom":
-        p1 = (x, y - TERMINAL_KEEP_INWARD_LEN)
-        p2 = (x, y + TERMINAL_KEEP_OUTWARD_LEN)
+        p1 = (x, y - inward_len)
+        p2 = (x, y + outward_len)
     else:
-        # fallback prudente: se il lato non è disponibile, almeno preserva il cerchio
         p1 = (x, y)
         p2 = (x, y)
 
@@ -137,19 +162,21 @@ def carve_terminal_keep_zones(mask, terminals):
     keep_debug = np.zeros_like(mask)
 
     for term in terminals:
+        params = terminal_keep_params(term)
+
         x = int(round(term["x"]))
         y = int(round(term["y"]))
         x, y = clamp_point(x, y, w, h)
 
-        cv2.circle(mask, (x, y), TERMINAL_KEEP_RADIUS, 0, thickness=-1)
-        cv2.circle(keep_debug, (x, y), TERMINAL_KEEP_RADIUS, 255, thickness=-1)
+        cv2.circle(mask, (x, y), params["radius"], 0, thickness=-1)
+        cv2.circle(keep_debug, (x, y), params["radius"], 255, thickness=-1)
 
         p1f, p2f = terminal_keep_segment(term)
         p1 = clamp_point(p1f[0], p1f[1], w, h)
         p2 = clamp_point(p2f[0], p2f[1], w, h)
 
-        cv2.line(mask, p1, p2, 0, thickness=TERMINAL_KEEP_LINE_THICKNESS)
-        cv2.line(keep_debug, p1, p2, 255, thickness=TERMINAL_KEEP_LINE_THICKNESS)
+        cv2.line(mask, p1, p2, 0, thickness=params["thickness"])
+        cv2.line(keep_debug, p1, p2, 255, thickness=params["thickness"])
 
     return mask, keep_debug
 

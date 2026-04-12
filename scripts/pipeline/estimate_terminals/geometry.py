@@ -1122,13 +1122,21 @@ def _opamp_vertical_band_density(binary, x, y_start, y_end, halfspan=1):
     return float(pixel_count) / float(area)
 
 
-def _opamp_refine_aux_x_on_stem(binary, bbox, relative_position, base_x, base_y):
+def _opamp_refine_aux_x_on_stem(binary, bbox, orientation, relative_position, base_x, base_y):
     """
     Raffina la x dello stelo verticale in una piccola finestra locale.
-    Non cerca in tutto il bbox: cerca solo vicino al candidate_x già trovato.
+
+    Idea:
+    - valutiamo tutti gli x candidati vicino a base_x
+    - teniamo quelli quasi migliori
+    - per opamp "right" scegliamo il candidato più a SINISTRA
+      tra quelli buoni
+    - per opamp "left" scegliamo il candidato più a DESTRA
+
+    Così evitiamo che aux1 resti spostato verso destra per colpa
+    del bias iniziale di base_x.
     """
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
-    width = max(x2 - x1, 1)
     height = max(y2 - y1, 1)
 
     radius = OPAMP_AUX_X_REFINE_RADIUS
@@ -1145,6 +1153,7 @@ def _opamp_refine_aux_x_on_stem(binary, bbox, relative_position, base_x, base_y)
             "refined_x": float(base_x),
             "stem_density": 0.0,
             "edge_support": 0,
+            "x_refine_mode": "empty_search",
         }
 
     edge_band = max(2, int(round(OPAMP_AUX_EDGE_BAND_RATIO * height)))
@@ -1166,7 +1175,7 @@ def _opamp_refine_aux_x_on_stem(binary, bbox, relative_position, base_x, base_y)
         edge_y1 = max(y1, y2 - edge_band)
         edge_y2 = y2
 
-    best = None
+    candidates = []
     for x in xs:
         stem_density = _opamp_vertical_band_density(
             binary,
@@ -1184,27 +1193,138 @@ def _opamp_refine_aux_x_on_stem(binary, bbox, relative_position, base_x, base_y)
             edge_y2 + 1,
         )
 
-        key = (
-            stem_density >= OPAMP_AUX_X_REFINE_MIN_DENSITY,
-            stem_density,
-            edge_support,
-            -abs(x - int(round(base_x))),
-        )
+        candidates.append({
+            "x": float(x),
+            "stem_density": float(stem_density),
+            "edge_support": int(edge_support),
+        })
 
-        if best is None or key > best["key"]:
-            best = {
-                "key": key,
-                "x": float(x),
-                "stem_density": float(stem_density),
-                "edge_support": int(edge_support),
-            }
+    max_density = max(c["stem_density"] for c in candidates)
+    keep_threshold = max(OPAMP_AUX_X_REFINE_MIN_DENSITY, max_density * OPAMP_AUX_X_KEEP_RATIO)
+
+    kept = [
+        c for c in candidates
+        if c["stem_density"] >= keep_threshold and c["edge_support"] > 0
+    ]
+
+    if not kept:
+        # fallback conservativo
+        best = max(
+            candidates,
+            key=lambda c: (
+                c["stem_density"] >= OPAMP_AUX_X_REFINE_MIN_DENSITY,
+                c["stem_density"],
+                c["edge_support"],
+                -abs(c["x"] - float(base_x)),
+            )
+        )
+        return best["x"], {
+            "x_refined": best["x"] != float(base_x),
+            "refined_x": best["x"],
+            "stem_density": round(best["stem_density"], 4),
+            "edge_support": best["edge_support"],
+            "x_refine_mode": "fallback_best_density",
+            "kept_candidates": 0,
+            "keep_threshold": round(float(keep_threshold), 4),
+        }
+
+    if orientation == "right":
+        # scegli il più a sinistra tra quelli quasi migliori
+        best = min(kept, key=lambda c: c["x"])
+    else:
+        # opamp "left": simmetrico
+        best = max(kept, key=lambda c: c["x"])
 
     return best["x"], {
         "x_refined": best["x"] != float(base_x),
         "refined_x": best["x"],
         "stem_density": round(best["stem_density"], 4),
         "edge_support": best["edge_support"],
+        "x_refine_mode": "kept_candidates_inner_side",
+        "kept_candidates": len(kept),
+        "keep_threshold": round(float(keep_threshold), 4),
     }
+
+def _opamp_aux_make_refine_binary(binary, bbox, orientation):
+    """
+    Restituisce una copia locale del binary in cui i numeri interni
+    dell'opamp (tipicamente 4 e 5) sono mascherati.
+
+    La maschera viene usata SOLO per la refine degli auxiliary.
+    """
+    if not OPAMP_AUX_MASK_INTERNAL_LABELS:
+        return binary, {
+            "internal_label_masked": False,
+        }
+
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+
+    # Per ora la usiamo solo sugli opamp orizzontali
+    if orientation not in {"right", "left"}:
+        return binary, {
+            "internal_label_masked": False,
+            "mask_orientation_supported": False,
+        }
+
+    masked = binary.copy()
+
+    def xr(r):
+        return x1 + int(round(r * width))
+
+    def yr(r):
+        return y1 + int(round(r * height))
+
+    def mirrored_x_interval(r1, r2):
+        if orientation == "right":
+            xa = xr(r1)
+            xb = xr(r2)
+        else:
+            # mirror orizzontale per opamp "left"
+            xa = xr(1.0 - r2)
+            xb = xr(1.0 - r1)
+
+        if xb < xa:
+            xa, xb = xb, xa
+        return xa, xb
+
+    mask_x1, mask_x2 = mirrored_x_interval(
+        OPAMP_AUX_MASK_X1_RATIO,
+        OPAMP_AUX_MASK_X2_RATIO,
+    )
+
+    top_y1 = yr(OPAMP_AUX_MASK_TOP_Y1_RATIO)
+    top_y2 = yr(OPAMP_AUX_MASK_TOP_Y2_RATIO)
+
+    bottom_y1 = yr(OPAMP_AUX_MASK_BOTTOM_Y1_RATIO)
+    bottom_y2 = yr(OPAMP_AUX_MASK_BOTTOM_Y2_RATIO)
+
+    # clamp
+    mask_x1 = max(0, min(binary.shape[1] - 1, mask_x1))
+    mask_x2 = max(0, min(binary.shape[1] - 1, mask_x2))
+    top_y1 = max(0, min(binary.shape[0] - 1, top_y1))
+    top_y2 = max(0, min(binary.shape[0] - 1, top_y2))
+    bottom_y1 = max(0, min(binary.shape[0] - 1, bottom_y1))
+    bottom_y2 = max(0, min(binary.shape[0] - 1, bottom_y2))
+
+    if mask_x2 >= mask_x1 and top_y2 >= top_y1:
+        masked[top_y1:top_y2 + 1, mask_x1:mask_x2 + 1] = 0
+
+    if mask_x2 >= mask_x1 and bottom_y2 >= bottom_y1:
+        masked[bottom_y1:bottom_y2 + 1, mask_x1:mask_x2 + 1] = 0
+
+    return masked, {
+        "internal_label_masked": True,
+        "mask_x1": int(mask_x1),
+        "mask_x2": int(mask_x2),
+        "mask_top_y1": int(top_y1),
+        "mask_top_y2": int(top_y2),
+        "mask_bottom_y1": int(bottom_y1),
+        "mask_bottom_y2": int(bottom_y2),
+        "mask_orientation_supported": True,
+    }
+
 
 
 def _geom_opamp_aux_terminal_v1(binary, bbox, orientation, relative_position):
@@ -1230,24 +1350,53 @@ def _geom_opamp_aux_terminal_v1(binary, bbox, orientation, relative_position):
     if not xs:
         xs = [int(round((x1 + x2) / 2))]
 
-    best = None
+    candidates = []
+
     for x in xs:
-        run = _opamp_vertical_run_from_edge(binary, (x1, y1, x2, y2), x, relative_position)
+        run = _opamp_vertical_run_from_edge(
+            binary,
+            (x1, y1, x2, y2),
+            x,
+            relative_position,
+        )
         if run is None:
             continue
 
-        key = (
-            run["run_len"] >= OPAMP_AUX_MIN_RUN_LENGTH,
-            run["run_len"],
-            -abs(x - int(round((scan_start + scan_end) / 2))),
-        )
+        candidates.append({
+            "x": float(x),
+            **run,
+        })
 
-        if best is None or key > best["key"]:
-            best = {
-                "key": key,
-                "x": x,
-                **run,
-            }
+    if not candidates:
+        point = geom_terminal_point_from_bbox(bbox, relative_position)
+        return point, {
+            "point_mode": "opamp_aux_v1",
+            "aux_detected": False,
+            "orientation_supported": True,
+            "relative_position": relative_position,
+            "scan_start": scan_start,
+            "scan_end": scan_end,
+            "min_run_length": OPAMP_AUX_MIN_RUN_LENGTH,
+            "aux_reason": "no_vertical_run_candidates",
+        }
+
+    max_run_len = max(c["run_len"] for c in candidates)
+    keep_threshold = max(
+        OPAMP_AUX_MIN_RUN_LENGTH,
+        int(round(max_run_len * OPAMP_AUX_RUN_KEEP_RATIO)),
+    )
+
+    kept = [c for c in candidates if c["run_len"] >= keep_threshold]
+
+    if not kept:
+        kept = candidates
+
+    if orientation == "right":
+        # scegli il ramo più interno: più a sinistra
+        best = min(kept, key=lambda c: c["x"])
+    else:
+        # opamp left: simmetrico, più a destra
+        best = max(kept, key=lambda c: c["x"])
 
     if best is None or best["run_len"] < OPAMP_AUX_MIN_RUN_LENGTH:
         point = geom_terminal_point_from_bbox(bbox, relative_position)
@@ -1264,16 +1413,23 @@ def _geom_opamp_aux_terminal_v1(binary, bbox, orientation, relative_position):
     base_x = float(best["x"])
     base_y = float(best["run_end"])
 
-    refined_x, x_refine_debug = _opamp_refine_aux_x_on_stem(
+    refine_binary, mask_debug = _opamp_aux_make_refine_binary(
         binary,
         (x1, y1, x2, y2),
-        relative_position,
-        base_x,
-        base_y,
+        orientation,
     )
 
+    # Per gli aux teniamo la x dello stelo trovata dalla run verticale.
+    # La refine della x stava spostando il punto fuori dallo stelo.
+    refined_x = float(base_x)
+    x_refine_debug = {
+        "x_refined": False,
+        "refined_x": float(base_x),
+        "x_refine_mode": "disabled_trust_run_axis",
+    }
+
     refined_y, y_refine_debug = _opamp_refine_aux_y_to_diagonal(
-        binary,
+        refine_binary,
         (x1, y1, x2, y2),
         orientation,
         relative_position,
@@ -1297,6 +1453,7 @@ def _geom_opamp_aux_terminal_v1(binary, bbox, orientation, relative_position):
         "min_run_length": OPAMP_AUX_MIN_RUN_LENGTH,
         "base_x": base_x,
         "base_y": base_y,
+        **mask_debug,
         **x_refine_debug,
         **y_refine_debug,
     }

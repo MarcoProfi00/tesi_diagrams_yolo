@@ -8,6 +8,7 @@ from .probes import (
     score_mosfet_candidate_terminals,
 )
 
+
 def candidate_mosfet_orientations_from_bbox(bbox):
     """
     Per ora testiamo sempre tutte e 4 le orientazioni.
@@ -17,18 +18,11 @@ def candidate_mosfet_orientations_from_bbox(bbox):
     return ("left", "right", "top", "bottom")
 
 
-def score_mosfet_orientation_by_terminal_points(binary, bbox, orientation):
+def score_three_terminal_orientation_by_terminal_points(binary, bbox, orientation, single_weight):
     """
-    Valuta un'orientazione candidata del Mosfet usando i 3 terminali stimati.
-
-    Flusso:
-    - genero i 3 punti terminali coerenti con l'orientazione candidata
-    - costruisco una lista di terminali candidati
-    - delego lo scoring finale a score_mosfet_candidate_terminals(...)
-
-    Questo è molto più robusto dei casi speculari left/right:
-    non guarda solo il lato singolo in astratto, ma valuta direttamente
-    i punti terminali finali che useremo davvero nel passo 03.
+    Versione generica della validazione finale:
+    genera i 3 terminali coerenti con l'orientazione candidata
+    e li valuta con lo scoring locale attorno ai punti finali.
     """
     candidate_terminals = []
     point_debug = {}
@@ -58,7 +52,7 @@ def score_mosfet_orientation_by_terminal_points(binary, bbox, orientation):
         binary,
         candidate_terminals,
         single_side=orientation,
-        single_weight=MOSFET_SINGLE_TERMINAL_WEIGHT,
+        single_weight=single_weight,
     )
 
     debug = {
@@ -68,6 +62,16 @@ def score_mosfet_orientation_by_terminal_points(binary, bbox, orientation):
     }
 
     return total_score, debug
+
+
+def score_mosfet_orientation_by_terminal_points(binary, bbox, orientation):
+    return score_three_terminal_orientation_by_terminal_points(
+        binary,
+        bbox,
+        orientation,
+        single_weight=MOSFET_SINGLE_TERMINAL_WEIGHT,
+    )
+
 
 # =========================================================
 # STRATEGY: THREE-TERMINAL COMPONENTS
@@ -86,12 +90,14 @@ def _resolve_specular_tie(side_a, side_b, lateral_scores, single_side_scores):
     # Caso top/bottom: usa gli score del lato singolo già calcolati
     return side_a if single_side_scores[side_a] >= single_side_scores[side_b] else side_b
 
+
 def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", default_orientation="right"):
     """
     Strategia per i 3-terminali.
 
     Idea generale:
-    - NPN: la scelta del lato singolo funziona bene con i probe classici
+    - NPN / altri 3-terminali: prima lato singolo, ma con validazione finale
+      anche sui 3 punti terminali stimati
     - Mosfet: oltre ai probe per il lato singolo, facciamo una validazione
       finale dell'orientazione usando i 3 punti terminali stimati
 
@@ -99,12 +105,12 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
     1. calcolo score del lato singolo
     2. calcolo fallback multi-anchor
     3. se classe Mosfet:
-       - valuto direttamente le orientazioni candidate (left/right oppure top/bottom)
-         usando il supporto locale attorno ai 3 terminali stimati
-       - se una orientazione è chiaramente migliore, la uso
-    4. altrimenti uso il lato singolo se è chiaro
-    5. se non basta, fallback multi-anchor
-    6. ultimo fallback: default_orientation YAML
+       - valuto direttamente le orientazioni candidate usando i 3 punti terminali
+    4. se non Mosfet:
+       - valuto direttamente le orientazioni candidate usando i 3 punti terminali
+    5. se il lato singolo è abbastanza chiaro, uso quello
+    6. se non basta, fallback multi-anchor
+    7. ultimo fallback: default_orientation YAML
     """
     # -------------------------------------------------
     # 1) Score per il lato singolo
@@ -114,7 +120,6 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
         single_side_source = "mosfet_near_far"
         single_side_min_score = MOSFET_SINGLE_SIDE_MIN_SCORE
         single_side_margin = MOSFET_SINGLE_SIDE_MARGIN
-
         lateral_scores = get_mosfet_lateral_gate_scores(binary, bbox)
     else:
         single_side_scores = get_local_terminal_probe_scores_center(binary, bbox)
@@ -148,20 +153,23 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
         best_vertical_score = single_side_scores[best_vertical_side]
 
         if (
-            MOSFET_FORCE_LATERAL_GATE and
-            best_lateral_score > best_vertical_score * MOSFET_LATERAL_MARGIN
+            MOSFET_FORCE_LATERAL_GATE
+            and best_lateral_score > best_vertical_score * MOSFET_LATERAL_MARGIN
         ):
             best_side = best_lateral_side
             second_side = "right" if best_side == "left" else "left"
             best_score = best_lateral_score
             second_score = lateral_scores[second_side]
 
+    # Queste due variabili DEVONO esistere sempre
+    mosfet_orientation_scores = None
+    mosfet_orientation_point_debug = None
+    generic_orientation_scores = None
+    generic_orientation_point_debug = None
+
     # -------------------------------------------------
     # 2) Validazione finale specifica per Mosfet
     # -------------------------------------------------
-    mosfet_orientation_scores = None
-    mosfet_orientation_point_debug = None
-
     if class_name == "Mosfet":
         candidate_orientations = candidate_mosfet_orientations_from_bbox(bbox)
 
@@ -176,9 +184,10 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
             )
 
             gate_bonus = 0.0
-            #if lateral_scores is not None and cand in ("left", "right"):
-            #    gate_bonus = 0.8 * lateral_scores[cand]
-            #    cand_score += gate_bonus
+            # Se vuoi riattivarlo in futuro:
+            # if lateral_scores is not None and cand in ("left", "right"):
+            #     gate_bonus = 0.8 * lateral_scores[cand]
+            #     cand_score += gate_bonus
 
             cand_debug["gate_bonus"] = gate_bonus
             mosfet_orientation_scores[cand] = cand_score
@@ -194,34 +203,27 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
         cand_second = ordered_candidates[1] if len(ordered_candidates) > 1 else None
 
         cand_best_score = mosfet_orientation_scores[cand_best]
-        cand_second_score = (
-            mosfet_orientation_scores[cand_second]
-            if cand_second is not None else 0.0
-        )
+        cand_second_score = mosfet_orientation_scores[cand_second] if cand_second is not None else 0.0
 
-        # -------------------------------------------------
         # Tie-break per casi speculari quasi pari
-        # -------------------------------------------------
         if cand_second is not None and _is_specular_pair(cand_best, cand_second):
             ratio = cand_best_score / max(cand_second_score, 1e-6)
 
-            # Se sono molto vicini, risolviamo con un criterio dedicato
-            #if ratio < 1.15:
-            #    chosen = _resolve_specular_tie(
-            #        cand_best,
-            #        cand_second,
-            #        lateral_scores=lateral_scores,
-            #        single_side_scores=single_side_scores,
-            #    )
-            #    cand_best = chosen
-            #    cand_best_score = mosfet_orientation_scores[cand_best]
+            # Se vuoi riattivarlo in futuro:
+            # if ratio < 1.15:
+            #     chosen = _resolve_specular_tie(
+            #         cand_best,
+            #         cand_second,
+            #         lateral_scores=lateral_scores,
+            #         single_side_scores=single_side_scores,
+            #     )
+            #     cand_best = chosen
+            #     cand_best_score = mosfet_orientation_scores[cand_best]
             pass
 
-        # Se una orientazione candidata è chiaramente migliore,
-        # la usiamo direttamente.
         if (
-            cand_second is None or
-            cand_best_score > cand_second_score * MOSFET_ORIENTATION_VALIDATION_MARGIN
+            cand_second is None
+            or cand_best_score > cand_second_score * MOSFET_ORIENTATION_VALIDATION_MARGIN
         ):
             required_sides = THREE_TERMINAL_TEMPLATES[cand_best]
 
@@ -252,11 +254,110 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
             return cand_best, debug_scores
 
     # -------------------------------------------------
+    # 2a) Validazione finale generica sui punti terminali
+    #     per i 3-terminali non Mosfet
+    # -------------------------------------------------
+    if class_name != "Mosfet" and THREE_TERMINAL_POINT_VALIDATION_ENABLE:
+        # Prefiltro sull'asse:
+        # evitiamo che un transistor "right/left" venga ribaltato in "top/bottom"
+        # per colpa di testo o grafica interna.
+        if THREE_TERMINAL_AXIS_PREFILTER_ENABLE:
+            horizontal_axis_score = max(
+                single_side_scores["left"],
+                single_side_scores["right"],
+            )
+            vertical_axis_score = max(
+                single_side_scores["top"],
+                single_side_scores["bottom"],
+            )
+
+            if horizontal_axis_score > vertical_axis_score * THREE_TERMINAL_AXIS_PREFILTER_MARGIN:
+                candidate_orientations = ("left", "right")
+                axis_prefilter = "horizontal"
+            elif vertical_axis_score > horizontal_axis_score * THREE_TERMINAL_AXIS_PREFILTER_MARGIN:
+                candidate_orientations = ("top", "bottom")
+                axis_prefilter = "vertical"
+            else:
+                candidate_orientations = ("left", "right", "top", "bottom")
+                axis_prefilter = "none"
+        else:
+            candidate_orientations = ("left", "right", "top", "bottom")
+            axis_prefilter = "disabled"
+
+        generic_orientation_scores = {}
+        generic_orientation_point_debug = {}
+
+        for cand in candidate_orientations:
+            cand_score, cand_debug = score_three_terminal_orientation_by_terminal_points(
+                binary,
+                bbox,
+                cand,
+                single_weight=THREE_TERMINAL_POINT_VALIDATION_SINGLE_WEIGHT,
+            )
+            generic_orientation_scores[cand] = cand_score
+            generic_orientation_point_debug[cand] = cand_debug
+
+        ordered_candidates = sorted(
+            candidate_orientations,
+            key=lambda o: generic_orientation_scores[o],
+            reverse=True
+        )
+
+        cand_best = ordered_candidates[0]
+        cand_second = ordered_candidates[1] if len(ordered_candidates) > 1 else None
+
+        cand_best_score = generic_orientation_scores[cand_best]
+        cand_second_score = generic_orientation_scores[cand_second] if cand_second is not None else 0.0
+
+        # tie-break solo tra orientazioni speculari
+        if cand_second is not None and _is_specular_pair(cand_best, cand_second):
+            ratio = cand_best_score / max(cand_second_score, 1e-6)
+            if ratio < 1.10:
+                cand_best = _resolve_specular_tie(
+                    cand_best,
+                    cand_second,
+                    lateral_scores=None,
+                    single_side_scores=single_side_scores,
+                )
+                cand_best_score = generic_orientation_scores[cand_best]
+
+        if (
+            cand_second is None
+            or cand_best_score > cand_second_score * THREE_TERMINAL_POINT_VALIDATION_MARGIN
+        ):
+            required_sides = THREE_TERMINAL_TEMPLATES[cand_best]
+
+            debug_scores = dict(multi_scores)
+            debug_scores["single_side_scores"] = {
+                "top": single_side_scores["top"],
+                "bottom": single_side_scores["bottom"],
+                "left": single_side_scores["left"],
+                "right": single_side_scores["right"],
+            }
+            debug_scores["single_side_source"] = single_side_source
+            debug_scores["decision_mode"] = "three_terminal_point_validation"
+            debug_scores["axis_prefilter"] = axis_prefilter
+            debug_scores["candidate_orientations"] = list(candidate_orientations)
+            debug_scores["single_side"] = cand_best
+            debug_scores["single_side_score"] = cand_best_score
+            debug_scores["second_side"] = cand_second
+            debug_scores["second_side_score"] = cand_second_score
+            debug_scores["required_sides"] = list(required_sides)
+            debug_scores["missing_side"] = next(
+                side for side in ("top", "bottom", "left", "right")
+                if side not in required_sides
+            )
+            debug_scores["three_terminal_orientation_scores"] = generic_orientation_scores
+            debug_scores["three_terminal_orientation_point_debug"] = generic_orientation_point_debug
+
+            return cand_best, debug_scores
+
+    # -------------------------------------------------
     # 3) Se il lato singolo è abbastanza chiaro, usiamo quello
     # -------------------------------------------------
     if (
-        best_score >= single_side_min_score and
-        best_score > second_score * single_side_margin
+        best_score >= single_side_min_score
+        and best_score > second_score * single_side_margin
     ):
         required_sides = THREE_TERMINAL_TEMPLATES[best_side]
 
@@ -285,6 +386,11 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
             debug_scores["mosfet_orientation_scores"] = mosfet_orientation_scores
         if mosfet_orientation_point_debug is not None:
             debug_scores["mosfet_orientation_point_debug"] = mosfet_orientation_point_debug
+
+        if generic_orientation_scores is not None:
+            debug_scores["three_terminal_orientation_scores"] = generic_orientation_scores
+        if generic_orientation_point_debug is not None:
+            debug_scores["three_terminal_orientation_point_debug"] = generic_orientation_point_debug
 
         return best_side, debug_scores
 
@@ -330,6 +436,11 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
         if mosfet_orientation_point_debug is not None:
             multi_scores["mosfet_orientation_point_debug"] = mosfet_orientation_point_debug
 
+        if generic_orientation_scores is not None:
+            multi_scores["three_terminal_orientation_scores"] = generic_orientation_scores
+        if generic_orientation_point_debug is not None:
+            multi_scores["three_terminal_orientation_point_debug"] = generic_orientation_point_debug
+
         return best_orientation, multi_scores
 
     # -------------------------------------------------
@@ -351,5 +462,10 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
         multi_scores["mosfet_orientation_scores"] = mosfet_orientation_scores
     if mosfet_orientation_point_debug is not None:
         multi_scores["mosfet_orientation_point_debug"] = mosfet_orientation_point_debug
+
+    if generic_orientation_scores is not None:
+        multi_scores["three_terminal_orientation_scores"] = generic_orientation_scores
+    if generic_orientation_point_debug is not None:
+        multi_scores["three_terminal_orientation_point_debug"] = generic_orientation_point_debug
 
     return default_orientation, multi_scores

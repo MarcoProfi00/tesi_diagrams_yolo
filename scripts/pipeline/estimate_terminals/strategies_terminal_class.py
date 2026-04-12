@@ -41,9 +41,58 @@ def _combined_side_scores(local_scores, far_scores):
         for side in ("top", "bottom", "left", "right")
     }
 
+def _terminal_bbox_shape_info(bbox):
+    x1, y1, x2, y2 = bbox
+    w = max(float(x2 - x1), 1.0)
+    h = max(float(y2 - y1), 1.0)
 
-def _best_single_side(local_scores, far_scores):
-    combined = _combined_side_scores(local_scores, far_scores)
+    ratio_hw = h / w
+    ratio_wh = w / h
+    major_ratio = max(ratio_hw, ratio_wh)
+
+    return {
+        "width": w,
+        "height": h,
+        "ratio_hw": ratio_hw,
+        "ratio_wh": ratio_wh,
+        "major_ratio": major_ratio,
+        "is_near_square": major_ratio <= TERMINAL_CLASS_NEAR_SQUARE_RATIO,
+        "is_vertical": ratio_hw > TERMINAL_CLASS_NEAR_SQUARE_RATIO,
+        "is_horizontal": ratio_wh > TERMINAL_CLASS_NEAR_SQUARE_RATIO,
+    }
+
+def _apply_terminal_shape_prior(bbox, side_scores):
+    """
+    Bias geometrico molto leggero:
+    - lo applichiamo solo se il bbox NON è quasi quadrato
+    - terminali piccoli/quasi quadrati non devono essere forzati
+      verso top/bottom o left/right
+    """
+    shape = _terminal_bbox_shape_info(bbox)
+    adjusted = {k: float(v) for k, v in side_scores.items()}
+
+    if shape["is_near_square"]:
+        return adjusted
+
+    if shape["ratio_hw"] >= TERMINAL_CLASS_SHAPE_RATIO_STRONG:
+        adjusted["top"] += TERMINAL_CLASS_SHAPE_BONUS_STRONG
+        adjusted["bottom"] += TERMINAL_CLASS_SHAPE_BONUS_STRONG
+    elif shape["ratio_hw"] >= TERMINAL_CLASS_SHAPE_RATIO_WEAK:
+        adjusted["top"] += TERMINAL_CLASS_SHAPE_BONUS_WEAK
+        adjusted["bottom"] += TERMINAL_CLASS_SHAPE_BONUS_WEAK
+    elif shape["ratio_wh"] >= TERMINAL_CLASS_SHAPE_RATIO_STRONG:
+        adjusted["left"] += TERMINAL_CLASS_SHAPE_BONUS_STRONG
+        adjusted["right"] += TERMINAL_CLASS_SHAPE_BONUS_STRONG
+    elif shape["ratio_wh"] >= TERMINAL_CLASS_SHAPE_RATIO_WEAK:
+        adjusted["left"] += TERMINAL_CLASS_SHAPE_BONUS_WEAK
+        adjusted["right"] += TERMINAL_CLASS_SHAPE_BONUS_WEAK
+
+    return adjusted
+
+
+def _best_single_side(binary, bbox, local_scores, far_scores):
+    combined_raw = _combined_side_scores(local_scores, far_scores)
+    combined = _apply_terminal_shape_prior(bbox, combined_raw)
     best_side = max(combined, key=combined.get)
     ordered = sorted(combined.items(), key=lambda kv: kv[1], reverse=True)
 
@@ -145,7 +194,7 @@ def classify_terminal_cardinality(binary, bbox, default_side="right"):
     local_scores = get_terminal_class_probe_scores(binary, bbox)
     far_scores = get_terminal_class_far_probe_scores(binary, bbox)
 
-    single_eval = _best_single_side(local_scores, far_scores)
+    single_eval = _best_single_side(binary, bbox, local_scores, far_scores)
     horiz_eval = _horizontal_two_side_evidence(local_scores, far_scores)
     vert_eval = _vertical_two_side_evidence(local_scores, far_scores)
 
@@ -241,7 +290,12 @@ def detect_terminal_one_side(binary, bbox, default_side="right", precomputed_sco
     if far_scores is None:
         far_scores = get_terminal_class_far_probe_scores(binary, bbox)
 
-    combined = _combined_side_scores(scores, far_scores)
+    combined_raw = _combined_side_scores(scores, far_scores)
+    combined = _apply_terminal_shape_prior(bbox, combined_raw)
+    scores["combined_scores_raw"] = combined_raw
+    scores["combined_scores_shape_adjusted"] = combined
+    shape_info = _terminal_bbox_shape_info(bbox)
+    scores["bbox_shape_debug"] = shape_info
     ordered = sorted(combined.items(), key=lambda kv: kv[1], reverse=True)
 
     best_side, best_score = ordered[0]
@@ -270,40 +324,49 @@ def detect_terminal_one_side(binary, bbox, default_side="right", precomputed_sco
     # -------------------------------------------------
     # 2) Tie-break principale: continuità fuori+dentro sullo stesso asse
     # -------------------------------------------------
-    candidate_sides = [
-        side
-        for side, score in combined.items()
-        if score >= max(10.0, 0.35 * best_score)
-    ]
-
+    # IMPORTANTE:
+    # per terminali piccoli / quasi quadrati (tipici output terminal circolari/ovali),
+    # il supporto "inside" è spesso rumore del simbolo stesso.
+    # In quel caso saltiamo del tutto questo step.
     through_debug = {}
-    for side in candidate_sides:
-        through_debug[side] = _score_terminal_one_side_candidate_by_through_support(
-            binary,
-            bbox,
-            side,
-        )
+    scores["through_support_skipped_for_near_square"] = bool(shape_info["is_near_square"])
 
-    scores["through_support_debug"] = through_debug
+    if not shape_info["is_near_square"]:
+        candidate_sides = [
+            side
+            for side, score in combined.items()
+            if score >= max(10.0, 0.35 * best_score)
+        ]
 
-    if through_debug:
-        ordered_through = sorted(
-            through_debug.items(),
-            key=lambda kv: kv[1]["through_score"],
-            reverse=True,
-        )
+        for side in candidate_sides:
+            through_debug[side] = _score_terminal_one_side_candidate_by_through_support(
+                binary,
+                bbox,
+                side,
+            )
 
-        best_through_side, best_through = ordered_through[0]
-        second_through_score = (
-            ordered_through[1][1]["through_score"]
-            if len(ordered_through) > 1 else 0.0
-        )
+        scores["through_support_debug"] = through_debug
 
-        if (
-            best_through["outside"] >= THROUGH_MIN_OUTSIDE
-            and best_through["through_score"] > second_through_score * THROUGH_MARGIN
-        ):
-            return [{"name": "t1", "relative_position": best_through_side}], best_through_side
+        if through_debug:
+            ordered_through = sorted(
+                through_debug.items(),
+                key=lambda kv: kv[1]["through_score"],
+                reverse=True,
+            )
+
+            best_through_side, best_through = ordered_through[0]
+            second_through_score = (
+                ordered_through[1][1]["through_score"]
+                if len(ordered_through) > 1 else 0.0
+            )
+
+            if (
+                best_through["outside"] >= THROUGH_MIN_OUTSIDE
+                and best_through["through_score"] > second_through_score * THROUGH_MARGIN
+            ):
+                return [{"name": "t1", "relative_position": best_through_side}], best_through_side
+    else:
+        scores["through_support_debug"] = {}
 
     # -------------------------------------------------
     # 3) Tie-break secondario: validazione point-based
@@ -326,10 +389,26 @@ def detect_terminal_one_side(binary, bbox, default_side="right", precomputed_sco
 
     scores["point_debug_one_side"] = point_debug
 
-    point_combined = {
-        side: point_scores[side] + POINT_FAR_WEIGHT * far_scores.get(side, 0)
-        for side in ("top", "bottom", "left", "right")
-    }
+    if shape_info["is_near_square"]:
+        # Per i terminali piccoli / circolari / quasi quadrati
+        # pesiamo di più l'evidenza esterna reale.
+        point_combined = {
+            side: (
+                1.00 * point_scores[side]
+                + 1.00 * far_scores.get(side, 0)
+                + 0.35 * scores.get(side, 0)
+            )
+            for side in ("top", "bottom", "left", "right")
+        }
+        point_margin_used = 1.08
+    else:
+        point_combined = {
+            side: point_scores[side] + POINT_FAR_WEIGHT * far_scores.get(side, 0)
+            for side in ("top", "bottom", "left", "right")
+        }
+        point_margin_used = POINT_MARGIN
+
+    scores["point_combined_one_side"] = point_combined
 
     ordered_point = sorted(point_combined.items(), key=lambda kv: kv[1], reverse=True)
     best_point_side, best_point_score = ordered_point[0]
@@ -337,7 +416,7 @@ def detect_terminal_one_side(binary, bbox, default_side="right", precomputed_sco
 
     if (
         point_scores.get(best_point_side, 0) >= POINT_MIN_SCORE
-        and best_point_score > second_point_score * POINT_MARGIN
+        and best_point_score > second_point_score * point_margin_used
     ):
         return [{"name": "t1", "relative_position": best_point_side}], best_point_side
 

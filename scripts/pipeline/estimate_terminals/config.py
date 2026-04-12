@@ -72,6 +72,17 @@ TERMINAL_CLASS_FAR_GAP = 3
 TERMINAL_CLASS_FAR_LEN = 10
 TERMINAL_CLASS_FAR_MIN = 2
 
+# Bias geometrico per la classe Terminal
+# Molto più conservativo: i terminali piccoli / quasi quadrati
+# non devono essere spinti artificialmente verso top/bottom o left/right.
+TERMINAL_CLASS_NEAR_SQUARE_RATIO = 1.28
+
+TERMINAL_CLASS_SHAPE_RATIO_STRONG = 1.70
+TERMINAL_CLASS_SHAPE_RATIO_WEAK = 1.45
+
+TERMINAL_CLASS_SHAPE_BONUS_STRONG = 1.25
+TERMINAL_CLASS_SHAPE_BONUS_WEAK = 0.60
+
 # 3 TERMINALI - STIMA DEL PATTERN DEI LATI
 THREE_TERMINAL_ANCHOR_RATIOS = (0.22, 0.50, 0.78)
 THREE_TERMINAL_MIN_SIDE_SCORE = 3
@@ -82,6 +93,13 @@ THREE_TERMINAL_TEMPLATES = {
     "top": ("top", "left", "right"),
     "bottom": ("bottom", "left", "right"),
 }
+# 3 TERMINALI - VALIDAZIONE FINALE DELL'ORIENTAZIONE
+THREE_TERMINAL_POINT_VALIDATION_ENABLE = True
+THREE_TERMINAL_POINT_VALIDATION_MARGIN = 1.12
+THREE_TERMINAL_POINT_VALIDATION_SINGLE_WEIGHT = 1.20
+
+THREE_TERMINAL_AXIS_PREFILTER_ENABLE = True
+THREE_TERMINAL_AXIS_PREFILTER_MARGIN = 1.05
 
 # Per i 3-terminali il lato "singolo" (base/gate) di solito entra circa a metà lato,
 # mentre gli altri due terminali stanno sull'asse ortogonale e molto spesso verso
@@ -307,8 +325,10 @@ OPAMP_AUX_REFINE_BOTTOM_END_RATIO = 0.86
 # ---------------------------------------------------------
 # OPAMP AUX V3: refine locale della x dello stelo verticale
 # ---------------------------------------------------------
-OPAMP_AUX_X_REFINE_RADIUS = 4
+OPAMP_AUX_X_REFINE_RADIUS = 8
+OPAMP_AUX_X_KEEP_RATIO = 0.92
 OPAMP_AUX_X_REFINE_HALFSPAN = 1
+OPAMP_AUX_RUN_KEEP_RATIO = 0.92
 
 # banda verticale dove misurare la densità dello stelo
 OPAMP_AUX_X_REFINE_TOP_END_RATIO = 0.40
@@ -316,4 +336,22 @@ OPAMP_AUX_X_REFINE_BOTTOM_START_RATIO = 0.60
 
 OPAMP_AUX_X_REFINE_MIN_DENSITY = 0.18
 
+
+# ---------------------------------------------------------
+# OPAMP AUX V4: maschera locale dei numeri interni (4, 5)
+# usata SOLO nella refine degli auxiliary
+# ---------------------------------------------------------
+OPAMP_AUX_MASK_INTERNAL_LABELS = True
+
+# box orizzontale dei numeri interni nel caso opamp "right"
+OPAMP_AUX_MASK_X1_RATIO = 0.34
+OPAMP_AUX_MASK_X2_RATIO = 0.58
+
+# box del "4"
+OPAMP_AUX_MASK_TOP_Y1_RATIO = 0.28
+OPAMP_AUX_MASK_TOP_Y2_RATIO = 0.50
+
+# box del "5"
+OPAMP_AUX_MASK_BOTTOM_Y1_RATIO = 0.50
+OPAMP_AUX_MASK_BOTTOM_Y2_RATIO = 0.72
 
