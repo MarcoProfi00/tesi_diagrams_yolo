@@ -13,6 +13,7 @@ Pipeline:
     6. salvataggio label map e debug images
 """
 from pathlib import Path
+import os
 import json
 import cv2
 import numpy as np
@@ -22,8 +23,10 @@ import numpy as np
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v6_opamp" / "04_extract_wires"
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v6_opamp" / "05_build_nets"
+PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "topology_v6_opamp")
+
+INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "04_extract_wires"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "05_build_nets"
 
 # =========================================================
 # TERMINAL -> LABEL MATCHING
@@ -43,6 +46,19 @@ TERMINAL_SQUARE_FALLBACK_RADIUS = 12
 
 MIN_SINGLE_TERMINAL_NET_PIXELS = 20
 MIN_SINGLE_TERMINAL_NET_SPAN = 12
+
+OPAMP_AUX_SEARCH_OUTWARD = 240
+OPAMP_AUX_SEARCH_INWARD = 20
+OPAMP_AUX_HALFSPAN = 60
+OPAMP_AUX_MIN_REACH = 6
+OPAMP_AUX_AREA_WEIGHT = 0.12
+OPAMP_AUX_REACH_WEIGHT = 3.0
+OPAMP_AUX_XGAP_WEIGHT = 1.2
+OPAMP_AUX_WRONG_SIDE_WEIGHT = 0.20
+OPAMP_AUX_IMPLICIT_MAX_SNAP_DISTANCE = 12.0
+OPAMP_AUX_IMPLICIT_MAX_XGAP = 8
+OPAMP_AUX_IMPLICIT_MIN_EXTENSION_REACH = 45
+OPAMP_AUX_IMPLICIT_MAX_CHAIN_GAP = 80
 
 # =========================================================
 # NET FILTERING
@@ -96,19 +112,6 @@ TERMINAL_TEXT_OUTLINE = (0, 0, 0)       # nero
 TERMINAL_TEXT_SCALE = 0.45
 TERMINAL_TEXT_THICKNESS = 1
 TERMINAL_TEXT_OUTLINE_THICKNESS = 3
-
-# Terminali auxiliary opamp: il punto del 03 è vicino al giunto interno,
-# ma il wire utile può stare più lontano lungo lo stelo verticale.
-OPAMP_AUX_SEARCH_OUTWARD = 40
-OPAMP_AUX_SEARCH_INWARD = 10
-OPAMP_AUX_DIRECTIONAL_HALFSPAN = 8
-OPAMP_AUX_SQUARE_FALLBACK_RADIUS = 24
-OPAMP_AUX_MATCH_OUTWARD = 46
-OPAMP_AUX_MATCH_INWARD = 6
-OPAMP_AUX_MATCH_X_TOL = 5
-OPAMP_AUX_MATCH_MIN_PIXELS = 2
-OPAMP_AUX_MATCH_X_PENALTY = 1.6
-OPAMP_AUX_MATCH_COUNT_WEIGHT = 0.35
 
 # utility base
 def load_binary_image(path: Path):
@@ -321,234 +324,623 @@ def find_nearest_labeled_pixel(labels: np.ndarray, term: dict, window):
     }
 
 def is_opamp_aux_terminal(term: dict) -> bool:
+    return (
+        int(term.get("component_class_id", -1)) == 19 and
+        str(term.get("name", "")).lower() in {"aux1", "aux2"}
+    )
+
+
+def get_label_bbox_and_area(stats: np.ndarray, lbl: int):
+    row = stats[int(lbl)]
+    x = int(row[cv2.CC_STAT_LEFT])
+    y = int(row[cv2.CC_STAT_TOP])
+    w = int(row[cv2.CC_STAT_WIDTH])
+    h = int(row[cv2.CC_STAT_HEIGHT])
+    area = int(row[cv2.CC_STAT_AREA])
+    return x, y, x + w - 1, y + h - 1, area
+
+
+def axis_gap_1d(v: int, a: int, b: int) -> int:
+    if v < a:
+        return a - v
+    if v > b:
+        return v - b
+    return 0
+
+
+def find_nearest_pixel_for_specific_label(labels: np.ndarray, term: dict, window, target_label: int):
+    x1, y1, x2, y2 = window
+    roi = labels[y1:y2, x1:x2]
+    ys, xs = np.where(roi == int(target_label))
+    if len(xs) == 0:
+        return None
+
+    abs_xs = xs + x1
+    abs_ys = ys + y1
+
+    tx = float(term["x"])
+    ty = float(term["y"])
+    d2 = (abs_xs - tx) ** 2 + (abs_ys - ty) ** 2
+    best_idx = int(np.argmin(d2))
+
+    px = int(abs_xs[best_idx])
+    py = int(abs_ys[best_idx])
+
+    return {
+        "label": int(target_label),
+        "snap_point": [px, py],
+        "snap_distance": round(float(np.sqrt(d2[best_idx])), 3),
+    }
+
+
+def score_opamp_aux_label(term: dict, stats: np.ndarray, lbl: int):
+    tx = int(round(term["x"]))
+    ty = int(round(term["y"]))
     name = str(term.get("name", "")).lower()
-    return name in {"aux1", "aux2"}
+
+    x1, y1, x2, y2, area = get_label_bbox_and_area(stats, lbl)
+    xgap = axis_gap_1d(tx, x1, x2)
+
+    if name == "aux1":
+        reach = ty - y1
+        wrong_side = max(0, y2 - ty)
+    else:  # aux2
+        reach = y2 - ty
+        wrong_side = max(0, ty - y1)
+
+    if reach < OPAMP_AUX_MIN_REACH:
+        return None
+
+    score = (
+        OPAMP_AUX_REACH_WEIGHT * float(reach) +
+        OPAMP_AUX_AREA_WEIGHT * float(min(area, 300)) -
+        OPAMP_AUX_XGAP_WEIGHT * float(xgap) -
+        OPAMP_AUX_WRONG_SIDE_WEIGHT * float(wrong_side)
+    )
+
+    return {
+        "label": int(lbl),
+        "score": round(score, 3),
+        "reach": int(reach),
+        "wrong_side": int(wrong_side),
+        "xgap": int(xgap),
+        "bbox": [x1, y1, x2, y2],
+        "area": int(area),
+    }
 
 
-def get_terminal_search_params(term: dict, default_radius=12, default_halfspan=5):
-    if is_opamp_aux_terminal(term):
+def build_opamp_aux_implicit_supply_match(
+    labels: np.ndarray,
+    term: dict,
+    window,
+    scored,
+):
+    """
+    Gestione conservativa dei supply impliciti:
+    serve un frammento vicino al pin e almeno un'estensione outward
+    ben allineata sullo stesso asse del terminale.
+    """
+    if not scored:
+        return None
+
+    name = str(term.get("name", "")).lower()
+    if name not in {"aux1", "aux2"}:
+        return None
+
+    scored_by_label = {int(info["label"]): dict(info) for info in scored}
+    with_snap = []
+
+    for info in scored:
+        nearest = find_nearest_pixel_for_specific_label(
+            labels,
+            term,
+            window,
+            info["label"],
+        )
+        if nearest is None:
+            continue
+
+        info_copy = dict(info)
+        info_copy["snap_point"] = nearest["snap_point"]
+        info_copy["snap_distance"] = float(nearest["snap_distance"])
+        with_snap.append(info_copy)
+
+    if not with_snap:
+        return None
+
+    anchor_candidates = [
+        info for info in with_snap
+        if float(info["snap_distance"]) <= OPAMP_AUX_IMPLICIT_MAX_SNAP_DISTANCE
+    ]
+    if not anchor_candidates:
+        return None
+
+    anchor_candidates.sort(
+        key=lambda info: (
+            float(info["snap_distance"]),
+            -float(info["score"]),
+        )
+    )
+    anchor = anchor_candidates[0]
+
+    if name == "aux1":
+        extension_candidates = [
+            info for info in scored
+            if int(info["label"]) != int(anchor["label"])
+            and int(info["xgap"]) <= OPAMP_AUX_IMPLICIT_MAX_XGAP
+            and int(info["wrong_side"]) == 0
+            and int(info["reach"]) >= OPAMP_AUX_IMPLICIT_MIN_EXTENSION_REACH
+            and int(info["bbox"][3]) < int(anchor["bbox"][1])
+        ]
+        extension_candidates.sort(key=lambda info: int(info["bbox"][3]), reverse=True)
+        chain_edge = int(anchor["bbox"][1])
+    else:
+        extension_candidates = [
+            info for info in scored
+            if int(info["label"]) != int(anchor["label"])
+            and int(info["xgap"]) <= OPAMP_AUX_IMPLICIT_MAX_XGAP
+            and int(info["wrong_side"]) == 0
+            and int(info["reach"]) >= OPAMP_AUX_IMPLICIT_MIN_EXTENSION_REACH
+            and int(info["bbox"][1]) > int(anchor["bbox"][3])
+        ]
+        extension_candidates.sort(key=lambda info: int(info["bbox"][1]))
+        chain_edge = int(anchor["bbox"][3])
+
+    merged_labels = [int(anchor["label"])]
+
+    for info in extension_candidates:
+        if name == "aux1":
+            gap = int(chain_edge) - int(info["bbox"][3])
+        else:
+            gap = int(info["bbox"][1]) - int(chain_edge)
+
+        if gap < 0 or gap > OPAMP_AUX_IMPLICIT_MAX_CHAIN_GAP:
+            continue
+
+        merged_labels.append(int(info["label"]))
+        if name == "aux1":
+            chain_edge = int(info["bbox"][1])
+        else:
+            chain_edge = int(info["bbox"][3])
+
+    if len(merged_labels) <= 1:
+        return None
+
+    return {
+        "primary_label": int(anchor["label"]),
+        "candidate_labels": sorted(set(int(info["label"]) for info in scored)),
+        "preferred_candidate_labels": [],
+        "search_window": [int(v) for v in window],
+        "snap_point": [int(v) for v in anchor["snap_point"]],
+        "snap_distance": round(float(anchor["snap_distance"]), 3),
+        "match_mode": "opamp_aux_implicit_supply_orphan",
+        "aux_score_debug": [
+            dict(scored_by_label[int(lbl)])
+            for lbl in merged_labels
+            if int(lbl) in scored_by_label
+        ],
+        "is_implicit_supply": True,
+        "implicit_reason": "missing_terminal_symbol",
+        "implicit_supply_anchor_label": int(anchor["label"]),
+        "implicit_supply_source_labels": merged_labels,
+    }
+
+
+def match_opamp_aux_terminal(
+    labels: np.ndarray,
+    stats: np.ndarray,
+    term: dict,
+    preferred_labels=None,
+    require_preferred_label=False,
+):
+    tx = int(round(term["x"]))
+    ty = int(round(term["y"]))
+    name = str(term.get("name", "")).lower()
+    preferred_labels = {int(v) for v in (preferred_labels or [])}
+
+    if name == "aux1":
+        window = clamp_window(
+            tx - OPAMP_AUX_HALFSPAN,
+            ty - OPAMP_AUX_SEARCH_OUTWARD,
+            tx + OPAMP_AUX_HALFSPAN + 1,
+            ty + OPAMP_AUX_SEARCH_INWARD + 1,
+            labels.shape[1],
+            labels.shape[0],
+        )
+    else:  # aux2
+        window = clamp_window(
+            tx - OPAMP_AUX_HALFSPAN,
+            ty - OPAMP_AUX_SEARCH_INWARD,
+            tx + OPAMP_AUX_HALFSPAN + 1,
+            ty + OPAMP_AUX_SEARCH_OUTWARD + 1,
+            labels.shape[1],
+            labels.shape[0],
+        )
+
+    candidate_labels = collect_labels_in_window(labels, window)
+    if not candidate_labels:
         return {
-            "outward": OPAMP_AUX_SEARCH_OUTWARD,
-            "inward": OPAMP_AUX_SEARCH_INWARD,
-            "halfspan": OPAMP_AUX_DIRECTIONAL_HALFSPAN,
-            "radius": OPAMP_AUX_SQUARE_FALLBACK_RADIUS,
-            "terminal_kind": "opamp_auxiliary",
+            "primary_label": None,
+            "candidate_labels": [],
+            "preferred_candidate_labels": [],
+            "search_window": [int(v) for v in window],
+            "snap_point": None,
+            "snap_distance": None,
+            "match_mode": "opamp_aux_no_candidates",
+            "aux_score_debug": [],
+            "is_implicit_supply": False,
+        }
+
+    preferred_candidate_labels = [
+        int(lbl) for lbl in candidate_labels
+        if int(lbl) in preferred_labels
+    ]
+
+    scored = []
+    for lbl in candidate_labels:
+        info = score_opamp_aux_label(term, stats, lbl)
+        if info is not None:
+            scored.append(info)
+
+    if require_preferred_label and not preferred_candidate_labels:
+        implicit_match = build_opamp_aux_implicit_supply_match(
+            labels,
+            term,
+            window,
+            scored,
+        )
+        if implicit_match is not None:
+            return implicit_match
+
+        return {
+            "primary_label": None,
+            "candidate_labels": candidate_labels,
+            "preferred_candidate_labels": [],
+            "search_window": [int(v) for v in window],
+            "snap_point": None,
+            "snap_distance": None,
+            "match_mode": "opamp_aux_missing_non_aux_anchor",
+            "aux_score_debug": scored[:5],
+            "is_implicit_supply": False,
+        }
+
+    scored_to_use = scored
+    if preferred_candidate_labels:
+        scored_to_use = [
+            info for info in scored
+            if int(info["label"]) in preferred_candidate_labels
+        ]
+
+    # ramo "normale": abbiamo candidati validi
+    if scored_to_use:
+        scored_to_use.sort(key=lambda x: x["score"], reverse=True)
+        best = scored_to_use[0]
+
+        nearest = find_nearest_pixel_for_specific_label(labels, term, window, best["label"])
+        if nearest is None:
+            return {
+                "primary_label": None,
+                "candidate_labels": candidate_labels,
+                "preferred_candidate_labels": preferred_candidate_labels,
+                "search_window": [int(v) for v in window],
+                "snap_point": None,
+                "snap_distance": None,
+                "match_mode": "opamp_aux_missing_snap_point",
+                "aux_score_debug": scored_to_use[:5],
+                "is_implicit_supply": False,
+            }
+
+        return {
+            "primary_label": int(best["label"]),
+            "candidate_labels": candidate_labels,
+            "preferred_candidate_labels": preferred_candidate_labels,
+            "search_window": [int(v) for v in window],
+            "snap_point": nearest["snap_point"],
+            "snap_distance": nearest["snap_distance"],
+            "match_mode": (
+                "opamp_aux_preferred_non_aux_label"
+                if preferred_candidate_labels
+                else "opamp_aux_special"
+            ),
+            "aux_score_debug": scored_to_use[:5],
+            "is_implicit_supply": False,
+        }
+
+    # fallback rilassato
+    relaxed = []
+    for lbl in candidate_labels:
+        x1, y1, x2, y2, area = get_label_bbox_and_area(stats, lbl)
+        xgap = axis_gap_1d(tx, x1, x2)
+
+        if name == "aux1":
+            reach = max(0, ty - y1)
+            wrong_side = max(0, y2 - ty)
+        else:
+            reach = max(0, y2 - ty)
+            wrong_side = max(0, ty - y1)
+
+        score = (
+            2.0 * float(reach) +
+            0.08 * float(min(area, 300)) -
+            1.2 * float(xgap) -
+            0.15 * float(wrong_side)
+        )
+
+        relaxed.append({
+            "label": int(lbl),
+            "score": round(score, 3),
+            "reach": int(reach),
+            "wrong_side": int(wrong_side),
+            "xgap": int(xgap),
+            "bbox": [x1, y1, x2, y2],
+            "area": int(area),
+        })
+
+    relaxed_to_use = relaxed
+    if preferred_candidate_labels:
+        relaxed_to_use = [
+            info for info in relaxed
+            if int(info["label"]) in preferred_candidate_labels
+        ]
+
+    if not relaxed_to_use:
+        return {
+            "primary_label": None,
+            "candidate_labels": candidate_labels,
+            "preferred_candidate_labels": preferred_candidate_labels,
+            "search_window": [int(v) for v in window],
+            "snap_point": None,
+            "snap_distance": None,
+            "match_mode": "opamp_aux_no_valid_candidate",
+            "aux_score_debug": relaxed[:5],
+            "is_implicit_supply": False,
+        }
+
+    relaxed_to_use.sort(key=lambda x: x["score"], reverse=True)
+    best = relaxed_to_use[0]
+
+    nearest = find_nearest_pixel_for_specific_label(labels, term, window, best["label"])
+    if nearest is None:
+        return {
+            "primary_label": None,
+            "candidate_labels": candidate_labels,
+            "preferred_candidate_labels": preferred_candidate_labels,
+            "search_window": [int(v) for v in window],
+            "snap_point": None,
+            "snap_distance": None,
+            "match_mode": "opamp_aux_missing_snap_point",
+            "aux_score_debug": relaxed_to_use[:5],
+            "is_implicit_supply": False,
         }
 
     return {
-        "outward": TERMINAL_SEARCH_OUTWARD,
-        "inward": TERMINAL_SEARCH_INWARD,
-        "halfspan": default_halfspan,
-        "radius": default_radius,
-        "terminal_kind": "standard",
+        "primary_label": int(best["label"]),
+        "candidate_labels": candidate_labels,
+        "preferred_candidate_labels": preferred_candidate_labels,
+        "search_window": [int(v) for v in window],
+        "snap_point": nearest["snap_point"],
+        "snap_distance": nearest["snap_distance"],
+        "match_mode": (
+            "opamp_aux_preferred_non_aux_label_relaxed"
+            if preferred_candidate_labels
+            else "opamp_aux_special_relaxed"
+        ),
+        "aux_score_debug": relaxed_to_use[:5],
+        "is_implicit_supply": False,
     }
 
-def is_opamp_aux_terminal(term: dict) -> bool:
-    name = str(term.get("name", "")).lower()
-    return name in {"aux1", "aux2"}
+def match_standard_terminal(labels: np.ndarray, term: dict, radius=12, directional_halfspan=5):
+    dir_window = get_directional_window(
+        term,
+        labels.shape,
+        outward=TERMINAL_SEARCH_OUTWARD,
+        inward=TERMINAL_SEARCH_INWARD,
+        halfspan=directional_halfspan,
+    )
+    dir_labels = collect_labels_in_window(labels, dir_window)
+    nearest = find_nearest_labeled_pixel(labels, term, dir_window)
+    match_mode = "directional"
 
-
-def match_opamp_aux_vertical(labels: np.ndarray, term: dict):
-    """
-    Matcher dedicato agli auxiliary dell'opamp.
-
-    Idea:
-    - il punto del 03 è vicino al giunto interno sul triangolo
-    - la net utile però è spesso sullo stelo verticale verso Vcc / -Vcc
-    - quindi cerchiamo in una capsula verticale e scegliamo il label
-      che massimizza il progresso outward mantenendo x vicina al terminale
-    """
-    if not is_opamp_aux_terminal(term):
-        return None
-
-    rel = term.get("relative_position")
-    if rel not in {"top", "bottom"}:
-        return None
-
-    h, w = labels.shape[:2]
-    x = int(round(term["x"]))
-    y = int(round(term["y"]))
-
-    if rel == "top":
-        window = clamp_window(
-            x - OPAMP_AUX_MATCH_X_TOL,
-            y - OPAMP_AUX_MATCH_OUTWARD,
-            x + OPAMP_AUX_MATCH_X_TOL + 1,
-            y + OPAMP_AUX_MATCH_INWARD + 1,
-            w,
-            h,
-        )
+    if nearest is None:
+        sq_window = get_square_window(term, labels.shape, radius=radius)
+        sq_labels = collect_labels_in_window(labels, sq_window)
+        nearest = find_nearest_labeled_pixel(labels, term, sq_window)
+        match_mode = "square_fallback"
+        candidate_labels = sq_labels
+        used_window = sq_window
     else:
-        window = clamp_window(
-            x - OPAMP_AUX_MATCH_X_TOL,
-            y - OPAMP_AUX_MATCH_INWARD,
-            x + OPAMP_AUX_MATCH_X_TOL + 1,
-            y + OPAMP_AUX_MATCH_OUTWARD + 1,
-            w,
-            h,
-        )
+        candidate_labels = dir_labels
+        used_window = dir_window
 
-    x1, y1, x2, y2 = window
-    roi = labels[y1:y2, x1:x2]
-    candidate_labels = [int(v) for v in np.unique(roi) if int(v) > 0]
+    primary_label = None
+    snap_point = None
+    snap_distance = None
 
-    if not candidate_labels:
-        return {
-            "candidate_labels": [],
-            "primary_label": None,
-            "snap_point": None,
-            "snap_distance": None,
-            "search_window": [int(v) for v in window],
-            "match_mode": "opamp_aux_vertical_none",
-        }
-
-    best = None
-
-    for lbl in candidate_labels:
-        ys, xs = np.where(roi == lbl)
-        if len(xs) < OPAMP_AUX_MATCH_MIN_PIXELS:
-            continue
-
-        xs_global = xs + x1
-        ys_global = ys + y1
-
-        if rel == "top":
-            outward_progress = y - ys_global
-        else:
-            outward_progress = ys_global - y
-
-        x_penalty = np.abs(xs_global - x)
-        pixel_scores = outward_progress - OPAMP_AUX_MATCH_X_PENALTY * x_penalty
-
-        valid = np.where(outward_progress >= -1)[0]
-        if len(valid) == 0:
-            continue
-
-        best_idx_local = valid[int(np.argmax(pixel_scores[valid]))]
-
-        px = int(xs_global[best_idx_local])
-        py = int(ys_global[best_idx_local])
-        dist = float(np.sqrt((px - x) ** 2 + (py - y) ** 2))
-
-        label_score = float(
-            pixel_scores[best_idx_local] +
-            OPAMP_AUX_MATCH_COUNT_WEIGHT * len(valid)
-        )
-
-        cand = {
-            "label": int(lbl),
-            "snap_point": [px, py],
-            "snap_distance": round(dist, 3),
-            "label_score": label_score,
-        }
-
-        if best is None or cand["label_score"] > best["label_score"]:
-            best = cand
-
-    if best is None:
-        return {
-            "candidate_labels": candidate_labels,
-            "primary_label": None,
-            "snap_point": None,
-            "snap_distance": None,
-            "search_window": [int(v) for v in window],
-            "match_mode": "opamp_aux_vertical_no_valid_label",
-        }
+    if nearest is not None:
+        primary_label = int(nearest["label"])
+        snap_point = nearest["snap_point"]
+        snap_distance = nearest["snap_distance"]
 
     return {
         "candidate_labels": candidate_labels,
-        "primary_label": best["label"],
-        "snap_point": best["snap_point"],
-        "snap_distance": best["snap_distance"],
-        "search_window": [int(v) for v in window],
-        "match_mode": "opamp_aux_vertical_corridor",
+        "primary_label": primary_label,
+        "match_mode": match_mode,
+        "search_window": [int(v) for v in used_window],
+        "snap_point": snap_point,
+        "snap_distance": snap_distance,
+        "relative_position": term.get("relative_position"),
     }
 
-def terminal_to_candidate_labels(labels: np.ndarray, terminals, radius=12, directional_halfspan=5):
-    """
-    Matching terminale -> source label candidata.
 
-    Regola:
-    - terminali normali: finestra direzionale + fallback quadrato
-    - aux1/aux2 opamp: prima matcher verticale dedicato
+def match_opamp_aux_via_neighbor_terminal(term: dict, terminal_debug_by_id: dict):
+    point_debug = term.get("terminal_point_debug", {}) or {}
+    if not point_debug.get("snapped_to_nearby_terminal", False):
+        return None
+
+    neighbor_terminal_id = point_debug.get("neighbor_terminal_id")
+    if not neighbor_terminal_id:
+        return None
+
+    neighbor_debug = terminal_debug_by_id.get(neighbor_terminal_id)
+    if not neighbor_debug:
+        return None
+
+    primary_label = neighbor_debug.get("primary_label")
+    candidate_labels = neighbor_debug.get("candidate_labels", [])
+    preferred_candidate_labels = (
+        [int(primary_label)] if primary_label is not None else []
+    )
+
+    return {
+        "primary_label": int(primary_label) if primary_label is not None else None,
+        "candidate_labels": candidate_labels,
+        "preferred_candidate_labels": preferred_candidate_labels,
+        "search_window": neighbor_debug.get("search_window"),
+        "snap_point": neighbor_debug.get("snap_point"),
+        "snap_distance": neighbor_debug.get("snap_distance"),
+        "match_mode": "opamp_aux_inherit_neighbor_terminal",
+        "aux_score_debug": [],
+        "neighbor_terminal_id": neighbor_terminal_id,
+        "is_implicit_supply": False,
+    }
+
+
+def terminal_to_candidate_labels(labels: np.ndarray, stats: np.ndarray, terminals, radius=12, directional_halfspan=5):
+    """
+    Per ogni terminale prova prima un intorno direzionale coerente col lato del terminale,
+    poi fa fallback a una finestra quadrata. Salva sia i label candidati sia il label
+    principale ottenuto con snap al pixel di skeleton più vicino.
     """
     primary_label_to_terminal_ids = {}
-    terminal_debug = {}
+    terminal_debug_by_id = {}
+    implicit_aux_merges = {}
 
-    for term in terminals:
+    non_aux_terms = [term for term in terminals if not is_opamp_aux_terminal(term)]
+    aux_terms = [term for term in terminals if is_opamp_aux_terminal(term)]
+
+    for term in non_aux_terms:
         term_id = term["terminal_id"]
+        match_info = match_standard_terminal(
+            labels,
+            term,
+            radius=radius,
+            directional_halfspan=directional_halfspan,
+        )
 
-        aux_match = match_opamp_aux_vertical(labels, term)
-
-        if aux_match is not None and aux_match["primary_label"] is not None:
-            primary_label = int(aux_match["primary_label"])
-            snap_point = aux_match["snap_point"]
-            snap_distance = aux_match["snap_distance"]
-            candidate_labels = aux_match["candidate_labels"]
-            used_window = aux_match["search_window"]
-            match_mode = aux_match["match_mode"]
-
+        primary_label = match_info["primary_label"]
+        if primary_label is not None:
             primary_label_to_terminal_ids.setdefault(primary_label, set()).add(term_id)
 
-            terminal_debug[term_id] = {
-                "candidate_labels": candidate_labels,
+        terminal_debug_by_id[term_id] = match_info
+
+    # Gli auxiliary dell'opamp devono preferire label già ancorate a terminali reali.
+    # Se nel loro corridoio c'è solo uno stelo "orfano", meglio lasciarli unmatched
+    # che creare una net artificiale.
+    preferred_aux_labels = set(int(lbl) for lbl in primary_label_to_terminal_ids.keys())
+
+    for term in aux_terms:
+        term_id = term["terminal_id"]
+        inherited_match = match_opamp_aux_via_neighbor_terminal(
+            term,
+            terminal_debug_by_id,
+        )
+
+        if inherited_match is not None:
+            primary_label = inherited_match["primary_label"]
+            if primary_label is not None:
+                primary_label_to_terminal_ids.setdefault(primary_label, set()).add(term_id)
+
+            terminal_debug_by_id[term_id] = {
+                "candidate_labels": inherited_match["candidate_labels"],
+                "preferred_candidate_labels": inherited_match.get("preferred_candidate_labels", []),
                 "primary_label": primary_label,
-                "match_mode": match_mode,
-                "search_window": [int(v) for v in used_window],
-                "snap_point": snap_point,
-                "snap_distance": snap_distance,
+                "match_mode": inherited_match["match_mode"],
+                "search_window": inherited_match["search_window"],
+                "snap_point": inherited_match["snap_point"],
+                "snap_distance": inherited_match["snap_distance"],
                 "relative_position": term.get("relative_position"),
-                "terminal_kind": "opamp_auxiliary",
+                "aux_score_debug": inherited_match.get("aux_score_debug", []),
+                "neighbor_terminal_id": inherited_match.get("neighbor_terminal_id"),
+                "is_implicit_supply": bool(inherited_match.get("is_implicit_supply", False)),
             }
             continue
 
-        dir_window = get_directional_window(
+        aux_match = match_opamp_aux_terminal(
+            labels,
+            stats,
             term,
-            labels.shape,
-            outward=TERMINAL_SEARCH_OUTWARD,
-            inward=TERMINAL_SEARCH_INWARD,
-            halfspan=directional_halfspan,
+            preferred_labels=preferred_aux_labels,
+            require_preferred_label=True,
         )
-        dir_labels = collect_labels_in_window(labels, dir_window)
-        nearest = find_nearest_labeled_pixel(labels, term, dir_window)
-        match_mode = "directional"
 
-        if nearest is None:
-            sq_window = get_square_window(term, labels.shape, radius=radius)
-            sq_labels = collect_labels_in_window(labels, sq_window)
-            nearest = find_nearest_labeled_pixel(labels, term, sq_window)
-            match_mode = "square_fallback"
-            candidate_labels = sq_labels
-            used_window = sq_window
-        else:
-            candidate_labels = dir_labels
-            used_window = dir_window
-
-        primary_label = None
-        snap_point = None
-        snap_distance = None
-
-        if nearest is not None:
-            primary_label = int(nearest["label"])
-            snap_point = nearest["snap_point"]
-            snap_distance = nearest["snap_distance"]
+        primary_label = aux_match["primary_label"]
+        if primary_label is not None:
             primary_label_to_terminal_ids.setdefault(primary_label, set()).add(term_id)
 
-        terminal_debug[term_id] = {
-            "candidate_labels": candidate_labels,
+        if aux_match.get("is_implicit_supply") and primary_label is not None:
+            merged_labels = [
+                int(lbl)
+                for lbl in aux_match.get("implicit_supply_source_labels", [])
+            ]
+            implicit_aux_merges[int(primary_label)] = {
+                "source_label": int(primary_label),
+                "merged_source_labels": merged_labels or [int(primary_label)],
+                "anchor_terminal_id": term_id,
+                "implicit_reason": aux_match.get("implicit_reason", "missing_terminal_symbol"),
+            }
+
+        terminal_debug_by_id[term_id] = {
+            "candidate_labels": aux_match["candidate_labels"],
+            "preferred_candidate_labels": aux_match.get("preferred_candidate_labels", []),
             "primary_label": primary_label,
-            "match_mode": match_mode,
-            "search_window": [int(v) for v in used_window],
-            "snap_point": snap_point,
-            "snap_distance": snap_distance,
+            "match_mode": aux_match["match_mode"],
+            "search_window": aux_match["search_window"],
+            "snap_point": aux_match["snap_point"],
+            "snap_distance": aux_match["snap_distance"],
             "relative_position": term.get("relative_position"),
-            "terminal_kind": "standard",
+            "aux_score_debug": aux_match.get("aux_score_debug", []),
+            "is_implicit_supply": bool(aux_match.get("is_implicit_supply", False)),
+            "implicit_reason": aux_match.get("implicit_reason"),
+            "implicit_supply_anchor_label": aux_match.get("implicit_supply_anchor_label"),
+            "implicit_supply_source_labels": aux_match.get("implicit_supply_source_labels", []),
         }
 
-    return primary_label_to_terminal_ids, terminal_debug
+    terminal_debug = {
+        term["terminal_id"]: terminal_debug_by_id[term["terminal_id"]]
+        for term in terminals
+    }
+
+    return primary_label_to_terminal_ids, terminal_debug, implicit_aux_merges
+
+
+def build_terminal_index(terminals):
+    return {term["terminal_id"]: term for term in terminals}
+
+
+def summarize_connected_terminals(connected_terminal_ids, terminal_index):
+    connected_terminal_names = []
+    auxiliary_terminal_ids = []
+
+    for term_id in connected_terminal_ids:
+        term = terminal_index.get(term_id, {})
+        name = str(term.get("name", "")).lower()
+        connected_terminal_names.append(name)
+
+        if name in {"aux1", "aux2"}:
+            auxiliary_terminal_ids.append(term_id)
+
+    return {
+        "connected_terminal_names": connected_terminal_names,
+        "auxiliary_terminal_ids": auxiliary_terminal_ids,
+        "n_auxiliary_terminals": len(auxiliary_terminal_ids),
+        "all_connected_terminals_are_auxiliary": (
+            len(connected_terminal_ids) > 0 and
+            len(auxiliary_terminal_ids) == len(connected_terminal_ids)
+        ),
+    }
 
 # candidate nets
-def build_candidate_nets(stats, label_to_terminal_ids):
+def build_candidate_nets(stats, label_to_terminal_ids, terminal_index, implicit_aux_merges=None):
     """
     Costruisce le candidate nets a partire dalle connected components
     dello skeleton e dalla mappa label -> terminal_id connessi.
@@ -566,7 +958,7 @@ def build_candidate_nets(stats, label_to_terminal_ids):
     list[dict]
         Lista di candidate nets.
     """
-    candidates = []
+    raw_candidates = []
 
     for lbl, stat_row in enumerate(stats[1:], start=1):  # salto background
         x = int(stat_row[cv2.CC_STAT_LEFT])
@@ -577,16 +969,89 @@ def build_candidate_nets(stats, label_to_terminal_ids):
 
         connected_terminal_ids = sorted(label_to_terminal_ids.get(lbl, set()))
         bbox = [x, y, x + w - 1, y + h - 1]
+        terminal_summary = summarize_connected_terminals(connected_terminal_ids, terminal_index)
 
-        candidates.append({
+        raw_candidates.append({
             "source_label": lbl,
             "pixel_count": area,
             "bbox": bbox,
             "connected_terminal_ids": connected_terminal_ids,
             "n_connected_terminals": len(connected_terminal_ids),
+            "connected_terminal_names": terminal_summary["connected_terminal_names"],
+            "auxiliary_terminal_ids": terminal_summary["auxiliary_terminal_ids"],
+            "n_auxiliary_terminals": terminal_summary["n_auxiliary_terminals"],
+            "all_connected_terminals_are_auxiliary": terminal_summary["all_connected_terminals_are_auxiliary"],
         })
 
-    return candidates
+    if not implicit_aux_merges:
+        return raw_candidates
+
+    raw_by_label = {int(cand["source_label"]): cand for cand in raw_candidates}
+    merged_related_labels = set()
+    merged_by_anchor = {}
+
+    for anchor_label, merge_info in implicit_aux_merges.items():
+        anchor_label = int(anchor_label)
+        anchor_cand = raw_by_label.get(anchor_label)
+        if anchor_cand is None:
+            continue
+
+        merged_labels = []
+        merged_connected_terminal_ids = set(anchor_cand.get("connected_terminal_ids", []))
+        pixel_count = int(anchor_cand["pixel_count"])
+        x1, y1, x2, y2 = anchor_cand["bbox"]
+
+        for lbl in merge_info.get("merged_source_labels", [anchor_label]):
+            lbl = int(lbl)
+            cand = raw_by_label.get(lbl)
+            if cand is None:
+                continue
+
+            merged_labels.append(lbl)
+            if lbl == anchor_label:
+                continue
+
+            merged_related_labels.add(lbl)
+            pixel_count += int(cand["pixel_count"])
+            cx1, cy1, cx2, cy2 = cand["bbox"]
+            x1 = min(x1, cx1)
+            y1 = min(y1, cy1)
+            x2 = max(x2, cx2)
+            y2 = max(y2, cy2)
+            merged_connected_terminal_ids.update(cand.get("connected_terminal_ids", []))
+
+        terminal_ids = sorted(merged_connected_terminal_ids)
+        terminal_summary = summarize_connected_terminals(terminal_ids, terminal_index)
+
+        merged_cand = dict(anchor_cand)
+        merged_cand["pixel_count"] = pixel_count
+        merged_cand["bbox"] = [x1, y1, x2, y2]
+        merged_cand["merged_source_labels"] = merged_labels or [anchor_label]
+        merged_cand["connected_terminal_ids"] = terminal_ids
+        merged_cand["n_connected_terminals"] = len(terminal_ids)
+        merged_cand["connected_terminal_names"] = terminal_summary["connected_terminal_names"]
+        merged_cand["auxiliary_terminal_ids"] = terminal_summary["auxiliary_terminal_ids"]
+        merged_cand["n_auxiliary_terminals"] = terminal_summary["n_auxiliary_terminals"]
+        merged_cand["all_connected_terminals_are_auxiliary"] = terminal_summary["all_connected_terminals_are_auxiliary"]
+        merged_cand["is_implicit_supply"] = True
+        merged_cand["implicit_reason"] = merge_info.get("implicit_reason", "missing_terminal_symbol")
+        merged_cand["implicit_anchor_terminal_id"] = merge_info.get("anchor_terminal_id")
+        merged_by_anchor[anchor_label] = merged_cand
+
+    if not merged_by_anchor:
+        return raw_candidates
+
+    final_candidates = []
+    for cand in raw_candidates:
+        lbl = int(cand["source_label"])
+        if lbl in merged_related_labels:
+            continue
+        if lbl in merged_by_anchor:
+            final_candidates.append(merged_by_anchor[lbl])
+        else:
+            final_candidates.append(cand)
+
+    return final_candidates
 
 def filter_candidate_nets(candidates):
     kept = []
@@ -605,8 +1070,16 @@ def filter_candidate_nets(candidates):
             reject_reasons.append("no_connected_terminals")
 
         # Filtro aggiuntivo:
-        # se la net tocca un solo terminale, deve avere un minimo di consistenza
-        if cand["n_connected_terminals"] == 1:
+        # se la net tocca un solo terminale, deve avere un minimo di consistenza.
+        # Eccezione: se quel terminale è un auxiliary dell'opamp (aux1/aux2),
+        # non applichiamo il filtro single-terminal "forte" perché la linea di
+        # alimentazione può essere corta ma comunque valida.
+        is_single_aux_net = (
+            cand["n_connected_terminals"] == 1 and
+            cand.get("all_connected_terminals_are_auxiliary", False)
+        )
+
+        if cand["n_connected_terminals"] == 1 and not is_single_aux_net:
             if cand["pixel_count"] < MIN_SINGLE_TERMINAL_NET_PIXELS:
                 keep = False
                 reject_reasons.append("weak_single_terminal_net")
@@ -632,17 +1105,29 @@ def relabel_kept_nets(original_labels: np.ndarray, kept_candidates, sort_order="
     nets = []
 
     for idx, cand in enumerate(kept_sorted, start=1):
-        old_label = cand["source_label"]
-        relabeled[original_labels == old_label] = idx
+        source_labels = [
+            int(v)
+            for v in cand.get("merged_source_labels", [cand["source_label"]])
+        ]
+        for old_label in source_labels:
+            relabeled[original_labels == old_label] = idx
 
         net = {
             "net_id": f"N{idx}",
             "net_index": idx,
-            "source_label": old_label,
+            "source_label": int(cand["source_label"]),
+            "merged_source_labels": source_labels,
             "pixel_count": cand["pixel_count"],
             "bbox": cand["bbox"],
             "connected_terminal_ids": cand["connected_terminal_ids"],
+            "connected_terminal_names": cand.get("connected_terminal_names", []),
+            "auxiliary_terminal_ids": cand.get("auxiliary_terminal_ids", []),
+            "n_auxiliary_terminals": cand.get("n_auxiliary_terminals", 0),
+            "all_connected_terminals_are_auxiliary": cand.get("all_connected_terminals_are_auxiliary", False),
             "n_connected_terminals": cand["n_connected_terminals"],
+            "is_implicit_supply": bool(cand.get("is_implicit_supply", False)),
+            "implicit_reason": cand.get("implicit_reason"),
+            "implicit_anchor_terminal_id": cand.get("implicit_anchor_terminal_id"),
         }
         nets.append(net)
 
@@ -796,17 +1281,24 @@ def main() -> None:
 
         skeleton_binary = load_binary_image(skeleton_path)
         terminals = data.get("terminals", [])
+        terminal_index = build_terminal_index(terminals)
 
         num_labels, labels, stats, _ = find_connected_components(skeleton_binary)
 
-        label_to_terminal_ids, terminal_to_labels = terminal_to_candidate_labels(
+        label_to_terminal_ids, terminal_to_labels, implicit_aux_merges = terminal_to_candidate_labels(
             labels,
+            stats,
             terminals,
             radius=TERMINAL_SQUARE_FALLBACK_RADIUS,
             directional_halfspan=TERMINAL_DIRECTIONAL_HALFSPAN,
         )
 
-        candidates = build_candidate_nets(stats, label_to_terminal_ids)
+        candidates = build_candidate_nets(
+            stats,
+            label_to_terminal_ids,
+            terminal_index,
+            implicit_aux_merges=implicit_aux_merges,
+        )
         kept_candidates, rejected_candidates = filter_candidate_nets(candidates)
 
         relabeled_map, nets = relabel_kept_nets(
@@ -828,15 +1320,6 @@ def main() -> None:
             "terminal_search_inward": TERMINAL_SEARCH_INWARD,
             "terminal_square_fallback_radius": TERMINAL_SQUARE_FALLBACK_RADIUS,
             "terminal_directional_halfspan": TERMINAL_DIRECTIONAL_HALFSPAN,
-
-            "opamp_aux_search_outward": OPAMP_AUX_SEARCH_OUTWARD,
-            "opamp_aux_search_inward": OPAMP_AUX_SEARCH_INWARD,
-            "opamp_aux_directional_halfspan": OPAMP_AUX_DIRECTIONAL_HALFSPAN,
-            "opamp_aux_square_fallback_radius": OPAMP_AUX_SQUARE_FALLBACK_RADIUS,
-            "opamp_aux_match_outward": OPAMP_AUX_MATCH_OUTWARD,
-            "opamp_aux_match_inward": OPAMP_AUX_MATCH_INWARD,
-            "opamp_aux_match_x_tol": OPAMP_AUX_MATCH_X_TOL,
-
             "min_net_pixels": MIN_NET_PIXELS,
             "min_connected_terminals": MIN_CONNECTED_TERMINALS,
             "net_sort_order": NET_SORT_ORDER,
@@ -847,8 +1330,10 @@ def main() -> None:
             "n_terminals": len(terminals),
             "n_terminals_with_primary_label": sum(1 for v in terminal_to_labels.values() if v.get("primary_label") is not None),
             "n_terminals_unmatched": sum(1 for v in terminal_to_labels.values() if v.get("primary_label") is None),
+            "n_implicit_supply_matches": sum(1 for v in terminal_to_labels.values() if v.get("is_implicit_supply")),
             "label_map_path": str(label_map_path),
             "terminal_to_candidate_labels": terminal_to_labels,
+            "implicit_aux_merges": list(implicit_aux_merges.values()),
             "rejected_candidates": rejected_candidates,
         }
 

@@ -31,6 +31,7 @@ from estimate_terminals.io_utils import io_load_class_metadata, img_build_foregr
 from estimate_terminals.processor import estimate_terminals_for_component
 from estimate_terminals.debug_draw import draw_terminals
 from estimate_terminals.config import SAVE_DEBUG_IMAGES
+from estimate_terminals.strategies_opamp import snap_opamp_top_aux_to_nearby_terminal
 
 #PATH / INPUT-OUTPUT
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -89,6 +90,8 @@ def main() -> None:
                 comp_copy["connection_side_scores"] = side_scores
             updated_components.append(comp_copy)
             all_terminals.extend(terminals)
+
+        snap_opamp_top_aux_to_nearby_terminal(updated_components, image_binary)
 
         output_data = dict(data)
         output_data["components"] = updated_components

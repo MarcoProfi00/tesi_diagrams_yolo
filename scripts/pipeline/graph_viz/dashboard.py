@@ -21,6 +21,7 @@ def _build_card_html(row: dict[str, Any]) -> str:
     diagram_id = str(row.get("diagram_id", ""))
     short_name = short_diagram_name(diagram_id)
     suspicious = int(row.get("n_suspicious_terminal_matches", 0))
+    implicit_supply = int(row.get("n_implicit_supply_nets", 0))
 
     suspicious_badge = (
         f'<span class="badge badge-warn">{suspicious} suspicious</span>'
@@ -33,6 +34,11 @@ def _build_card_html(row: dict[str, Any]) -> str:
     component_png_rel = f"component_net_png/{row['component_net_png']}" if row.get("component_net_png") else None
     component_html_rel = f"component_net_html/{row['component_net_html']}" if row.get("component_net_html") else None
     overlay_png_rel = f"overlay/{row['overlay_png']}" if row.get("overlay_png") else None
+    graph_json_rel = f"downloads/graph_json/{row['graph_json']}" if row.get("graph_json") else None
+    simplified_json_rel = (
+        f"downloads/simplified_json/{row['simplified_json']}"
+        if row.get("simplified_json") else None
+    )
 
     preview_rel = component_png_rel or overlay_png_rel or full_png_rel
     preview_html = (
@@ -53,10 +59,11 @@ def _build_card_html(row: dict[str, Any]) -> str:
       <p class="card-subtitle">{diagram_id}</p>
     </div>
 
-    <div class="metrics-grid">
+      <div class="metrics-grid">
       <div class="metric"><span class="metric-value">{row.get('n_nodes_total', 0)}</span><span class="metric-label">nodes</span></div>
       <div class="metric"><span class="metric-value">{row.get('n_edges_total', 0)}</span><span class="metric-label">edges</span></div>
       <div class="metric"><span class="metric-value">{suspicious}</span><span class="metric-label">suspicious</span></div>
+      <div class="metric"><span class="metric-value">{implicit_supply}</span><span class="metric-label">implicit nets</span></div>
     </div>
   </div>
 
@@ -86,6 +93,14 @@ def _build_card_html(row: dict[str, Any]) -> str:
         <div class="group-title">Overlay</div>
         <div class="action-row">
           {_render_link('PNG', overlay_png_rel)}
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="group-title">Data</div>
+        <div class="action-row">
+          {_render_link('Graph JSON', graph_json_rel)}
+          {_render_link('Simplified JSON', simplified_json_rel, 'primary')}
         </div>
       </div>
     </div>

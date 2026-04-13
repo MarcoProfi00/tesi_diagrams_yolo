@@ -18,6 +18,8 @@ Output:
 from __future__ import annotations
 
 from pathlib import Path
+import os
+import shutil
 from typing import Any
 
 
@@ -40,8 +42,11 @@ from graph_viz.render_full import draw_full_html, draw_full_png
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v5_various_two_terminals_components" / "07_export_graph" / "graph_json"
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v5_various_two_terminals_components" / "08_visualize_graph"
+PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "topology_v6_opamp")
+
+INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "07_export_graph" / "graph_json"
+SIMPLIFIED_INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "07_export_graph" / "simplified_json"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "08_visualize_graph"
 
 # =========================================================
 # OUTPUT SUBDIRECTORIES
@@ -51,6 +56,8 @@ FULL_HTML_DIR = OUTPUT_DIR / "full_html"
 COMPONENT_NET_PNG_DIR = OUTPUT_DIR / "component_net_png"
 COMPONENT_NET_HTML_DIR = OUTPUT_DIR / "component_net_html"
 OVERLAY_DIR = OUTPUT_DIR / "overlay"
+DOWNLOAD_GRAPH_JSON_DIR = OUTPUT_DIR / "downloads" / "graph_json"
+DOWNLOAD_SIMPLIFIED_JSON_DIR = OUTPUT_DIR / "downloads" / "simplified_json"
 
 
 
@@ -72,6 +79,8 @@ def main() -> None:
         COMPONENT_NET_HTML_DIR.mkdir(parents=True, exist_ok=True)
     if SAVE_OVERLAY:
         OVERLAY_DIR.mkdir(parents=True, exist_ok=True)
+    DOWNLOAD_GRAPH_JSON_DIR.mkdir(parents=True, exist_ok=True)
+    DOWNLOAD_SIMPLIFIED_JSON_DIR.mkdir(parents=True, exist_ok=True)
 
     json_files = sorted(INPUT_DIR.glob("*_graph.json"))
     if not json_files:
@@ -93,6 +102,9 @@ def main() -> None:
         component_net_png_name = f"{diagram_id}_component_net.png"
         component_net_html_name = f"{diagram_id}_component_net.html"
         overlay_png_name = f"{diagram_id}_overlay.png"
+        graph_json_name = json_path.name
+        simplified_json_name = f"{json_path.stem.replace('_graph', '')}_simplified.json"
+        simplified_input_path = SIMPLIFIED_INPUT_DIR / simplified_json_name
 
         if SAVE_FULL_PNG:
             draw_full_png(graph_data, FULL_PNG_DIR / full_png_name)
@@ -105,24 +117,32 @@ def main() -> None:
         if SAVE_OVERLAY:
             draw_overlay(graph_data, OVERLAY_DIR / overlay_png_name)
 
+        shutil.copy2(json_path, DOWNLOAD_GRAPH_JSON_DIR / graph_json_name)
+        if simplified_input_path.exists():
+            shutil.copy2(simplified_input_path, DOWNLOAD_SIMPLIFIED_JSON_DIR / simplified_json_name)
+
         index_rows.append(
             {
                 "diagram_id": diagram_id,
                 "n_nodes_total": summary.get("n_nodes_total", 0),
                 "n_edges_total": summary.get("n_edges_total", 0),
                 "n_suspicious_terminal_matches": summary.get("n_suspicious_terminal_matches", 0),
+                "n_implicit_supply_nets": summary.get("n_implicit_supply_nets", 0),
                 "full_png": full_png_name if SAVE_FULL_PNG else None,
                 "full_html": full_html_name if SAVE_FULL_HTML else None,
                 "component_net_png": component_net_png_name if SAVE_COMPONENT_NET_PNG else None,
                 "component_net_html": component_net_html_name if SAVE_COMPONENT_NET_HTML else None,
                 "overlay_png": overlay_png_name if SAVE_OVERLAY else None,
+                "graph_json": graph_json_name,
+                "simplified_json": simplified_json_name if simplified_input_path.exists() else None,
             }
         )
 
         print(
             f"[{i}/{len(json_files)}] {json_path.name} -> "
             f"nodes={summary.get('n_nodes_total')}, edges={summary.get('n_edges_total')}, "
-            f"suspicious={summary.get('n_suspicious_terminal_matches', 0)}"
+            f"suspicious={summary.get('n_suspicious_terminal_matches', 0)}, "
+            f"implicit_supply={summary.get('n_implicit_supply_nets', 0)}"
         )
 
     if SAVE_INDEX_HTML:
@@ -141,6 +161,8 @@ def main() -> None:
         print(f"Component-Net HTML salvati in: {COMPONENT_NET_HTML_DIR}")
     if SAVE_OVERLAY:
         print(f"Overlay PNG salvati in      : {OVERLAY_DIR}")
+    print(f"Graph JSON copiati in       : {DOWNLOAD_GRAPH_JSON_DIR}")
+    print(f"Simplified JSON copiati in  : {DOWNLOAD_SIMPLIFIED_JSON_DIR}")
 
 
 if __name__ == "__main__":

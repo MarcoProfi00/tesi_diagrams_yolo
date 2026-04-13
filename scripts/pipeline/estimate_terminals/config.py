@@ -355,3 +355,10 @@ OPAMP_AUX_MASK_TOP_Y2_RATIO = 0.50
 OPAMP_AUX_MASK_BOTTOM_Y1_RATIO = 0.50
 OPAMP_AUX_MASK_BOTTOM_Y2_RATIO = 0.72
 
+# ---------------------------------------------------------
+# OPAMP AUX V5: se sopra l'opamp c'e' un piccolo Terminal (Vcc/Vdd),
+# per l'aux superiore preferiamo allinearci direttamente a quel punto.
+# ---------------------------------------------------------
+OPAMP_AUX_SNAP_TO_NEARBY_TERMINAL = True
+OPAMP_AUX_NEARBY_TERMINAL_TOP_REGION_RATIO = 0.45
+

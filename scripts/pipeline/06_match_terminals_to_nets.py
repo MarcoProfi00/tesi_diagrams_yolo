@@ -27,9 +27,20 @@ import numpy as np
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v5_various_two_terminals_components" / "05_build_nets"
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v5_various_two_terminals_components" / "06_match_terminals_to_nets"
+INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v6_opamp" / "05_build_nets"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v6_opamp" / "06_match_terminals_to_nets"
 DEBUG_DIR = OUTPUT_DIR / "debug_images"
+
+OPAMP_AUX_VERTICAL_OUTWARD = 56
+OPAMP_AUX_VERTICAL_INWARD = 8
+OPAMP_AUX_VERTICAL_X_TOL = 6
+OPAMP_AUX_VERTICAL_MIN_PIXELS = 2
+OPAMP_AUX_VERTICAL_X_PENALTY = 1.6
+OPAMP_AUX_VERTICAL_COUNT_WEIGHT = 0.30
+OPAMP_AUX_PREFERRED_BONUS = 8.0
+
+OPAMP_AUX_MAX_OK_DISTANCE = 48.0
+OPAMP_AUX_MAX_PREFERRED_DISTANCE = 160.0
 
 # =========================================================
 # BASE SEARCH PARAMETERS
@@ -140,7 +151,10 @@ def build_net_index_map(nets):
 def build_source_label_to_net_index_map(nets):
     out = {}
     for net in nets:
-        out[int(net["source_label"])] = int(net["net_index"])
+        net_index = int(net["net_index"])
+        source_labels = net.get("merged_source_labels", [net["source_label"]])
+        for source_label in source_labels:
+            out[int(source_label)] = net_index
     return out
 
 def clamp_window(x1, y1, x2, y2, w, h):
@@ -191,6 +205,144 @@ def draw_boxed_text(
         thickness,
         cv2.LINE_AA,
     )
+
+def is_opamp_aux_terminal(term: dict) -> bool:
+    name = str(term.get("name") or "").lower()
+    terminal_id = str(term.get("terminal_id") or "").lower()
+
+    return (
+        name in {"aux1", "aux2"}
+        or terminal_id.endswith(":aux1")
+        or terminal_id.endswith(":aux2")
+    )
+
+
+def get_max_ok_distance(term: dict) -> float:
+    if is_opamp_aux_terminal(term):
+        return OPAMP_AUX_MAX_OK_DISTANCE
+    return MAX_OK_DISTANCE
+
+
+def is_preferred_like_match_status(match_status: str) -> bool:
+    return match_status in {"matched_preferred", "matched_implicit_supply"}
+
+
+def get_preferred_match_status(preferred_is_implicit_supply: bool) -> str:
+    if preferred_is_implicit_supply:
+        return "matched_implicit_supply"
+    return "matched_preferred"
+
+
+def run_opamp_aux_vertical_stage(label_map: np.ndarray, term: dict, preferred_net_index=None):
+    """
+    Matcher dedicato per aux1/aux2:
+    cerca in una capsula verticale e privilegia la net che:
+    - va nella direzione outward (top/bottom)
+    - resta vicina alla x del terminale
+    - ha un minimo di supporto in pixel
+    """
+    if not is_opamp_aux_terminal(term):
+        return None
+
+    rel = term.get("relative_position")
+    if rel not in {"top", "bottom"}:
+        return None
+
+    h, w = label_map.shape[:2]
+    x = int(round(term["x"]))
+    y = int(round(term["y"]))
+
+    if rel == "top":
+        rect = clamp_window(
+            x - OPAMP_AUX_VERTICAL_X_TOL,
+            y - OPAMP_AUX_VERTICAL_OUTWARD,
+            x + OPAMP_AUX_VERTICAL_X_TOL + 1,
+            y + OPAMP_AUX_VERTICAL_INWARD + 1,
+            w, h
+        )
+    else:
+        rect = clamp_window(
+            x - OPAMP_AUX_VERTICAL_X_TOL,
+            y - OPAMP_AUX_VERTICAL_INWARD,
+            x + OPAMP_AUX_VERTICAL_X_TOL + 1,
+            y + OPAMP_AUX_VERTICAL_OUTWARD + 1,
+            w, h
+        )
+
+    candidate_labels = collect_labels_in_rect(label_map, rect)
+    if not candidate_labels:
+        return {
+            "candidate_labels": [],
+            "chosen_label": None,
+            "distance": None,
+            "snap_point": None,
+            "decision_mode": None,
+            "search_window": rect,
+        }
+
+    x1, y1, x2, y2 = rect
+    roi = label_map[y1:y2, x1:x2]
+
+    best = None
+    for lbl in candidate_labels:
+        ys, xs = np.where(roi == lbl)
+        if len(xs) < OPAMP_AUX_VERTICAL_MIN_PIXELS:
+            continue
+
+        xs_global = xs + x1
+        ys_global = ys + y1
+
+        if rel == "top":
+            outward_progress = y - ys_global
+        else:
+            outward_progress = ys_global - y
+
+        valid = np.where(outward_progress >= -1)[0]
+        if len(valid) == 0:
+            continue
+
+        x_penalty = np.abs(xs_global - x)
+        scores = outward_progress - OPAMP_AUX_VERTICAL_X_PENALTY * x_penalty
+
+        if preferred_net_index is not None and int(lbl) == int(preferred_net_index):
+            scores = scores + OPAMP_AUX_PREFERRED_BONUS
+
+        local_valid = valid[int(np.argmax(scores[valid]))]
+        px = int(xs_global[local_valid])
+        py = int(ys_global[local_valid])
+        dist = float(np.sqrt((px - x) ** 2 + (py - y) ** 2))
+
+        label_score = float(scores[local_valid] + OPAMP_AUX_VERTICAL_COUNT_WEIGHT * len(valid))
+
+        cand = {
+            "label": int(lbl),
+            "distance": dist,
+            "snap_point": [px, py],
+            "label_score": label_score,
+            "decision_mode": "preferred_label" if preferred_net_index is not None and int(lbl) == int(preferred_net_index) else "aux_vertical_corridor",
+        }
+
+        if best is None or cand["label_score"] > best["label_score"]:
+            best = cand
+
+    if best is None:
+        return {
+            "candidate_labels": candidate_labels,
+            "chosen_label": None,
+            "distance": None,
+            "snap_point": None,
+            "decision_mode": None,
+            "search_window": rect,
+        }
+
+    return {
+        "candidate_labels": candidate_labels,
+        "chosen_label": best["label"],
+        "distance": best["distance"],
+        "snap_point": best["snap_point"],
+        "decision_mode": best["decision_mode"],
+        "search_window": rect,
+    }
 
 def get_class_search_params(term: dict):
     params = {
@@ -418,6 +570,7 @@ def run_search_stage(label_map: np.ndarray, term: dict, stage: dict, preferred_n
 # Confidence / warning del match
 # ---------------------------------------------------------
 def classify_match_confidence(
+    term: dict,
     match_status: str,
     distance_px,
     search_stage: str,
@@ -428,24 +581,35 @@ def classify_match_confidence(
 
     warnings = []
     distance = None if distance_px is None else float(distance_px)
+    max_ok_distance = get_max_ok_distance(term)
 
+    if (
+        is_opamp_aux_terminal(term)
+        and preferred_net_index is not None
+        and is_preferred_like_match_status(match_status)
+    ):
+        max_ok_distance = max(max_ok_distance, OPAMP_AUX_MAX_PREFERRED_DISTANCE)
 
-    if distance is None or distance > MAX_OK_DISTANCE:
+    if distance is None or distance > max_ok_distance:
         return "unmatched", ["distance_too_large"]
 
     if preferred_net_index is None:
         warnings.append("no_preferred_net_from_05")
-    if match_status != "matched_preferred":
+    if not is_preferred_like_match_status(match_status):
         warnings.append("matched_without_preferred_label")
     if search_stage in {"directional_fallback", "circle_fallback"}:
         warnings.append("used_fallback_search")
     if search_stage == "circle_primary":
         warnings.append("used_circle_search")
+    if search_stage == "opamp_aux_vertical":
+        warnings.append("used_opamp_aux_vertical_search")
 
     return "ok", warnings
 
-def finalize_match_result(result: dict):
+
+def finalize_match_result(term: dict, result: dict):
     confidence, warnings = classify_match_confidence(
+        term=term,
         match_status=result["match_status"],
         distance_px=result["match_distance_px"],
         search_stage=result["search_stage"],
@@ -453,11 +617,13 @@ def finalize_match_result(result: dict):
     )
     result["match_confidence"] = confidence
     result["match_warnings"] = warnings
-    
+
     result["is_suspicious_match"] = confidence != "ok"
     if confidence != "ok":
         result["matched_net_id"] = None
         result["matched_net_index"] = None
+        result["matched_net_is_implicit_supply"] = False
+        result["matched_net_implicit_reason"] = None
         result["match_status"] = "unmatched"
         result["snap_point"] = None
     return result
@@ -473,8 +639,58 @@ def get_preferred_net_index(term: dict, source_label_to_net_index: dict, net_bui
         return None
     return source_label_to_net_index.get(int(source_label))
 
+
+def run_preferred_from_05_window_stage(
+    label_map: np.ndarray,
+    term: dict,
+    preferred_net_index,
+    net_building_terminal_debug: dict,
+):
+    if preferred_net_index is None or not is_opamp_aux_terminal(term):
+        return None
+
+    term_id = term["terminal_id"]
+    debug = net_building_terminal_debug.get(term_id, {})
+    search_window = debug.get("search_window")
+    if not search_window or len(search_window) != 4:
+        return None
+
+    rect = tuple(int(v) for v in search_window)
+    x = int(round(term["x"]))
+    y = int(round(term["y"]))
+
+    chosen_lbl, dist, point = nearest_label_by_pixel_distance(
+        label_map,
+        x,
+        y,
+        [preferred_net_index],
+        rect=rect,
+    )
+    if chosen_lbl is None:
+        return None
+
+    return {
+        "candidate_labels": [int(preferred_net_index)],
+        "chosen_label": int(chosen_lbl),
+        "distance": dist,
+        "snap_point": point,
+        "decision_mode": "preferred_label",
+        "search_window": [int(v) for v in rect],
+    }
+
+
 def match_terminal_to_net(term: dict, label_map: np.ndarray, net_index_map: dict, source_label_to_net_index: dict, net_building_terminal_debug: dict):
     preferred_net_index = get_preferred_net_index(term, source_label_to_net_index, net_building_terminal_debug)
+    term_debug = net_building_terminal_debug.get(term["terminal_id"], {})
+    preferred_net = net_index_map.get(preferred_net_index, {}) if preferred_net_index is not None else {}
+    preferred_is_implicit_supply = bool(
+        term_debug.get("is_implicit_supply", False)
+        or preferred_net.get("is_implicit_supply", False)
+    )
+    preferred_implicit_reason = (
+        term_debug.get("implicit_reason")
+        or preferred_net.get("implicit_reason")
+    )
 
     result = {
         "terminal_id": term["terminal_id"],
@@ -485,10 +701,14 @@ def match_terminal_to_net(term: dict, label_map: np.ndarray, net_index_map: dict
         "y": term["y"],
         "preferred_net_index_from_05": preferred_net_index,
         "preferred_net_id_from_05": net_index_map.get(preferred_net_index, {}).get("net_id") if preferred_net_index is not None else None,
+        "preferred_from_05_is_implicit_supply": preferred_is_implicit_supply,
+        "preferred_from_05_implicit_reason": preferred_implicit_reason,
         "candidate_net_ids": [],
         "candidate_net_indices": [],
         "matched_net_id": None,
         "matched_net_index": None,
+        "matched_net_is_implicit_supply": False,
+        "matched_net_implicit_reason": None,
         "match_status": "unmatched",
         "match_distance_px": None,
         "snap_point": None,
@@ -499,6 +719,78 @@ def match_terminal_to_net(term: dict, label_map: np.ndarray, net_index_map: dict
         "match_warnings": ["unmatched_terminal"],
         "is_suspicious_match": True,
     }
+
+    preferred_window_stage = run_preferred_from_05_window_stage(
+        label_map,
+        term,
+        preferred_net_index,
+        net_building_terminal_debug,
+    )
+    if preferred_window_stage is not None:
+        result["candidate_net_indices"] = [int(preferred_net_index)]
+        result["candidate_net_ids"] = [
+            net_index_map[int(preferred_net_index)]["net_id"]
+        ]
+        result["matched_net_index"] = int(preferred_window_stage["chosen_label"])
+        result["matched_net_id"] = net_index_map[int(preferred_window_stage["chosen_label"])]["net_id"]
+        result["matched_net_is_implicit_supply"] = bool(
+            net_index_map[int(preferred_window_stage["chosen_label"])].get("is_implicit_supply", False)
+        )
+        result["matched_net_implicit_reason"] = (
+            net_index_map[int(preferred_window_stage["chosen_label"])].get("implicit_reason")
+            if result["matched_net_is_implicit_supply"]
+            else None
+        )
+        result["match_status"] = get_preferred_match_status(preferred_is_implicit_supply)
+        result["match_distance_px"] = round(float(preferred_window_stage["distance"]), 3)
+        result["snap_point"] = preferred_window_stage["snap_point"]
+        result["search_stage"] = "preferred_from_05_window"
+        result["search_window"] = preferred_window_stage["search_window"]
+        result["search_kind"] = "directional"
+        return finalize_match_result(term, result)
+
+    aux_stage = run_opamp_aux_vertical_stage(
+        label_map,
+        term,
+        preferred_net_index=preferred_net_index,
+    )
+        
+    result["aux_stage_debug"] = aux_stage
+
+    if aux_stage is not None:
+        candidate_labels = aux_stage["candidate_labels"]
+        if candidate_labels:
+            result["candidate_net_indices"] = sorted(set(int(v) for v in candidate_labels))
+            result["candidate_net_ids"] = [
+                net_index_map[idx]["net_id"]
+                for idx in result["candidate_net_indices"]
+                if idx in net_index_map
+            ]
+            result["search_stage"] = "opamp_aux_vertical"
+            result["search_window"] = aux_stage["search_window"]
+            result["search_kind"] = "directional"
+
+            chosen_idx = aux_stage["chosen_label"]
+            if chosen_idx is not None:
+                result["matched_net_index"] = int(chosen_idx)
+                result["matched_net_id"] = net_index_map[int(chosen_idx)]["net_id"]
+                result["matched_net_is_implicit_supply"] = bool(
+                    net_index_map[int(chosen_idx)].get("is_implicit_supply", False)
+                )
+                result["matched_net_implicit_reason"] = (
+                    net_index_map[int(chosen_idx)].get("implicit_reason")
+                    if result["matched_net_is_implicit_supply"]
+                    else None
+                )
+                result["match_distance_px"] = round(float(aux_stage["distance"]), 3)
+                result["snap_point"] = aux_stage["snap_point"]
+
+                if aux_stage["decision_mode"] == "preferred_label":
+                    result["match_status"] = get_preferred_match_status(preferred_is_implicit_supply)
+                else:
+                    result["match_status"] = "matched_nearest"
+
+                return finalize_match_result(term, result)
 
     for stage in build_search_plan(term):
         stage_result = run_search_stage(label_map, term, stage, preferred_net_index=preferred_net_index)
@@ -521,20 +813,28 @@ def match_terminal_to_net(term: dict, label_map: np.ndarray, net_index_map: dict
 
             result["matched_net_index"] = int(chosen_idx)
             result["matched_net_id"] = net_index_map[int(chosen_idx)]["net_id"]
+            result["matched_net_is_implicit_supply"] = bool(
+                net_index_map[int(chosen_idx)].get("is_implicit_supply", False)
+            )
+            result["matched_net_implicit_reason"] = (
+                net_index_map[int(chosen_idx)].get("implicit_reason")
+                if result["matched_net_is_implicit_supply"]
+                else None
+            )
             result["match_distance_px"] = None if stage_result["distance"] is None else round(float(stage_result["distance"]), 3)
             result["snap_point"] = stage_result["snap_point"]
 
             decision_mode = stage_result["decision_mode"]
             if decision_mode == "preferred_label":
-                result["match_status"] = "matched_preferred"
+                result["match_status"] = get_preferred_match_status(preferred_is_implicit_supply)
             elif decision_mode == "single_candidate":
                 result["match_status"] = "matched_single"
             else:
                 result["match_status"] = "matched_nearest"
 
-            return finalize_match_result(result)
+            return finalize_match_result(term, result)
 
-    return finalize_match_result(result)
+    return finalize_match_result(term, result)
 
 
 def apply_match_info_to_terminal(term: dict, match_info: dict):
@@ -544,8 +844,12 @@ def apply_match_info_to_terminal(term: dict, match_info: dict):
     term_copy["candidate_net_indices"] = match_info.get("candidate_net_indices", [])
     term_copy["preferred_net_index_from_05"] = match_info.get("preferred_net_index_from_05")
     term_copy["preferred_net_id_from_05"] = match_info.get("preferred_net_id_from_05")
+    term_copy["preferred_from_05_is_implicit_supply"] = match_info.get("preferred_from_05_is_implicit_supply", False)
+    term_copy["preferred_from_05_implicit_reason"] = match_info.get("preferred_from_05_implicit_reason")
     term_copy["matched_net_id"] = match_info.get("matched_net_id")
     term_copy["matched_net_index"] = match_info.get("matched_net_index")
+    term_copy["matched_net_is_implicit_supply"] = match_info.get("matched_net_is_implicit_supply", False)
+    term_copy["matched_net_implicit_reason"] = match_info.get("matched_net_implicit_reason")
     term_copy["match_status"] = match_info.get("match_status", "unmatched")
     term_copy["match_distance_px"] = match_info.get("match_distance_px")
     term_copy["snap_point"] = match_info.get("snap_point")
@@ -590,6 +894,8 @@ def build_connections(terminals_with_matches):
             "component_class_name": term.get("component_class_name"),
             "net_id": term["matched_net_id"],
             "net_index": term["matched_net_index"],
+            "net_is_implicit_supply": term.get("matched_net_is_implicit_supply", False),
+            "net_implicit_reason": term.get("matched_net_implicit_reason"),
             "match_status": term["match_status"],
             "match_distance_px": term["match_distance_px"],
             "snap_point": term.get("snap_point"),
