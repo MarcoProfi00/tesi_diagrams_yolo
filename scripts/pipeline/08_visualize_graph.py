@@ -46,6 +46,7 @@ PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "topology_v6_opamp")
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "07_export_graph" / "graph_json"
 SIMPLIFIED_INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "07_export_graph" / "simplified_json"
+LLM_CONTEXT_INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "07_export_graph" / "llm_context"
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "08_visualize_graph"
 
 # =========================================================
@@ -58,6 +59,7 @@ COMPONENT_NET_HTML_DIR = OUTPUT_DIR / "component_net_html"
 OVERLAY_DIR = OUTPUT_DIR / "overlay"
 DOWNLOAD_GRAPH_JSON_DIR = OUTPUT_DIR / "downloads" / "graph_json"
 DOWNLOAD_SIMPLIFIED_JSON_DIR = OUTPUT_DIR / "downloads" / "simplified_json"
+DOWNLOAD_LLM_CONTEXT_DIR = OUTPUT_DIR / "downloads" / "llm_context"
 
 
 
@@ -81,6 +83,7 @@ def main() -> None:
         OVERLAY_DIR.mkdir(parents=True, exist_ok=True)
     DOWNLOAD_GRAPH_JSON_DIR.mkdir(parents=True, exist_ok=True)
     DOWNLOAD_SIMPLIFIED_JSON_DIR.mkdir(parents=True, exist_ok=True)
+    DOWNLOAD_LLM_CONTEXT_DIR.mkdir(parents=True, exist_ok=True)
 
     json_files = sorted(INPUT_DIR.glob("*_graph.json"))
     if not json_files:
@@ -104,7 +107,9 @@ def main() -> None:
         overlay_png_name = f"{diagram_id}_overlay.png"
         graph_json_name = json_path.name
         simplified_json_name = f"{json_path.stem.replace('_graph', '')}_simplified.json"
+        llm_context_name = f"{json_path.stem.replace('_graph', '')}_llm_context.md"
         simplified_input_path = SIMPLIFIED_INPUT_DIR / simplified_json_name
+        llm_context_input_path = LLM_CONTEXT_INPUT_DIR / llm_context_name
 
         if SAVE_FULL_PNG:
             draw_full_png(graph_data, FULL_PNG_DIR / full_png_name)
@@ -120,6 +125,8 @@ def main() -> None:
         shutil.copy2(json_path, DOWNLOAD_GRAPH_JSON_DIR / graph_json_name)
         if simplified_input_path.exists():
             shutil.copy2(simplified_input_path, DOWNLOAD_SIMPLIFIED_JSON_DIR / simplified_json_name)
+        if llm_context_input_path.exists():
+            shutil.copy2(llm_context_input_path, DOWNLOAD_LLM_CONTEXT_DIR / llm_context_name)
 
         index_rows.append(
             {
@@ -135,6 +142,7 @@ def main() -> None:
                 "overlay_png": overlay_png_name if SAVE_OVERLAY else None,
                 "graph_json": graph_json_name,
                 "simplified_json": simplified_json_name if simplified_input_path.exists() else None,
+                "llm_context": llm_context_name if llm_context_input_path.exists() else None,
             }
         )
 
@@ -163,6 +171,7 @@ def main() -> None:
         print(f"Overlay PNG salvati in      : {OVERLAY_DIR}")
     print(f"Graph JSON copiati in       : {DOWNLOAD_GRAPH_JSON_DIR}")
     print(f"Simplified JSON copiati in  : {DOWNLOAD_SIMPLIFIED_JSON_DIR}")
+    print(f"LLM context copiati in      : {DOWNLOAD_LLM_CONTEXT_DIR}")
 
 
 if __name__ == "__main__":

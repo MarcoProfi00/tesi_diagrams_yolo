@@ -6,6 +6,7 @@ from .geometry import (
     geom_terminal_point_by_side_peak,
     geom_terminal_point_opamp,
 )
+from .strategies_three_terminal import resolve_three_terminal_semantics
 # =========================================================
 # COMPONENT PROCESSING
 # =========================================================
@@ -85,6 +86,8 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
             "component_class_id": class_id,
             "component_class_name": component.get("class_name"),
             "name": term_name,
+            "display_name": term_name,
+            "display_terminal_id": f"{instance_id}:{term_name}",
             "relative_position": rel_pos,
             "estimated_orientation": estimated_orientation,
             "estimated_connection_side": connected_side,
@@ -93,4 +96,13 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
             "x": x,
             "y": y,
         })
+
+    if point_mode == "three_terminal_structured":
+        terminals = resolve_three_terminal_semantics(
+            image_binary,
+            bbox,
+            estimated_orientation,
+            terminals,
+            meta,
+        )
     return terminals, estimated_orientation, connected_side, side_scores

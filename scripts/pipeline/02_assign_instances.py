@@ -6,6 +6,7 @@
 #   5. salva anche una immagine debug con instance_id
 
 from pathlib import Path
+import os
 import json
 from collections import defaultdict
 import cv2
@@ -15,9 +16,10 @@ import cv2
 # =========================================================
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "topology_v6_opamp")
 
-INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v6_opamp"  / "01_detect_components"
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v6_opamp"  / "02_assign_instances"
+INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "01_detect_components"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "02_assign_instances"
 DEBUG_IMAGES_DIR = OUTPUT_DIR / "debug_images"
 
 # Ordinamento delle istanze:

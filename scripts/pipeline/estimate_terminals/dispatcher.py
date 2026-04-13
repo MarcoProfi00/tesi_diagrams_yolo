@@ -105,7 +105,17 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
         return meta.get("terminals", []), None, None, None
 
     if strategy == "auto_by_aspect_ratio":
+        class_name = meta.get("name", "")
         default_orientation = meta.get("default_orientation", "horizontal")
+
+        if image_binary is not None and class_name in {"Inductor", "Transformer"}:
+            orientation, side_scores = strategy_detect_two_terminal_orientation_generic(
+                image_binary,
+                bbox,
+                default_orientation=default_orientation,
+            )
+            return _get_oriented_terminals(meta, orientation), orientation, None, side_scores
+
         orientation = geom_infer_orientation_from_bbox(
             bbox,
             default_orientation=default_orientation,

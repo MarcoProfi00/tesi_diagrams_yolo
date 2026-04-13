@@ -854,6 +854,9 @@ def terminal_to_candidate_labels(labels: np.ndarray, stats: np.ndarray, terminal
                 "candidate_labels": inherited_match["candidate_labels"],
                 "preferred_candidate_labels": inherited_match.get("preferred_candidate_labels", []),
                 "primary_label": primary_label,
+                "display_terminal_id": term.get("display_terminal_id", term_id),
+                "semantic_terminal_name": term.get("semantic_terminal_name"),
+                "semantic_terminal_id": term.get("semantic_terminal_id"),
                 "match_mode": inherited_match["match_mode"],
                 "search_window": inherited_match["search_window"],
                 "snap_point": inherited_match["snap_point"],
@@ -893,6 +896,9 @@ def terminal_to_candidate_labels(labels: np.ndarray, stats: np.ndarray, terminal
             "candidate_labels": aux_match["candidate_labels"],
             "preferred_candidate_labels": aux_match.get("preferred_candidate_labels", []),
             "primary_label": primary_label,
+            "display_terminal_id": term.get("display_terminal_id", term_id),
+            "semantic_terminal_name": term.get("semantic_terminal_name"),
+            "semantic_terminal_id": term.get("semantic_terminal_id"),
             "match_mode": aux_match["match_mode"],
             "search_window": aux_match["search_window"],
             "snap_point": aux_match["snap_point"],
@@ -919,18 +925,27 @@ def build_terminal_index(terminals):
 
 def summarize_connected_terminals(connected_terminal_ids, terminal_index):
     connected_terminal_names = []
+    connected_terminal_display_ids = []
+    connected_semantic_terminal_names = []
     auxiliary_terminal_ids = []
 
     for term_id in connected_terminal_ids:
         term = terminal_index.get(term_id, {})
         name = str(term.get("name", "")).lower()
         connected_terminal_names.append(name)
+        connected_terminal_display_ids.append(term.get("display_terminal_id", term_id))
+
+        semantic_name = term.get("semantic_terminal_name")
+        if semantic_name:
+            connected_semantic_terminal_names.append(semantic_name)
 
         if name in {"aux1", "aux2"}:
             auxiliary_terminal_ids.append(term_id)
 
     return {
         "connected_terminal_names": connected_terminal_names,
+        "connected_terminal_display_ids": connected_terminal_display_ids,
+        "connected_semantic_terminal_names": connected_semantic_terminal_names,
         "auxiliary_terminal_ids": auxiliary_terminal_ids,
         "n_auxiliary_terminals": len(auxiliary_terminal_ids),
         "all_connected_terminals_are_auxiliary": (
@@ -976,8 +991,10 @@ def build_candidate_nets(stats, label_to_terminal_ids, terminal_index, implicit_
             "pixel_count": area,
             "bbox": bbox,
             "connected_terminal_ids": connected_terminal_ids,
+            "connected_terminal_display_ids": terminal_summary["connected_terminal_display_ids"],
             "n_connected_terminals": len(connected_terminal_ids),
             "connected_terminal_names": terminal_summary["connected_terminal_names"],
+            "connected_semantic_terminal_names": terminal_summary["connected_semantic_terminal_names"],
             "auxiliary_terminal_ids": terminal_summary["auxiliary_terminal_ids"],
             "n_auxiliary_terminals": terminal_summary["n_auxiliary_terminals"],
             "all_connected_terminals_are_auxiliary": terminal_summary["all_connected_terminals_are_auxiliary"],
@@ -1028,8 +1045,10 @@ def build_candidate_nets(stats, label_to_terminal_ids, terminal_index, implicit_
         merged_cand["bbox"] = [x1, y1, x2, y2]
         merged_cand["merged_source_labels"] = merged_labels or [anchor_label]
         merged_cand["connected_terminal_ids"] = terminal_ids
+        merged_cand["connected_terminal_display_ids"] = terminal_summary["connected_terminal_display_ids"]
         merged_cand["n_connected_terminals"] = len(terminal_ids)
         merged_cand["connected_terminal_names"] = terminal_summary["connected_terminal_names"]
+        merged_cand["connected_semantic_terminal_names"] = terminal_summary["connected_semantic_terminal_names"]
         merged_cand["auxiliary_terminal_ids"] = terminal_summary["auxiliary_terminal_ids"]
         merged_cand["n_auxiliary_terminals"] = terminal_summary["n_auxiliary_terminals"]
         merged_cand["all_connected_terminals_are_auxiliary"] = terminal_summary["all_connected_terminals_are_auxiliary"]
@@ -1120,7 +1139,9 @@ def relabel_kept_nets(original_labels: np.ndarray, kept_candidates, sort_order="
             "pixel_count": cand["pixel_count"],
             "bbox": cand["bbox"],
             "connected_terminal_ids": cand["connected_terminal_ids"],
+            "connected_terminal_display_ids": cand.get("connected_terminal_display_ids", cand["connected_terminal_ids"]),
             "connected_terminal_names": cand.get("connected_terminal_names", []),
+            "connected_semantic_terminal_names": cand.get("connected_semantic_terminal_names", []),
             "auxiliary_terminal_ids": cand.get("auxiliary_terminal_ids", []),
             "n_auxiliary_terminals": cand.get("n_auxiliary_terminals", 0),
             "all_connected_terminals_are_auxiliary": cand.get("all_connected_terminals_are_auxiliary", False),
@@ -1201,6 +1222,7 @@ def draw_terminal_debug(image_bgr, terminals, terminal_debug, relabeled_map, net
 
     for term in terminals:
         term_id = term["terminal_id"]
+        display_term_id = term.get("display_terminal_id", term_id)
         info = terminal_debug.get(term_id, {})
 
         tx = int(round(term["x"]))
@@ -1215,7 +1237,7 @@ def draw_terminal_debug(image_bgr, terminals, terminal_debug, relabeled_map, net
         if snap_point is None or primary_label is None:
             draw_outlined_text(
                 out,
-                f"{term_id}: none",
+                f"{display_term_id}: none",
                 (tx + 8, max(16, ty - 8)),
                 color=(0, 0, 255),
                 outline_color=(255, 255, 255),
@@ -1235,7 +1257,7 @@ def draw_terminal_debug(image_bgr, terminals, terminal_debug, relabeled_map, net
 
         draw_outlined_text(
             out,
-            f"{term_id}->{net_id}",
+            f"{display_term_id}->{net_id}",
             (tx + 8, max(16, ty - 8)),
             color=TERMINAL_TEXT_COLOR,
             outline_color=TERMINAL_TEXT_OUTLINE,

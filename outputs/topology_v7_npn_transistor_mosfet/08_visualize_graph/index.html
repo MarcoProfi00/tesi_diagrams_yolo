@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>08_visualize_graph</title>
+  <style>
+    :root {
+      --bg: #f6f8fb;
+      --card: #ffffff;
+      --card-2: #fbfcfe;
+      --text: #1f2937;
+      --muted: #667085;
+      --border: #e5e7eb;
+      --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      --primary: #2563eb;
+      --primary-soft: #dbeafe;
+      --ok: #15803d;
+      --ok-soft: #dcfce7;
+      --warn: #b45309;
+      --warn-soft: #fef3c7;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, Arial, sans-serif;
+      background: linear-gradient(180deg, #eff4ff 0%, var(--bg) 240px);
+      color: var(--text);
+    }
+    .page { max-width: 1500px; margin: 0 auto; padding: 28px 28px 40px; }
+    .hero {
+      background: rgba(255,255,255,0.88);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.7);
+      border-radius: 24px;
+      padding: 26px 28px;
+      box-shadow: var(--shadow);
+      margin-bottom: 22px;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 12px;
+    }
+    h1 { margin: 0 0 8px; font-size: 32px; line-height: 1.1; }
+    .hero p { margin: 0; color: var(--muted); max-width: 980px; line-height: 1.55; }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin: 18px 0 0;
+    }
+    .summary-card {
+      background: linear-gradient(180deg, var(--card) 0%, var(--card-2) 100%);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px 18px;
+    }
+    .summary-value { display: block; font-size: 28px; font-weight: 800; line-height: 1; margin-bottom: 8px; }
+    .summary-label { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .04em; }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255,255,255,0.88);
+      border: 1px solid rgba(255,255,255,0.7);
+      border-radius: 20px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+      margin-bottom: 18px;
+      position: sticky;
+      top: 12px;
+      z-index: 5;
+    }
+    .toolbar-left { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .toolbar-right { color: var(--muted); font-size: 14px; }
+    input[type="search"] {
+      width: min(360px, 70vw);
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      font-size: 14px;
+      background: white;
+    }
+    .check { display: inline-flex; gap: 8px; align-items: center; color: var(--text); font-size: 14px; }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+      gap: 18px;
+    }
+    .diagram-card {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid rgba(255,255,255,0.75);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+    .card-top { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
+    .card-title-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .card-title-row h2 { margin: 0; font-size: 22px; line-height: 1.1; }
+    .card-subtitle { margin: 8px 0 0; font-size: 13px; color: var(--muted); word-break: break-all; }
+
+    .badge { display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .badge-ok { background: var(--ok-soft); color: var(--ok); }
+    .badge-warn { background: var(--warn-soft); color: var(--warn); }
+
+    .metrics-grid { display: grid; grid-template-columns: repeat(3, minmax(72px, 1fr)); gap: 10px; min-width: 250px; }
+    .metric { background: #f8fafc; border: 1px solid var(--border); border-radius: 16px; padding: 12px 10px; text-align: center; }
+    .metric-value { display: block; font-size: 20px; font-weight: 800; }
+    .metric-label { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+
+    .card-body { display: grid; grid-template-columns: 1.15fr 1fr; gap: 16px; align-items: start; }
+    .preview-wrap { background: #f8fafc; border: 1px solid var(--border); border-radius: 18px; padding: 10px; min-height: 250px; display: flex; align-items: center; justify-content: center; }
+    .preview-link { display: block; width: 100%; }
+    .preview { width: 100%; max-height: 280px; object-fit: contain; border-radius: 12px; display: block; }
+    .preview-empty { color: var(--muted); font-size: 14px; }
+
+    .actions-wrap { display: flex; flex-direction: column; gap: 12px; }
+    .action-group { background: #f8fafc; border: 1px solid var(--border); border-radius: 18px; padding: 14px; }
+    .group-title { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
+    .action-row { display: flex; flex-wrap: wrap; gap: 10px; }
+    .action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 86px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: white;
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }
+    .action:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(15,23,42,.08); border-color: #cbd5e1; }
+    .action.primary { background: var(--primary); border-color: var(--primary); color: white; }
+    .action.disabled { opacity: .45; pointer-events: none; }
+
+    .empty {
+      display: none;
+      padding: 30px 20px;
+      text-align: center;
+      color: var(--muted);
+      background: rgba(255,255,255,0.85);
+      border: 1px dashed var(--border);
+      border-radius: 18px;
+      margin-top: 18px;
+    }
+
+    @media (max-width: 980px) {
+      .cards { grid-template-columns: 1fr; }
+      .card-body { grid-template-columns: 1fr; }
+      .metrics-grid { min-width: 0; width: 100%; }
+      .card-top { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="eyebrow">08_visualize_graph · browser dashboard</div>
+      <h1>Graph visualization index</h1>
+      <p>
+        Dashboard delle visualizzazioni generate a partire dai file <code>*_graph.json</code> prodotti dal passo 07.
+        Per ogni diagramma sono disponibili la <b>vista completa</b>, la <b>vista semplificata Component → Net</b>
+        e l'<b>overlay sul diagramma originale</b>. La preview usa, quando disponibile, la vista Component → Net.
+      </p>
+      <div class="summary-grid">
+        <div class="summary-card"><span class="summary-value">7</span><span class="summary-label">diagrammi</span></div>
+        <div class="summary-card"><span class="summary-value">298</span><span class="summary-label">nodi totali</span></div>
+        <div class="summary-card"><span class="summary-value">448</span><span class="summary-label">archi totali</span></div>
+        <div class="summary-card"><span class="summary-value">2</span><span class="summary-label">match sospetti totali</span></div>
+        <div class="summary-card"><span class="summary-value">1</span><span class="summary-label">diagrammi con criticità</span></div>
+      </div>
+    </section>
+
+    <section class="toolbar">
+      <div class="toolbar-left">
+        <input id="searchBox" type="search" placeholder="Cerca diagramma, id, nome corto..." />
+        <label class="check"><input id="onlySuspicious" type="checkbox" /> Mostra solo diagrammi con suspicious &gt; 0</label>
+      </div>
+      <div class="toolbar-right">Risultati visibili: <span id="visibleCount">0</span></div>
+    </section>
+
+    <section id="cards" class="cards">
+      <article class="diagram-card" data-name="2 2" data-suspicious="2">
+  <div class="card-top">
+    <div>
+      <div class="card-title-row">
+        <h2>2</h2>
+        <span class="badge badge-warn">2 suspicious</span>
+      </div>
+      <p class="card-subtitle">2</p>
+    </div>
+
+      <div class="metrics-grid">
+      <div class="metric"><span class="metric-value">55</span><span class="metric-label">nodes</span></div>
+      <div class="metric"><span class="metric-value">81</span><span class="metric-label">edges</span></div>
+      <div class="metric"><span class="metric-value">2</span><span class="metric-label">suspicious</span></div>
+      <div class="metric"><span class="metric-value">0</span><span class="metric-label">implicit nets</span></div>
+    </div>
+  </div>
+
+  <div class="card-body">
+    <div class="preview-wrap">
+      <a class="preview-link" href="component_net_png/2_component_net.png" target="_blank" rel="noopener">  <img class="preview" src="component_net_png/2_component_net.png" alt="Preview 2" loading="lazy" /></a>
+    </div>
+
+    <div class="actions-wrap">
+      <div class="action-group">
+        <div class="group-title">Full graph</div>
+        <div class="action-row">
+          <a class="action " href="full_png/2_full_graph.png" target="_blank" rel="noopener">PNG</a>
+          <a class="action primary" href="full_html/2_full_graph.html" target="_blank" rel="noopener">HTML</a>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="group-title">Component → Net</div>
+        <div class="action-row">
+          <a class="action " href="component_net_png/2_component_net.png" target="_blank" rel="noopener">PNG</a>
+          <a class="action primary" href="component_net_html/2_component_net.html" target="_blank" rel="noopener">HTML</a>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="group-title">Overlay</div>
+        <div class="action-row">
+          <a class="action " href="overlay/2_overlay.png" target="_blank" rel="noopener">PNG</a>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="group-title">Data</div>
+        <div class="action-row">
+          <a class="action " href="downloads/graph_json/2_graph.json" target="_blank" rel="noopener">Graph JSON</a>
+          <a class="action primary" href="downloads/simplified_json/2_simplified.json" target="_blank" rel="noopener">Simplified JSON</a>
+          <a class="action " href="downloads/llm_context/2_llm_context.md" target="_blank" rel="noopener">LLM Context</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>
+
+<article class="diagram-card" data-name="1 1" data-suspicious="0">
+  <div class="card-top">
+    <div>
+      <div class="card-title-row">
+        <h2>1</h2>
+        <span class="badge badge-ok">clean</span>
+      </div>
+      <p class="card-subtitle">1</p>
+    </div>
+
+      <div class="metrics-grid">
+      <div class="metric"><span class="metric-value">19</span><span class="metric-label">nodes</span></div>
+      <div class="metric"><span class="metric-value">28</span><span class="metric-label">edges</span></div>
+      <div class="metric"><span class="metric-value">0</span><span class="metric-label">suspicious</span></div>
+      <div class="metric"><span class="metric-value">0</span><span class="metric-label">implicit nets</span></div>
+    </div>
+  </div>
+
+  <div class="card-body">
+    <div class="preview-wrap">
+      <a class="preview-link" href="component_net_png/1_component_net.png" target="_blank" rel="noopener">  <img class="preview" src="component_net_png/1_component_net.png" alt="Preview 1" loading="lazy" /></a>
+    </div>
+
+    <div class="actions-wrap">
+      <div class="action-group">
+        <div class="group-title">Full graph</div>
+        <div class="action-row">
+          <a class="action " href="full_png/1_full_graph.png" target="_blank" rel="noopener">PNG</a>
+          <a class="action primary" href="full_html/1_full_graph.html" target="_blank" rel="noopener">HTML</a>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="group-title">Component → Net</div>
+        <div class="action-row">
+          <a class="action " href="component_net_png/1_component_net.png" target="_blank" rel="noopener">PNG</a>
+          <a class="action primary" href="component_net_html/1_component_net.html" target="_blank" rel="noopener">HTML</a>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="group-title">Overlay</div>
+        <div class="action-row">
+          <a class="action " href="overlay/1_overlay.png" target="_blank" rel="noopener">PNG</a>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="group-title">Data</div>
+        <div class="action-row">
+          <a class="action " href="downloads/graph_json/1_graph.json" target="_blank" rel="noopener">Graph JSON</a>
+          <a class="action primary" href="downloads/simplified_json/1_simplified.json" target="_blank" rel="noopener">Simplified JSON</a>
+          <a class="action " href="downloads/llm_context/1_llm_context.md" target="_blank" rel="noopener">LLM Context</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>
+
+<article class="diagram-card" data-name="3 3" data-suspicious="0">
+  <div class="card-top">
+    <div>
+      <div class="card-title-row">
+        <h2>3</h2>
+        <span class="badge badge-ok">clean</span>
+      </div>
+      <p class="card-subtitle">3</p>
+    </div>
+
+      <div class="metrics-grid">
+      <div class="metric"><span class="metric-value">33</span><span class="metric-label">nodes</span></div>
+      <div class="metric"><span class="metric-value">48</span><span class="metric-label">edges</span></div>
+      <div class="metric"><span class="metric-value">0</span><span class="metric-label">suspicious</span></div>
+      <div class="metric"><span class="metric-value">0</span><span class="metric-label">implicit nets</span></div>
+    </div>
+  </div>
+
+  <div class="card-body">
+    <div class="preview-wrap">
+      <a class="preview-link" href="component_net_png/3_component_net.png" target="_blank" rel="noopener">  <img class="preview" src="component_net_png/3_component_net.png" alt="Preview 3" loading="lazy" /></a>
+    </div>
+
+    <div class="actions-wrap">
+      <div class="action-group">
+        <div class="group-title">Full graph</div>
+        <div class="action-row">
+          <a class="action " href="full_png/3_full_graph.png" target="_blank" rel="noopener">PNG</a>
+          <a class="action primary" href="full_html/3_full_graph.html" target="_blank" rel="noopener">HTML</a>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="group-title">Component → Net</div>
+        <div class="action-row">
+          <a class="action " href="component_net_png/3_component_net.png" target="_blank" rel="noopener">PNG</a>
+          <a class="action primary" href="component_net_html/3_component_net.html" target="_blank" rel="noopener">HTML</a>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="group-title">Overlay</div>
+        <div class="action-row">
+          <a class="action " href="overlay/3_overlay.png" target="_blank" rel="noopener">PNG</a>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="group-title">Data</div>
+        <div class="action-row">
+          <a class="action " href="downloads/graph_json/3_graph.json" target="_blank" rel="noopener">Graph JSON</a>
+          <a class="action primary" href="downloads/simplified_json/3_simplified.json" target="_blank" rel="noopener">Simplified JSON</a>
+          <a class="action " href="downloads/llm_context/3_llm_context.md" target="_blank" rel="noopener">LLM Context</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>
+
+<article class="diagram-card" data-name="4 4" data-suspicious="0">
+  <div class="card-top">
+    <div>
+      <div class="card-title-row">
+        <h2>4</h2>
+        <span class="badge badge-ok">clean</span>
+      </div>
+      <p class="card-subtitle">4</p>
+    </div>
+
+      <div class="metrics-grid">
+      <div class="metric"><span class="metric-value">37</span><span class="metric-label">nodes</span></div>
+      <div class="metric"><span class="metric-value">57</span><span class="metric-label">edges</span></div>
+      <div class="metric"><span class="metric-value">0</span><span class="metric-label">suspicious</span></div>
+      <div class="metric"><span class="metric-value">0</span><span class="metric-label">implicit nets</span></div>
+    </div>
+  </div>
+
+  <div class="card-body">
+    <div class="preview-wrap">
+      <a class="preview-link" href="component_net_png/4_component_net.png" target="_blank" rel="noopener">  <img class="preview" src="component_net_png/4_component_net.png" alt="Preview 4" loading="lazy" /></a>
+    </div>
+
+    <div class="actions-wrap">
+      <div class="action-group">
+        <div class="group-title">Full graph</div>
+        <div class="action-row">
+          <a class="action " href="full_png/4_full_graph.png" target="_blank" rel="noopener">PNG</a>
+          <a class="action primary" href="full_html/4_full_graph.html" target="_blank" rel="noopener">HTML</a>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="group-title">Component → Net</div>
+        <div class="action-row">
+          <a class="action " href="component_net_png/4_component_net.png" target="_blank" rel="noopener">PNG</a>
+          <a class="action primary" href="component_net_html/4_component_net.html" target="_blank" rel="noopener">HTML</a>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="group-title">Overlay</div>
+        <div class="action-row">
+          <a class="action " href="overlay/4_overlay.png" target="_blank" rel="noopener">PNG</a>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="group-title">Data</div>
+        <div class="action-row">
+          <a class="action " href="downloads/graph_json/4_graph.json" target="_blank" rel="noopener">Graph JSON</a>
+          <a class="action primary" href="downloads/simplified_json/4_simplified.json" target="_blank" rel="noopener">Simplified JSON</a>
+          <a class="action " href="downloads/llm_context/4_llm_context.md" target="_blank" rel="noopener">LLM Context</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>
+
+<article class="diagram-card" data-name="5 5" data-suspicious="0">
+  <div class="card-top">
+    <div>
+      <div class="card-title-row">
+        <h2>5</h2>
+        <span class="badge badge-ok">clean</span>
+      </div>
+      <p class="card-subtitle">5</p>
+    </div>
+
+      <div class="metrics-grid">
+      <div class="metric"><span class="metric-value">45</span><span class="metric-label">nodes</span></div>
+      <div class="metric"><span class="metric-value">69</span><span class="metric-label">edges</span></div>
+      <div class="metric"><span class="metric-value">0</span><span class="metric-label">suspicious</span></div>
+      <div class="metric"><span class="metric-value">0</span><span class="metric-label">implicit nets</span></div>
+    </div>
+  </div>
+
+  <div class="card-body">
+    <div class="preview-wrap">
+      <a class="preview-link" href="component_net_png/5_component_net.png" target="_blank" rel="noopener">  <img class="preview" src="component_net_png/5_component_net.png" alt="Preview 5" loading="lazy" /></a>
+    </div>
+
+    <div class="actions-wrap">
+      <div class="action-group">
+        <div class="group-title">Full graph</div>
+        <div class="action-row">
+          <a class="action " href="full_png/5_full_graph.png" target="_blank" rel="noopener">PNG</a>
+          <a class="action primary" href="full_html/5_full_graph.html" target="_blank" rel="noopener">HTML</a>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="group-title">Component → Net</div>
+        <div class="action-row">
+          <a class="action " href="component_net_png/5_component_net.png" target="_blank" rel="noopener">PNG</a>
+          <a class="action primary" href="component_net_html/5_component_net.html" target="_blank" rel="noopener">HTML</a>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="group-title">Overlay</div>
+        <div class="action-row">
+          <a class="action " href="overlay/5_overlay.png" target="_blank" rel="noopener">PNG</a>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="group-title">Data</div>
+        <div class="action-row">
+          <a class="action " href="downloads/graph_json/5_graph.json" target="_blank" rel="noopener">Graph JSON</a>
+          <a class="action primary" href="downloads/simplified_json/5_simplified.json" target="_blank" rel="noopener">Simplified JSON</a>
+          <a class="action " href="downloads/llm_context/5_llm_context.md" target="_blank" rel="noopener">LLM Context</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>
+
+<article class="diagram-card" data-name="6 6" data-suspicious="0">
+  <div class="card-top">
+    <div>
+      <div class="card-title-row">
+        <h2>6</h2>
+        <span class="badge badge-ok">clean</span>
+      </div>
+      <p class="card-subtitle">6</p>
+    </div>
+
+      <div class="metrics-grid">
+      <div class="metric"><span class="metric-value">65</span><span class="metric-label">nodes</span></div>
+      <div class="metric"><span class="metric-value">96</span><span class="metric-label">edges</span></div>
+      <div class="metric"><span class="metric-value">0</span><span class="metric-label">suspicious</span></div>
+      <div class="metric"><span class="metric-value">0</span><span class="metric-label">implicit nets</span></div>
+    </div>
+  </div>
+
+  <div class="card-body">
+    <div class="preview-wrap">
+      <a class="preview-link" href="component_net_png/6_component_net.png" target="_blank" rel="noopener">  <img class="preview" src="component_net_png/6_component_net.png" alt="Preview 6" loading="lazy" /></a>
+    </div>
+
+    <div class="actions-wrap">
+      <div class="action-group">
+        <div class="group-title">Full graph</div>
+        <div class="action-row">
+          <a class="action " href="full_png/6_full_graph.png" target="_blank" rel="noopener">PNG</a>
+          <a class="action primary" href="full_html/6_full_graph.html" target="_blank" rel="noopener">HTML</a>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="group-title">Component → Net</div>
+        <div class="action-row">
+          <a class="action " href="component_net_png/6_component_net.png" target="_blank" rel="noopener">PNG</a>
+          <a class="action primary" href="component_net_html/6_component_net.html" target="_blank" rel="noopener">HTML</a>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="group-title">Overlay</div>
+        <div class="action-row">
+          <a class="action " href="overlay/6_overlay.png" target="_blank" rel="noopener">PNG</a>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="group-title">Data</div>
+        <div class="action-row">
+          <a class="action " href="downloads/graph_json/6_graph.json" target="_blank" rel="noopener">Graph JSON</a>
+          <a class="action primary" href="downloads/simplified_json/6_simplified.json" target="_blank" rel="noopener">Simplified JSON</a>
+          <a class="action " href="downloads/llm_context/6_llm_context.md" target="_blank" rel="noopener">LLM Context</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>
+
+<article class="diagram-card" data-name="7 7" data-suspicious="0">
+  <div class="card-top">
+    <div>
+      <div class="card-title-row">
+        <h2>7</h2>
+        <span class="badge badge-ok">clean</span>
+      </div>
+      <p class="card-subtitle">7</p>
+    </div>
+
+      <div class="metrics-grid">
+      <div class="metric"><span class="metric-value">44</span><span class="metric-label">nodes</span></div>
+      <div class="metric"><span class="metric-value">69</span><span class="metric-label">edges</span></div>
+      <div class="metric"><span class="metric-value">0</span><span class="metric-label">suspicious</span></div>
+      <div class="metric"><span class="metric-value">0</span><span class="metric-label">implicit nets</span></div>
+    </div>
+  </div>
+
+  <div class="card-body">
+    <div class="preview-wrap">
+      <a class="preview-link" href="component_net_png/7_component_net.png" target="_blank" rel="noopener">  <img class="preview" src="component_net_png/7_component_net.png" alt="Preview 7" loading="lazy" /></a>
+    </div>
+
+    <div class="actions-wrap">
+      <div class="action-group">
+        <div class="group-title">Full graph</div>
+        <div class="action-row">
+          <a class="action " href="full_png/7_full_graph.png" target="_blank" rel="noopener">PNG</a>
+          <a class="action primary" href="full_html/7_full_graph.html" target="_blank" rel="noopener">HTML</a>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="group-title">Component → Net</div>
+        <div class="action-row">
+          <a class="action " href="component_net_png/7_component_net.png" target="_blank" rel="noopener">PNG</a>
+          <a class="action primary" href="component_net_html/7_component_net.html" target="_blank" rel="noopener">HTML</a>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="group-title">Overlay</div>
+        <div class="action-row">
+          <a class="action " href="overlay/7_overlay.png" target="_blank" rel="noopener">PNG</a>
+        </div>
+      </div>
+
+      <div class="action-group">
+        <div class="group-title">Data</div>
+        <div class="action-row">
+          <a class="action " href="downloads/graph_json/7_graph.json" target="_blank" rel="noopener">Graph JSON</a>
+          <a class="action primary" href="downloads/simplified_json/7_simplified.json" target="_blank" rel="noopener">Simplified JSON</a>
+          <a class="action " href="downloads/llm_context/7_llm_context.md" target="_blank" rel="noopener">LLM Context</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</article>
+
+    </section>
+
+    <div id="emptyState" class="empty">Nessun diagramma corrisponde ai filtri selezionati.</div>
+  </main>
+
+  <script>
+    const searchBox = document.getElementById('searchBox');
+    const onlySuspicious = document.getElementById('onlySuspicious');
+    const cards = Array.from(document.querySelectorAll('.diagram-card'));
+    const visibleCount = document.getElementById('visibleCount');
+    const emptyState = document.getElementById('emptyState');
+
+    function applyFilters() {
+      const query = searchBox.value.trim().toLowerCase();
+      const suspiciousOnly = onlySuspicious.checked;
+      let visible = 0;
+
+      for (const card of cards) {
+        const haystack = card.dataset.name || '';
+        const suspicious = Number(card.dataset.suspicious || '0');
+        const matchesText = !query || haystack.includes(query);
+        const matchesSuspicious = !suspiciousOnly || suspicious > 0;
+        const show = matchesText && matchesSuspicious;
+        card.style.display = show ? '' : 'none';
+        if (show) visible += 1;
+      }
+
+      visibleCount.textContent = String(visible);
+      emptyState.style.display = visible === 0 ? 'block' : 'none';
+    }
+
+    searchBox.addEventListener('input', applyFilters);
+    onlySuspicious.addEventListener('change', applyFilters);
+    applyFilters();
+  </script>
+</body>
+</html>

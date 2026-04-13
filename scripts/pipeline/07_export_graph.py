@@ -37,6 +37,7 @@ OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "07_export_graph"
 # =========================================================
 GRAPH_JSON_DIR = OUTPUT_DIR / "graph_json"
 SIMPLIFIED_JSON_DIR = OUTPUT_DIR / "simplified_json"
+LLM_CONTEXT_DIR = OUTPUT_DIR / "llm_context"
 NODES_CSV_DIR = OUTPUT_DIR / "nodes_csv"
 EDGES_CSV_DIR = OUTPUT_DIR / "edges_csv"
 COMBINED_DIR = OUTPUT_DIR / "combined_csv"
@@ -106,6 +107,20 @@ def terminal_ref(terminal_id: str | None, terminal_name: str | None) -> str:
     return terminal_id or "unknown_terminal"
 
 
+def terminal_display_id(term: dict) -> str | None:
+    return term.get("display_terminal_id") or term.get("terminal_id")
+
+
+def terminal_human_name(term: dict) -> str | None:
+    return (
+        term.get("display_name")
+        or term.get("semantic_terminal_name")
+        or term.get("name")
+        or term.get("display_terminal_id")
+        or term.get("terminal_id")
+    )
+
+
 def build_match_status_counts(terminals: list[dict]) -> dict[str, int]:
     counts: dict[str, int] = {}
     for terminal in terminals:
@@ -151,7 +166,7 @@ def build_terminal_and_net_indexes(data: dict):
 
 def build_terminal_statement(term: dict, peer_terminals: list[dict]) -> str:
     comp_text = component_ref(term.get("instance_id"), term.get("component_class_name"))
-    terminal_name = term.get("name") or term.get("terminal_id")
+    terminal_name = terminal_human_name(term)
     net_id = term.get("matched_net_id")
     is_implicit_supply = bool(term.get("matched_net_is_implicit_supply", False))
     implicit_reason = term.get("matched_net_implicit_reason")
@@ -171,7 +186,7 @@ def build_terminal_statement(term: dict, peer_terminals: list[dict]) -> str:
     if len(peer_terminals) == 1:
         peer = peer_terminals[0]
         peer_text = component_ref(peer.get("instance_id"), peer.get("component_class_name"))
-        peer_terminal_name = peer.get("terminal_name") or peer.get("terminal_id")
+        peer_terminal_name = peer.get("terminal_name") or peer.get("display_terminal_id") or peer.get("terminal_id")
         return (
             f"{comp_text} terminal {terminal_name} is connected on net {net_id} to "
             f"{peer_text} terminal {peer_terminal_name}."
@@ -179,7 +194,7 @@ def build_terminal_statement(term: dict, peer_terminals: list[dict]) -> str:
 
     peers_text = ", ".join(
         f"{component_ref(peer.get('instance_id'), peer.get('component_class_name'))} terminal "
-        f"{peer.get('terminal_name') or peer.get('terminal_id')}"
+        f"{peer.get('terminal_name') or peer.get('display_terminal_id') or peer.get('terminal_id')}"
         for peer in peer_terminals
     )
     return (
@@ -199,7 +214,7 @@ def build_net_statement(net: dict, connected_terminals: list[dict]) -> str:
     if len(connected_terminals) == 1:
         term = connected_terminals[0]
         comp_text = component_ref(term.get("instance_id"), term.get("component_class_name"))
-        terminal_name = term.get("name") or term.get("terminal_id")
+        terminal_name = terminal_human_name(term)
         if is_implicit_supply:
             reason_text = f" ({implicit_reason})" if implicit_reason else ""
             return (
@@ -210,7 +225,7 @@ def build_net_statement(net: dict, connected_terminals: list[dict]) -> str:
 
     endpoints_text = ", ".join(
         f"{component_ref(term.get('instance_id'), term.get('component_class_name'))} terminal "
-        f"{term.get('name') or term.get('terminal_id')}"
+        f"{terminal_human_name(term)}"
         for term in connected_terminals
     )
     return f"Net {net_id} connects {endpoints_text}."
@@ -220,6 +235,7 @@ def build_diagnostic_context(terminals: list[dict], nets: list[dict]) -> dict:
     suspicious_terminals = [
         {
             "terminal_id": term.get("terminal_id"),
+            "display_terminal_id": terminal_display_id(term),
             "instance_id": term.get("instance_id"),
             "component_class_name": term.get("component_class_name"),
             "match_status": term.get("match_status"),
@@ -233,6 +249,7 @@ def build_diagnostic_context(terminals: list[dict], nets: list[dict]) -> dict:
     unmatched_terminals = [
         {
             "terminal_id": term.get("terminal_id"),
+            "display_terminal_id": terminal_display_id(term),
             "instance_id": term.get("instance_id"),
             "component_class_name": term.get("component_class_name"),
         }
@@ -253,6 +270,7 @@ def build_diagnostic_context(terminals: list[dict], nets: list[dict]) -> dict:
     implicit_supply_terminal_matches = [
         {
             "terminal_id": term.get("terminal_id"),
+            "display_terminal_id": terminal_display_id(term),
             "instance_id": term.get("instance_id"),
             "component_class_name": term.get("component_class_name"),
             "matched_net_id": term.get("matched_net_id"),
@@ -335,17 +353,23 @@ def make_component_node(component: dict, diagram_id: str) -> dict:
 
 def make_terminal_node(terminal: dict, diagram_id: str) -> dict:
     snap_point = terminal.get("snap_point") or [None, None]
+    display_terminal_id = terminal_display_id(terminal)
+    display_name = terminal_human_name(terminal)
     return {
         "node_id": terminal_node_id(diagram_id, terminal["terminal_id"]),
         "node_type": "Terminal",
-        "label": terminal["terminal_id"],
+        "label": display_terminal_id,
         "diagram_id": diagram_id,
         "terminal_id": terminal["terminal_id"],
+        "display_terminal_id": display_terminal_id,
         "instance_id": terminal.get("instance_id"),
         "component_node_id": component_node_id(diagram_id, terminal.get("instance_id")),
         "component_class_id": terminal.get("component_class_id"),
         "component_class_name": terminal.get("component_class_name"),
         "terminal_name": terminal.get("name"),
+        "display_name": display_name,
+        "semantic_terminal_name": terminal.get("semantic_terminal_name"),
+        "semantic_terminal_id": terminal.get("semantic_terminal_id"),
         "relative_position": terminal.get("relative_position"),
         "estimated_orientation": terminal.get("estimated_orientation"),
         "estimated_connection_side": terminal.get("estimated_connection_side"),
@@ -394,6 +418,8 @@ def make_net_node(net: dict, diagram_id: str) -> dict:
         "bbox_x2": bbox[2],
         "bbox_y2": bbox[3],
         "connected_terminal_ids": net.get("connected_terminal_ids", []),
+        "connected_terminal_display_ids": net.get("connected_terminal_display_ids", []),
+        "connected_semantic_terminal_names": net.get("connected_semantic_terminal_names", []),
     }
 
 
@@ -439,9 +465,10 @@ def build_simplified_diagram_json(data: dict) -> dict:
                 peer = terminal_index.get(peer_terminal_id, {})
                 peer_terminals.append({
                     "terminal_id": peer.get("terminal_id"),
+                    "display_terminal_id": terminal_display_id(peer),
                     "instance_id": peer.get("instance_id"),
                     "component_class_name": peer.get("component_class_name"),
-                    "terminal_name": peer.get("name"),
+                    "terminal_name": terminal_human_name(peer),
                     "net_id": peer.get("matched_net_id"),
                 })
 
@@ -469,7 +496,9 @@ def build_simplified_diagram_json(data: dict) -> dict:
 
         terminal_entry = {
             "terminal_id": terminal_id,
-            "terminal_name": term.get("name"),
+            "display_terminal_id": terminal_display_id(term),
+            "terminal_name": terminal_human_name(term),
+            "semantic_terminal_name": term.get("semantic_terminal_name"),
             "relative_position": term.get("relative_position"),
             "net_id": net_id,
             "net_index": term.get("matched_net_index"),
@@ -488,9 +517,11 @@ def build_simplified_diagram_json(data: dict) -> dict:
 
         terminal_facts.append({
             "terminal_id": terminal_id,
+            "display_terminal_id": terminal_display_id(term),
             "instance_id": term.get("instance_id"),
             "component_class_name": term.get("component_class_name"),
-            "terminal_name": term.get("name"),
+            "terminal_name": terminal_human_name(term),
+            "semantic_terminal_name": term.get("semantic_terminal_name"),
             "net_id": net_id,
             "match_status": term.get("match_status"),
             "is_implicit_supply": term.get("matched_net_is_implicit_supply", False),
@@ -534,7 +565,9 @@ def build_simplified_diagram_json(data: dict) -> dict:
                     peer_group["via_net_ids"].add(str(entry["net_id"]))
                 peer_group["via_terminal_pairs"].append({
                     "source_terminal_id": entry.get("terminal_id"),
+                    "source_display_terminal_id": entry.get("display_terminal_id"),
                     "peer_terminal_id": peer.get("terminal_id"),
+                    "peer_display_terminal_id": peer.get("display_terminal_id"),
                     "net_id": entry.get("net_id"),
                 })
 
@@ -579,11 +612,13 @@ def build_simplified_diagram_json(data: dict) -> dict:
                     "instance_id": instance_id,
                     "component_class_name": term.get("component_class_name"),
                     "terminal_ids": [],
+                    "terminal_display_ids": [],
                     "terminal_names": [],
                 },
             )
             entry["terminal_ids"].append(term.get("terminal_id"))
-            entry["terminal_names"].append(term.get("name"))
+            entry["terminal_display_ids"].append(terminal_display_id(term))
+            entry["terminal_names"].append(terminal_human_name(term))
 
         readable_nets.append({
             "net_id": net.get("net_id"),
@@ -592,6 +627,7 @@ def build_simplified_diagram_json(data: dict) -> dict:
             "implicit_reason": net.get("implicit_reason"),
             "pixel_count": net.get("pixel_count"),
             "connected_terminal_ids": [term.get("terminal_id") for term in connected_terminals],
+            "connected_terminal_display_ids": [terminal_display_id(term) for term in connected_terminals],
             "connected_components": sorted(
                 connected_components.values(),
                 key=lambda item: str(item.get("instance_id") or ""),
@@ -625,6 +661,126 @@ def build_simplified_diagram_json(data: dict) -> dict:
         "nets": readable_nets,
         "terminal_facts": terminal_facts,
     }
+
+
+def join_or_none(values: list[str]) -> str:
+    cleaned = [str(value) for value in values if value]
+    if not cleaned:
+        return "none"
+    return ", ".join(cleaned)
+
+
+def build_llm_context_markdown(simplified_data: dict) -> str:
+    metadata = simplified_data.get("diagram_metadata", {})
+    overview = simplified_data.get("overview", {})
+    diagnostic = simplified_data.get("diagnostic_context", {})
+    components = simplified_data.get("components", [])
+    nets = simplified_data.get("nets", [])
+
+    diagram_id = metadata.get("diagram_id", "unknown")
+    lines: list[str] = [
+        f"# LLM Context - Diagram {diagram_id}",
+        "",
+        "## Purpose",
+        "Use this context to reason about the circuit topology and identify possible faults, broken components, abnormal connections, or inconsistent supply paths.",
+        "",
+        "## Overview",
+        f"- Diagram ID: {diagram_id}",
+        f"- Image: {metadata.get('image_name')}",
+        f"- Pipeline variant: {metadata.get('pipeline_variant')}",
+        f"- Components: {overview.get('n_components', 0)}",
+        f"- Terminals: {overview.get('n_terminals', 0)}",
+        f"- Nets: {overview.get('n_nets', 0)}",
+        f"- Connections: {overview.get('n_connections', 0)}",
+        f"- Suspicious terminal matches: {overview.get('n_suspicious_terminal_matches', 0)}",
+        f"- Unmatched terminals: {overview.get('n_unmatched_terminals', 0)}",
+        f"- Implicit supply nets: {overview.get('n_implicit_supply_nets', 0)}",
+        "",
+        "## Diagnostic Notes",
+    ]
+
+    for note in diagnostic.get("notes", []):
+        lines.append(f"- {note}")
+
+    suspicious_terminals = diagnostic.get("suspicious_terminals", [])
+    if suspicious_terminals:
+        lines.append("")
+        lines.append("### Suspicious Terminal Matches")
+        for item in suspicious_terminals:
+            warnings = join_or_none(item.get("match_warnings", []))
+            lines.append(
+                f"- {item.get('display_terminal_id') or item.get('terminal_id')} on {component_ref(item.get('instance_id'), item.get('component_class_name'))}: "
+                f"status={item.get('match_status')}, confidence={item.get('match_confidence')}, warnings={warnings}"
+            )
+
+    unmatched_terminals = diagnostic.get("unmatched_terminals", [])
+    if unmatched_terminals:
+        lines.append("")
+        lines.append("### Unmatched Terminals")
+        for item in unmatched_terminals:
+            lines.append(
+                f"- {item.get('display_terminal_id') or item.get('terminal_id')} on {component_ref(item.get('instance_id'), item.get('component_class_name'))}"
+            )
+
+    implicit_matches = diagnostic.get("implicit_supply_terminal_matches", [])
+    if implicit_matches:
+        lines.append("")
+        lines.append("### Implicit Supply Matches")
+        for item in implicit_matches:
+            lines.append(
+                f"- {item.get('display_terminal_id') or item.get('terminal_id')} on {component_ref(item.get('instance_id'), item.get('component_class_name'))} "
+                f"uses {item.get('matched_net_id')} with reason `{item.get('implicit_reason')}`."
+            )
+
+    lines.extend([
+        "",
+        "## Component-Centric Topology",
+    ])
+
+    for component in components:
+        instance_id = component.get("instance_id")
+        class_name = component.get("class_name")
+        lines.append("")
+        lines.append(f"### {component_ref(instance_id, class_name)}")
+        lines.append(f"- Connected nets: {join_or_none(component.get('connected_net_ids', []))}")
+
+        connected_components = component.get("connected_components", [])
+        if connected_components:
+            peer_bits = [
+                f"{component_ref(item.get('instance_id'), item.get('component_class_name'))} via {join_or_none(item.get('via_net_ids', []))}"
+                for item in connected_components
+            ]
+            lines.append(f"- Connected components: {'; '.join(peer_bits)}")
+        else:
+            lines.append("- Connected components: none")
+
+        for terminal in component.get("terminals", []):
+            lines.append(f"- {terminal.get('display_terminal_id') or terminal.get('terminal_id')}: {terminal.get('statement')}")
+
+    lines.extend([
+        "",
+        "## Net-Centric Topology",
+    ])
+
+    for net in nets:
+        prefix = f"- {net.get('net_id')}: {net.get('statement')}"
+        if net.get("is_implicit_supply", False):
+            prefix += f" Implicit reason: `{net.get('implicit_reason')}`."
+        lines.append(prefix)
+
+    lines.extend([
+        "",
+        "## Reasoning Hints",
+        "- Check whether supply nets, especially implicit ones, are plausible for the connected components.",
+        "- Look for components whose terminals connect to unexpected peers or to only one modeled net when that seems electrically unusual.",
+        "- Use the component-centric section to follow signal flow and the net-centric section to verify shared connectivity.",
+        "",
+        "## Companion Files",
+        "- `*_simplified.json`: same information in structured JSON form.",
+        "- `*_graph.json`: full graph export with nodes and edges.",
+    ])
+
+    return "\n".join(lines) + "\n"
 
 # =========================================================
 # BUILD GRAPH
@@ -689,16 +845,19 @@ def build_graph(data: dict):
             edges.append(
                 make_edge(
                     edge_id=f"edge:{diagram_id}:component:{comp['instance_id']}:terminal:{term['terminal_id']}",
-                    source=comp_node,
-                    target=terminal_node_id(diagram_id, term["terminal_id"]),
-                    relation_type="HAS_TERMINAL",
-                    diagram_id=diagram_id,
-                    instance_id=comp["instance_id"],
-                    terminal_id=term["terminal_id"],
-                    terminal_name=term.get("name"),
-                    relative_position=term.get("relative_position"),
-                )
+                source=comp_node,
+                target=terminal_node_id(diagram_id, term["terminal_id"]),
+                relation_type="HAS_TERMINAL",
+                diagram_id=diagram_id,
+                instance_id=comp["instance_id"],
+                terminal_id=term["terminal_id"],
+                display_terminal_id=term.get("display_terminal_id"),
+                terminal_name=term.get("name"),
+                display_name=term.get("display_name"),
+                semantic_terminal_name=term.get("semantic_terminal_name"),
+                relative_position=term.get("relative_position"),
             )
+        )
 
     # Archi terminal -> net
     for conn in connections:
@@ -712,6 +871,8 @@ def build_graph(data: dict):
                 relation_type="CONNECTED_TO",
                 diagram_id=diagram_id,
                 terminal_id=terminal_id,
+                display_terminal_id=conn.get("display_terminal_id"),
+                semantic_terminal_name=conn.get("semantic_terminal_name"),
                 net_id=net_id,
                 net_index=conn.get("net_index"),
                 component_class_name=conn.get("component_class_name"),
@@ -785,6 +946,7 @@ def main() -> None:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     GRAPH_JSON_DIR.mkdir(parents=True, exist_ok=True)
     SIMPLIFIED_JSON_DIR.mkdir(parents=True, exist_ok=True)
+    LLM_CONTEXT_DIR.mkdir(parents=True, exist_ok=True)
     NODES_CSV_DIR.mkdir(parents=True, exist_ok=True)
     EDGES_CSV_DIR.mkdir(parents=True, exist_ok=True)
     if SAVE_COMBINED_CSV:
@@ -810,10 +972,12 @@ def main() -> None:
 
         graph_data = build_graph(data)
         simplified_data = build_simplified_diagram_json(data)
+        llm_context_md = build_llm_context_markdown(simplified_data)
         stem = json_path.stem
 
         graph_json_path = GRAPH_JSON_DIR / f"{stem}_graph.json"
         simplified_json_path = SIMPLIFIED_JSON_DIR / f"{stem}_simplified.json"
+        llm_context_path = LLM_CONTEXT_DIR / f"{stem}_llm_context.md"
         nodes_csv_path = NODES_CSV_DIR / f"{stem}_nodes.csv"
         edges_csv_path = EDGES_CSV_DIR / f"{stem}_edges.csv"
 
@@ -821,6 +985,8 @@ def main() -> None:
             json.dump(graph_data, f, indent=2, ensure_ascii=False)
         with open(simplified_json_path, "w", encoding="utf-8") as f:
             json.dump(simplified_data, f, indent=2, ensure_ascii=False)
+        with open(llm_context_path, "w", encoding="utf-8") as f:
+            f.write(llm_context_md)
 
         save_csv(graph_data["nodes"], nodes_csv_path)
         save_csv(graph_data["edges"], edges_csv_path)
@@ -850,6 +1016,7 @@ def main() -> None:
     print("\nCompletato.")
     print(f"Graph JSON salvati in: {GRAPH_JSON_DIR}")
     print(f"Simplified JSON salvati in: {SIMPLIFIED_JSON_DIR}")
+    print(f"LLM context salvati in: {LLM_CONTEXT_DIR}")
     print(f"Nodes CSV salvati in : {NODES_CSV_DIR}")
     print(f"Edges CSV salvati in : {EDGES_CSV_DIR}")
     if SAVE_COMBINED_CSV:

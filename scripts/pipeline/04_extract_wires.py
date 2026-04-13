@@ -15,6 +15,7 @@ Output principali:
 """
 
 from pathlib import Path
+import os
 import json
 import cv2
 import numpy as np
@@ -24,9 +25,10 @@ from skimage.morphology import skeletonize
 # PATHS / INPUT-OUTPUT
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "topology_v6_opamp")
 
-INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v6_opamp" / "03_estimate_terminals"
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v6_opamp" / "04_extract_wires"
+INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "03_estimate_terminals"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "04_extract_wires"
 
 # =========================================================
 # COMPONENT MASKING

@@ -7,17 +7,25 @@
 #   6. salva un'immagine debug con i bounding box
 
 from pathlib import Path
+import os
 import json
 import yaml
 import cv2
 
 from ultralytics import YOLO
+from estimate_terminals.io_utils import img_build_foreground_binary
+from estimate_terminals.probes import (
+    get_terminal_class_far_probe_scores,
+    get_terminal_class_probe_scores,
+)
 
 # =========================================================
 # CONFIGURAZIONE
 # =========================================================
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "topology_v6_opamp")
+PIPELINE_INPUT_BATCH = os.environ.get("PIPELINE_INPUT_BATCH", "batch_v6_operational_amplifier")
 
 # === MODELLO ===
 MODEL_PATH = (
@@ -33,21 +41,55 @@ MODEL_PATH = (
 CLASS_TERMINALS_PATH = PROJECT_ROOT / "metadata" / "class_terminals_v1.yaml"
 
 # === INPUT ===
-INPUT_IMAGES_DIR = PROJECT_ROOT / "data" / "batch_v6_operational_amplifier"
+INPUT_IMAGES_DIR = PROJECT_ROOT / "data" / PIPELINE_INPUT_BATCH
 
 # === OUTPUT ===
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v6_opamp" / "01_detect_components"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "01_detect_components"
 DEBUG_IMAGES_DIR = OUTPUT_DIR / "debug_images"
 
 # === PARAMETRI INFERENZA ===
 IMG_SIZE = 1024
 CONF_THRES = 0.40
 IOU_THRES = 0.45
+CLASS_CONF_THRES = {
+    "Battery": 0.18,
+    "Terminal": 0.35,
+}
 
 # === DEBUG ===
 SAVE_DEBUG_IMAGES = True
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
+
+
+def get_required_confidence(class_name: str) -> float:
+    return float(CLASS_CONF_THRES.get(class_name, CONF_THRES))
+
+
+def get_model_inference_confidence(class_meta) -> float:
+    class_names = [meta.get("name", "") for meta in class_meta.values()]
+    per_class_thresholds = [get_required_confidence(name) for name in class_names if name]
+    if not per_class_thresholds:
+        return CONF_THRES
+    return min([CONF_THRES, *per_class_thresholds])
+
+
+def is_terminal_detection_valid(image_binary, bbox) -> bool:
+    near_scores = get_terminal_class_probe_scores(image_binary, bbox)
+    far_scores = get_terminal_class_far_probe_scores(image_binary, bbox)
+
+    combined = {
+        side: float(near_scores.get(side, 0)) + 0.8 * float(far_scores.get(side, 0))
+        for side in ("top", "bottom", "left", "right")
+    }
+    ordered = sorted(combined.items(), key=lambda kv: kv[1], reverse=True)
+    best_score = ordered[0][1]
+    second_score = ordered[1][1]
+
+    return (
+        best_score >= 18.0
+        or (best_score >= 10.0 and second_score >= 5.0)
+    )
 
 
 def load_yaml(path: Path):
@@ -155,11 +197,12 @@ def predict_components_on_image(
         raise ValueError(f"Impossibile leggere l'immagine: {image_path}")
 
     image_h, image_w = image_bgr.shape[:2]
+    image_binary = img_build_foreground_binary(image_bgr)
 
     results = model.predict(
         source=str(image_path),
         imgsz=IMG_SIZE,
-        conf=CONF_THRES,
+        conf=get_model_inference_confidence(class_meta),
         iou=IOU_THRES,
         classes=detect_class_ids,
         verbose=False
@@ -181,6 +224,13 @@ def predict_components_on_image(
 
             yaml_class_name = meta.get("name", f"class_{class_id}")
             model_class_name = model_names.get(class_id, f"class_{class_id}")
+            required_conf = get_required_confidence(yaml_class_name)
+
+            if float(conf) < required_conf:
+                continue
+
+            if yaml_class_name == "Terminal" and not is_terminal_detection_valid(image_binary, box):
+                continue
 
             components.append({
                 "class_id": class_id,
@@ -241,6 +291,8 @@ def main() -> None:
     print(f"DETECT_CLASS_IDS     : {detect_class_ids}")
     print(f"TERMINAL_CLASS_IDS   : {terminal_class_ids}")
     print(f"MASKING_CLASS_IDS    : {masking_class_ids}\n")
+    print(f"CONF_THRES           : {CONF_THRES}")
+    print(f"CLASS_CONF_THRES     : {CLASS_CONF_THRES}\n")
 
     model = YOLO(str(MODEL_PATH))
     model_names = normalize_model_names(model.names)

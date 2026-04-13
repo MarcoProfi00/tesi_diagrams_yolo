@@ -39,6 +39,10 @@ def _build_card_html(row: dict[str, Any]) -> str:
         f"downloads/simplified_json/{row['simplified_json']}"
         if row.get("simplified_json") else None
     )
+    llm_context_rel = (
+        f"downloads/llm_context/{row['llm_context']}"
+        if row.get("llm_context") else None
+    )
 
     preview_rel = component_png_rel or overlay_png_rel or full_png_rel
     preview_html = (
@@ -101,6 +105,7 @@ def _build_card_html(row: dict[str, Any]) -> str:
         <div class="action-row">
           {_render_link('Graph JSON', graph_json_rel)}
           {_render_link('Simplified JSON', simplified_json_rel, 'primary')}
+          {_render_link('LLM Context', llm_context_rel)}
         </div>
       </div>
     </div>

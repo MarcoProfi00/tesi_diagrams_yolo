@@ -24,6 +24,7 @@ Casi speciali:
 """
 
 from pathlib import Path
+import os
 import json
 import cv2
 
@@ -35,9 +36,10 @@ from estimate_terminals.strategies_opamp import snap_opamp_top_aux_to_nearby_ter
 
 #PATH / INPUT-OUTPUT
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "topology_v6_opamp")
 
-INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v6_opamp" / "02_assign_instances"
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v6_opamp" / "03_estimate_terminals"
+INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "02_assign_instances"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "03_estimate_terminals"
 DEBUG_IMAGES_DIR = OUTPUT_DIR / "debug_images"
 
 CLASS_TERMINALS_PATH = PROJECT_ROOT / "metadata" / "class_terminals_v1.yaml"

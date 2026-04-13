@@ -596,6 +596,22 @@ def score_point_directional_support(
     return img_count_foreground_pixels(binary, x1, y1, x2, y2)
 
 
+def score_point_orthogonal_support(binary, x, y, relative_position):
+    if relative_position in {"left", "right"}:
+        return (
+            score_point_directional_support(binary, x, y, "top")
+            + score_point_directional_support(binary, x, y, "bottom")
+        )
+
+    if relative_position in {"top", "bottom"}:
+        return (
+            score_point_directional_support(binary, x, y, "left")
+            + score_point_directional_support(binary, x, y, "right")
+        )
+
+    return 0
+
+
 def score_mosfet_candidate_terminals(binary, terminals, single_side, single_weight=1.35):
     """
     Score finale di una orientazione candidata del Mosfet.
@@ -622,8 +638,14 @@ def score_mosfet_candidate_terminals(binary, terminals, single_side, single_weig
 
         local_score = score_point_local_support(binary, x, y)
         directional_score = score_point_directional_support(binary, x, y, rel)
+        orthogonal_support = score_point_orthogonal_support(binary, x, y, rel)
 
         point_score = local_score + 1.15 * directional_score
+
+        penalty = 0.0
+        if rel == single_side:
+            penalty = MOSFET_SINGLE_TERMINAL_ORTHOGONAL_PENALTY * orthogonal_support
+            point_score = max(0.0, point_score - penalty)
 
         weight = single_weight if rel == single_side else 1.0
         weighted_score = weight * point_score
@@ -635,6 +657,8 @@ def score_mosfet_candidate_terminals(binary, terminals, single_side, single_weig
             "y": round(float(y), 2),
             "local_score": round(float(local_score), 3),
             "directional_score": round(float(directional_score), 3),
+            "orthogonal_support": round(float(orthogonal_support), 3),
+            "orthogonal_penalty": round(float(penalty), 3),
             "weight": round(float(weight), 3),
             "weighted_score": round(float(weighted_score), 3),
         })

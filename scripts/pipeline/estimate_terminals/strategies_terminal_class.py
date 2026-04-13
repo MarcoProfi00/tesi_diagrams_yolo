@@ -67,6 +67,57 @@ def _terminal_bbox_shape_info(bbox):
         "is_horizontal": ratio_wh > TERMINAL_CLASS_NEAR_SQUARE_RATIO,
     }
 
+
+def _range_overlap_ratio(a1, a2, b1, b2):
+    inter = max(0, min(a2, b2) - max(a1, b1) + 1)
+    base = max(1, min(a2 - a1 + 1, b2 - b1 + 1))
+    return float(inter) / float(base)
+
+
+def _component_is_side_aligned_external(component_bbox, bbox):
+    cx1, cy1, cx2, cy2 = component_bbox
+    x1, y1, x2, y2 = bbox
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+
+    central_x1 = x1 + int(round(0.20 * width))
+    central_x2 = x2 - int(round(0.20 * width))
+    central_y1 = y1 + int(round(0.20 * height))
+    central_y2 = y2 - int(round(0.20 * height))
+
+    gap_limit = TERMINAL_CLASS_EXTERNAL_KEEP_GAP
+    overlap_limit = TERMINAL_CLASS_EXTERNAL_KEEP_OVERLAP_RATIO
+
+    if (
+        cx1 >= x2 + 1
+        and (cx1 - x2) <= gap_limit
+        and _range_overlap_ratio(cy1, cy2, central_y1, central_y2) >= overlap_limit
+    ):
+        return True
+
+    if (
+        cx2 <= x1 - 1
+        and (x1 - cx2) <= gap_limit
+        and _range_overlap_ratio(cy1, cy2, central_y1, central_y2) >= overlap_limit
+    ):
+        return True
+
+    if (
+        cy1 >= y2 + 1
+        and (cy1 - y2) <= gap_limit
+        and _range_overlap_ratio(cx1, cx2, central_x1, central_x2) >= overlap_limit
+    ):
+        return True
+
+    if (
+        cy2 <= y1 - 1
+        and (y1 - cy2) <= gap_limit
+        and _range_overlap_ratio(cx1, cx2, central_x1, central_x2) >= overlap_limit
+    ):
+        return True
+
+    return False
+
 def _build_terminal_text_suppressed_binary(binary, bbox):
     """
     Costruisce un binary locale pulito per la classe Terminal.
@@ -82,7 +133,10 @@ def _build_terminal_text_suppressed_binary(binary, bbox):
     w = max(x2 - x1, 1)
     h = max(y2 - y1, 1)
 
-    margin = max(8, int(round(0.8 * max(w, h))))
+    margin = max(
+        TERMINAL_CLASS_TEXT_SUPPRESS_MARGIN_MIN,
+        int(round(TERMINAL_CLASS_TEXT_SUPPRESS_MARGIN_RATIO * max(w, h))),
+    )
 
     rx1 = max(0, x1 - margin)
     ry1 = max(0, y1 - margin)
@@ -94,23 +148,52 @@ def _build_terminal_text_suppressed_binary(binary, bbox):
 
     num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(roi_fg, connectivity=8)
 
-    # seed = bbox originale leggermente dilatato
-    seed_pad = 2
-    sx1 = max(0, (x1 - rx1) - seed_pad)
-    sy1 = max(0, (y1 - ry1) - seed_pad)
-    sx2 = min(roi.shape[1] - 1, (x2 - rx1) + seed_pad)
-    sy2 = min(roi.shape[0] - 1, (y2 - ry1) + seed_pad)
+    # seed = regione centrale del terminale:
+    # tende a contenere il pallino vero, ma esclude testo/simboli
+    # troppo vicini ai bordi del bbox.
+    seed_w = max(TERMINAL_CLASS_SEED_MIN_SIZE, int(round(w * (1.0 - 2.0 * TERMINAL_CLASS_SEED_INSET_RATIO))))
+    seed_h = max(TERMINAL_CLASS_SEED_MIN_SIZE, int(round(h * (1.0 - 2.0 * TERMINAL_CLASS_SEED_INSET_RATIO))))
+
+    bbox_x1_in_roi = x1 - rx1
+    bbox_y1_in_roi = y1 - ry1
+
+    sx1 = max(0, bbox_x1_in_roi + int(round((w - seed_w) / 2.0)))
+    sy1 = max(0, bbox_y1_in_roi + int(round((h - seed_h) / 2.0)))
+    sx2 = min(roi.shape[1] - 1, sx1 + seed_w - 1)
+    sy2 = min(roi.shape[0] - 1, sy1 + seed_h - 1)
 
     seed_labels = np.unique(labels[sy1:sy2 + 1, sx1:sx2 + 1])
 
     cleaned_roi = np.zeros_like(roi, dtype=np.uint8)
     kept_labels = []
+    kept_external_labels = []
 
     for lab in seed_labels:
         if lab == 0:
             continue
         cleaned_roi[labels == lab] = 255
         kept_labels.append(int(lab))
+
+    for lab in range(1, num_labels):
+        if lab in seed_labels:
+            continue
+
+        left = int(stats[lab, cv2.CC_STAT_LEFT])
+        top = int(stats[lab, cv2.CC_STAT_TOP])
+        comp_w = int(stats[lab, cv2.CC_STAT_WIDTH])
+        comp_h = int(stats[lab, cv2.CC_STAT_HEIGHT])
+        comp_bbox = (
+            rx1 + left,
+            ry1 + top,
+            rx1 + left + comp_w - 1,
+            ry1 + top + comp_h - 1,
+        )
+
+        if not _component_is_side_aligned_external(comp_bbox, (x1, y1, x2, y2)):
+            continue
+
+        cleaned_roi[labels == lab] = 255
+        kept_external_labels.append(int(lab))
 
     cleaned = binary.copy()
     cleaned[ry1:ry2 + 1, rx1:rx2 + 1] = cleaned_roi
@@ -121,6 +204,7 @@ def _build_terminal_text_suppressed_binary(binary, bbox):
         "seed_bbox_in_roi": [int(sx1), int(sy1), int(sx2), int(sy2)],
         "connected_components": int(num_labels - 1),
         "kept_labels": kept_labels,
+        "kept_external_labels": kept_external_labels,
     }
 
     return cleaned, debug
@@ -254,13 +338,52 @@ def _vertical_two_side_evidence(local_scores, far_scores):
     }
 
 
-def classify_terminal_cardinality(binary, bbox, default_side="right"):
+def _relaxed_two_side_evidence(local_scores, far_scores, orientation):
+    if orientation == "horizontal":
+        pair_sides = ("left", "right")
+        perp_sides = ("top", "bottom")
+    else:
+        pair_sides = ("top", "bottom")
+        perp_sides = ("left", "right")
+
+    pair_combined = [
+        float(local_scores[s]) + float(far_scores[s])
+        for s in pair_sides
+    ]
+    perp_combined = [
+        float(local_scores[s]) + 0.8 * float(far_scores[s])
+        for s in perp_sides
+    ]
+
+    pair_score = sum(pair_combined)
+    perpendicular_score = sum(perp_combined)
+
+    valid = (
+        min(pair_combined) >= TERMINAL_CLASS_TWO_SIDE_RELAXED_MIN
+        and max(pair_combined) >= TERMINAL_CLASS_TWO_SIDE_RELAXED_STRONG
+        and pair_score > max(1.0, perpendicular_score) * TERMINAL_CLASS_TWO_SIDE_RELAXED_AXIS_MARGIN
+    )
+
+    return {
+        "valid": valid,
+        "orientation": orientation,
+        "pair_score": float(pair_score),
+        "perpendicular_score": float(perpendicular_score),
+        "pair_combined_min": float(min(pair_combined)),
+        "pair_combined_max": float(max(pair_combined)),
+    }
+
+
+def classify_terminal_cardinality(binary, bbox, default_side="right", text_suppression_debug=None):
     local_scores = get_terminal_class_probe_scores(binary, bbox)
     far_scores = get_terminal_class_far_probe_scores(binary, bbox)
+    shape_info = _terminal_bbox_shape_info(bbox)
 
     single_eval = _best_single_side(binary, bbox, local_scores, far_scores)
     horiz_eval = _horizontal_two_side_evidence(local_scores, far_scores)
     vert_eval = _vertical_two_side_evidence(local_scores, far_scores)
+    horiz_relaxed = _relaxed_two_side_evidence(local_scores, far_scores, "horizontal")
+    vert_relaxed = _relaxed_two_side_evidence(local_scores, far_scores, "vertical")
 
     local_scores["far_scores"] = far_scores
     local_scores["single_side_evaluation"] = single_eval
@@ -268,6 +391,20 @@ def classify_terminal_cardinality(binary, bbox, default_side="right"):
         "horizontal": horiz_eval,
         "vertical": vert_eval,
     }
+    local_scores["two_side_relaxed_evaluations"] = {
+        "horizontal": horiz_relaxed,
+        "vertical": vert_relaxed,
+    }
+
+    relaxed_external_fragmented = False
+    if text_suppression_debug is not None:
+        connected_components = int(text_suppression_debug.get("connected_components", 0))
+        kept_external_labels = text_suppression_debug.get("kept_external_labels", [])
+        relaxed_external_fragmented = (
+            connected_components >= 3
+            or len(kept_external_labels) >= 2
+        )
+    local_scores["relaxed_external_fragmented"] = relaxed_external_fragmented
 
     # 2 terminali solo se batte chiaramente la migliore ipotesi mono-terminale
     TWO_VS_ONE_MIN_ADVANTAGE = 2.0
@@ -288,6 +425,15 @@ def classify_terminal_cardinality(binary, bbox, default_side="right"):
         return 2, "horizontal", local_scores
 
     if (
+        shape_info["is_near_square"]
+        and relaxed_external_fragmented
+        and horiz_relaxed["valid"]
+        and not vert_relaxed["valid"]
+    ):
+        local_scores["decision_mode"] = "terminal_cardinality_two_horizontal_relaxed"
+        return 2, "horizontal", local_scores
+
+    if (
         vert_eval["valid"]
         and vert_beats_one
         and (
@@ -296,6 +442,15 @@ def classify_terminal_cardinality(binary, bbox, default_side="right"):
         )
     ):
         local_scores["decision_mode"] = "terminal_cardinality_two_vertical"
+        return 2, "vertical", local_scores
+
+    if (
+        shape_info["is_near_square"]
+        and relaxed_external_fragmented
+        and vert_relaxed["valid"]
+        and not horiz_relaxed["valid"]
+    ):
+        local_scores["decision_mode"] = "terminal_cardinality_two_vertical_relaxed"
         return 2, "vertical", local_scores
 
     local_scores["decision_mode"] = "terminal_cardinality_default_one"
@@ -528,6 +683,7 @@ def detect_terminal_auto_one_or_two(binary, bbox, default_side="right"):
         working_binary,
         bbox,
         default_side=default_side,
+        text_suppression_debug=text_suppression_debug,
     )
 
     scores["bbox_shape_debug"] = shape_info

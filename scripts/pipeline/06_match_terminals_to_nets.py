@@ -18,6 +18,7 @@ Pipeline:
 """
 
 from pathlib import Path
+import os
 import json
 import cv2
 import numpy as np
@@ -26,9 +27,10 @@ import numpy as np
 # PATHS / INPUT-OUTPUT
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "topology_v6_opamp")
 
-INPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v6_opamp" / "05_build_nets"
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "topology_v6_opamp" / "06_match_terminals_to_nets"
+INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "05_build_nets"
+OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "06_match_terminals_to_nets"
 DEBUG_DIR = OUTPUT_DIR / "debug_images"
 
 OPAMP_AUX_VERTICAL_OUTWARD = 56
@@ -890,6 +892,10 @@ def build_connections(terminals_with_matches):
 
         connections.append({
             "terminal_id": term["terminal_id"],
+            "display_terminal_id": term.get("display_terminal_id", term["terminal_id"]),
+            "display_name": term.get("display_name", term.get("name")),
+            "semantic_terminal_name": term.get("semantic_terminal_name"),
+            "semantic_terminal_id": term.get("semantic_terminal_id"),
             "instance_id": term["instance_id"],
             "component_class_name": term.get("component_class_name"),
             "net_id": term["matched_net_id"],
@@ -928,6 +934,7 @@ def draw_debug_overlay(image_bgr, terminals_with_matches):
     for term in terminals_with_matches:
         x = int(round(term["x"]))
         y = int(round(term["y"]))
+        display_term_id = term.get("display_terminal_id", term["terminal_id"])
         matched_net_id = term.get("matched_net_id")
         confidence = term.get("match_confidence", "none")
         snap_point = term.get("snap_point")
@@ -936,9 +943,9 @@ def draw_debug_overlay(image_bgr, terminals_with_matches):
         text_color = get_debug_text_color(term)
 
         if matched_net_id is None:
-            label = f"{term['terminal_id']}: none"
+            label = f"{display_term_id}: none"
         else:
-            label = f"{term['terminal_id']}->{matched_net_id} [{confidence}]"
+            label = f"{display_term_id}->{matched_net_id} [{confidence}]"
 
         # punto terminale
         cv2.circle(out, (x, y), DEBUG_TERMINAL_RADIUS, point_color, -1)
@@ -1033,6 +1040,11 @@ def main() -> None:
             for t in terminals_with_matches
             if t.get("is_suspicious_match", False)
         ]
+        suspicious_terminal_display_ids = [
+            t.get("display_terminal_id", t["terminal_id"])
+            for t in terminals_with_matches
+            if t.get("is_suspicious_match", False)
+        ]
 
         output_data = dict(data)
         output_data["components"] = updated_components
@@ -1054,6 +1066,7 @@ def main() -> None:
             "n_unmatched_terminals": n_unmatched,
             "n_suspicious_matches": len(suspicious_terminal_ids),
             "suspicious_terminal_ids": suspicious_terminal_ids,
+            "suspicious_terminal_display_ids": suspicious_terminal_display_ids,
         }
 
         if SAVE_DEBUG_IMAGES:

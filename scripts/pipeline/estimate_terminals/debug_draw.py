@@ -17,6 +17,7 @@ def draw_terminals(image_bgr, components, terminals):
     for term in terminals:
         x = int(round(term["x"]))
         y = int(round(term["y"]))
+        label = term.get("display_terminal_id", term["terminal_id"])
         cv2.circle(out, (x, y), TERMINAL_RADIUS, (0, 0, 255), -1)
-        cv2.putText(out, term["terminal_id"], (x + 8, max(y - 8, 0)), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 1, cv2.LINE_AA)
+        cv2.putText(out, label, (x + 8, max(y - 8, 0)), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 1, cv2.LINE_AA)
     return out
