@@ -1,62 +1,51 @@
-# LLM Context - Diagram 1
+# Purpose
+This document summarizes the extracted circuit topology in a descriptive form. Facts come directly from the graph when possible, while descriptive labels remain cautious heuristic summaries of the observed topology.
 
-## Purpose
-Use this context to reason about the circuit topology and identify possible faults, broken components, abnormal connections, or inconsistent supply paths.
+# Overview
+Diagram `1` (`1.jpg`) from pipeline variant `topology_v7_npn_transistor_mosfet` was exported from `06_match_terminals_to_nets`.
+The topology contains 4 components, 10 terminals, 4 nets, and 10 terminal-to-net connections.
+Explicit ground references: GND 9.1.
 
-## Overview
-- Diagram ID: 1
-- Image: 1.jpg
-- Pipeline variant: topology_v7_npn_transistor_mosfet
-- Components: 4
-- Terminals: 10
-- Nets: 4
-- Connections: 10
-- Suspicious terminal matches: 0
-- Unmatched terminals: 0
-- Implicit supply nets: 0
+# Main Branches
+- `N3` (shared_internal_branch, importance=medium): Net N3 forms a shared internal branch connecting Mosfet 16.1, Mosfet 16.2, Mosfet 16.3.
+- `N4` (single_terminal_stub, importance=low): Net N4 forms a single terminal stub connecting Mosfet 16.2.
 
-## Diagnostic Notes
-- No implicit supply nets, suspicious terminal matches, or unmatched terminals were detected.
+# Component Descriptions
+- `16.1` (Mosfet): active component [specificity=low, confidence=0.72] Mosfet 16.1 is described as active component. It is connected to nets N1, N2, N3 and to Mosfet 16.2 via N1, N3; Mosfet 16.3 via N2, N3; GND 9.1 via N2.
+- `16.2` (Mosfet): active component [specificity=low, confidence=0.72] Mosfet 16.2 is described as active component. It is connected to nets N1, N3, N4 and to Mosfet 16.1 via N1, N3; Mosfet 16.3 via N3.
+- `16.3` (Mosfet): active component [specificity=low, confidence=0.72] Mosfet 16.3 is described as active component. It is connected to nets N2, N3 and to Mosfet 16.1 via N2, N3; Mosfet 16.2 via N3; GND 9.1 via N2.
+- `9.1` (GND): ground reference [specificity=high, confidence=1.00] GND 9.1 is described as ground reference. It is connected to nets N2 and to Mosfet 16.1 via N2; Mosfet 16.3 via N2.
 
-## Component-Centric Topology
+# Net Descriptions
+- `N1`: local interconnect [specificity=low, confidence=0.60] Basis: The net connects a small local group without stronger semantic evidence.
+- `N2`: ground return [specificity=high, confidence=1.00] Basis: An explicit ground symbol is attached to this net.
+- `N3`: shared internal branch [specificity=medium, confidence=0.70] Basis: The net behaves like a multi-device internal junction and its terminal semantics are mixed or widely shared.
+- `N4`: single terminal stub [specificity=high, confidence=0.96] Basis: Only one modeled terminal reaches this net.
 
-### 16.1 (Mosfet)
-- Connected nets: N1, N2, N3
-- Connected components: 16.2 (Mosfet) via N1, N3; 16.3 (Mosfet) via N2, N3; 9.1 (GND) via N2
-- 16.1:G: 16.1 (Mosfet) terminal G is connected on net N3 together with 16.2 (Mosfet) terminal S, 16.3 (Mosfet) terminal G, 16.3 (Mosfet) terminal D.
-- 16.1:D: 16.1 (Mosfet) terminal D is connected on net N1 to 16.2 (Mosfet) terminal G.
-- 16.1:S: 16.1 (Mosfet) terminal S is connected on net N2 together with 16.3 (Mosfet) terminal S, 9.1 (GND) terminal t1.
+# Aggregated Relations
+- `N3`: N3 is a shared internal branch connecting Mosfet 16.1 gate, Mosfet 16.2 source, Mosfet 16.3 drain.
+- `N1`: N1 is a local interconnect connecting Mosfet 16.1 drain, Mosfet 16.2 gate.
+- `N2`: N2 is a ground return connecting Mosfet 16.1 source, Mosfet 16.3 source, GND 9.1 terminal t1.
 
-### 9.1 (GND)
-- Connected nets: N2
-- Connected components: 16.1 (Mosfet) via N2; 16.3 (Mosfet) via N2
-- 9.1:t1: 9.1 (GND) terminal t1 is connected on net N2 together with 16.1 (Mosfet) terminal S, 16.3 (Mosfet) terminal S.
+# Functional Paths
+- `P1` `ground_to_device_path`: Ground to device path: GND 9.1 -> N2 (ground return) -> Mosfet 16.1. Confidence: 0.68 (heuristic_inference).
 
-### 16.2 (Mosfet)
-- Connected nets: N1, N3, N4
-- Connected components: 16.1 (Mosfet) via N1, N3; 16.3 (Mosfet) via N3
-- 16.2:G: 16.2 (Mosfet) terminal G is connected on net N1 to 16.1 (Mosfet) terminal D.
-- 16.2:D: 16.2 (Mosfet) terminal D is the only modeled terminal on net N4.
-- 16.2:S: 16.2 (Mosfet) terminal S is connected on net N3 together with 16.1 (Mosfet) terminal G, 16.3 (Mosfet) terminal G, 16.3 (Mosfet) terminal D.
+# Structural Patterns
+- `multiple_terminals_same_net` on `16.3`: Mosfet 16.3 has terminals 16.3:G, 16.3:D on the same net N3.
+- `single_terminal_stub` on `N4`: Net N4 currently touches only Mosfet 16.2 drain.
 
-### 16.3 (Mosfet)
-- Connected nets: N2, N3
-- Connected components: 16.1 (Mosfet) via N2, N3; 16.2 (Mosfet) via N3; 9.1 (GND) via N2
-- 16.3:G: 16.3 (Mosfet) terminal G is connected on net N3 together with 16.1 (Mosfet) terminal G, 16.2 (Mosfet) terminal S, 16.3 (Mosfet) terminal D.
-- 16.3:D: 16.3 (Mosfet) terminal D is connected on net N3 together with 16.1 (Mosfet) terminal G, 16.2 (Mosfet) terminal S, 16.3 (Mosfet) terminal G.
-- 16.3:S: 16.3 (Mosfet) terminal S is connected on net N2 together with 16.1 (Mosfet) terminal S, 9.1 (GND) terminal t1.
+# Terminal Facts
+- `16.1:G`: Mosfet 16.1 terminal G is connected on net N3 with Mosfet 16.2, Mosfet 16.3.
+- `16.1:D`: Mosfet 16.1 terminal D is connected on net N1 with Mosfet 16.2.
+- `16.1:S`: Mosfet 16.1 terminal S is connected on net N2 with GND 9.1, Mosfet 16.3.
+- `16.2:G`: Mosfet 16.2 terminal G is connected on net N1 with Mosfet 16.1.
+- `16.2:D`: Mosfet 16.2 terminal D is the only modeled terminal on net N4.
+- `16.2:S`: Mosfet 16.2 terminal S is connected on net N3 with Mosfet 16.1, Mosfet 16.3.
+- `16.3:G`: Mosfet 16.3 terminal G is connected on net N3 with Mosfet 16.1, Mosfet 16.2, Mosfet 16.3.
+- `16.3:D`: Mosfet 16.3 terminal D is connected on net N3 with Mosfet 16.1, Mosfet 16.2, Mosfet 16.3.
+- `16.3:S`: Mosfet 16.3 terminal S is connected on net N2 with GND 9.1, Mosfet 16.1.
+- `9.1:t1`: GND 9.1 terminal t1 is connected on net N2 with Mosfet 16.1, Mosfet 16.3.
 
-## Net-Centric Topology
-- N1: Net N1 connects 16.1 (Mosfet) terminal D, 16.2 (Mosfet) terminal G.
-- N2: Net N2 connects 16.1 (Mosfet) terminal S, 16.3 (Mosfet) terminal S, 9.1 (GND) terminal t1.
-- N3: Net N3 connects 16.1 (Mosfet) terminal G, 16.2 (Mosfet) terminal S, 16.3 (Mosfet) terminal G, 16.3 (Mosfet) terminal D.
-- N4: Net N4 currently touches only 16.2 (Mosfet) terminal D.
-
-## Reasoning Hints
-- Check whether supply nets, especially implicit ones, are plausible for the connected components.
-- Look for components whose terminals connect to unexpected peers or to only one modeled net when that seems electrically unusual.
-- Use the component-centric section to follow signal flow and the net-centric section to verify shared connectivity.
-
-## Companion Files
-- `*_simplified.json`: same information in structured JSON form.
-- `*_graph.json`: full graph export with nodes and edges.
+# Companion Files
+- `*_graph.json` remains the technical source of truth.
+- `*_semantic_explanation.json` contains the deterministic semantic summary used to build this markdown.

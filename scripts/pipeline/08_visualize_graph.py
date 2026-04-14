@@ -45,7 +45,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "topology_v6_opamp")
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "07_export_graph" / "graph_json"
-SIMPLIFIED_INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "07_export_graph" / "simplified_json"
+SEMANTIC_INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "07_export_graph" / "semantic_explanation"
 LLM_CONTEXT_INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "07_export_graph" / "llm_context"
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "08_visualize_graph"
 
@@ -58,8 +58,9 @@ COMPONENT_NET_PNG_DIR = OUTPUT_DIR / "component_net_png"
 COMPONENT_NET_HTML_DIR = OUTPUT_DIR / "component_net_html"
 OVERLAY_DIR = OUTPUT_DIR / "overlay"
 DOWNLOAD_GRAPH_JSON_DIR = OUTPUT_DIR / "downloads" / "graph_json"
-DOWNLOAD_SIMPLIFIED_JSON_DIR = OUTPUT_DIR / "downloads" / "simplified_json"
+DOWNLOAD_SEMANTIC_JSON_DIR = OUTPUT_DIR / "downloads" / "semantic_explanation"
 DOWNLOAD_LLM_CONTEXT_DIR = OUTPUT_DIR / "downloads" / "llm_context"
+LEGACY_DOWNLOAD_SIMPLIFIED_JSON_DIR = OUTPUT_DIR / "downloads" / "simplified_json"
 
 
 
@@ -82,7 +83,9 @@ def main() -> None:
     if SAVE_OVERLAY:
         OVERLAY_DIR.mkdir(parents=True, exist_ok=True)
     DOWNLOAD_GRAPH_JSON_DIR.mkdir(parents=True, exist_ok=True)
-    DOWNLOAD_SIMPLIFIED_JSON_DIR.mkdir(parents=True, exist_ok=True)
+    if LEGACY_DOWNLOAD_SIMPLIFIED_JSON_DIR.exists():
+        shutil.rmtree(LEGACY_DOWNLOAD_SIMPLIFIED_JSON_DIR)
+    DOWNLOAD_SEMANTIC_JSON_DIR.mkdir(parents=True, exist_ok=True)
     DOWNLOAD_LLM_CONTEXT_DIR.mkdir(parents=True, exist_ok=True)
 
     json_files = sorted(INPUT_DIR.glob("*_graph.json"))
@@ -106,9 +109,9 @@ def main() -> None:
         component_net_html_name = f"{diagram_id}_component_net.html"
         overlay_png_name = f"{diagram_id}_overlay.png"
         graph_json_name = json_path.name
-        simplified_json_name = f"{json_path.stem.replace('_graph', '')}_simplified.json"
+        semantic_json_name = f"{json_path.stem.replace('_graph', '')}_semantic_explanation.json"
         llm_context_name = f"{json_path.stem.replace('_graph', '')}_llm_context.md"
-        simplified_input_path = SIMPLIFIED_INPUT_DIR / simplified_json_name
+        semantic_input_path = SEMANTIC_INPUT_DIR / semantic_json_name
         llm_context_input_path = LLM_CONTEXT_INPUT_DIR / llm_context_name
 
         if SAVE_FULL_PNG:
@@ -123,8 +126,8 @@ def main() -> None:
             draw_overlay(graph_data, OVERLAY_DIR / overlay_png_name)
 
         shutil.copy2(json_path, DOWNLOAD_GRAPH_JSON_DIR / graph_json_name)
-        if simplified_input_path.exists():
-            shutil.copy2(simplified_input_path, DOWNLOAD_SIMPLIFIED_JSON_DIR / simplified_json_name)
+        if semantic_input_path.exists():
+            shutil.copy2(semantic_input_path, DOWNLOAD_SEMANTIC_JSON_DIR / semantic_json_name)
         if llm_context_input_path.exists():
             shutil.copy2(llm_context_input_path, DOWNLOAD_LLM_CONTEXT_DIR / llm_context_name)
 
@@ -141,7 +144,7 @@ def main() -> None:
                 "component_net_html": component_net_html_name if SAVE_COMPONENT_NET_HTML else None,
                 "overlay_png": overlay_png_name if SAVE_OVERLAY else None,
                 "graph_json": graph_json_name,
-                "simplified_json": simplified_json_name if simplified_input_path.exists() else None,
+                "semantic_json": semantic_json_name if semantic_input_path.exists() else None,
                 "llm_context": llm_context_name if llm_context_input_path.exists() else None,
             }
         )
@@ -170,7 +173,7 @@ def main() -> None:
     if SAVE_OVERLAY:
         print(f"Overlay PNG salvati in      : {OVERLAY_DIR}")
     print(f"Graph JSON copiati in       : {DOWNLOAD_GRAPH_JSON_DIR}")
-    print(f"Simplified JSON copiati in  : {DOWNLOAD_SIMPLIFIED_JSON_DIR}")
+    print(f"Semantic JSON copiati in    : {DOWNLOAD_SEMANTIC_JSON_DIR}")
     print(f"LLM context copiati in      : {DOWNLOAD_LLM_CONTEXT_DIR}")
 
 

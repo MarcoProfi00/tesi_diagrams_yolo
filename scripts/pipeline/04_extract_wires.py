@@ -39,6 +39,7 @@ TERMINAL_KEEP_DEBUG_DIR = OUTPUT_DIR / "terminal_keep_debug"
 MASKED_DIR = OUTPUT_DIR / "masked_gray"
 BINARY_DIR = OUTPUT_DIR / "binary"
 CLOSED_DIR = OUTPUT_DIR / "closed"
+BRIDGED_DIR = OUTPUT_DIR / "bridged"
 FILTERED_DIR = OUTPUT_DIR / "filtered"
 SKELETON_DIR = OUTPUT_DIR / "skeleton"
 
@@ -62,6 +63,10 @@ OPAMP_AUX_KEEP_OUTWARD_LEN = 12
 # =========================================================
 CLOSING_KERNEL_SIZE = 3
 CLOSING_ITERATIONS = 1
+ENABLE_FRAGMENTED_WIRE_BRIDGE = True
+FRAGMENTED_WIRE_BRIDGE_KERNEL_LENGTH = 15
+FRAGMENTED_WIRE_BRIDGE_KERNEL_THICKNESS = 3
+FRAGMENTED_WIRE_BRIDGE_ITERATIONS = 1
 
 # =========================================================
 # SMALL COMPONENT FILTER
@@ -236,6 +241,55 @@ def remove_small_connected_components(binary_img, min_area=40):
     return filtered, kept_components, removed_components
 
 
+def bridge_fragmented_wires(binary_img):
+    """
+    Ricuce piccoli gap orizzontali/verticali tipici dei wire tratteggiati.
+    """
+    if not ENABLE_FRAGMENTED_WIRE_BRIDGE:
+        return binary_img.copy(), {
+            "enabled": False,
+            "kernel_length": None,
+            "kernel_thickness": None,
+            "iterations": None,
+        }
+
+    h_kernel = cv2.getStructuringElement(
+        cv2.MORPH_RECT,
+        (
+            FRAGMENTED_WIRE_BRIDGE_KERNEL_LENGTH,
+            FRAGMENTED_WIRE_BRIDGE_KERNEL_THICKNESS,
+        ),
+    )
+    v_kernel = cv2.getStructuringElement(
+        cv2.MORPH_RECT,
+        (
+            FRAGMENTED_WIRE_BRIDGE_KERNEL_THICKNESS,
+            FRAGMENTED_WIRE_BRIDGE_KERNEL_LENGTH,
+        ),
+    )
+
+    bridged = cv2.morphologyEx(
+        binary_img,
+        cv2.MORPH_CLOSE,
+        h_kernel,
+        iterations=FRAGMENTED_WIRE_BRIDGE_ITERATIONS,
+    )
+    bridged = cv2.morphologyEx(
+        bridged,
+        cv2.MORPH_CLOSE,
+        v_kernel,
+        iterations=FRAGMENTED_WIRE_BRIDGE_ITERATIONS,
+    )
+
+    return bridged, {
+        "enabled": True,
+        "kernel_length": FRAGMENTED_WIRE_BRIDGE_KERNEL_LENGTH,
+        "kernel_thickness": FRAGMENTED_WIRE_BRIDGE_KERNEL_THICKNESS,
+        "iterations": FRAGMENTED_WIRE_BRIDGE_ITERATIONS,
+        "notes": "Closing anisotropo orizzontale+verticale per ricucire tratti tratteggiati o frammentati.",
+    }
+
+
 def extract_wires_from_image(image_bgr, components, terminals):
     # 1. grayscale
     gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
@@ -265,18 +319,21 @@ def extract_wires_from_image(image_bgr, components, terminals):
         iterations=CLOSING_ITERATIONS,
     )
 
-    # 6. small component filter
+    # 6. bridge fragmented dashed wires
+    bridged, bridge_info = bridge_fragmented_wires(closed)
+
+    # 7. small component filter
     if ENABLE_SMALL_COMPONENT_FILTER:
         filtered, kept_components, removed_components = remove_small_connected_components(
-            closed,
+            bridged,
             min_area=MIN_COMPONENT_AREA,
         )
     else:
-        filtered = closed.copy()
+        filtered = bridged.copy()
         kept_components = None
         removed_components = None
 
-    # 7. skeletonization
+    # 8. skeletonization
     skeleton_bool = skeletonize(filtered > 0)
     skeleton = (skeleton_bool.astype(np.uint8)) * 255
 
@@ -301,10 +358,12 @@ def extract_wires_from_image(image_bgr, components, terminals):
         masked_gray,
         binary,
         closed,
+        bridged,
         filtered,
         skeleton,
         filter_info,
         keep_info,
+        bridge_info,
     )
 
 # main
@@ -319,6 +378,7 @@ def main() -> None:
     MASKED_DIR.mkdir(parents=True, exist_ok=True)
     BINARY_DIR.mkdir(parents=True, exist_ok=True)
     CLOSED_DIR.mkdir(parents=True, exist_ok=True)
+    BRIDGED_DIR.mkdir(parents=True, exist_ok=True)
     FILTERED_DIR.mkdir(parents=True, exist_ok=True)
     SKELETON_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -350,10 +410,12 @@ def main() -> None:
             masked_gray,
             binary,
             closed,
+            bridged,
             filtered,
             skeleton,
             filter_info,
             keep_info,
+            bridge_info,
         ) = extract_wires_from_image(image_bgr, components, terminals)
 
         stem = json_path.stem
@@ -364,6 +426,7 @@ def main() -> None:
         masked_path = MASKED_DIR / f"{stem}_masked_gray.png"
         binary_path = BINARY_DIR / f"{stem}_binary.png"
         closed_path = CLOSED_DIR / f"{stem}_closed.png"
+        bridged_path = BRIDGED_DIR / f"{stem}_bridged.png"
         filtered_path = FILTERED_DIR / f"{stem}_filtered.png"
         skeleton_path = SKELETON_DIR / f"{stem}_skeleton.png"
 
@@ -373,6 +436,7 @@ def main() -> None:
         cv2.imwrite(str(masked_path), masked_gray)
         cv2.imwrite(str(binary_path), binary)
         cv2.imwrite(str(closed_path), closed)
+        cv2.imwrite(str(bridged_path), bridged)
         cv2.imwrite(str(filtered_path), filtered)
         cv2.imwrite(str(skeleton_path), skeleton)
 
@@ -382,6 +446,7 @@ def main() -> None:
             "terminal_keep": keep_info,
             "closing_kernel_size": CLOSING_KERNEL_SIZE,
             "closing_iterations": CLOSING_ITERATIONS,
+            "fragmented_wire_bridge": bridge_info,
             "small_component_filter": filter_info,
             "mask_debug_path": str(mask_debug_path),
             "component_mask_path": str(component_mask_path),
@@ -389,6 +454,7 @@ def main() -> None:
             "masked_gray_path": str(masked_path),
             "binary_path": str(binary_path),
             "closed_path": str(closed_path),
+            "bridged_path": str(bridged_path),
             "filtered_path": str(filtered_path),
             "skeleton_path": str(skeleton_path),
         }

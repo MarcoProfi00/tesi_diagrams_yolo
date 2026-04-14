@@ -35,9 +35,9 @@ def _build_card_html(row: dict[str, Any]) -> str:
     component_html_rel = f"component_net_html/{row['component_net_html']}" if row.get("component_net_html") else None
     overlay_png_rel = f"overlay/{row['overlay_png']}" if row.get("overlay_png") else None
     graph_json_rel = f"downloads/graph_json/{row['graph_json']}" if row.get("graph_json") else None
-    simplified_json_rel = (
-        f"downloads/simplified_json/{row['simplified_json']}"
-        if row.get("simplified_json") else None
+    semantic_json_rel = (
+        f"downloads/semantic_explanation/{row['semantic_json']}"
+        if row.get("semantic_json") else None
     )
     llm_context_rel = (
         f"downloads/llm_context/{row['llm_context']}"
@@ -104,7 +104,7 @@ def _build_card_html(row: dict[str, Any]) -> str:
         <div class="group-title">Data</div>
         <div class="action-row">
           {_render_link('Graph JSON', graph_json_rel)}
-          {_render_link('Simplified JSON', simplified_json_rel, 'primary')}
+          {_render_link('Semantic JSON', semantic_json_rel, 'primary')}
           {_render_link('LLM Context', llm_context_rel)}
         </div>
       </div>

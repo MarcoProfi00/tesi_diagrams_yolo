@@ -1,150 +1,88 @@
-# LLM Context - Diagram 6
+# Purpose
+This document summarizes the extracted circuit topology in a descriptive form. Facts come directly from the graph when possible, while descriptive labels remain cautious heuristic summaries of the observed topology.
 
-## Purpose
-Use this context to reason about the circuit topology and identify possible faults, broken components, abnormal connections, or inconsistent supply paths.
+# Overview
+Diagram `6` (`6.jpg`) from pipeline variant `topology_v7_npn_transistor_mosfet` was exported from `06_match_terminals_to_nets`.
+The topology contains 18 components, 32 terminals, 14 nets, and 32 terminal-to-net connections.
+Explicit ground references: GND 9.1, GND 9.2, GND 9.3, GND 9.4, GND 9.5.
+Possible external inputs: Terminal 26.1.
 
-## Overview
-- Diagram ID: 6
-- Image: 6.jpg
-- Pipeline variant: topology_v7_npn_transistor_mosfet
-- Components: 18
-- Terminals: 32
-- Nets: 14
-- Connections: 32
-- Suspicious terminal matches: 0
-- Unmatched terminals: 0
-- Implicit supply nets: 0
+# Main Branches
+- `N1` (external_control_branch, importance=high): Net N1 forms an external control branch connecting Mosfet 16.1, Terminal 26.1.
+- `N14` (external_interface_branch, importance=high): Net N14 forms an external interface branch connecting Inductor 10.6, Terminal 26.2.
+- `N11` (shared_internal_branch, importance=medium): Net N11 forms a shared internal branch connecting Inductor 10.4, Inductor 10.6, Mosfet 16.3.
+- `N6` (shared_internal_branch, importance=medium): Net N6 forms a shared internal branch connecting Inductor 10.1, Inductor 10.3, Mosfet 16.2.
+- `N7` (shared_internal_branch, importance=medium): Net N7 forms a shared internal branch connecting Inductor 10.2, Inductor 10.4, Mosfet 16.2.
+- `N9` (shared_internal_branch, importance=medium): Net N9 forms a shared internal branch connecting Inductor 10.3, Inductor 10.5, Mosfet 16.3.
 
-## Diagnostic Notes
-- No implicit supply nets, suspicious terminal matches, or unmatched terminals were detected.
+# Component Descriptions
+- `10.1` (Inductor): passive component [specificity=medium, confidence=0.76] Inductor 10.1 is described as passive component. It is connected to nets N3, N6 and to Inductor 10.3 via N6; Mosfet 16.1 via N3; Mosfet 16.2 via N6.
+- `10.2` (Inductor): passive component [specificity=medium, confidence=0.76] Inductor 10.2 is described as passive component. It is connected to nets N5, N7 and to Inductor 10.4 via N7; Mosfet 16.2 via N7; Resistor 22.1 via N5.
+- `10.3` (Inductor): passive component [specificity=medium, confidence=0.76] Inductor 10.3 is described as passive component. It is connected to nets N6, N9 and to Inductor 10.1 via N6; Inductor 10.5 via N9; Mosfet 16.2 via N6; Mosfet 16.3 via N9.
+- `10.4` (Inductor): passive component [specificity=medium, confidence=0.76] Inductor 10.4 is described as passive component. It is connected to nets N11, N7 and to Inductor 10.2 via N7; Inductor 10.6 via N11; Mosfet 16.2 via N7; Mosfet 16.3 via N11.
+- `10.5` (Inductor): passive component [specificity=medium, confidence=0.76] Inductor 10.5 is described as passive component. It is connected to nets N12, N9 and to Inductor 10.3 via N9; Mosfet 16.3 via N9; Resistor 22.2 via N12.
+- `10.6` (Inductor): passive component [specificity=medium, confidence=0.76] Inductor 10.6 is described as passive component. It is connected to nets N11, N14 and to Inductor 10.4 via N11; Mosfet 16.3 via N11; Terminal 26.2 via N14.
+- `16.1` (Mosfet): active component [specificity=low, confidence=0.72] Mosfet 16.1 is described as active component. It is connected to nets N1, N2, N3 and to Inductor 10.1 via N3; Terminal 26.1 via N1; GND 9.1 via N2.
+- `16.2` (Mosfet): active component [specificity=low, confidence=0.72] Mosfet 16.2 is described as active component. It is connected to nets N6, N7, N8 and to Inductor 10.1 via N6; Inductor 10.2 via N7; Inductor 10.3 via N6; Inductor 10.4 via N7; GND 9.3 via N8.
+- `16.3` (Mosfet): active component [specificity=low, confidence=0.72] Mosfet 16.3 is described as active component. It is connected to nets N10, N11, N9 and to Inductor 10.3 via N9; Inductor 10.4 via N11; Inductor 10.5 via N9; Inductor 10.6 via N11; GND 9.4 via N10.
+- `22.1` (Resistor): passive component [specificity=medium, confidence=0.76] Resistor 22.1 is described as passive component. It is connected to nets N4, N5 and to Inductor 10.2 via N5; GND 9.2 via N4.
+- `22.2` (Resistor): passive component [specificity=medium, confidence=0.76] Resistor 22.2 is described as passive component. It is connected to nets N12, N13 and to Inductor 10.5 via N12; GND 9.5 via N13.
+- `26.1` (Terminal): external interface [specificity=medium, confidence=0.76] Terminal 26.1 is described as external interface. It is connected to nets N1 and to Mosfet 16.1 via N1.
+- `26.2` (Terminal): external interface [specificity=low, confidence=0.68] Terminal 26.2 is described as external interface. It is connected to nets N14 and to Inductor 10.6 via N14.
+- `9.1` (GND): ground reference [specificity=high, confidence=1.00] GND 9.1 is described as ground reference. It is connected to nets N2 and to Mosfet 16.1 via N2.
+- `9.2` (GND): ground reference [specificity=high, confidence=1.00] GND 9.2 is described as ground reference. It is connected to nets N4 and to Resistor 22.1 via N4.
+- `9.3` (GND): ground reference [specificity=high, confidence=1.00] GND 9.3 is described as ground reference. It is connected to nets N8 and to Mosfet 16.2 via N8.
+- `9.4` (GND): ground reference [specificity=high, confidence=1.00] GND 9.4 is described as ground reference. It is connected to nets N10 and to Mosfet 16.3 via N10.
+- `9.5` (GND): ground reference [specificity=high, confidence=1.00] GND 9.5 is described as ground reference. It is connected to nets N13 and to Resistor 22.2 via N13.
 
-## Component-Centric Topology
+# Net Descriptions
+- `N1`: external control branch [specificity=medium, confidence=0.74] Basis: The net reaches an external interface and at least one control-like terminal.
+- `N2`: ground return [specificity=high, confidence=1.00] Basis: An explicit ground symbol is attached to this net.
+- `N3`: local interconnect [specificity=low, confidence=0.60] Basis: The net connects a small local group without stronger semantic evidence.
+- `N4`: ground return [specificity=high, confidence=1.00] Basis: An explicit ground symbol is attached to this net.
+- `N5`: local interconnect [specificity=low, confidence=0.60] Basis: The net connects a small local group without stronger semantic evidence.
+- `N6`: shared internal branch [specificity=medium, confidence=0.72] Basis: The net behaves like a shared internal junction between multiple components.
+- `N7`: shared internal branch [specificity=medium, confidence=0.72] Basis: The net behaves like a shared internal junction between multiple components.
+- `N8`: ground return [specificity=high, confidence=1.00] Basis: An explicit ground symbol is attached to this net.
+- `N9`: shared internal branch [specificity=medium, confidence=0.72] Basis: The net behaves like a shared internal junction between multiple components.
+- `N10`: ground return [specificity=high, confidence=1.00] Basis: An explicit ground symbol is attached to this net.
+- `N11`: shared internal branch [specificity=medium, confidence=0.72] Basis: The net behaves like a shared internal junction between multiple components.
+- `N12`: local interconnect [specificity=low, confidence=0.60] Basis: The net connects a small local group without stronger semantic evidence.
+- `N13`: ground return [specificity=high, confidence=1.00] Basis: An explicit ground symbol is attached to this net.
+- `N14`: external interface branch [specificity=low, confidence=0.68] Basis: The net reaches at least one explicit external interface.
 
-### 26.1 (Terminal)
-- Connected nets: N1
-- Connected components: 16.1 (Mosfet) via N1
-- 26.1:t1: 26.1 (Terminal) terminal t1 is connected on net N1 to 16.1 (Mosfet) terminal G.
+# Aggregated Relations
+- `N1`: N1 is a external control branch connecting Mosfet 16.1 gate, Terminal 26.1 terminal t1.
+- `N14`: N14 is a external interface branch connecting Inductor 10.6 terminal t2, Terminal 26.2 terminal t1.
+- `N11`: N11 is a shared internal branch connecting Inductor 10.4 terminal t2, Inductor 10.6 terminal t1, Mosfet 16.3 drain.
+- `N6`: N6 is a shared internal branch connecting Inductor 10.1 terminal t2, Inductor 10.3 terminal t1, Mosfet 16.2 gate.
+- `N7`: N7 is a shared internal branch connecting Inductor 10.2 terminal t2, Inductor 10.4 terminal t1, Mosfet 16.2 drain.
+- `N9`: N9 is a shared internal branch connecting Inductor 10.3 terminal t2, Inductor 10.5 terminal t1, Mosfet 16.3 gate.
+- `N10`: N10 is a ground return connecting Mosfet 16.3 source, GND 9.4 terminal t1.
+- `N12`: N12 is a local interconnect connecting Inductor 10.5 terminal t2, Resistor 22.2 terminal t1.
 
-### 16.1 (Mosfet)
-- Connected nets: N1, N2, N3
-- Connected components: 10.1 (Inductor) via N3; 26.1 (Terminal) via N1; 9.1 (GND) via N2
-- 16.1:G: 16.1 (Mosfet) terminal G is connected on net N1 to 26.1 (Terminal) terminal t1.
-- 16.1:D: 16.1 (Mosfet) terminal D is connected on net N3 to 10.1 (Inductor) terminal t1.
-- 16.1:S: 16.1 (Mosfet) terminal S is connected on net N2 to 9.1 (GND) terminal t1.
+# Functional Paths
+- `P1` `external_interface_to_device_path`: External interface to device path: Terminal 26.1 -> N1 (external control branch) -> Mosfet 16.1. Confidence: 0.72 (heuristic_inference).
+- `P2` `ground_to_device_path`: Ground to device path: GND 9.1 -> N2 (ground return) -> Mosfet 16.1. Confidence: 0.68 (heuristic_inference).
+- `P3` `ground_to_device_path`: Ground to device path: GND 9.2 -> N4 (ground return) -> Resistor 22.1 -> N5 (local interconnect) -> Inductor 10.2 -> N7 (shared internal branch) -> Mosfet 16.2. Confidence: 0.68 (heuristic_inference).
+- `P4` `ground_to_device_path`: Ground to device path: GND 9.3 -> N8 (ground return) -> Mosfet 16.2. Confidence: 0.68 (heuristic_inference).
+- `P5` `ground_to_device_path`: Ground to device path: GND 9.4 -> N10 (ground return) -> Mosfet 16.3. Confidence: 0.68 (heuristic_inference).
 
-### 9.1 (GND)
-- Connected nets: N2
-- Connected components: 16.1 (Mosfet) via N2
-- 9.1:t1: 9.1 (GND) terminal t1 is connected on net N2 to 16.1 (Mosfet) terminal S.
+# Structural Patterns
+- No structural pattern was recorded from the current topology.
 
-### 9.2 (GND)
-- Connected nets: N4
-- Connected components: 22.1 (Resistor) via N4
-- 9.2:t1: 9.2 (GND) terminal t1 is connected on net N4 to 22.1 (Resistor) terminal t2.
+# Terminal Facts
+- `10.1:t1`: Inductor 10.1 terminal t1 is connected on net N3 with Mosfet 16.1.
+- `10.1:t2`: Inductor 10.1 terminal t2 is connected on net N6 with Inductor 10.3, Mosfet 16.2.
+- `10.2:t1`: Inductor 10.2 terminal t1 is connected on net N5 with Resistor 22.1.
+- `10.2:t2`: Inductor 10.2 terminal t2 is connected on net N7 with Inductor 10.4, Mosfet 16.2.
+- `10.3:t1`: Inductor 10.3 terminal t1 is connected on net N6 with Inductor 10.1, Mosfet 16.2.
+- `10.3:t2`: Inductor 10.3 terminal t2 is connected on net N9 with Inductor 10.5, Mosfet 16.3.
+- `10.4:t1`: Inductor 10.4 terminal t1 is connected on net N7 with Inductor 10.2, Mosfet 16.2.
+- `10.4:t2`: Inductor 10.4 terminal t2 is connected on net N11 with Inductor 10.6, Mosfet 16.3.
+- `10.5:t1`: Inductor 10.5 terminal t1 is connected on net N9 with Inductor 10.3, Mosfet 16.3.
+- `10.5:t2`: Inductor 10.5 terminal t2 is connected on net N12 with Resistor 22.2.
 
-### 10.1 (Inductor)
-- Connected nets: N3, N6
-- Connected components: 10.3 (Inductor) via N6; 16.1 (Mosfet) via N3; 16.2 (Mosfet) via N6
-- 10.1:t1: 10.1 (Inductor) terminal t1 is connected on net N3 to 16.1 (Mosfet) terminal D.
-- 10.1:t2: 10.1 (Inductor) terminal t2 is connected on net N6 together with 10.3 (Inductor) terminal t1, 16.2 (Mosfet) terminal G.
-
-### 22.1 (Resistor)
-- Connected nets: N4, N5
-- Connected components: 10.2 (Inductor) via N5; 9.2 (GND) via N4
-- 22.1:t1: 22.1 (Resistor) terminal t1 is connected on net N5 to 10.2 (Inductor) terminal t1.
-- 22.1:t2: 22.1 (Resistor) terminal t2 is connected on net N4 to 9.2 (GND) terminal t1.
-
-### 10.2 (Inductor)
-- Connected nets: N5, N7
-- Connected components: 10.4 (Inductor) via N7; 16.2 (Mosfet) via N7; 22.1 (Resistor) via N5
-- 10.2:t1: 10.2 (Inductor) terminal t1 is connected on net N5 to 22.1 (Resistor) terminal t1.
-- 10.2:t2: 10.2 (Inductor) terminal t2 is connected on net N7 together with 10.4 (Inductor) terminal t1, 16.2 (Mosfet) terminal D.
-
-### 16.2 (Mosfet)
-- Connected nets: N6, N7, N8
-- Connected components: 10.1 (Inductor) via N6; 10.2 (Inductor) via N7; 10.3 (Inductor) via N6; 10.4 (Inductor) via N7; 9.3 (GND) via N8
-- 16.2:G: 16.2 (Mosfet) terminal G is connected on net N6 together with 10.1 (Inductor) terminal t2, 10.3 (Inductor) terminal t1.
-- 16.2:D: 16.2 (Mosfet) terminal D is connected on net N7 together with 10.2 (Inductor) terminal t2, 10.4 (Inductor) terminal t1.
-- 16.2:S: 16.2 (Mosfet) terminal S is connected on net N8 to 9.3 (GND) terminal t1.
-
-### 10.3 (Inductor)
-- Connected nets: N6, N9
-- Connected components: 10.1 (Inductor) via N6; 10.5 (Inductor) via N9; 16.2 (Mosfet) via N6; 16.3 (Mosfet) via N9
-- 10.3:t1: 10.3 (Inductor) terminal t1 is connected on net N6 together with 10.1 (Inductor) terminal t2, 16.2 (Mosfet) terminal G.
-- 10.3:t2: 10.3 (Inductor) terminal t2 is connected on net N9 together with 10.5 (Inductor) terminal t1, 16.3 (Mosfet) terminal G.
-
-### 9.3 (GND)
-- Connected nets: N8
-- Connected components: 16.2 (Mosfet) via N8
-- 9.3:t1: 9.3 (GND) terminal t1 is connected on net N8 to 16.2 (Mosfet) terminal S.
-
-### 10.4 (Inductor)
-- Connected nets: N11, N7
-- Connected components: 10.2 (Inductor) via N7; 10.6 (Inductor) via N11; 16.2 (Mosfet) via N7; 16.3 (Mosfet) via N11
-- 10.4:t1: 10.4 (Inductor) terminal t1 is connected on net N7 together with 10.2 (Inductor) terminal t2, 16.2 (Mosfet) terminal D.
-- 10.4:t2: 10.4 (Inductor) terminal t2 is connected on net N11 together with 10.6 (Inductor) terminal t1, 16.3 (Mosfet) terminal D.
-
-### 16.3 (Mosfet)
-- Connected nets: N10, N11, N9
-- Connected components: 10.3 (Inductor) via N9; 10.4 (Inductor) via N11; 10.5 (Inductor) via N9; 10.6 (Inductor) via N11; 9.4 (GND) via N10
-- 16.3:G: 16.3 (Mosfet) terminal G is connected on net N9 together with 10.3 (Inductor) terminal t2, 10.5 (Inductor) terminal t1.
-- 16.3:D: 16.3 (Mosfet) terminal D is connected on net N11 together with 10.4 (Inductor) terminal t2, 10.6 (Inductor) terminal t1.
-- 16.3:S: 16.3 (Mosfet) terminal S is connected on net N10 to 9.4 (GND) terminal t1.
-
-### 9.4 (GND)
-- Connected nets: N10
-- Connected components: 16.3 (Mosfet) via N10
-- 9.4:t1: 9.4 (GND) terminal t1 is connected on net N10 to 16.3 (Mosfet) terminal S.
-
-### 10.5 (Inductor)
-- Connected nets: N12, N9
-- Connected components: 10.3 (Inductor) via N9; 16.3 (Mosfet) via N9; 22.2 (Resistor) via N12
-- 10.5:t1: 10.5 (Inductor) terminal t1 is connected on net N9 together with 10.3 (Inductor) terminal t2, 16.3 (Mosfet) terminal G.
-- 10.5:t2: 10.5 (Inductor) terminal t2 is connected on net N12 to 22.2 (Resistor) terminal t1.
-
-### 22.2 (Resistor)
-- Connected nets: N12, N13
-- Connected components: 10.5 (Inductor) via N12; 9.5 (GND) via N13
-- 22.2:t1: 22.2 (Resistor) terminal t1 is connected on net N12 to 10.5 (Inductor) terminal t2.
-- 22.2:t2: 22.2 (Resistor) terminal t2 is connected on net N13 to 9.5 (GND) terminal t1.
-
-### 9.5 (GND)
-- Connected nets: N13
-- Connected components: 22.2 (Resistor) via N13
-- 9.5:t1: 9.5 (GND) terminal t1 is connected on net N13 to 22.2 (Resistor) terminal t2.
-
-### 10.6 (Inductor)
-- Connected nets: N11, N14
-- Connected components: 10.4 (Inductor) via N11; 16.3 (Mosfet) via N11; 26.2 (Terminal) via N14
-- 10.6:t1: 10.6 (Inductor) terminal t1 is connected on net N11 together with 10.4 (Inductor) terminal t2, 16.3 (Mosfet) terminal D.
-- 10.6:t2: 10.6 (Inductor) terminal t2 is connected on net N14 to 26.2 (Terminal) terminal t1.
-
-### 26.2 (Terminal)
-- Connected nets: N14
-- Connected components: 10.6 (Inductor) via N14
-- 26.2:t1: 26.2 (Terminal) terminal t1 is connected on net N14 to 10.6 (Inductor) terminal t2.
-
-## Net-Centric Topology
-- N1: Net N1 connects 16.1 (Mosfet) terminal G, 26.1 (Terminal) terminal t1.
-- N2: Net N2 connects 16.1 (Mosfet) terminal S, 9.1 (GND) terminal t1.
-- N3: Net N3 connects 10.1 (Inductor) terminal t1, 16.1 (Mosfet) terminal D.
-- N4: Net N4 connects 22.1 (Resistor) terminal t2, 9.2 (GND) terminal t1.
-- N5: Net N5 connects 10.2 (Inductor) terminal t1, 22.1 (Resistor) terminal t1.
-- N6: Net N6 connects 10.1 (Inductor) terminal t2, 10.3 (Inductor) terminal t1, 16.2 (Mosfet) terminal G.
-- N7: Net N7 connects 10.2 (Inductor) terminal t2, 10.4 (Inductor) terminal t1, 16.2 (Mosfet) terminal D.
-- N8: Net N8 connects 16.2 (Mosfet) terminal S, 9.3 (GND) terminal t1.
-- N9: Net N9 connects 10.3 (Inductor) terminal t2, 10.5 (Inductor) terminal t1, 16.3 (Mosfet) terminal G.
-- N10: Net N10 connects 16.3 (Mosfet) terminal S, 9.4 (GND) terminal t1.
-- N11: Net N11 connects 10.4 (Inductor) terminal t2, 10.6 (Inductor) terminal t1, 16.3 (Mosfet) terminal D.
-- N12: Net N12 connects 10.5 (Inductor) terminal t2, 22.2 (Resistor) terminal t1.
-- N13: Net N13 connects 22.2 (Resistor) terminal t2, 9.5 (GND) terminal t1.
-- N14: Net N14 connects 10.6 (Inductor) terminal t2, 26.2 (Terminal) terminal t1.
-
-## Reasoning Hints
-- Check whether supply nets, especially implicit ones, are plausible for the connected components.
-- Look for components whose terminals connect to unexpected peers or to only one modeled net when that seems electrically unusual.
-- Use the component-centric section to follow signal flow and the net-centric section to verify shared connectivity.
-
-## Companion Files
-- `*_simplified.json`: same information in structured JSON form.
-- `*_graph.json`: full graph export with nodes and edges.
+# Companion Files
+- `*_graph.json` remains the technical source of truth.
+- `*_semantic_explanation.json` contains the deterministic semantic summary used to build this markdown.
