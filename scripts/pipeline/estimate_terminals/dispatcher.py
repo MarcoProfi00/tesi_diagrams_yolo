@@ -64,7 +64,7 @@ def _resolve_two_terminal_orientation(strategy: str, class_name: str, image_bina
             default_orientation=default_orientation,
         )
 
-    if strategy == "two_terminal_led" or class_name == "LED":
+    if strategy == "two_terminal_led" or class_name in {"LED", "Diode"}:
         return detect_two_terminal_orientation_led(
             image_binary,
             bbox,

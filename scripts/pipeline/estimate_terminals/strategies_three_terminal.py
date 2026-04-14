@@ -76,6 +76,17 @@ def _build_three_terminal_support_binary(binary, bbox):
     }
 
 
+def get_three_terminal_working_binary(binary, bbox):
+    """
+    Espone il binary ripulito usato per i 3-terminali anche al processor,
+    cosi' i punti finali non vengono piu' risucchiati da testo come M5.
+    """
+    if THREE_TERMINAL_TEXT_SUPPRESS_ENABLE:
+        working_binary, _ = _build_three_terminal_support_binary(binary, bbox)
+        return working_binary
+    return binary
+
+
 def candidate_mosfet_orientations_from_bbox(bbox):
     """
     Per ora testiamo sempre tutte e 4 le orientazioni.
@@ -271,6 +282,75 @@ def _three_terminal_arrow_branch_probe(binary, bbox, orientation):
     return scores, debug
 
 
+def _mosfet_arrow_branch_probe(binary, bbox, orientation):
+    """
+    Per i MOSFET il probe troppo esterno puo' leggere piu' il wire del ramo
+    che la freccia/sagoma interna. Combiniamo quindi:
+    - un probe esterno (quello gia' usato finora)
+    - un probe piu' interno verso il corpo del simbolo
+    con piu' peso al probe interno.
+    """
+    outer_scores, outer_debug = _three_terminal_arrow_branch_probe(binary, bbox, orientation)
+    if orientation not in {"left", "right"}:
+        return outer_scores, outer_debug
+
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+
+    half_w = max(
+        THREE_TERMINAL_ARROW_PROBE_HALFSPAN_MIN,
+        int(round(width * THREE_TERMINAL_ARROW_PROBE_HALFSPAN_X_RATIO)),
+    )
+    half_h = max(
+        THREE_TERMINAL_ARROW_PROBE_HALFSPAN_MIN,
+        int(round(height * THREE_TERMINAL_ARROW_PROBE_HALFSPAN_Y_RATIO)),
+    )
+
+    def xr(ratio):
+        return x1 + int(round(ratio * width))
+
+    def yr(ratio):
+        return y1 + int(round(ratio * height))
+
+    if orientation == "left":
+        inner_cx = xr(0.56)
+    else:
+        inner_cx = xr(0.44)
+
+    inner_points = {
+        "top": (inner_cx, yr(THREE_TERMINAL_ARROW_PAIR_FIRST_RATIO)),
+        "bottom": (inner_cx, yr(THREE_TERMINAL_ARROW_PAIR_SECOND_RATIO)),
+    }
+
+    inner_scores = {}
+    for rel_pos, (cx, cy) in inner_points.items():
+        inner_scores[rel_pos] = float(
+            _count_three_terminal_semantic_probe(binary, cx, cy, half_w, half_h)
+        )
+
+    combined_scores = {
+        rel_pos: round(0.70 * inner_scores.get(rel_pos, 0.0) + 0.30 * outer_scores.get(rel_pos, 0.0), 4)
+        for rel_pos in inner_points
+    }
+
+    return combined_scores, {
+        "probe_mode": "mosfet_dual_arrow_probe",
+        "orientation": orientation,
+        "inner_scores": inner_scores,
+        "outer_scores": outer_scores,
+        "combined_scores": combined_scores,
+        "inner_probe_points": {
+            rel_pos: {
+                "x": int(point[0]),
+                "y": int(point[1]),
+            }
+            for rel_pos, point in inner_points.items()
+        },
+        "outer_probe_debug": outer_debug,
+    }
+
+
 def _npn_arrow_branch_probe(binary, bbox, orientation):
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     width = max(x2 - x1, 1)
@@ -390,7 +470,7 @@ def resolve_three_terminal_semantics(binary, bbox, orientation, terminals, meta)
 
     if semantic_strategy == "mosfet_gate_with_optional_source_drain":
         single_side_name = semantic_roles.get("single_side")
-        arrow_scores, arrow_debug = _three_terminal_arrow_branch_probe(
+        arrow_scores, arrow_debug = _mosfet_arrow_branch_probe(
             working_binary,
             bbox,
             orientation,
@@ -678,18 +758,15 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
         # Tie-break per casi speculari quasi pari
         if cand_second is not None and _is_specular_pair(cand_best, cand_second):
             ratio = cand_best_score / max(cand_second_score, 1e-6)
-
-            # Se vuoi riattivarlo in futuro:
-            # if ratio < 1.15:
-            #     chosen = _resolve_specular_tie(
-            #         cand_best,
-            #         cand_second,
-            #         lateral_scores=lateral_scores,
-            #         single_side_scores=single_side_scores,
-            #     )
-            #     cand_best = chosen
-            #     cand_best_score = mosfet_orientation_scores[cand_best]
-            pass
+            if ratio < 1.15:
+                chosen = _resolve_specular_tie(
+                    cand_best,
+                    cand_second,
+                    lateral_scores=lateral_scores,
+                    single_side_scores=single_side_scores,
+                )
+                cand_best = chosen
+                cand_best_score = mosfet_orientation_scores[cand_best]
 
         if (
             cand_second is None

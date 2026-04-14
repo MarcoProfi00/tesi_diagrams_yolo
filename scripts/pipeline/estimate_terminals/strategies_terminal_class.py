@@ -79,6 +79,8 @@ def _component_is_side_aligned_external(component_bbox, bbox):
     x1, y1, x2, y2 = bbox
     width = max(x2 - x1, 1)
     height = max(y2 - y1, 1)
+    comp_w = max(cx2 - cx1 + 1, 1)
+    comp_h = max(cy2 - cy1 + 1, 1)
 
     central_x1 = x1 + int(round(0.20 * width))
     central_x2 = x2 - int(round(0.20 * width))
@@ -87,11 +89,20 @@ def _component_is_side_aligned_external(component_bbox, bbox):
 
     gap_limit = TERMINAL_CLASS_EXTERNAL_KEEP_GAP
     overlap_limit = TERMINAL_CLASS_EXTERNAL_KEEP_OVERLAP_RATIO
+    min_long_span = TERMINAL_CLASS_EXTERNAL_MIN_LONG_SPAN
+    long_short_ratio = TERMINAL_CLASS_EXTERNAL_LONG_TO_SHORT_RATIO
+
+    def is_horizontal_stub():
+        return comp_w >= max(min_long_span, int(round(long_short_ratio * comp_h)))
+
+    def is_vertical_stub():
+        return comp_h >= max(min_long_span, int(round(long_short_ratio * comp_w)))
 
     if (
         cx1 >= x2 + 1
         and (cx1 - x2) <= gap_limit
         and _range_overlap_ratio(cy1, cy2, central_y1, central_y2) >= overlap_limit
+        and is_horizontal_stub()
     ):
         return True
 
@@ -99,6 +110,7 @@ def _component_is_side_aligned_external(component_bbox, bbox):
         cx2 <= x1 - 1
         and (x1 - cx2) <= gap_limit
         and _range_overlap_ratio(cy1, cy2, central_y1, central_y2) >= overlap_limit
+        and is_horizontal_stub()
     ):
         return True
 
@@ -106,6 +118,7 @@ def _component_is_side_aligned_external(component_bbox, bbox):
         cy1 >= y2 + 1
         and (cy1 - y2) <= gap_limit
         and _range_overlap_ratio(cx1, cx2, central_x1, central_x2) >= overlap_limit
+        and is_vertical_stub()
     ):
         return True
 
@@ -113,6 +126,7 @@ def _component_is_side_aligned_external(component_bbox, bbox):
         cy2 <= y1 - 1
         and (y1 - cy2) <= gap_limit
         and _range_overlap_ratio(cx1, cx2, central_x1, central_x2) >= overlap_limit
+        and is_vertical_stub()
     ):
         return True
 
@@ -409,9 +423,17 @@ def classify_terminal_cardinality(binary, bbox, default_side="right", text_suppr
     # 2 terminali solo se batte chiaramente la migliore ipotesi mono-terminale
     TWO_VS_ONE_MIN_ADVANTAGE = 2.0
     TWO_SIDE_MARGIN = 1.10
+    RELAXED_TWO_SINGLE_VETO_RATIO = 2.25
+    RELAXED_TWO_SINGLE_VETO_DELTA = 48.0
 
     horiz_beats_one = horiz_eval["pair_score"] >= single_eval["best_score"] + TWO_VS_ONE_MIN_ADVANTAGE
     vert_beats_one = vert_eval["pair_score"] >= single_eval["best_score"] + TWO_VS_ONE_MIN_ADVANTAGE
+    relaxed_single_veto = (
+        single_eval["best_score"] >= max(
+            RELAXED_TWO_SINGLE_VETO_DELTA,
+            single_eval["second_score"] * RELAXED_TWO_SINGLE_VETO_RATIO,
+        )
+    )
 
     if (
         horiz_eval["valid"]
@@ -429,6 +451,7 @@ def classify_terminal_cardinality(binary, bbox, default_side="right", text_suppr
         and relaxed_external_fragmented
         and horiz_relaxed["valid"]
         and not vert_relaxed["valid"]
+        and not relaxed_single_veto
     ):
         local_scores["decision_mode"] = "terminal_cardinality_two_horizontal_relaxed"
         return 2, "horizontal", local_scores
@@ -449,9 +472,19 @@ def classify_terminal_cardinality(binary, bbox, default_side="right", text_suppr
         and relaxed_external_fragmented
         and vert_relaxed["valid"]
         and not horiz_relaxed["valid"]
+        and not relaxed_single_veto
     ):
         local_scores["decision_mode"] = "terminal_cardinality_two_vertical_relaxed"
         return 2, "vertical", local_scores
+
+    if relaxed_single_veto:
+        local_scores["relaxed_two_terminal_veto"] = {
+            "enabled": True,
+            "best_score": float(single_eval["best_score"]),
+            "second_score": float(single_eval["second_score"]),
+            "ratio_threshold": RELAXED_TWO_SINGLE_VETO_RATIO,
+            "delta_threshold": RELAXED_TWO_SINGLE_VETO_DELTA,
+        }
 
     local_scores["decision_mode"] = "terminal_cardinality_default_one"
     return 1, single_eval["best_side"], local_scores

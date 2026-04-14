@@ -6,7 +6,11 @@ from .geometry import (
     geom_terminal_point_by_side_peak,
     geom_terminal_point_opamp,
 )
-from .strategies_three_terminal import resolve_three_terminal_semantics
+from .strategies_three_terminal import (
+    get_three_terminal_working_binary,
+    resolve_three_terminal_semantics,
+)
+from .semantic_two_terminal import resolve_two_terminal_semantics
 # =========================================================
 # COMPONENT PROCESSING
 # =========================================================
@@ -29,6 +33,9 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
     # Per i 3-terminal invece usiamo una localizzazione più strutturata:
     # prima il lato singolo, poi la coppia ortogonale coerente con quel lato.
     point_mode = resolve_terminal_point_mode(meta)
+    point_binary = image_binary
+    if point_mode == "three_terminal_structured":
+        point_binary = get_three_terminal_working_binary(image_binary, bbox)
 
     terminals = []
     for term_def in terminals_def:
@@ -41,7 +48,7 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
 
         if point_mode == "three_terminal_structured":
             point, structured_debug = geom_terminal_point_three_terminal(
-                image_binary,
+                point_binary,
                 bbox,
                 estimated_orientation,
                 rel_pos
@@ -60,13 +67,27 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
             point_debug.update(opamp_debug)
 
         elif point_mode == "two_terminal_side_peak":
-            point, peak_debug = geom_terminal_point_by_side_peak(
-                image_binary,
-                bbox,
-                rel_pos
-            )
-            x, y = point
-            point_debug.update(peak_debug)
+            if component.get("class_name") == "Diode":
+                x, y = geom_terminal_point_from_bbox(bbox, rel_pos)
+                point_debug["point_mode"] = "two_terminal_axis_center"
+                if rel_pos in {"top", "bottom"}:
+                    point_debug["anchor_offset_ratio"] = 0.5
+                else:
+                    point_debug["anchor_offset_ratio"] = 0.5
+            elif component.get("class_name") == "GND":
+                # Ground symbols have a centered stem, so text near the symbol
+                # should not influence the final terminal point location.
+                x, y = geom_terminal_point_from_bbox(bbox, rel_pos)
+                point_debug["point_mode"] = "one_terminal_axis_center"
+                point_debug["anchor_offset_ratio"] = 0.5
+            else:
+                point, peak_debug = geom_terminal_point_by_side_peak(
+                    image_binary,
+                    bbox,
+                    rel_pos
+                )
+                x, y = point
+                point_debug.update(peak_debug)
 
         else:
             x, y = geom_terminal_point_from_bbox(bbox, rel_pos)
@@ -99,6 +120,14 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
 
     if point_mode == "three_terminal_structured":
         terminals = resolve_three_terminal_semantics(
+            point_binary,
+            bbox,
+            estimated_orientation,
+            terminals,
+            meta,
+        )
+    else:
+        terminals = resolve_two_terminal_semantics(
             image_binary,
             bbox,
             estimated_orientation,

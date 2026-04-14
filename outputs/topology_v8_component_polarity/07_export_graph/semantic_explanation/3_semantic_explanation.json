@@ -1,0 +1,1324 @@
+{
+  "diagram_metadata": {
+    "diagram_id": "3",
+    "image_name": "3.jpg",
+    "pipeline_variant": "topology_v8_component_polarity",
+    "source_json_stage": "06_match_terminals_to_nets"
+  },
+  "summary": {
+    "n_components": 9,
+    "n_terminals": 18,
+    "n_nets": 6,
+    "n_connections": 18,
+    "main_inputs": [],
+    "main_outputs": [],
+    "supplies": [
+      {
+        "instance_id": "31.1",
+        "class_name": "Voltage_Source",
+        "connected_nets": [
+          "N1",
+          "N3"
+        ]
+      },
+      {
+        "instance_id": "31.2",
+        "class_name": "Voltage_Source",
+        "connected_nets": [
+          "N2",
+          "N3"
+        ]
+      },
+      {
+        "instance_id": "31.3",
+        "class_name": "Voltage_Source",
+        "connected_nets": [
+          "N3",
+          "N5"
+        ]
+      },
+      {
+        "instance_id": "31.4",
+        "class_name": "Voltage_Source",
+        "connected_nets": [
+          "N5",
+          "N6"
+        ]
+      },
+      {
+        "instance_id": "6.1",
+        "class_name": "Current_Source",
+        "connected_nets": [
+          "N2",
+          "N5"
+        ]
+      },
+      {
+        "instance_id": "6.2",
+        "class_name": "Current_Source",
+        "connected_nets": [
+          "N1",
+          "N4"
+        ]
+      }
+    ],
+    "grounds": [],
+    "notes": [
+      "9 components, 18 terminals, 6 nets, and 18 terminal-to-net connections were summarized deterministically from the extracted topology."
+    ]
+  },
+  "component_descriptions": [
+    {
+      "instance_id": "10.1",
+      "class_name": "Inductor",
+      "description_label": "passive_component",
+      "description_specificity": "medium",
+      "description_basis": [
+        "Component class indicates a passive or directional device; the exact electrical purpose depends on the larger circuit context."
+      ],
+      "confidence": 0.76,
+      "evidence_type": "heuristic_inference",
+      "interface_kind": null,
+      "connected_nets": [
+        "N2",
+        "N5"
+      ],
+      "connected_components": [
+        {
+          "instance_id": "31.2",
+          "component_class_name": "Voltage_Source",
+          "via_net_ids": [
+            "N2"
+          ]
+        },
+        {
+          "instance_id": "31.3",
+          "component_class_name": "Voltage_Source",
+          "via_net_ids": [
+            "N5"
+          ]
+        },
+        {
+          "instance_id": "31.4",
+          "component_class_name": "Voltage_Source",
+          "via_net_ids": [
+            "N5"
+          ]
+        },
+        {
+          "instance_id": "6.1",
+          "component_class_name": "Current_Source",
+          "via_net_ids": [
+            "N2",
+            "N5"
+          ]
+        }
+      ],
+      "natural_language": "Inductor 10.1 is described as passive component. It is connected to nets N2, N5 and to Voltage_Source 31.2 via N2; Voltage_Source 31.3 via N5; Voltage_Source 31.4 via N5; Current_Source 6.1 via N2, N5."
+    },
+    {
+      "instance_id": "10.2",
+      "class_name": "Inductor",
+      "description_label": "passive_component",
+      "description_specificity": "medium",
+      "description_basis": [
+        "Component class indicates a passive or directional device; the exact electrical purpose depends on the larger circuit context."
+      ],
+      "confidence": 0.76,
+      "evidence_type": "heuristic_inference",
+      "interface_kind": null,
+      "connected_nets": [
+        "N1",
+        "N4"
+      ],
+      "connected_components": [
+        {
+          "instance_id": "31.1",
+          "component_class_name": "Voltage_Source",
+          "via_net_ids": [
+            "N1"
+          ]
+        },
+        {
+          "instance_id": "4.1",
+          "component_class_name": "Capacitor",
+          "via_net_ids": [
+            "N4"
+          ]
+        },
+        {
+          "instance_id": "6.2",
+          "component_class_name": "Current_Source",
+          "via_net_ids": [
+            "N1",
+            "N4"
+          ]
+        }
+      ],
+      "natural_language": "Inductor 10.2 is described as passive component. It is connected to nets N1, N4 and to Voltage_Source 31.1 via N1; Capacitor 4.1 via N4; Current_Source 6.2 via N1, N4."
+    },
+    {
+      "instance_id": "31.1",
+      "class_name": "Voltage_Source",
+      "description_label": "power_source",
+      "description_specificity": "high",
+      "description_basis": [
+        "Direct fact from explicit source component class."
+      ],
+      "confidence": 0.98,
+      "evidence_type": "topological_fact",
+      "interface_kind": null,
+      "connected_nets": [
+        "N1",
+        "N3"
+      ],
+      "connected_components": [
+        {
+          "instance_id": "10.2",
+          "component_class_name": "Inductor",
+          "via_net_ids": [
+            "N1"
+          ]
+        },
+        {
+          "instance_id": "31.2",
+          "component_class_name": "Voltage_Source",
+          "via_net_ids": [
+            "N3"
+          ]
+        },
+        {
+          "instance_id": "31.3",
+          "component_class_name": "Voltage_Source",
+          "via_net_ids": [
+            "N3"
+          ]
+        },
+        {
+          "instance_id": "6.2",
+          "component_class_name": "Current_Source",
+          "via_net_ids": [
+            "N1"
+          ]
+        }
+      ],
+      "natural_language": "Voltage_Source 31.1 is described as power source. It is connected to nets N1, N3 and to Inductor 10.2 via N1; Voltage_Source 31.2 via N3; Voltage_Source 31.3 via N3; Current_Source 6.2 via N1."
+    },
+    {
+      "instance_id": "31.2",
+      "class_name": "Voltage_Source",
+      "description_label": "power_source",
+      "description_specificity": "high",
+      "description_basis": [
+        "Direct fact from explicit source component class."
+      ],
+      "confidence": 0.98,
+      "evidence_type": "topological_fact",
+      "interface_kind": null,
+      "connected_nets": [
+        "N2",
+        "N3"
+      ],
+      "connected_components": [
+        {
+          "instance_id": "10.1",
+          "component_class_name": "Inductor",
+          "via_net_ids": [
+            "N2"
+          ]
+        },
+        {
+          "instance_id": "31.1",
+          "component_class_name": "Voltage_Source",
+          "via_net_ids": [
+            "N3"
+          ]
+        },
+        {
+          "instance_id": "31.3",
+          "component_class_name": "Voltage_Source",
+          "via_net_ids": [
+            "N3"
+          ]
+        },
+        {
+          "instance_id": "6.1",
+          "component_class_name": "Current_Source",
+          "via_net_ids": [
+            "N2"
+          ]
+        }
+      ],
+      "natural_language": "Voltage_Source 31.2 is described as power source. It is connected to nets N2, N3 and to Inductor 10.1 via N2; Voltage_Source 31.1 via N3; Voltage_Source 31.3 via N3; Current_Source 6.1 via N2."
+    },
+    {
+      "instance_id": "31.3",
+      "class_name": "Voltage_Source",
+      "description_label": "power_source",
+      "description_specificity": "high",
+      "description_basis": [
+        "Direct fact from explicit source component class."
+      ],
+      "confidence": 0.98,
+      "evidence_type": "topological_fact",
+      "interface_kind": null,
+      "connected_nets": [
+        "N3",
+        "N5"
+      ],
+      "connected_components": [
+        {
+          "instance_id": "10.1",
+          "component_class_name": "Inductor",
+          "via_net_ids": [
+            "N5"
+          ]
+        },
+        {
+          "instance_id": "31.1",
+          "component_class_name": "Voltage_Source",
+          "via_net_ids": [
+            "N3"
+          ]
+        },
+        {
+          "instance_id": "31.2",
+          "component_class_name": "Voltage_Source",
+          "via_net_ids": [
+            "N3"
+          ]
+        },
+        {
+          "instance_id": "31.4",
+          "component_class_name": "Voltage_Source",
+          "via_net_ids": [
+            "N5"
+          ]
+        },
+        {
+          "instance_id": "6.1",
+          "component_class_name": "Current_Source",
+          "via_net_ids": [
+            "N5"
+          ]
+        }
+      ],
+      "natural_language": "Voltage_Source 31.3 is described as power source. It is connected to nets N3, N5 and to Inductor 10.1 via N5; Voltage_Source 31.1 via N3; Voltage_Source 31.2 via N3; Voltage_Source 31.4 via N5; Current_Source 6.1 via N5."
+    },
+    {
+      "instance_id": "31.4",
+      "class_name": "Voltage_Source",
+      "description_label": "power_source",
+      "description_specificity": "high",
+      "description_basis": [
+        "Direct fact from explicit source component class."
+      ],
+      "confidence": 0.98,
+      "evidence_type": "topological_fact",
+      "interface_kind": null,
+      "connected_nets": [
+        "N5",
+        "N6"
+      ],
+      "connected_components": [
+        {
+          "instance_id": "10.1",
+          "component_class_name": "Inductor",
+          "via_net_ids": [
+            "N5"
+          ]
+        },
+        {
+          "instance_id": "31.3",
+          "component_class_name": "Voltage_Source",
+          "via_net_ids": [
+            "N5"
+          ]
+        },
+        {
+          "instance_id": "4.1",
+          "component_class_name": "Capacitor",
+          "via_net_ids": [
+            "N6"
+          ]
+        },
+        {
+          "instance_id": "6.1",
+          "component_class_name": "Current_Source",
+          "via_net_ids": [
+            "N5"
+          ]
+        }
+      ],
+      "natural_language": "Voltage_Source 31.4 is described as power source. It is connected to nets N5, N6 and to Inductor 10.1 via N5; Voltage_Source 31.3 via N5; Capacitor 4.1 via N6; Current_Source 6.1 via N5."
+    },
+    {
+      "instance_id": "4.1",
+      "class_name": "Capacitor",
+      "description_label": "passive_component",
+      "description_specificity": "medium",
+      "description_basis": [
+        "Component class indicates a passive or directional device; the exact electrical purpose depends on the larger circuit context."
+      ],
+      "confidence": 0.76,
+      "evidence_type": "heuristic_inference",
+      "interface_kind": null,
+      "connected_nets": [
+        "N4",
+        "N6"
+      ],
+      "connected_components": [
+        {
+          "instance_id": "10.2",
+          "component_class_name": "Inductor",
+          "via_net_ids": [
+            "N4"
+          ]
+        },
+        {
+          "instance_id": "31.4",
+          "component_class_name": "Voltage_Source",
+          "via_net_ids": [
+            "N6"
+          ]
+        },
+        {
+          "instance_id": "6.2",
+          "component_class_name": "Current_Source",
+          "via_net_ids": [
+            "N4"
+          ]
+        }
+      ],
+      "natural_language": "Capacitor 4.1 is described as passive component. It is connected to nets N4, N6 and to Inductor 10.2 via N4; Voltage_Source 31.4 via N6; Current_Source 6.2 via N4."
+    },
+    {
+      "instance_id": "6.1",
+      "class_name": "Current_Source",
+      "description_label": "power_source",
+      "description_specificity": "high",
+      "description_basis": [
+        "Direct fact from explicit source component class."
+      ],
+      "confidence": 0.98,
+      "evidence_type": "topological_fact",
+      "interface_kind": null,
+      "connected_nets": [
+        "N2",
+        "N5"
+      ],
+      "connected_components": [
+        {
+          "instance_id": "10.1",
+          "component_class_name": "Inductor",
+          "via_net_ids": [
+            "N2",
+            "N5"
+          ]
+        },
+        {
+          "instance_id": "31.2",
+          "component_class_name": "Voltage_Source",
+          "via_net_ids": [
+            "N2"
+          ]
+        },
+        {
+          "instance_id": "31.3",
+          "component_class_name": "Voltage_Source",
+          "via_net_ids": [
+            "N5"
+          ]
+        },
+        {
+          "instance_id": "31.4",
+          "component_class_name": "Voltage_Source",
+          "via_net_ids": [
+            "N5"
+          ]
+        }
+      ],
+      "natural_language": "Current_Source 6.1 is described as power source. It is connected to nets N2, N5 and to Inductor 10.1 via N2, N5; Voltage_Source 31.2 via N2; Voltage_Source 31.3 via N5; Voltage_Source 31.4 via N5."
+    },
+    {
+      "instance_id": "6.2",
+      "class_name": "Current_Source",
+      "description_label": "power_source",
+      "description_specificity": "high",
+      "description_basis": [
+        "Direct fact from explicit source component class."
+      ],
+      "confidence": 0.98,
+      "evidence_type": "topological_fact",
+      "interface_kind": null,
+      "connected_nets": [
+        "N1",
+        "N4"
+      ],
+      "connected_components": [
+        {
+          "instance_id": "10.2",
+          "component_class_name": "Inductor",
+          "via_net_ids": [
+            "N1",
+            "N4"
+          ]
+        },
+        {
+          "instance_id": "31.1",
+          "component_class_name": "Voltage_Source",
+          "via_net_ids": [
+            "N1"
+          ]
+        },
+        {
+          "instance_id": "4.1",
+          "component_class_name": "Capacitor",
+          "via_net_ids": [
+            "N4"
+          ]
+        }
+      ],
+      "natural_language": "Current_Source 6.2 is described as power source. It is connected to nets N1, N4 and to Inductor 10.2 via N1, N4; Voltage_Source 31.1 via N1; Capacitor 4.1 via N4."
+    }
+  ],
+  "net_descriptions": [
+    {
+      "net_id": "N1",
+      "alias": "source_connected_branch_N1",
+      "description_label": "source_connected_branch",
+      "description_specificity": "medium",
+      "description_basis": [
+        "An explicit source component is attached to this net."
+      ],
+      "confidence": 0.88,
+      "evidence_type": "heuristic_inference",
+      "connected_components": [
+        {
+          "instance_id": "10.2",
+          "component_class_name": "Inductor"
+        },
+        {
+          "instance_id": "31.1",
+          "component_class_name": "Voltage_Source"
+        },
+        {
+          "instance_id": "6.2",
+          "component_class_name": "Current_Source"
+        }
+      ],
+      "natural_language": "Net N1 is described as source connected branch. It connects Inductor 10.2, Voltage_Source 31.1, Current_Source 6.2."
+    },
+    {
+      "net_id": "N2",
+      "alias": "source_connected_branch_N2",
+      "description_label": "source_connected_branch",
+      "description_specificity": "medium",
+      "description_basis": [
+        "An explicit source component is attached to this net."
+      ],
+      "confidence": 0.88,
+      "evidence_type": "heuristic_inference",
+      "connected_components": [
+        {
+          "instance_id": "10.1",
+          "component_class_name": "Inductor"
+        },
+        {
+          "instance_id": "31.2",
+          "component_class_name": "Voltage_Source"
+        },
+        {
+          "instance_id": "6.1",
+          "component_class_name": "Current_Source"
+        }
+      ],
+      "natural_language": "Net N2 is described as source connected branch. It connects Inductor 10.1, Voltage_Source 31.2, Current_Source 6.1."
+    },
+    {
+      "net_id": "N3",
+      "alias": "source_connected_branch_N3",
+      "description_label": "source_connected_branch",
+      "description_specificity": "medium",
+      "description_basis": [
+        "An explicit source component is attached to this net."
+      ],
+      "confidence": 0.88,
+      "evidence_type": "heuristic_inference",
+      "connected_components": [
+        {
+          "instance_id": "31.1",
+          "component_class_name": "Voltage_Source"
+        },
+        {
+          "instance_id": "31.2",
+          "component_class_name": "Voltage_Source"
+        },
+        {
+          "instance_id": "31.3",
+          "component_class_name": "Voltage_Source"
+        }
+      ],
+      "natural_language": "Net N3 is described as source connected branch. It connects Voltage_Source 31.1, Voltage_Source 31.2, Voltage_Source 31.3."
+    },
+    {
+      "net_id": "N4",
+      "alias": "source_connected_branch_N4",
+      "description_label": "source_connected_branch",
+      "description_specificity": "medium",
+      "description_basis": [
+        "An explicit source component is attached to this net."
+      ],
+      "confidence": 0.88,
+      "evidence_type": "heuristic_inference",
+      "connected_components": [
+        {
+          "instance_id": "10.2",
+          "component_class_name": "Inductor"
+        },
+        {
+          "instance_id": "4.1",
+          "component_class_name": "Capacitor"
+        },
+        {
+          "instance_id": "6.2",
+          "component_class_name": "Current_Source"
+        }
+      ],
+      "natural_language": "Net N4 is described as source connected branch. It connects Inductor 10.2, Capacitor 4.1, Current_Source 6.2."
+    },
+    {
+      "net_id": "N5",
+      "alias": "source_connected_branch_N5",
+      "description_label": "source_connected_branch",
+      "description_specificity": "medium",
+      "description_basis": [
+        "An explicit source component is attached to this net."
+      ],
+      "confidence": 0.88,
+      "evidence_type": "heuristic_inference",
+      "connected_components": [
+        {
+          "instance_id": "10.1",
+          "component_class_name": "Inductor"
+        },
+        {
+          "instance_id": "31.3",
+          "component_class_name": "Voltage_Source"
+        },
+        {
+          "instance_id": "31.4",
+          "component_class_name": "Voltage_Source"
+        },
+        {
+          "instance_id": "6.1",
+          "component_class_name": "Current_Source"
+        }
+      ],
+      "natural_language": "Net N5 is described as source connected branch. It connects Inductor 10.1, Voltage_Source 31.3, Voltage_Source 31.4, Current_Source 6.1."
+    },
+    {
+      "net_id": "N6",
+      "alias": "source_connected_branch_N6",
+      "description_label": "source_connected_branch",
+      "description_specificity": "medium",
+      "description_basis": [
+        "An explicit source component is attached to this net."
+      ],
+      "confidence": 0.88,
+      "evidence_type": "heuristic_inference",
+      "connected_components": [
+        {
+          "instance_id": "31.4",
+          "component_class_name": "Voltage_Source"
+        },
+        {
+          "instance_id": "4.1",
+          "component_class_name": "Capacitor"
+        }
+      ],
+      "natural_language": "Net N6 is described as source connected branch. It connects Voltage_Source 31.4, Capacitor 4.1."
+    }
+  ],
+  "branch_summaries": [
+    {
+      "anchor_net": "N1",
+      "branch_kind": "source_connected_branch",
+      "connected_components": [
+        "10.2",
+        "31.1",
+        "6.2"
+      ],
+      "importance": "high",
+      "natural_language": "Net N1 forms a source connected branch connecting Inductor 10.2, Voltage_Source 31.1, Current_Source 6.2.",
+      "branch_id": "B1"
+    },
+    {
+      "anchor_net": "N2",
+      "branch_kind": "source_connected_branch",
+      "connected_components": [
+        "10.1",
+        "31.2",
+        "6.1"
+      ],
+      "importance": "high",
+      "natural_language": "Net N2 forms a source connected branch connecting Inductor 10.1, Voltage_Source 31.2, Current_Source 6.1.",
+      "branch_id": "B2"
+    },
+    {
+      "anchor_net": "N3",
+      "branch_kind": "source_connected_branch",
+      "connected_components": [
+        "31.1",
+        "31.2",
+        "31.3"
+      ],
+      "importance": "high",
+      "natural_language": "Net N3 forms a source connected branch connecting Voltage_Source 31.1, Voltage_Source 31.2, Voltage_Source 31.3.",
+      "branch_id": "B3"
+    },
+    {
+      "anchor_net": "N4",
+      "branch_kind": "source_connected_branch",
+      "connected_components": [
+        "10.2",
+        "4.1",
+        "6.2"
+      ],
+      "importance": "high",
+      "natural_language": "Net N4 forms a source connected branch connecting Inductor 10.2, Capacitor 4.1, Current_Source 6.2.",
+      "branch_id": "B4"
+    },
+    {
+      "anchor_net": "N5",
+      "branch_kind": "source_connected_branch",
+      "connected_components": [
+        "10.1",
+        "31.3",
+        "31.4",
+        "6.1"
+      ],
+      "importance": "high",
+      "natural_language": "Net N5 forms a source connected branch connecting Inductor 10.1, Voltage_Source 31.3, Voltage_Source 31.4, Current_Source 6.1.",
+      "branch_id": "B5"
+    },
+    {
+      "anchor_net": "N6",
+      "branch_kind": "source_connected_branch",
+      "connected_components": [
+        "31.4",
+        "4.1"
+      ],
+      "importance": "high",
+      "natural_language": "Net N6 forms a source connected branch connecting Voltage_Source 31.4, Capacitor 4.1.",
+      "branch_id": "B6"
+    }
+  ],
+  "component_to_component_relations": [
+    {
+      "from_component": "10.2",
+      "from_terminal": "10.2:t1",
+      "to_component": "31.1",
+      "to_terminal": "31.1:positive",
+      "via_net": "N1",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Inductor 10.2 terminal t1 is electrically tied to Voltage_Source 31.1 positive through net N1."
+    },
+    {
+      "from_component": "10.2",
+      "from_terminal": "10.2:t1",
+      "to_component": "6.2",
+      "to_terminal": "6.2:current_from",
+      "via_net": "N1",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Inductor 10.2 terminal t1 is electrically tied to Current_Source 6.2 current_from through net N1."
+    },
+    {
+      "from_component": "31.1",
+      "from_terminal": "31.1:positive",
+      "to_component": "6.2",
+      "to_terminal": "6.2:current_from",
+      "via_net": "N1",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Voltage_Source 31.1 positive is electrically tied to Current_Source 6.2 current_from through net N1."
+    },
+    {
+      "from_component": "10.1",
+      "from_terminal": "10.1:t1",
+      "to_component": "31.2",
+      "to_terminal": "31.2:positive",
+      "via_net": "N2",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Inductor 10.1 terminal t1 is electrically tied to Voltage_Source 31.2 positive through net N2."
+    },
+    {
+      "from_component": "10.1",
+      "from_terminal": "10.1:t1",
+      "to_component": "6.1",
+      "to_terminal": "6.1:current_from",
+      "via_net": "N2",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Inductor 10.1 terminal t1 is electrically tied to Current_Source 6.1 current_from through net N2."
+    },
+    {
+      "from_component": "31.2",
+      "from_terminal": "31.2:positive",
+      "to_component": "6.1",
+      "to_terminal": "6.1:current_from",
+      "via_net": "N2",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Voltage_Source 31.2 positive is electrically tied to Current_Source 6.1 current_from through net N2."
+    },
+    {
+      "from_component": "31.1",
+      "from_terminal": "31.1:negative",
+      "to_component": "31.2",
+      "to_terminal": "31.2:negative",
+      "via_net": "N3",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Voltage_Source 31.1 negative is electrically tied to Voltage_Source 31.2 negative through net N3."
+    },
+    {
+      "from_component": "31.1",
+      "from_terminal": "31.1:negative",
+      "to_component": "31.3",
+      "to_terminal": "31.3:negative",
+      "via_net": "N3",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Voltage_Source 31.1 negative is electrically tied to Voltage_Source 31.3 negative through net N3."
+    },
+    {
+      "from_component": "31.2",
+      "from_terminal": "31.2:negative",
+      "to_component": "31.3",
+      "to_terminal": "31.3:negative",
+      "via_net": "N3",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Voltage_Source 31.2 negative is electrically tied to Voltage_Source 31.3 negative through net N3."
+    },
+    {
+      "from_component": "10.2",
+      "from_terminal": "10.2:t2",
+      "to_component": "4.1",
+      "to_terminal": "4.1:t1",
+      "via_net": "N4",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Inductor 10.2 terminal t2 is electrically tied to Capacitor 4.1 terminal t1 through net N4."
+    },
+    {
+      "from_component": "10.2",
+      "from_terminal": "10.2:t2",
+      "to_component": "6.2",
+      "to_terminal": "6.2:current_to",
+      "via_net": "N4",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Inductor 10.2 terminal t2 is electrically tied to Current_Source 6.2 current_to through net N4."
+    },
+    {
+      "from_component": "4.1",
+      "from_terminal": "4.1:t1",
+      "to_component": "6.2",
+      "to_terminal": "6.2:current_to",
+      "via_net": "N4",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Capacitor 4.1 terminal t1 is electrically tied to Current_Source 6.2 current_to through net N4."
+    },
+    {
+      "from_component": "10.1",
+      "from_terminal": "10.1:t2",
+      "to_component": "31.3",
+      "to_terminal": "31.3:positive",
+      "via_net": "N5",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Inductor 10.1 terminal t2 is electrically tied to Voltage_Source 31.3 positive through net N5."
+    },
+    {
+      "from_component": "31.3",
+      "from_terminal": "31.3:positive",
+      "to_component": "31.4",
+      "to_terminal": "31.4:negative",
+      "via_net": "N5",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Voltage_Source 31.3 positive is electrically tied to Voltage_Source 31.4 negative through net N5."
+    },
+    {
+      "from_component": "31.3",
+      "from_terminal": "31.3:positive",
+      "to_component": "6.1",
+      "to_terminal": "6.1:current_to",
+      "via_net": "N5",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Voltage_Source 31.3 positive is electrically tied to Current_Source 6.1 current_to through net N5."
+    },
+    {
+      "from_component": "10.1",
+      "from_terminal": "10.1:t2",
+      "to_component": "31.4",
+      "to_terminal": "31.4:negative",
+      "via_net": "N5",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Inductor 10.1 terminal t2 is electrically tied to Voltage_Source 31.4 negative through net N5."
+    },
+    {
+      "from_component": "31.4",
+      "from_terminal": "31.4:negative",
+      "to_component": "6.1",
+      "to_terminal": "6.1:current_to",
+      "via_net": "N5",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Voltage_Source 31.4 negative is electrically tied to Current_Source 6.1 current_to through net N5."
+    },
+    {
+      "from_component": "10.1",
+      "from_terminal": "10.1:t2",
+      "to_component": "6.1",
+      "to_terminal": "6.1:current_to",
+      "via_net": "N5",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Inductor 10.1 terminal t2 is electrically tied to Current_Source 6.1 current_to through net N5."
+    },
+    {
+      "from_component": "31.4",
+      "from_terminal": "31.4:positive",
+      "to_component": "4.1",
+      "to_terminal": "4.1:t2",
+      "via_net": "N6",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Voltage_Source 31.4 positive is electrically tied to Capacitor 4.1 terminal t2 through net N6."
+    }
+  ],
+  "component_relation_groups": [
+    {
+      "net_id": "N1",
+      "summary": "N1 is a source connected branch connecting Inductor 10.2 terminal t1, Voltage_Source 31.1 positive, Current_Source 6.2 current_from.",
+      "connected_components": [
+        "10.2",
+        "31.1",
+        "6.2"
+      ],
+      "importance": "high",
+      "role_hypothesis": "source_connected_branch"
+    },
+    {
+      "net_id": "N2",
+      "summary": "N2 is a source connected branch connecting Inductor 10.1 terminal t1, Voltage_Source 31.2 positive, Current_Source 6.1 current_from.",
+      "connected_components": [
+        "10.1",
+        "31.2",
+        "6.1"
+      ],
+      "importance": "high",
+      "role_hypothesis": "source_connected_branch"
+    },
+    {
+      "net_id": "N3",
+      "summary": "N3 is a source connected branch connecting Voltage_Source 31.1 negative, Voltage_Source 31.2 negative, Voltage_Source 31.3 negative.",
+      "connected_components": [
+        "31.1",
+        "31.2",
+        "31.3"
+      ],
+      "importance": "high",
+      "role_hypothesis": "source_connected_branch"
+    },
+    {
+      "net_id": "N4",
+      "summary": "N4 is a source connected branch connecting Inductor 10.2 terminal t2, Capacitor 4.1 terminal t1, Current_Source 6.2 current_to.",
+      "connected_components": [
+        "10.2",
+        "4.1",
+        "6.2"
+      ],
+      "importance": "high",
+      "role_hypothesis": "source_connected_branch"
+    },
+    {
+      "net_id": "N5",
+      "summary": "N5 is a source connected branch connecting Inductor 10.1 terminal t2, Voltage_Source 31.3 positive, Voltage_Source 31.4 negative, Current_Source 6.1 current_to.",
+      "connected_components": [
+        "10.1",
+        "31.3",
+        "31.4",
+        "6.1"
+      ],
+      "importance": "high",
+      "role_hypothesis": "source_connected_branch"
+    },
+    {
+      "net_id": "N6",
+      "summary": "N6 is a source connected branch connecting Voltage_Source 31.4 positive, Capacitor 4.1 terminal t2.",
+      "connected_components": [
+        "31.4",
+        "4.1"
+      ],
+      "importance": "high",
+      "role_hypothesis": "source_connected_branch"
+    }
+  ],
+  "functional_paths": [],
+  "structural_patterns": [],
+  "terminal_facts": [
+    {
+      "terminal_id": "10.1:t1",
+      "display_terminal_id": "10.1:t1",
+      "instance_id": "10.1",
+      "component_class_name": "Inductor",
+      "terminal_name": "t1",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N2",
+      "match_status": "matched_preferred",
+      "description": "Inductor 10.1 terminal t1 is connected on net N2 with Current_Source 6.1, Voltage_Source 31.2."
+    },
+    {
+      "terminal_id": "10.1:t2",
+      "display_terminal_id": "10.1:t2",
+      "instance_id": "10.1",
+      "component_class_name": "Inductor",
+      "terminal_name": "t2",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N5",
+      "match_status": "matched_preferred",
+      "description": "Inductor 10.1 terminal t2 is connected on net N5 with Current_Source 6.1, Voltage_Source 31.3, Voltage_Source 31.4."
+    },
+    {
+      "terminal_id": "10.2:t1",
+      "display_terminal_id": "10.2:t1",
+      "instance_id": "10.2",
+      "component_class_name": "Inductor",
+      "terminal_name": "t1",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N1",
+      "match_status": "matched_preferred",
+      "description": "Inductor 10.2 terminal t1 is connected on net N1 with Current_Source 6.2, Voltage_Source 31.1."
+    },
+    {
+      "terminal_id": "10.2:t2",
+      "display_terminal_id": "10.2:t2",
+      "instance_id": "10.2",
+      "component_class_name": "Inductor",
+      "terminal_name": "t2",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N4",
+      "match_status": "matched_preferred",
+      "description": "Inductor 10.2 terminal t2 is connected on net N4 with Capacitor 4.1, Current_Source 6.2."
+    },
+    {
+      "terminal_id": "31.1:t1",
+      "display_terminal_id": "31.1:positive",
+      "instance_id": "31.1",
+      "component_class_name": "Voltage_Source",
+      "terminal_name": "positive",
+      "semantic_terminal_name": "positive",
+      "semantic_slot": "marker_side",
+      "semantic_confidence": 0.5769,
+      "semantic_evidence_type": "symbol_heuristic",
+      "semantic_resolution_mode": "voltage_source_positive_from_plus_marker",
+      "semantic_role_family": "polarity",
+      "semantic_polarity": "positive",
+      "semantic_direction": null,
+      "net_id": "N1",
+      "match_status": "matched_preferred",
+      "description": "Voltage_Source 31.1 terminal positive is connected on net N1 with Current_Source 6.2, Inductor 10.2."
+    },
+    {
+      "terminal_id": "31.1:t2",
+      "display_terminal_id": "31.1:negative",
+      "instance_id": "31.1",
+      "component_class_name": "Voltage_Source",
+      "terminal_name": "negative",
+      "semantic_terminal_name": "negative",
+      "semantic_slot": "other_side",
+      "semantic_confidence": 0.5769,
+      "semantic_evidence_type": "symbol_heuristic",
+      "semantic_resolution_mode": "voltage_source_positive_from_plus_marker",
+      "semantic_role_family": "polarity",
+      "semantic_polarity": "negative",
+      "semantic_direction": null,
+      "net_id": "N3",
+      "match_status": "matched_preferred",
+      "description": "Voltage_Source 31.1 terminal negative is connected on net N3 with Voltage_Source 31.2, Voltage_Source 31.3."
+    },
+    {
+      "terminal_id": "31.2:t1",
+      "display_terminal_id": "31.2:positive",
+      "instance_id": "31.2",
+      "component_class_name": "Voltage_Source",
+      "terminal_name": "positive",
+      "semantic_terminal_name": "positive",
+      "semantic_slot": "marker_side",
+      "semantic_confidence": 0.541,
+      "semantic_evidence_type": "symbol_heuristic",
+      "semantic_resolution_mode": "voltage_source_positive_from_plus_marker",
+      "semantic_role_family": "polarity",
+      "semantic_polarity": "positive",
+      "semantic_direction": null,
+      "net_id": "N2",
+      "match_status": "matched_preferred",
+      "description": "Voltage_Source 31.2 terminal positive is connected on net N2 with Current_Source 6.1, Inductor 10.1."
+    },
+    {
+      "terminal_id": "31.2:t2",
+      "display_terminal_id": "31.2:negative",
+      "instance_id": "31.2",
+      "component_class_name": "Voltage_Source",
+      "terminal_name": "negative",
+      "semantic_terminal_name": "negative",
+      "semantic_slot": "other_side",
+      "semantic_confidence": 0.541,
+      "semantic_evidence_type": "symbol_heuristic",
+      "semantic_resolution_mode": "voltage_source_positive_from_plus_marker",
+      "semantic_role_family": "polarity",
+      "semantic_polarity": "negative",
+      "semantic_direction": null,
+      "net_id": "N3",
+      "match_status": "matched_preferred",
+      "description": "Voltage_Source 31.2 terminal negative is connected on net N3 with Voltage_Source 31.1, Voltage_Source 31.3."
+    },
+    {
+      "terminal_id": "31.3:t1",
+      "display_terminal_id": "31.3:positive",
+      "instance_id": "31.3",
+      "component_class_name": "Voltage_Source",
+      "terminal_name": "positive",
+      "semantic_terminal_name": "positive",
+      "semantic_slot": "marker_side",
+      "semantic_confidence": 0.614,
+      "semantic_evidence_type": "symbol_heuristic",
+      "semantic_resolution_mode": "voltage_source_positive_from_plus_marker",
+      "semantic_role_family": "polarity",
+      "semantic_polarity": "positive",
+      "semantic_direction": null,
+      "net_id": "N5",
+      "match_status": "matched_preferred",
+      "description": "Voltage_Source 31.3 terminal positive is connected on net N5 with Current_Source 6.1, Inductor 10.1, Voltage_Source 31.4."
+    },
+    {
+      "terminal_id": "31.3:t2",
+      "display_terminal_id": "31.3:negative",
+      "instance_id": "31.3",
+      "component_class_name": "Voltage_Source",
+      "terminal_name": "negative",
+      "semantic_terminal_name": "negative",
+      "semantic_slot": "other_side",
+      "semantic_confidence": 0.614,
+      "semantic_evidence_type": "symbol_heuristic",
+      "semantic_resolution_mode": "voltage_source_positive_from_plus_marker",
+      "semantic_role_family": "polarity",
+      "semantic_polarity": "negative",
+      "semantic_direction": null,
+      "net_id": "N3",
+      "match_status": "matched_preferred",
+      "description": "Voltage_Source 31.3 terminal negative is connected on net N3 with Voltage_Source 31.1, Voltage_Source 31.2."
+    },
+    {
+      "terminal_id": "31.4:t1",
+      "display_terminal_id": "31.4:positive",
+      "instance_id": "31.4",
+      "component_class_name": "Voltage_Source",
+      "terminal_name": "positive",
+      "semantic_terminal_name": "positive",
+      "semantic_slot": "marker_side",
+      "semantic_confidence": 1.0,
+      "semantic_evidence_type": "symbol_heuristic",
+      "semantic_resolution_mode": "voltage_source_positive_from_plus_marker",
+      "semantic_role_family": "polarity",
+      "semantic_polarity": "positive",
+      "semantic_direction": null,
+      "net_id": "N6",
+      "match_status": "matched_preferred",
+      "description": "Voltage_Source 31.4 terminal positive is connected on net N6 with Capacitor 4.1."
+    },
+    {
+      "terminal_id": "31.4:t2",
+      "display_terminal_id": "31.4:negative",
+      "instance_id": "31.4",
+      "component_class_name": "Voltage_Source",
+      "terminal_name": "negative",
+      "semantic_terminal_name": "negative",
+      "semantic_slot": "other_side",
+      "semantic_confidence": 1.0,
+      "semantic_evidence_type": "symbol_heuristic",
+      "semantic_resolution_mode": "voltage_source_positive_from_plus_marker",
+      "semantic_role_family": "polarity",
+      "semantic_polarity": "negative",
+      "semantic_direction": null,
+      "net_id": "N5",
+      "match_status": "matched_preferred",
+      "description": "Voltage_Source 31.4 terminal negative is connected on net N5 with Current_Source 6.1, Inductor 10.1, Voltage_Source 31.3."
+    },
+    {
+      "terminal_id": "4.1:t1",
+      "display_terminal_id": "4.1:t1",
+      "instance_id": "4.1",
+      "component_class_name": "Capacitor",
+      "terminal_name": "t1",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N4",
+      "match_status": "matched_preferred",
+      "description": "Capacitor 4.1 terminal t1 is connected on net N4 with Current_Source 6.2, Inductor 10.2."
+    },
+    {
+      "terminal_id": "4.1:t2",
+      "display_terminal_id": "4.1:t2",
+      "instance_id": "4.1",
+      "component_class_name": "Capacitor",
+      "terminal_name": "t2",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N6",
+      "match_status": "matched_preferred",
+      "description": "Capacitor 4.1 terminal t2 is connected on net N6 with Voltage_Source 31.4."
+    },
+    {
+      "terminal_id": "6.1:t1",
+      "display_terminal_id": "6.1:current_from",
+      "instance_id": "6.1",
+      "component_class_name": "Current_Source",
+      "terminal_name": "current_from",
+      "semantic_terminal_name": "current_from",
+      "semantic_slot": "other_side",
+      "semantic_confidence": 0.4813,
+      "semantic_evidence_type": "symbol_heuristic",
+      "semantic_resolution_mode": "current_source_direction_from_arrow",
+      "semantic_role_family": "current_direction",
+      "semantic_polarity": null,
+      "semantic_direction": "current_from",
+      "net_id": "N2",
+      "match_status": "matched_preferred",
+      "description": "Current_Source 6.1 terminal current_from is connected on net N2 with Inductor 10.1, Voltage_Source 31.2."
+    },
+    {
+      "terminal_id": "6.1:t2",
+      "display_terminal_id": "6.1:current_to",
+      "instance_id": "6.1",
+      "component_class_name": "Current_Source",
+      "terminal_name": "current_to",
+      "semantic_terminal_name": "current_to",
+      "semantic_slot": "marker_side",
+      "semantic_confidence": 0.4813,
+      "semantic_evidence_type": "symbol_heuristic",
+      "semantic_resolution_mode": "current_source_direction_from_arrow",
+      "semantic_role_family": "current_direction",
+      "semantic_polarity": null,
+      "semantic_direction": "current_to",
+      "net_id": "N5",
+      "match_status": "matched_preferred",
+      "description": "Current_Source 6.1 terminal current_to is connected on net N5 with Inductor 10.1, Voltage_Source 31.3, Voltage_Source 31.4."
+    },
+    {
+      "terminal_id": "6.2:t1",
+      "display_terminal_id": "6.2:current_from",
+      "instance_id": "6.2",
+      "component_class_name": "Current_Source",
+      "terminal_name": "current_from",
+      "semantic_terminal_name": "current_from",
+      "semantic_slot": "other_side",
+      "semantic_confidence": 0.4604,
+      "semantic_evidence_type": "symbol_heuristic",
+      "semantic_resolution_mode": "current_source_direction_from_arrow",
+      "semantic_role_family": "current_direction",
+      "semantic_polarity": null,
+      "semantic_direction": "current_from",
+      "net_id": "N1",
+      "match_status": "matched_preferred",
+      "description": "Current_Source 6.2 terminal current_from is connected on net N1 with Inductor 10.2, Voltage_Source 31.1."
+    },
+    {
+      "terminal_id": "6.2:t2",
+      "display_terminal_id": "6.2:current_to",
+      "instance_id": "6.2",
+      "component_class_name": "Current_Source",
+      "terminal_name": "current_to",
+      "semantic_terminal_name": "current_to",
+      "semantic_slot": "marker_side",
+      "semantic_confidence": 0.4604,
+      "semantic_evidence_type": "symbol_heuristic",
+      "semantic_resolution_mode": "current_source_direction_from_arrow",
+      "semantic_role_family": "current_direction",
+      "semantic_polarity": null,
+      "semantic_direction": "current_to",
+      "net_id": "N4",
+      "match_status": "matched_preferred",
+      "description": "Current_Source 6.2 terminal current_to is connected on net N4 with Capacitor 4.1, Inductor 10.2."
+    }
+  ]
+}

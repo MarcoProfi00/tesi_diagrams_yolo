@@ -32,13 +32,24 @@
   symbol_type: two_terminal
   use_for_terminals: true
   use_for_masking: true
-  terminal_strategy: fixed
-  terminals:
-    - name: t1
-      relative_position: top
-    - name: t2
-      relative_position: bottom
-  notes: "Battery con terminali fissi top/bottom"
+  terminal_strategy: two_terminal_by_connection_axis
+  semantic_terminal_strategy: battery_positive_from_long_plate
+  semantic_roles:
+    marker_side: positive
+    other_side: negative
+  default_orientation: vertical
+  orientations:
+    horizontal:
+      - name: t1
+        relative_position: left
+      - name: t2
+        relative_position: right
+    vertical:
+      - name: t1
+        relative_position: top
+      - name: t2
+        relative_position: bottom
+  notes: "Battery: polarita stimata dalla plate piu lunga"
 
 3:
   name: Breaker
@@ -91,6 +102,10 @@
   use_for_terminals: true
   use_for_masking: true
   terminal_strategy: two_terminal_round_source
+  semantic_terminal_strategy: current_source_direction_from_arrow
+  semantic_roles:
+    marker_side: current_to
+    other_side: current_from
   default_orientation: vertical
   orientations:
     horizontal:
@@ -110,6 +125,10 @@
   use_for_terminals: true
   use_for_masking: true
   terminal_strategy: two_terminal_by_connection_axis
+  semantic_terminal_strategy: diode_cathode_from_bar
+  semantic_roles:
+    marker_side: cathode
+    other_side: anode
   default_orientation: horizontal
   orientations:
     horizontal:
@@ -197,6 +216,10 @@
   use_for_terminals: true
   use_for_masking: true
   terminal_strategy: two_terminal_led
+  semantic_terminal_strategy: diode_cathode_from_bar
+  semantic_roles:
+    marker_side: cathode
+    other_side: anode
   default_orientation: horizontal
   orientations:
     horizontal:
@@ -482,6 +505,10 @@
   use_for_terminals: true
   use_for_masking: true
   terminal_strategy: two_terminal_by_connection_axis
+  semantic_terminal_strategy: polarized_capacitor_positive_from_marker
+  semantic_roles:
+    marker_side: positive
+    other_side: negative
   default_orientation: horizontal
   orientations:
     horizontal:
@@ -686,6 +713,10 @@
   use_for_terminals: true
   use_for_masking: true
   terminal_strategy: two_terminal_round_source
+  semantic_terminal_strategy: voltage_source_positive_from_plus_marker
+  semantic_roles:
+    marker_side: positive
+    other_side: negative
   default_orientation: vertical
   orientations:
     horizontal:

@@ -336,6 +336,27 @@ def get_mosfet_lateral_gate_scores(binary, bbox):
     inside_w = max(MOSFET_GATE_INSIDE_X_MIN, int(round(width * MOSFET_GATE_INSIDE_X_RATIO)))
     cy1 = int(round(y1 + height * MOSFET_GATE_CENTER_Y1_RATIO))
     cy2 = int(round(y1 + height * MOSFET_GATE_CENTER_Y2_RATIO))
+    outside_strip_w = max(2, int(round(width * 0.10)))
+    outer_y1 = y1 + max(1, int(round(0.06 * height)))
+    outer_y2 = y2 - max(1, int(round(0.06 * height)))
+    corner_w = max(3, int(round(width * 0.20)))
+    corner_h = max(3, int(round(height * 0.22)))
+
+    outer_mass_left = img_count_foreground_pixels(
+        binary,
+        x1 - outside_strip_w,
+        outer_y1,
+        x1,
+        outer_y2 + 1,
+    )
+
+    outer_mass_right = img_count_foreground_pixels(
+        binary,
+        x2 + 1,
+        outer_y1,
+        x2 + 1 + outside_strip_w,
+        outer_y2 + 1,
+    )
 
     inside_left = img_count_foreground_pixels(
         binary,
@@ -353,8 +374,61 @@ def get_mosfet_lateral_gate_scores(binary, bbox):
         cy2
     )
 
-    combined_left = outside_scores["left"] + MOSFET_GATE_INSIDE_WEIGHT * inside_left
-    combined_right = outside_scores["right"] + MOSFET_GATE_INSIDE_WEIGHT * inside_right
+    corner_mass_left = (
+        img_count_foreground_pixels(
+            binary,
+            x1 + 1,
+            y1 + 1,
+            x1 + 1 + corner_w,
+            y1 + 1 + corner_h,
+        )
+        + img_count_foreground_pixels(
+            binary,
+            x1 + 1,
+            y2 - corner_h,
+            x1 + 1 + corner_w,
+            y2,
+        )
+    )
+
+    corner_mass_right = (
+        img_count_foreground_pixels(
+            binary,
+            x2 - corner_w,
+            y1 + 1,
+            x2,
+            y1 + 1 + corner_h,
+        )
+        + img_count_foreground_pixels(
+            binary,
+            x2 - corner_w,
+            y2 - corner_h,
+            x2,
+            y2,
+        )
+    )
+
+    # Il gate laterale tende ad avere una connessione compatta e concentrata
+    # nella banda centrale, mentre il lato drain/source spesso genera una massa
+    # esterna piu' diffusa lungo tutto il lato. Il rapporto centro/massa aiuta
+    # a risolvere i casi speculari come M3/M7 del batch v8.
+    left_focus_ratio = float(outside_scores["left"]) / float(max(outer_mass_left, 1))
+    right_focus_ratio = float(outside_scores["right"]) / float(max(outer_mass_right, 1))
+    focus_bonus_scale = 45.0
+    corner_penalty_scale = 0.45
+
+    combined_left = (
+        outside_scores["left"]
+        + MOSFET_GATE_INSIDE_WEIGHT * inside_left
+        + focus_bonus_scale * left_focus_ratio
+        - corner_penalty_scale * corner_mass_left
+    )
+    combined_right = (
+        outside_scores["right"]
+        + MOSFET_GATE_INSIDE_WEIGHT * inside_right
+        + focus_bonus_scale * right_focus_ratio
+        - corner_penalty_scale * corner_mass_right
+    )
 
     return {
         "left": combined_left,
@@ -363,6 +437,14 @@ def get_mosfet_lateral_gate_scores(binary, bbox):
         "outside_right": outside_scores["right"],
         "inside_left": inside_left,
         "inside_right": inside_right,
+        "outer_mass_left": outer_mass_left,
+        "outer_mass_right": outer_mass_right,
+        "focus_ratio_left": round(left_focus_ratio, 4),
+        "focus_ratio_right": round(right_focus_ratio, 4),
+        "focus_bonus_scale": focus_bonus_scale,
+        "corner_mass_left": corner_mass_left,
+        "corner_mass_right": corner_mass_right,
+        "corner_penalty_scale": corner_penalty_scale,
         "probe_mode": "mosfet_lateral_gate_combined",
     }
 
