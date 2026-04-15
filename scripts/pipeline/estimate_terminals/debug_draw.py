@@ -5,6 +5,7 @@ from .config import *
 # DEBUG DRAWING
 # =========================================================
 def draw_terminals(image_bgr, components, terminals):
+    """Disegna terminals per visualizzazione o debug."""
     out = image_bgr.copy()
     for comp in components:
         x1, y1, x2, y2 = map(int, comp["bbox"])

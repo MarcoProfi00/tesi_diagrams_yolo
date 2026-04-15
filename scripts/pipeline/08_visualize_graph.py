@@ -68,6 +68,7 @@ LEGACY_DOWNLOAD_SIMPLIFIED_JSON_DIR = OUTPUT_DIR / "downloads" / "simplified_jso
 # MAIN
 # =========================================================
 def main() -> None:
+    """Esegue il punto di ingresso dello step corrente della pipeline."""
     if not INPUT_DIR.exists():
         raise FileNotFoundError(f"Cartella input non trovata: {INPUT_DIR}")
 

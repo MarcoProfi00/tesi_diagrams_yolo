@@ -31,6 +31,7 @@ SAVE_DEBUG_IMAGES = True
 
 
 def compute_center(bbox):
+    """Calcola il centro geometrico di un bounding box."""
     x1, y1, x2, y2 = bbox
     xc = (x1 + x2) / 2.0
     yc = (y1 + y2) / 2.0
@@ -38,6 +39,7 @@ def compute_center(bbox):
 
 
 def sort_components(components, sort_order="yx"):
+    """Ordina components secondo le regole richieste."""
     def key_fn(comp):
         bbox = comp["bbox"]
         xc, yc = compute_center(bbox)
@@ -50,6 +52,7 @@ def sort_components(components, sort_order="yx"):
 
 
 def assign_instances_to_image(data: dict, sort_order="yx") -> dict:
+    """Assegna gli instance_id ai componenti di una stessa immagine raggruppandoli per classe e posizione."""
     components = data.get("components", [])
     grouped = defaultdict(list)
 
@@ -78,6 +81,7 @@ def assign_instances_to_image(data: dict, sort_order="yx") -> dict:
 
 
 def draw_components_with_instances(image_bgr, components):
+    """Disegna i componenti con il relativo instance_id per l'immagine di debug."""
     out = image_bgr.copy()
 
     for comp in components:
@@ -106,6 +110,7 @@ def draw_components_with_instances(image_bgr, components):
 
 
 def save_debug_image(updated_data: dict, output_image_path: Path):
+    """Salva debug image nel percorso di output previsto."""
     image_path = Path(updated_data["image_path"])
     image_bgr = cv2.imread(str(image_path))
 
@@ -118,6 +123,7 @@ def save_debug_image(updated_data: dict, output_image_path: Path):
 
 
 def main() -> None:
+    """Esegue il punto di ingresso dello step corrente della pipeline."""
     if not INPUT_DIR.exists():
         raise FileNotFoundError(f"Cartella input non trovata: {INPUT_DIR}")
 

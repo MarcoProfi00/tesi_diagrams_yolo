@@ -8,6 +8,7 @@ from .labels import sort_components_spatial, sort_nets, sort_terminals
 
 
 def build_nx_graph(graph_data: dict[str, Any]) -> nx.DiGraph:
+    """Costruisce nx graph a partire dagli input correnti della pipeline."""
     G = nx.DiGraph()
     for node in graph_data["nodes"]:
         G.add_node(node["node_id"], **node)
@@ -16,6 +17,7 @@ def build_nx_graph(graph_data: dict[str, Any]) -> nx.DiGraph:
     return G
 
 def compute_layered_positions(graph_data: dict[str, Any]) -> dict[str, tuple[float, float]]:
+    """Calcola layered positions a partire dagli input forniti."""
     by_type: dict[str, list[dict[str, Any]]] = {
         "Diagram": [],
         "Component": [],
@@ -55,6 +57,7 @@ def compute_layered_positions(graph_data: dict[str, Any]) -> dict[str, tuple[flo
     return positions
 
 def compute_component_net_positions(graph_data: dict[str, Any]) -> dict[str, tuple[float, float]]:
+    """Calcola component net positions a partire dagli input forniti."""
     components = sort_components_spatial([n for n in graph_data["nodes"] if n.get("viz_node_type") == "Component"])
     nets = sort_nets([n for n in graph_data["nodes"] if n.get("viz_node_type") == "Net"])
 

@@ -56,12 +56,12 @@ Il primo livello serve per la localizzazione geometrica coerente con l’orienta
 
 Sono stati introdotti semantic_terminal_strategy e semantic_roles per diversi componenti a due terminali:
 
-- Battery: battery_positive_from_long_plate, con ruoli positive e negative
-- Current_Source: current_source_direction_from_arrow, con ruoli current_to e current_from
-- Diode: diode_cathode_from_bar, con ruoli cathode e anode
+- Battery: **battery_positive_from_long_plate**, con ruoli positive e negative
+- Current_Source: **current_source_direction_from_arrow**, con ruoli current_to e current_from
+- Diode: **diode_cathode_from_bar**, con ruoli cathode e anode
 - LED: stessa semantica del diodo, quindi cathode e anode
-- Polarized_Capacitor: polarized_capacitor_positive_from_marker, con ruoli positive e negative
-- Voltage_Source: voltage_source_positive_from_plus_marker, con ruoli positive e negative
+- Polarized_Capacitor: **polarized_capacitor_positive_from_marker**, con ruoli positive e negative
+- Voltage_Source: **voltage_source_positive_from_plus_marker**, con ruoli positive e negative
 
 Questa estensione permette alla pipeline di distinguere tra terminali geometricamente equivalenti ma elettricamente non equivalenti.
 

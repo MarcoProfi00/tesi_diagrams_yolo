@@ -103,6 +103,7 @@ MAX_FUNCTIONAL_PATHS = 8
 # UTILITY
 # =========================================================
 def infer_source_stage(data: dict) -> str:
+    """Inferisce source stage dalle evidenze disponibili."""
     if "terminal_net_matching" in data:
         matching = data.get("terminal_net_matching", {})
         if "n_ok_matches" in matching or "n_unmatched_matches" in matching:
@@ -111,11 +112,13 @@ def infer_source_stage(data: dict) -> str:
     return "unknown"
 
 def jsonable(value: Any):
+    """Converte liste e dizionari in stringhe JSON per poterli scrivere comodamente nei CSV."""
     if isinstance(value, (list, dict)):
         return json.dumps(value, ensure_ascii=False)
     return value
 
 def save_csv(rows: list[dict], out_path: Path):
+    """Salva una tabella CSV costruendo automaticamente l'unione di tutte le colonne presenti nelle righe."""
     if not rows:
         with open(out_path, "w", newline="", encoding="utf-8") as f:
             pass
@@ -134,35 +137,43 @@ def save_csv(rows: list[dict], out_path: Path):
 # COSTRUZIONE ID UNIVOCI NEL BATCH
 # =========================================================
 def diagram_node_id(diagram_id: str) -> str:
+    """Genera l'identificatore univoco del nodo Diagram nel grafo esportato."""
     return f"diagram:{diagram_id}"
 
 def component_node_id(diagram_id: str, instance_id: str) -> str:
+    """Genera l'identificatore univoco di un nodo Component nel grafo esportato."""
     return f"component:{diagram_id}:{instance_id}"
 
 def terminal_node_id(diagram_id: str, terminal_id: str) -> str:
+    """Genera l'identificatore univoco di un nodo Terminal nel grafo esportato."""
     return f"terminal:{diagram_id}:{terminal_id}"
 
 def net_node_id(diagram_id: str, net_id: str) -> str:
+    """Genera l'identificatore univoco di un nodo Net nel grafo esportato."""
     return f"net:{diagram_id}:{net_id}"
 
 
 def component_ref(instance_id: str | None, class_name: str | None) -> str:
+    """Costruisce una stringa leggibile per riferirsi a un componente nei testi descrittivi."""
     if instance_id and class_name:
         return f"{instance_id} ({class_name})"
     return instance_id or class_name or "unknown_component"
 
 
 def terminal_ref(terminal_id: str | None, terminal_name: str | None) -> str:
+    """Costruisce una stringa leggibile per riferirsi a un terminale nei testi descrittivi."""
     if terminal_name:
         return f"{terminal_id} [{terminal_name}]"
     return terminal_id or "unknown_terminal"
 
 
 def terminal_display_id(term: dict) -> str | None:
+    """Restituisce l'identificatore piu leggibile da mostrare per un terminale."""
     return term.get("display_terminal_id") or term.get("terminal_id")
 
 
 def terminal_human_name(term: dict) -> str | None:
+    """Restituisce il nome piu parlante disponibile per un terminale."""
     return (
         term.get("display_name")
         or term.get("semantic_terminal_name")
@@ -173,6 +184,7 @@ def terminal_human_name(term: dict) -> str | None:
 
 
 def build_match_status_counts(terminals: list[dict]) -> dict[str, int]:
+    """Conta quanti terminali ricadono in ciascuno stato di matching."""
     counts: dict[str, int] = {}
     for terminal in terminals:
         status = str(terminal.get("match_status") or "unknown")
@@ -181,6 +193,7 @@ def build_match_status_counts(terminals: list[dict]) -> dict[str, int]:
 
 
 def build_terminal_and_net_indexes(data: dict):
+    """Prepara indici rapidi di componenti, terminali e net insieme alla mappa net -> terminali."""
     components = data.get("components", [])
     terminals = data.get("terminals", [])
     nets = data.get("nets", [])
@@ -216,6 +229,7 @@ def build_terminal_and_net_indexes(data: dict):
 
 
 def build_terminal_statement(term: dict, peer_terminals: list[dict]) -> str:
+    """Genera una frase breve che descrive come un terminale e collegato nel diagramma."""
     comp_text = component_ref(term.get("instance_id"), term.get("component_class_name"))
     terminal_name = terminal_human_name(term)
     net_id = term.get("matched_net_id")
@@ -255,6 +269,7 @@ def build_terminal_statement(term: dict, peer_terminals: list[dict]) -> str:
 
 
 def build_net_statement(net: dict, connected_terminals: list[dict]) -> str:
+    """Genera una frase breve che descrive quali terminali risultano collegati alla net."""
     net_id = net.get("net_id")
     if not connected_terminals:
         return f"Net {net_id} has no modeled connected terminals."
@@ -283,6 +298,7 @@ def build_net_statement(net: dict, connected_terminals: list[dict]) -> str:
 
 
 def build_diagnostic_context(terminals: list[dict], nets: list[dict]) -> dict:
+    """Raccoglie il contesto diagnostico utile per terminali sospetti, unmatched e net implicite."""
     suspicious_terminals = [
         {
             "terminal_id": term.get("terminal_id"),
@@ -332,6 +348,8 @@ def build_diagnostic_context(terminals: list[dict], nets: list[dict]) -> dict:
         if term.get("matched_net_is_implicit_supply", False)
     ]
 
+    # Questo blocco produce un riassunto umano molto compatto che poi viene
+    # riutilizzato sia nell'export semantico sia nelle viste di debug.
     notes = []
     if implicit_supply_nets:
         notes.append(
@@ -361,6 +379,7 @@ def build_diagnostic_context(terminals: list[dict], nets: list[dict]) -> dict:
 # NODE BUILDER
 # =========================================================
 def make_diagram_node(data: dict) -> dict:
+    """Crea diagram node per la struttura del grafo esportato."""
     diagram_id = data["image_id"]
     return {
         "node_id": diagram_node_id(diagram_id),
@@ -380,6 +399,7 @@ def make_diagram_node(data: dict) -> dict:
 
 
 def make_component_node(component: dict, diagram_id: str) -> dict:
+    """Crea component node per la struttura del grafo esportato."""
     bbox = component.get("bbox", [None, None, None, None])
     return {
         "node_id": component_node_id(diagram_id, component["instance_id"]),
@@ -403,6 +423,7 @@ def make_component_node(component: dict, diagram_id: str) -> dict:
     }
 
 def make_terminal_node(terminal: dict, diagram_id: str) -> dict:
+    """Crea terminal node per la struttura del grafo esportato."""
     snap_point = terminal.get("snap_point") or [None, None]
     display_terminal_id = terminal_display_id(terminal)
     display_name = terminal_human_name(terminal)
@@ -456,6 +477,7 @@ def make_terminal_node(terminal: dict, diagram_id: str) -> dict:
     }
 
 def make_net_node(net: dict, diagram_id: str) -> dict:
+    """Crea net node per la struttura del grafo esportato."""
     bbox = net.get("bbox", [None, None, None, None])
     return {
         "node_id": net_node_id(diagram_id, net["net_id"]),
@@ -485,6 +507,7 @@ def make_net_node(net: dict, diagram_id: str) -> dict:
 # EDGE BUILDERS
 # =========================================================
 def make_edge(edge_id: str, source: str, target: str, relation_type: str, diagram_id: str, **attrs) -> dict:
+    """Crea edge per la struttura del grafo esportato."""
     edge = {
         "edge_id": edge_id,
         "source": source,
@@ -498,6 +521,7 @@ def make_edge(edge_id: str, source: str, target: str, relation_type: str, diagra
 
 def build_simplified_diagram_json(data: dict) -> dict:
     # Legacy compatibility wrapper: the active export now writes semantic_explanation.json.
+    """Mantiene la compatibilita legacy costruendo il JSON semantico semplificato."""
     return build_semantic_explanation(
         data,
         pipeline_variant=PIPELINE_DATASET,
@@ -506,6 +530,7 @@ def build_simplified_diagram_json(data: dict) -> dict:
 
 
 def join_or_none(values: list[str]) -> str:
+    """Unisce or none in una rappresentazione testuale compatta."""
     cleaned = [str(value) for value in values if value]
     if not cleaned:
         return "none"
@@ -514,12 +539,14 @@ def join_or_none(values: list[str]) -> str:
 
 def build_llm_context_markdown(simplified_data: dict) -> str:
     # Legacy compatibility wrapper: the active markdown now derives from semantic_explanation.json.
+    """Genera il contesto testuale in Markdown da allegare all'export semantico."""
     return build_semantic_llm_context(simplified_data)
 
 # =========================================================
 # BUILD GRAPH
 # =========================================================
 def build_graph(data: dict):
+    """Costruisce nodi, archi e statistiche del grafo finale a partire dai risultati topologici."""
     diagram_id = data["image_id"]
 
     nodes: list[dict] = []
@@ -621,6 +648,8 @@ def build_graph(data: dict):
             )
         )
 
+    # Le statistiche finali non servono solo per reportistica: vengono lette anche
+    # dalla dashboard HTML per mostrare rapidamente problemi e copertura del matching.
     confidence_counts = {
         "ok": sum(1 for t in terminals if t.get("match_confidence") == "ok"),
         "unmatched": sum(1 for t in terminals if t.get("match_confidence") == "unmatched"),
@@ -674,6 +703,7 @@ def build_graph(data: dict):
 # =========================================================
 def main() -> None:
     # 1. load input json
+    """Esegue il punto di ingresso dello step corrente della pipeline."""
     if not INPUT_DIR.exists():
         raise FileNotFoundError(f"Cartella input non trovata: {INPUT_DIR}")
 

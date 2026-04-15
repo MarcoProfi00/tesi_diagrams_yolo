@@ -63,21 +63,27 @@ IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
 
 
 def get_required_confidence(class_name: str) -> float:
+    """Restituisce la soglia minima di confidenza da usare per una specifica classe rilevata."""
     return float(CLASS_CONF_THRES.get(class_name, CONF_THRES))
 
 
 def get_model_inference_confidence(class_meta) -> float:
+    """Calcola la confidenza globale di inferenza del modello scegliendo la soglia piu permissiva necessaria tra le classi abilitate."""
     class_names = [meta.get("name", "") for meta in class_meta.values()]
     per_class_thresholds = [get_required_confidence(name) for name in class_names if name]
     if not per_class_thresholds:
         return CONF_THRES
+    # Usiamo la soglia minima per non tagliare via in partenza classi che
+    # richiedono un threshold piu basso; il filtraggio fine avviene dopo.
     return min([CONF_THRES, *per_class_thresholds])
 
 
 def is_terminal_detection_valid(image_binary, bbox) -> bool:
+    """Verifica se una detection della classe Terminal ha abbastanza evidenza grafica sui lati per essere considerata plausibile."""
     near_scores = get_terminal_class_probe_scores(image_binary, bbox)
     far_scores = get_terminal_class_far_probe_scores(image_binary, bbox)
 
+    # Il contributo lontano pesa meno: serve come conferma, non come segnale principale.
     combined = {
         side: float(near_scores.get(side, 0)) + 0.8 * float(far_scores.get(side, 0))
         for side in ("top", "bottom", "left", "right")
@@ -93,18 +99,13 @@ def is_terminal_detection_valid(image_binary, bbox) -> bool:
 
 
 def load_yaml(path: Path):
+    """Legge un file YAML e ne restituisce il contenuto gia convertito in strutture Python."""
     with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
 def load_class_metadata(class_terminals_path: Path):
-    """
-    Legge metadata/class_terminals_v1.yaml e restituisce:
-    - class_meta: dict {class_id: metadata}
-    - detect_class_ids: tutte le classi presenti nello yaml
-    - terminal_class_ids: classi con use_for_terminals = true
-    - masking_class_ids: classi con use_for_masking = true
-    """
+    """Carica i metadati delle classi e prepara gli insiemi di classi usate per detection, terminali e masking."""
     data = load_yaml(class_terminals_path)
 
     class_meta = {}
@@ -126,6 +127,7 @@ def load_class_metadata(class_terminals_path: Path):
 
 
 def normalize_model_names(model_names):
+    """Normalizza il mapping dei nomi classe del modello in un dizionario indicizzato per class_id."""
     if isinstance(model_names, list):
         return {i: name for i, name in enumerate(model_names)}
 
@@ -136,6 +138,7 @@ def normalize_model_names(model_names):
 
 
 def get_input_images():
+    """Raccoglie e ordina le immagini di input che verranno processate in questo step."""
     if not INPUT_IMAGES_DIR.exists():
         raise FileNotFoundError(f"Cartella immagini non trovata: {INPUT_IMAGES_DIR}")
 
@@ -151,6 +154,7 @@ def get_input_images():
 
 
 def draw_components(image_bgr, components):
+    """Disegna bounding box e label dei componenti rilevati sull'immagine di debug."""
     out = image_bgr.copy()
 
     for comp in components:
@@ -192,6 +196,7 @@ def predict_components_on_image(
     model_names,
     class_meta
 ):
+    """Esegue la detection su una singola immagine e costruisce il JSON con i componenti filtrati."""
     image_bgr = cv2.imread(str(image_path))
     if image_bgr is None:
         raise ValueError(f"Impossibile leggere l'immagine: {image_path}")
@@ -229,6 +234,8 @@ def predict_components_on_image(
             if float(conf) < required_conf:
                 continue
 
+            # La classe Terminal e particolarmente rumorosa: oltre alla confidence
+            # richiediamo anche un minimo di struttura grafica coerente.
             if yaml_class_name == "Terminal" and not is_terminal_detection_valid(image_binary, box):
                 continue
 
@@ -270,6 +277,7 @@ def predict_components_on_image(
 
 
 def main() -> None:
+    """Esegue il punto di ingresso dello step corrente della pipeline."""
     if not MODEL_PATH.exists():
         raise FileNotFoundError(f"Modello non trovato: {MODEL_PATH}")
 

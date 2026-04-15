@@ -48,6 +48,7 @@ CLASS_TERMINALS_PATH = PROJECT_ROOT / "metadata" / "class_terminals_v1.yaml"
 # MAIN
 # =========================================================
 def main() -> None:
+    """Esegue il punto di ingresso dello step corrente della pipeline."""
     if not INPUT_DIR.exists():
         raise FileNotFoundError(f"Cartella input non trovata: {INPUT_DIR}")
     if not CLASS_TERMINALS_PATH.exists():

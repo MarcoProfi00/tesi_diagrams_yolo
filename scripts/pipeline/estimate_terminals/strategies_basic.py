@@ -21,12 +21,7 @@ from .probes import (
 # STRATEGY: ONE-TERMINAL COMPONENTS
 # =========================================================
 def _score_one_terminal_candidate_side(binary, bbox, side):
-    """
-    Valuta un lato candidato per componenti a 1 terminale
-    usando:
-    1) side-peak sul lato
-    2) supporto direzionale quasi solo esterno al bbox
-    """
+    """Helper interno che assegna uno score a one terminal candidate side per la selezione successiva."""
     point, peak_debug = geom_terminal_point_by_side_peak(binary, bbox, side)
     px, py = point
 
@@ -47,6 +42,7 @@ def strategy_detect_connected_side(binary, bbox):
     # -------------------------------------------------
     # 1) Validazione diretta sui 4 lati candidati
     # -------------------------------------------------
+    """Gestisce strategy detect connected side all'interno di questo modulo della pipeline."""
     point_scores = {}
     point_debug = {}
 
@@ -138,6 +134,7 @@ def strategy_detect_connected_side(binary, bbox):
     return coarse_best_side, side_scores
 
 def resolve_one_terminal_orientation(meta: dict, connected_side: str):
+    """Risolve one terminal orientation usando le euristiche configurate."""
     orientations = meta.get("orientations", {})
     for orientation_name, terminals_def in orientations.items():
         for term_def in terminals_def:
@@ -156,6 +153,7 @@ def resolve_one_terminal_orientation(meta: dict, connected_side: str):
 # STRATEGY: TWO-TERMINAL COMPONENTS
 # =========================================================
 def _decide_axis_from_scores(side_scores):
+    """Helper interno che gestisce decide axis from scores all'interno di questo modulo della pipeline."""
     lr_pair = min(side_scores["left"], side_scores["right"])
     tb_pair = min(side_scores["top"], side_scores["bottom"])
     lr_score = side_scores["left"] + side_scores["right"]
@@ -168,6 +166,7 @@ def _decide_axis_from_scores(side_scores):
     return None
 
 def strategy_detect_two_terminal_orientation_generic(binary, bbox, default_orientation="horizontal"):
+    """Gestisce strategy detect two terminal orientation generic all'interno di questo modulo della pipeline."""
     side_scores = get_local_terminal_probe_scores_center(binary, bbox)
     orientation = _decide_axis_from_scores(side_scores)
     if orientation is not None:
@@ -194,6 +193,7 @@ def strategy_detect_two_terminal_orientation_generic(binary, bbox, default_orien
 
 
 def detect_two_terminal_orientation_capacitor(binary, bbox, default_orientation="horizontal"):
+    """Rileva two terminal orientation capacitor usando le euristiche configurate."""
     side_scores = get_local_terminal_probe_scores_center(binary, bbox)
     orientation = _decide_axis_from_scores(side_scores)
     if orientation is not None:
@@ -219,6 +219,7 @@ def detect_two_terminal_orientation_capacitor(binary, bbox, default_orientation=
 
 
 def strategy_detect_two_terminal_orientation_switch(binary, bbox, default_orientation="horizontal"):
+    """Gestisce strategy detect two terminal orientation switch all'interno di questo modulo della pipeline."""
     side_scores = get_local_terminal_probe_scores_multi_anchor(binary, bbox)
     orientation = _decide_axis_from_scores(side_scores)
     if orientation is not None:
@@ -244,10 +245,7 @@ def strategy_detect_two_terminal_orientation_switch(binary, bbox, default_orient
     return default_orientation, side_scores
 
 def _score_two_terminal_candidate_by_points(binary, bbox, orientation):
-    """
-    Valuta una orientazione candidata usando i due terminali stimati
-    e il supporto reale del wire attorno a ciascun terminale.
-    """
+    """Helper interno che assegna uno score a two terminal candidate by points per la selezione successiva."""
     if orientation == "horizontal":
         sides = ("left", "right")
     else:
@@ -287,15 +285,7 @@ def _score_two_terminal_candidate_by_points(binary, bbox, orientation):
     return total_score, side_scores, point_debug
 
 def detect_two_terminal_orientation_led(binary, bbox, default_orientation="vertical"):
-    """
-    Strategia dedicata per LED / diode-like symbols.
-
-    Ordine:
-    1. validazione diretta delle 2 orientazioni candidate tramite i terminali stimati
-    2. probe LED near/far
-    3. fallback bbox invertito specifico LED
-    4. fallback finale YAML
-    """
+    """Rileva two terminal orientation led usando le euristiche configurate."""
 
     # -------------------------------------------------
     # 1) Validazione diretta tramite terminali candidati
@@ -410,20 +400,7 @@ def detect_two_terminal_orientation_led(binary, bbox, default_orientation="verti
     return default_orientation, combined_scores
 
 def detect_two_terminal_orientation_round_source(binary, bbox, default_orientation="vertical"):
-    """
-    Strategia dedicata per simboli rotondi a 2 terminali.
-
-    Obiettivo:
-    - evitare che il cerchio interno falsi left/right oppure top/bottom
-    - evitare che il bordo immagine o testo vicino pesino troppo
-
-    Flusso:
-    1. probe near stretti e SOLO esterni
-    2. probe far per conferma continuità wire
-    3. decisione asse
-    4. fallback su aspect ratio se il bbox è abbastanza non quadrato
-    5. ultimo fallback: default_orientation YAML
-    """
+    """Rileva two terminal orientation round source usando le euristiche configurate."""
     near_scores = get_round_source_probe_scores(binary, bbox)
     far_scores = get_round_source_far_probe_scores(binary, bbox)
 
@@ -480,10 +457,7 @@ def detect_two_terminal_orientation_round_source(binary, bbox, default_orientati
     return default_orientation, combined_scores
 
 def _score_variable_resistor_candidate_by_points(binary, bbox, orientation):
-    """
-    Valuta una orientazione candidata usando i due terminali stimati
-    e leggendo supporto quasi solo ESTERNO al bbox.
-    """
+    """Helper interno che assegna uno score a variable resistor candidate by points per la selezione successiva."""
     if orientation == "horizontal":
         sides = ("left", "right")
     else:
@@ -520,14 +494,7 @@ def _score_variable_resistor_candidate_by_points(binary, bbox, orientation):
 
 
 def detect_two_terminal_orientation_variable_resistor(binary, bbox, default_orientation="horizontal"):
-    """
-    Strategia dedicata per Variable_Resistor / Photoresistor.
-
-    Ordine:
-    1) validazione diretta delle 2 orientazioni candidate tramite terminali stimati
-    2) bande esterne molto strette
-    3) fallback generic
-    """
+    """Rileva two terminal orientation variable resistor usando le euristiche configurate."""
 
     # -------------------------------------------------
     # 1) Validazione diretta tramite terminali candidati

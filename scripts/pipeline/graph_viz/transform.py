@@ -2,6 +2,7 @@ from typing import Any
 
 
 def derive_component_net_graph(graph_data: dict[str, Any]) -> dict[str, Any]:
+    """Gestisce derive component net graph all'interno di questo modulo della pipeline."""
     component_nodes = [n for n in graph_data["nodes"] if n.get("node_type") == "Component"]
     net_nodes = [n for n in graph_data["nodes"] if n.get("node_type") == "Net"]
     component_lookup = {str(n.get("instance_id")): n for n in component_nodes}

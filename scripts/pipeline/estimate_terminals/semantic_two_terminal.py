@@ -13,6 +13,7 @@ DEFAULT_FALLBACK_SIDE = {
 
 
 def _group_consecutive_indices(indices: list[int]) -> list[list[int]]:
+    """Helper interno che gestisce group consecutive indices all'interno di questo modulo della pipeline."""
     if not indices:
         return []
     groups = [[indices[0]]]
@@ -25,6 +26,7 @@ def _group_consecutive_indices(indices: list[int]) -> list[list[int]]:
 
 
 def _bbox_dims(bbox, binary):
+    """Helper interno che gestisce bbox dims all'interno di questo modulo della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     width = max(1, x2 - x1 + 1)
     height = max(1, y2 - y1 + 1)
@@ -32,6 +34,7 @@ def _bbox_dims(bbox, binary):
 
 
 def _count_nonzero(binary, x1, y1, x2, y2) -> int:
+    """Helper interno che gestisce count nonzero all'interno di questo modulo della pipeline."""
     h, w = binary.shape[:2]
     x1 = max(0, min(w, int(round(x1))))
     y1 = max(0, min(h, int(round(y1))))
@@ -49,6 +52,7 @@ def _projection_side_scores(
     center_band_ratio: float = 0.42,
     edge_inset_ratio: float = 0.08,
 ):
+    """Helper interno che gestisce projection side scores all'interno di questo modulo della pipeline."""
     x1, y1, x2, y2, width, height = _bbox_dims(bbox, binary)
 
     if orientation == "horizontal":
@@ -104,6 +108,7 @@ def _projection_edge_group_scores(
     center_band_ratio: float = 0.42,
     edge_inset_ratio: float = 0.08,
 ):
+    """Helper interno che gestisce projection edge group scores all'interno di questo modulo della pipeline."""
     x1, y1, x2, y2, width, height = _bbox_dims(bbox, binary)
 
     if orientation == "horizontal":
@@ -175,11 +180,7 @@ def _projection_edge_group_scores(
 
 
 def _diode_bar_scores(score_map: dict, orientation: str) -> dict:
-    """
-    Nei diodi il lato con la barra tende a produrre un gruppo piu' corto e
-    compatto del lato col triangolo. Favoriamo quindi il gruppo edge piu' thin
-    e vicino al bordo sia in orizzontale sia in verticale.
-    """
+    """Helper interno che gestisce diode bar scores all'interno di questo modulo della pipeline."""
     projection = score_map.get("projection_values") or []
     groups = score_map.get("kept_groups") or []
     axis_size = len(projection)
@@ -211,6 +212,7 @@ def _diode_bar_scores(score_map: dict, orientation: str) -> dict:
 
 
 def _plus_marker_scores_by_side(binary, bbox, orientation: str):
+    """Helper interno che gestisce plus marker scores by side all'interno di questo modulo della pipeline."""
     x1, y1, x2, y2, width, height = _bbox_dims(bbox, binary)
     strip_half = max(1, int(round(min(width, height) * 0.06)))
 
@@ -243,6 +245,7 @@ def _plus_marker_scores_by_side(binary, bbox, orientation: str):
 
 
 def _inner_half_mass_scores(binary, bbox, orientation: str):
+    """Helper interno che gestisce inner half mass scores all'interno di questo modulo della pipeline."""
     x1, y1, x2, y2, width, height = _bbox_dims(bbox, binary)
     inset_x = max(2, int(round(width * 0.22)))
     inset_y = max(2, int(round(height * 0.22)))
@@ -278,6 +281,7 @@ def _inner_half_mass_scores(binary, bbox, orientation: str):
 
 
 def _choose_side(score_map: dict, positive_key: str, negative_key: str, fallback_side: str):
+    """Helper interno che sceglie side tra i candidati disponibili."""
     positive_score = float(score_map.get(positive_key, 0.0))
     negative_score = float(score_map.get(negative_key, 0.0))
 
@@ -315,6 +319,7 @@ def _choose_side(score_map: dict, positive_key: str, negative_key: str, fallback
 
 
 def _set_term_semantic_fields(term: dict, semantic_name: str, semantic_slot: str, confidence: float, resolution_mode: str, evidence_type: str, debug: dict):
+    """Helper interno che gestisce set term semantic fields all'interno di questo modulo della pipeline."""
     term["semantic_terminal_name"] = semantic_name
     term["semantic_terminal_id"] = f"{term['instance_id']}:{semantic_name}"
     term["semantic_slot"] = semantic_slot
@@ -344,6 +349,7 @@ def _assign_pair_roles(
     evidence_type: str,
     debug: dict,
 ):
+    """Helper interno che gestisce assign pair roles all'interno di questo modulo della pipeline."""
     role_by_position = {
         marker_side: ("marker_side", marker_name),
         other_side: ("other_side", other_name),
@@ -367,6 +373,7 @@ def _assign_pair_roles(
 
 
 def _assign_strategy_result(terminals, orientation, meta, score_map, resolution_mode):
+    """Helper interno che gestisce assign strategy result all'interno di questo modulo della pipeline."""
     if orientation == "horizontal":
         primary_side = "left"
         secondary_side = "right"
@@ -405,6 +412,7 @@ def _assign_strategy_result(terminals, orientation, meta, score_map, resolution_
 
 
 def resolve_two_terminal_semantics(binary, bbox, orientation, terminals, meta):
+    """Risolve two terminal semantics usando le euristiche configurate."""
     semantic_strategy = meta.get("semantic_terminal_strategy")
 
     if semantic_strategy is None or len(terminals) < 2 or orientation not in {"horizontal", "vertical"}:

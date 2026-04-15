@@ -8,6 +8,7 @@ from .probes import score_point_directional_support
 
 
 def _get_opamp_orientation_defs(meta: dict, orientation: str):
+    """Helper interno che restituisce opamp orientation defs per il contesto corrente della pipeline."""
     terminals_def = meta.get("orientations", {}).get(orientation)
     if terminals_def is None:
         raise ValueError(f"Nessuna definizione opamp per orientazione '{orientation}'")
@@ -15,6 +16,7 @@ def _get_opamp_orientation_defs(meta: dict, orientation: str):
 
 
 def _score_opamp_terminal(binary, bbox, orientation: str, term_def: dict):
+    """Helper interno che assegna uno score a opamp terminal per la selezione successiva."""
     point, point_debug = geom_terminal_point_opamp(
         binary,
         bbox,
@@ -51,15 +53,7 @@ def _score_opamp_terminal(binary, bbox, orientation: str, term_def: dict):
 
 
 def detect_opamp_terminals(meta: dict, binary, bbox, default_orientation="right"):
-    """
-    Reset strategico dell'opamp.
-
-    Fase attuale:
-    1) stimiamo l'orientazione usando SOLO i 3 terminali obbligatori
-    2) restituiamo SOLO i 3 terminali obbligatori
-    3) ignoriamo temporaneamente gli auxiliary, così non inquinano né
-       l'orientazione né la localizzazione dei pin principali
-    """
+    """Rileva opamp terminals usando le euristiche configurate."""
     candidate_orientations = ("right", "left", "top", "bottom")
 
     orientation_scores = {}
@@ -158,16 +152,7 @@ def detect_opamp_terminals(meta: dict, binary, bbox, default_orientation="right"
 
 
 def snap_opamp_top_aux_to_nearby_terminal(components: list[dict], binary):
-    """
-    Per gli opamp orizzontali, l'aux superiore puo' essere collegato a un
-    piccolo Terminal separato (tipicamente Vcc/Vdd) disegnato sopra il simbolo.
-
-    La sola geometria interna dell'opamp tende a scegliere uno stelo "forte"
-    dentro il triangolo e a spostare il punto troppo verso il numero 4.
-    Quando troviamo un Terminal vicino nella banda centrale superiore
-    dell'opamp, usiamo quel Terminal per fissare l'asse x corretto, ma il
-    punto finale resta il giunto interno con la diagonale dell'opamp.
-    """
+    """Gestisce snap opamp top aux to nearby terminal all'interno di questo modulo della pipeline."""
     if not OPAMP_AUX_SNAP_TO_NEARBY_TERMINAL:
         return []
 

@@ -6,6 +6,7 @@ from .geometry import geom_clamp_bbox_to_image
 # PROBE HELPERS - GENERIC
 # =========================================================
 def probe_get_side_scores(binary, bbox):
+    """Gestisce probe get side scores all'interno di questo modulo della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     xc = int(round((x1 + x2) / 2))
     yc = int(round((y1 + y2) / 2))
@@ -22,6 +23,7 @@ def probe_get_side_scores(binary, bbox):
 
 
 def _probe_halfspan(width, height):
+    """Helper interno che gestisce probe halfspan all'interno di questo modulo della pipeline."""
     min_dim = max(1, min(width, height))
     halfspan = int(round(min_dim * TERMINAL_PROBE_HALFSPAN_RATIO))
     halfspan = max(TERMINAL_PROBE_HALFSPAN_MIN, halfspan)
@@ -30,6 +32,7 @@ def _probe_halfspan(width, height):
 
 
 def get_local_terminal_probe_scores_center(binary, bbox):
+    """Restituisce local terminal probe scores center per il contesto corrente della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     xc = int(round((x1 + x2) / 2))
     yc = int(round((y1 + y2) / 2))
@@ -50,6 +53,7 @@ def get_local_terminal_probe_scores_center(binary, bbox):
 
 
 def get_local_terminal_probe_scores_multi_anchor(binary, bbox, anchor_ratios=SWITCH_ANCHOR_RATIOS):
+    """Restituisce local terminal probe scores multi anchor per il contesto corrente della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     width = max(x2 - x1, 1)
     height = max(y2 - y1, 1)
@@ -89,6 +93,7 @@ def get_local_terminal_probe_scores_multi_anchor(binary, bbox, anchor_ratios=SWI
     }
 
 def _led_probe_halfspan(width, height):
+    """Helper interno che gestisce led probe halfspan all'interno di questo modulo della pipeline."""
     min_dim = max(1, min(width, height))
     halfspan = int(round(min_dim * LED_PROBE_HALFSPAN_RATIO))
     halfspan = max(LED_PROBE_HALFSPAN_MIN, halfspan)
@@ -97,14 +102,7 @@ def _led_probe_halfspan(width, height):
 
 
 def get_led_probe_scores(binary, bbox):
-    """
-    Probe dedicati per i LED.
-
-    Idea:
-    - usiamo bande molto strette e centrate
-    - così le frecce del LED pesano meno
-    - leggiamo soprattutto i punti in cui il wire entra davvero nel simbolo
-    """
+    """Restituisce led probe scores per il contesto corrente della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     xc = int(round((x1 + x2) / 2))
     yc = int(round((y1 + y2) / 2))
@@ -153,10 +151,7 @@ def get_led_probe_scores(binary, bbox):
     }
 
 def get_led_far_probe_scores(binary, bbox):
-    """
-    Probe più lontani dal bbox per confermare che da quel lato
-    esce davvero un wire e non solo la grafica interna del LED.
-    """
+    """Restituisce led far probe scores per il contesto corrente della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     xc = int(round((x1 + x2) / 2))
     yc = int(round((y1 + y2) / 2))
@@ -202,10 +197,7 @@ def get_led_far_probe_scores(binary, bbox):
     }
 
 def _mosfet_single_side_halfspan(width, height):
-    """
-    Halfspan piccolo: vogliamo leggere soprattutto il wire che entra nel gate,
-    non la struttura interna del Mosfet.
-    """
+    """Helper interno che gestisce mosfet single side halfspan all'interno di questo modulo della pipeline."""
     min_dim = max(1, min(width, height))
     halfspan = int(round(min_dim * MOSFET_SINGLE_SIDE_HALFSPAN_RATIO))
     halfspan = max(MOSFET_SINGLE_SIDE_HALFSPAN_MIN, halfspan)
@@ -214,18 +206,7 @@ def _mosfet_single_side_halfspan(width, height):
 
 
 def get_mosfet_single_side_scores(binary, bbox):
-    """
-    Score specifici per capire il lato singolo del Mosfet.
-
-    Usiamo:
-    - probe near: subito fuori dal bbox
-    - probe far : poco più lontano, per confermare continuità reale del wire
-
-    Questo riduce gli errori dovuti a:
-    - testo vicino al simbolo
-    - bordo del simbolo
-    - grafica interna del canale
-    """
+    """Restituisce mosfet single side scores per il contesto corrente della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     xc = int(round((x1 + x2) / 2))
     yc = int(round((y1 + y2) / 2))
@@ -317,16 +298,7 @@ def get_mosfet_single_side_scores(binary, bbox):
     return combined_scores
 
 def get_mosfet_lateral_gate_scores(binary, bbox):
-    """
-    Score specifico per decidere se il gate del Mosfet è a sinistra o a destra.
-
-    Combiniamo:
-    - score esterno (wire che arriva da fuori)
-    - score interno nella fascia centrale del simbolo
-
-    Questo aiuta nei casi in cui il lato drain/source ha un wire più forte
-    all'esterno ma il gate vero è riconoscibile meglio all'interno del simbolo.
-    """
+    """Restituisce mosfet lateral gate scores per il contesto corrente della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     width = max(x2 - x1, 1)
     height = max(y2 - y1, 1)
@@ -452,6 +424,7 @@ def get_mosfet_lateral_gate_scores(binary, bbox):
 # PROBE HELPERS - CLASS "Terminal"
 # =========================================================
 def _terminal_class_probe_halfspan(width, height):
+    """Helper interno che gestisce terminal class probe halfspan nel flusso dedicato ai terminali."""
     min_dim = max(1, min(width, height))
     halfspan = int(round(min_dim * TERMINAL_CLASS_PROBE_HALFSPAN_RATIO))
     halfspan = max(TERMINAL_CLASS_PROBE_HALFSPAN_MIN, halfspan)
@@ -460,10 +433,7 @@ def _terminal_class_probe_halfspan(width, height):
 
 
 def get_terminal_class_probe_scores(binary, bbox):
-    """
-    Probe stretti SOLO esterni al bbox, pensati per la classe Terminal.
-    Questo evita di far contaminare i punteggi dalla grafica interna del cerchietto.
-    """
+    """Restituisce terminal class probe scores per il contesto corrente della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     xc = int(round((x1 + x2) / 2))
     yc = int(round((y1 + y2) / 2))
@@ -509,6 +479,7 @@ def get_terminal_class_probe_scores(binary, bbox):
 
 
 def get_terminal_class_far_probe_scores(binary, bbox):
+    """Restituisce terminal class far probe scores per il contesto corrente della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     xc = int(round((x1 + x2) / 2))
     yc = int(round((y1 + y2) / 2))
@@ -551,12 +522,7 @@ def get_terminal_class_far_probe_scores(binary, bbox):
     }
 
 def get_terminal_border_preference(binary_shape, bbox, margin=TERMINAL_CLASS_BORDER_MARGIN):
-    """
-    Se il Terminal è vicino al bordo dell'immagine, favorisce il lato interno al diagramma.
-    Esempio:
-    - vicino al bordo sinistro -> preferisci 'right'
-    - vicino al bordo destro  -> preferisci 'left'
-    """
+    """Restituisce terminal border preference per il contesto corrente della pipeline."""
     h, w = binary_shape[:2]
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, (h, w))
 
@@ -581,6 +547,7 @@ def get_terminal_border_preference(binary_shape, bbox, margin=TERMINAL_CLASS_BOR
 
 
 def is_terminal_near_border(binary_shape, bbox):
+    """Restituisce se terminal near border rispetta la condizione richiesta."""
     h, w = binary_shape[:2]
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, (h, w))
     margin = max(TERMINAL_BORDER_MARGIN_MIN, int(TERMINAL_BORDER_MARGIN_RATIO * min(h, w)))
@@ -593,9 +560,7 @@ def is_terminal_near_border(binary_shape, bbox):
     )
 
 def score_point_local_support(binary, x, y, radius=MOSFET_POINT_SUPPORT_RADIUS):
-    """
-    Misura quanta evidenza di foreground/wire c'è attorno a un punto terminale stimato.
-    """
+    """Assegna uno score a point local support per la selezione successiva."""
     xi = int(round(x))
     yi = int(round(y))
     return img_count_foreground_pixels(
@@ -615,18 +580,7 @@ def score_point_directional_support(
     inward=3,
     halfspan=4,
 ):
-    """
-    Misura il supporto del wire attorno a un punto, ma in modo DIREZIONALE.
-
-    Esempio:
-    - terminale 'left'  -> guardo soprattutto a sinistra del punto
-    - terminale 'right' -> guardo soprattutto a destra
-    - terminale 'top'   -> guardo soprattutto sopra
-    - terminale 'bottom'-> guardo soprattutto sotto
-
-    Questo aiuta molto nei casi in cui due orientazioni del Mosfet sono
-    speculari e il solo score locale quadrato non basta a distinguerle.
-    """
+    """Assegna uno score a point directional support per la selezione successiva."""
     h, w = binary.shape[:2]
     xi = int(round(x))
     yi = int(round(y))
@@ -679,6 +633,7 @@ def score_point_directional_support(
 
 
 def score_point_orthogonal_support(binary, x, y, relative_position):
+    """Assegna uno score a point orthogonal support per la selezione successiva."""
     if relative_position in {"left", "right"}:
         return (
             score_point_directional_support(binary, x, y, "top")
@@ -695,21 +650,7 @@ def score_point_orthogonal_support(binary, x, y, relative_position):
 
 
 def score_mosfet_candidate_terminals(binary, terminals, single_side, single_weight=1.35):
-    """
-    Score finale di una orientazione candidata del Mosfet.
-
-    terminals: lista di dict con almeno:
-        - x
-        - y
-        - relative_position
-
-    single_side: lato del terminale singolo (gate), es. 'left' o 'right'
-
-    Idea:
-    - sommo supporto locale + supporto direzionale
-    - do più peso al terminale singolo, perché è quello che di solito
-      decide gli errori speculari left/right
-    """
+    """Assegna uno score a mosfet candidate terminals per la selezione successiva."""
     total = 0.0
     details = []
 
@@ -748,15 +689,7 @@ def score_mosfet_candidate_terminals(binary, terminals, single_side, single_weig
     return total, details
 
 def get_round_source_probe_scores(binary, bbox):
-    """
-    Probe dedicati per simboli rotondi a 2 terminali:
-    Signal_Source, Voltage_Source, Current_Source, Meter.
-
-    Idea:
-    - bande strette centrate
-    - SOLO esterne al bbox
-    - così il cerchio interno pesa meno
-    """
+    """Restituisce round source probe scores per il contesto corrente della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     xc = int(round((x1 + x2) / 2))
     yc = int(round((y1 + y2) / 2))
@@ -803,10 +736,7 @@ def get_round_source_probe_scores(binary, bbox):
 
 
 def get_round_source_far_probe_scores(binary, bbox):
-    """
-    Probe più lontani per confermare la continuità del wire.
-    Servono soprattutto quando il bordo del cerchio sporca i probe near.
-    """
+    """Restituisce round source far probe scores per il contesto corrente della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     xc = int(round((x1 + x2) / 2))
     yc = int(round((y1 + y2) / 2))

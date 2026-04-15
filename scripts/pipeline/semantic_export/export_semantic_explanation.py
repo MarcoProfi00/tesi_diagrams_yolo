@@ -62,10 +62,12 @@ PATH_PRIORITY = {
 
 
 def normalize_token(value: Any) -> str:
+    """Normalizza token in un formato interno coerente."""
     return str(value or "").strip().lower().replace(" ", "_").replace("-", "_")
 
 
 def join_or_none(values: list[Any]) -> str:
+    """Unisce una lista di valori leggibili oppure restituisce none se non ci sono elementi utili."""
     cleaned = [str(value) for value in values if value is not None and str(value) != ""]
     if not cleaned:
         return "none"
@@ -73,6 +75,7 @@ def join_or_none(values: list[Any]) -> str:
 
 
 def joined_with_and(values: list[Any]) -> str:
+    """Compone una lista in una frase piu naturale usando and nell'ultimo collegamento."""
     cleaned = [str(value) for value in values if value is not None and str(value) != ""]
     if not cleaned:
         return "none"
@@ -84,21 +87,25 @@ def joined_with_and(values: list[Any]) -> str:
 
 
 def titleize_label(value: str | None) -> str:
+    """Converte label in un'etichetta con formattazione leggibile."""
     token = str(value or "").replace("_", " ").strip()
     return token.capitalize() if token else "Path"
 
 
 def human_component_name(instance_id: str | None, class_name: str | None) -> str:
+    """Restituisce un nome leggibile del componente combinando classe e instance_id quando disponibili."""
     if class_name and instance_id:
         return f"{class_name} {instance_id}"
     return class_name or instance_id or "Unknown component"
 
 
 def terminal_display_id(term: dict) -> str | None:
+    """Restituisce l'identificatore piu leggibile da mostrare per un terminale."""
     return term.get("display_terminal_id") or term.get("terminal_id")
 
 
 def terminal_human_name(term: dict) -> str | None:
+    """Restituisce il nome piu parlante disponibile per un terminale."""
     return (
         term.get("display_name")
         or term.get("semantic_terminal_name")
@@ -109,6 +116,7 @@ def terminal_human_name(term: dict) -> str | None:
 
 
 def expanded_terminal_name(raw_name: str | None) -> str:
+    """Espande abbreviazioni e terminali numerici in etichette piu parlanti per i testi descrittivi."""
     if not raw_name:
         return "terminal"
     token = normalize_token(raw_name)
@@ -120,6 +128,7 @@ def expanded_terminal_name(raw_name: str | None) -> str:
 
 
 def terminal_role_text(term: dict) -> str:
+    """Restituisce il nome piu adatto da usare quando il terminale va descritto in linguaggio naturale."""
     raw_name = (
         term.get("semantic_terminal_name")
         or term.get("display_name")
@@ -131,27 +140,33 @@ def terminal_role_text(term: dict) -> str:
 
 
 def is_ground_component(class_name: str | None) -> bool:
+    """Riconosce se il componente appartiene alla famiglia delle masse."""
     return normalize_token(class_name) in GROUND_COMPONENT_CLASSES
 
 
 def is_supply_component(class_name: str | None) -> bool:
+    """Riconosce se il componente rappresenta una sorgente o alimentazione."""
     return normalize_token(class_name) in SUPPLY_COMPONENT_CLASSES
 
 
 def is_external_interface_component(class_name: str | None) -> bool:
+    """Riconosce se il componente e usato come interfaccia esterna del circuito."""
     return normalize_token(class_name) in EXTERNAL_INTERFACE_CLASSES
 
 
 def is_active_component(class_name: str | None) -> bool:
+    """Riconosce se il componente appartiene alla famiglia dei dispositivi attivi."""
     token = normalize_token(class_name)
     return any(active_token in token for active_token in ACTIVE_COMPONENT_TOKENS) or token in {"switch", "relay"}
 
 
 def is_passive_component(class_name: str | None) -> bool:
+    """Riconosce se il componente appartiene alla famiglia dei dispositivi passivi."""
     return normalize_token(class_name) in PASSIVE_COMPONENT_CLASSES
 
 
 def infer_source_component_kind(class_name: str | None) -> str:
+    """Inferisce source component kind dalle evidenze disponibili."""
     if is_ground_component(class_name):
         return "ground"
     if is_supply_component(class_name):
@@ -166,6 +181,7 @@ def infer_source_component_kind(class_name: str | None) -> str:
 
 
 def representative_terminal(terminals: list[dict]) -> dict:
+    """Sceglie il terminale piu rappresentativo di un gruppo per descrizioni e riepiloghi."""
     return sorted(
         terminals,
         key=lambda item: (
@@ -176,6 +192,7 @@ def representative_terminal(terminals: list[dict]) -> dict:
 
 
 def build_terminal_and_net_indexes(data: dict):
+    """Prepara indici rapidi di componenti, terminali e net insieme alla mappa net -> terminali."""
     components = data.get("components", [])
     terminals = data.get("terminals", [])
     nets = data.get("nets", [])
@@ -211,6 +228,7 @@ def build_terminal_and_net_indexes(data: dict):
 
 
 def build_terminal_statement(term: dict, peer_terminals: list[dict]) -> str:
+    """Genera una frase breve che descrive come un terminale e collegato nel diagramma."""
     comp_text = human_component_name(term.get("instance_id"), term.get("component_class_name"))
     terminal_name = terminal_human_name(term)
     net_id = term.get("matched_net_id")
@@ -236,6 +254,7 @@ def build_terminal_semantic_entries(
     terminal_index: dict[str, dict],
     net_to_terminal_ids: dict[str, list[str]],
 ) -> tuple[dict[str, list[dict]], list[dict]]:
+    """Costruisce le schede semantiche dei terminali arricchendole con peer, net e frasi descrittive."""
     terminal_entries_by_component: dict[str, list[dict]] = defaultdict(list)
     terminal_facts: list[dict] = []
 
@@ -245,6 +264,8 @@ def build_terminal_semantic_entries(
         peer_terminals: list[dict] = []
 
         if net_id is not None:
+            # Qui costruiamo esplicitamente la vista locale del terminale:
+            # stessa net, stessi peer, stessa frase che poi verra riusata ovunque.
             for peer_terminal_id in net_to_terminal_ids.get(str(net_id), []):
                 if peer_terminal_id == terminal_id:
                     continue
@@ -306,6 +327,7 @@ def build_terminal_semantic_entries(
 
 
 def build_component_connected_components(terminal_entries: list[dict], instance_id: str) -> list[dict]:
+    """Ricostruisce quali altri componenti risultano adiacenti al componente corrente tramite le net condivise."""
     peer_groups: dict[str, dict] = {}
     for entry in terminal_entries:
         for peer in entry.get("peer_terminals", []):
@@ -336,6 +358,7 @@ def build_component_connected_components(terminal_entries: list[dict], instance_
 
 
 def classify_external_interface(terminal_entries: list[dict]) -> tuple[str, float, str, str | None, list[str]]:
+    """Stima se un'interfaccia esterna si comporta piu come ingresso, uscita o ponte tra piu net."""
     connected_nets = sorted({
         str(entry.get("net_id"))
         for entry in terminal_entries
@@ -391,6 +414,7 @@ def classify_external_interface(terminal_entries: list[dict]) -> tuple[str, floa
 
 
 def infer_component_role(component: dict, terminal_entries: list[dict], connected_components: list[dict]) -> dict:
+    """Assegna al componente un ruolo funzionale plausibile usando classe, terminali e vicinato topologico."""
     class_name = component.get("class_name")
     instance_id = component.get("instance_id")
     connected_net_ids = sorted({
@@ -477,6 +501,7 @@ def infer_component_role(component: dict, terminal_entries: list[dict], connecte
 
 
 def infer_net_role(net: dict, connected_terminals: list[dict], connected_components: list[dict]) -> dict:
+    """Inferisce net role dalle evidenze disponibili."""
     net_id = str(net.get("net_id"))
     n_components = len(connected_components)
     has_ground = any(is_ground_component(item.get("component_class_name")) for item in connected_components)
@@ -559,6 +584,7 @@ def infer_net_role(net: dict, connected_terminals: list[dict], connected_compone
 
 
 def branch_importance_for_net_role(role_hypothesis: str, connected_components: list[dict]) -> str:
+    """Gestisce branch importance for net role all'interno di questo modulo della pipeline."""
     if role_hypothesis in {"source_connected_branch", "external_interface_branch", "external_control_branch"}:
         return "high"
     if role_hypothesis in {"shared_internal_branch", "external_interface_branch"} or len(connected_components) >= 4:
@@ -567,6 +593,7 @@ def branch_importance_for_net_role(role_hypothesis: str, connected_components: l
 
 
 def build_branch_summaries(net_roles: list[dict]) -> list[dict]:
+    """Costruisce branch summaries a partire dagli input correnti della pipeline."""
     summary_seed: list[dict] = []
     for net_role in net_roles:
         role_hypothesis = str(net_role.get("role_hypothesis"))
@@ -618,6 +645,7 @@ def build_component_relation_groups(
     terminal_index: dict[str, dict],
     net_to_terminal_ids: dict[str, list[str]],
 ) -> list[dict]:
+    """Costruisce component relation groups a partire dagli input correnti della pipeline."""
     groups: list[dict] = []
     for net in sorted(nets, key=lambda item: int(item.get("net_index") or 0)):
         net_id = str(net.get("net_id"))
@@ -672,6 +700,7 @@ def build_component_to_component_relations(
     terminal_index: dict[str, dict],
     net_to_terminal_ids: dict[str, list[str]],
 ) -> list[dict]:
+    """Costruisce component to component relations a partire dagli input correnti della pipeline."""
     relations: list[dict] = []
     for net in sorted(nets, key=lambda item: int(item.get("net_index") or 0)):
         net_id = str(net.get("net_id"))
@@ -743,6 +772,7 @@ def build_component_to_component_relations(
 
 
 def build_component_net_adjacency(terminals: list[dict]) -> dict[tuple[str, str], set[tuple[str, str]]]:
+    """Costruisce component net adjacency a partire dagli input correnti della pipeline."""
     adjacency: dict[tuple[str, str], set[tuple[str, str]]] = defaultdict(set)
     for term in terminals:
         instance_id = term.get("instance_id")
@@ -763,6 +793,7 @@ def shortest_path_to_targets(
     target_nodes: set[tuple[str, str]],
     max_depth: int = 10,
 ) -> list[tuple[str, str]] | None:
+    """Gestisce shortest path to targets all'interno di questo modulo della pipeline."""
     if start in target_nodes:
         return [start]
 
@@ -790,6 +821,7 @@ def path_sequence_to_objects(
     component_index: dict[str, dict],
     net_roles_by_id: dict[str, dict],
 ) -> list[dict]:
+    """Gestisce path sequence to objects all'interno di questo modulo della pipeline."""
     sequence = []
     for kind, node_id in path:
         if kind == "component":
@@ -821,6 +853,7 @@ def add_functional_path(
     confidence: float,
     evidence_type: str,
 ) -> None:
+    """Gestisce add functional path all'interno di questo modulo della pipeline."""
     if not path:
         return
 
@@ -853,6 +886,7 @@ def build_functional_paths(
     component_index: dict[str, dict],
     terminals: list[dict],
 ) -> list[dict]:
+    """Costruisce functional paths a partire dagli input correnti della pipeline."""
     adjacency = build_component_net_adjacency(terminals)
     net_roles_by_id = {str(item.get("net_id")): item for item in net_roles}
 
@@ -981,6 +1015,7 @@ def build_structural_patterns(
     terminal_entries_by_component: dict[str, list[dict]],
     terminal_index: dict[str, dict],
 ) -> list[dict]:
+    """Costruisce structural patterns a partire dagli input correnti della pipeline."""
     terminals = data.get("terminals", [])
     patterns: list[dict] = []
 
@@ -1105,6 +1140,7 @@ def build_structural_patterns(
 
 
 def build_component_descriptions(component_roles: list[dict]) -> list[dict]:
+    """Costruisce component descriptions a partire dagli input correnti della pipeline."""
     return [
         {
             "instance_id": role.get("instance_id"),
@@ -1124,6 +1160,7 @@ def build_component_descriptions(component_roles: list[dict]) -> list[dict]:
 
 
 def build_net_descriptions(net_roles: list[dict]) -> list[dict]:
+    """Costruisce net descriptions a partire dagli input correnti della pipeline."""
     return [
         {
             "net_id": role.get("net_id"),
@@ -1141,6 +1178,7 @@ def build_net_descriptions(net_roles: list[dict]) -> list[dict]:
 
 
 def build_functional_path_descriptions(functional_paths: list[dict]) -> list[dict]:
+    """Costruisce functional path descriptions a partire dagli input correnti della pipeline."""
     return [
         {
             "path_id": path.get("path_id"),
@@ -1157,6 +1195,7 @@ def build_functional_path_descriptions(functional_paths: list[dict]) -> list[dic
 
 
 def build_terminal_fact_descriptions(terminal_facts: list[dict]) -> list[dict]:
+    """Costruisce terminal fact descriptions a partire dagli input correnti della pipeline."""
     return [
         {
             "terminal_id": fact.get("terminal_id"),
@@ -1185,6 +1224,7 @@ def build_semantic_explanation(
     pipeline_variant: str,
     source_stage: str,
 ) -> dict:
+    """Costruisce semantic explanation a partire dagli input correnti della pipeline."""
     components = data.get("components", [])
     terminals = data.get("terminals", [])
     nets = data.get("nets", [])
@@ -1342,6 +1382,7 @@ def build_semantic_explanation(
 
 
 def build_semantic_llm_context(semantic_data: dict) -> str:
+    """Costruisce semantic llm context a partire dagli input correnti della pipeline."""
     metadata = semantic_data.get("diagram_metadata", {})
     summary = semantic_data.get("summary", {})
     branch_summaries = semantic_data.get("branch_summaries", [])

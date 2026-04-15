@@ -7,17 +7,20 @@ TEMPLATE_PATH = Path(__file__).with_name("dashboard_template.html")
 
 
 def _read_template(path: Path) -> str:
+    """Helper interno che gestisce read template all'interno di questo modulo della pipeline."""
     with open(path, "r", encoding="utf-8") as f:
         return f.read()
 
 
 def _render_link(label: str, href: str | None, cls: str = "") -> str:
+    """Helper interno che gestisce render link all'interno di questo modulo della pipeline."""
     if not href:
         return f'<span class="action disabled {cls}">{label}</span>'
     return f'<a class="action {cls}" href="{href}" target="_blank" rel="noopener">{label}</a>'
 
 
 def _build_card_html(row: dict[str, Any]) -> str:
+    """Helper interno che costruisce card html a partire dagli input correnti della pipeline."""
     diagram_id = str(row.get("diagram_id", ""))
     short_name = short_diagram_name(diagram_id)
     suspicious = int(row.get("n_suspicious_terminal_matches", 0))
@@ -115,6 +118,7 @@ def _build_card_html(row: dict[str, Any]) -> str:
 
 
 def save_index_html(index_rows: list[dict[str, Any]], out_path: Path) -> None:
+    """Salva index html nel percorso di output previsto."""
     rows_sorted = sorted(
         index_rows,
         key=lambda r: (

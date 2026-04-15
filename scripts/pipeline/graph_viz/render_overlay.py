@@ -21,6 +21,7 @@ COMP_TEXT_COLOR = "#006D2C"
 
 
 def terminal_overlay_color(node: dict[str, Any]) -> str:
+    """Gestisce terminal overlay color nel flusso dedicato ai terminali."""
     if bool(node.get("is_suspicious_match", False)):
         return "#D62728"   # rosso forte
 
@@ -44,6 +45,7 @@ def terminal_overlay_color(node: dict[str, Any]) -> str:
 
 
 def _label_offset(idx: int) -> tuple[float, float]:
+    """Helper interno che gestisce label offset all'interno di questo modulo della pipeline."""
     offsets = [
         (14, -12),
         (14, 12),
@@ -58,6 +60,7 @@ def _label_offset(idx: int) -> tuple[float, float]:
 
 
 def draw_overlay(graph_data: dict[str, Any], out_png: Path) -> None:
+    """Sovrappone le net finali all'immagine originale."""
     meta = graph_data.get("graph_metadata", {})
     image_path = meta.get("image_path")
     if not image_path:

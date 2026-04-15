@@ -17,6 +17,7 @@ from .probes import (
 
 
 def _build_three_terminal_support_binary(binary, bbox):
+    """Helper interno che costruisce three terminal support binary a partire dagli input correnti della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     w = max(x2 - x1, 1)
     h = max(y2 - y1, 1)
@@ -77,10 +78,7 @@ def _build_three_terminal_support_binary(binary, bbox):
 
 
 def get_three_terminal_working_binary(binary, bbox):
-    """
-    Espone il binary ripulito usato per i 3-terminali anche al processor,
-    cosi' i punti finali non vengono piu' risucchiati da testo come M5.
-    """
+    """Restituisce three terminal working binary per il contesto corrente della pipeline."""
     if THREE_TERMINAL_TEXT_SUPPRESS_ENABLE:
         working_binary, _ = _build_three_terminal_support_binary(binary, bbox)
         return working_binary
@@ -88,20 +86,12 @@ def get_three_terminal_working_binary(binary, bbox):
 
 
 def candidate_mosfet_orientations_from_bbox(bbox):
-    """
-    Per ora testiamo sempre tutte e 4 le orientazioni.
-    È il modo più semplice per capire se il problema nasce
-    dal filtro iniziale sul bbox.
-    """
+    """Gestisce candidate mosfet orientations from bbox all'interno di questo modulo della pipeline."""
     return ("left", "right", "top", "bottom")
 
 
 def score_three_terminal_orientation_by_terminal_points(binary, bbox, orientation, single_weight):
-    """
-    Versione generica della validazione finale:
-    genera i 3 terminali coerenti con l'orientazione candidata
-    e li valuta con lo scoring locale attorno ai punti finali.
-    """
+    """Assegna uno score a three terminal orientation by terminal points per la selezione successiva."""
     candidate_terminals = []
     point_debug = {}
 
@@ -143,6 +133,7 @@ def score_three_terminal_orientation_by_terminal_points(binary, bbox, orientatio
 
 
 def score_mosfet_orientation_by_terminal_points(binary, bbox, orientation):
+    """Assegna uno score a mosfet orientation by terminal points per la selezione successiva."""
     return score_three_terminal_orientation_by_terminal_points(
         binary,
         bbox,
@@ -155,10 +146,12 @@ def score_mosfet_orientation_by_terminal_points(binary, bbox, orientation):
 # STRATEGY: THREE-TERMINAL COMPONENTS
 # =========================================================
 def _is_specular_pair(a, b):
+    """Helper interno che restituisce se specular pair rispetta la condizione richiesta."""
     return {a, b} in ({"left", "right"}, {"top", "bottom"})
 
 
 def _resolve_specular_tie(side_a, side_b, lateral_scores, single_side_scores):
+    """Helper interno che risolve specular tie usando le euristiche configurate."""
     pair = {side_a, side_b}
 
     # Caso left/right: usa il probe gate laterale
@@ -169,6 +162,7 @@ def _resolve_specular_tie(side_a, side_b, lateral_scores, single_side_scores):
     return side_a if single_side_scores[side_a] >= single_side_scores[side_b] else side_b
 
 def get_bjt_base_side_scores(binary, bbox):
+    """Restituisce bjt base side scores per il contesto corrente della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     width = max(x2 - x1, 1)
     height = max(y2 - y1, 1)
@@ -202,6 +196,7 @@ def get_bjt_base_side_scores(binary, bbox):
 
 
 def _count_three_terminal_semantic_probe(binary, cx, cy, half_w, half_h):
+    """Helper interno che gestisce count three terminal semantic probe all'interno di questo modulo della pipeline."""
     h, w = binary.shape[:2]
     xa = max(0, int(round(cx)) - half_w)
     xb = min(w, int(round(cx)) + half_w + 1)
@@ -215,6 +210,7 @@ def _count_three_terminal_semantic_probe(binary, cx, cy, half_w, half_h):
 
 
 def _three_terminal_arrow_branch_probe(binary, bbox, orientation):
+    """Helper interno che gestisce three terminal arrow branch probe all'interno di questo modulo della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     width = max(x2 - x1, 1)
     height = max(y2 - y1, 1)
@@ -283,13 +279,7 @@ def _three_terminal_arrow_branch_probe(binary, bbox, orientation):
 
 
 def _mosfet_arrow_branch_probe(binary, bbox, orientation):
-    """
-    Per i MOSFET il probe troppo esterno puo' leggere piu' il wire del ramo
-    che la freccia/sagoma interna. Combiniamo quindi:
-    - un probe esterno (quello gia' usato finora)
-    - un probe piu' interno verso il corpo del simbolo
-    con piu' peso al probe interno.
-    """
+    """Helper interno che gestisce mosfet arrow branch probe all'interno di questo modulo della pipeline."""
     outer_scores, outer_debug = _three_terminal_arrow_branch_probe(binary, bbox, orientation)
     if orientation not in {"left", "right"}:
         return outer_scores, outer_debug
@@ -352,6 +342,7 @@ def _mosfet_arrow_branch_probe(binary, bbox, orientation):
 
 
 def _npn_arrow_branch_probe(binary, bbox, orientation):
+    """Helper interno che gestisce npn arrow branch probe all'interno di questo modulo della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     width = max(x2 - x1, 1)
     height = max(y2 - y1, 1)
@@ -411,6 +402,7 @@ def _npn_arrow_branch_probe(binary, bbox, orientation):
 
 
 def _semantic_pair_confidence(pair_scores, arrow_branch_position, other_branch_position):
+    """Helper interno che gestisce semantic pair confidence all'interno di questo modulo della pipeline."""
     best_score = float(pair_scores.get(arrow_branch_position, 0.0))
     second_score = float(pair_scores.get(other_branch_position, 0.0))
 
@@ -423,6 +415,7 @@ def _semantic_pair_confidence(pair_scores, arrow_branch_position, other_branch_p
 
 
 def resolve_three_terminal_semantics(binary, bbox, orientation, terminals, meta):
+    """Risolve three terminal semantics usando le euristiche configurate."""
     semantic_strategy = meta.get("semantic_terminal_strategy")
     semantic_roles = meta.get("semantic_roles", {})
 
@@ -631,26 +624,7 @@ def resolve_three_terminal_semantics(binary, bbox, orientation, terminals, meta)
 
 
 def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", default_orientation="right"):
-    """
-    Strategia per i 3-terminali.
-
-    Idea generale:
-    - NPN / altri 3-terminali: prima lato singolo, ma con validazione finale
-      anche sui 3 punti terminali stimati
-    - Mosfet: oltre ai probe per il lato singolo, facciamo una validazione
-      finale dell'orientazione usando i 3 punti terminali stimati
-
-    Flusso:
-    1. calcolo score del lato singolo
-    2. calcolo fallback multi-anchor
-    3. se classe Mosfet:
-       - valuto direttamente le orientazioni candidate usando i 3 punti terminali
-    4. se non Mosfet:
-       - valuto direttamente le orientazioni candidate usando i 3 punti terminali
-    5. se il lato singolo è abbastanza chiaro, uso quello
-    6. se non basta, fallback multi-anchor
-    7. ultimo fallback: default_orientation YAML
-    """
+    """Gestisce strategy detect three terminal orientation all'interno di questo modulo della pipeline."""
     working_binary = binary
     support_binary_debug = {
         "enabled": False,
