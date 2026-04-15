@@ -23,7 +23,10 @@ import numpy as np
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "topology_v6_opamp")
+PIPELINE_DATASET = os.environ.get(
+    "PIPELINE_DATASET",
+    "topology_v9.1_analog_meter_connector_transformer",
+)
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "04_extract_wires"
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "05_build_nets"

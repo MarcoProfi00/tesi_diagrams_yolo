@@ -27,7 +27,10 @@ import numpy as np
 # PATHS / INPUT-OUTPUT
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "topology_v6_opamp")
+PIPELINE_DATASET = os.environ.get(
+    "PIPELINE_DATASET",
+    "topology_v9.1_analog_meter_connector_transformer",
+)
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "05_build_nets"
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "06_match_terminals_to_nets"
@@ -63,11 +66,18 @@ BASE_FALLBACK_RADIUS = 24
 # o il match è più ambiguo.
 CLASS_SEARCH_OVERRIDES = {
     "Switch": {
-        "directional_outward": 30,
+        "directional_outward": 42,
+        "directional_inward": 10,
+        "directional_halfspan": 12,
+        "circle_radius": 18,
+        "fallback_radius": 42,
+    },
+    "Analog_Meter": {
+        "directional_outward": 48,
         "directional_inward": 8,
-        "directional_halfspan": 10,
-        "circle_radius": 14,
-        "fallback_radius": 30,
+        "directional_halfspan": 14,
+        "circle_radius": 32,
+        "fallback_radius": 72,
     },
     "Inductor": {
         "directional_outward": 30,
@@ -110,6 +120,10 @@ CLASS_SEARCH_OVERRIDES = {
 # MATCH CONFIDENCE THRESHOLDS
 # =========================================================
 MAX_OK_DISTANCE = 18.0
+CLASS_MAX_OK_DISTANCE = {
+    "Analog_Meter": 55.0,
+    "Switch": 28.0,
+}
 #DEBUG
 SAVE_DEBUG_IMAGES = True
 DEBUG_FONT_SCALE = 0.48
@@ -229,6 +243,9 @@ def get_max_ok_distance(term: dict) -> float:
     """Restituisce la distanza massima accettabile per considerare affidabile un match terminale-net."""
     if is_opamp_aux_terminal(term):
         return OPAMP_AUX_MAX_OK_DISTANCE
+    class_name = str(term.get("component_class_name", "")).strip()
+    if class_name in CLASS_MAX_OK_DISTANCE:
+        return float(CLASS_MAX_OK_DISTANCE[class_name])
     return MAX_OK_DISTANCE
 
 

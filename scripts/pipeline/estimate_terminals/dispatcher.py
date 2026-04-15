@@ -13,6 +13,11 @@ from .strategies_basic import (
 from .strategies_terminal_class import detect_terminal_auto_one_or_two
 from .strategies_three_terminal import strategy_detect_three_terminal_orientation
 from .strategies_opamp import detect_opamp_terminals
+from .strategies_connector import detect_connector_terminals
+from .strategies_structured_symbols import (
+    detect_analog_meter_terminals,
+    detect_transformer_terminals,
+)
 
 
 def _get_oriented_terminals(meta: dict, orientation: str):
@@ -37,6 +42,12 @@ def resolve_terminal_point_mode(meta: dict):
 
     if strategy == "opamp_by_orientation_and_optional_supply":
         return OPAMP_POINT_MODE
+
+    if strategy == "connector_by_projection":
+        return "bbox_side_center"
+
+    if strategy in {"analog_meter_by_posts", "transformer_external_wires"}:
+        return "strategy_absolute_point"
 
     if strategy in {
         "two_terminal_led",
@@ -177,7 +188,42 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
             default_side=default_side,
         )
         return terminals_def, orientation, None, side_scores
-    
+
+    if strategy == "connector_by_projection":
+        if image_binary is None:
+            raise ValueError("connector_by_projection richiede image_binary.")
+
+        default_orientation = meta.get("default_orientation", "vertical")
+        terminals_def, orientation, side_scores = detect_connector_terminals(
+            meta,
+            image_binary,
+            bbox,
+            default_orientation=default_orientation,
+        )
+        return terminals_def, orientation, None, side_scores
+
+    if strategy == "analog_meter_by_posts":
+        if image_binary is None:
+            raise ValueError("analog_meter_by_posts richiede image_binary.")
+
+        terminals_def, orientation, connected_side, side_scores = detect_analog_meter_terminals(
+            meta,
+            image_binary,
+            bbox,
+        )
+        return terminals_def, orientation, connected_side, side_scores
+
+    if strategy == "transformer_external_wires":
+        if image_binary is None:
+            raise ValueError("transformer_external_wires richiede image_binary.")
+
+        terminals_def, orientation, connected_side, side_scores = detect_transformer_terminals(
+            meta,
+            image_binary,
+            bbox,
+        )
+        return terminals_def, orientation, connected_side, side_scores
+
     if strategy == "opamp_by_orientation_and_optional_supply":
         if image_binary is None:
             raise ValueError("opamp_by_orientation_and_optional_supply richiede image_binary.")

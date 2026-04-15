@@ -30,6 +30,24 @@ def geom_terminal_point_from_bbox(bbox, relative_position: str):
         return [round(xc, 2), round(y2 + TERMINAL_OUTWARD_OFFSET, 2)]
     raise ValueError(f"relative_position non supportata: {relative_position}")
 
+
+def geom_terminal_point_from_bbox_with_anchor(bbox, relative_position: str, anchor_offset_ratio: float):
+    """Stima il terminale su un lato del bbox usando una coordinata relativa lungo il lato stesso."""
+    x1, y1, x2, y2 = bbox
+    ratio = max(0.0, min(1.0, float(anchor_offset_ratio)))
+    width = max(x2 - x1, 1e-6)
+    height = max(y2 - y1, 1e-6)
+
+    if relative_position == "left":
+        return [round(x1 - TERMINAL_OUTWARD_OFFSET, 2), round(y1 + ratio * height, 2)]
+    if relative_position == "right":
+        return [round(x2 + TERMINAL_OUTWARD_OFFSET, 2), round(y1 + ratio * height, 2)]
+    if relative_position == "top":
+        return [round(x1 + ratio * width, 2), round(y1 - TERMINAL_OUTWARD_OFFSET, 2)]
+    if relative_position == "bottom":
+        return [round(x1 + ratio * width, 2), round(y2 + TERMINAL_OUTWARD_OFFSET, 2)]
+    raise ValueError(f"relative_position non supportata: {relative_position}")
+
 def geom_infer_orientation_from_bbox(bbox, default_orientation="horizontal"):
     """Stima se il simbolo e piu vicino a un orientamento orizzontale o verticale guardando il rapporto tra i lati."""
     x1, y1, x2, y2 = bbox

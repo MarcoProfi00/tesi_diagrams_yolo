@@ -2,6 +2,7 @@ from .config import *
 from .dispatcher import get_terminals_definition, resolve_terminal_point_mode
 from .geometry import (
     geom_terminal_point_from_bbox,
+    geom_terminal_point_from_bbox_with_anchor,
     geom_terminal_point_three_terminal,
     geom_terminal_point_by_side_peak,
     geom_terminal_point_opamp,
@@ -47,7 +48,12 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
             "point_mode": point_mode
         }
 
-        if point_mode == "three_terminal_structured":
+        if term_def.get("point") is not None:
+            x, y = [round(float(v), 2) for v in term_def["point"]]
+            point_debug["point_mode"] = "strategy_absolute_point"
+            point_debug["point_source"] = "term_def.point"
+
+        elif point_mode == "three_terminal_structured":
             point, structured_debug = geom_terminal_point_three_terminal(
                 point_binary,
                 bbox,
@@ -91,16 +97,26 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
                 point_debug.update(peak_debug)
 
         else:
-            x, y = geom_terminal_point_from_bbox(bbox, rel_pos)
-
-            x1, y1, x2, y2 = bbox
-            width = max(x2 - x1, 1e-6)
-            height = max(y2 - y1, 1e-6)
-
-            if rel_pos in {"top", "bottom"}:
-                point_debug["anchor_offset_ratio"] = round((x - x1) / width, 4)
+            anchor_offset_ratio = term_def.get("anchor_offset_ratio")
+            if anchor_offset_ratio is not None:
+                x, y = geom_terminal_point_from_bbox_with_anchor(
+                    bbox,
+                    rel_pos,
+                    anchor_offset_ratio,
+                )
+                point_debug["point_mode"] = "bbox_side_anchor_ratio"
+                point_debug["anchor_offset_ratio"] = round(float(anchor_offset_ratio), 4)
             else:
-                point_debug["anchor_offset_ratio"] = round((y - y1) / height, 4)
+                x, y = geom_terminal_point_from_bbox(bbox, rel_pos)
+
+                x1, y1, x2, y2 = bbox
+                width = max(x2 - x1, 1e-6)
+                height = max(y2 - y1, 1e-6)
+
+                if rel_pos in {"top", "bottom"}:
+                    point_debug["anchor_offset_ratio"] = round((x - x1) / width, 4)
+                else:
+                    point_debug["anchor_offset_ratio"] = round((y - y1) / height, 4)
 
         terminals.append({
             "terminal_id": f"{instance_id}:{term_name}",

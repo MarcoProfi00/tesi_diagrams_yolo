@@ -37,7 +37,10 @@ from semantic_export.export_semantic_explanation import (
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "topology_v6_opamp")
+PIPELINE_DATASET = os.environ.get(
+    "PIPELINE_DATASET",
+    "topology_v9.1_analog_meter_connector_transformer",
+)
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "06_match_terminals_to_nets"
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "07_export_graph"

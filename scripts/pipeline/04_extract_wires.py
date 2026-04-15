@@ -25,7 +25,10 @@ from skimage.morphology import skeletonize
 # PATHS / INPUT-OUTPUT
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "topology_v6_opamp")
+PIPELINE_DATASET = os.environ.get(
+    "PIPELINE_DATASET",
+    "topology_v9.1_analog_meter_connector_transformer",
+)
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "03_estimate_terminals"
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "04_extract_wires"
@@ -44,7 +47,13 @@ FILTERED_DIR = OUTPUT_DIR / "filtered"
 SKELETON_DIR = OUTPUT_DIR / "skeleton"
 
 
-MASK_SHRINK_FACTOR = 0.88
+MASK_SHRINK_FACTOR = 1.0
+CLASS_MASK_PADDING = {
+    "Analog_Meter": 8,
+    "Connector": 6,
+    "Switch": 4,
+    "Transformer": 4,
+}
 
 # =========================================================
 # TERMINAL KEEP ZONES
@@ -57,6 +66,35 @@ OPAMP_AUX_KEEP_RADIUS = 5
 OPAMP_AUX_KEEP_LINE_THICKNESS = 5
 OPAMP_AUX_KEEP_INWARD_LEN = 0
 OPAMP_AUX_KEEP_OUTWARD_LEN = 12
+
+CLASS_TERMINAL_KEEP_OVERRIDES = {
+    # Questi simboli hanno molto "corpo" interno e, se preserviamo troppo
+    # dentro al bbox, rischiamo di riaprire il simbolo nello skeleton.
+    "Analog_Meter": {
+        "radius": 8,
+        "thickness": 6,
+        "inward_len": 4,
+        "outward_len": 14,
+    },
+    "Connector": {
+        "radius": 8,
+        "thickness": 6,
+        "inward_len": 3,
+        "outward_len": 14,
+    },
+    "Switch": {
+        "radius": 8,
+        "thickness": 6,
+        "inward_len": 2,
+        "outward_len": 16,
+    },
+    "Transformer": {
+        "radius": 8,
+        "thickness": 6,
+        "inward_len": 4,
+        "outward_len": 14,
+    },
+}
 
 # =========================================================
 # MORPHOLOGY
@@ -98,6 +136,12 @@ def shrink_bbox(bbox, shrink_factor=0.88):
 
     return [new_x1, new_y1, new_x2, new_y2]
 
+
+def expand_bbox(bbox, pad=0):
+    """Espande bbox di una piccola tolleranza per coprire bordi simbolo molto spessi."""
+    x1, y1, x2, y2 = bbox
+    return [x1 - pad, y1 - pad, x2 + pad, y2 + pad]
+
 # costruzione maschere
 def build_base_component_mask(image_shape, components):
     """Costruisce la maschera piena dei componenti che devono essere rimossi dall'immagine."""
@@ -109,6 +153,10 @@ def build_base_component_mask(image_shape, components):
             continue
 
         bbox = shrink_bbox(comp["bbox"], shrink_factor=MASK_SHRINK_FACTOR)
+        bbox = expand_bbox(
+            bbox,
+            pad=int(CLASS_MASK_PADDING.get(str(comp.get("class_name", "")).strip(), 0)),
+        )
         x1, y1, x2, y2 = map(int, bbox)
 
         x1 = max(0, min(w - 1, x1))
@@ -123,6 +171,7 @@ def build_base_component_mask(image_shape, components):
 def terminal_keep_params(term):
     """Restituisce i parametri della zona di preservazione da usare per il terminale corrente."""
     name = str(term.get("name", "")).lower()
+    class_name = str(term.get("component_class_name", "")).strip()
 
     if name in {"aux1", "aux2"}:
         return {
@@ -131,6 +180,9 @@ def terminal_keep_params(term):
             "inward_len": OPAMP_AUX_KEEP_INWARD_LEN,
             "outward_len": OPAMP_AUX_KEEP_OUTWARD_LEN,
         }
+
+    if class_name in CLASS_TERMINAL_KEEP_OVERRIDES:
+        return dict(CLASS_TERMINAL_KEEP_OVERRIDES[class_name])
 
     return {
         "radius": TERMINAL_KEEP_RADIUS,

@@ -427,6 +427,33 @@ def resolve_two_terminal_semantics(binary, bbox, orientation, terminals, meta):
             edge_inset_ratio=0.08,
         )
         score_map = _diode_bar_scores(score_map, orientation)
+
+        if orientation == "vertical" and meta.get("name") in {"LED", "Diode"}:
+            top_score = float(score_map.get("top", 0.0))
+            bottom_score = float(score_map.get("bottom", 0.0))
+            ambiguity = abs(top_score - bottom_score) / max(top_score + bottom_score, 1.0)
+            if ambiguity < 0.12:
+                semantic_roles = meta.get("semantic_roles", {})
+                debug = {
+                    "orientation": orientation,
+                    "scores": score_map,
+                    "selected_marker_side": "bottom",
+                    "selected_other_side": "top",
+                    "confidence": round(float(max(0.2, 1.0 - ambiguity)), 4),
+                    "evidence_type": "vertical_led_convention_fallback",
+                }
+                return _assign_pair_roles(
+                    terminals,
+                    marker_side="bottom",
+                    other_side="top",
+                    marker_name=semantic_roles.get("marker_side"),
+                    other_name=semantic_roles.get("other_side"),
+                    confidence=max(0.2, 1.0 - ambiguity),
+                    resolution_mode=f"{semantic_strategy}_vertical_led_fallback",
+                    evidence_type="orientation_fallback",
+                    debug=debug,
+                )
+
         return _assign_strategy_result(
             terminals,
             orientation,
