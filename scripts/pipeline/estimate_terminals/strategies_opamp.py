@@ -7,16 +7,16 @@ from .geometry import (
 from .probes import score_point_directional_support
 
 
+# Get op-amp orientation defs.
 def _get_opamp_orientation_defs(meta: dict, orientation: str):
-    """Helper interno che restituisce opamp orientation defs per il contesto corrente della pipeline."""
     terminals_def = meta.get("orientations", {}).get(orientation)
     if terminals_def is None:
         raise ValueError(f"Nessuna definizione opamp per orientazione '{orientation}'")
     return terminals_def
 
 
+# Score op-amp terminal.
 def _score_opamp_terminal(binary, bbox, orientation: str, term_def: dict):
-    """Helper interno che assegna uno score a opamp terminal per la selezione successiva."""
     point, point_debug = geom_terminal_point_opamp(
         binary,
         bbox,
@@ -52,8 +52,8 @@ def _score_opamp_terminal(binary, bbox, orientation: str, term_def: dict):
     }
 
 
+# Detect op-amp terminals.
 def detect_opamp_terminals(meta: dict, binary, bbox, default_orientation="right"):
-    """Rileva opamp terminals usando le euristiche configurate."""
     candidate_orientations = ("right", "left", "top", "bottom")
 
     orientation_scores = {}
@@ -151,8 +151,8 @@ def detect_opamp_terminals(meta: dict, binary, bbox, default_orientation="right"
     return active_terminals, chosen_orientation, debug_scores
 
 
+# Snap op-amp top aux to nearby terminal.
 def snap_opamp_top_aux_to_nearby_terminal(components: list[dict], binary):
-    """Gestisce snap opamp top aux to nearby terminal all'interno di questo modulo della pipeline."""
     if not OPAMP_AUX_SNAP_TO_NEARBY_TERMINAL:
         return []
 

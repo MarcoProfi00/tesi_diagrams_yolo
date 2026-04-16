@@ -15,8 +15,8 @@ from .semantic_two_terminal import resolve_two_terminal_semantics
 # =========================================================
 # COMPONENT PROCESSING
 # =========================================================
+# Estimate terminals for component.
 def estimate_terminals_for_component(component: dict, class_meta: dict, image_binary):
-    """Stima terminals for component a partire dall'evidenza dell'immagine."""
     class_id = component["class_id"]
     meta = class_meta.get(class_id, {})
     if not component.get("use_for_terminals", False):

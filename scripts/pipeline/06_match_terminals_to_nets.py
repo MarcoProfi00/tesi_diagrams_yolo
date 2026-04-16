@@ -29,7 +29,7 @@ import numpy as np
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PIPELINE_DATASET = os.environ.get(
     "PIPELINE_DATASET",
-    "topology_v9.1_analog_meter_connector_transformer",
+    "topology_v9.2_set_successivo",
 )
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "05_build_nets"
@@ -65,6 +65,13 @@ BASE_FALLBACK_RADIUS = 24
 # Override per classi in cui il terminale può essere più lontano dal wire
 # o il match è più ambiguo.
 CLASS_SEARCH_OVERRIDES = {
+    "Breaker": {
+        "directional_outward": 42,
+        "directional_inward": 10,
+        "directional_halfspan": 12,
+        "circle_radius": 18,
+        "fallback_radius": 44,
+    },
     "Switch": {
         "directional_outward": 42,
         "directional_inward": 10,
@@ -73,18 +80,25 @@ CLASS_SEARCH_OVERRIDES = {
         "fallback_radius": 42,
     },
     "Analog_Meter": {
-        "directional_outward": 48,
+        "directional_outward": 56,
         "directional_inward": 8,
         "directional_halfspan": 14,
         "circle_radius": 32,
-        "fallback_radius": 72,
+        "fallback_radius": 80,
+    },
+    "Connector": {
+        "directional_outward": 14,
+        "directional_inward": 4,
+        "directional_halfspan": 5,
+        "circle_radius": 8,
+        "fallback_radius": 14,
     },
     "Inductor": {
-        "directional_outward": 30,
-        "directional_inward": 8,
-        "directional_halfspan": 10,
-        "circle_radius": 14,
-        "fallback_radius": 30,
+        "directional_outward": 42,
+        "directional_inward": 10,
+        "directional_halfspan": 12,
+        "circle_radius": 22,
+        "fallback_radius": 44,
     },
     "Meter": {
         "directional_outward": 22,
@@ -114,6 +128,20 @@ CLASS_SEARCH_OVERRIDES = {
         "circle_radius": 18,
         "fallback_radius": 38,
     },
+    "Transformer": {
+        "directional_outward": 36,
+        "directional_inward": 8,
+        "directional_halfspan": 18,
+        "circle_radius": 22,
+        "fallback_radius": 44,
+    },
+    "NPN_Transistor": {
+        "directional_outward": 30,
+        "directional_inward": 8,
+        "directional_halfspan": 12,
+        "circle_radius": 18,
+        "fallback_radius": 36,
+    },
 }
 
 # =========================================================
@@ -121,8 +149,13 @@ CLASS_SEARCH_OVERRIDES = {
 # =========================================================
 MAX_OK_DISTANCE = 18.0
 CLASS_MAX_OK_DISTANCE = {
-    "Analog_Meter": 55.0,
+    "Analog_Meter": 75.0,
+    "Breaker": 40.0,
+    "Connector": 12.0,
+    "Inductor": 40.0,
     "Switch": 28.0,
+    "Transformer": 36.0,
+    "NPN_Transistor": 34.0,
 }
 #DEBUG
 SAVE_DEBUG_IMAGES = True
@@ -153,21 +186,21 @@ DEBUG_POINT_COLOR_SUSPICIOUS = (0, 165, 255)
 # ---------------------------------------------------------
 # Utility base
 # ---------------------------------------------------------
+# Load label map.
 def load_label_map(path: Path) -> np.ndarray:
-    """Carica la label map prodotta dallo step 05."""
     if not path.exists():
         raise FileNotFoundError(f"Label map non trovata: {path}")
     return np.load(path)
 
+# Build net index map.
 def build_net_index_map(nets):
-    """Costruisce un indice delle net finali usando net_index come chiave."""
     out = {}
     for net in nets:
         out[int(net["net_index"])] = net
     return out
 
+# Build source label to net index map.
 def build_source_label_to_net_index_map(nets):
-    """Collega ogni source_label originale dello skeleton alla net finale corrispondente."""
     out = {}
     for net in nets:
         net_index = int(net["net_index"])
@@ -176,8 +209,8 @@ def build_source_label_to_net_index_map(nets):
             out[int(source_label)] = net_index
     return out
 
+# Clamp window.
 def clamp_window(x1, y1, x2, y2, w, h):
-    """Limita window per mantenerla entro limiti validi."""
     return (
         max(0, min(w, x1)),
         max(0, min(h, y1)),
@@ -185,6 +218,7 @@ def clamp_window(x1, y1, x2, y2, w, h):
         max(0, min(h, y2)),
     )
 
+# Draw boxed text.
 def draw_boxed_text(
     image,
     text,
@@ -197,7 +231,6 @@ def draw_boxed_text(
     padding_x=4,
     padding_y=3,
 ):
-    """Disegna testo dentro un piccolo riquadro per migliorare la leggibilita del debug."""
     font = cv2.FONT_HERSHEY_SIMPLEX
     (tw, th), baseline = cv2.getTextSize(text, font, font_scale, thickness)
 
@@ -227,8 +260,8 @@ def draw_boxed_text(
         cv2.LINE_AA,
     )
 
+# Handle is op-amp aux terminal.
 def is_opamp_aux_terminal(term: dict) -> bool:
-    """Riconosce i terminali ausiliari dell'operazionale che richiedono un matching dedicato."""
     name = str(term.get("name") or "").lower()
     terminal_id = str(term.get("terminal_id") or "").lower()
 
@@ -239,8 +272,8 @@ def is_opamp_aux_terminal(term: dict) -> bool:
     )
 
 
+# Get max ok distance.
 def get_max_ok_distance(term: dict) -> float:
-    """Restituisce la distanza massima accettabile per considerare affidabile un match terminale-net."""
     if is_opamp_aux_terminal(term):
         return OPAMP_AUX_MAX_OK_DISTANCE
     class_name = str(term.get("component_class_name", "")).strip()
@@ -249,20 +282,20 @@ def get_max_ok_distance(term: dict) -> float:
     return MAX_OK_DISTANCE
 
 
+# Handle is preferred like match status.
 def is_preferred_like_match_status(match_status: str) -> bool:
-    """Indica se uno stato di match equivale a un aggancio preferito."""
     return match_status in {"matched_preferred", "matched_implicit_supply"}
 
 
+# Get preferred match status.
 def get_preferred_match_status(preferred_is_implicit_supply: bool) -> str:
-    """Restituisce lo stato da assegnare quando viene usata la net preferita."""
     if preferred_is_implicit_supply:
         return "matched_implicit_supply"
     return "matched_preferred"
 
 
+# Run op-amp aux vertical stage.
 def run_opamp_aux_vertical_stage(label_map: np.ndarray, term: dict, preferred_net_index=None):
-    """Esegue la ricerca verticale dedicata ai terminali ausiliari top/bottom dell'operazionale."""
     if not is_opamp_aux_terminal(term):
         return None
 
@@ -368,8 +401,8 @@ def run_opamp_aux_vertical_stage(label_map: np.ndarray, term: dict, preferred_ne
         "search_window": rect,
     }
 
+# Get class search params.
 def get_class_search_params(term: dict):
-    """Restituisce i parametri di ricerca da usare per la classe del terminale corrente."""
     params = {
         "directional_outward": BASE_DIRECTIONAL_OUTWARD,
         "directional_inward": BASE_DIRECTIONAL_INWARD,
@@ -383,8 +416,8 @@ def get_class_search_params(term: dict):
 # ---------------------------------------------------------
 # search geometry / search plan
 # ---------------------------------------------------------
+# Build directional rect.
 def build_directional_rect(term: dict, shape, outward: int, inward: int, halfspan: int):
-    """Costruisce il rettangolo di ricerca direzionale coerente con il lato del terminale."""
     h, w = shape[:2]
     x = int(round(term["x"]))
     y = int(round(term["y"]))
@@ -424,16 +457,16 @@ def build_directional_rect(term: dict, shape, outward: int, inward: int, halfspa
         w, h
     )
 
+# Collect labels in rect.
 def collect_labels_in_rect(label_map: np.ndarray, rect):
-    """Raccoglie le label non nulle presenti in un rettangolo di ricerca."""
     x1, y1, x2, y2 = rect
     roi = label_map[y1:y2, x1:x2]
     labels = np.unique(roi)
     labels = [int(v) for v in labels if int(v) > 0]
     return labels
 
+# Collect labels in circle.
 def collect_labels_in_circle(label_map: np.ndarray, x: int, y: int, radius: int):
-    """Raccoglie le label non nulle presenti in una ricerca circolare attorno al terminale."""
     h, w = label_map.shape[:2]
     x1 = max(0, x - radius)
     y1 = max(0, y - radius)
@@ -449,8 +482,8 @@ def collect_labels_in_circle(label_map: np.ndarray, x: int, y: int, radius: int)
     labels = [int(v) for v in labels if int(v) > 0]
     return labels, [x1, y1, x2, y2]
 
+# Build search plan.
 def build_search_plan(term: dict):
-    """Prepara la sequenza ordinata di ricerche da provare per collegare un terminale a una net."""
     params = get_class_search_params(term)
     directional_outward = int(params["directional_outward"])
     directional_inward = int(params["directional_inward"])
@@ -488,8 +521,8 @@ def build_search_plan(term: dict):
 # ---------------------------------------------------------
 # snap / label choice
 # ---------------------------------------------------------
+# Handle nearest label by pixel distance.
 def nearest_label_by_pixel_distance(label_map: np.ndarray, x: int, y: int, candidate_labels, rect=None, radius=None):
-    """Sceglie la label candidata piu vicina in termini di distanza pixel dal terminale."""
     if rect is not None:
         x1, y1, x2, y2 = rect
     else:
@@ -523,8 +556,8 @@ def nearest_label_by_pixel_distance(label_map: np.ndarray, x: int, y: int, candi
 
     return best_label, best_distance, best_point
 
+# Choose best label.
 def choose_best_label(label_map: np.ndarray, x: int, y: int, candidate_labels, preferred_label=None, rect=None, radius=None):
-    """Sceglie la label migliore privilegiando quella preferita e, in assenza, la piu vicina al terminale."""
     if not candidate_labels:
         return None, None, None, None
 
@@ -547,8 +580,8 @@ def choose_best_label(label_map: np.ndarray, x: int, y: int, candidate_labels, p
     )
     return chosen_lbl, dist, point, "nearest_candidate"
 
+# Run search stage.
 def run_search_stage(label_map: np.ndarray, term: dict, stage: dict, preferred_net_index=None):
-    """Esegue uno stage di ricerca e restituisce candidati, distanza e punto di snap scelto."""
     x = int(round(term["x"]))
     y = int(round(term["y"]))
 
@@ -601,6 +634,7 @@ def run_search_stage(label_map: np.ndarray, term: dict, stage: dict, preferred_n
 # ---------------------------------------------------------
 # Confidence / warning del match
 # ---------------------------------------------------------
+# Classify match confidence.
 def classify_match_confidence(
     term: dict,
     match_status: str,
@@ -608,7 +642,6 @@ def classify_match_confidence(
     search_stage: str,
     preferred_net_index,
 ):
-    """Classifica il match come affidabile o sospetto in base a distanza, strategia e net preferita."""
     if match_status == "unmatched":
         return "unmatched", ["unmatched_terminal"]
 
@@ -640,8 +673,8 @@ def classify_match_confidence(
     return "ok", warnings
 
 
+# Finalize match result.
 def finalize_match_result(term: dict, result: dict):
-    """Completa il risultato del matching aggiungendo confidenza e ripulendo i casi da considerare unmatched."""
     confidence, warnings = classify_match_confidence(
         term=term,
         match_status=result["match_status"],
@@ -664,11 +697,12 @@ def finalize_match_result(term: dict, result: dict):
         result["snap_point"] = None
     return result
 
+
 # ---------------------------------------------------------
 # Matching terminal -> net
 # ---------------------------------------------------------
+# Get preferred net index.
 def get_preferred_net_index(term: dict, source_label_to_net_index: dict, net_building_terminal_debug: dict):
-    """Recupera la net preferita dello step 05 a partire dal debug del terminale."""
     term_id = term["terminal_id"]
     debug = net_building_terminal_debug.get(term_id, {})
     source_label = debug.get("primary_label")
@@ -677,13 +711,13 @@ def get_preferred_net_index(term: dict, source_label_to_net_index: dict, net_bui
     return source_label_to_net_index.get(int(source_label))
 
 
+# Run preferred from 05 window stage.
 def run_preferred_from_05_window_stage(
     label_map: np.ndarray,
     term: dict,
     preferred_net_index,
     net_building_terminal_debug: dict,
 ):
-    """Riprova la net preferita dentro la stessa finestra usata nello step 05 prima di cercare alternative."""
     if preferred_net_index is None or not is_opamp_aux_terminal(term):
         return None
 
@@ -717,8 +751,8 @@ def run_preferred_from_05_window_stage(
     }
 
 
+# Match terminal to net.
 def match_terminal_to_net(term: dict, label_map: np.ndarray, net_index_map: dict, source_label_to_net_index: dict, net_building_terminal_debug: dict):
-    """Esegue l'intera strategia di matching terminale -> net seguendo priorita e fallback definiti."""
     preferred_net_index = get_preferred_net_index(term, source_label_to_net_index, net_building_terminal_debug)
     term_debug = net_building_terminal_debug.get(term["terminal_id"], {})
     preferred_net = net_index_map.get(preferred_net_index, {}) if preferred_net_index is not None else {}
@@ -837,53 +871,69 @@ def match_terminal_to_net(term: dict, label_map: np.ndarray, net_index_map: dict
 
     # Se non basta neppure questo, passiamo a una sequenza ordinata di fallback:
     # prima ricerche direzionali, poi ricerche piu permissive circolari.
+    best_stage_result = None
+    best_stage_sort_key = None
     for stage in build_search_plan(term):
         stage_result = run_search_stage(label_map, term, stage, preferred_net_index=preferred_net_index)
         candidate_labels = stage_result["candidate_labels"]
 
         if candidate_labels:
-            result["candidate_net_indices"] = sorted(set(int(v) for v in candidate_labels))
-            result["candidate_net_ids"] = [
-                net_index_map[idx]["net_id"]
-                for idx in result["candidate_net_indices"]
-                if idx in net_index_map
-            ]
-            result["search_stage"] = stage["name"]
-            result["search_window"] = stage_result["search_window"]
-            result["search_kind"] = stage["kind"]
-
             chosen_idx = stage_result["chosen_label"]
             if chosen_idx is None:
                 continue
 
-            result["matched_net_index"] = int(chosen_idx)
-            result["matched_net_id"] = net_index_map[int(chosen_idx)]["net_id"]
-            result["matched_net_is_implicit_supply"] = bool(
+            decision_mode = stage_result["decision_mode"]
+            candidate_result = dict(result)
+            candidate_result["candidate_net_indices"] = sorted(set(int(v) for v in candidate_labels))
+            candidate_result["candidate_net_ids"] = [
+                net_index_map[idx]["net_id"]
+                for idx in candidate_result["candidate_net_indices"]
+                if idx in net_index_map
+            ]
+            candidate_result["search_stage"] = stage["name"]
+            candidate_result["search_window"] = stage_result["search_window"]
+            candidate_result["search_kind"] = stage["kind"]
+            candidate_result["matched_net_index"] = int(chosen_idx)
+            candidate_result["matched_net_id"] = net_index_map[int(chosen_idx)]["net_id"]
+            candidate_result["matched_net_is_implicit_supply"] = bool(
                 net_index_map[int(chosen_idx)].get("is_implicit_supply", False)
             )
-            result["matched_net_implicit_reason"] = (
+            candidate_result["matched_net_implicit_reason"] = (
                 net_index_map[int(chosen_idx)].get("implicit_reason")
-                if result["matched_net_is_implicit_supply"]
+                if candidate_result["matched_net_is_implicit_supply"]
                 else None
             )
-            result["match_distance_px"] = None if stage_result["distance"] is None else round(float(stage_result["distance"]), 3)
-            result["snap_point"] = stage_result["snap_point"]
+            candidate_result["match_distance_px"] = None if stage_result["distance"] is None else round(float(stage_result["distance"]), 3)
+            candidate_result["snap_point"] = stage_result["snap_point"]
 
-            decision_mode = stage_result["decision_mode"]
             if decision_mode == "preferred_label":
-                result["match_status"] = get_preferred_match_status(preferred_is_implicit_supply)
+                candidate_result["match_status"] = get_preferred_match_status(preferred_is_implicit_supply)
+                return finalize_match_result(term, candidate_result)
             elif decision_mode == "single_candidate":
-                result["match_status"] = "matched_single"
+                candidate_result["match_status"] = "matched_single"
             else:
-                result["match_status"] = "matched_nearest"
+                candidate_result["match_status"] = "matched_nearest"
 
-            return finalize_match_result(term, result)
+            distance_sort = float(stage_result["distance"]) if stage_result["distance"] is not None else 1e9
+            stage_priority = 0 if stage["name"] == "circle_primary" else 1 if stage["name"] == "directional_primary" else 2 if stage["name"] == "directional_fallback" else 3
+            candidate_count = len(candidate_labels)
+            sort_key = (
+                round(distance_sort, 4),
+                stage_priority,
+                candidate_count,
+            )
+            if best_stage_result is None or sort_key < best_stage_sort_key:
+                best_stage_result = candidate_result
+                best_stage_sort_key = sort_key
+
+    if best_stage_result is not None:
+        return finalize_match_result(term, best_stage_result)
 
     return finalize_match_result(term, result)
 
 
+# Apply match info to terminal.
 def apply_match_info_to_terminal(term: dict, match_info: dict):
-    """Applica match info to terminal alla struttura dati di destinazione."""
     term_copy = dict(term)
 
     term_copy["candidate_net_ids"] = match_info.get("candidate_net_ids", [])
@@ -911,8 +961,8 @@ def apply_match_info_to_terminal(term: dict, match_info: dict):
 # ---------------------------------------------------------
 # Update strutture output
 # ---------------------------------------------------------
+# Update components with terminal matches.
 def update_components_with_terminal_matches(components, terminal_match_map):
-    """Aggiorna components with terminal matches con le informazioni piu recenti della pipeline."""
     updated_components = []
 
     for comp in components:
@@ -929,8 +979,8 @@ def update_components_with_terminal_matches(components, terminal_match_map):
 
     return updated_components
 
+# Build connections.
 def build_connections(terminals_with_matches):
-    """Costruisce la lista piatta delle connessioni terminale-net per l'export finale."""
     connections = []
     for term in terminals_with_matches:
         if term.get("matched_net_id") is None:
@@ -967,24 +1017,24 @@ def build_connections(terminals_with_matches):
 # ---------------------------------------------------------
 # Debug images
 # ---------------------------------------------------------
+# Get debug view color.
 def get_debug_color(term: dict):
-    """Sceglie il colore del terminale nel debug in base all'esito del matching."""
     if term.get("matched_net_id") is None:
         return DEBUG_POINT_COLOR_NONE
     if term.get("match_confidence") == "ok":
         return DEBUG_POINT_COLOR_OK
     return DEBUG_POINT_COLOR_SUSPICIOUS
 
+# Get debug view text color.
 def get_debug_text_color(term: dict):
-    """Sceglie il colore del testo nel debug in base all'esito del matching."""
     if term.get("matched_net_id") is None:
         return DEBUG_TEXT_COLOR_NONE
     if term.get("match_confidence") == "ok":
         return DEBUG_TEXT_COLOR_OK
     return DEBUG_TEXT_COLOR_SUSPICIOUS
 
+# Draw debug view overlay.
 def draw_debug_overlay(image_bgr, terminals_with_matches):
-    """Disegna l'overlay finale con terminali, snap point e net abbinate."""
     out = image_bgr.copy()
 
     for term in terminals_with_matches:
@@ -1027,8 +1077,8 @@ def draw_debug_overlay(image_bgr, terminals_with_matches):
 # ---------------------------------------------------------
 # Main
 # ---------------------------------------------------------
+# Run the entrypoint for this pipeline stage.
 def main() -> None:
-    """Esegue il punto di ingresso dello step corrente della pipeline."""
     if not INPUT_DIR.exists():
         raise FileNotFoundError(f"Cartella input non trovata: {INPUT_DIR}")
 

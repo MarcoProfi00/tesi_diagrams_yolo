@@ -12,8 +12,8 @@ from .io_utils import short_diagram_name
 # =========================================================
 # RENDERING COMPONENT -> NET VIEW
 # =========================================================
+# Draw component net PNG.
 def draw_component_net_png(graph_data: dict[str, Any], out_png: Path) -> None:
-    """Disegna component net png per visualizzazione o debug."""
     simple = derive_component_net_graph(graph_data)
     G = nx.Graph()
     for node in simple["nodes"]:
@@ -69,8 +69,8 @@ def draw_component_net_png(graph_data: dict[str, Any], out_png: Path) -> None:
     fig.savefig(out_png, dpi=220, bbox_inches="tight")
     plt.close(fig)
 
+# Draw component net HTML.
 def draw_component_net_html(graph_data: dict[str, Any], out_html: Path) -> None:
-    """Disegna component net html per visualizzazione o debug."""
     simple = derive_component_net_graph(graph_data)
     G = nx.Graph()
     for node in simple["nodes"]:

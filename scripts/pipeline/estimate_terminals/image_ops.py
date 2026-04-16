@@ -1,8 +1,8 @@
 import cv2
 
 
+# Handle img count foreground pixels.
 def img_count_foreground_pixels(binary, x1, y1, x2, y2):
-    """Gestisce img count foreground pixels all'interno di questo modulo della pipeline."""
     h, w = binary.shape[:2]
     x1 = max(0, min(w, x1))
     y1 = max(0, min(h, y1))

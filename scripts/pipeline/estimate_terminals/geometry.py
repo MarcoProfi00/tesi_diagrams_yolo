@@ -4,8 +4,8 @@ from .image_ops import img_count_foreground_pixels
 # =========================================================
 # GENERIC GEOMETRY
 # =========================================================
+# Handle geom clamp bounding box to image.
 def geom_clamp_bbox_to_image(bbox, image_shape):
-    """Riporta il bounding box entro i limiti dell'immagine prima di fare misure geometriche."""
     h, w = image_shape[:2]
     x1, y1, x2, y2 = bbox
     x1 = int(max(0, min(w - 1, round(x1))))
@@ -14,8 +14,8 @@ def geom_clamp_bbox_to_image(bbox, image_shape):
     y2 = int(max(0, min(h - 1, round(y2))))
     return x1, y1, x2, y2
 
+# Handle geom terminal point from bounding box.
 def geom_terminal_point_from_bbox(bbox, relative_position: str):
-    """Stima il terminale nel centro geometrico del lato richiesto del bounding box."""
     x1, y1, x2, y2 = bbox
     xc = (x1 + x2) / 2.0
     yc = (y1 + y2) / 2.0
@@ -31,8 +31,8 @@ def geom_terminal_point_from_bbox(bbox, relative_position: str):
     raise ValueError(f"relative_position non supportata: {relative_position}")
 
 
+# Handle geom terminal point from bounding box with anchor.
 def geom_terminal_point_from_bbox_with_anchor(bbox, relative_position: str, anchor_offset_ratio: float):
-    """Stima il terminale su un lato del bbox usando una coordinata relativa lungo il lato stesso."""
     x1, y1, x2, y2 = bbox
     ratio = max(0.0, min(1.0, float(anchor_offset_ratio)))
     width = max(x2 - x1, 1e-6)
@@ -48,8 +48,8 @@ def geom_terminal_point_from_bbox_with_anchor(bbox, relative_position: str, anch
         return [round(x1 + ratio * width, 2), round(y2 + TERMINAL_OUTWARD_OFFSET, 2)]
     raise ValueError(f"relative_position non supportata: {relative_position}")
 
+# Handle geom infer orientation from bounding box.
 def geom_infer_orientation_from_bbox(bbox, default_orientation="horizontal"):
-    """Stima se il simbolo e piu vicino a un orientamento orizzontale o verticale guardando il rapporto tra i lati."""
     x1, y1, x2, y2 = bbox
     width = max(x2 - x1, 1e-6)
     height = max(y2 - y1, 1e-6)
@@ -63,8 +63,8 @@ def geom_infer_orientation_from_bbox(bbox, default_orientation="horizontal"):
 # =========================================================
 # GENERIC SIDE-PEAK LOCALIZATION
 # =========================================================
+# Handle side peak halfspan.
 def _side_peak_halfspan(width, height):
-    """Calcola la semiampiezza della probe usata per cercare il picco di connessione lungo un lato."""
     min_dim = max(1, min(width, height))
     halfspan = int(round(min_dim * SIDE_PEAK_HALFSPAN_RATIO))
     halfspan = max(SIDE_PEAK_HALFSPAN_MIN, halfspan)
@@ -72,13 +72,13 @@ def _side_peak_halfspan(width, height):
     return halfspan
 
 
+# Handle side peak scan margin.
 def _side_peak_scan_margin(length):
-    """Calcola un margine di sicurezza che evita di campionare gli angoli del bounding box."""
     margin = int(round(length * SIDE_PEAK_SCAN_MARGIN_RATIO))
     return max(SIDE_PEAK_SCAN_MARGIN_MIN, margin)
 
+# Group consecutive indices.
 def _group_consecutive_indices(indices):
-    """Raggruppa indici consecutivi in blocchi continui per stabilizzare la scelta del picco."""
     if not indices:
         return []
 
@@ -91,8 +91,8 @@ def _group_consecutive_indices(indices):
     return groups
 
 
+# Handle select peak index from scores.
 def _select_peak_index_from_scores(scores, center_index):
-    """Seleziona il picco piu affidabile del profilo, preferendo run solide e non singoli pixel rumorosi."""
     if not scores:
         return None, {
             "max_score": 0,
@@ -135,6 +135,7 @@ def _select_peak_index_from_scores(scores, center_index):
 
     groups = _group_consecutive_indices(kept)
 
+    # Group key.
     def group_key(group):
         group_scores = [scores[i] for i in group]
         group_center = (group[0] + group[-1]) / 2.0
@@ -157,8 +158,8 @@ def _select_peak_index_from_scores(scores, center_index):
         "selected_run_score": scores[best_idx],
     }
 
+# Handle geom terminal point by side peak.
 def geom_terminal_point_by_side_peak(binary, bbox, relative_position: str, scan_start=None, scan_end=None, center_coord=None):
-    """Localizza con precisione un terminale cercando il punto di massimo supporto lungo il lato del simbolo."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     width = max(x2 - x1, 1)
     height = max(y2 - y1, 1)
@@ -301,14 +302,16 @@ def geom_terminal_point_by_side_peak(binary, bbox, relative_position: str, scan_
 # =========================================================
 # THREE-TERMINAL GEOMETRY
 # =========================================================
+# Handle three terminal pair scan window.
 def _three_terminal_pair_scan_window(x1, y1, x2, y2, orientation, same_side=False):
-    """Costruisce la finestra di scansione per i terminali della coppia nei simboli a tre terminali."""
     width = max(x2 - x1, 1)
     height = max(y2 - y1, 1)
 
+    # Handle xr.
     def xr(r):
         return x1 + r * width
 
+    # Handle yr.
     def yr(r):
         return y1 + r * height
 
@@ -337,12 +340,13 @@ def _three_terminal_pair_scan_window(x1, y1, x2, y2, orientation, same_side=Fals
 
     raise ValueError(f"orientation non supportata: {orientation}")
 
+# Resolve three terminal pair bias.
 def _resolve_three_terminal_pair_bias(binary, bbox, orientation):
-    """Decide se la coppia di terminali opposti appare davvero sul lato atteso o in una configurazione specchiata."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
 
     pair_positions = ("top", "bottom") if orientation in {"left", "right"} else ("left", "right")
 
+    # Score candidate.
     def score_candidate(same_side):
         total = 0.0
         debug = {}
@@ -384,15 +388,17 @@ def _resolve_three_terminal_pair_bias(binary, bbox, orientation):
 
     return "opposite_side", opposite_debug
 
+# Handle geom terminal point three terminal.
 def geom_terminal_point_three_terminal(binary, bbox, orientation: str, relative_position: str):
-    """Stima la posizione dei terminali nei simboli a tre terminali usando finestre di scansione piu mirate."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     width = max(x2 - x1, 1)
     height = max(y2 - y1, 1)
 
+    # Handle x from ratio.
     def x_from_ratio(r):
         return x1 + r * width
 
+    # Handle y from ratio.
     def y_from_ratio(r):
         return y1 + r * height
 
@@ -472,8 +478,8 @@ def geom_terminal_point_three_terminal(binary, bbox, orientation: str, relative_
 # =========================================================
 # OPAMP - LOW LEVEL HELPERS
 # =========================================================
+# Handle op-amp count horizontal line.
 def _opamp_count_horizontal_line(binary, x_start, x_end, y):
-    """Helper interno che gestisce opamp count horizontal line all'interno di questo modulo della pipeline."""
     h, w = binary.shape[:2]
     y = max(0, min(h - 1, int(round(y))))
 
@@ -489,8 +495,8 @@ def _opamp_count_horizontal_line(binary, x_start, x_end, y):
     return img_count_foreground_pixels(binary, xa, y, xb, y + 1)
 
 
+# Handle op-amp count vertical line.
 def _opamp_count_vertical_line(binary, x, y_start, y_end):
-    """Helper interno che gestisce opamp count vertical line all'interno di questo modulo della pipeline."""
     h, w = binary.shape[:2]
     x = max(0, min(w - 1, int(round(x))))
 
@@ -506,8 +512,8 @@ def _opamp_count_vertical_line(binary, x, y_start, y_end):
     return img_count_foreground_pixels(binary, x, ya, x + 1, yb)
 
 
+# Handle select op-amp mandatory best index.
 def _select_opamp_mandatory_best_index(scores, coords, center_coord):
-    """Helper interno che seleziona opamp mandatory best index tra i candidati valutati."""
     if not scores:
         return 0, {
             "max_score": 0,
@@ -537,8 +543,8 @@ def _select_opamp_mandatory_best_index(scores, coords, center_coord):
         "kept_candidates": len(kept),
     }
 
+# Handle op-amp slot scan range.
 def _opamp_slot_scan_range(x1, y1, x2, y2, relative_position: str, slot: str):
-    """Helper interno che gestisce opamp slot scan range all'interno di questo modulo della pipeline."""
     width = max(x2 - x1, 1)
     height = max(y2 - y1, 1)
 
@@ -575,8 +581,8 @@ def _opamp_slot_scan_range(x1, y1, x2, y2, relative_position: str, slot: str):
 # =========================================================
 # OPAMP - MANDATORY TERMINALS
 # =========================================================
+# Handle op-amp mandatory probe score.
 def _opamp_mandatory_probe_score(binary, bbox, relative_position: str, coord: int):
-    """Helper interno che gestisce opamp mandatory probe score all'interno di questo modulo della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
 
     if relative_position == "left":
@@ -674,8 +680,8 @@ def _opamp_mandatory_probe_score(binary, bbox, relative_position: str, coord: in
     raise ValueError(f"relative_position non supportata per opamp mandatory: {relative_position}")
 
 
+# Handle geom op-amp mandatory terminal.
 def _geom_opamp_mandatory_terminal(binary, bbox, relative_position: str, slot: str):
-    """Helper interno che gestisce geom opamp mandatory terminal all'interno di questo modulo della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     scan_start, scan_end, center_coord = _opamp_slot_scan_range(x1, y1, x2, y2, relative_position, slot)
     halfspan = OPAMP_MANDATORY_SCAN_HALFSPAN
@@ -753,8 +759,8 @@ def _geom_opamp_mandatory_terminal(binary, bbox, relative_position: str, slot: s
 # =========================================================
 # OPAMP - AUXILIARY TERMINALS
 # =========================================================
+# Handle op-amp aux scan x range.
 def _opamp_aux_scan_x_range(bbox):
-    """Helper interno che gestisce opamp aux scan x range all'interno di questo modulo della pipeline."""
     x1, y1, x2, y2 = bbox
     width = max(x2 - x1, 1)
     start = x1 + int(round(OPAMP_AUX_SCAN_X_START_RATIO * width))
@@ -764,8 +770,8 @@ def _opamp_aux_scan_x_range(bbox):
     return start, end
 
 
+# Handle op-amp vertical run from edge.
 def _opamp_vertical_run_from_edge(binary, bbox, x, side):
-    """Helper interno che gestisce opamp vertical run from edge all'interno di questo modulo della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     height = max(y2 - y1, 1)
 
@@ -775,6 +781,7 @@ def _opamp_vertical_run_from_edge(binary, bbox, x, side):
     max_depth = int(round(OPAMP_AUX_RUN_MAX_DEPTH_RATIO * height))
     edge_band = max(2, int(round(OPAMP_AUX_EDGE_BAND_RATIO * height)))
 
+    # Handle row fg.
     def row_fg(y):
         return img_count_foreground_pixels(
             binary,
@@ -844,10 +851,11 @@ def _opamp_vertical_run_from_edge(binary, bbox, x, side):
 
     return None
 
+# Handle op-amp diagonal support.
 def _opamp_diagonal_support(binary, x, y, diag_kind, radius=4):
-    """Helper interno che gestisce opamp diagonal support all'interno di questo modulo della pipeline."""
     h, w = binary.shape[:2]
 
+    # Handle sample.
     def sample(offset):
         cnt = 0
         for k in range(-radius, radius + 1):
@@ -864,8 +872,8 @@ def _opamp_diagonal_support(binary, x, y, diag_kind, radius=4):
     return max(sample(-1), sample(0), sample(1))
 
 
+# Handle op-amp aux segment density.
 def _opamp_aux_segment_density(binary, x, y1, y2, side, y, halfspan=1):
-    """Helper interno che gestisce opamp aux segment density all'interno di questo modulo della pipeline."""
     h, w = binary.shape[:2]
     xa = max(0, x - halfspan)
     xb = min(w, x + halfspan + 1)
@@ -885,8 +893,8 @@ def _opamp_aux_segment_density(binary, x, y1, y2, side, y, halfspan=1):
     return float(pixel_count) / float(area)
 
 
+# Handle op-amp refine aux y to diagonal.
 def _opamp_refine_aux_y_to_diagonal(binary, bbox, orientation, relative_position, x, base_y):
-    """Helper interno che gestisce opamp refine aux y to diagonal all'interno di questo modulo della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     height = max(y2 - y1, 1)
 
@@ -1020,8 +1028,8 @@ def _opamp_refine_aux_y_to_diagonal(binary, bbox, orientation, relative_position
         "refine_mode": "best_global_fallback",
     }
 
+# Handle op-amp vertical band density.
 def _opamp_vertical_band_density(binary, x, y_start, y_end, halfspan=1):
-    """Helper interno che gestisce opamp vertical band density all'interno di questo modulo della pipeline."""
     h, w = binary.shape[:2]
     xa = max(0, int(round(x)) - halfspan)
     xb = min(w, int(round(x)) + halfspan + 1)
@@ -1037,8 +1045,8 @@ def _opamp_vertical_band_density(binary, x, y_start, y_end, halfspan=1):
     return float(pixel_count) / float(area)
 
 
+# Handle op-amp aux make refine binary image.
 def _opamp_aux_make_refine_binary(binary, bbox, orientation):
-    """Helper interno che gestisce opamp aux make refine binary all'interno di questo modulo della pipeline."""
     if not OPAMP_AUX_MASK_INTERNAL_LABELS:
         return binary, {
             "internal_label_masked": False,
@@ -1057,12 +1065,15 @@ def _opamp_aux_make_refine_binary(binary, bbox, orientation):
 
     masked = binary.copy()
 
+    # Handle xr.
     def xr(r):
         return x1 + int(round(r * width))
 
+    # Handle yr.
     def yr(r):
         return y1 + int(round(r * height))
 
+    # Handle mirrored x interval.
     def mirrored_x_interval(r1, r2):
         if orientation == "right":
             xa = xr(r1)
@@ -1112,8 +1123,8 @@ def _opamp_aux_make_refine_binary(binary, bbox, orientation):
         "mask_orientation_supported": True,
     }
 
+# Handle geom op-amp aux terminal v1.
 def _geom_opamp_aux_terminal_v1(binary, bbox, orientation, relative_position):
-    """Helper interno che gestisce geom opamp aux terminal v1 all'interno di questo modulo della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
 
     if orientation not in {"right", "left"} or relative_position not in {"top", "bottom"}:
@@ -1241,8 +1252,8 @@ def _geom_opamp_aux_terminal_v1(binary, bbox, orientation, relative_position):
 # =========================================================
 # OPAMP - PUBLIC API
 # =========================================================
+# Handle geom terminal point op-amp.
 def geom_terminal_point_opamp(binary, bbox, orientation: str, term_def: dict):
-    """Gestisce geom terminal point opamp all'interno di questo modulo della pipeline."""
     relative_position = term_def["relative_position"]
     slot = term_def.get("slot", "center")
     terminal_role = term_def.get("terminal_role")

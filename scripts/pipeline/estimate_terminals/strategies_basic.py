@@ -17,11 +17,26 @@ from .probes import (
     score_point_directional_support,
 )
 
+
+# Group consecutive indices.
+def _group_consecutive_indices(indices):
+    if not indices:
+        return []
+
+    groups = [[int(indices[0])]]
+    for idx in indices[1:]:
+        idx = int(idx)
+        if idx <= groups[-1][-1] + 1:
+            groups[-1].append(idx)
+        else:
+            groups.append([idx])
+    return groups
+
 # =========================================================
 # STRATEGY: ONE-TERMINAL COMPONENTS
 # =========================================================
+# Score one terminal candidate side.
 def _score_one_terminal_candidate_side(binary, bbox, side):
-    """Helper interno che assegna uno score a one terminal candidate side per la selezione successiva."""
     point, peak_debug = geom_terminal_point_by_side_peak(binary, bbox, side)
     px, py = point
 
@@ -38,11 +53,11 @@ def _score_one_terminal_candidate_side(binary, bbox, side):
     return dir_score, point, peak_debug
 
 
+# Handle strategy detect connected side.
 def strategy_detect_connected_side(binary, bbox):
     # -------------------------------------------------
     # 1) Validazione diretta sui 4 lati candidati
     # -------------------------------------------------
-    """Gestisce strategy detect connected side all'interno di questo modulo della pipeline."""
     point_scores = {}
     point_debug = {}
 
@@ -133,8 +148,8 @@ def strategy_detect_connected_side(binary, bbox):
 
     return coarse_best_side, side_scores
 
+# Resolve one terminal orientation.
 def resolve_one_terminal_orientation(meta: dict, connected_side: str):
-    """Risolve one terminal orientation usando le euristiche configurate."""
     orientations = meta.get("orientations", {})
     for orientation_name, terminals_def in orientations.items():
         for term_def in terminals_def:
@@ -152,8 +167,8 @@ def resolve_one_terminal_orientation(meta: dict, connected_side: str):
 # =========================================================
 # STRATEGY: TWO-TERMINAL COMPONENTS
 # =========================================================
+# Handle decide axis from scores.
 def _decide_axis_from_scores(side_scores):
-    """Helper interno che gestisce decide axis from scores all'interno di questo modulo della pipeline."""
     lr_pair = min(side_scores["left"], side_scores["right"])
     tb_pair = min(side_scores["top"], side_scores["bottom"])
     lr_score = side_scores["left"] + side_scores["right"]
@@ -165,8 +180,8 @@ def _decide_axis_from_scores(side_scores):
         return "vertical"
     return None
 
+# Handle strategy detect two terminal orientation generic.
 def strategy_detect_two_terminal_orientation_generic(binary, bbox, default_orientation="horizontal"):
-    """Gestisce strategy detect two terminal orientation generic all'interno di questo modulo della pipeline."""
     side_scores = get_local_terminal_probe_scores_center(binary, bbox)
     orientation = _decide_axis_from_scores(side_scores)
     if orientation is not None:
@@ -192,9 +207,71 @@ def strategy_detect_two_terminal_orientation_generic(binary, bbox, default_orien
     return geom_infer_orientation_from_bbox(bbox, default_orientation=default_orientation), side_scores
 
 
+# Detect two terminal orientation capacitor.
 def detect_two_terminal_orientation_capacitor(binary, bbox, default_orientation="horizontal"):
-    """Rileva two terminal orientation capacitor usando le euristiche configurate."""
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    width = max(x2 - x1 + 1, 1)
+    height = max(y2 - y1 + 1, 1)
+
+    inset_x = max(2, int(round(width * 0.18)))
+    inset_y = max(2, int(round(height * 0.18)))
+    rx1 = min(max(x1, x1 + inset_x), x2)
+    rx2 = max(min(x2 + 1, x2 + 1 - inset_x), rx1 + 1)
+    ry1 = min(max(y1, y1 + inset_y), y2)
+    ry2 = max(min(y2 + 1, y2 + 1 - inset_y), ry1 + 1)
+    inner = binary[ry1:ry2, rx1:rx2]
+
+    if inner.size:
+        row_proj = np.count_nonzero(inner > 0, axis=1)
+        col_proj = np.count_nonzero(inner > 0, axis=0)
+
+        # Handle peak count.
+        def peak_count(proj):
+            if len(proj) == 0:
+                return 0, 0
+            max_score = int(proj.max()) if len(proj) else 0
+            if max_score <= 0:
+                return 0, 0
+            keep_threshold = max(2, int(round(max_score * 0.68)))
+            kept = [idx for idx, value in enumerate(proj.tolist()) if int(value) >= keep_threshold]
+            groups = _group_consecutive_indices(kept)
+            filtered = [group for group in groups if len(group) <= max(10, int(round(len(proj) * 0.22)))]
+            return len(filtered), max_score
+
+        row_peaks, row_max = peak_count(row_proj)
+        col_peaks, col_max = peak_count(col_proj)
+        projection_debug = {
+            "inner_roi": [int(rx1), int(ry1), int(rx2), int(ry2)],
+            "row_peaks": int(row_peaks),
+            "col_peaks": int(col_peaks),
+            "row_max": int(row_max),
+            "col_max": int(col_max),
+        }
+
+        # Due piastre orizzontali -> terminali top/bottom -> orientazione vertical.
+        if row_peaks >= 2 and row_max >= col_max * 1.10:
+            return "vertical", {
+                "decision_mode": "capacitor_internal_plate_projection_vertical",
+                **projection_debug,
+            }
+
+        # Due piastre verticali -> terminali left/right -> orientazione horizontal.
+        if col_peaks >= 2 and col_max >= row_max * 1.10:
+            return "horizontal", {
+                "decision_mode": "capacitor_internal_plate_projection_horizontal",
+                **projection_debug,
+            }
+
     side_scores = get_local_terminal_probe_scores_center(binary, bbox)
+    lr_min = min(side_scores["left"], side_scores["right"])
+    tb_min = min(side_scores["top"], side_scores["bottom"])
+    if lr_min >= TERMINAL_PROBE_MIN_SIDE_SCORE and tb_min < max(1.0, 0.45 * lr_min):
+        side_scores["decision_mode"] = "capacitor_balanced_left_right_override"
+        return "horizontal", side_scores
+    if tb_min >= TERMINAL_PROBE_MIN_SIDE_SCORE and lr_min < max(1.0, 0.45 * tb_min):
+        side_scores["decision_mode"] = "capacitor_balanced_top_bottom_override"
+        return "vertical", side_scores
+
     orientation = _decide_axis_from_scores(side_scores)
     if orientation is not None:
         side_scores["decision_mode"] = "capacitor_center_probes"
@@ -218,8 +295,8 @@ def detect_two_terminal_orientation_capacitor(binary, bbox, default_orientation=
     return geom_infer_orientation_from_bbox(bbox, default_orientation=default_orientation), side_scores
 
 
+# Handle strategy detect two terminal orientation switch.
 def strategy_detect_two_terminal_orientation_switch(binary, bbox, default_orientation="horizontal"):
-    """Gestisce strategy detect two terminal orientation switch all'interno di questo modulo della pipeline."""
     side_scores = get_local_terminal_probe_scores_multi_anchor(binary, bbox)
     orientation = _decide_axis_from_scores(side_scores)
     if orientation is not None:
@@ -244,8 +321,8 @@ def strategy_detect_two_terminal_orientation_switch(binary, bbox, default_orient
     side_scores["decision_mode"] = "switch_default_orientation_fallback"
     return default_orientation, side_scores
 
+# Score two terminal candidate by points.
 def _score_two_terminal_candidate_by_points(binary, bbox, orientation):
-    """Helper interno che assegna uno score a two terminal candidate by points per la selezione successiva."""
     if orientation == "horizontal":
         sides = ("left", "right")
     else:
@@ -284,8 +361,8 @@ def _score_two_terminal_candidate_by_points(binary, bbox, orientation):
 
     return total_score, side_scores, point_debug
 
+# Detect two terminal orientation LED.
 def detect_two_terminal_orientation_led(binary, bbox, default_orientation="vertical"):
-    """Rileva two terminal orientation led usando le euristiche configurate."""
 
     # -------------------------------------------------
     # 1) Validazione diretta tramite terminali candidati
@@ -399,8 +476,8 @@ def detect_two_terminal_orientation_led(binary, bbox, default_orientation="verti
     combined_scores["decision_mode"] = "led_default_fallback"
     return default_orientation, combined_scores
 
+# Detect two terminal orientation round source.
 def detect_two_terminal_orientation_round_source(binary, bbox, default_orientation="vertical"):
-    """Rileva two terminal orientation round source usando le euristiche configurate."""
     near_scores = get_round_source_probe_scores(binary, bbox)
     far_scores = get_round_source_far_probe_scores(binary, bbox)
 
@@ -456,8 +533,8 @@ def detect_two_terminal_orientation_round_source(binary, bbox, default_orientati
     combined_scores["decision_mode"] = "round_source_default_fallback"
     return default_orientation, combined_scores
 
+# Score variable resistor candidate by points.
 def _score_variable_resistor_candidate_by_points(binary, bbox, orientation):
-    """Helper interno che assegna uno score a variable resistor candidate by points per la selezione successiva."""
     if orientation == "horizontal":
         sides = ("left", "right")
     else:
@@ -493,8 +570,8 @@ def _score_variable_resistor_candidate_by_points(binary, bbox, orientation):
     return total_score, side_scores, point_debug
 
 
+# Detect two terminal orientation variable resistor.
 def detect_two_terminal_orientation_variable_resistor(binary, bbox, default_orientation="horizontal"):
-    """Rileva two terminal orientation variable resistor usando le euristiche configurate."""
 
     # -------------------------------------------------
     # 1) Validazione diretta tramite terminali candidati

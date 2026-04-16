@@ -27,7 +27,7 @@ from skimage.morphology import skeletonize
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PIPELINE_DATASET = os.environ.get(
     "PIPELINE_DATASET",
-    "topology_v9.1_analog_meter_connector_transformer",
+    "topology_v9.2_set_successivo",
 )
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "03_estimate_terminals"
@@ -113,16 +113,16 @@ ENABLE_SMALL_COMPONENT_FILTER = True
 MIN_COMPONENT_AREA = 40
 
 # utility geometriche
+# Clamp point.
 def clamp_point(x, y, w, h):
-    """Limita point per mantenerla entro limiti validi."""
     x = max(0, min(w - 1, int(round(x))))
     y = max(0, min(h - 1, int(round(y))))
     return x, y
 
 
 
+# Shrink bounding box.
 def shrink_bbox(bbox, shrink_factor=0.88):
-    """Riduce bbox preservandone il centro."""
     x1, y1, x2, y2 = bbox
     xc = (x1 + x2) / 2.0
     yc = (y1 + y2) / 2.0
@@ -137,14 +137,14 @@ def shrink_bbox(bbox, shrink_factor=0.88):
     return [new_x1, new_y1, new_x2, new_y2]
 
 
+# Expand bounding box.
 def expand_bbox(bbox, pad=0):
-    """Espande bbox di una piccola tolleranza per coprire bordi simbolo molto spessi."""
     x1, y1, x2, y2 = bbox
     return [x1 - pad, y1 - pad, x2 + pad, y2 + pad]
 
 # costruzione maschere
+# Build base component mask.
 def build_base_component_mask(image_shape, components):
-    """Costruisce la maschera piena dei componenti che devono essere rimossi dall'immagine."""
     h, w = image_shape[:2]
     mask = np.zeros((h, w), dtype=np.uint8)
 
@@ -168,8 +168,8 @@ def build_base_component_mask(image_shape, components):
 
     return mask
 
+# Terminal keep params.
 def terminal_keep_params(term):
-    """Restituisce i parametri della zona di preservazione da usare per il terminale corrente."""
     name = str(term.get("name", "")).lower()
     class_name = str(term.get("component_class_name", "")).strip()
 
@@ -192,8 +192,8 @@ def terminal_keep_params(term):
     }
 
 
+# Terminal keep segment.
 def terminal_keep_segment(term):
-    """Calcola il piccolo segmento direzionale da preservare attorno al terminale."""
     x = float(term["x"])
     y = float(term["y"])
     rel = term.get("relative_position")
@@ -221,8 +221,8 @@ def terminal_keep_segment(term):
     return p1, p2
 
 
+# Carve terminal keep zones.
 def carve_terminal_keep_zones(mask, terminals):
-    """Scava nella maschera le zone che devono rimanere visibili vicino ai terminali."""
     h, w = mask.shape[:2]
     keep_debug = np.zeros_like(mask)
 
@@ -246,15 +246,15 @@ def carve_terminal_keep_zones(mask, terminals):
     return mask, keep_debug
 
 
+# Build component mask.
 def build_component_mask(image_shape, components, terminals):
-    """Combina masking dei componenti e zone di preservazione dei terminali in una sola maschera."""
     mask = build_base_component_mask(image_shape, components)
     mask, keep_debug = carve_terminal_keep_zones(mask, terminals)
     return mask, keep_debug
 
 # debug outputs
+# Save mask debug view.
 def save_mask_debug(image_bgr, mask, out_path: Path):
-    """Salva mask debug nel percorso di output previsto."""
     overlay = image_bgr.copy()
     red_layer = np.zeros_like(image_bgr)
     red_layer[:, :, 2] = 255
@@ -268,8 +268,8 @@ def save_mask_debug(image_bgr, mask, out_path: Path):
     cv2.imwrite(str(out_path), overlay)
 
 
+# Save terminal keep debug view.
 def save_terminal_keep_debug(image_bgr, keep_debug, out_path: Path):
-    """Salva terminal keep debug nel percorso di output previsto."""
     overlay = image_bgr.copy()
     green_layer = np.zeros_like(image_bgr)
     green_layer[:, :, 1] = 255
@@ -283,8 +283,8 @@ def save_terminal_keep_debug(image_bgr, keep_debug, out_path: Path):
     cv2.imwrite(str(out_path), overlay)
 
 # post-processing wires
+# Remove small connected components.
 def remove_small_connected_components(binary_img, min_area=40):
-    """Rimuove i frammenti troppo piccoli dalla mappa binaria dei wire."""
     num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(binary_img, connectivity=8)
 
     filtered = np.zeros_like(binary_img)
@@ -303,8 +303,8 @@ def remove_small_connected_components(binary_img, min_area=40):
     return filtered, kept_components, removed_components
 
 
+# Bridge fragmented wires.
 def bridge_fragmented_wires(binary_img):
-    """Ricuce piccoli gap orizzontali e verticali nei wire frammentati prima della skeletonization."""
     if not ENABLE_FRAGMENTED_WIRE_BRIDGE:
         return binary_img.copy(), {
             "enabled": False,
@@ -350,9 +350,9 @@ def bridge_fragmented_wires(binary_img):
     }
 
 
+# Extract wires from image.
 def extract_wires_from_image(image_bgr, components, terminals):
     # 1. grayscale
-    """Esegue tutta la pipeline di estrazione dei wire e restituisce mappe intermedie e metadati di debug."""
     gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
 
     # 2. component mask + terminal keep zones
@@ -428,8 +428,8 @@ def extract_wires_from_image(image_bgr, components, terminals):
     )
 
 # main
+# Run the entrypoint for this pipeline stage.
 def main() -> None:
-    """Esegue il punto di ingresso dello step corrente della pipeline."""
     if not INPUT_DIR.exists():
         raise FileNotFoundError(f"Cartella input non trovata: {INPUT_DIR}")
 

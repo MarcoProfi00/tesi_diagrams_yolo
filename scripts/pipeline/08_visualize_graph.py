@@ -44,7 +44,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 PIPELINE_DATASET = os.environ.get(
     "PIPELINE_DATASET",
-    "topology_v9.1_analog_meter_connector_transformer",
+    "topology_v9.2_set_successivo",
 )
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "07_export_graph" / "graph_json"
@@ -70,8 +70,8 @@ LEGACY_DOWNLOAD_SIMPLIFIED_JSON_DIR = OUTPUT_DIR / "downloads" / "simplified_jso
 # =========================================================
 # MAIN
 # =========================================================
+# Run the entrypoint for this pipeline stage.
 def main() -> None:
-    """Esegue il punto di ingresso dello step corrente della pipeline."""
     if not INPUT_DIR.exists():
         raise FileNotFoundError(f"Cartella input non trovata: {INPUT_DIR}")
 

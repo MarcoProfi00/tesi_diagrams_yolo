@@ -10,6 +10,7 @@ from pathlib import Path
 import os
 import json
 import yaml
+import math
 import cv2
 
 from ultralytics import YOLO
@@ -24,8 +25,8 @@ from estimate_terminals.probes import (
 # =========================================================
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "topology_v9.1_analog_meter_connector_transformer")
-PIPELINE_INPUT_BATCH = os.environ.get("PIPELINE_INPUT_BATCH", "batch_v9_1_primo_set_analog_meter_connector_transformer")
+PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "topology_v9.2_set_successivo")
+PIPELINE_INPUT_BATCH = os.environ.get("PIPELINE_INPUT_BATCH", "batch_v9_2_set_successivo_analog_meter_connector_transformer")
 
 # === MODELLO ===
 MODEL_PATH = (
@@ -55,10 +56,21 @@ CLASS_CONF_THRES = {
     "Analog_Meter": 0.03,
     "Battery": 0.18,
     "Connector": 0.18,
+    "Inductor": 0.30,
     "Lamp": 0.25,
+    "Memristor": 0.08,
     "Switch": 0.02,
     "Terminal": 0.35,
     "Transformer": 0.22,
+    "Voltage_Source": 0.75,
+}
+
+SECONDARY_CLASS_PREDICTION_SPECS = {
+    "Diode": {
+        "imgsz": 1536,
+        "predict_conf": 0.14,
+        "accept_conf": 0.14,
+    },
 }
 
 # === DEBUG ===
@@ -67,8 +79,8 @@ SAVE_DEBUG_IMAGES = True
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff", ".webp"}
 
 
+# Clamp bounding box to image.
 def _clamp_bbox_to_image(box, image_shape):
-    """Riporta un bbox ai limiti immagine per le euristiche locali di post-detection."""
     h, w = image_shape[:2]
     x1, y1, x2, y2 = box
     x1 = max(0, min(w - 1, int(round(x1))))
@@ -78,8 +90,8 @@ def _clamp_bbox_to_image(box, image_shape):
     return x1, y1, x2, y2
 
 
+# Group close indices.
 def _group_close_indices(indices, max_gap=1):
-    """Raggruppa indici vicini per stabilizzare le euristiche basate su proiezione."""
     if not indices:
         return []
 
@@ -92,8 +104,8 @@ def _group_close_indices(indices, max_gap=1):
     return groups
 
 
+# Handle merge close values.
 def _merge_close_values(values, min_gap):
-    """Fonde coordinate troppo vicine per evitare doppi conteggi dello stesso pin/feature."""
     if not values:
         return []
 
@@ -106,11 +118,13 @@ def _merge_close_values(values, min_gap):
     return [int(round(v)) for v in merged]
 
 
+# Handle bounding box area.
 def _bbox_area(box) -> float:
     x1, y1, x2, y2 = box
     return max(0.0, float(x2 - x1)) * max(0.0, float(y2 - y1))
 
 
+# Handle bounding box intersection.
 def _bbox_intersection(box_a, box_b) -> float:
     ax1, ay1, ax2, ay2 = box_a
     bx1, by1, bx2, by2 = box_b
@@ -121,6 +135,7 @@ def _bbox_intersection(box_a, box_b) -> float:
     return max(0.0, ix2 - ix1) * max(0.0, iy2 - iy1)
 
 
+# Handle bounding box IoU.
 def _bbox_iou(box_a, box_b) -> float:
     inter = _bbox_intersection(box_a, box_b)
     if inter <= 0.0:
@@ -131,6 +146,7 @@ def _bbox_iou(box_a, box_b) -> float:
     return inter / union
 
 
+# Handle bounding box IoA.
 def _bbox_ioa(box_inner, box_outer) -> float:
     area_inner = _bbox_area(box_inner)
     if area_inner <= 0.0:
@@ -138,19 +154,21 @@ def _bbox_ioa(box_inner, box_outer) -> float:
     return _bbox_intersection(box_inner, box_outer) / area_inner
 
 
+# Handle bounding box center.
 def _bbox_center(box):
     x1, y1, x2, y2 = box
     return (float(x1 + x2) / 2.0, float(y1 + y2) / 2.0)
 
 
+# Handle point in box.
 def _point_in_box(point, box) -> bool:
     px, py = point
     x1, y1, x2, y2 = box
     return float(x1) <= float(px) <= float(x2) and float(y1) <= float(py) <= float(y2)
 
 
+# Count hough circles.
 def _count_hough_circles(image_gray, box, min_dist=18, param1=80, param2=14, min_radius=7, max_radius=24):
-    """Conta i cerchi rilevati in una ROI: utile per connettori e meter analogici."""
     x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_gray.shape)
     if x2 <= x1 or y2 <= y1:
         return 0
@@ -171,8 +189,8 @@ def _count_hough_circles(image_gray, box, min_dist=18, param1=80, param2=14, min
     return int(circles.shape[1])
 
 
+# Expand LED bounding box.
 def expand_led_bbox(box, image_shape):
-    """Allarga leggermente il bbox del LED verso l'area delle frecce luminose."""
     x1, y1, x2, y2 = box
     expanded = [
         float(x1) - 6.0,
@@ -183,8 +201,8 @@ def expand_led_bbox(box, image_shape):
     return _clamp_bbox_to_image(expanded, image_shape)
 
 
+# Handle component areas in box.
 def _component_areas_in_box(image_binary, box):
-    """Restituisce le aree delle connected components in una ROI binaria."""
     x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)
     if x2 <= x1 or y2 <= y1:
         return []
@@ -197,8 +215,8 @@ def _component_areas_in_box(image_binary, box):
     )
 
 
+# Count connector pin rows.
 def _count_connector_pin_rows(image_binary, box):
-    """Stima il numero di pin di un connettore verticale usando la proiezione interna."""
     x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)
     width = max(x2 - x1, 1)
     height = max(y2 - y1, 1)
@@ -230,8 +248,8 @@ def _count_connector_pin_rows(image_binary, box):
     return len(centers)
 
 
+# Handle is connector like bounding box.
 def is_connector_like_bbox(image_binary, box) -> bool:
-    """Verifica se un bbox assomiglia a un connettore multipin verticale del batch v9.1."""
     x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)
     width = max(x2 - x1, 1)
     height = max(y2 - y1, 1)
@@ -264,11 +282,13 @@ def is_connector_like_bbox(image_binary, box) -> bool:
         sorted(centers),
         min_gap=max(18, int(round(height * 0.10))),
     )
-    return 3 <= len(centers) <= 6
+    component_areas = _component_areas_in_box(image_binary, box)
+    medium_components = [area for area in component_areas[1:] if area >= 80]
+    return 4 <= len(centers) <= 6 and len(medium_components) >= 3
 
 
+# Handle is analog meter like bounding box.
 def is_analog_meter_like_bbox(image_binary, box) -> bool:
-    """Verifica se un bbox assomiglia a un meter analogico quadrato del batch v9.1."""
     x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)
     width = max(x2 - x1, 1)
     height = max(y2 - y1, 1)
@@ -306,13 +326,53 @@ def is_analog_meter_like_bbox(image_binary, box) -> bool:
     )
 
 
+# Handle is memristor like bounding box.
+def is_memristor_like_bbox(image_binary, box) -> bool:
+    x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)
+    width = max(x2 - x1 + 1, 1)
+    height = max(y2 - y1 + 1, 1)
+    ratio = height / float(width)
+
+    if not (28 <= width <= 70 and height >= 140 and ratio >= 2.8):
+        return False
+
+    roi = image_binary[y1:y2 + 1, x1:x2 + 1]
+    side_band = max(2, int(round(width * 0.18)))
+    top_band = max(2, int(round(height * 0.10)))
+
+    left_density = cv2.countNonZero(roi[:, :side_band]) / float(max(roi[:, :side_band].size, 1))
+    right_density = cv2.countNonZero(roi[:, -side_band:]) / float(max(roi[:, -side_band:].size, 1))
+    top_density = cv2.countNonZero(roi[:top_band, :]) / float(max(roi[:top_band, :].size, 1))
+
+    cy1 = int(round(height * 0.20))
+    cy2 = int(round(height * 0.80))
+    cx1 = int(round(width * 0.25))
+    cx2 = int(round(width * 0.75))
+    center_roi = roi[cy1:cy2, cx1:cx2]
+    center_density = cv2.countNonZero(center_roi) / float(max(center_roi.size, 1))
+
+    component_areas = _component_areas_in_box(image_binary, box)
+    dominant_area = component_areas[0] if component_areas else 0
+
+    return (
+        left_density >= 0.16
+        and right_density >= 0.10
+        and top_density >= 0.18
+        and center_density >= 0.22
+        and len(component_areas) <= 2
+        and dominant_area >= int(round(width * height * 0.22))
+    )
+
+
+# Handle is switch like bounding box.
 def is_switch_like_bbox(image_gray, box) -> bool:
-    """Filtra false positive di Switch mantenendo solo simboli con due contatti circolari reali."""
     x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_gray.shape)
     width = max(x2 - x1, 1)
     height = max(y2 - y1, 1)
 
-    if width < 90 or height < 55 or width < height * 0.95:
+    # Alcuni switch del batch v9.2 hanno bbox quasi quadrati o perfino piu alti
+    # che larghi: il segnale decisivo resta la presenza dei due contatti circolari.
+    if max(width, height) < 75 or min(width, height) < 35:
         return False
 
     circle_count = _count_hough_circles(
@@ -324,11 +384,70 @@ def is_switch_like_bbox(image_gray, box) -> bool:
         min_radius=7,
         max_radius=22,
     )
-    return circle_count >= 2
+    if circle_count < 2:
+        return False
+
+    roi = image_gray[y1:y2 + 1, x1:x2 + 1]
+    _, roi_binary = cv2.threshold(roi, 200, 255, cv2.THRESH_BINARY_INV)
+    num_labels, _, stats, _ = cv2.connectedComponentsWithStats(roi_binary, connectivity=8)
+    min_component_area = max(80, int(round(width * height * 0.018)))
+    large_components = [
+        int(stats[idx, cv2.CC_STAT_AREA])
+        for idx in range(1, num_labels)
+        if int(stats[idx, cv2.CC_STAT_AREA]) >= min_component_area
+    ]
+    return len(large_components) >= 2
 
 
+# Handle is switch like bounding box relaxed.
+def is_switch_like_bbox_relaxed(image_gray, box) -> bool:
+    x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_gray.shape)
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+
+    if max(width, height) < 55 or min(width, height) < 28:
+        return False
+
+    circle_count = _count_hough_circles(
+        image_gray,
+        box,
+        min_dist=max(18, int(round(width * 0.24))),
+        param1=80,
+        param2=13,
+        min_radius=6,
+        max_radius=22,
+    )
+    if circle_count < 2:
+        return False
+
+    roi = image_gray[y1:y2 + 1, x1:x2 + 1]
+    edges = cv2.Canny(roi, 50, 150)
+    lines = cv2.HoughLinesP(
+        edges,
+        1,
+        math.pi / 180.0,
+        threshold=12,
+        minLineLength=max(12, int(round(min(width, height) * 0.22))),
+        maxLineGap=6,
+    )
+    if lines is None:
+        return False
+
+    for line in lines[:, 0, :]:
+        lx1, ly1, lx2, ly2 = map(int, line)
+        dx = lx2 - lx1
+        dy = ly2 - ly1
+        if dx == 0 and dy == 0:
+            continue
+        angle = abs(math.degrees(math.atan2(dy, dx)))
+        angle = min(angle, 180.0 - angle)
+        if 22.0 <= angle <= 70.0:
+            return True
+    return False
+
+
+# Extract plate peaks.
 def _extract_plate_peaks(projection, orthogonal_span):
-    """Estrae i due picchi principali associati alle piastre di battery/capacitor."""
     if projection is None or len(projection) == 0:
         return []
 
@@ -364,8 +483,8 @@ def _extract_plate_peaks(projection, orthogonal_span):
     return sorted(peaks, key=lambda item: item["score"], reverse=True)
 
 
+# Classify plate symbol.
 def classify_plate_symbol(image_binary, box):
-    """Distingue Battery da Capacitor misurando la differenza tra le due piastre principali."""
     x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)
     width = max(x2 - x1 + 1, 1)
     height = max(y2 - y1 + 1, 1)
@@ -412,27 +531,105 @@ def classify_plate_symbol(image_binary, box):
     return None
 
 
+# Handle is LED like diode box.
 def is_led_like_diode_box(image_binary, box) -> bool:
-    """Capisce se un bbox predetto come Diode contiene in realta un LED con frecce luminose."""
-    x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)
+    orig_x1, orig_y1, orig_x2, orig_y2 = _clamp_bbox_to_image(box, image_binary.shape)
     pad = 18
     h, w = image_binary.shape[:2]
-    x1 = max(0, x1 - pad)
-    y1 = max(0, y1 - pad)
-    x2 = min(w - 1, x2 + pad)
-    y2 = min(h - 1, y2 + pad)
+    x1 = max(0, orig_x1 - pad)
+    y1 = max(0, orig_y1 - pad)
+    x2 = min(w - 1, orig_x2 + pad)
+    y2 = min(h - 1, orig_y2 + pad)
     roi = image_binary[y1:y2 + 1, x1:x2 + 1]
-    num_labels, _, stats, _ = cv2.connectedComponentsWithStats(roi, connectivity=8)
-    areas = sorted(
-        [int(stats[i, cv2.CC_STAT_AREA]) for i in range(1, num_labels)],
-        reverse=True,
-    )
-    medium = [area for area in areas[1:] if 40 <= area <= 900]
-    return len(medium) >= 2
+    num_labels, _, stats, centroids = cv2.connectedComponentsWithStats(roi, connectivity=8)
+
+    center_x = (orig_x1 + orig_x2) / 2.0
+    center_y = (orig_y1 + orig_y2) / 2.0
+    width = max(float(orig_x2 - orig_x1), 1.0)
+    height = max(float(orig_y2 - orig_y1), 1.0)
+
+    right_side_hits = 0
+    upper_side_hits = 0
+
+    for idx in range(1, num_labels):
+        area = int(stats[idx, cv2.CC_STAT_AREA])
+        if not (40 <= area <= 260):
+            continue
+
+        cx = float(centroids[idx][0]) + float(x1)
+        cy = float(centroids[idx][1]) + float(y1)
+
+        if cx > float(orig_x2) + 1.0 and abs(cy - center_y) <= height * 0.45:
+            right_side_hits += 1
+        if cy < float(orig_y1) - 1.0 and abs(cx - center_x) <= width * 0.45:
+            upper_side_hits += 1
+
+    return right_side_hits >= 2 or upper_side_hits >= 2
 
 
+# Handle is voltage source like bounding box.
+def is_voltage_source_like_bbox(image_binary, box) -> bool:
+    x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)
+    roi = image_binary[y1:y2 + 1, x1:x2 + 1]
+    h, w = roi.shape[:2]
+    if h < 24 or w < 18:
+        return False
+
+    cx1 = int(round(w * 0.18))
+    cx2 = int(round(w * 0.82))
+    cy1 = int(round(h * 0.15))
+    cy2 = int(round(h * 0.85))
+    inner = roi[cy1:cy2, cx1:cx2]
+    if inner.size == 0:
+        return False
+
+    num_labels, _, stats, centroids = cv2.connectedComponentsWithStats(inner, connectivity=8)
+    small_components = []
+    paired_marker_candidates = []
+    for idx in range(1, num_labels):
+        area = int(stats[idx, cv2.CC_STAT_AREA])
+        if 5 <= area <= 120:
+            small_components.append({
+                "area": area,
+                "cy": float(centroids[idx][1]),
+            })
+        if 16 <= area <= 180:
+            comp_w = int(stats[idx, cv2.CC_STAT_WIDTH])
+            comp_h = int(stats[idx, cv2.CC_STAT_HEIGHT])
+            paired_marker_candidates.append({
+                "area": area,
+                "cy": float(centroids[idx][1]),
+                "width": comp_w,
+                "height": comp_h,
+            })
+
+    inner_h = float(max(inner.shape[0], 1))
+    inner_w = float(max(inner.shape[1], 1))
+    has_top = any(comp["cy"] <= inner_h * 0.35 for comp in small_components)
+    has_bottom = any(comp["cy"] >= inner_h * 0.55 for comp in small_components)
+    if len(small_components) >= 3 and has_top and has_bottom and (num_labels - 1) <= 5:
+        return True
+
+    top_candidates = [
+        comp for comp in paired_marker_candidates
+        if comp["cy"] <= inner_h * 0.35 and comp["width"] >= inner_w * 0.55
+    ]
+    bottom_candidates = [
+        comp for comp in paired_marker_candidates
+        if comp["cy"] >= inner_h * 0.55 and comp["width"] >= inner_w * 0.55
+    ]
+    if len(paired_marker_candidates) != 2 or not top_candidates or not bottom_candidates:
+        return False
+
+    top_comp = max(top_candidates, key=lambda comp: comp["area"])
+    bottom_comp = max(bottom_candidates, key=lambda comp: comp["area"])
+    area_ratio = max(float(top_comp["area"]), float(bottom_comp["area"])) / float(max(min(top_comp["area"], bottom_comp["area"]), 1))
+    height_ratio = max(float(top_comp["height"]), float(bottom_comp["height"])) / float(max(min(top_comp["height"], bottom_comp["height"]), 1))
+    return area_ratio <= 1.55 and height_ratio <= 1.6
+
+
+# Handle dedupe candidate boxes.
 def _dedupe_candidate_boxes(candidates, max_overlap=0.55):
-    """Rimuove candidati duplicati tenendo quelli piu plausibili."""
     ordered = sorted(
         candidates,
         key=lambda c: (float(c["score"]), -_bbox_area(c["bbox"])),
@@ -446,8 +643,8 @@ def _dedupe_candidate_boxes(candidates, max_overlap=0.55):
     return kept
 
 
+# Find structured symbol candidates.
 def find_structured_symbol_candidates(image_gray, image_binary):
-    """Trova candidati strutturali per Connector e Analog_Meter direttamente dal binario."""
     contours, hierarchy = cv2.findContours(
         image_binary,
         cv2.RETR_TREE,
@@ -507,7 +704,9 @@ def find_structured_symbol_candidates(image_gray, image_binary):
                 max_radius=20,
             )
             row_count = _count_connector_pin_rows(image_binary, box)
-            if circle_count >= 4 and 3 <= row_count <= 6:
+            component_areas = _component_areas_in_box(image_binary, box)
+            medium_components = [area for area in component_areas[1:] if area >= 80]
+            if circle_count >= 4 and 4 <= row_count <= 6 and len(medium_components) >= 3:
                 connector_candidates.append({
                     "bbox": box,
                     "score": 10.0 * extent + float(circle_count) + 0.5 * float(row_count),
@@ -519,6 +718,7 @@ def find_structured_symbol_candidates(image_gray, image_binary):
     }
 
 
+# Handle box matches candidate.
 def _box_matches_candidate(box, candidate_box, min_iou=0.28, min_ioa=0.55):
     return (
         _bbox_iou(box, candidate_box) >= min_iou
@@ -527,8 +727,8 @@ def _box_matches_candidate(box, candidate_box, min_iou=0.28, min_ioa=0.55):
     )
 
 
+# Handle remap special component.
 def remap_special_component(image_gray, image_binary, box, predicted_class_name: str, structured_candidates):
-    """Rimappa alcune classi YOLO verso Connector/Analog_Meter quando la forma locale lo suggerisce chiaramente."""
     connector_candidates = structured_candidates.get("Connector", [])
     analog_candidates = structured_candidates.get("Analog_Meter", [])
 
@@ -544,6 +744,10 @@ def remap_special_component(image_gray, image_binary, box, predicted_class_name:
         if is_analog_meter_like_bbox(image_binary, box):
             return "Analog_Meter"
 
+    if predicted_class_name in {"Mosfet", "Integrated_Circuit"}:
+        if is_memristor_like_bbox(image_binary, box):
+            return "Memristor"
+
     plate_symbol = classify_plate_symbol(image_binary, box)
     if predicted_class_name == "Capacitor" and plate_symbol == "Battery":
         return "Battery"
@@ -556,6 +760,7 @@ def remap_special_component(image_gray, image_binary, box, predicted_class_name:
     return predicted_class_name
 
 
+# Build component record.
 def _build_component_record(
     class_id,
     class_name,
@@ -585,8 +790,8 @@ def _build_component_record(
     }
 
 
+# Add missing structured components.
 def add_missing_structured_components(components, structured_candidates, class_meta, class_id_by_name):
-    """Aggiunge componenti euristici quando il modello non li ha proprio rilevati."""
     target_conf = {
         "Connector": 0.72,
         "Analog_Meter": 0.58,
@@ -623,8 +828,8 @@ def add_missing_structured_components(components, structured_candidates, class_m
     return updated
 
 
+# Suppress conflicting components.
 def suppress_conflicting_components(components, image_binary):
-    """Sopprime detection in conflitto scegliendo la classe piu plausibile per alcuni casi noti."""
     suppressed = set()
 
     for i in range(len(components)):
@@ -653,6 +858,21 @@ def suppress_conflicting_components(components, image_binary):
             if "Analog_Meter" in pair and pair.intersection({"Integrated_Circuit", "Meter", "Inductor"}):
                 drop_idx = i if class_a in {"Integrated_Circuit", "Meter", "Inductor"} else j
                 suppressed.add(drop_idx)
+                continue
+
+            if pair == {"Analog_Meter", "Connector"}:
+                analog_idx = i if class_a == "Analog_Meter" else j
+                connector_idx = j if analog_idx == i else i
+                analog_box = components[analog_idx]["bbox"]
+                connector_box = components[connector_idx]["bbox"]
+
+                if (
+                    is_analog_meter_like_bbox(image_binary, analog_box)
+                    or not is_connector_like_bbox(image_binary, connector_box)
+                ):
+                    suppressed.add(connector_idx)
+                else:
+                    suppressed.add(analog_idx)
                 continue
 
             if pair == {"Connector", "Integrated_Circuit"}:
@@ -693,8 +913,8 @@ def suppress_conflicting_components(components, image_binary):
     ]
 
 
+# Handle dedupe overlapping same class.
 def dedupe_overlapping_same_class(components):
-    """Elimina duplicati della stessa classe nati da remap o detection molto sovrapposte."""
     suppressed = set()
     ordered = sorted(
         range(len(components)),
@@ -733,8 +953,8 @@ def dedupe_overlapping_same_class(components):
     ]
 
 
+# Suppress nested terminals.
 def suppress_nested_terminals(components):
-    """Rimuove Terminal rilevati dentro simboli strutturati dove i pallini fanno parte del simbolo."""
     blocking_classes = {"Connector", "Switch", "Analog_Meter", "Meter", "Integrated_Circuit"}
     filtered = []
     for comp in components:
@@ -758,13 +978,85 @@ def suppress_nested_terminals(components):
     return filtered
 
 
+# Get required confidence.
 def get_required_confidence(class_name: str) -> float:
-    """Restituisce la soglia minima di confidenza da usare per una specifica classe rilevata."""
     return float(CLASS_CONF_THRES.get(class_name, CONF_THRES))
 
 
+# Add secondary class predictions.
+def add_secondary_class_predictions(
+    image_path: Path,
+    image_bgr,
+    image_gray,
+    image_binary,
+    components,
+    model,
+    class_meta,
+    class_id_by_name,
+):
+    updated = list(components)
+
+    for target_class_name, spec in SECONDARY_CLASS_PREDICTION_SPECS.items():
+        if any(comp.get("class_name") == target_class_name for comp in updated):
+            continue
+
+        target_class_id = class_id_by_name.get(target_class_name)
+        if target_class_id is None:
+            continue
+
+        results = model.predict(
+            source=str(image_path),
+            imgsz=int(spec.get("imgsz", IMG_SIZE)),
+            conf=float(spec.get("predict_conf", CONF_THRES)),
+            iou=IOU_THRES,
+            classes=[target_class_id],
+            verbose=False,
+        )
+        result = results[0]
+        if result.boxes is None or len(result.boxes) == 0:
+            continue
+
+        xyxy = result.boxes.xyxy.cpu().numpy()
+        confs = result.boxes.conf.cpu().numpy()
+
+        for box, conf in zip(xyxy, confs):
+            original_meta = class_meta.get(target_class_id, {})
+            remapped_class_name = remap_special_component(
+                image_gray,
+                image_binary,
+                box,
+                target_class_name,
+                {"Analog_Meter": [], "Connector": []},
+            )
+            effective_class_id = class_id_by_name.get(remapped_class_name, target_class_id)
+            meta = class_meta.get(effective_class_id, original_meta)
+            yaml_class_name = meta.get("name", remapped_class_name)
+            accept_conf = float(spec.get("accept_conf", get_required_confidence(yaml_class_name)))
+
+            if float(conf) < accept_conf:
+                continue
+            if yaml_class_name == "Switch" and not is_switch_like_bbox(image_gray, box):
+                continue
+
+            final_box = expand_led_bbox(box, image_bgr.shape) if yaml_class_name == "LED" else box
+            updated.append(
+                _build_component_record(
+                    class_id=effective_class_id,
+                    class_name=yaml_class_name,
+                    model_class_name=f"secondary_{target_class_name}",
+                    conf=float(conf),
+                    bbox=final_box,
+                    meta=meta,
+                    source_class_id=target_class_id,
+                    source_class_name=target_class_name,
+                )
+            )
+
+    return updated
+
+
+# Get model inference confidence.
 def get_model_inference_confidence(class_meta) -> float:
-    """Calcola la confidenza globale di inferenza del modello scegliendo la soglia piu permissiva necessaria tra le classi abilitate."""
     class_names = [meta.get("name", "") for meta in class_meta.values()]
     per_class_thresholds = [get_required_confidence(name) for name in class_names if name]
     if not per_class_thresholds:
@@ -774,8 +1066,8 @@ def get_model_inference_confidence(class_meta) -> float:
     return min([CONF_THRES, *per_class_thresholds])
 
 
+# Handle is terminal detection valid.
 def is_terminal_detection_valid(image_binary, bbox) -> bool:
-    """Verifica se una detection della classe Terminal ha abbastanza evidenza grafica sui lati per essere considerata plausibile."""
     near_scores = get_terminal_class_probe_scores(image_binary, bbox)
     far_scores = get_terminal_class_far_probe_scores(image_binary, bbox)
 
@@ -794,14 +1086,14 @@ def is_terminal_detection_valid(image_binary, bbox) -> bool:
     )
 
 
+# Load YAML.
 def load_yaml(path: Path):
-    """Legge un file YAML e ne restituisce il contenuto gia convertito in strutture Python."""
     with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
+# Load class metadata.
 def load_class_metadata(class_terminals_path: Path):
-    """Carica i metadati delle classi e prepara gli insiemi di classi usate per detection, terminali e masking."""
     data = load_yaml(class_terminals_path)
 
     class_meta = {}
@@ -822,8 +1114,8 @@ def load_class_metadata(class_terminals_path: Path):
     return class_meta, detect_class_ids, terminal_class_ids, masking_class_ids
 
 
+# Normalize model names.
 def normalize_model_names(model_names):
-    """Normalizza il mapping dei nomi classe del modello in un dizionario indicizzato per class_id."""
     if isinstance(model_names, list):
         return {i: name for i, name in enumerate(model_names)}
 
@@ -833,8 +1125,8 @@ def normalize_model_names(model_names):
     raise TypeError("Formato model.names non riconosciuto.")
 
 
+# Get input images.
 def get_input_images():
-    """Raccoglie e ordina le immagini di input che verranno processate in questo step."""
     if not INPUT_IMAGES_DIR.exists():
         raise FileNotFoundError(f"Cartella immagini non trovata: {INPUT_IMAGES_DIR}")
 
@@ -849,9 +1141,18 @@ def get_input_images():
     return images
 
 
+# Draw components.
 def draw_components(image_bgr, components):
-    """Disegna bounding box e label dei componenti rilevati sull'immagine di debug."""
     out = image_bgr.copy()
+    box_color = (220, 170, 40)
+    text_color = (35, 35, 35)
+    label_bg_color = (245, 245, 245)
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 0.46
+    font_thickness = 1
+    box_thickness = 2
+    padding_x = 5
+    padding_y = 4
 
     for comp in components:
         x1, y1, x2, y2 = comp["bbox"]
@@ -870,21 +1171,33 @@ def draw_components(image_bgr, components):
 
         label = f"{class_id} | {class_name} | {conf:.2f} | {suffix}"
 
-        cv2.rectangle(out, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        cv2.rectangle(out, (x1, y1), (x2, y2), box_color, box_thickness)
+
+        (text_w, text_h), baseline = cv2.getTextSize(label, font, font_scale, font_thickness)
+        label_x1 = max(0, x1)
+        label_y2 = max(text_h + 2 * padding_y + baseline, y1)
+        label_y1 = max(0, label_y2 - (text_h + 2 * padding_y + baseline))
+        label_x2 = min(out.shape[1] - 1, label_x1 + text_w + 2 * padding_x)
+
+        overlay = out.copy()
+        cv2.rectangle(overlay, (label_x1, label_y1), (label_x2, label_y2), label_bg_color, -1)
+        cv2.addWeighted(overlay, 0.88, out, 0.12, 0, out)
+        cv2.rectangle(out, (label_x1, label_y1), (label_x2, label_y2), box_color, 1)
         cv2.putText(
             out,
             label,
-            (x1, max(y1 - 8, 0)),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.50,
-            (0, 255, 0),
-            2,
-            cv2.LINE_AA
+            (label_x1 + padding_x, label_y2 - baseline - padding_y),
+            font,
+            font_scale,
+            text_color,
+            font_thickness,
+            cv2.LINE_AA,
         )
 
     return out
 
 
+# Predict components on image.
 def predict_components_on_image(
     image_path: Path,
     model,
@@ -892,7 +1205,6 @@ def predict_components_on_image(
     model_names,
     class_meta
 ):
-    """Esegue la detection su una singola immagine e costruisce il JSON con i componenti filtrati."""
     image_bgr = cv2.imread(str(image_path))
     if image_bgr is None:
         raise ValueError(f"Impossibile leggere l'immagine: {image_path}")
@@ -951,7 +1263,11 @@ def predict_components_on_image(
             # richiediamo anche un minimo di struttura grafica coerente.
             if yaml_class_name == "Terminal" and not is_terminal_detection_valid(image_binary, box):
                 continue
-            if yaml_class_name == "Switch" and not is_switch_like_bbox(image_gray, box):
+            if yaml_class_name == "Switch":
+                if not is_switch_like_bbox(image_gray, box):
+                    if float(conf) < 0.75 or not is_switch_like_bbox_relaxed(image_gray, box):
+                        continue
+            if yaml_class_name == "Voltage_Source" and not is_voltage_source_like_bbox(image_binary, box):
                 continue
             if yaml_class_name == "LED":
                 x1, y1, x2, y2 = expand_led_bbox(box, image_bgr.shape)
@@ -976,6 +1292,16 @@ def predict_components_on_image(
                 "use_for_masking": meta.get("use_for_masking", False),
             })
 
+    components = add_secondary_class_predictions(
+        image_path=image_path,
+        image_bgr=image_bgr,
+        image_gray=image_gray,
+        image_binary=image_binary,
+        components=components,
+        model=model,
+        class_meta=class_meta,
+        class_id_by_name=class_id_by_name,
+    )
     components = add_missing_structured_components(
         components=components,
         structured_candidates=structured_candidates,
@@ -1007,8 +1333,8 @@ def predict_components_on_image(
     return image_bgr, output_data
 
 
+# Run the entrypoint for this pipeline stage.
 def main() -> None:
-    """Esegue il punto di ingresso dello step corrente della pipeline."""
     if not MODEL_PATH.exists():
         raise FileNotFoundError(f"Modello non trovato: {MODEL_PATH}")
 

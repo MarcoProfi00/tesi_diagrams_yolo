@@ -20,16 +20,16 @@ from .strategies_structured_symbols import (
 )
 
 
+# Get oriented terminals.
 def _get_oriented_terminals(meta: dict, orientation: str):
-    """Helper interno che restituisce oriented terminals per il contesto corrente della pipeline."""
     terminals_def = meta.get("orientations", {}).get(orientation)
     if terminals_def is None:
         raise ValueError(f"Nessuna definizione terminali per orientazione '{orientation}'")
     return terminals_def
 
 
+# Resolve terminal point mode.
 def resolve_terminal_point_mode(meta: dict):
-    """Risolve terminal point mode usando le euristiche configurate."""
     explicit_mode = meta.get("terminal_point_mode")
     if explicit_mode is not None:
         return explicit_mode
@@ -62,8 +62,8 @@ def resolve_terminal_point_mode(meta: dict):
     return "bbox_side_center"
 
 
+# Resolve two terminal orientation.
 def _resolve_two_terminal_orientation(strategy: str, class_name: str, image_binary, bbox, default_orientation: str):
-    """Helper interno che risolve two terminal orientation usando le euristiche configurate."""
     if strategy == "two_terminal_capacitor" or class_name in {"Capacitor", "Polarized_Capacitor"}:
         return detect_two_terminal_orientation_capacitor(
             image_binary,
@@ -78,8 +78,15 @@ def _resolve_two_terminal_orientation(strategy: str, class_name: str, image_bina
             default_orientation=default_orientation,
         )
 
-    if strategy == "two_terminal_led" or class_name in {"LED", "Diode"}:
+    if strategy == "two_terminal_led" or class_name == "LED":
         return detect_two_terminal_orientation_led(
+            image_binary,
+            bbox,
+            default_orientation=default_orientation,
+        )
+
+    if class_name == "Diode":
+        return strategy_detect_two_terminal_orientation_generic(
             image_binary,
             bbox,
             default_orientation=default_orientation,
@@ -95,7 +102,7 @@ def _resolve_two_terminal_orientation(strategy: str, class_name: str, image_bina
             default_orientation=default_orientation,
         )
 
-    if strategy == "two_terminal_variable_resistor":
+    if strategy == "two_terminal_variable_resistor" or class_name == "Resistor":
         return detect_two_terminal_orientation_variable_resistor(
             image_binary,
             bbox,
@@ -112,8 +119,8 @@ def _resolve_two_terminal_orientation(strategy: str, class_name: str, image_bina
 # =========================================================
 # STRATEGY DISPATCHER
 # =========================================================
+# Get terminals definition.
 def get_terminals_definition(meta: dict, bbox, image_binary=None):
-    """Restituisce terminals definition per il contesto corrente della pipeline."""
     strategy = meta.get("terminal_strategy", "fixed")
 
     if strategy == "fixed":
@@ -123,7 +130,7 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
         class_name = meta.get("name", "")
         default_orientation = meta.get("default_orientation", "horizontal")
 
-        if image_binary is not None and class_name in {"Inductor", "Transformer"}:
+        if image_binary is not None and class_name == "Transformer":
             orientation, side_scores = strategy_detect_two_terminal_orientation_generic(
                 image_binary,
                 bbox,

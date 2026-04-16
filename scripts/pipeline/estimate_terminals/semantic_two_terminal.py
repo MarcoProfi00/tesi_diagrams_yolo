@@ -12,8 +12,8 @@ DEFAULT_FALLBACK_SIDE = {
 }
 
 
+# Group consecutive indices.
 def _group_consecutive_indices(indices: list[int]) -> list[list[int]]:
-    """Helper interno che gestisce group consecutive indices all'interno di questo modulo della pipeline."""
     if not indices:
         return []
     groups = [[indices[0]]]
@@ -25,16 +25,16 @@ def _group_consecutive_indices(indices: list[int]) -> list[list[int]]:
     return groups
 
 
+# Handle bounding box dims.
 def _bbox_dims(bbox, binary):
-    """Helper interno che gestisce bbox dims all'interno di questo modulo della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     width = max(1, x2 - x1 + 1)
     height = max(1, y2 - y1 + 1)
     return x1, y1, x2, y2, width, height
 
 
+# Count nonzero.
 def _count_nonzero(binary, x1, y1, x2, y2) -> int:
-    """Helper interno che gestisce count nonzero all'interno di questo modulo della pipeline."""
     h, w = binary.shape[:2]
     x1 = max(0, min(w, int(round(x1))))
     y1 = max(0, min(h, int(round(y1))))
@@ -45,6 +45,7 @@ def _count_nonzero(binary, x1, y1, x2, y2) -> int:
     return int(cv2.countNonZero(binary[y1:y2, x1:x2]))
 
 
+# Handle projection side scores.
 def _projection_side_scores(
     binary,
     bbox,
@@ -52,7 +53,6 @@ def _projection_side_scores(
     center_band_ratio: float = 0.42,
     edge_inset_ratio: float = 0.08,
 ):
-    """Helper interno che gestisce projection side scores all'interno di questo modulo della pipeline."""
     x1, y1, x2, y2, width, height = _bbox_dims(bbox, binary)
 
     if orientation == "horizontal":
@@ -101,6 +101,7 @@ def _projection_side_scores(
     }
 
 
+# Handle projection edge group scores.
 def _projection_edge_group_scores(
     binary,
     bbox,
@@ -108,7 +109,6 @@ def _projection_edge_group_scores(
     center_band_ratio: float = 0.42,
     edge_inset_ratio: float = 0.08,
 ):
-    """Helper interno che gestisce projection edge group scores all'interno di questo modulo della pipeline."""
     x1, y1, x2, y2, width, height = _bbox_dims(bbox, binary)
 
     if orientation == "horizontal":
@@ -152,6 +152,7 @@ def _projection_edge_group_scores(
     kept = [idx for idx, value in enumerate(projection.tolist()) if value >= keep_threshold]
     groups = _group_consecutive_indices(kept)
 
+    # Handle edge group score.
     def edge_group_score(group: list[int], side: str) -> float:
         group_max = max(int(projection[idx]) for idx in group)
         group_len = len(group)
@@ -179,8 +180,8 @@ def _projection_edge_group_scores(
     }
 
 
+# Handle diode bar scores.
 def _diode_bar_scores(score_map: dict, orientation: str) -> dict:
-    """Helper interno che gestisce diode bar scores all'interno di questo modulo della pipeline."""
     projection = score_map.get("projection_values") or []
     groups = score_map.get("kept_groups") or []
     axis_size = len(projection)
@@ -190,62 +191,87 @@ def _diode_bar_scores(score_map: dict, orientation: str) -> dict:
     else:
         keys = ("top", "bottom")
 
-    def bar_score(group: list[int], side: str) -> float:
+    # Group center.
+    def group_center(group: list[int]) -> float:
+        return (float(group[0]) + float(group[-1])) / 2.0
+
+    # Handle bar score.
+    def bar_score(group: list[int]) -> float:
         if not group:
             return 0.0
         group_max = max(int(projection[idx]) for idx in group)
         group_len = len(group)
-        if side == "top":
-            edge_distance = group[0]
-        else:
-            edge_distance = max(0, axis_size - 1 - group[-1])
-        return float(group_max) - 0.95 * float(group_len) - 0.15 * float(edge_distance)
+        axis_mid = float(max(axis_size - 1, 0)) / 2.0
+        center_distance = abs(group_center(group) - axis_mid)
+        edge_distance = min(group[0], max(0, axis_size - 1 - group[-1]))
+        return 1.4 * float(group_max) - 0.8 * float(group_len) - 0.08 * float(center_distance) + 0.05 * float(edge_distance)
 
-    first_group = groups[0] if groups else []
-    last_group = groups[-1] if groups else []
+    best_group = max(groups, key=lambda group: (bar_score(group), group_center(group)), default=[])
+    best_center = group_center(best_group) if best_group else 0.0
+    axis_mid = float(max(axis_size - 1, 0)) / 2.0
+    marker_side = keys[0] if best_center <= axis_mid else keys[1]
+    other_side = keys[1] if marker_side == keys[0] else keys[0]
 
     adjusted = dict(score_map)
-    adjusted[keys[0]] = round(bar_score(first_group, keys[0]), 4)
-    adjusted[keys[1]] = round(bar_score(last_group, keys[1]), 4)
+    adjusted[marker_side] = round(bar_score(best_group) + 10.0, 4)
+    adjusted[other_side] = round(bar_score(best_group) - 10.0, 4)
     adjusted["projection_mode"] = "diode_bar_thin_group"
+    adjusted["selected_bar_group"] = best_group
+    adjusted["selected_bar_center"] = round(float(best_center), 4)
+    adjusted["selected_bar_side"] = marker_side
     return adjusted
 
 
+# Handle plus marker scores by side.
 def _plus_marker_scores_by_side(binary, bbox, orientation: str):
-    """Helper interno che gestisce plus marker scores by side all'interno di questo modulo della pipeline."""
+    # Handle plus like patch score.
+    def plus_like_patch_score(cx: int, cy: int, half_w: int, half_h: int) -> float:
+        xa = max(0, cx - half_w)
+        xb = min(binary.shape[1], cx + half_w + 1)
+        ya = max(0, cy - half_h)
+        yb = min(binary.shape[0], cy + half_h + 1)
+        roi = binary[ya:yb, xa:xb]
+        if roi.size == 0:
+            return 0.0
+
+        row_proj = np.count_nonzero(roi > 0, axis=1)
+        col_proj = np.count_nonzero(roi > 0, axis=0)
+        row_max = float(row_proj.max()) if row_proj.size else 0.0
+        col_max = float(col_proj.max()) if col_proj.size else 0.0
+        return row_max + col_max + 0.8 * min(row_max, col_max)
+
     x1, y1, x2, y2, width, height = _bbox_dims(bbox, binary)
-    strip_half = max(1, int(round(min(width, height) * 0.06)))
+    patch_half_w = max(2, int(round(width * 0.18)))
+    patch_half_h = max(2, int(round(height * 0.10)))
 
     if orientation == "horizontal":
-        top_band_y1 = y1 + max(1, int(round(0.04 * height)))
-        top_band_y2 = y1 + max(3, int(round(0.32 * height)))
         left_cx = int(round(x1 + width * 0.10))
         right_cx = int(round(x1 + width * 0.90))
-        left_score = _count_nonzero(binary, left_cx - strip_half, top_band_y1, left_cx + strip_half + 1, top_band_y2 + 1)
-        right_score = _count_nonzero(binary, right_cx - strip_half, top_band_y1, right_cx + strip_half + 1, top_band_y2 + 1)
+        top_cy = int(round(y1 + height * 0.20))
+        left_score = plus_like_patch_score(left_cx, top_cy, patch_half_w, patch_half_h)
+        right_score = plus_like_patch_score(right_cx, top_cy, patch_half_w, patch_half_h)
         return {
-            "left": left_score,
-            "right": right_score,
-            "strip_half": strip_half,
-            "marker_band": [int(top_band_y1), int(top_band_y2)],
+            "left": round(float(left_score), 4),
+            "right": round(float(right_score), 4),
+            "patch_half_w": patch_half_w,
+            "patch_half_h": patch_half_h,
         }
 
     cx = int(round((x1 + x2) / 2.0))
-    band_half = max(2, int(round(width * 0.12)))
     top_cy = int(round(y1 + height * 0.18))
     bottom_cy = int(round(y1 + height * 0.82))
-    top_score = _count_nonzero(binary, cx - strip_half, top_cy - band_half, cx + strip_half + 1, top_cy + band_half + 1)
-    bottom_score = _count_nonzero(binary, cx - strip_half, bottom_cy - band_half, cx + strip_half + 1, bottom_cy + band_half + 1)
+    top_score = plus_like_patch_score(cx, top_cy, patch_half_w, patch_half_h)
+    bottom_score = plus_like_patch_score(cx, bottom_cy, patch_half_w, patch_half_h)
     return {
-        "top": top_score,
-        "bottom": bottom_score,
-        "strip_half": strip_half,
-        "band_half": band_half,
+        "top": round(float(top_score), 4),
+        "bottom": round(float(bottom_score), 4),
+        "patch_half_w": patch_half_w,
+        "patch_half_h": patch_half_h,
     }
 
 
+# Handle inner half mass scores.
 def _inner_half_mass_scores(binary, bbox, orientation: str):
-    """Helper interno che gestisce inner half mass scores all'interno di questo modulo della pipeline."""
     x1, y1, x2, y2, width, height = _bbox_dims(bbox, binary)
     inset_x = max(2, int(round(width * 0.22)))
     inset_y = max(2, int(round(height * 0.22)))
@@ -280,8 +306,8 @@ def _inner_half_mass_scores(binary, bbox, orientation: str):
     }
 
 
+# Choose side.
 def _choose_side(score_map: dict, positive_key: str, negative_key: str, fallback_side: str):
-    """Helper interno che sceglie side tra i candidati disponibili."""
     positive_score = float(score_map.get(positive_key, 0.0))
     negative_score = float(score_map.get(negative_key, 0.0))
 
@@ -318,8 +344,8 @@ def _choose_side(score_map: dict, positive_key: str, negative_key: str, fallback
     return chosen, other, round(float(confidence), 4), evidence_type
 
 
+# Handle set term semantic fields.
 def _set_term_semantic_fields(term: dict, semantic_name: str, semantic_slot: str, confidence: float, resolution_mode: str, evidence_type: str, debug: dict):
-    """Helper interno che gestisce set term semantic fields all'interno di questo modulo della pipeline."""
     term["semantic_terminal_name"] = semantic_name
     term["semantic_terminal_id"] = f"{term['instance_id']}:{semantic_name}"
     term["semantic_slot"] = semantic_slot
@@ -338,6 +364,7 @@ def _set_term_semantic_fields(term: dict, semantic_name: str, semantic_slot: str
         term["semantic_role_family"] = "current_direction"
 
 
+# Assign pair roles.
 def _assign_pair_roles(
     terminals: list[dict],
     marker_side: str,
@@ -349,7 +376,6 @@ def _assign_pair_roles(
     evidence_type: str,
     debug: dict,
 ):
-    """Helper interno che gestisce assign pair roles all'interno di questo modulo della pipeline."""
     role_by_position = {
         marker_side: ("marker_side", marker_name),
         other_side: ("other_side", other_name),
@@ -372,8 +398,8 @@ def _assign_pair_roles(
     return terminals
 
 
+# Assign strategy result.
 def _assign_strategy_result(terminals, orientation, meta, score_map, resolution_mode):
-    """Helper interno che gestisce assign strategy result all'interno di questo modulo della pipeline."""
     if orientation == "horizontal":
         primary_side = "left"
         secondary_side = "right"
@@ -411,8 +437,8 @@ def _assign_strategy_result(terminals, orientation, meta, score_map, resolution_
     )
 
 
+# Resolve two terminal semantics.
 def resolve_two_terminal_semantics(binary, bbox, orientation, terminals, meta):
-    """Risolve two terminal semantics usando le euristiche configurate."""
     semantic_strategy = meta.get("semantic_terminal_strategy")
 
     if semantic_strategy is None or len(terminals) < 2 or orientation not in {"horizontal", "vertical"}:
@@ -427,33 +453,6 @@ def resolve_two_terminal_semantics(binary, bbox, orientation, terminals, meta):
             edge_inset_ratio=0.08,
         )
         score_map = _diode_bar_scores(score_map, orientation)
-
-        if orientation == "vertical" and meta.get("name") in {"LED", "Diode"}:
-            top_score = float(score_map.get("top", 0.0))
-            bottom_score = float(score_map.get("bottom", 0.0))
-            ambiguity = abs(top_score - bottom_score) / max(top_score + bottom_score, 1.0)
-            if ambiguity < 0.12:
-                semantic_roles = meta.get("semantic_roles", {})
-                debug = {
-                    "orientation": orientation,
-                    "scores": score_map,
-                    "selected_marker_side": "bottom",
-                    "selected_other_side": "top",
-                    "confidence": round(float(max(0.2, 1.0 - ambiguity)), 4),
-                    "evidence_type": "vertical_led_convention_fallback",
-                }
-                return _assign_pair_roles(
-                    terminals,
-                    marker_side="bottom",
-                    other_side="top",
-                    marker_name=semantic_roles.get("marker_side"),
-                    other_name=semantic_roles.get("other_side"),
-                    confidence=max(0.2, 1.0 - ambiguity),
-                    resolution_mode=f"{semantic_strategy}_vertical_led_fallback",
-                    evidence_type="orientation_fallback",
-                    debug=debug,
-                )
-
         return _assign_strategy_result(
             terminals,
             orientation,

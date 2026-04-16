@@ -14,6 +14,7 @@ CONNECTOR_SIDE_PROBE_HALFSPAN_MIN = 3
 CONNECTOR_SIDE_PROBE_HALFSPAN_MAX = 8
 
 
+# Group close indices.
 def _group_close_indices(indices, max_gap=1):
     if not indices:
         return []
@@ -27,6 +28,7 @@ def _group_close_indices(indices, max_gap=1):
     return groups
 
 
+# Handle projection groups.
 def _projection_groups(values):
     if not values:
         return [], 0
@@ -37,6 +39,7 @@ def _projection_groups(values):
     return _group_close_indices(kept, max_gap=CONNECTOR_MAX_GAP), threshold
 
 
+# Handle merge close centers.
 def _merge_close_centers(centers, min_separation):
     if not centers:
         return []
@@ -50,8 +53,8 @@ def _merge_close_centers(centers, min_separation):
     return [int(round(c)) for c in merged]
 
 
+# Detect connector hole centers.
 def _detect_connector_hole_centers(binary, bbox, orientation):
-    """Trova i centri dei pin interni del connector usando i fori circolari visibili nel simbolo."""
     x1, y1, x2, y2 = bbox
     if x2 <= x1 or y2 <= y1:
         return []
@@ -112,6 +115,7 @@ def _detect_connector_hole_centers(binary, bbox, orientation):
     return _merge_close_centers(sorted(centers), min_separation=min_gap)
 
 
+# Handle side probe halfspan.
 def _side_probe_halfspan(width, height):
     min_dim = max(1, min(width, height))
     halfspan = int(round(min_dim * 0.12))
@@ -120,6 +124,7 @@ def _side_probe_halfspan(width, height):
     return halfspan
 
 
+# Handle side score vertical.
 def _side_score_vertical(binary, bbox, center_y, side, halfspan):
     x1, y1, x2, y2 = bbox
     if side == "left":
@@ -140,6 +145,7 @@ def _side_score_vertical(binary, bbox, center_y, side, halfspan):
     )
 
 
+# Handle side score horizontal.
 def _side_score_horizontal(binary, bbox, center_x, side, halfspan):
     x1, y1, x2, y2 = bbox
     if side == "top":
@@ -160,6 +166,7 @@ def _side_score_horizontal(binary, bbox, center_x, side, halfspan):
     )
 
 
+# Build vertical connector.
 def _build_vertical_connector(binary, bbox):
     x1, y1, x2, y2 = bbox
     width = max(x2 - x1, 1)
@@ -228,6 +235,7 @@ def _build_vertical_connector(binary, bbox):
     }
 
 
+# Build horizontal connector.
 def _build_horizontal_connector(binary, bbox):
     x1, y1, x2, y2 = bbox
     width = max(x2 - x1, 1)
@@ -295,6 +303,7 @@ def _build_horizontal_connector(binary, bbox):
     }
 
 
+# Detect connector terminals.
 def detect_connector_terminals(meta: dict, binary, bbox, default_orientation="vertical"):
     bbox = geom_clamp_bbox_to_image(bbox, binary.shape)
     orientation = geom_infer_orientation_from_bbox(

@@ -10,8 +10,8 @@ from .io_utils import short_diagram_name
 # =========================================================
 # RENDERING FULL GRAPH - PNG / HTML
 # =========================================================
+# Draw full PNG.
 def draw_full_png(graph_data: dict[str, Any], out_png: Path) -> None:
-    """Disegna full png per visualizzazione o debug."""
     G = build_nx_graph(graph_data)
     pos = compute_layered_positions(graph_data)
 
@@ -75,8 +75,8 @@ def draw_full_png(graph_data: dict[str, Any], out_png: Path) -> None:
     fig.savefig(out_png, dpi=220, bbox_inches="tight")
     plt.close(fig)
 
+# Draw full HTML.
 def draw_full_html(graph_data: dict[str, Any], out_html: Path) -> None:
-    """Disegna full html per visualizzazione o debug."""
     G = build_nx_graph(graph_data)
     pos = compute_layered_positions(graph_data)
 

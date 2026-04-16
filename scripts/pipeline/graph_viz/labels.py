@@ -7,8 +7,8 @@ from .config import REL_POS_ORDER
 from .io_utils import bbox_center, safe_float, short_diagram_name
 
 
+# Make node hover.
 def make_node_hover(node: dict[str, Any]) -> str:
-    """Crea node hover per la struttura del grafo esportato."""
     keys = [
         "node_type",
         "label",
@@ -37,8 +37,8 @@ def make_node_hover(node: dict[str, Any]) -> str:
         parts.append("match_warnings: " + ", ".join(map(str, warnings)))
     return "<br>".join(parts)
 
+# Make edge hover.
 def make_edge_hover(edge: dict[str, Any]) -> str:
-    """Crea edge hover per la struttura del grafo esportato."""
     keys = [
         "relation_type",
         "source",
@@ -61,8 +61,8 @@ def make_edge_hover(edge: dict[str, Any]) -> str:
     return "<br>".join(parts)
 
 
+# Handle compact node label.
 def compact_node_label(node: dict[str, Any], *, show_terminal_labels: bool) -> str:
-    """Gestisce compact node label all'interno di questo modulo della pipeline."""
     node_type = node.get("node_type")
     if node_type == "Diagram":
         return short_diagram_name(str(node.get("diagram_id", node.get("label", "diagram"))))
@@ -76,16 +76,17 @@ def compact_node_label(node: dict[str, Any], *, show_terminal_labels: bool) -> s
         return str(node.get("net_id", node.get("label", "net")))
     return str(node.get("label", node.get("node_id", "node")))
 
+# Sort components spatial.
 def sort_components_spatial(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Ordina components spatial secondo le regole richieste."""
     return sorted(nodes, key=lambda n: (bbox_center(n)[1], bbox_center(n)[0], str(n.get("instance_id", ""))))
 
+# Sort nets.
 def sort_nets(nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Ordina nets secondo le regole richieste."""
     return sorted(nodes, key=lambda n: (safe_float(n.get("net_index"), 9999.0), str(n.get("net_id", ""))))
 
+# Sort terminals.
 def sort_terminals(nodes: list[dict[str, Any]], component_order: dict[str, int]) -> list[dict[str, Any]]:
-    """Ordina terminals secondo le regole richieste."""
+    # Handle key.
     def key(n: dict[str, Any]) -> tuple[Any, ...]:
         instance_id = str(n.get("instance_id", ""))
         rel_pos = str(n.get("relative_position", ""))

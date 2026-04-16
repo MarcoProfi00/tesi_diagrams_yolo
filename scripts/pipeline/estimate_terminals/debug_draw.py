@@ -4,21 +4,56 @@ from .config import *
 # =========================================================
 # DEBUG DRAWING
 # =========================================================
+# Draw terminals.
 def draw_terminals(image_bgr, components, terminals):
-    """Disegna terminals per visualizzazione o debug."""
     out = image_bgr.copy()
+    comp_box_color = (220, 170, 40)
+    term_box_color = (58, 92, 190)
+    text_color = (35, 35, 35)
+    label_bg_color = (245, 245, 245)
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    comp_font_scale = 0.46
+    term_font_scale = 0.43
+    font_thickness = 1
+    box_thickness = 2
+    padding_x = 5
+    padding_y = 4
+
+    # Draw label.
+    def draw_label(text, anchor_x, anchor_y, border_color, font_scale):
+        (text_w, text_h), baseline = cv2.getTextSize(text, font, font_scale, font_thickness)
+        label_x1 = max(0, int(anchor_x))
+        label_y2 = max(text_h + 2 * padding_y + baseline, int(anchor_y))
+        label_y1 = max(0, label_y2 - (text_h + 2 * padding_y + baseline))
+        label_x2 = min(out.shape[1] - 1, label_x1 + text_w + 2 * padding_x)
+
+        overlay = out.copy()
+        cv2.rectangle(overlay, (label_x1, label_y1), (label_x2, label_y2), label_bg_color, -1)
+        cv2.addWeighted(overlay, 0.88, out, 0.12, 0, out)
+        cv2.rectangle(out, (label_x1, label_y1), (label_x2, label_y2), border_color, 1)
+        cv2.putText(
+            out,
+            text,
+            (label_x1 + padding_x, label_y2 - baseline - padding_y),
+            font,
+            font_scale,
+            text_color,
+            font_thickness,
+            cv2.LINE_AA,
+        )
+
     for comp in components:
         x1, y1, x2, y2 = map(int, comp["bbox"])
         label = comp.get("instance_id", "N/A")
         if comp.get("estimated_orientation"):
             label = f"{label} ({comp['estimated_orientation'][0]})"
-        cv2.rectangle(out, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        cv2.putText(out, label, (x1, max(y1 - 8, 0)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2, cv2.LINE_AA)
+        cv2.rectangle(out, (x1, y1), (x2, y2), comp_box_color, box_thickness)
+        draw_label(label, x1, y1, comp_box_color, comp_font_scale)
 
     for term in terminals:
         x = int(round(term["x"]))
         y = int(round(term["y"]))
         label = term.get("display_terminal_id", term["terminal_id"])
         cv2.circle(out, (x, y), TERMINAL_RADIUS, (0, 0, 255), -1)
-        cv2.putText(out, label, (x + 8, max(y - 8, 0)), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 255), 1, cv2.LINE_AA)
+        draw_label(label, x + 8, max(y - 8, 0), term_box_color, term_font_scale)
     return out

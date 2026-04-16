@@ -20,8 +20,8 @@ from .probes import (
 # - nessun forcing dal bordo immagine
 # =========================================================
 
+# Score terminal one side candidate by points.
 def _score_terminal_one_side_candidate_by_points(binary, bbox, side):
-    """Helper interno che assegna uno score a terminal one side candidate by points per la selezione successiva."""
     point, peak_debug = geom_terminal_point_by_side_peak(binary, bbox, side)
     px, py = point
 
@@ -38,15 +38,15 @@ def _score_terminal_one_side_candidate_by_points(binary, bbox, side):
     return dir_score, point, peak_debug
 
 
+# Handle combined side scores.
 def _combined_side_scores(local_scores, far_scores):
-    """Helper interno che gestisce combined side scores all'interno di questo modulo della pipeline."""
     return {
         side: float(local_scores.get(side, 0)) + 1.2 * float(far_scores.get(side, 0))
         for side in ("top", "bottom", "left", "right")
     }
 
+# Terminal bounding box shape info.
 def _terminal_bbox_shape_info(bbox):
-    """Helper interno che gestisce terminal bbox shape info nel flusso dedicato ai terminali."""
     x1, y1, x2, y2 = bbox
     w = max(float(x2 - x1), 1.0)
     h = max(float(y2 - y1), 1.0)
@@ -67,15 +67,15 @@ def _terminal_bbox_shape_info(bbox):
     }
 
 
+# Handle range overlap ratio.
 def _range_overlap_ratio(a1, a2, b1, b2):
-    """Helper interno che gestisce range overlap ratio all'interno di questo modulo della pipeline."""
     inter = max(0, min(a2, b2) - max(a1, b1) + 1)
     base = max(1, min(a2 - a1 + 1, b2 - b1 + 1))
     return float(inter) / float(base)
 
 
+# Handle component is side aligned external.
 def _component_is_side_aligned_external(component_bbox, bbox):
-    """Helper interno che restituisce component is side aligned external usato nella rappresentazione esportata del grafo."""
     cx1, cy1, cx2, cy2 = component_bbox
     x1, y1, x2, y2 = bbox
     width = max(x2 - x1, 1)
@@ -93,9 +93,11 @@ def _component_is_side_aligned_external(component_bbox, bbox):
     min_long_span = TERMINAL_CLASS_EXTERNAL_MIN_LONG_SPAN
     long_short_ratio = TERMINAL_CLASS_EXTERNAL_LONG_TO_SHORT_RATIO
 
+    # Handle is horizontal stub.
     def is_horizontal_stub():
         return comp_w >= max(min_long_span, int(round(long_short_ratio * comp_h)))
 
+    # Handle is vertical stub.
     def is_vertical_stub():
         return comp_h >= max(min_long_span, int(round(long_short_ratio * comp_w)))
 
@@ -133,8 +135,8 @@ def _component_is_side_aligned_external(component_bbox, bbox):
 
     return False
 
+# Build terminal text suppressed binary image.
 def _build_terminal_text_suppressed_binary(binary, bbox):
-    """Helper interno che costruisce terminal text suppressed binary a partire dagli input correnti della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     w = max(x2 - x1, 1)
     h = max(y2 - y1, 1)
@@ -215,8 +217,8 @@ def _build_terminal_text_suppressed_binary(binary, bbox):
 
     return cleaned, debug
 
+# Apply terminal shape prior.
 def _apply_terminal_shape_prior(bbox, side_scores):
-    """Helper interno che applica terminal shape prior alla struttura dati di destinazione."""
     shape = _terminal_bbox_shape_info(bbox)
     adjusted = {k: float(v) for k, v in side_scores.items()}
 
@@ -239,8 +241,8 @@ def _apply_terminal_shape_prior(bbox, side_scores):
     return adjusted
 
 
+# Handle best single side.
 def _best_single_side(binary, bbox, local_scores, far_scores):
-    """Helper interno che gestisce best single side all'interno di questo modulo della pipeline."""
     combined_raw = _combined_side_scores(local_scores, far_scores)
     combined = _apply_terminal_shape_prior(bbox, combined_raw)
     best_side = max(combined, key=combined.get)
@@ -258,8 +260,8 @@ def _best_single_side(binary, bbox, local_scores, far_scores):
     }
 
 
+# Handle horizontal two side evidence.
 def _horizontal_two_side_evidence(local_scores, far_scores):
-    """Helper interno che gestisce horizontal two side evidence all'interno di questo modulo della pipeline."""
     left_local = local_scores["left"]
     right_local = local_scores["right"]
     top_local = local_scores["top"]
@@ -300,8 +302,8 @@ def _horizontal_two_side_evidence(local_scores, far_scores):
     }
 
 
+# Handle vertical two side evidence.
 def _vertical_two_side_evidence(local_scores, far_scores):
-    """Helper interno che gestisce vertical two side evidence all'interno di questo modulo della pipeline."""
     left_local = local_scores["left"]
     right_local = local_scores["right"]
     top_local = local_scores["top"]
@@ -342,8 +344,8 @@ def _vertical_two_side_evidence(local_scores, far_scores):
     }
 
 
+# Handle relaxed two side evidence.
 def _relaxed_two_side_evidence(local_scores, far_scores, orientation):
-    """Helper interno che gestisce relaxed two side evidence all'interno di questo modulo della pipeline."""
     if orientation == "horizontal":
         pair_sides = ("left", "right")
         perp_sides = ("top", "bottom")
@@ -379,8 +381,8 @@ def _relaxed_two_side_evidence(local_scores, far_scores, orientation):
     }
 
 
+# Classify terminal cardinality.
 def classify_terminal_cardinality(binary, bbox, default_side="right", text_suppression_debug=None):
-    """Classifica terminal cardinality a partire dalle feature correnti."""
     local_scores = get_terminal_class_probe_scores(binary, bbox)
     far_scores = get_terminal_class_far_probe_scores(binary, bbox)
     shape_info = _terminal_bbox_shape_info(bbox)
@@ -426,6 +428,9 @@ def classify_terminal_cardinality(binary, bbox, default_side="right", text_suppr
             single_eval["second_score"] * RELAXED_TWO_SINGLE_VETO_RATIO,
         )
     )
+    horizontal_relaxed_shape_ok = shape_info["is_near_square"] or shape_info["is_horizontal"]
+    vertical_relaxed_shape_ok = shape_info["is_near_square"] or shape_info["is_vertical"]
+    relaxed_two_single_margin = 1.12
 
     if (
         horiz_eval["valid"]
@@ -439,11 +444,17 @@ def classify_terminal_cardinality(binary, bbox, default_side="right", text_suppr
         return 2, "horizontal", local_scores
 
     if (
-        shape_info["is_near_square"]
+        horizontal_relaxed_shape_ok
         and relaxed_external_fragmented
         and horiz_relaxed["valid"]
         and not vert_relaxed["valid"]
-        and not relaxed_single_veto
+        and (
+            not relaxed_single_veto
+            or (
+                shape_info["is_horizontal"]
+                and horiz_relaxed["pair_score"] >= single_eval["best_score"] * relaxed_two_single_margin
+            )
+        )
     ):
         local_scores["decision_mode"] = "terminal_cardinality_two_horizontal_relaxed"
         return 2, "horizontal", local_scores
@@ -460,11 +471,17 @@ def classify_terminal_cardinality(binary, bbox, default_side="right", text_suppr
         return 2, "vertical", local_scores
 
     if (
-        shape_info["is_near_square"]
+        vertical_relaxed_shape_ok
         and relaxed_external_fragmented
         and vert_relaxed["valid"]
         and not horiz_relaxed["valid"]
-        and not relaxed_single_veto
+        and (
+            not relaxed_single_veto
+            or (
+                shape_info["is_vertical"]
+                and vert_relaxed["pair_score"] >= single_eval["best_score"] * relaxed_two_single_margin
+            )
+        )
     ):
         local_scores["decision_mode"] = "terminal_cardinality_two_vertical_relaxed"
         return 2, "vertical", local_scores
@@ -481,8 +498,8 @@ def classify_terminal_cardinality(binary, bbox, default_side="right", text_suppr
     local_scores["decision_mode"] = "terminal_cardinality_default_one"
     return 1, single_eval["best_side"], local_scores
 
+# Handle opposite side.
 def _opposite_side(side):
-    """Helper interno che gestisce opposite side all'interno di questo modulo della pipeline."""
     return {
         "top": "bottom",
         "bottom": "top",
@@ -491,8 +508,8 @@ def _opposite_side(side):
     }[side]
 
 
+# Score terminal one side candidate by through support.
 def _score_terminal_one_side_candidate_by_through_support(binary, bbox, side):
-    """Helper interno che assegna uno score a terminal one side candidate by through support per la selezione successiva."""
     point, peak_debug = geom_terminal_point_by_side_peak(binary, bbox, side)
     px, py = point
 
@@ -525,8 +542,8 @@ def _score_terminal_one_side_candidate_by_through_support(binary, bbox, side):
     }
 
 
+# Detect terminal one side.
 def detect_terminal_one_side(binary, bbox, default_side="right", precomputed_scores=None):
-    """Rileva terminal one side usando le euristiche configurate."""
     scores = precomputed_scores if precomputed_scores is not None else get_terminal_class_probe_scores(binary, bbox)
     far_scores = scores.get("far_scores")
     if far_scores is None:
@@ -668,8 +685,8 @@ def detect_terminal_one_side(binary, bbox, default_side="right", precomputed_sco
     return [{"name": "t1", "relative_position": best_side}], best_side
 
 
+# Detect terminal two sides.
 def detect_terminal_two_sides(binary, bbox, precomputed_scores=None):
-    """Rileva terminal two sides usando le euristiche configurate."""
     scores = precomputed_scores if precomputed_scores is not None else get_terminal_class_probe_scores(binary, bbox)
     far_scores = scores.get("far_scores")
     if far_scores is None:
@@ -690,8 +707,8 @@ def detect_terminal_two_sides(binary, bbox, precomputed_scores=None):
     ], "vertical"
 
 
+# Detect terminal auto one or two.
 def detect_terminal_auto_one_or_two(binary, bbox, default_side="right"):
-    """Rileva terminal auto one or two usando le euristiche configurate."""
     shape_info = _terminal_bbox_shape_info(bbox)
 
     # Per la classe Terminal applichiamo SEMPRE la pulizia locale:

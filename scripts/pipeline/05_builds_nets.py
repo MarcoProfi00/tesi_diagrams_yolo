@@ -25,7 +25,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 PIPELINE_DATASET = os.environ.get(
     "PIPELINE_DATASET",
-    "topology_v9.1_analog_meter_connector_transformer",
+    "topology_v9.2_set_successivo",
 )
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "04_extract_wires"
@@ -117,8 +117,8 @@ TERMINAL_TEXT_THICKNESS = 1
 TERMINAL_TEXT_OUTLINE_THICKNESS = 3
 
 # utility base
+# Load binary image image.
 def load_binary_image(path: Path):
-    """Carica da disco una mappa binaria e la normalizza in formato 0/255."""
     img = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
     if img is None:
         raise FileNotFoundError(f"Immagine non trovata o non leggibile: {path}")
@@ -127,8 +127,8 @@ def load_binary_image(path: Path):
     return binary
 
 
+# Get sort key.
 def get_sort_key(item, sort_order="xy"):
-    """Costruisce la chiave di ordinamento spaziale per net o componenti."""
     x1, y1, x2, y2 = item["bbox"]
     xc = (x1 + x2) / 2.0
     yc = (y1 + y2) / 2.0
@@ -137,8 +137,8 @@ def get_sort_key(item, sort_order="xy"):
         return (yc, xc)
     return (xc, yc)
 
+# Clamp window.
 def clamp_window(x1, y1, x2, y2, w, h):
-    """Limita window per mantenerla entro limiti validi."""
     return (
         max(0, min(w, x1)),
         max(0, min(h, y1)),
@@ -146,13 +146,14 @@ def clamp_window(x1, y1, x2, y2, w, h):
         max(0, min(h, y2)),
     )
 
+# Get bounding box span.
 def get_bbox_span(bbox):
-    """Restituisce la dimensione dominante del bounding box, utile per filtrare net troppo corte."""
     x1, y1, x2, y2 = bbox
     width = x2 - x1 + 1
     height = y2 - y1 + 1
     return max(width, height)
 
+# Draw outlined text.
 def draw_outlined_text(
     image,
     text,
@@ -163,7 +164,6 @@ def draw_outlined_text(
     thickness=1,
     outline_thickness=3,
 ):
-    """Disegna testo con contorno per mantenerlo leggibile sopra immagini o overlay."""
     cv2.putText(
         image,
         text,
@@ -185,6 +185,7 @@ def draw_outlined_text(
         cv2.LINE_AA,
     )
 
+# Draw boxed text.
 def draw_boxed_text(
     image,
     text,
@@ -197,7 +198,6 @@ def draw_boxed_text(
     padding_x=4,
     padding_y=3,
 ):
-    """Disegna testo dentro un piccolo riquadro per migliorare la leggibilita del debug."""
     font = cv2.FONT_HERSHEY_SIMPLEX
     (tw, th), baseline = cv2.getTextSize(text, font, font_scale, thickness)
 
@@ -228,15 +228,15 @@ def draw_boxed_text(
     )
 
 # connected components + terminal matching
+# Find connected components.
 def find_connected_components(skeleton_binary: np.ndarray):
-    """Esegue la connected components analysis sullo skeleton dei wire."""
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
         skeleton_binary, connectivity=8
     )
     return num_labels, labels, stats, centroids
 
+# Get directional window.
 def get_directional_window(term: dict, labels_shape, outward=16, inward=4, halfspan=5):
-    """Costruisce una finestra di ricerca orientata nella direzione in cui ci si aspetta continui il wire del terminale."""
     h, w = labels_shape[:2]
     x = int(round(term["x"]))
     y = int(round(term["y"]))
@@ -276,22 +276,22 @@ def get_directional_window(term: dict, labels_shape, outward=16, inward=4, halfs
         w, h
     )
 
+# Get square window.
 def get_square_window(term: dict, labels_shape, radius=12):
-    """Costruisce una finestra quadrata di fallback attorno al terminale."""
     h, w = labels_shape[:2]
     x = int(round(term["x"]))
     y = int(round(term["y"]))
     return clamp_window(x - radius, y - radius, x + radius + 1, y + radius + 1, w, h)
 
+# Collect labels in window.
 def collect_labels_in_window(labels: np.ndarray, window):
-    """Estrae le label non nulle presenti nella finestra di ricerca indicata."""
     x1, y1, x2, y2 = window
     roi = labels[y1:y2, x1:x2]
     unique_labels = np.unique(roi)
     return [int(v) for v in unique_labels if int(v) > 0]
 
+# Find nearest labeled pixel.
 def find_nearest_labeled_pixel(labels: np.ndarray, term: dict, window):
-    """Trova il pixel etichettato piu vicino al terminale dentro una finestra di ricerca."""
     x1, y1, x2, y2 = window
     roi = labels[y1:y2, x1:x2]
     ys, xs = np.where(roi > 0)
@@ -318,16 +318,16 @@ def find_nearest_labeled_pixel(labels: np.ndarray, term: dict, window):
         "snap_distance": round(dist, 3),
     }
 
+# Handle is op-amp aux terminal.
 def is_opamp_aux_terminal(term: dict) -> bool:
-    """Riconosce i terminali ausiliari dell'operazionale che richiedono un matching dedicato."""
     return (
         int(term.get("component_class_id", -1)) == 19 and
         str(term.get("name", "")).lower() in {"aux1", "aux2"}
     )
 
 
+# Get label bounding box and area.
 def get_label_bbox_and_area(stats: np.ndarray, lbl: int):
-    """Recupera bounding box e area di una connected component a partire dalla sua label."""
     row = stats[int(lbl)]
     x = int(row[cv2.CC_STAT_LEFT])
     y = int(row[cv2.CC_STAT_TOP])
@@ -337,8 +337,8 @@ def get_label_bbox_and_area(stats: np.ndarray, lbl: int):
     return x, y, x + w - 1, y + h - 1, area
 
 
+# Handle axis gap 1d.
 def axis_gap_1d(v: int, a: int, b: int) -> int:
-    """Misura quanto un valore e distante da un intervallo lungo un solo asse."""
     if v < a:
         return a - v
     if v > b:
@@ -346,8 +346,8 @@ def axis_gap_1d(v: int, a: int, b: int) -> int:
     return 0
 
 
+# Find nearest pixel for specific label.
 def find_nearest_pixel_for_specific_label(labels: np.ndarray, term: dict, window, target_label: int):
-    """Trova il pixel piu vicino appartenente a una label specifica."""
     x1, y1, x2, y2 = window
     roi = labels[y1:y2, x1:x2]
     ys, xs = np.where(roi == int(target_label))
@@ -372,8 +372,8 @@ def find_nearest_pixel_for_specific_label(labels: np.ndarray, term: dict, window
     }
 
 
+# Score op-amp aux label.
 def score_opamp_aux_label(term: dict, stats: np.ndarray, lbl: int):
-    """Valuta quanto una connected component sia compatibile con un terminale ausiliario dell'operazionale."""
     tx = int(round(term["x"]))
     ty = int(round(term["y"]))
     name = str(term.get("name", "")).lower()
@@ -411,13 +411,13 @@ def score_opamp_aux_label(term: dict, stats: np.ndarray, lbl: int):
     }
 
 
+# Build op-amp aux implicit supply match.
 def build_opamp_aux_implicit_supply_match(
     labels: np.ndarray,
     term: dict,
     window,
     scored,
 ):
-    """Prova a ricostruire una net di alimentazione implicita quando il simbolo del supply non e stato rilevato."""
     if not scored:
         return None
 
@@ -527,6 +527,7 @@ def build_opamp_aux_implicit_supply_match(
     }
 
 
+# Match op-amp aux terminal.
 def match_opamp_aux_terminal(
     labels: np.ndarray,
     stats: np.ndarray,
@@ -534,7 +535,6 @@ def match_opamp_aux_terminal(
     preferred_labels=None,
     require_preferred_label=False,
 ):
-    """Esegue il matching specializzato dei terminali aux1/aux2 dell'operazionale."""
     tx = int(round(term["x"]))
     ty = int(round(term["y"]))
     name = str(term.get("name", "")).lower()
@@ -731,8 +731,8 @@ def match_opamp_aux_terminal(
         "is_implicit_supply": False,
     }
 
+# Match standard terminal.
 def match_standard_terminal(labels: np.ndarray, term: dict, radius=12, directional_halfspan=5):
-    """Esegue il matching standard di un terminale verso una label candidata dello skeleton."""
     dir_window = get_directional_window(
         term,
         labels.shape,
@@ -775,8 +775,8 @@ def match_standard_terminal(labels: np.ndarray, term: dict, radius=12, direction
     }
 
 
+# Match op-amp aux via neighbor terminal.
 def match_opamp_aux_via_neighbor_terminal(term: dict, terminal_debug_by_id: dict):
-    """Propaga un match ai terminali ausiliari sfruttando il terminale vicino gia agganciato."""
     point_debug = term.get("terminal_point_debug", {}) or {}
     if not point_debug.get("snapped_to_nearby_terminal", False):
         return None
@@ -809,8 +809,8 @@ def match_opamp_aux_via_neighbor_terminal(term: dict, terminal_debug_by_id: dict
     }
 
 
+# Terminal to candidate labels.
 def terminal_to_candidate_labels(labels: np.ndarray, stats: np.ndarray, terminals, radius=12, directional_halfspan=5):
-    """Costruisce la mappa terminale -> label candidate e seleziona una label primaria per ogni terminale."""
     primary_label_to_terminal_ids = {}
     terminal_debug_by_id = {}
     implicit_aux_merges = {}
@@ -919,13 +919,13 @@ def terminal_to_candidate_labels(labels: np.ndarray, stats: np.ndarray, terminal
     return primary_label_to_terminal_ids, terminal_debug, implicit_aux_merges
 
 
+# Build terminal index.
 def build_terminal_index(terminals):
-    """Indicizza i terminali per terminal_id per accessi rapidi nelle fasi successive."""
     return {term["terminal_id"]: term for term in terminals}
 
 
+# Summarize connected terminals.
 def summarize_connected_terminals(connected_terminal_ids, terminal_index):
-    """Riassume connected terminals per report o export."""
     connected_terminal_names = []
     connected_terminal_display_ids = []
     connected_semantic_terminal_names = []
@@ -957,8 +957,8 @@ def summarize_connected_terminals(connected_terminal_ids, terminal_index):
     }
 
 # candidate nets
+# Build candidate nets.
 def build_candidate_nets(stats, label_to_terminal_ids, terminal_index, implicit_aux_merges=None):
-    """Costruisce le net candidate a partire dalle connected components e dai terminali agganciati."""
     raw_candidates = []
 
     for lbl, stat_row in enumerate(stats[1:], start=1):  # salto background
@@ -1060,8 +1060,8 @@ def build_candidate_nets(stats, label_to_terminal_ids, terminal_index, implicit_
 
     return final_candidates
 
+# Filter candidate nets.
 def filter_candidate_nets(candidates):
-    """Scarta le net candidate troppo deboli o poco supportate dai terminali."""
     kept = []
     rejected = []
 
@@ -1106,8 +1106,8 @@ def filter_candidate_nets(candidates):
 
     return kept, rejected
 
+# Relabel kept nets.
 def relabel_kept_nets(original_labels: np.ndarray, kept_candidates, sort_order="xy"):
-    """Assegna alle net mantenute una numerazione finale stabile e costruisce la label map rilabelata."""
     kept_sorted = sorted(kept_candidates, key=lambda x: get_sort_key(x, sort_order=sort_order))
 
     relabeled = np.zeros_like(original_labels, dtype=np.int32)
@@ -1148,8 +1148,8 @@ def relabel_kept_nets(original_labels: np.ndarray, kept_candidates, sort_order="
     return relabeled, nets
 
 # debug / visualization
+# Draw net map.
 def draw_net_map(relabeled_map: np.ndarray, nets):
-    """Disegna la mappa colorata delle net finali."""
     h, w = relabeled_map.shape
     canvas = np.zeros((h, w, 3), dtype=np.uint8)
 
@@ -1177,8 +1177,8 @@ def draw_net_map(relabeled_map: np.ndarray, nets):
     return canvas
 
 
+# Draw overlay.
 def draw_overlay(image_bgr, relabeled_map: np.ndarray, nets):
-    """Sovrappone le net finali all'immagine originale."""
     overlay = image_bgr.copy()
 
     for net in nets:
@@ -1211,8 +1211,8 @@ def draw_overlay(image_bgr, relabeled_map: np.ndarray, nets):
     return blended
 
 
+# Draw terminal debug view.
 def draw_terminal_debug(image_bgr, terminals, terminal_debug, relabeled_map, nets):
-    """Disegna il debug del collegamento tra ogni terminale e il punto di snap scelto sul wire."""
     out = image_bgr.copy()
     index_to_net_id = {net["net_index"]: net["net_id"] for net in nets}
 
@@ -1265,8 +1265,8 @@ def draw_terminal_debug(image_bgr, terminals, terminal_debug, relabeled_map, net
     return out
 
 # main
+# Run the entrypoint for this pipeline stage.
 def main() -> None:
-    """Esegue il punto di ingresso dello step corrente della pipeline."""
     if not INPUT_DIR.exists():
         raise FileNotFoundError(f"Cartella input non trovata: {INPUT_DIR}")
 

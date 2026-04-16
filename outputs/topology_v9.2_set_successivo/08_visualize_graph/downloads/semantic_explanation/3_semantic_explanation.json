@@ -1,0 +1,1567 @@
+{
+  "diagram_metadata": {
+    "diagram_id": "3",
+    "image_name": "3.jpg",
+    "pipeline_variant": "topology_v9.2_set_successivo",
+    "source_json_stage": "06_match_terminals_to_nets"
+  },
+  "summary": {
+    "n_components": 12,
+    "n_terminals": 23,
+    "n_nets": 11,
+    "n_connections": 23,
+    "main_inputs": [],
+    "main_outputs": [],
+    "supplies": [
+      {
+        "instance_id": "2.1",
+        "class_name": "Battery",
+        "connected_nets": [
+          "N1",
+          "N3"
+        ]
+      }
+    ],
+    "grounds": [
+      {
+        "instance_id": "9.1",
+        "class_name": "GND",
+        "connected_nets": [
+          "N11"
+        ]
+      }
+    ],
+    "notes": [
+      "12 components, 23 terminals, 11 nets, and 23 terminal-to-net connections were summarized deterministically from the extracted topology.",
+      "4 structural pattern(s) were recorded as direct descriptive observations."
+    ]
+  },
+  "component_descriptions": [
+    {
+      "instance_id": "0.1",
+      "class_name": "Analog_Meter",
+      "description_label": "generic_circuit_element",
+      "description_specificity": "low",
+      "description_basis": [
+        "No stronger class-based semantic rule was triggered."
+      ],
+      "confidence": 0.55,
+      "evidence_type": "heuristic_inference",
+      "interface_kind": null,
+      "connected_nets": [
+        "N3",
+        "N9"
+      ],
+      "connected_components": [
+        {
+          "instance_id": "2.1",
+          "component_class_name": "Battery",
+          "via_net_ids": [
+            "N3"
+          ]
+        }
+      ],
+      "natural_language": "Analog_Meter 0.1 is described as generic circuit element. It is connected to nets N3, N9 and to Battery 2.1 via N3."
+    },
+    {
+      "instance_id": "12.1",
+      "class_name": "LED",
+      "description_label": "generic_circuit_element",
+      "description_specificity": "low",
+      "description_basis": [
+        "No stronger class-based semantic rule was triggered."
+      ],
+      "confidence": 0.55,
+      "evidence_type": "heuristic_inference",
+      "interface_kind": null,
+      "connected_nets": [
+        "N4",
+        "N5"
+      ],
+      "connected_components": [
+        {
+          "instance_id": "30.1",
+          "component_class_name": "Variable_Resistor",
+          "via_net_ids": [
+            "N5"
+          ]
+        }
+      ],
+      "natural_language": "LED 12.1 is described as generic circuit element. It is connected to nets N4, N5 and to Variable_Resistor 30.1 via N5."
+    },
+    {
+      "instance_id": "13.1",
+      "class_name": "Lamp",
+      "description_label": "generic_circuit_element",
+      "description_specificity": "low",
+      "description_basis": [
+        "No stronger class-based semantic rule was triggered."
+      ],
+      "confidence": 0.55,
+      "evidence_type": "heuristic_inference",
+      "interface_kind": null,
+      "connected_nets": [
+        "N10",
+        "N11"
+      ],
+      "connected_components": [
+        {
+          "instance_id": "23.1",
+          "component_class_name": "Signal_Source",
+          "via_net_ids": [
+            "N10"
+          ]
+        },
+        {
+          "instance_id": "30.2",
+          "component_class_name": "Variable_Resistor",
+          "via_net_ids": [
+            "N10",
+            "N11"
+          ]
+        },
+        {
+          "instance_id": "9.1",
+          "component_class_name": "GND",
+          "via_net_ids": [
+            "N11"
+          ]
+        }
+      ],
+      "natural_language": "Lamp 13.1 is described as generic circuit element. It is connected to nets N10, N11 and to Signal_Source 23.1 via N10; Variable_Resistor 30.2 via N10, N11; GND 9.1 via N11."
+    },
+    {
+      "instance_id": "2.1",
+      "class_name": "Battery",
+      "description_label": "power_source",
+      "description_specificity": "high",
+      "description_basis": [
+        "Direct fact from explicit source component class."
+      ],
+      "confidence": 0.98,
+      "evidence_type": "topological_fact",
+      "interface_kind": null,
+      "connected_nets": [
+        "N1",
+        "N3"
+      ],
+      "connected_components": [
+        {
+          "instance_id": "0.1",
+          "component_class_name": "Analog_Meter",
+          "via_net_ids": [
+            "N3"
+          ]
+        },
+        {
+          "instance_id": "8.1",
+          "component_class_name": "Fuse",
+          "via_net_ids": [
+            "N1"
+          ]
+        }
+      ],
+      "natural_language": "Battery 2.1 is described as power source. It is connected to nets N1, N3 and to Analog_Meter 0.1 via N3; Fuse 8.1 via N1."
+    },
+    {
+      "instance_id": "23.1",
+      "class_name": "Signal_Source",
+      "description_label": "generic_circuit_element",
+      "description_specificity": "low",
+      "description_basis": [
+        "No stronger class-based semantic rule was triggered."
+      ],
+      "confidence": 0.55,
+      "evidence_type": "heuristic_inference",
+      "interface_kind": null,
+      "connected_nets": [
+        "N10",
+        "N6"
+      ],
+      "connected_components": [
+        {
+          "instance_id": "13.1",
+          "component_class_name": "Lamp",
+          "via_net_ids": [
+            "N10"
+          ]
+        },
+        {
+          "instance_id": "25.1",
+          "component_class_name": "Switch",
+          "via_net_ids": [
+            "N6"
+          ]
+        },
+        {
+          "instance_id": "29.1",
+          "component_class_name": "Trim_Capacitor",
+          "via_net_ids": [
+            "N6"
+          ]
+        },
+        {
+          "instance_id": "30.2",
+          "component_class_name": "Variable_Resistor",
+          "via_net_ids": [
+            "N10"
+          ]
+        }
+      ],
+      "natural_language": "Signal_Source 23.1 is described as generic circuit element. It is connected to nets N10, N6 and to Lamp 13.1 via N10; Switch 25.1 via N6; Trim_Capacitor 29.1 via N6; Variable_Resistor 30.2 via N10."
+    },
+    {
+      "instance_id": "25.1",
+      "class_name": "Switch",
+      "description_label": "active_component",
+      "description_specificity": "low",
+      "description_basis": [
+        "Component class indicates an active controllable device, but topology alone does not prove its exact circuit function."
+      ],
+      "confidence": 0.72,
+      "evidence_type": "heuristic_inference",
+      "interface_kind": null,
+      "connected_nets": [
+        "N2",
+        "N6"
+      ],
+      "connected_components": [
+        {
+          "instance_id": "23.1",
+          "component_class_name": "Signal_Source",
+          "via_net_ids": [
+            "N6"
+          ]
+        },
+        {
+          "instance_id": "29.1",
+          "component_class_name": "Trim_Capacitor",
+          "via_net_ids": [
+            "N6"
+          ]
+        },
+        {
+          "instance_id": "30.1",
+          "component_class_name": "Variable_Resistor",
+          "via_net_ids": [
+            "N2"
+          ]
+        },
+        {
+          "instance_id": "8.1",
+          "component_class_name": "Fuse",
+          "via_net_ids": [
+            "N2"
+          ]
+        }
+      ],
+      "natural_language": "Switch 25.1 is described as active component. It is connected to nets N2, N6 and to Signal_Source 23.1 via N6; Trim_Capacitor 29.1 via N6; Variable_Resistor 30.1 via N2; Fuse 8.1 via N2."
+    },
+    {
+      "instance_id": "29.1",
+      "class_name": "Trim_Capacitor",
+      "description_label": "generic_circuit_element",
+      "description_specificity": "low",
+      "description_basis": [
+        "No stronger class-based semantic rule was triggered."
+      ],
+      "confidence": 0.55,
+      "evidence_type": "heuristic_inference",
+      "interface_kind": null,
+      "connected_nets": [
+        "N6",
+        "N8"
+      ],
+      "connected_components": [
+        {
+          "instance_id": "23.1",
+          "component_class_name": "Signal_Source",
+          "via_net_ids": [
+            "N6"
+          ]
+        },
+        {
+          "instance_id": "25.1",
+          "component_class_name": "Switch",
+          "via_net_ids": [
+            "N6"
+          ]
+        },
+        {
+          "instance_id": "7.1",
+          "component_class_name": "Diode",
+          "via_net_ids": [
+            "N8"
+          ]
+        }
+      ],
+      "natural_language": "Trim_Capacitor 29.1 is described as generic circuit element. It is connected to nets N6, N8 and to Signal_Source 23.1 via N6; Switch 25.1 via N6; Diode 7.1 via N8."
+    },
+    {
+      "instance_id": "30.1",
+      "class_name": "Variable_Resistor",
+      "description_label": "generic_circuit_element",
+      "description_specificity": "low",
+      "description_basis": [
+        "No stronger class-based semantic rule was triggered."
+      ],
+      "confidence": 0.55,
+      "evidence_type": "heuristic_inference",
+      "interface_kind": null,
+      "connected_nets": [
+        "N2",
+        "N5"
+      ],
+      "connected_components": [
+        {
+          "instance_id": "12.1",
+          "component_class_name": "LED",
+          "via_net_ids": [
+            "N5"
+          ]
+        },
+        {
+          "instance_id": "25.1",
+          "component_class_name": "Switch",
+          "via_net_ids": [
+            "N2"
+          ]
+        },
+        {
+          "instance_id": "8.1",
+          "component_class_name": "Fuse",
+          "via_net_ids": [
+            "N2"
+          ]
+        }
+      ],
+      "natural_language": "Variable_Resistor 30.1 is described as generic circuit element. It is connected to nets N2, N5 and to LED 12.1 via N5; Switch 25.1 via N2; Fuse 8.1 via N2."
+    },
+    {
+      "instance_id": "30.2",
+      "class_name": "Variable_Resistor",
+      "description_label": "generic_circuit_element",
+      "description_specificity": "low",
+      "description_basis": [
+        "No stronger class-based semantic rule was triggered."
+      ],
+      "confidence": 0.55,
+      "evidence_type": "heuristic_inference",
+      "interface_kind": null,
+      "connected_nets": [
+        "N10",
+        "N11"
+      ],
+      "connected_components": [
+        {
+          "instance_id": "13.1",
+          "component_class_name": "Lamp",
+          "via_net_ids": [
+            "N10",
+            "N11"
+          ]
+        },
+        {
+          "instance_id": "23.1",
+          "component_class_name": "Signal_Source",
+          "via_net_ids": [
+            "N10"
+          ]
+        },
+        {
+          "instance_id": "9.1",
+          "component_class_name": "GND",
+          "via_net_ids": [
+            "N11"
+          ]
+        }
+      ],
+      "natural_language": "Variable_Resistor 30.2 is described as generic circuit element. It is connected to nets N10, N11 and to Lamp 13.1 via N10, N11; Signal_Source 23.1 via N10; GND 9.1 via N11."
+    },
+    {
+      "instance_id": "7.1",
+      "class_name": "Diode",
+      "description_label": "passive_component",
+      "description_specificity": "medium",
+      "description_basis": [
+        "Component class indicates a passive or directional device; the exact electrical purpose depends on the larger circuit context."
+      ],
+      "confidence": 0.76,
+      "evidence_type": "heuristic_inference",
+      "interface_kind": null,
+      "connected_nets": [
+        "N7",
+        "N8"
+      ],
+      "connected_components": [
+        {
+          "instance_id": "29.1",
+          "component_class_name": "Trim_Capacitor",
+          "via_net_ids": [
+            "N8"
+          ]
+        }
+      ],
+      "natural_language": "Diode 7.1 is described as passive component. It is connected to nets N7, N8 and to Trim_Capacitor 29.1 via N8."
+    },
+    {
+      "instance_id": "8.1",
+      "class_name": "Fuse",
+      "description_label": "generic_circuit_element",
+      "description_specificity": "low",
+      "description_basis": [
+        "No stronger class-based semantic rule was triggered."
+      ],
+      "confidence": 0.55,
+      "evidence_type": "heuristic_inference",
+      "interface_kind": null,
+      "connected_nets": [
+        "N1",
+        "N2"
+      ],
+      "connected_components": [
+        {
+          "instance_id": "2.1",
+          "component_class_name": "Battery",
+          "via_net_ids": [
+            "N1"
+          ]
+        },
+        {
+          "instance_id": "25.1",
+          "component_class_name": "Switch",
+          "via_net_ids": [
+            "N2"
+          ]
+        },
+        {
+          "instance_id": "30.1",
+          "component_class_name": "Variable_Resistor",
+          "via_net_ids": [
+            "N2"
+          ]
+        }
+      ],
+      "natural_language": "Fuse 8.1 is described as generic circuit element. It is connected to nets N1, N2 and to Battery 2.1 via N1; Switch 25.1 via N2; Variable_Resistor 30.1 via N2."
+    },
+    {
+      "instance_id": "9.1",
+      "class_name": "GND",
+      "description_label": "ground_reference",
+      "description_specificity": "high",
+      "description_basis": [
+        "Direct fact from explicit GND component class."
+      ],
+      "confidence": 1.0,
+      "evidence_type": "topological_fact",
+      "interface_kind": null,
+      "connected_nets": [
+        "N11"
+      ],
+      "connected_components": [
+        {
+          "instance_id": "13.1",
+          "component_class_name": "Lamp",
+          "via_net_ids": [
+            "N11"
+          ]
+        },
+        {
+          "instance_id": "30.2",
+          "component_class_name": "Variable_Resistor",
+          "via_net_ids": [
+            "N11"
+          ]
+        }
+      ],
+      "natural_language": "GND 9.1 is described as ground reference. It is connected to nets N11 and to Lamp 13.1 via N11; Variable_Resistor 30.2 via N11."
+    }
+  ],
+  "net_descriptions": [
+    {
+      "net_id": "N1",
+      "alias": "source_connected_branch_N1",
+      "description_label": "source_connected_branch",
+      "description_specificity": "medium",
+      "description_basis": [
+        "An explicit source component is attached to this net."
+      ],
+      "confidence": 0.88,
+      "evidence_type": "heuristic_inference",
+      "connected_components": [
+        {
+          "instance_id": "2.1",
+          "component_class_name": "Battery"
+        },
+        {
+          "instance_id": "8.1",
+          "component_class_name": "Fuse"
+        }
+      ],
+      "natural_language": "Net N1 is described as source connected branch. It connects Battery 2.1, Fuse 8.1."
+    },
+    {
+      "net_id": "N2",
+      "alias": "shared_internal_branch_N2",
+      "description_label": "shared_internal_branch",
+      "description_specificity": "medium",
+      "description_basis": [
+        "The net behaves like a shared internal junction between multiple components."
+      ],
+      "confidence": 0.72,
+      "evidence_type": "heuristic_inference",
+      "connected_components": [
+        {
+          "instance_id": "25.1",
+          "component_class_name": "Switch"
+        },
+        {
+          "instance_id": "30.1",
+          "component_class_name": "Variable_Resistor"
+        },
+        {
+          "instance_id": "8.1",
+          "component_class_name": "Fuse"
+        }
+      ],
+      "natural_language": "Net N2 is described as shared internal branch. It connects Switch 25.1, Variable_Resistor 30.1, Fuse 8.1."
+    },
+    {
+      "net_id": "N3",
+      "alias": "single_terminal_stub_N3",
+      "description_label": "single_terminal_stub",
+      "description_specificity": "high",
+      "description_basis": [
+        "Only one modeled terminal reaches this net."
+      ],
+      "confidence": 0.96,
+      "evidence_type": "heuristic_inference",
+      "connected_components": [
+        {
+          "instance_id": "0.1",
+          "component_class_name": "Analog_Meter"
+        },
+        {
+          "instance_id": "2.1",
+          "component_class_name": "Battery"
+        }
+      ],
+      "natural_language": "Net N3 is described as single terminal stub. It connects Analog_Meter 0.1, Battery 2.1."
+    },
+    {
+      "net_id": "N4",
+      "alias": "single_terminal_stub_N4",
+      "description_label": "single_terminal_stub",
+      "description_specificity": "high",
+      "description_basis": [
+        "Only one modeled terminal reaches this net."
+      ],
+      "confidence": 0.96,
+      "evidence_type": "heuristic_inference",
+      "connected_components": [
+        {
+          "instance_id": "12.1",
+          "component_class_name": "LED"
+        }
+      ],
+      "natural_language": "Net N4 is described as single terminal stub. It connects LED 12.1."
+    },
+    {
+      "net_id": "N5",
+      "alias": "local_interconnect_N5",
+      "description_label": "local_interconnect",
+      "description_specificity": "low",
+      "description_basis": [
+        "The net connects a small local group without stronger semantic evidence."
+      ],
+      "confidence": 0.6,
+      "evidence_type": "heuristic_inference",
+      "connected_components": [
+        {
+          "instance_id": "12.1",
+          "component_class_name": "LED"
+        },
+        {
+          "instance_id": "30.1",
+          "component_class_name": "Variable_Resistor"
+        }
+      ],
+      "natural_language": "Net N5 is described as local interconnect. It connects LED 12.1, Variable_Resistor 30.1."
+    },
+    {
+      "net_id": "N6",
+      "alias": "shared_internal_branch_N6",
+      "description_label": "shared_internal_branch",
+      "description_specificity": "medium",
+      "description_basis": [
+        "The net behaves like a shared internal junction between multiple components."
+      ],
+      "confidence": 0.72,
+      "evidence_type": "heuristic_inference",
+      "connected_components": [
+        {
+          "instance_id": "23.1",
+          "component_class_name": "Signal_Source"
+        },
+        {
+          "instance_id": "25.1",
+          "component_class_name": "Switch"
+        },
+        {
+          "instance_id": "29.1",
+          "component_class_name": "Trim_Capacitor"
+        }
+      ],
+      "natural_language": "Net N6 is described as shared internal branch. It connects Signal_Source 23.1, Switch 25.1, Trim_Capacitor 29.1."
+    },
+    {
+      "net_id": "N7",
+      "alias": "single_terminal_stub_N7",
+      "description_label": "single_terminal_stub",
+      "description_specificity": "high",
+      "description_basis": [
+        "Only one modeled terminal reaches this net."
+      ],
+      "confidence": 0.96,
+      "evidence_type": "heuristic_inference",
+      "connected_components": [
+        {
+          "instance_id": "7.1",
+          "component_class_name": "Diode"
+        }
+      ],
+      "natural_language": "Net N7 is described as single terminal stub. It connects Diode 7.1."
+    },
+    {
+      "net_id": "N8",
+      "alias": "local_interconnect_N8",
+      "description_label": "local_interconnect",
+      "description_specificity": "low",
+      "description_basis": [
+        "The net connects a small local group without stronger semantic evidence."
+      ],
+      "confidence": 0.6,
+      "evidence_type": "heuristic_inference",
+      "connected_components": [
+        {
+          "instance_id": "29.1",
+          "component_class_name": "Trim_Capacitor"
+        },
+        {
+          "instance_id": "7.1",
+          "component_class_name": "Diode"
+        }
+      ],
+      "natural_language": "Net N8 is described as local interconnect. It connects Trim_Capacitor 29.1, Diode 7.1."
+    },
+    {
+      "net_id": "N9",
+      "alias": "single_terminal_stub_N9",
+      "description_label": "single_terminal_stub",
+      "description_specificity": "high",
+      "description_basis": [
+        "Only one modeled terminal reaches this net."
+      ],
+      "confidence": 0.96,
+      "evidence_type": "heuristic_inference",
+      "connected_components": [
+        {
+          "instance_id": "0.1",
+          "component_class_name": "Analog_Meter"
+        }
+      ],
+      "natural_language": "Net N9 is described as single terminal stub. It connects Analog_Meter 0.1."
+    },
+    {
+      "net_id": "N10",
+      "alias": "local_interconnect_N10",
+      "description_label": "local_interconnect",
+      "description_specificity": "low",
+      "description_basis": [
+        "The net connects a small local group without stronger semantic evidence."
+      ],
+      "confidence": 0.6,
+      "evidence_type": "heuristic_inference",
+      "connected_components": [
+        {
+          "instance_id": "13.1",
+          "component_class_name": "Lamp"
+        },
+        {
+          "instance_id": "23.1",
+          "component_class_name": "Signal_Source"
+        },
+        {
+          "instance_id": "30.2",
+          "component_class_name": "Variable_Resistor"
+        }
+      ],
+      "natural_language": "Net N10 is described as local interconnect. It connects Lamp 13.1, Signal_Source 23.1, Variable_Resistor 30.2."
+    },
+    {
+      "net_id": "N11",
+      "alias": "ground_return_N11",
+      "description_label": "ground_return",
+      "description_specificity": "high",
+      "description_basis": [
+        "An explicit ground symbol is attached to this net."
+      ],
+      "confidence": 1.0,
+      "evidence_type": "topological_fact",
+      "connected_components": [
+        {
+          "instance_id": "13.1",
+          "component_class_name": "Lamp"
+        },
+        {
+          "instance_id": "30.2",
+          "component_class_name": "Variable_Resistor"
+        },
+        {
+          "instance_id": "9.1",
+          "component_class_name": "GND"
+        }
+      ],
+      "natural_language": "Net N11 is described as ground return. It connects Lamp 13.1, Variable_Resistor 30.2, GND 9.1."
+    }
+  ],
+  "branch_summaries": [
+    {
+      "anchor_net": "N1",
+      "branch_kind": "source_connected_branch",
+      "connected_components": [
+        "2.1",
+        "8.1"
+      ],
+      "importance": "high",
+      "natural_language": "Net N1 forms a source connected branch connecting Battery 2.1, Fuse 8.1.",
+      "branch_id": "B1"
+    },
+    {
+      "anchor_net": "N2",
+      "branch_kind": "shared_internal_branch",
+      "connected_components": [
+        "25.1",
+        "30.1",
+        "8.1"
+      ],
+      "importance": "medium",
+      "natural_language": "Net N2 forms a shared internal branch connecting Switch 25.1, Variable_Resistor 30.1, Fuse 8.1.",
+      "branch_id": "B2"
+    },
+    {
+      "anchor_net": "N6",
+      "branch_kind": "shared_internal_branch",
+      "connected_components": [
+        "23.1",
+        "25.1",
+        "29.1"
+      ],
+      "importance": "medium",
+      "natural_language": "Net N6 forms a shared internal branch connecting Signal_Source 23.1, Switch 25.1, Trim_Capacitor 29.1.",
+      "branch_id": "B3"
+    },
+    {
+      "anchor_net": "N3",
+      "branch_kind": "single_terminal_stub",
+      "connected_components": [
+        "0.1",
+        "2.1"
+      ],
+      "importance": "low",
+      "natural_language": "Net N3 forms a single terminal stub connecting Analog_Meter 0.1, Battery 2.1.",
+      "branch_id": "B4"
+    },
+    {
+      "anchor_net": "N4",
+      "branch_kind": "single_terminal_stub",
+      "connected_components": [
+        "12.1"
+      ],
+      "importance": "low",
+      "natural_language": "Net N4 forms a single terminal stub connecting LED 12.1.",
+      "branch_id": "B5"
+    },
+    {
+      "anchor_net": "N7",
+      "branch_kind": "single_terminal_stub",
+      "connected_components": [
+        "7.1"
+      ],
+      "importance": "low",
+      "natural_language": "Net N7 forms a single terminal stub connecting Diode 7.1.",
+      "branch_id": "B6"
+    },
+    {
+      "anchor_net": "N9",
+      "branch_kind": "single_terminal_stub",
+      "connected_components": [
+        "0.1"
+      ],
+      "importance": "low",
+      "natural_language": "Net N9 forms a single terminal stub connecting Analog_Meter 0.1.",
+      "branch_id": "B7"
+    }
+  ],
+  "component_to_component_relations": [
+    {
+      "from_component": "2.1",
+      "from_terminal": "2.1:positive",
+      "to_component": "8.1",
+      "to_terminal": "8.1:t1",
+      "via_net": "N1",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Battery 2.1 positive is electrically tied to Fuse 8.1 terminal t1 through net N1."
+    },
+    {
+      "from_component": "25.1",
+      "from_terminal": "25.1:t1",
+      "to_component": "30.1",
+      "to_terminal": "30.1:t1",
+      "via_net": "N2",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Switch 25.1 terminal t1 is electrically tied to Variable_Resistor 30.1 terminal t1 through net N2."
+    },
+    {
+      "from_component": "25.1",
+      "from_terminal": "25.1:t1",
+      "to_component": "8.1",
+      "to_terminal": "8.1:t2",
+      "via_net": "N2",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Switch 25.1 terminal t1 is electrically tied to Fuse 8.1 terminal t2 through net N2."
+    },
+    {
+      "from_component": "30.1",
+      "from_terminal": "30.1:t1",
+      "to_component": "8.1",
+      "to_terminal": "8.1:t2",
+      "via_net": "N2",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Variable_Resistor 30.1 terminal t1 is electrically tied to Fuse 8.1 terminal t2 through net N2."
+    },
+    {
+      "from_component": "0.1",
+      "from_terminal": "0.1:t1",
+      "to_component": "2.1",
+      "to_terminal": "2.1:negative",
+      "via_net": "N3",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Analog_Meter 0.1 terminal t1 is electrically tied to Battery 2.1 negative through net N3."
+    },
+    {
+      "from_component": "12.1",
+      "from_terminal": "12.1:anode",
+      "to_component": "30.1",
+      "to_terminal": "30.1:t2",
+      "via_net": "N5",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "LED 12.1 anode is electrically tied to Variable_Resistor 30.1 terminal t2 through net N5."
+    },
+    {
+      "from_component": "23.1",
+      "from_terminal": "23.1:t1",
+      "to_component": "25.1",
+      "to_terminal": "25.1:t2",
+      "via_net": "N6",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Signal_Source 23.1 terminal t1 is electrically tied to Switch 25.1 terminal t2 through net N6."
+    },
+    {
+      "from_component": "23.1",
+      "from_terminal": "23.1:t1",
+      "to_component": "29.1",
+      "to_terminal": "29.1:t1",
+      "via_net": "N6",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Signal_Source 23.1 terminal t1 is electrically tied to Trim_Capacitor 29.1 terminal t1 through net N6."
+    },
+    {
+      "from_component": "25.1",
+      "from_terminal": "25.1:t2",
+      "to_component": "29.1",
+      "to_terminal": "29.1:t1",
+      "via_net": "N6",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Switch 25.1 terminal t2 is electrically tied to Trim_Capacitor 29.1 terminal t1 through net N6."
+    },
+    {
+      "from_component": "29.1",
+      "from_terminal": "29.1:t2",
+      "to_component": "7.1",
+      "to_terminal": "7.1:anode",
+      "via_net": "N8",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Trim_Capacitor 29.1 terminal t2 is electrically tied to Diode 7.1 anode through net N8."
+    },
+    {
+      "from_component": "13.1",
+      "from_terminal": "13.1:t1",
+      "to_component": "23.1",
+      "to_terminal": "23.1:t2",
+      "via_net": "N10",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Lamp 13.1 terminal t1 is electrically tied to Signal_Source 23.1 terminal t2 through net N10."
+    },
+    {
+      "from_component": "13.1",
+      "from_terminal": "13.1:t1",
+      "to_component": "30.2",
+      "to_terminal": "30.2:t1",
+      "via_net": "N10",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Lamp 13.1 terminal t1 is electrically tied to Variable_Resistor 30.2 terminal t1 through net N10."
+    },
+    {
+      "from_component": "23.1",
+      "from_terminal": "23.1:t2",
+      "to_component": "30.2",
+      "to_terminal": "30.2:t1",
+      "via_net": "N10",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Signal_Source 23.1 terminal t2 is electrically tied to Variable_Resistor 30.2 terminal t1 through net N10."
+    },
+    {
+      "from_component": "13.1",
+      "from_terminal": "13.1:t2",
+      "to_component": "30.2",
+      "to_terminal": "30.2:t2",
+      "via_net": "N11",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Lamp 13.1 terminal t2 is electrically tied to Variable_Resistor 30.2 terminal t2 through net N11."
+    },
+    {
+      "from_component": "13.1",
+      "from_terminal": "13.1:t2",
+      "to_component": "9.1",
+      "to_terminal": "9.1:t1",
+      "via_net": "N11",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Lamp 13.1 terminal t2 is electrically tied to GND 9.1 terminal t1 through net N11."
+    },
+    {
+      "from_component": "30.2",
+      "from_terminal": "30.2:t2",
+      "to_component": "9.1",
+      "to_terminal": "9.1:t1",
+      "via_net": "N11",
+      "relation_type": "electrical_connection",
+      "evidence_type": "topological_fact",
+      "confidence": 1.0,
+      "natural_language": "Variable_Resistor 30.2 terminal t2 is electrically tied to GND 9.1 terminal t1 through net N11."
+    }
+  ],
+  "component_relation_groups": [
+    {
+      "net_id": "N1",
+      "summary": "N1 is a source connected branch connecting Battery 2.1 positive, Fuse 8.1 terminal t1.",
+      "connected_components": [
+        "2.1",
+        "8.1"
+      ],
+      "importance": "high",
+      "role_hypothesis": "source_connected_branch"
+    },
+    {
+      "net_id": "N2",
+      "summary": "N2 is a shared internal branch connecting Switch 25.1 terminal t1, Variable_Resistor 30.1 terminal t1, Fuse 8.1 terminal t2.",
+      "connected_components": [
+        "25.1",
+        "30.1",
+        "8.1"
+      ],
+      "importance": "medium",
+      "role_hypothesis": "shared_internal_branch"
+    },
+    {
+      "net_id": "N6",
+      "summary": "N6 is a shared internal branch connecting Signal_Source 23.1 terminal t1, Switch 25.1 terminal t2, Trim_Capacitor 29.1 terminal t1.",
+      "connected_components": [
+        "23.1",
+        "25.1",
+        "29.1"
+      ],
+      "importance": "medium",
+      "role_hypothesis": "shared_internal_branch"
+    },
+    {
+      "net_id": "N10",
+      "summary": "N10 is a local interconnect connecting Lamp 13.1 terminal t1, Signal_Source 23.1 terminal t2, Variable_Resistor 30.2 terminal t1.",
+      "connected_components": [
+        "13.1",
+        "23.1",
+        "30.2"
+      ],
+      "importance": "low",
+      "role_hypothesis": "local_interconnect"
+    },
+    {
+      "net_id": "N11",
+      "summary": "N11 is a ground return connecting Lamp 13.1 terminal t2, Variable_Resistor 30.2 terminal t2, GND 9.1 terminal t1.",
+      "connected_components": [
+        "13.1",
+        "30.2",
+        "9.1"
+      ],
+      "importance": "low",
+      "role_hypothesis": "ground_return"
+    },
+    {
+      "net_id": "N3",
+      "summary": "N3 is a single terminal stub connecting Analog_Meter 0.1 terminal t1, Battery 2.1 negative.",
+      "connected_components": [
+        "0.1",
+        "2.1"
+      ],
+      "importance": "low",
+      "role_hypothesis": "single_terminal_stub"
+    },
+    {
+      "net_id": "N5",
+      "summary": "N5 is a local interconnect connecting LED 12.1 anode, Variable_Resistor 30.1 terminal t2.",
+      "connected_components": [
+        "12.1",
+        "30.1"
+      ],
+      "importance": "low",
+      "role_hypothesis": "local_interconnect"
+    },
+    {
+      "net_id": "N8",
+      "summary": "N8 is a local interconnect connecting Trim_Capacitor 29.1 terminal t2, Diode 7.1 anode.",
+      "connected_components": [
+        "29.1",
+        "7.1"
+      ],
+      "importance": "low",
+      "role_hypothesis": "local_interconnect"
+    }
+  ],
+  "functional_paths": [
+    {
+      "path_id": "P1",
+      "path_type": "ground_to_device_path",
+      "start": "GND 9.1",
+      "end": "Switch 25.1",
+      "sequence": [
+        {
+          "node_type": "component",
+          "id": "9.1",
+          "label": "GND 9.1",
+          "class_name": "GND"
+        },
+        {
+          "node_type": "net",
+          "id": "N11",
+          "label": "N11 (ground return)",
+          "role_hypothesis": "ground_return"
+        },
+        {
+          "node_type": "component",
+          "id": "13.1",
+          "label": "Lamp 13.1",
+          "class_name": "Lamp"
+        },
+        {
+          "node_type": "net",
+          "id": "N10",
+          "label": "N10 (local interconnect)",
+          "role_hypothesis": "local_interconnect"
+        },
+        {
+          "node_type": "component",
+          "id": "23.1",
+          "label": "Signal_Source 23.1",
+          "class_name": "Signal_Source"
+        },
+        {
+          "node_type": "net",
+          "id": "N6",
+          "label": "N6 (shared internal branch)",
+          "role_hypothesis": "shared_internal_branch"
+        },
+        {
+          "node_type": "component",
+          "id": "25.1",
+          "label": "Switch 25.1",
+          "class_name": "Switch"
+        }
+      ],
+      "confidence": 0.68,
+      "evidence_type": "heuristic_inference",
+      "natural_language": "Ground to device path: GND 9.1 -> N11 (ground return) -> Lamp 13.1 -> N10 (local interconnect) -> Signal_Source 23.1 -> N6 (shared internal branch) -> Switch 25.1."
+    }
+  ],
+  "structural_patterns": [
+    {
+      "pattern_type": "single_terminal_stub",
+      "target": "N3",
+      "description": "Net N3 currently touches only Battery 2.1 negative.",
+      "evidence_type": "topological_fact"
+    },
+    {
+      "pattern_type": "single_terminal_stub",
+      "target": "N4",
+      "description": "Net N4 currently touches only LED 12.1 cathode.",
+      "evidence_type": "topological_fact"
+    },
+    {
+      "pattern_type": "single_terminal_stub",
+      "target": "N7",
+      "description": "Net N7 currently touches only Diode 7.1 cathode.",
+      "evidence_type": "topological_fact"
+    },
+    {
+      "pattern_type": "single_terminal_stub",
+      "target": "N9",
+      "description": "Net N9 currently touches only Analog_Meter 0.1 terminal t2.",
+      "evidence_type": "topological_fact"
+    }
+  ],
+  "terminal_facts": [
+    {
+      "terminal_id": "0.1:t1",
+      "display_terminal_id": "0.1:t1",
+      "instance_id": "0.1",
+      "component_class_name": "Analog_Meter",
+      "terminal_name": "t1",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N3",
+      "match_status": "matched_nearest",
+      "description": "Analog_Meter 0.1 terminal t1 is connected on net N3 with Battery 2.1."
+    },
+    {
+      "terminal_id": "0.1:t2",
+      "display_terminal_id": "0.1:t2",
+      "instance_id": "0.1",
+      "component_class_name": "Analog_Meter",
+      "terminal_name": "t2",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N9",
+      "match_status": "matched_preferred",
+      "description": "Analog_Meter 0.1 terminal t2 is the only modeled terminal on net N9."
+    },
+    {
+      "terminal_id": "12.1:t1",
+      "display_terminal_id": "12.1:anode",
+      "instance_id": "12.1",
+      "component_class_name": "LED",
+      "terminal_name": "anode",
+      "semantic_terminal_name": "anode",
+      "semantic_slot": "other_side",
+      "semantic_confidence": 0.4363,
+      "semantic_evidence_type": "symbol_heuristic",
+      "semantic_resolution_mode": "diode_cathode_from_bar",
+      "semantic_role_family": "polarity",
+      "semantic_polarity": "anode",
+      "semantic_direction": null,
+      "net_id": "N5",
+      "match_status": "matched_preferred",
+      "description": "LED 12.1 terminal anode is connected on net N5 with Variable_Resistor 30.1."
+    },
+    {
+      "terminal_id": "12.1:t2",
+      "display_terminal_id": "12.1:cathode",
+      "instance_id": "12.1",
+      "component_class_name": "LED",
+      "terminal_name": "cathode",
+      "semantic_terminal_name": "cathode",
+      "semantic_slot": "marker_side",
+      "semantic_confidence": 0.4363,
+      "semantic_evidence_type": "symbol_heuristic",
+      "semantic_resolution_mode": "diode_cathode_from_bar",
+      "semantic_role_family": "polarity",
+      "semantic_polarity": "cathode",
+      "semantic_direction": null,
+      "net_id": "N4",
+      "match_status": "matched_preferred",
+      "description": "LED 12.1 terminal cathode is the only modeled terminal on net N4."
+    },
+    {
+      "terminal_id": "13.1:t1",
+      "display_terminal_id": "13.1:t1",
+      "instance_id": "13.1",
+      "component_class_name": "Lamp",
+      "terminal_name": "t1",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N10",
+      "match_status": "matched_preferred",
+      "description": "Lamp 13.1 terminal t1 is connected on net N10 with Signal_Source 23.1, Variable_Resistor 30.2."
+    },
+    {
+      "terminal_id": "13.1:t2",
+      "display_terminal_id": "13.1:t2",
+      "instance_id": "13.1",
+      "component_class_name": "Lamp",
+      "terminal_name": "t2",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N11",
+      "match_status": "matched_preferred",
+      "description": "Lamp 13.1 terminal t2 is connected on net N11 with GND 9.1, Variable_Resistor 30.2."
+    },
+    {
+      "terminal_id": "2.1:t1",
+      "display_terminal_id": "2.1:positive",
+      "instance_id": "2.1",
+      "component_class_name": "Battery",
+      "terminal_name": "positive",
+      "semantic_terminal_name": "positive",
+      "semantic_slot": "marker_side",
+      "semantic_confidence": 0.2,
+      "semantic_evidence_type": "orientation_fallback",
+      "semantic_resolution_mode": "battery_positive_from_long_plate",
+      "semantic_role_family": "polarity",
+      "semantic_polarity": "positive",
+      "semantic_direction": null,
+      "net_id": "N1",
+      "match_status": "matched_preferred",
+      "description": "Battery 2.1 terminal positive is connected on net N1 with Fuse 8.1."
+    },
+    {
+      "terminal_id": "2.1:t2",
+      "display_terminal_id": "2.1:negative",
+      "instance_id": "2.1",
+      "component_class_name": "Battery",
+      "terminal_name": "negative",
+      "semantic_terminal_name": "negative",
+      "semantic_slot": "other_side",
+      "semantic_confidence": 0.2,
+      "semantic_evidence_type": "orientation_fallback",
+      "semantic_resolution_mode": "battery_positive_from_long_plate",
+      "semantic_role_family": "polarity",
+      "semantic_polarity": "negative",
+      "semantic_direction": null,
+      "net_id": "N3",
+      "match_status": "matched_preferred",
+      "description": "Battery 2.1 terminal negative is connected on net N3 with Analog_Meter 0.1."
+    },
+    {
+      "terminal_id": "23.1:t1",
+      "display_terminal_id": "23.1:t1",
+      "instance_id": "23.1",
+      "component_class_name": "Signal_Source",
+      "terminal_name": "t1",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N6",
+      "match_status": "matched_preferred",
+      "description": "Signal_Source 23.1 terminal t1 is connected on net N6 with Switch 25.1, Trim_Capacitor 29.1."
+    },
+    {
+      "terminal_id": "23.1:t2",
+      "display_terminal_id": "23.1:t2",
+      "instance_id": "23.1",
+      "component_class_name": "Signal_Source",
+      "terminal_name": "t2",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N10",
+      "match_status": "matched_preferred",
+      "description": "Signal_Source 23.1 terminal t2 is connected on net N10 with Lamp 13.1, Variable_Resistor 30.2."
+    },
+    {
+      "terminal_id": "25.1:t1",
+      "display_terminal_id": "25.1:t1",
+      "instance_id": "25.1",
+      "component_class_name": "Switch",
+      "terminal_name": "t1",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N2",
+      "match_status": "matched_preferred",
+      "description": "Switch 25.1 terminal t1 is connected on net N2 with Fuse 8.1, Variable_Resistor 30.1."
+    },
+    {
+      "terminal_id": "25.1:t2",
+      "display_terminal_id": "25.1:t2",
+      "instance_id": "25.1",
+      "component_class_name": "Switch",
+      "terminal_name": "t2",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N6",
+      "match_status": "matched_preferred",
+      "description": "Switch 25.1 terminal t2 is connected on net N6 with Signal_Source 23.1, Trim_Capacitor 29.1."
+    },
+    {
+      "terminal_id": "29.1:t1",
+      "display_terminal_id": "29.1:t1",
+      "instance_id": "29.1",
+      "component_class_name": "Trim_Capacitor",
+      "terminal_name": "t1",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N6",
+      "match_status": "matched_preferred",
+      "description": "Trim_Capacitor 29.1 terminal t1 is connected on net N6 with Signal_Source 23.1, Switch 25.1."
+    },
+    {
+      "terminal_id": "29.1:t2",
+      "display_terminal_id": "29.1:t2",
+      "instance_id": "29.1",
+      "component_class_name": "Trim_Capacitor",
+      "terminal_name": "t2",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N8",
+      "match_status": "matched_preferred",
+      "description": "Trim_Capacitor 29.1 terminal t2 is connected on net N8 with Diode 7.1."
+    },
+    {
+      "terminal_id": "30.1:t1",
+      "display_terminal_id": "30.1:t1",
+      "instance_id": "30.1",
+      "component_class_name": "Variable_Resistor",
+      "terminal_name": "t1",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N2",
+      "match_status": "matched_preferred",
+      "description": "Variable_Resistor 30.1 terminal t1 is connected on net N2 with Fuse 8.1, Switch 25.1."
+    },
+    {
+      "terminal_id": "30.1:t2",
+      "display_terminal_id": "30.1:t2",
+      "instance_id": "30.1",
+      "component_class_name": "Variable_Resistor",
+      "terminal_name": "t2",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N5",
+      "match_status": "matched_preferred",
+      "description": "Variable_Resistor 30.1 terminal t2 is connected on net N5 with LED 12.1."
+    },
+    {
+      "terminal_id": "30.2:t1",
+      "display_terminal_id": "30.2:t1",
+      "instance_id": "30.2",
+      "component_class_name": "Variable_Resistor",
+      "terminal_name": "t1",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N10",
+      "match_status": "matched_preferred",
+      "description": "Variable_Resistor 30.2 terminal t1 is connected on net N10 with Lamp 13.1, Signal_Source 23.1."
+    },
+    {
+      "terminal_id": "30.2:t2",
+      "display_terminal_id": "30.2:t2",
+      "instance_id": "30.2",
+      "component_class_name": "Variable_Resistor",
+      "terminal_name": "t2",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N11",
+      "match_status": "matched_preferred",
+      "description": "Variable_Resistor 30.2 terminal t2 is connected on net N11 with GND 9.1, Lamp 13.1."
+    },
+    {
+      "terminal_id": "7.1:t1",
+      "display_terminal_id": "7.1:anode",
+      "instance_id": "7.1",
+      "component_class_name": "Diode",
+      "terminal_name": "anode",
+      "semantic_terminal_name": "anode",
+      "semantic_slot": "other_side",
+      "semantic_confidence": 0.3731,
+      "semantic_evidence_type": "symbol_heuristic",
+      "semantic_resolution_mode": "diode_cathode_from_bar",
+      "semantic_role_family": "polarity",
+      "semantic_polarity": "anode",
+      "semantic_direction": null,
+      "net_id": "N8",
+      "match_status": "matched_preferred",
+      "description": "Diode 7.1 terminal anode is connected on net N8 with Trim_Capacitor 29.1."
+    },
+    {
+      "terminal_id": "7.1:t2",
+      "display_terminal_id": "7.1:cathode",
+      "instance_id": "7.1",
+      "component_class_name": "Diode",
+      "terminal_name": "cathode",
+      "semantic_terminal_name": "cathode",
+      "semantic_slot": "marker_side",
+      "semantic_confidence": 0.3731,
+      "semantic_evidence_type": "symbol_heuristic",
+      "semantic_resolution_mode": "diode_cathode_from_bar",
+      "semantic_role_family": "polarity",
+      "semantic_polarity": "cathode",
+      "semantic_direction": null,
+      "net_id": "N7",
+      "match_status": "matched_preferred",
+      "description": "Diode 7.1 terminal cathode is the only modeled terminal on net N7."
+    },
+    {
+      "terminal_id": "8.1:t1",
+      "display_terminal_id": "8.1:t1",
+      "instance_id": "8.1",
+      "component_class_name": "Fuse",
+      "terminal_name": "t1",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N1",
+      "match_status": "matched_preferred",
+      "description": "Fuse 8.1 terminal t1 is connected on net N1 with Battery 2.1."
+    },
+    {
+      "terminal_id": "8.1:t2",
+      "display_terminal_id": "8.1:t2",
+      "instance_id": "8.1",
+      "component_class_name": "Fuse",
+      "terminal_name": "t2",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N2",
+      "match_status": "matched_preferred",
+      "description": "Fuse 8.1 terminal t2 is connected on net N2 with Switch 25.1, Variable_Resistor 30.1."
+    },
+    {
+      "terminal_id": "9.1:t1",
+      "display_terminal_id": "9.1:t1",
+      "instance_id": "9.1",
+      "component_class_name": "GND",
+      "terminal_name": "t1",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N11",
+      "match_status": "matched_preferred",
+      "description": "GND 9.1 terminal t1 is connected on net N11 with Lamp 13.1, Variable_Resistor 30.2."
+    }
+  ]
+}

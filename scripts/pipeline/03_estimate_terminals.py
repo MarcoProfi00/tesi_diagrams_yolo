@@ -36,7 +36,7 @@ from estimate_terminals.strategies_opamp import snap_opamp_top_aux_to_nearby_ter
 
 #PATH / INPUT-OUTPUT
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "topology_v9.1_analog_meter_connector_transformer")
+PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "topology_v9.2_set_successivo")
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "02_assign_instances"
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "03_estimate_terminals"
@@ -47,8 +47,8 @@ CLASS_TERMINALS_PATH = PROJECT_ROOT / "metadata" / "class_terminals_v1.yaml"
 # =========================================================
 # MAIN
 # =========================================================
+# Run the entrypoint for this pipeline stage.
 def main() -> None:
-    """Esegue il punto di ingresso dello step corrente della pipeline."""
     if not INPUT_DIR.exists():
         raise FileNotFoundError(f"Cartella input non trovata: {INPUT_DIR}")
     if not CLASS_TERMINALS_PATH.exists():

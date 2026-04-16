@@ -16,8 +16,8 @@ from .probes import (
 )
 
 
+# Build three terminal support binary image.
 def _build_three_terminal_support_binary(binary, bbox):
-    """Helper interno che costruisce three terminal support binary a partire dagli input correnti della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     w = max(x2 - x1, 1)
     h = max(y2 - y1, 1)
@@ -77,21 +77,21 @@ def _build_three_terminal_support_binary(binary, bbox):
     }
 
 
+# Get three terminal working binary image.
 def get_three_terminal_working_binary(binary, bbox):
-    """Restituisce three terminal working binary per il contesto corrente della pipeline."""
     if THREE_TERMINAL_TEXT_SUPPRESS_ENABLE:
         working_binary, _ = _build_three_terminal_support_binary(binary, bbox)
         return working_binary
     return binary
 
 
+# Handle candidate mosfet orientations from bounding box.
 def candidate_mosfet_orientations_from_bbox(bbox):
-    """Gestisce candidate mosfet orientations from bbox all'interno di questo modulo della pipeline."""
     return ("left", "right", "top", "bottom")
 
 
+# Score three terminal orientation by terminal points.
 def score_three_terminal_orientation_by_terminal_points(binary, bbox, orientation, single_weight):
-    """Assegna uno score a three terminal orientation by terminal points per la selezione successiva."""
     candidate_terminals = []
     point_debug = {}
 
@@ -132,8 +132,8 @@ def score_three_terminal_orientation_by_terminal_points(binary, bbox, orientatio
     return total_score, debug
 
 
+# Score mosfet orientation by terminal points.
 def score_mosfet_orientation_by_terminal_points(binary, bbox, orientation):
-    """Assegna uno score a mosfet orientation by terminal points per la selezione successiva."""
     return score_three_terminal_orientation_by_terminal_points(
         binary,
         bbox,
@@ -145,13 +145,13 @@ def score_mosfet_orientation_by_terminal_points(binary, bbox, orientation):
 # =========================================================
 # STRATEGY: THREE-TERMINAL COMPONENTS
 # =========================================================
+# Handle is specular pair.
 def _is_specular_pair(a, b):
-    """Helper interno che restituisce se specular pair rispetta la condizione richiesta."""
     return {a, b} in ({"left", "right"}, {"top", "bottom"})
 
 
+# Resolve specular tie.
 def _resolve_specular_tie(side_a, side_b, lateral_scores, single_side_scores):
-    """Helper interno che risolve specular tie usando le euristiche configurate."""
     pair = {side_a, side_b}
 
     # Caso left/right: usa il probe gate laterale
@@ -161,8 +161,8 @@ def _resolve_specular_tie(side_a, side_b, lateral_scores, single_side_scores):
     # Caso top/bottom: usa gli score del lato singolo già calcolati
     return side_a if single_side_scores[side_a] >= single_side_scores[side_b] else side_b
 
+# Get bjt base side scores.
 def get_bjt_base_side_scores(binary, bbox):
-    """Restituisce bjt base side scores per il contesto corrente della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     width = max(x2 - x1, 1)
     height = max(y2 - y1, 1)
@@ -195,8 +195,8 @@ def get_bjt_base_side_scores(binary, bbox):
     }
 
 
+# Count three terminal semantic probe.
 def _count_three_terminal_semantic_probe(binary, cx, cy, half_w, half_h):
-    """Helper interno che gestisce count three terminal semantic probe all'interno di questo modulo della pipeline."""
     h, w = binary.shape[:2]
     xa = max(0, int(round(cx)) - half_w)
     xb = min(w, int(round(cx)) + half_w + 1)
@@ -209,8 +209,8 @@ def _count_three_terminal_semantic_probe(binary, cx, cy, half_w, half_h):
     return img_count_foreground_pixels(binary, xa, ya, xb, yb)
 
 
+# Handle three terminal arrow branch probe.
 def _three_terminal_arrow_branch_probe(binary, bbox, orientation):
-    """Helper interno che gestisce three terminal arrow branch probe all'interno di questo modulo della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     width = max(x2 - x1, 1)
     height = max(y2 - y1, 1)
@@ -224,9 +224,11 @@ def _three_terminal_arrow_branch_probe(binary, bbox, orientation):
         int(round(height * THREE_TERMINAL_ARROW_PROBE_HALFSPAN_Y_RATIO)),
     )
 
+    # Handle xr.
     def xr(ratio):
         return x1 + int(round(ratio * width))
 
+    # Handle yr.
     def yr(ratio):
         return y1 + int(round(ratio * height))
 
@@ -278,8 +280,8 @@ def _three_terminal_arrow_branch_probe(binary, bbox, orientation):
     return scores, debug
 
 
+# Handle mosfet arrow branch probe.
 def _mosfet_arrow_branch_probe(binary, bbox, orientation):
-    """Helper interno che gestisce mosfet arrow branch probe all'interno di questo modulo della pipeline."""
     outer_scores, outer_debug = _three_terminal_arrow_branch_probe(binary, bbox, orientation)
     if orientation not in {"left", "right"}:
         return outer_scores, outer_debug
@@ -297,9 +299,11 @@ def _mosfet_arrow_branch_probe(binary, bbox, orientation):
         int(round(height * THREE_TERMINAL_ARROW_PROBE_HALFSPAN_Y_RATIO)),
     )
 
+    # Handle xr.
     def xr(ratio):
         return x1 + int(round(ratio * width))
 
+    # Handle yr.
     def yr(ratio):
         return y1 + int(round(ratio * height))
 
@@ -341,8 +345,8 @@ def _mosfet_arrow_branch_probe(binary, bbox, orientation):
     }
 
 
+# Handle npn arrow branch probe.
 def _npn_arrow_branch_probe(binary, bbox, orientation):
-    """Helper interno che gestisce npn arrow branch probe all'interno di questo modulo della pipeline."""
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     width = max(x2 - x1, 1)
     height = max(y2 - y1, 1)
@@ -356,9 +360,11 @@ def _npn_arrow_branch_probe(binary, bbox, orientation):
         int(round(height * 0.10)),
     )
 
+    # Handle xr.
     def xr(ratio):
         return x1 + int(round(ratio * width))
 
+    # Handle yr.
     def yr(ratio):
         return y1 + int(round(ratio * height))
 
@@ -401,8 +407,8 @@ def _npn_arrow_branch_probe(binary, bbox, orientation):
     return scores, debug
 
 
+# Handle semantic pair confidence.
 def _semantic_pair_confidence(pair_scores, arrow_branch_position, other_branch_position):
-    """Helper interno che gestisce semantic pair confidence all'interno di questo modulo della pipeline."""
     best_score = float(pair_scores.get(arrow_branch_position, 0.0))
     second_score = float(pair_scores.get(other_branch_position, 0.0))
 
@@ -414,8 +420,8 @@ def _semantic_pair_confidence(pair_scores, arrow_branch_position, other_branch_p
     return best_score, second_score, confidence
 
 
+# Resolve three terminal semantics.
 def resolve_three_terminal_semantics(binary, bbox, orientation, terminals, meta):
-    """Risolve three terminal semantics usando le euristiche configurate."""
     semantic_strategy = meta.get("semantic_terminal_strategy")
     semantic_roles = meta.get("semantic_roles", {})
 
@@ -623,8 +629,8 @@ def resolve_three_terminal_semantics(binary, bbox, orientation, terminals, meta)
     return terminals
 
 
+# Handle strategy detect three terminal orientation.
 def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", default_orientation="right"):
-    """Gestisce strategy detect three terminal orientation all'interno di questo modulo della pipeline."""
     working_binary = binary
     support_binary_debug = {
         "enabled": False,
@@ -658,6 +664,35 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
         bbox,
         anchor_ratios=THREE_TERMINAL_ANCHOR_RATIOS
     )
+
+    bjt_base_side_scores = None
+    if class_name == "NPN_Transistor":
+        bjt_base_side_scores = get_bjt_base_side_scores(working_binary, bbox)
+        base_side_scores = {
+            "left": float(single_side_scores["left"]) + 0.35 * float(bjt_base_side_scores["left"]),
+            "right": float(single_side_scores["right"]) + 0.35 * float(bjt_base_side_scores["right"]),
+        }
+        best_base_side = "left" if base_side_scores["left"] >= base_side_scores["right"] else "right"
+        other_base_side = "right" if best_base_side == "left" else "left"
+
+        if base_side_scores[best_base_side] > base_side_scores[other_base_side] * 1.12:
+            debug_scores = dict(multi_scores)
+            debug_scores["single_side_scores"] = {
+                "top": single_side_scores["top"],
+                "bottom": single_side_scores["bottom"],
+                "left": single_side_scores["left"],
+                "right": single_side_scores["right"],
+            }
+            debug_scores["single_side_source"] = single_side_source
+            debug_scores["decision_mode"] = "npn_base_side_override"
+            debug_scores["single_side"] = best_base_side
+            debug_scores["single_side_score"] = base_side_scores[best_base_side]
+            debug_scores["second_side"] = other_base_side
+            debug_scores["second_side_score"] = base_side_scores[other_base_side]
+            debug_scores["bjt_base_side_scores"] = bjt_base_side_scores
+            debug_scores["bjt_combined_base_side_scores"] = base_side_scores
+            debug_scores["three_terminal_support_binary_debug"] = support_binary_debug
+            return best_base_side, debug_scores
 
     ordered_single = sorted(
         ("top", "bottom", "left", "right"),
@@ -819,10 +854,7 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
             generic_orientation_scores[cand] = cand_score
             generic_orientation_point_debug[cand] = cand_debug
 
-            bjt_base_side_scores = None
-            if class_name == "NPN_Transistor":
-                bjt_base_side_scores = get_bjt_base_side_scores(working_binary, bbox)
-
+            if class_name == "NPN_Transistor" and bjt_base_side_scores is not None:
                 if "left" in generic_orientation_scores:
                     generic_orientation_scores["left"] += 0.8 * bjt_base_side_scores["left"]
 
