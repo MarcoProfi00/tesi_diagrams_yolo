@@ -7,9 +7,9 @@
   },
   "summary": {
     "n_components": 6,
-    "n_terminals": 10,
-    "n_nets": 5,
-    "n_connections": 10,
+    "n_terminals": 12,
+    "n_nets": 6,
+    "n_connections": 11,
     "main_inputs": [],
     "main_outputs": [],
     "supplies": [],
@@ -25,13 +25,13 @@
         "instance_id": "9.2",
         "class_name": "GND",
         "connected_nets": [
-          "N5"
+          "N6"
         ]
       }
     ],
     "notes": [
-      "6 components, 10 terminals, 5 nets, and 10 terminal-to-net connections were summarized deterministically from the extracted topology.",
-      "2 structural pattern(s) were recorded as direct descriptive observations."
+      "6 components, 12 terminals, 6 nets, and 11 terminal-to-net connections were summarized deterministically from the extracted topology.",
+      "5 structural pattern(s) were recorded as direct descriptive observations."
     ]
   },
   "component_descriptions": [
@@ -47,33 +47,25 @@
       "evidence_type": "heuristic_inference",
       "interface_kind": null,
       "connected_nets": [
-        "N4",
-        "N5"
+        "N6"
       ],
       "connected_components": [
         {
           "instance_id": "22.1",
           "component_class_name": "Resistor",
           "via_net_ids": [
-            "N5"
-          ]
-        },
-        {
-          "instance_id": "28.1",
-          "component_class_name": "Transformer",
-          "via_net_ids": [
-            "N4"
+            "N6"
           ]
         },
         {
           "instance_id": "9.2",
           "component_class_name": "GND",
           "via_net_ids": [
-            "N5"
+            "N6"
           ]
         }
       ],
-      "natural_language": "Analog_Meter 0.1 is described as generic circuit element. It is connected to nets N4, N5 and to Resistor 22.1 via N5; Transformer 28.1 via N4; GND 9.2 via N5."
+      "natural_language": "Analog_Meter 0.1 is described as generic circuit element. It is connected to nets N6 and to Resistor 22.1 via N6; GND 9.2 via N6."
     },
     {
       "instance_id": "22.1",
@@ -88,14 +80,14 @@
       "interface_kind": null,
       "connected_nets": [
         "N3",
-        "N5"
+        "N6"
       ],
       "connected_components": [
         {
           "instance_id": "0.1",
           "component_class_name": "Analog_Meter",
           "via_net_ids": [
-            "N5"
+            "N6"
           ]
         },
         {
@@ -109,11 +101,11 @@
           "instance_id": "9.2",
           "component_class_name": "GND",
           "via_net_ids": [
-            "N5"
+            "N6"
           ]
         }
       ],
-      "natural_language": "Resistor 22.1 is described as passive component. It is connected to nets N3, N5 and to Analog_Meter 0.1 via N5; GND 9.1 via N3; GND 9.2 via N5."
+      "natural_language": "Resistor 22.1 is described as passive component. It is connected to nets N3, N6 and to Analog_Meter 0.1 via N6; GND 9.1 via N3; GND 9.2 via N6."
     },
     {
       "instance_id": "23.1",
@@ -154,16 +146,10 @@
       "interface_kind": null,
       "connected_nets": [
         "N2",
-        "N4"
+        "N4",
+        "N5"
       ],
       "connected_components": [
-        {
-          "instance_id": "0.1",
-          "component_class_name": "Analog_Meter",
-          "via_net_ids": [
-            "N4"
-          ]
-        },
         {
           "instance_id": "23.1",
           "component_class_name": "Signal_Source",
@@ -172,7 +158,7 @@
           ]
         }
       ],
-      "natural_language": "Transformer 28.1 is described as generic circuit element. It is connected to nets N2, N4 and to Analog_Meter 0.1 via N4; Signal_Source 23.1 via N2."
+      "natural_language": "Transformer 28.1 is described as generic circuit element. It is connected to nets N2, N4, N5 and to Signal_Source 23.1 via N2."
     },
     {
       "instance_id": "9.1",
@@ -211,25 +197,25 @@
       "evidence_type": "topological_fact",
       "interface_kind": null,
       "connected_nets": [
-        "N5"
+        "N6"
       ],
       "connected_components": [
         {
           "instance_id": "0.1",
           "component_class_name": "Analog_Meter",
           "via_net_ids": [
-            "N5"
+            "N6"
           ]
         },
         {
           "instance_id": "22.1",
           "component_class_name": "Resistor",
           "via_net_ids": [
-            "N5"
+            "N6"
           ]
         }
       ],
-      "natural_language": "GND 9.2 is described as ground reference. It is connected to nets N5 and to Analog_Meter 0.1 via N5; Resistor 22.1 via N5."
+      "natural_language": "GND 9.2 is described as ground reference. It is connected to nets N6 and to Analog_Meter 0.1 via N6; Resistor 22.1 via N6."
     }
   ],
   "net_descriptions": [
@@ -297,7 +283,25 @@
     },
     {
       "net_id": "N4",
-      "alias": "single_terminal_stub_N4",
+      "alias": "local_interconnect_N4",
+      "description_label": "local_interconnect",
+      "description_specificity": "low",
+      "description_basis": [
+        "The net connects a small local group without stronger semantic evidence."
+      ],
+      "confidence": 0.6,
+      "evidence_type": "heuristic_inference",
+      "connected_components": [
+        {
+          "instance_id": "28.1",
+          "component_class_name": "Transformer"
+        }
+      ],
+      "natural_language": "Net N4 is described as local interconnect. It connects Transformer 28.1."
+    },
+    {
+      "net_id": "N5",
+      "alias": "single_terminal_stub_N5",
       "description_label": "single_terminal_stub",
       "description_specificity": "high",
       "description_basis": [
@@ -307,19 +311,15 @@
       "evidence_type": "heuristic_inference",
       "connected_components": [
         {
-          "instance_id": "0.1",
-          "component_class_name": "Analog_Meter"
-        },
-        {
           "instance_id": "28.1",
           "component_class_name": "Transformer"
         }
       ],
-      "natural_language": "Net N4 is described as single terminal stub. It connects Analog_Meter 0.1, Transformer 28.1."
+      "natural_language": "Net N5 is described as single terminal stub. It connects Transformer 28.1."
     },
     {
-      "net_id": "N5",
-      "alias": "ground_return_N5",
+      "net_id": "N6",
+      "alias": "ground_return_N6",
       "description_label": "ground_return",
       "description_specificity": "high",
       "description_basis": [
@@ -341,7 +341,7 @@
           "component_class_name": "GND"
         }
       ],
-      "natural_language": "Net N5 is described as ground return. It connects Analog_Meter 0.1, Resistor 22.1, GND 9.2."
+      "natural_language": "Net N6 is described as ground return. It connects Analog_Meter 0.1, Resistor 22.1, GND 9.2."
     }
   ],
   "branch_summaries": [
@@ -356,14 +356,13 @@
       "branch_id": "B1"
     },
     {
-      "anchor_net": "N4",
+      "anchor_net": "N5",
       "branch_kind": "single_terminal_stub",
       "connected_components": [
-        "0.1",
         "28.1"
       ],
       "importance": "low",
-      "natural_language": "Net N4 forms a single terminal stub connecting Analog_Meter 0.1, Transformer 28.1.",
+      "natural_language": "Net N5 forms a single terminal stub connecting Transformer 28.1.",
       "branch_id": "B2"
     }
   ],
@@ -372,12 +371,12 @@
       "from_component": "23.1",
       "from_terminal": "23.1:t2",
       "to_component": "28.1",
-      "to_terminal": "28.1:t1",
+      "to_terminal": "28.1:t3",
       "via_net": "N2",
       "relation_type": "electrical_connection",
       "evidence_type": "topological_fact",
       "confidence": 1.0,
-      "natural_language": "Signal_Source 23.1 terminal t2 is electrically tied to Transformer 28.1 terminal t1 through net N2."
+      "natural_language": "Signal_Source 23.1 terminal t2 is electrically tied to Transformer 28.1 terminal t3 through net N2."
     },
     {
       "from_component": "22.1",
@@ -392,53 +391,42 @@
     },
     {
       "from_component": "0.1",
-      "from_terminal": "0.1:t1",
-      "to_component": "28.1",
-      "to_terminal": "28.1:t2",
-      "via_net": "N4",
-      "relation_type": "electrical_connection",
-      "evidence_type": "topological_fact",
-      "confidence": 1.0,
-      "natural_language": "Analog_Meter 0.1 terminal t1 is electrically tied to Transformer 28.1 terminal t2 through net N4."
-    },
-    {
-      "from_component": "0.1",
       "from_terminal": "0.1:t2",
       "to_component": "22.1",
       "to_terminal": "22.1:t2",
-      "via_net": "N5",
+      "via_net": "N6",
       "relation_type": "electrical_connection",
       "evidence_type": "topological_fact",
       "confidence": 1.0,
-      "natural_language": "Analog_Meter 0.1 terminal t2 is electrically tied to Resistor 22.1 terminal t2 through net N5."
+      "natural_language": "Analog_Meter 0.1 terminal t2 is electrically tied to Resistor 22.1 terminal t2 through net N6."
     },
     {
       "from_component": "0.1",
       "from_terminal": "0.1:t2",
       "to_component": "9.2",
       "to_terminal": "9.2:t1",
-      "via_net": "N5",
+      "via_net": "N6",
       "relation_type": "electrical_connection",
       "evidence_type": "topological_fact",
       "confidence": 1.0,
-      "natural_language": "Analog_Meter 0.1 terminal t2 is electrically tied to GND 9.2 terminal t1 through net N5."
+      "natural_language": "Analog_Meter 0.1 terminal t2 is electrically tied to GND 9.2 terminal t1 through net N6."
     },
     {
       "from_component": "22.1",
       "from_terminal": "22.1:t2",
       "to_component": "9.2",
       "to_terminal": "9.2:t1",
-      "via_net": "N5",
+      "via_net": "N6",
       "relation_type": "electrical_connection",
       "evidence_type": "topological_fact",
       "confidence": 1.0,
-      "natural_language": "Resistor 22.1 terminal t2 is electrically tied to GND 9.2 terminal t1 through net N5."
+      "natural_language": "Resistor 22.1 terminal t2 is electrically tied to GND 9.2 terminal t1 through net N6."
     }
   ],
   "component_relation_groups": [
     {
       "net_id": "N2",
-      "summary": "N2 is a local interconnect connecting Signal_Source 23.1 terminal t2, Transformer 28.1 terminal t1.",
+      "summary": "N2 is a local interconnect connecting Signal_Source 23.1 terminal t2, Transformer 28.1 terminal t3.",
       "connected_components": [
         "23.1",
         "28.1"
@@ -457,18 +445,8 @@
       "role_hypothesis": "ground_return"
     },
     {
-      "net_id": "N4",
-      "summary": "N4 is a single terminal stub connecting Analog_Meter 0.1 terminal t1, Transformer 28.1 terminal t2.",
-      "connected_components": [
-        "0.1",
-        "28.1"
-      ],
-      "importance": "low",
-      "role_hypothesis": "single_terminal_stub"
-    },
-    {
-      "net_id": "N5",
-      "summary": "N5 is a ground return connecting Analog_Meter 0.1 terminal t2, Resistor 22.1 terminal t2, GND 9.2 terminal t1.",
+      "net_id": "N6",
+      "summary": "N6 is a ground return connecting Analog_Meter 0.1 terminal t2, Resistor 22.1 terminal t2, GND 9.2 terminal t1.",
       "connected_components": [
         "0.1",
         "22.1",
@@ -481,6 +459,13 @@
   "functional_paths": [],
   "structural_patterns": [
     {
+      "pattern_type": "multiple_terminals_same_net",
+      "target": "28.1",
+      "description": "Transformer 28.1 has terminals 28.1:t1, 28.1:t2 on the same net N4.",
+      "net_id": "N4",
+      "evidence_type": "topological_fact"
+    },
+    {
       "pattern_type": "single_terminal_stub",
       "target": "N1",
       "description": "Net N1 currently touches only Signal_Source 23.1 terminal t1.",
@@ -488,8 +473,20 @@
     },
     {
       "pattern_type": "single_terminal_stub",
-      "target": "N4",
-      "description": "Net N4 currently touches only Transformer 28.1 terminal t2.",
+      "target": "N5",
+      "description": "Net N5 currently touches only Transformer 28.1 terminal t4.",
+      "evidence_type": "topological_fact"
+    },
+    {
+      "pattern_type": "suspicious_terminal_match",
+      "target": "0.1:t1",
+      "description": "Analog_Meter 0.1 terminal t1 was flagged as a suspicious terminal-to-net match.",
+      "evidence_type": "topological_fact"
+    },
+    {
+      "pattern_type": "unmatched_terminal",
+      "target": "0.1:t1",
+      "description": "Analog_Meter 0.1 terminal t1 is unmatched.",
       "evidence_type": "topological_fact"
     }
   ],
@@ -508,9 +505,9 @@
       "semantic_role_family": null,
       "semantic_polarity": null,
       "semantic_direction": null,
-      "net_id": "N4",
-      "match_status": "matched_single",
-      "description": "Analog_Meter 0.1 terminal t1 is connected on net N4 with Transformer 28.1."
+      "net_id": null,
+      "match_status": "unmatched",
+      "description": "Analog_Meter 0.1 terminal t1 is currently unmatched to any net."
     },
     {
       "terminal_id": "0.1:t2",
@@ -526,9 +523,9 @@
       "semantic_role_family": null,
       "semantic_polarity": null,
       "semantic_direction": null,
-      "net_id": "N5",
-      "match_status": "matched_preferred",
-      "description": "Analog_Meter 0.1 terminal t2 is connected on net N5 with GND 9.2, Resistor 22.1."
+      "net_id": "N6",
+      "match_status": "matched_single",
+      "description": "Analog_Meter 0.1 terminal t2 is connected on net N6 with GND 9.2, Resistor 22.1."
     },
     {
       "terminal_id": "22.1:t1",
@@ -562,9 +559,9 @@
       "semantic_role_family": null,
       "semantic_polarity": null,
       "semantic_direction": null,
-      "net_id": "N5",
+      "net_id": "N6",
       "match_status": "matched_preferred",
-      "description": "Resistor 22.1 terminal t2 is connected on net N5 with Analog_Meter 0.1, GND 9.2."
+      "description": "Resistor 22.1 terminal t2 is connected on net N6 with Analog_Meter 0.1, GND 9.2."
     },
     {
       "terminal_id": "23.1:t1",
@@ -616,9 +613,9 @@
       "semantic_role_family": null,
       "semantic_polarity": null,
       "semantic_direction": null,
-      "net_id": "N2",
+      "net_id": "N4",
       "match_status": "matched_preferred",
-      "description": "Transformer 28.1 terminal t1 is connected on net N2 with Signal_Source 23.1."
+      "description": "Transformer 28.1 terminal t1 is connected on net N4 with Transformer 28.1."
     },
     {
       "terminal_id": "28.1:t2",
@@ -636,7 +633,43 @@
       "semantic_direction": null,
       "net_id": "N4",
       "match_status": "matched_preferred",
-      "description": "Transformer 28.1 terminal t2 is connected on net N4 with Analog_Meter 0.1."
+      "description": "Transformer 28.1 terminal t2 is connected on net N4 with Transformer 28.1."
+    },
+    {
+      "terminal_id": "28.1:t3",
+      "display_terminal_id": "28.1:t3",
+      "instance_id": "28.1",
+      "component_class_name": "Transformer",
+      "terminal_name": "t3",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N2",
+      "match_status": "matched_preferred",
+      "description": "Transformer 28.1 terminal t3 is connected on net N2 with Signal_Source 23.1."
+    },
+    {
+      "terminal_id": "28.1:t4",
+      "display_terminal_id": "28.1:t4",
+      "instance_id": "28.1",
+      "component_class_name": "Transformer",
+      "terminal_name": "t4",
+      "semantic_terminal_name": null,
+      "semantic_slot": null,
+      "semantic_confidence": null,
+      "semantic_evidence_type": null,
+      "semantic_resolution_mode": null,
+      "semantic_role_family": null,
+      "semantic_polarity": null,
+      "semantic_direction": null,
+      "net_id": "N5",
+      "match_status": "matched_preferred",
+      "description": "Transformer 28.1 terminal t4 is the only modeled terminal on net N5."
     },
     {
       "terminal_id": "9.1:t1",
@@ -670,9 +703,9 @@
       "semantic_role_family": null,
       "semantic_polarity": null,
       "semantic_direction": null,
-      "net_id": "N5",
+      "net_id": "N6",
       "match_status": "matched_preferred",
-      "description": "GND 9.2 terminal t1 is connected on net N5 with Analog_Meter 0.1, Resistor 22.1."
+      "description": "GND 9.2 terminal t1 is connected on net N6 with Analog_Meter 0.1, Resistor 22.1."
     }
   ]
 }

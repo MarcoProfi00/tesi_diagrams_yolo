@@ -61,7 +61,7 @@
     ],
     "notes": [
       "13 components, 24 terminals, 11 nets, and 24 terminal-to-net connections were summarized deterministically from the extracted topology.",
-      "4 structural pattern(s) were recorded as direct descriptive observations."
+      "3 structural pattern(s) were recorded as direct descriptive observations."
     ]
   },
   "component_descriptions": [
@@ -712,13 +712,13 @@
     },
     {
       "net_id": "N9",
-      "alias": "single_terminal_stub_N9",
-      "description_label": "single_terminal_stub",
-      "description_specificity": "high",
+      "alias": "local_interconnect_N9",
+      "description_label": "local_interconnect",
+      "description_specificity": "low",
       "description_basis": [
-        "Only one modeled terminal reaches this net."
+        "The net connects a small local group without stronger semantic evidence."
       ],
-      "confidence": 0.96,
+      "confidence": 0.6,
       "evidence_type": "heuristic_inference",
       "connected_components": [
         {
@@ -730,7 +730,7 @@
           "component_class_name": "Switch"
         }
       ],
-      "natural_language": "Net N9 is described as single terminal stub. It connects Lamp 13.1, Switch 25.1."
+      "natural_language": "Net N9 is described as local interconnect. It connects Lamp 13.1, Switch 25.1."
     },
     {
       "net_id": "N10",
@@ -812,17 +812,6 @@
       "importance": "low",
       "natural_language": "Net N11 forms a single terminal stub connecting GND 9.5.",
       "branch_id": "B4"
-    },
-    {
-      "anchor_net": "N9",
-      "branch_kind": "single_terminal_stub",
-      "connected_components": [
-        "13.1",
-        "25.1"
-      ],
-      "importance": "low",
-      "natural_language": "Net N9 forms a single terminal stub connecting Lamp 13.1, Switch 25.1.",
-      "branch_id": "B5"
     }
   ],
   "component_to_component_relations": [
@@ -1078,13 +1067,13 @@
     },
     {
       "net_id": "N9",
-      "summary": "N9 is a single terminal stub connecting Lamp 13.1 terminal t1, Switch 25.1 terminal t2.",
+      "summary": "N9 is a local interconnect connecting Lamp 13.1 terminal t1, Switch 25.1 terminal t2.",
       "connected_components": [
         "13.1",
         "25.1"
       ],
       "importance": "low",
-      "role_hypothesis": "single_terminal_stub"
+      "role_hypothesis": "local_interconnect"
     }
   ],
   "functional_paths": [
@@ -1320,12 +1309,6 @@
       "target": "N11",
       "description": "Net N11 currently touches only GND 9.5 terminal t1.",
       "evidence_type": "topological_fact"
-    },
-    {
-      "pattern_type": "single_terminal_stub",
-      "target": "N9",
-      "description": "Net N9 currently touches only Switch 25.1 terminal t2.",
-      "evidence_type": "topological_fact"
     }
   ],
   "terminal_facts": [
@@ -1337,9 +1320,9 @@
       "terminal_name": "anode",
       "semantic_terminal_name": "anode",
       "semantic_slot": "other_side",
-      "semantic_confidence": 0.9051,
-      "semantic_evidence_type": "orientation_fallback",
-      "semantic_resolution_mode": "diode_cathode_from_bar_vertical_led_fallback",
+      "semantic_confidence": 0.1881,
+      "semantic_evidence_type": "symbol_heuristic",
+      "semantic_resolution_mode": "diode_cathode_from_bar",
       "semantic_role_family": "polarity",
       "semantic_polarity": "anode",
       "semantic_direction": null,
@@ -1355,9 +1338,9 @@
       "terminal_name": "cathode",
       "semantic_terminal_name": "cathode",
       "semantic_slot": "marker_side",
-      "semantic_confidence": 0.9051,
-      "semantic_evidence_type": "orientation_fallback",
-      "semantic_resolution_mode": "diode_cathode_from_bar_vertical_led_fallback",
+      "semantic_confidence": 0.1881,
+      "semantic_evidence_type": "symbol_heuristic",
+      "semantic_resolution_mode": "diode_cathode_from_bar",
       "semantic_role_family": "polarity",
       "semantic_polarity": "cathode",
       "semantic_direction": null,
@@ -1488,7 +1471,7 @@
       "semantic_polarity": null,
       "semantic_direction": null,
       "net_id": "N5",
-      "match_status": "matched_single",
+      "match_status": "matched_preferred",
       "description": "Switch 25.1 terminal t1 is connected on net N5 with Capacitor 4.1, Connector 5.1."
     },
     {
@@ -1506,7 +1489,7 @@
       "semantic_polarity": null,
       "semantic_direction": null,
       "net_id": "N9",
-      "match_status": "matched_single",
+      "match_status": "matched_preferred",
       "description": "Switch 25.1 terminal t2 is connected on net N9 with Lamp 13.1."
     },
     {

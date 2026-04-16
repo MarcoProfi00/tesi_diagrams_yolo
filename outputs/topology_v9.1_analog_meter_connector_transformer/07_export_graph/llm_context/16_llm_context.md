@@ -7,7 +7,7 @@ The topology contains 9 components, 17 terminals, 8 nets, and 17 terminal-to-net
 Explicit ground references: GND 9.1, GND 9.2, GND 9.3.
 
 # Main Branches
-- `N2` (single_terminal_stub, importance=low): Net N2 forms a single terminal stub connecting Switch 25.1, Connector 5.1.
+- No branch summary was produced from the current topology.
 
 # Component Descriptions
 - `12.1` (LED): generic circuit element [specificity=low, confidence=0.55] LED 12.1 is described as generic circuit element. It is connected to nets N7, N8 and to Lamp 13.1 via N8; Resistor 22.2 via N7; GND 9.3 via N8.
@@ -22,7 +22,7 @@ Explicit ground references: GND 9.1, GND 9.2, GND 9.3.
 
 # Net Descriptions
 - `N1`: ground return [specificity=high, confidence=1.00] Basis: An explicit ground symbol is attached to this net.
-- `N2`: single terminal stub [specificity=high, confidence=0.96] Basis: Only one modeled terminal reaches this net.
+- `N2`: local interconnect [specificity=low, confidence=0.60] Basis: The net connects a small local group without stronger semantic evidence.
 - `N3`: ground return [specificity=high, confidence=1.00] Basis: An explicit ground symbol is attached to this net.
 - `N4`: local interconnect [specificity=low, confidence=0.60] Basis: The net connects a small local group without stronger semantic evidence.
 - `N5`: local interconnect [specificity=low, confidence=0.60] Basis: The net connects a small local group without stronger semantic evidence.
@@ -32,7 +32,7 @@ Explicit ground references: GND 9.1, GND 9.2, GND 9.3.
 
 # Aggregated Relations
 - `N1`: N1 is a ground return connecting Switch 25.1 terminal t1, GND 9.1 terminal t1.
-- `N2`: N2 is a single terminal stub connecting Switch 25.1 terminal t2, Connector 5.1 pin3.
+- `N2`: N2 is a local interconnect connecting Switch 25.1 terminal t2, Connector 5.1 pin3.
 - `N3`: N3 is a ground return connecting Connector 5.1 pin4, GND 9.2 terminal t1.
 - `N4`: N4 is a local interconnect connecting Resistor 22.2 terminal t1, Connector 5.1 pin1.
 - `N5`: N5 is a local interconnect connecting Resistor 22.1 terminal t1, Connector 5.1 pin2.
@@ -42,11 +42,11 @@ Explicit ground references: GND 9.1, GND 9.2, GND 9.3.
 
 # Functional Paths
 - `P1` `ground_to_device_path`: Ground to device path: GND 9.1 -> N1 (ground return) -> Switch 25.1. Confidence: 0.68 (heuristic_inference).
-- `P2` `ground_to_device_path`: Ground to device path: GND 9.2 -> N3 (ground return) -> Connector 5.1 -> N2 (single terminal stub) -> Switch 25.1. Confidence: 0.68 (heuristic_inference).
-- `P3` `ground_to_device_path`: Ground to device path: GND 9.3 -> N8 (ground return) -> LED 12.1 -> N7 (local interconnect) -> Resistor 22.2 -> N4 (local interconnect) -> Connector 5.1 -> N2 (single terminal stub) -> Switch 25.1. Confidence: 0.68 (heuristic_inference).
+- `P2` `ground_to_device_path`: Ground to device path: GND 9.2 -> N3 (ground return) -> Connector 5.1 -> N2 (local interconnect) -> Switch 25.1. Confidence: 0.68 (heuristic_inference).
+- `P3` `ground_to_device_path`: Ground to device path: GND 9.3 -> N8 (ground return) -> LED 12.1 -> N7 (local interconnect) -> Resistor 22.2 -> N4 (local interconnect) -> Connector 5.1 -> N2 (local interconnect) -> Switch 25.1. Confidence: 0.68 (heuristic_inference).
 
 # Structural Patterns
-- `single_terminal_stub` on `N2`: Net N2 currently touches only Switch 25.1 terminal t2.
+- No structural pattern was recorded from the current topology.
 
 # Terminal Facts
 - `12.1:anode`: LED 12.1 terminal anode is connected on net N7 with Resistor 22.2.

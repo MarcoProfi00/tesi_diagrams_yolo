@@ -37,8 +37,7 @@
       }
     ],
     "notes": [
-      "9 components, 17 terminals, 8 nets, and 17 terminal-to-net connections were summarized deterministically from the extracted topology.",
-      "1 structural pattern(s) were recorded as direct descriptive observations."
+      "9 components, 17 terminals, 8 nets, and 17 terminal-to-net connections were summarized deterministically from the extracted topology."
     ]
   },
   "component_descriptions": [
@@ -378,13 +377,13 @@
     },
     {
       "net_id": "N2",
-      "alias": "single_terminal_stub_N2",
-      "description_label": "single_terminal_stub",
-      "description_specificity": "high",
+      "alias": "local_interconnect_N2",
+      "description_label": "local_interconnect",
+      "description_specificity": "low",
       "description_basis": [
-        "Only one modeled terminal reaches this net."
+        "The net connects a small local group without stronger semantic evidence."
       ],
-      "confidence": 0.96,
+      "confidence": 0.6,
       "evidence_type": "heuristic_inference",
       "connected_components": [
         {
@@ -396,7 +395,7 @@
           "component_class_name": "Connector"
         }
       ],
-      "natural_language": "Net N2 is described as single terminal stub. It connects Switch 25.1, Connector 5.1."
+      "natural_language": "Net N2 is described as local interconnect. It connects Switch 25.1, Connector 5.1."
     },
     {
       "net_id": "N3",
@@ -535,19 +534,7 @@
       "natural_language": "Net N8 is described as ground return. It connects LED 12.1, Lamp 13.1, GND 9.3."
     }
   ],
-  "branch_summaries": [
-    {
-      "anchor_net": "N2",
-      "branch_kind": "single_terminal_stub",
-      "connected_components": [
-        "25.1",
-        "5.1"
-      ],
-      "importance": "low",
-      "natural_language": "Net N2 forms a single terminal stub connecting Switch 25.1, Connector 5.1.",
-      "branch_id": "B1"
-    }
-  ],
+  "branch_summaries": [],
   "component_to_component_relations": [
     {
       "from_component": "25.1",
@@ -673,13 +660,13 @@
     },
     {
       "net_id": "N2",
-      "summary": "N2 is a single terminal stub connecting Switch 25.1 terminal t2, Connector 5.1 pin3.",
+      "summary": "N2 is a local interconnect connecting Switch 25.1 terminal t2, Connector 5.1 pin3.",
       "connected_components": [
         "25.1",
         "5.1"
       ],
       "importance": "low",
-      "role_hypothesis": "single_terminal_stub"
+      "role_hypothesis": "local_interconnect"
     },
     {
       "net_id": "N3",
@@ -800,8 +787,8 @@
         {
           "node_type": "net",
           "id": "N2",
-          "label": "N2 (single terminal stub)",
-          "role_hypothesis": "single_terminal_stub"
+          "label": "N2 (local interconnect)",
+          "role_hypothesis": "local_interconnect"
         },
         {
           "node_type": "component",
@@ -812,7 +799,7 @@
       ],
       "confidence": 0.68,
       "evidence_type": "heuristic_inference",
-      "natural_language": "Ground to device path: GND 9.2 -> N3 (ground return) -> Connector 5.1 -> N2 (single terminal stub) -> Switch 25.1."
+      "natural_language": "Ground to device path: GND 9.2 -> N3 (ground return) -> Connector 5.1 -> N2 (local interconnect) -> Switch 25.1."
     },
     {
       "path_id": "P3",
@@ -865,8 +852,8 @@
         {
           "node_type": "net",
           "id": "N2",
-          "label": "N2 (single terminal stub)",
-          "role_hypothesis": "single_terminal_stub"
+          "label": "N2 (local interconnect)",
+          "role_hypothesis": "local_interconnect"
         },
         {
           "node_type": "component",
@@ -877,17 +864,10 @@
       ],
       "confidence": 0.68,
       "evidence_type": "heuristic_inference",
-      "natural_language": "Ground to device path: GND 9.3 -> N8 (ground return) -> LED 12.1 -> N7 (local interconnect) -> Resistor 22.2 -> N4 (local interconnect) -> Connector 5.1 -> N2 (single terminal stub) -> Switch 25.1."
+      "natural_language": "Ground to device path: GND 9.3 -> N8 (ground return) -> LED 12.1 -> N7 (local interconnect) -> Resistor 22.2 -> N4 (local interconnect) -> Connector 5.1 -> N2 (local interconnect) -> Switch 25.1."
     }
   ],
-  "structural_patterns": [
-    {
-      "pattern_type": "single_terminal_stub",
-      "target": "N2",
-      "description": "Net N2 currently touches only Switch 25.1 terminal t2.",
-      "evidence_type": "topological_fact"
-    }
-  ],
+  "structural_patterns": [],
   "terminal_facts": [
     {
       "terminal_id": "12.1:t1",
@@ -897,7 +877,7 @@
       "terminal_name": "anode",
       "semantic_terminal_name": "anode",
       "semantic_slot": "other_side",
-      "semantic_confidence": 0.1458,
+      "semantic_confidence": 0.1541,
       "semantic_evidence_type": "symbol_heuristic",
       "semantic_resolution_mode": "diode_cathode_from_bar",
       "semantic_role_family": "polarity",
@@ -915,7 +895,7 @@
       "terminal_name": "cathode",
       "semantic_terminal_name": "cathode",
       "semantic_slot": "marker_side",
-      "semantic_confidence": 0.1458,
+      "semantic_confidence": 0.1541,
       "semantic_evidence_type": "symbol_heuristic",
       "semantic_resolution_mode": "diode_cathode_from_bar",
       "semantic_role_family": "polarity",
@@ -1066,7 +1046,7 @@
       "semantic_polarity": null,
       "semantic_direction": null,
       "net_id": "N2",
-      "match_status": "matched_single",
+      "match_status": "matched_preferred",
       "description": "Switch 25.1 terminal t2 is connected on net N2 with Connector 5.1."
     },
     {

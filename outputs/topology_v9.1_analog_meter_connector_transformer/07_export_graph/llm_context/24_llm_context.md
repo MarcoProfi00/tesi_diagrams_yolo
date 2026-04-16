@@ -12,7 +12,6 @@ Explicit ground references: GND 9.1, GND 9.2, GND 9.3, GND 9.4, GND 9.5.
 - `N5` (shared_internal_branch, importance=medium): Net N5 forms a shared internal branch connecting Switch 25.1, Capacitor 4.1, Connector 5.1.
 - `N10` (single_terminal_stub, importance=low): Net N10 forms a single terminal stub connecting Lamp 13.1.
 - `N11` (single_terminal_stub, importance=low): Net N11 forms a single terminal stub connecting GND 9.5.
-- `N9` (single_terminal_stub, importance=low): Net N9 forms a single terminal stub connecting Lamp 13.1, Switch 25.1.
 
 # Component Descriptions
 - `12.1` (LED): generic circuit element [specificity=low, confidence=0.55] LED 12.1 is described as generic circuit element. It is connected to nets N7, N8 and to Resistor 22.1 via N7; GND 9.4 via N8.
@@ -38,7 +37,7 @@ Explicit ground references: GND 9.1, GND 9.2, GND 9.3, GND 9.4, GND 9.5.
 - `N6`: ground return [specificity=high, confidence=1.00] Basis: An explicit ground symbol is attached to this net.
 - `N7`: local interconnect [specificity=low, confidence=0.60] Basis: The net connects a small local group without stronger semantic evidence.
 - `N8`: ground return [specificity=high, confidence=1.00] Basis: An explicit ground symbol is attached to this net.
-- `N9`: single terminal stub [specificity=high, confidence=0.96] Basis: Only one modeled terminal reaches this net.
+- `N9`: local interconnect [specificity=low, confidence=0.60] Basis: The net connects a small local group without stronger semantic evidence.
 - `N10`: single terminal stub [specificity=high, confidence=0.96] Basis: Only one modeled terminal reaches this net.
 - `N11`: single terminal stub [specificity=high, confidence=0.96] Basis: Only one modeled terminal reaches this net.
 
@@ -62,7 +61,6 @@ Explicit ground references: GND 9.1, GND 9.2, GND 9.3, GND 9.4, GND 9.5.
 - `multiple_terminals_same_net` on `5.1`: Connector 5.1 has terminals 5.1:pin2, 5.1:pin3 on the same net N5.
 - `single_terminal_stub` on `N10`: Net N10 currently touches only Lamp 13.1 terminal t2.
 - `single_terminal_stub` on `N11`: Net N11 currently touches only GND 9.5 terminal t1.
-- `single_terminal_stub` on `N9`: Net N9 currently touches only Switch 25.1 terminal t2.
 
 # Terminal Facts
 - `12.1:anode`: LED 12.1 terminal anode is connected on net N7 with Resistor 22.1.
