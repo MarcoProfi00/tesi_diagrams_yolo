@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 
 from .config import TERMINAL_OUTWARD_OFFSET
 from .geometry import geom_clamp_bbox_to_image
@@ -118,6 +119,7 @@ def _find_circular_holes(binary, box, min_area=25.0, max_area=320.0):
     holes = []
     box_w = max(x2 - x1, 1)
     box_h = max(y2 - y1, 1)
+
     for cnt in contours:
         hx, hy, hw, hh = cv2.boundingRect(cnt)
         if hw < 6 or hh < 6 or hw > 26 or hh > 26:
@@ -134,6 +136,7 @@ def _find_circular_holes(binary, box, min_area=25.0, max_area=320.0):
         perimeter = float(cv2.arcLength(cnt, True))
         if perimeter <= 0.0:
             continue
+
         circularity = 4.0 * 3.141592653589793 * area / float(perimeter * perimeter)
         if circularity < 0.35:
             continue
@@ -145,6 +148,9 @@ def _find_circular_holes(binary, box, min_area=25.0, max_area=320.0):
         if not (0.10 <= norm_x <= 0.90 and 0.08 <= norm_y <= 0.92):
             continue
 
+        radius = float(max(hw, hh) / 2.0)
+        ring_metrics = _measure_meter_post_ring(binary, cx, cy, radius)
+
         holes.append({
             "cx": cx,
             "cy": cy,
@@ -152,9 +158,21 @@ def _find_circular_holes(binary, box, min_area=25.0, max_area=320.0):
             "height": int(hh),
             "area": float(area),
             "circularity": round(float(circularity), 4),
+            **ring_metrics,
         })
 
-    holes = sorted(holes, key=lambda hole: float(hole["area"]), reverse=True)
+    holes = sorted(
+        holes,
+        key=lambda hole: (
+            float(hole.get("ring_score", -999.0)),
+            float(hole.get("annulus_fill_ratio", 0.0)),
+            -float(hole.get("center_fill_ratio", 1.0)),
+            float(hole.get("circularity", 0.0)),
+            float(hole.get("area", 0.0)),
+        ),
+        reverse=True,
+    )
+
     selected = []
     for hole in holes:
         if all(
@@ -163,8 +181,9 @@ def _find_circular_holes(binary, box, min_area=25.0, max_area=320.0):
             for other in selected
         ):
             selected.append(hole)
-        if len(selected) == 3:
+        if len(selected) == 6:
             break
+
     return selected
 
 
@@ -177,6 +196,117 @@ def _count_roi_nonzero(roi, xa, ya, xb, yb):
     if xb <= xa or yb <= ya:
         return 0
     return int(cv2.countNonZero(roi[ya:yb, xa:xb]))
+
+def _masked_fill_ratio(roi, mask):
+    mask_area = int(cv2.countNonZero(mask))
+    if mask_area <= 0:
+        return 0.0
+    masked = cv2.bitwise_and(roi, roi, mask=mask)
+    return float(cv2.countNonZero(masked)) / float(mask_area)
+
+
+def _measure_meter_post_ring(binary, cx, cy, radius):
+    cx_i = int(round(float(cx)))
+    cy_i = int(round(float(cy)))
+    radius_i = max(5, int(round(float(radius))))
+
+    pad = max(12, int(round(radius_i * 2.2)))
+    xa = max(0, cx_i - pad)
+    xb = min(binary.shape[1], cx_i + pad + 1)
+    ya = max(0, cy_i - pad)
+    yb = min(binary.shape[0], cy_i + pad + 1)
+
+    roi = binary[ya:yb, xa:xb]
+    if roi.size == 0:
+        return {
+            "center_fill_ratio": 1.0,
+            "annulus_fill_ratio": 0.0,
+            "halo_fill_ratio": 1.0,
+            "ring_score": -1.0,
+        }
+
+    local_cx = int(cx_i - xa)
+    local_cy = int(cy_i - ya)
+
+    center_r = max(2, int(round(radius_i * 0.40)))
+    inner_r = max(center_r + 1, int(round(radius_i * 0.68)))
+    outer_r = max(inner_r + 2, int(round(radius_i * 1.20)))
+    halo_r = max(outer_r + 2, int(round(radius_i * 1.70)))
+
+    center_mask = np.zeros(roi.shape[:2], dtype=np.uint8)
+    inner_mask = np.zeros_like(center_mask)
+    outer_mask = np.zeros_like(center_mask)
+    halo_mask_full = np.zeros_like(center_mask)
+
+    cv2.circle(center_mask, (local_cx, local_cy), center_r, 255, -1)
+    cv2.circle(inner_mask, (local_cx, local_cy), inner_r, 255, -1)
+    cv2.circle(outer_mask, (local_cx, local_cy), outer_r, 255, -1)
+    cv2.circle(halo_mask_full, (local_cx, local_cy), halo_r, 255, -1)
+
+    annulus_mask = cv2.subtract(outer_mask, inner_mask)
+    halo_mask = cv2.subtract(halo_mask_full, outer_mask)
+
+    center_fill_ratio = _masked_fill_ratio(roi, center_mask)
+    annulus_fill_ratio = _masked_fill_ratio(roi, annulus_mask)
+    halo_fill_ratio = _masked_fill_ratio(roi, halo_mask)
+
+    ring_score = (
+        1.25 * float(annulus_fill_ratio)
+        - 1.35 * float(center_fill_ratio)
+        - 0.30 * float(halo_fill_ratio)
+    )
+
+    return {
+        "center_fill_ratio": round(float(center_fill_ratio), 4),
+        "annulus_fill_ratio": round(float(annulus_fill_ratio), 4),
+        "halo_fill_ratio": round(float(halo_fill_ratio), 4),
+        "ring_score": round(float(ring_score), 4),
+    }
+
+
+def _compute_meter_candidate_quality(candidate):
+    ring_score = float(candidate.get("ring_score", -1.0))
+    annulus_fill = float(candidate.get("annulus_fill_ratio", 0.0))
+    center_fill = float(candidate.get("center_fill_ratio", 1.0))
+    halo_fill = float(candidate.get("halo_fill_ratio", 1.0))
+    best_support = float(candidate.get("best_support", 0.0))
+    source_bonus = 18.0 if candidate.get("source") == "contour_hole" else 0.0
+
+    quality_score = (
+        90.0 * ring_score
+        + 26.0 * annulus_fill
+        - 18.0 * center_fill
+        - 8.0 * halo_fill
+        + 0.55 * best_support
+        + source_bonus
+    )
+    return round(float(quality_score), 4)
+
+
+def _is_valid_meter_post_candidate(candidate):
+    source = candidate.get("source")
+    center_fill = float(candidate.get("center_fill_ratio", 1.0))
+    annulus_fill = float(candidate.get("annulus_fill_ratio", 0.0))
+    halo_fill = float(candidate.get("halo_fill_ratio", 1.0))
+    ring_score = float(candidate.get("ring_score", -1.0))
+    quality_score = float(candidate.get("quality_score", -999.0))
+
+    if source == "contour_hole":
+        return (
+            center_fill <= 0.42
+            and annulus_fill >= 0.16
+            and halo_fill <= 0.72
+            and ring_score >= -0.03
+            and quality_score >= 8.0
+        )
+
+    return (
+        center_fill <= 0.34
+        and annulus_fill >= 0.22
+        and halo_fill <= 0.62
+        and ring_score >= 0.04
+        and quality_score >= 16.0
+    )
 
 
 # Handle hough circle support.
@@ -249,65 +379,6 @@ def _choose_same_edge_pair(circles, box_w, box_h):
                     best_score = key
 
     return list(best_pair) if best_pair is not None else None
-
-
-# Choose best circle pair.
-def _choose_best_circle_pair(circles, box_w, box_h):
-    if len(circles) < 2:
-        return circles[:2]
-
-    same_edge_pair = _choose_same_edge_pair(circles, box_w, box_h)
-    if same_edge_pair is not None:
-        return same_edge_pair
-
-    best_pair = None
-    best_score = None
-
-    for idx_a in range(len(circles)):
-        for idx_b in range(idx_a + 1, len(circles)):
-            circ_a = circles[idx_a]
-            circ_b = circles[idx_b]
-            dx = abs(float(circ_a["cx"]) - float(circ_b["cx"]))
-            dy = abs(float(circ_a["cy"]) - float(circ_b["cy"]))
-            main_sep = max(dx, dy)
-            cross_sep = min(dx, dy)
-            if main_sep < 12.0:
-                continue
-            if cross_sep > 0.25 * main_sep + 4.0:
-                continue
-
-            pair_score = (
-                float(circ_a["support"]) +
-                float(circ_b["support"]) +
-                0.15 * float(main_sep) -
-                0.05 * float(cross_sep)
-            )
-            key = (
-                round(pair_score, 4),
-                round(float(main_sep), 4),
-                -round(float(cross_sep), 4),
-            )
-            if best_pair is None or key > best_score:
-                best_pair = (circ_a, circ_b)
-                best_score = key
-
-    if best_pair is not None:
-        return list(best_pair)
-
-    best_pair = None
-    best_distance = -1.0
-    for idx_a in range(len(circles)):
-        for idx_b in range(idx_a + 1, len(circles)):
-            circ_a = circles[idx_a]
-            circ_b = circles[idx_b]
-            dx = float(circ_a["cx"]) - float(circ_b["cx"])
-            dy = float(circ_a["cy"]) - float(circ_b["cy"])
-            distance_sq = dx * dx + dy * dy
-            if distance_sq > best_distance:
-                best_pair = (circ_a, circ_b)
-                best_distance = distance_sq
-    return list(best_pair) if best_pair is not None else circles[:2]
-
 
 # Find hough post circles.
 def _find_hough_post_circles(binary, box):
@@ -383,19 +454,44 @@ def _find_hough_post_circles(binary, box):
 # Handle merge meter post candidates.
 def _merge_meter_post_candidates(candidates):
     merged = []
+
     for cand in candidates:
         merged_into_existing = False
+
         for existing in merged:
             if (
                 abs(float(cand["cx"]) - float(existing["cx"])) <= 8.0
                 and abs(float(cand["cy"]) - float(existing["cy"])) <= 8.0
             ):
-                if float(cand.get("support", 0.0)) > float(existing.get("support", 0.0)):
+                cand_is_contour = cand.get("source") == "contour_hole"
+                existing_is_contour = existing.get("source") == "contour_hole"
+
+                replace_existing = False
+                if cand_is_contour and not existing_is_contour:
+                    replace_existing = True
+                elif cand_is_contour == existing_is_contour:
+                    cand_key = (
+                        float(cand.get("ring_score", -999.0)),
+                        float(cand.get("support", 0.0)),
+                        float(cand.get("area", 0.0)),
+                    )
+                    existing_key = (
+                        float(existing.get("ring_score", -999.0)),
+                        float(existing.get("support", 0.0)),
+                        float(existing.get("area", 0.0)),
+                    )
+                    if cand_key > existing_key:
+                        replace_existing = True
+
+                if replace_existing:
                     existing.update(cand)
+
                 merged_into_existing = True
                 break
+
         if not merged_into_existing:
             merged.append(dict(cand))
+
     return merged
 
 
@@ -422,14 +518,22 @@ def _build_meter_post_candidates(binary, search_box, holes):
     box_w = max(int(x2 - x1 + 1), 1)
     box_h = max(int(y2 - y1 + 1), 1)
 
-    candidates = []
+    raw_candidates = []
+
     for hole in holes:
         local_cx = float(hole["cx"]) - float(x1)
         local_cy = float(hole["cy"]) - float(y1)
         eligible_edges, edge_distances = _eligible_edges_for_point(local_cx, local_cy, box_w, box_h)
         nearest_edge = min(edge_distances, key=edge_distances.get)
 
-        candidates.append({
+        ring_metrics = {
+            "center_fill_ratio": float(hole.get("center_fill_ratio", 1.0)),
+            "annulus_fill_ratio": float(hole.get("annulus_fill_ratio", 0.0)),
+            "halo_fill_ratio": float(hole.get("halo_fill_ratio", 1.0)),
+            "ring_score": float(hole.get("ring_score", -1.0)),
+        }
+
+        raw_candidates.append({
             "cx": float(hole["cx"]),
             "cy": float(hole["cy"]),
             "radius": float(max(hole.get("width", 0), hole.get("height", 0)) / 2.0),
@@ -440,91 +544,54 @@ def _build_meter_post_candidates(binary, search_box, holes):
             "nearest_edge": nearest_edge,
             "edge_distance": float(edge_distances[nearest_edge]),
             "area": float(hole.get("area", 0.0)),
+            **ring_metrics,
         })
 
     for circle in _find_hough_post_circles(binary, search_box):
         local_cx = float(circle["cx"]) - float(x1)
         local_cy = float(circle["cy"]) - float(y1)
         eligible_edges, edge_distances = _eligible_edges_for_point(local_cx, local_cy, box_w, box_h)
+
         circle_copy = dict(circle)
         circle_copy["source"] = "hough_circle"
         circle_copy["eligible_edges"] = eligible_edges
         circle_copy["edge_distances"] = edge_distances
-        candidates.append(circle_copy)
 
-    return _merge_meter_post_candidates(candidates)
-
-# Prefer meter post candidates using the best structured edge.
-def _prefer_structured_meter_post_candidates(candidates, search_box):
-    x1, y1, x2, y2 = [float(v) for v in search_box]
-    box_w = max(float(x2 - x1), 1.0)
-    box_h = max(float(y2 - y1), 1.0)
-    edge_threshold = max(12.0, 0.18 * float(min(box_w, box_h)))
-
-    contour_holes = [
-        cand for cand in candidates
-        if cand.get("source") == "contour_hole"
-    ]
-    if len(contour_holes) < 2:
-        return candidates
-
-    best_edge = None
-    best_group = None
-    best_key = None
-
-    for edge in ("bottom", "left", "right", "top"):
-        group = [
-            cand for cand in contour_holes
-            if float(cand.get("edge_distance", 9999.0)) <= edge_threshold
-            and cand.get("nearest_edge") == edge
-        ]
-        if len(group) < 2:
-            continue
-
-        if edge in {"top", "bottom"}:
-            group = sorted(group, key=lambda cand: float(cand["cx"]))
-            main_sep = abs(float(group[-1]["cx"]) - float(group[0]["cx"]))
-            cross_sep = abs(float(group[-1]["cy"]) - float(group[0]["cy"]))
-        else:
-            group = sorted(group, key=lambda cand: float(cand["cy"]))
-            main_sep = abs(float(group[-1]["cy"]) - float(group[0]["cy"]))
-            cross_sep = abs(float(group[-1]["cx"]) - float(group[0]["cx"]))
-
-        if main_sep < 12.0:
-            continue
-        if cross_sep > 0.35 * main_sep + 6.0:
-            continue
-
-        avg_support = sum(float(cand.get("support", 0.0)) for cand in group) / float(len(group))
-        avg_edge_distance = sum(float(cand.get("edge_distance", 9999.0)) for cand in group) / float(len(group))
-
-        key = (
-            round(float(main_sep), 4),
-            round(float(avg_support), 4),
-            -round(float(cross_sep), 4),
-            -round(float(avg_edge_distance), 4),
+        circle_copy.update(
+            _measure_meter_post_ring(
+                binary,
+                circle_copy["cx"],
+                circle_copy["cy"],
+                circle_copy.get("radius", max(circle_copy.get("width", 0), circle_copy.get("height", 0)) / 2.0),
+            )
         )
+        raw_candidates.append(circle_copy)
 
-        if best_group is None or key > best_key:
-            best_edge = edge
-            best_group = group
-            best_key = key
+    candidates = _merge_meter_post_candidates(raw_candidates)
 
-    if best_group is None:
-        return candidates
+    annotated = []
+    for candidate in candidates:
+        candidate = _annotate_meter_candidate_external_support(binary, search_box, candidate)
+        candidate["quality_score"] = _compute_meter_candidate_quality(candidate)
+        annotated.append(candidate)
 
-    # Teniamo sicuramente i contour_hole del lato scelto.
-    preferred = list(best_group)
+    annotated = sorted(
+        annotated,
+        key=lambda cand: (
+            1 if cand.get("source") == "contour_hole" else 0,
+            float(cand.get("quality_score", -999.0)),
+            float(cand.get("ring_score", -999.0)),
+            float(cand.get("best_support", 0.0)),
+            float(cand.get("area", 0.0)),
+        ),
+        reverse=True,
+    )
 
-    # E in più lasciamo eventuali candidati Hough coerenti con lo stesso lato.
-    for cand in candidates:
-        if cand.get("source") == "contour_hole":
-            continue
-        if best_edge in cand.get("eligible_edges", []):
-            preferred.append(cand)
+    strong_candidates = [cand for cand in annotated if _is_valid_meter_post_candidate(cand)]
+    if len(strong_candidates) >= 2:
+        return strong_candidates[:10]
 
-    return preferred
-
+    return annotated[:10]
 
 # Handle meter edge scan scores.
 def _meter_edge_scan_scores(binary, box):
@@ -561,6 +628,7 @@ def _meter_edge_scan_scores(binary, box):
 def _score_meter_edge_pair(edge, cand_a, cand_b, scan_pair):
     dx = abs(float(cand_a["cx"]) - float(cand_b["cx"]))
     dy = abs(float(cand_a["cy"]) - float(cand_b["cy"]))
+
     if edge in {"top", "bottom"}:
         main_sep = dx
         cross_sep = dy
@@ -575,6 +643,7 @@ def _score_meter_edge_pair(edge, cand_a, cand_b, scan_pair):
         float(cand_a["edge_distances"][edge])
         + float(cand_b["edge_distances"][edge])
     )
+
     raw_circle_score = (
         float(cand_a.get("support", 0.0))
         + float(cand_b.get("support", 0.0))
@@ -588,7 +657,47 @@ def _score_meter_edge_pair(edge, cand_a, cand_b, scan_pair):
     scan_sum = scan_a + scan_b
     scan_diff = abs(scan_a - scan_b)
     balance = (min(scan_a, scan_b) + 6.0) / (max(scan_a, scan_b) + 6.0)
-    final_score = raw_circle_score * balance + 1.0 * scan_sum - 0.4 * scan_diff
+
+    ring_bonus = 55.0 * (
+        float(cand_a.get("ring_score", 0.0))
+        + float(cand_b.get("ring_score", 0.0))
+    )
+    annulus_bonus = 20.0 * (
+        float(cand_a.get("annulus_fill_ratio", 0.0))
+        + float(cand_b.get("annulus_fill_ratio", 0.0))
+    )
+    center_penalty = 16.0 * (
+        float(cand_a.get("center_fill_ratio", 0.0))
+        + float(cand_b.get("center_fill_ratio", 0.0))
+    )
+
+    contour_bonus = 70.0 if (
+        cand_a.get("source") == "contour_hole"
+        and cand_b.get("source") == "contour_hole"
+    ) else 0.0
+
+    best_side_bonus = 0.0
+    if cand_a.get("best_side") == edge:
+        best_side_bonus += 35.0
+    if cand_b.get("best_side") == edge:
+        best_side_bonus += 35.0
+
+    quality_bonus = 0.35 * (
+        float(cand_a.get("quality_score", 0.0))
+        + float(cand_b.get("quality_score", 0.0))
+    )
+
+    final_score = (
+        raw_circle_score * balance
+        + 1.0 * scan_sum
+        - 0.4 * scan_diff
+        + ring_bonus
+        + annulus_bonus
+        - center_penalty
+        + contour_bonus
+        + best_side_bonus
+        + quality_bonus
+    )
 
     return {
         "edge": edge,
@@ -601,6 +710,12 @@ def _score_meter_edge_pair(edge, cand_a, cand_b, scan_pair):
         "scan_scores": [round(float(scan_a), 3), round(float(scan_b), 3)],
         "scan_sum": round(float(scan_sum), 3),
         "scan_diff": round(float(scan_diff), 3),
+        "ring_bonus": round(float(ring_bonus), 3),
+        "annulus_bonus": round(float(annulus_bonus), 3),
+        "center_penalty": round(float(center_penalty), 3),
+        "contour_bonus": round(float(contour_bonus), 3),
+        "best_side_bonus": round(float(best_side_bonus), 3),
+        "quality_bonus": round(float(quality_bonus), 3),
     }
 
 
@@ -670,128 +785,6 @@ def _annotate_meter_candidate_external_support(binary, search_box, candidate):
         candidate_copy["eligible_edges"] = [candidate_copy["best_side"]]
 
     return candidate_copy
-
-# Choose analog meter posts using real external support, independent of orientation.
-def _choose_meter_posts_by_external_support(binary, search_box, candidates):
-    if len(candidates) < 2:
-        return None, None
-
-    annotated = [
-        _annotate_meter_candidate_external_support(binary, search_box, cand)
-        for cand in candidates
-    ]
-
-    strong = [
-        cand for cand in annotated
-        if float(cand.get("best_support", 0.0)) >= 10.0
-    ]
-    if len(strong) < 2:
-        strong = annotated
-
-    best_pair = None
-    best_debug = None
-    best_key = None
-
-    for idx_a in range(len(strong)):
-        for idx_b in range(idx_a + 1, len(strong)):
-            cand_a = strong[idx_a]
-            cand_b = strong[idx_b]
-
-            side_a = cand_a["best_side"]
-            side_b = cand_b["best_side"]
-
-            dx = abs(float(cand_a["cx"]) - float(cand_b["cx"]))
-            dy = abs(float(cand_a["cy"]) - float(cand_b["cy"]))
-
-            layout = None
-            main_sep = 0.0
-            cross_sep = 0.0
-
-            if side_a == side_b:
-                if side_a in {"top", "bottom"}:
-                    layout = "same_edge"
-                    main_sep = dx
-                    cross_sep = dy
-                else:
-                    layout = "same_edge"
-                    main_sep = dy
-                    cross_sep = dx
-
-                if main_sep < 14.0 or cross_sep > 0.40 * main_sep + 8.0:
-                    continue
-
-            elif {side_a, side_b} == {"left", "right"}:
-                layout = "opposite_edges"
-                main_sep = dx
-                cross_sep = dy
-                if main_sep < 14.0 or cross_sep > 0.28 * main_sep + 10.0:
-                    continue
-
-            elif {side_a, side_b} == {"top", "bottom"}:
-                layout = "opposite_edges"
-                main_sep = dy
-                cross_sep = dx
-                if main_sep < 14.0 or cross_sep > 0.28 * main_sep + 10.0:
-                    continue
-
-            else:
-                # layout adiacente: utile per meter ruotati/atipici
-                layout = "adjacent_edges"
-                main_sep = max(dx, dy)
-                cross_sep = min(dx, dy)
-                if main_sep < 14.0 or cross_sep > 0.65 * main_sep + 8.0:
-                    continue
-
-            support_sum = float(cand_a["best_support"]) + float(cand_b["best_support"])
-            contour_bonus = 12.0 * float(
-                int(cand_a.get("source") == "contour_hole") +
-                int(cand_b.get("source") == "contour_hole")
-            )
-
-            score = (
-                support_sum
-                + 0.55 * float(main_sep)
-                - 0.25 * float(cross_sep)
-                + contour_bonus
-            )
-
-            key = (
-                round(float(score), 4),
-                round(float(support_sum), 4),
-                round(float(main_sep), 4),
-                -round(float(cross_sep), 4),
-            )
-
-            if best_pair is None or key > best_key:
-                best_pair = (cand_a, cand_b)
-                best_key = key
-                best_debug = {
-                    "layout": layout,
-                    "score": round(float(score), 3),
-                    "support_sum": round(float(support_sum), 3),
-                    "main_sep": round(float(main_sep), 3),
-                    "cross_sep": round(float(cross_sep), 3),
-                    "edge_pair": [side_a, side_b],
-                    "posts": [
-                        {
-                            "cx": round(float(cand_a["cx"]), 2),
-                            "cy": round(float(cand_a["cy"]), 2),
-                            "best_side": side_a,
-                            "best_support": round(float(cand_a["best_support"]), 2),
-                            "source": cand_a.get("source"),
-                        },
-                        {
-                            "cx": round(float(cand_b["cx"]), 2),
-                            "cy": round(float(cand_b["cy"]), 2),
-                            "best_side": side_b,
-                            "best_support": round(float(cand_b["best_support"]), 2),
-                            "source": cand_b.get("source"),
-                        },
-                    ],
-                }
-
-    return list(best_pair) if best_pair is not None else None, best_debug
-
 
 # Score meter opposite pair.
 def _score_meter_opposite_pair(binary, box, side_a, cand_a, side_b, cand_b):
@@ -864,11 +857,12 @@ def _score_meter_opposite_pair(binary, box, side_a, cand_a, side_b, cand_b):
 
 
 # Handle select meter post pair.
-def _select_meter_post_pair(binary, search_box, candidates):
+def _select_meter_post_pair(binary, search_box, candidates, allow_opposite=False):
     scan_scores = _meter_edge_scan_scores(binary, search_box)
     x1, y1, x2, y2 = [float(v) for v in search_box]
     width = max(float(x2 - x1), 1.0)
     height = max(float(y2 - y1), 1.0)
+
     vertical_edge_floor = max(
         float(min(scan_scores["left"][0].get("max_score", 0), scan_scores["left"][1].get("max_score", 0))),
         float(min(scan_scores["right"][0].get("max_score", 0), scan_scores["right"][1].get("max_score", 0))),
@@ -877,14 +871,17 @@ def _select_meter_post_pair(binary, search_box, candidates):
         float(min(scan_scores["top"][0].get("max_score", 0), scan_scores["top"][1].get("max_score", 0))),
         float(min(scan_scores["bottom"][0].get("max_score", 0), scan_scores["bottom"][1].get("max_score", 0))),
     )
+
     best_pair = None
     best_pair_debug = None
     best_key = None
-    best_structured_opposite_pair = None
-    best_structured_opposite_debug = None
-    best_structured_opposite_key = None
     best_same_edge = {}
 
+    # -------------------------------------------------
+    # PASS PRINCIPALE: same-edge only.
+    # Per l'analog meter i due post reali stanno sulla
+    # stessa faccia del simbolo ruotato.
+    # -------------------------------------------------
     for edge in ("top", "bottom", "left", "right"):
         group = [cand for cand in candidates if edge in cand.get("eligible_edges", [])]
         if len(group) < 2:
@@ -894,9 +891,11 @@ def _select_meter_post_pair(binary, search_box, candidates):
             for idx_b in range(idx_a + 1, len(group)):
                 cand_a = group[idx_a]
                 cand_b = group[idx_b]
+
                 pair_debug = _score_meter_edge_pair(edge, cand_a, cand_b, scan_scores[edge])
                 if pair_debug is None:
                     continue
+
                 elongation_bonus = 0.0
                 if height >= width * 2.1 and edge in {"top", "bottom"}:
                     edge_floor = min(
@@ -915,15 +914,18 @@ def _select_meter_post_pair(binary, search_box, candidates):
 
                 pair_debug["elongation_bonus"] = round(float(elongation_bonus), 3)
                 pair_debug["score"] = round(float(pair_debug["score"] + elongation_bonus), 3)
+
                 key = (
                     round(float(pair_debug["score"]), 4),
                     round(float(pair_debug["main_sep"]), 4),
                     -round(float(pair_debug["cross_sep"]), 4),
                 )
+
                 if best_pair is None or key > best_key:
                     best_pair = (cand_a, cand_b)
                     best_pair_debug = pair_debug
                     best_key = key
+
                 stored = best_same_edge.get(edge)
                 if stored is None or key > stored["key"]:
                     best_same_edge[edge] = {
@@ -932,46 +934,9 @@ def _select_meter_post_pair(binary, search_box, candidates):
                         "key": key,
                     }
 
-    opposite_layouts = (
-        ("left", "right"),
-        ("top", "bottom"),
-    )
-    for side_a, side_b in opposite_layouts:
-        group_a = [cand for cand in candidates if side_a in cand.get("eligible_edges", [])]
-        group_b = [cand for cand in candidates if side_b in cand.get("eligible_edges", [])]
-        if not group_a or not group_b:
-            continue
-        for cand_a in group_a:
-            for cand_b in group_b:
-                if cand_a is cand_b:
-                    continue
-                pair_debug = _score_meter_opposite_pair(binary, search_box, side_a, cand_a, side_b, cand_b)
-                if pair_debug is None:
-                    continue
-                key = (
-                    round(float(pair_debug["score"]), 4),
-                    round(float(pair_debug["span"]), 4),
-                    -round(float(pair_debug["alignment"]), 4),
-                )
-                if best_pair is None or key > best_key:
-                    best_pair = (cand_a, cand_b)
-                    best_pair_debug = pair_debug
-                    best_key = key
-                if pair_debug.get("shared_secondary_edges"):
-                    if best_structured_opposite_pair is None or key > best_structured_opposite_key:
-                        best_structured_opposite_pair = (cand_a, cand_b)
-                        best_structured_opposite_debug = pair_debug
-                        best_structured_opposite_key = key
-
-    if (
-        best_structured_opposite_pair is not None
-        and best_pair is not None
-        and float(best_structured_opposite_debug.get("score", 0.0)) >= float(best_pair_debug.get("score", 0.0)) - 25.0
-    ):
-        best_pair = best_structured_opposite_pair
-        best_pair_debug = best_structured_opposite_debug
-        best_key = best_structured_opposite_key
-
+    # -------------------------------------------------
+    # Preferenza ulteriore fra left/right se entrambi forti.
+    # -------------------------------------------------
     left_same_edge = best_same_edge.get("left")
     right_same_edge = best_same_edge.get("right")
     if left_same_edge is not None and right_same_edge is not None:
@@ -1001,8 +966,322 @@ def _select_meter_post_pair(binary, search_box, candidates):
             best_pair_debug = preferred["debug"]
             best_key = preferred["key"]
 
-    return best_pair, best_pair_debug, scan_scores
+    if best_pair is not None or not allow_opposite:
+        return best_pair, best_pair_debug, scan_scores
 
+    # -------------------------------------------------
+    # FALLBACK ESTREMO: opposite_edges.
+    # Lo lasciamo solo come ultima chance.
+    # -------------------------------------------------
+    best_structured_opposite_pair = None
+    best_structured_opposite_debug = None
+    best_structured_opposite_key = None
+
+    opposite_layouts = (
+        ("left", "right"),
+        ("top", "bottom"),
+    )
+
+    for side_a, side_b in opposite_layouts:
+        group_a = [cand for cand in candidates if side_a in cand.get("eligible_edges", [])]
+        group_b = [cand for cand in candidates if side_b in cand.get("eligible_edges", [])]
+        if not group_a or not group_b:
+            continue
+
+        for cand_a in group_a:
+            for cand_b in group_b:
+                if cand_a is cand_b:
+                    continue
+
+                pair_debug = _score_meter_opposite_pair(binary, search_box, side_a, cand_a, side_b, cand_b)
+                if pair_debug is None:
+                    continue
+
+                pair_debug["score"] = round(
+                    float(pair_debug["score"])
+                    + 18.0 * float(cand_a.get("ring_score", 0.0) + cand_b.get("ring_score", 0.0))
+                    + 0.18 * float(cand_a.get("quality_score", 0.0) + cand_b.get("quality_score", 0.0)),
+                    3,
+                )
+
+                key = (
+                    round(float(pair_debug["score"]), 4),
+                    round(float(pair_debug["span"]), 4),
+                    -round(float(pair_debug["alignment"]), 4),
+                )
+
+                if (
+                    best_structured_opposite_pair is None
+                    or key > best_structured_opposite_key
+                ):
+                    best_structured_opposite_pair = (cand_a, cand_b)
+                    best_structured_opposite_debug = pair_debug
+                    best_structured_opposite_key = key
+
+    return best_structured_opposite_pair, best_structured_opposite_debug, scan_scores
+
+def _opposite_side(side):
+    return {
+        "top": "bottom",
+        "bottom": "top",
+        "left": "right",
+        "right": "left",
+    }[side]
+
+
+def _meter_face_side_scores(binary, box):
+    x1, y1, x2, y2 = [int(round(v)) for v in box]
+    w = max(x2 - x1 + 1, 1)
+    h = max(y2 - y1 + 1, 1)
+
+    # restringo all'interno per ridurre il peso del bordo esterno
+    ix1 = x1 + int(round(0.12 * w))
+    ix2 = x2 - int(round(0.12 * w))
+    iy1 = y1 + int(round(0.12 * h))
+    iy2 = y2 - int(round(0.12 * h))
+
+    if ix2 <= ix1 + 10 or iy2 <= iy1 + 10:
+        ix1, iy1, ix2, iy2 = x1, y1, x2, y2
+
+    iw = max(ix2 - ix1 + 1, 1)
+    ih = max(iy2 - iy1 + 1, 1)
+
+    def _density(rx1, ry1, rx2, ry2):
+        xa = ix1 + int(round(rx1 * iw))
+        xb = ix1 + int(round(rx2 * iw))
+        ya = iy1 + int(round(ry1 * ih))
+        yb = iy1 + int(round(ry2 * ih))
+
+        xa = max(x1, min(x2, xa))
+        xb = max(x1 + 1, min(x2 + 1, xb))
+        ya = max(y1, min(y2, ya))
+        yb = max(y1 + 1, min(y2 + 1, yb))
+
+        area = max((xb - xa) * (yb - ya), 1)
+        return float(_count_roi_nonzero(binary, xa, ya, xb, yb)) / float(area)
+
+    scores = {
+        "top": _density(0.20, 0.00, 0.80, 0.36),
+        "bottom": _density(0.20, 0.64, 0.80, 1.00),
+        "left": _density(0.00, 0.20, 0.36, 0.80),
+        "right": _density(0.64, 0.20, 1.00, 0.80),
+    }
+    return scores
+
+
+
+
+def _detect_meter_post_side(binary, box):
+    scores = _meter_face_side_scores(binary, box)
+
+    vertical_best = max(float(scores["top"]), float(scores["bottom"]))
+    horizontal_best = max(float(scores["left"]), float(scores["right"]))
+
+    if vertical_best >= horizontal_best:
+        dial_side = "top" if float(scores["top"]) >= float(scores["bottom"]) else "bottom"
+    else:
+        dial_side = "left" if float(scores["left"]) >= float(scores["right"]) else "right"
+
+    post_side = _opposite_side(dial_side)
+    return post_side, dial_side, scores
+
+
+def _meter_anchor_layout(box, post_side):
+    x1, y1, x2, y2 = [float(v) for v in box]
+    w = max(float(x2 - x1), 1.0)
+    h = max(float(y2 - y1), 1.0)
+
+    if post_side == "bottom":
+        anchors = [
+            (float(x1 + 0.28 * w), float(y1 + 0.79 * h)),
+            (float(x1 + 0.72 * w), float(y1 + 0.79 * h)),
+        ]
+        orientation = "horizontal"
+        relative_positions = ("bottom", "bottom")
+        axis = "bottom_template_posts"
+
+    elif post_side == "top":
+        anchors = [
+            (float(x1 + 0.28 * w), float(y1 + 0.21 * h)),
+            (float(x1 + 0.72 * w), float(y1 + 0.21 * h)),
+        ]
+        orientation = "horizontal"
+        relative_positions = ("top", "top")
+        axis = "top_template_posts"
+
+    elif post_side == "left":
+        anchors = [
+            (float(x1 + 0.23 * w), float(y1 + 0.31 * h)),
+            (float(x1 + 0.23 * w), float(y1 + 0.72 * h)),
+        ]
+        orientation = "vertical"
+        relative_positions = ("left", "left")
+        axis = "left_template_posts"
+
+    else:
+        anchors = [
+            (float(x1 + 0.77 * w), float(y1 + 0.31 * h)),
+            (float(x1 + 0.77 * w), float(y1 + 0.72 * h)),
+        ]
+        orientation = "vertical"
+        relative_positions = ("right", "right")
+        axis = "right_template_posts"
+
+    return anchors, orientation, relative_positions, axis
+
+
+def _refine_meter_post_near_anchor(binary, box, anchor, expected_side):
+    x1, y1, x2, y2 = [int(round(v)) for v in box]
+    w = max(x2 - x1 + 1, 1)
+    h = max(y2 - y1 + 1, 1)
+    min_dim = max(1, min(w, h))
+
+    ax = int(round(anchor[0]))
+    ay = int(round(anchor[1]))
+
+    search_r = max(5, int(round(0.10 * min_dim)))
+    radius = max(5, int(round(0.060 * min_dim)))
+
+    best = None
+    best_score = None
+
+    xa = max(x1 + 3, ax - search_r)
+    xb = min(x2 - 3, ax + search_r)
+    ya = max(y1 + 3, ay - search_r)
+    yb = min(y2 - 3, ay + search_r)
+
+    for cy in range(ya, yb + 1):
+        for cx in range(xa, xb + 1):
+            ring = _measure_meter_post_ring(binary, cx, cy, radius)
+            side_support = _meter_candidate_side_support(
+                binary,
+                box,
+                {"cx": float(cx), "cy": float(cy), "radius": float(radius)},
+                expected_side,
+            )["support"]
+
+            dist_px = float(((cx - ax) ** 2 + (cy - ay) ** 2) ** 0.5)
+
+            score = (
+                120.0 * float(ring["ring_score"])
+                + 28.0 * float(ring["annulus_fill_ratio"])
+                - 18.0 * float(ring["center_fill_ratio"])
+                - 8.0 * float(ring["halo_fill_ratio"])
+                + 0.10 * float(side_support)
+                - 1.60 * float(dist_px)
+            )
+
+            key = (
+                round(float(score), 4),
+                -round(float(dist_px), 4),
+            )
+
+            if best is None or key > best_score:
+                best = {
+                    "point": [float(cx), float(cy)],
+                    "radius": float(radius),
+                    "score": float(score),
+                    "dist_px": float(dist_px),
+                    "side_support": float(side_support),
+                    **ring,
+                }
+                best_score = key
+
+    if best is None:
+        return {
+            "point": [float(ax), float(ay)],
+            "radius": float(radius),
+            "score": -999.0,
+            "dist_px": 0.0,
+            "side_support": 0.0,
+            "center_fill_ratio": 1.0,
+            "annulus_fill_ratio": 0.0,
+            "halo_fill_ratio": 1.0,
+            "ring_score": -1.0,
+        }
+
+    # se la refine è troppo debole, torno all'anchor puro
+    if float(best["score"]) < -8.0:
+        return {
+            "point": [float(ax), float(ay)],
+            "radius": float(radius),
+            "score": float(best["score"]),
+            "dist_px": 0.0,
+            "side_support": float(best["side_support"]),
+            "center_fill_ratio": float(best["center_fill_ratio"]),
+            "annulus_fill_ratio": float(best["annulus_fill_ratio"]),
+            "halo_fill_ratio": float(best["halo_fill_ratio"]),
+            "ring_score": float(best["ring_score"]),
+            "fallback_anchor": True,
+        }
+
+    return best
+
+
+def _snap_meter_post_to_candidate(candidates, anchor_point, box, expected_side, used_points=None):
+    if not candidates:
+        return None
+
+    if used_points is None:
+        used_points = []
+
+    x1, y1, x2, y2 = [float(v) for v in box]
+    w = max(float(x2 - x1), 1.0)
+    h = max(float(y2 - y1), 1.0)
+
+    ax = float(anchor_point[0])
+    ay = float(anchor_point[1])
+
+    best = None
+    best_key = None
+
+    for cand in candidates:
+        cx = float(cand["cx"])
+        cy = float(cand["cy"])
+
+        # evita di riusare lo stesso candidato per i due post
+        if any(abs(cx - px) <= 6.0 and abs(cy - py) <= 6.0 for px, py in used_points):
+            continue
+
+        dx = (cx - ax) / w
+        dy = (cy - ay) / h
+        dist_norm = float((dx * dx + dy * dy) ** 0.5)
+
+        if dist_norm > 0.24:
+            continue
+
+        score = (
+            float(cand.get("quality_score", 0.0))
+            + 18.0 * float(1 if cand.get("source") == "contour_hole" else 0)
+            + 10.0 * float(1 if cand.get("best_side") == expected_side else 0)
+            + 12.0 * float(cand.get("ring_score", 0.0))
+            - 220.0 * float(dist_norm)
+        )
+
+        key = (
+            round(float(score), 4),
+            -round(float(dist_norm), 4),
+        )
+
+        if best is None or key > best_key:
+            best = {
+                "point": [float(cx), float(cy)],
+                "score": float(score),
+                "dist_norm": float(dist_norm),
+                "source": cand.get("source"),
+                "best_side": cand.get("best_side"),
+                "quality_score": float(cand.get("quality_score", 0.0)),
+                "ring_score": float(cand.get("ring_score", 0.0)),
+            }
+            best_key = key
+
+    if best is None:
+        return None
+
+    if float(best["score"]) < 4.0:
+        return None
+
+    return best
 
 # Detect analog meter terminals.
 def detect_analog_meter_terminals(meta: dict, binary, bbox):
@@ -1018,188 +1297,113 @@ def detect_analog_meter_terminals(meta: dict, binary, bbox):
         extent_min=0.88,
         prefer_square=True,
     )
+
     search_box = inner_box if inner_box is not None else det_box
+
     holes = _find_circular_holes(binary, search_box)
     if len(holes) < 2 and inner_box is not None:
         search_box = det_box
         holes = _find_circular_holes(binary, search_box)
-    
+
     candidates = _build_meter_post_candidates(binary, search_box, holes)
 
-    # -------------------------------------------------
-    # Pass 1: usa solo i veri contour hole del meter.
-    # Questa è la regola più generale e robusta per tutte
-    # le orientazioni, perché i due terminali reali sono
-    # proprio i due cerchietti interni del simbolo.
-    # -------------------------------------------------
-    contour_candidates = [
-        cand for cand in candidates
-        if cand.get("source") == "contour_hole"
-    ]
+    post_side, dial_side, face_scores = _detect_meter_post_side(binary, search_box)
+    anchors, orientation, relative_positions, axis = _meter_anchor_layout(search_box, post_side)
 
-    selected_pair = None
-    pair_debug = None
-    scan_scores = None
+    resolved_posts = []
+    used_points = []
 
-    if len(contour_candidates) >= 2:
-        selected_pair, pair_debug, scan_scores = _select_meter_post_pair(
+    for anchor in anchors:
+        refined = _refine_meter_post_near_anchor(
             binary,
             search_box,
-            contour_candidates,
+            anchor,
+            expected_side=post_side,
         )
 
-    # -------------------------------------------------
-    # Pass 2: fallback su tutti i candidati, inclusi Hough,
-    # solo se i contour hole non bastano oppure non
-    # producono una coppia valida.
-    # -------------------------------------------------
-    if selected_pair is None:
-        selected_pair, pair_debug, scan_scores = _select_meter_post_pair(
-            binary,
-            search_box,
+        snapped = _snap_meter_post_to_candidate(
             candidates,
+            refined["point"],
+            search_box,
+            expected_side=post_side,
+            used_points=used_points,
         )
 
-    if selected_pair is None:
-        x1, y1, x2, y2 = search_box
-        width = max(float(x2 - x1), 1.0)
-        height = max(float(y2 - y1), 1.0)
-        return [
-            {
-                "name": "t1",
-                "relative_position": "left",
-                "point": [round(float(x1 - TERMINAL_OUTWARD_OFFSET), 2), round(float(y1 + 0.62 * height), 2)],
-            },
-            {
-                "name": "t2",
-                "relative_position": "bottom",
-                "point": [round(float(x1 + 0.78 * width), 2), round(float(y2 + TERMINAL_OUTWARD_OFFSET), 2)],
-            },
-        ], None, None, {
-            "strategy": "analog_meter_by_posts",
-            "fallback": True,
-            "reason": "post_holes_not_found",
-            "inner_box": inner_box,
-            "search_box": [round(float(v), 2) for v in search_box],
-            "n_candidates": int(len(candidates)),
-        }
+        if snapped is not None:
+            chosen_point = snapped["point"]
+            chosen_debug = {
+                "selection": "candidate_snap",
+                "anchor": [round(float(anchor[0]), 2), round(float(anchor[1]), 2)],
+                "refined_point": [round(float(refined["point"][0]), 2), round(float(refined["point"][1]), 2)],
+                "snap_point": [round(float(snapped["point"][0]), 2), round(float(snapped["point"][1]), 2)],
+                "snap_source": snapped.get("source"),
+                "snap_best_side": snapped.get("best_side"),
+                "snap_quality_score": round(float(snapped.get("quality_score", 0.0)), 3),
+                "snap_ring_score": round(float(snapped.get("ring_score", 0.0)), 3),
+            }
+        else:
+            chosen_point = refined["point"]
+            chosen_debug = {
+                "selection": "anchor_local_refine",
+                "anchor": [round(float(anchor[0]), 2), round(float(anchor[1]), 2)],
+                "refined_point": [round(float(refined["point"][0]), 2), round(float(refined["point"][1]), 2)],
+                "refine_score": round(float(refined.get("score", 0.0)), 3),
+                "ring_score": round(float(refined.get("ring_score", 0.0)), 3),
+                "annulus_fill_ratio": round(float(refined.get("annulus_fill_ratio", 0.0)), 3),
+                "center_fill_ratio": round(float(refined.get("center_fill_ratio", 0.0)), 3),
+            }
 
-    selected = list(selected_pair)
-    hole_a, hole_b = selected[0], selected[1]
-    dx = abs(float(hole_a["cx"]) - float(hole_b["cx"]))
-    dy = abs(float(hole_a["cy"]) - float(hole_b["cy"]))
-    if pair_debug.get("layout") == "opposite_edges":
-        side_a, side_b = pair_debug["edge_pair"]
-        if {side_a, side_b} == {"left", "right"}:
-            selected = sorted(
-                ((side_a, hole_a), (side_b, hole_b)),
-                key=lambda item: 0 if item[0] == "left" else 1,
-            )
-            orientation = "horizontal"
-            relative_positions = tuple(side for side, _ in selected)
-            selected = [hole for _, hole in selected]
-            axis = "left_right_posts"
-        else:
-            selected = sorted(
-                ((side_a, hole_a), (side_b, hole_b)),
-                key=lambda item: 0 if item[0] == "top" else 1,
-            )
-            orientation = "vertical"
-            relative_positions = tuple(side for side, _ in selected)
-            selected = [hole for _, hole in selected]
-            axis = "top_bottom_posts"
+        used_points.append((float(chosen_point[0]), float(chosen_point[1])))
+        resolved_posts.append({
+            "point": [round(float(chosen_point[0]), 2), round(float(chosen_point[1]), 2)],
+            "debug": chosen_debug,
+        })
+
+    # ordinamento coerente
+    if post_side in {"top", "bottom"}:
+        resolved_posts = sorted(resolved_posts, key=lambda p: float(p["point"][0]))
     else:
-        selected_edge = pair_debug["edge"]
-        if selected_edge in {"top", "bottom"}:
-            selected = sorted(selected, key=lambda hole: float(hole["cx"]))
-            orientation = "horizontal"
-            relative_positions = (selected_edge, selected_edge)
-            axis = f"{selected_edge}_edge_posts"
-        else:
-            selected = sorted(selected, key=lambda hole: float(hole["cy"]))
-            orientation = "vertical"
-            relative_positions = (selected_edge, selected_edge)
-            axis = f"{selected_edge}_edge_posts"
+        resolved_posts = sorted(resolved_posts, key=lambda p: float(p["point"][1]))
 
     terminals_def = []
-    for term_name, rel_pos, hole in zip(("t1", "t2"), relative_positions, selected):
+    for term_name, rel_pos, post in zip(("t1", "t2"), relative_positions, resolved_posts):
         terminals_def.append(
             {
                 "name": term_name,
                 "relative_position": rel_pos,
-                "point": [
-                    round(float(hole["cx"]), 2),
-                    round(float(hole["cy"]), 2),
-                ],
+                "point": post["point"],
             }
         )
 
     return terminals_def, orientation, None, {
-        "strategy": "analog_meter_by_posts",
+        "strategy": "analog_meter_by_posts_template",
         "fallback": False,
-        "post_axis": axis,
         "inner_box": [round(float(v), 2) for v in inner_box] if inner_box is not None else None,
         "search_box": [round(float(v), 2) for v in search_box],
-        "selected_pair_debug": pair_debug,
-        "edge_scan_scores": {
-            edge: [int(pair[0].get("max_score", 0)), int(pair[1].get("max_score", 0))]
-            for edge, pair in scan_scores.items()
+        "dial_side": dial_side,
+        "post_side": post_side,
+        "post_axis": axis,
+        "face_side_scores": {
+            side: round(float(score), 4)
+            for side, score in face_scores.items()
         },
-        "n_candidates": int(len(candidates)),
-        "posts": [
-            {
-                "cx": round(float(hole["cx"]), 2),
-                "cy": round(float(hole["cy"]), 2),
-                "area": round(float(hole["area"]), 2),
-                "source": hole.get("source"),
-            }
-            for hole in selected
+        "anchors": [
+            [round(float(ax), 2), round(float(ay), 2)]
+            for ax, ay in anchors
         ],
-        "post_separation": {
-            "dx": round(float(dx), 2),
-            "dy": round(float(dy), 2),
-        },
-    }
-
-
-# Handle scan external wire y.
-def _scan_external_wire_y(binary, box, side, outward_len=18, inward_len=8, halfspan=5):
-    x1, y1, x2, y2 = [int(round(v)) for v in box]
-    height = max(y2 - y1, 1)
-    margin = max(4, int(round(height * 0.03)))
-    start = min(max(y1 + margin, y1), y2)
-    end = max(min(y2 - margin, y2), start)
-    coords = list(range(start, end + 1))
-    if not coords:
-        coords = [int(round((y1 + y2) / 2.0))]
-
-    scores = []
-    for cy in coords:
-        ya = max(0, cy - halfspan)
-        yb = min(binary.shape[0], cy + halfspan + 1)
-        if side == "left":
-            xa = max(0, x1 - outward_len)
-            xb = min(binary.shape[1], x1 + inward_len)
-        else:
-            xa = max(0, x2 - inward_len + 1)
-            xb = min(binary.shape[1], x2 + outward_len + 1)
-
-        if xb <= xa or yb <= ya:
-            scores.append(0)
-            continue
-        scores.append(int(cv2.countNonZero(binary[ya:yb, xa:xb])))
-
-    best_coord, debug = _select_peak_coord(coords, scores, keep_ratio=0.58, min_score=4)
-    return best_coord, {
-        "side": side,
-        "scan_start": int(start),
-        "scan_end": int(end),
-        "probe_outward_len": int(outward_len),
-        "probe_inward_len": int(inward_len),
-        "probe_halfspan": int(halfspan),
-        "max_score": int(max(scores) if scores else 0),
-        "raw_scores_sample": [int(score) for score in scores[:20]],
-        **debug,
+        "posts": [post["debug"] for post in resolved_posts],
+        "n_candidates": int(len(candidates)),
+        "candidate_debug": [
+            {
+                "cx": round(float(cand["cx"]), 2),
+                "cy": round(float(cand["cy"]), 2),
+                "source": cand.get("source"),
+                "best_side": cand.get("best_side"),
+                "quality_score": round(float(cand.get("quality_score", 0.0)), 3),
+                "ring_score": round(float(cand.get("ring_score", 0.0)), 3),
+            }
+            for cand in candidates[:8]
+        ],
     }
 
 
@@ -1246,7 +1450,6 @@ def _scan_external_wire_y_in_range(binary, box, side, y_start, y_end, outward_le
         "raw_scores_sample": [int(score) for score in scores[:20]],
         **debug,
     }
-
 
 # Handle scan external wire x in range.
 def _scan_external_wire_x_in_range(binary, box, side, x_start, x_end, outward_len=18, inward_len=8, halfspan=5):

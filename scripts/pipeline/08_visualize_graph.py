@@ -42,10 +42,7 @@ from graph_viz.render_full import draw_full_html, draw_full_png
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-PIPELINE_DATASET = os.environ.get(
-    "PIPELINE_DATASET",
-    "topology_v9.2_set_successivo",
-)
+PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "topology_v9.1_analog_meter_connector_transformer")
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "07_export_graph" / "graph_json"
 SEMANTIC_INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "07_export_graph" / "semantic_explanation"

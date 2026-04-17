@@ -1317,7 +1317,7 @@
           "name": "t1",
           "display_name": "t1",
           "display_terminal_id": "0.1:t1",
-          "relative_position": "left",
+          "relative_position": "bottom",
           "estimated_orientation": "horizontal",
           "estimated_connection_side": null,
           "terminal_point_mode": "strategy_absolute_point",
@@ -1325,8 +1325,8 @@
             "point_mode": "strategy_absolute_point",
             "point_source": "term_def.point"
           },
-          "x": 799.0,
-          "y": 136.0
+          "x": 802.6,
+          "y": 242.8
         },
         {
           "terminal_id": "0.1:t2",
@@ -1336,7 +1336,7 @@
           "name": "t2",
           "display_name": "t2",
           "display_terminal_id": "0.1:t2",
-          "relative_position": "right",
+          "relative_position": "bottom",
           "estimated_orientation": "horizontal",
           "estimated_connection_side": null,
           "terminal_point_mode": "strategy_absolute_point",
@@ -1344,15 +1344,14 @@
             "point_mode": "strategy_absolute_point",
             "point_source": "term_def.point"
           },
-          "x": 898.6,
-          "y": 133.6
+          "x": 904.6,
+          "y": 265.6
         }
       ],
       "estimated_orientation": "horizontal",
       "connection_side_scores": {
-        "strategy": "analog_meter_by_posts",
+        "strategy": "analog_meter_by_posts_template",
         "fallback": false,
-        "post_axis": "left_right_posts",
         "inner_box": [
           754.0,
           91.0,
@@ -1365,84 +1364,116 @@
           943.0,
           279.0
         ],
-        "selected_pair_debug": {
-          "layout": "opposite_edges",
-          "edge_pair": [
-            "left",
-            "right"
-          ],
-          "score": 716.58,
-          "support_sum": 378.0,
-          "support_balance": 1.0,
-          "single_edge_penalty": 0.0,
-          "support_overflow_penalty": 0.0,
-          "span": 99.6,
-          "alignment": 2.4,
-          "edge_penalty": 89.4,
-          "shared_secondary_edges": [
-            "top"
-          ],
-          "row_column_bonus": 240.8,
-          "support_debug": [
-            {
-              "side": "left",
-              "support": 189.0,
-              "probe": [
-                723,
-                123,
-                775,
-                150
-              ]
-            },
-            {
-              "side": "right",
-              "support": 189.0,
-              "probe": [
-                923,
-                121,
-                975,
-                148
-              ]
-            }
-          ]
+        "dial_side": "top",
+        "post_side": "bottom",
+        "post_axis": "bottom_template_posts",
+        "face_side_scores": {
+          "top": 0.148,
+          "bottom": 0.0597,
+          "left": 0.0495,
+          "right": 0.0681
         },
-        "edge_scan_scores": {
-          "top": [
-            88,
-            88
+        "anchors": [
+          [
+            806.92,
+            239.52
           ],
-          "bottom": [
-            88,
-            214
-          ],
-          "left": [
-            80,
-            80
-          ],
-          "right": [
-            80,
-            207
+          [
+            890.08,
+            239.52
           ]
-        },
-        "n_candidates": 10,
+        ],
         "posts": [
           {
-            "cx": 799.0,
-            "cy": 136.0,
-            "area": 608.74,
-            "source": "hough_circle"
+            "selection": "candidate_snap",
+            "anchor": [
+              806.92,
+              239.52
+            ],
+            "refined_point": [
+              805.0,
+              241.0
+            ],
+            "snap_point": [
+              802.6,
+              242.8
+            ],
+            "snap_source": "hough_circle",
+            "snap_best_side": "right",
+            "snap_quality_score": 287.738,
+            "snap_ring_score": 0.367
+          },
+          {
+            "selection": "candidate_snap",
+            "anchor": [
+              890.08,
+              239.52
+            ],
+            "refined_point": [
+              889.0,
+              239.0
+            ],
+            "snap_point": [
+              904.6,
+              265.6
+            ],
+            "snap_source": "hough_circle",
+            "snap_best_side": "bottom",
+            "snap_quality_score": 389.454,
+            "snap_ring_score": 0.528
+          }
+        ],
+        "n_candidates": 6,
+        "candidate_debug": [
+          {
+            "cx": 923.0,
+            "cy": 242.0,
+            "source": "contour_hole",
+            "best_side": "right",
+            "quality_score": 255.198,
+            "ring_score": 0.81
+          },
+          {
+            "cx": 904.6,
+            "cy": 265.6,
+            "source": "hough_circle",
+            "best_side": "bottom",
+            "quality_score": 389.454,
+            "ring_score": 0.528
           },
           {
             "cx": 898.6,
             "cy": 133.6,
-            "area": 608.74,
-            "source": "hough_circle"
+            "source": "hough_circle",
+            "best_side": "bottom",
+            "quality_score": 328.556,
+            "ring_score": 0.336
+          },
+          {
+            "cx": 802.6,
+            "cy": 242.8,
+            "source": "hough_circle",
+            "best_side": "right",
+            "quality_score": 287.738,
+            "ring_score": 0.367
+          },
+          {
+            "cx": 880.6,
+            "cy": 265.6,
+            "source": "hough_circle",
+            "best_side": "right",
+            "quality_score": 170.11,
+            "ring_score": 0.138
+          },
+          {
+            "cx": 799.0,
+            "cy": 136.0,
+            "source": "hough_circle",
+            "best_side": "top",
+            "quality_score": 151.912,
+            "ring_score": 0.3
           }
-        ],
-        "post_separation": {
-          "dx": 99.6,
-          "dy": 2.4
-        }
+        ]
       }
     },
     {
@@ -2595,7 +2626,7 @@
       "name": "t1",
       "display_name": "t1",
       "display_terminal_id": "0.1:t1",
-      "relative_position": "left",
+      "relative_position": "bottom",
       "estimated_orientation": "horizontal",
       "estimated_connection_side": null,
       "terminal_point_mode": "strategy_absolute_point",
@@ -2603,8 +2634,8 @@
         "point_mode": "strategy_absolute_point",
         "point_source": "term_def.point"
       },
-      "x": 799.0,
-      "y": 136.0
+      "x": 802.6,
+      "y": 242.8
     },
     {
       "terminal_id": "0.1:t2",
@@ -2614,7 +2645,7 @@
       "name": "t2",
       "display_name": "t2",
       "display_terminal_id": "0.1:t2",
-      "relative_position": "right",
+      "relative_position": "bottom",
       "estimated_orientation": "horizontal",
       "estimated_connection_side": null,
       "terminal_point_mode": "strategy_absolute_point",
@@ -2622,8 +2653,8 @@
         "point_mode": "strategy_absolute_point",
         "point_source": "term_def.point"
       },
-      "x": 898.6,
-      "y": 133.6
+      "x": 904.6,
+      "y": 265.6
     },
     {
       "terminal_id": "9.3:t1",
