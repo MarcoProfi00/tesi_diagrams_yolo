@@ -427,6 +427,8 @@ def _build_meter_post_candidates(binary, search_box, holes):
         local_cx = float(hole["cx"]) - float(x1)
         local_cy = float(hole["cy"]) - float(y1)
         eligible_edges, edge_distances = _eligible_edges_for_point(local_cx, local_cy, box_w, box_h)
+        nearest_edge = min(edge_distances, key=edge_distances.get)
+
         candidates.append({
             "cx": float(hole["cx"]),
             "cy": float(hole["cy"]),
@@ -435,6 +437,8 @@ def _build_meter_post_candidates(binary, search_box, holes):
             "source": "contour_hole",
             "eligible_edges": eligible_edges,
             "edge_distances": edge_distances,
+            "nearest_edge": nearest_edge,
+            "edge_distance": float(edge_distances[nearest_edge]),
             "area": float(hole.get("area", 0.0)),
         })
 
@@ -449,6 +453,77 @@ def _build_meter_post_candidates(binary, search_box, holes):
         candidates.append(circle_copy)
 
     return _merge_meter_post_candidates(candidates)
+
+# Prefer meter post candidates using the best structured edge.
+def _prefer_structured_meter_post_candidates(candidates, search_box):
+    x1, y1, x2, y2 = [float(v) for v in search_box]
+    box_w = max(float(x2 - x1), 1.0)
+    box_h = max(float(y2 - y1), 1.0)
+    edge_threshold = max(12.0, 0.18 * float(min(box_w, box_h)))
+
+    contour_holes = [
+        cand for cand in candidates
+        if cand.get("source") == "contour_hole"
+    ]
+    if len(contour_holes) < 2:
+        return candidates
+
+    best_edge = None
+    best_group = None
+    best_key = None
+
+    for edge in ("bottom", "left", "right", "top"):
+        group = [
+            cand for cand in contour_holes
+            if float(cand.get("edge_distance", 9999.0)) <= edge_threshold
+            and cand.get("nearest_edge") == edge
+        ]
+        if len(group) < 2:
+            continue
+
+        if edge in {"top", "bottom"}:
+            group = sorted(group, key=lambda cand: float(cand["cx"]))
+            main_sep = abs(float(group[-1]["cx"]) - float(group[0]["cx"]))
+            cross_sep = abs(float(group[-1]["cy"]) - float(group[0]["cy"]))
+        else:
+            group = sorted(group, key=lambda cand: float(cand["cy"]))
+            main_sep = abs(float(group[-1]["cy"]) - float(group[0]["cy"]))
+            cross_sep = abs(float(group[-1]["cx"]) - float(group[0]["cx"]))
+
+        if main_sep < 12.0:
+            continue
+        if cross_sep > 0.35 * main_sep + 6.0:
+            continue
+
+        avg_support = sum(float(cand.get("support", 0.0)) for cand in group) / float(len(group))
+        avg_edge_distance = sum(float(cand.get("edge_distance", 9999.0)) for cand in group) / float(len(group))
+
+        key = (
+            round(float(main_sep), 4),
+            round(float(avg_support), 4),
+            -round(float(cross_sep), 4),
+            -round(float(avg_edge_distance), 4),
+        )
+
+        if best_group is None or key > best_key:
+            best_edge = edge
+            best_group = group
+            best_key = key
+
+    if best_group is None:
+        return candidates
+
+    # Teniamo sicuramente i contour_hole del lato scelto.
+    preferred = list(best_group)
+
+    # E in più lasciamo eventuali candidati Hough coerenti con lo stesso lato.
+    for cand in candidates:
+        if cand.get("source") == "contour_hole":
+            continue
+        if best_edge in cand.get("eligible_edges", []):
+            preferred.append(cand)
+
+    return preferred
 
 
 # Handle meter edge scan scores.
@@ -565,6 +640,157 @@ def _meter_candidate_side_support(binary, box, candidate, side):
         "support": float(support),
         "probe": [int(xa), int(ya), int(xb), int(yb)],
     }
+
+# Annotate meter candidate with real external wire support on each side.
+def _annotate_meter_candidate_external_support(binary, search_box, candidate):
+    side_debug = {}
+    for side in ("left", "right", "top", "bottom"):
+        side_debug[side] = _meter_candidate_side_support(
+            binary,
+            search_box,
+            candidate,
+            side,
+        )
+
+    ranked = sorted(
+        side_debug.items(),
+        key=lambda kv: float(kv[1]["support"]),
+        reverse=True,
+    )
+
+    candidate_copy = dict(candidate)
+    candidate_copy["side_support_debug"] = side_debug
+    candidate_copy["best_side"] = ranked[0][0]
+    candidate_copy["best_support"] = float(ranked[0][1]["support"])
+    candidate_copy["second_side"] = ranked[1][0]
+    candidate_copy["second_support"] = float(ranked[1][1]["support"])
+
+    # Se un lato vince chiaramente, restringi eligible_edges a quel lato.
+    if candidate_copy["best_support"] >= candidate_copy["second_support"] + 6.0:
+        candidate_copy["eligible_edges"] = [candidate_copy["best_side"]]
+
+    return candidate_copy
+
+# Choose analog meter posts using real external support, independent of orientation.
+def _choose_meter_posts_by_external_support(binary, search_box, candidates):
+    if len(candidates) < 2:
+        return None, None
+
+    annotated = [
+        _annotate_meter_candidate_external_support(binary, search_box, cand)
+        for cand in candidates
+    ]
+
+    strong = [
+        cand for cand in annotated
+        if float(cand.get("best_support", 0.0)) >= 10.0
+    ]
+    if len(strong) < 2:
+        strong = annotated
+
+    best_pair = None
+    best_debug = None
+    best_key = None
+
+    for idx_a in range(len(strong)):
+        for idx_b in range(idx_a + 1, len(strong)):
+            cand_a = strong[idx_a]
+            cand_b = strong[idx_b]
+
+            side_a = cand_a["best_side"]
+            side_b = cand_b["best_side"]
+
+            dx = abs(float(cand_a["cx"]) - float(cand_b["cx"]))
+            dy = abs(float(cand_a["cy"]) - float(cand_b["cy"]))
+
+            layout = None
+            main_sep = 0.0
+            cross_sep = 0.0
+
+            if side_a == side_b:
+                if side_a in {"top", "bottom"}:
+                    layout = "same_edge"
+                    main_sep = dx
+                    cross_sep = dy
+                else:
+                    layout = "same_edge"
+                    main_sep = dy
+                    cross_sep = dx
+
+                if main_sep < 14.0 or cross_sep > 0.40 * main_sep + 8.0:
+                    continue
+
+            elif {side_a, side_b} == {"left", "right"}:
+                layout = "opposite_edges"
+                main_sep = dx
+                cross_sep = dy
+                if main_sep < 14.0 or cross_sep > 0.28 * main_sep + 10.0:
+                    continue
+
+            elif {side_a, side_b} == {"top", "bottom"}:
+                layout = "opposite_edges"
+                main_sep = dy
+                cross_sep = dx
+                if main_sep < 14.0 or cross_sep > 0.28 * main_sep + 10.0:
+                    continue
+
+            else:
+                # layout adiacente: utile per meter ruotati/atipici
+                layout = "adjacent_edges"
+                main_sep = max(dx, dy)
+                cross_sep = min(dx, dy)
+                if main_sep < 14.0 or cross_sep > 0.65 * main_sep + 8.0:
+                    continue
+
+            support_sum = float(cand_a["best_support"]) + float(cand_b["best_support"])
+            contour_bonus = 12.0 * float(
+                int(cand_a.get("source") == "contour_hole") +
+                int(cand_b.get("source") == "contour_hole")
+            )
+
+            score = (
+                support_sum
+                + 0.55 * float(main_sep)
+                - 0.25 * float(cross_sep)
+                + contour_bonus
+            )
+
+            key = (
+                round(float(score), 4),
+                round(float(support_sum), 4),
+                round(float(main_sep), 4),
+                -round(float(cross_sep), 4),
+            )
+
+            if best_pair is None or key > best_key:
+                best_pair = (cand_a, cand_b)
+                best_key = key
+                best_debug = {
+                    "layout": layout,
+                    "score": round(float(score), 3),
+                    "support_sum": round(float(support_sum), 3),
+                    "main_sep": round(float(main_sep), 3),
+                    "cross_sep": round(float(cross_sep), 3),
+                    "edge_pair": [side_a, side_b],
+                    "posts": [
+                        {
+                            "cx": round(float(cand_a["cx"]), 2),
+                            "cy": round(float(cand_a["cy"]), 2),
+                            "best_side": side_a,
+                            "best_support": round(float(cand_a["best_support"]), 2),
+                            "source": cand_a.get("source"),
+                        },
+                        {
+                            "cx": round(float(cand_b["cx"]), 2),
+                            "cy": round(float(cand_b["cy"]), 2),
+                            "best_side": side_b,
+                            "best_support": round(float(cand_b["best_support"]), 2),
+                            "source": cand_b.get("source"),
+                        },
+                    ],
+                }
+
+    return list(best_pair) if best_pair is not None else None, best_debug
 
 
 # Score meter opposite pair.
@@ -797,8 +1023,42 @@ def detect_analog_meter_terminals(meta: dict, binary, bbox):
     if len(holes) < 2 and inner_box is not None:
         search_box = det_box
         holes = _find_circular_holes(binary, search_box)
+    
     candidates = _build_meter_post_candidates(binary, search_box, holes)
-    selected_pair, pair_debug, scan_scores = _select_meter_post_pair(binary, search_box, candidates)
+
+    # -------------------------------------------------
+    # Pass 1: usa solo i veri contour hole del meter.
+    # Questa è la regola più generale e robusta per tutte
+    # le orientazioni, perché i due terminali reali sono
+    # proprio i due cerchietti interni del simbolo.
+    # -------------------------------------------------
+    contour_candidates = [
+        cand for cand in candidates
+        if cand.get("source") == "contour_hole"
+    ]
+
+    selected_pair = None
+    pair_debug = None
+    scan_scores = None
+
+    if len(contour_candidates) >= 2:
+        selected_pair, pair_debug, scan_scores = _select_meter_post_pair(
+            binary,
+            search_box,
+            contour_candidates,
+        )
+
+    # -------------------------------------------------
+    # Pass 2: fallback su tutti i candidati, inclusi Hough,
+    # solo se i contour hole non bastano oppure non
+    # producono una coppia valida.
+    # -------------------------------------------------
+    if selected_pair is None:
+        selected_pair, pair_debug, scan_scores = _select_meter_post_pair(
+            binary,
+            search_box,
+            candidates,
+        )
 
     if selected_pair is None:
         x1, y1, x2, y2 = search_box

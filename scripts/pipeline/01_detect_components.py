@@ -25,8 +25,8 @@ from estimate_terminals.probes import (
 # =========================================================
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "topology_v9.2_set_successivo")
-PIPELINE_INPUT_BATCH = os.environ.get("PIPELINE_INPUT_BATCH", "batch_v9_2_set_successivo_analog_meter_connector_transformer")
+PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "topology_v9.1_analog_meter_connector_transformer")
+PIPELINE_INPUT_BATCH = os.environ.get("PIPELINE_INPUT_BATCH", "batch_v9_1_primo_set_analog_meter_connector_transformer")
 
 # === MODELLO ===
 MODEL_PATH = (
@@ -55,7 +55,7 @@ IOU_THRES = 0.45
 CLASS_CONF_THRES = {
     "Analog_Meter": 0.03,
     "Battery": 0.18,
-    "Connector": 0.18,
+    "Connector": 0.10,
     "Inductor": 0.30,
     "Lamp": 0.25,
     "Memristor": 0.08,
@@ -70,6 +70,11 @@ SECONDARY_CLASS_PREDICTION_SPECS = {
         "imgsz": 1536,
         "predict_conf": 0.14,
         "accept_conf": 0.14,
+    },
+    "Connector": {
+        "imgsz": 1536,
+        "predict_conf": 0.10,
+        "accept_conf": 0.16,
     },
 }
 
@@ -124,7 +129,7 @@ def _bbox_area(box) -> float:
     return max(0.0, float(x2 - x1)) * max(0.0, float(y2 - y1))
 
 
-# Handle bounding box intersection.
+# Calcola l'area di intersezione tra due bounding box.
 def _bbox_intersection(box_a, box_b) -> float:
     ax1, ay1, ax2, ay2 = box_a
     bx1, by1, bx2, by2 = box_b
@@ -135,7 +140,7 @@ def _bbox_intersection(box_a, box_b) -> float:
     return max(0.0, ix2 - ix1) * max(0.0, iy2 - iy1)
 
 
-# Handle bounding box IoU.
+# Calcola l'IoU tra due bounding box.
 def _bbox_iou(box_a, box_b) -> float:
     inter = _bbox_intersection(box_a, box_b)
     if inter <= 0.0:
@@ -146,7 +151,7 @@ def _bbox_iou(box_a, box_b) -> float:
     return inter / union
 
 
-# Handle bounding box IoA.
+# Calcola l'IoA di un box rispetto a un altro.
 def _bbox_ioa(box_inner, box_outer) -> float:
     area_inner = _bbox_area(box_inner)
     if area_inner <= 0.0:
@@ -154,20 +159,20 @@ def _bbox_ioa(box_inner, box_outer) -> float:
     return _bbox_intersection(box_inner, box_outer) / area_inner
 
 
-# Handle bounding box center.
+# Restituisce il centro del bounding box.
 def _bbox_center(box):
     x1, y1, x2, y2 = box
     return (float(x1 + x2) / 2.0, float(y1 + y2) / 2.0)
 
 
-# Handle point in box.
+# Verifica se un punto cade dentro il bounding box.
 def _point_in_box(point, box) -> bool:
     px, py = point
     x1, y1, x2, y2 = box
     return float(x1) <= float(px) <= float(x2) and float(y1) <= float(py) <= float(y2)
 
 
-# Count hough circles.
+# Conta i cerchi rilevati con Hough in una ROI.
 def _count_hough_circles(image_gray, box, min_dist=18, param1=80, param2=14, min_radius=7, max_radius=24):
     x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_gray.shape)
     if x2 <= x1 or y2 <= y1:
@@ -189,7 +194,7 @@ def _count_hough_circles(image_gray, box, min_dist=18, param1=80, param2=14, min
     return int(circles.shape[1])
 
 
-# Expand LED bounding box.
+# Allarga leggermente il bbox dei LED per includere le frecce.
 def expand_led_bbox(box, image_shape):
     x1, y1, x2, y2 = box
     expanded = [
@@ -201,7 +206,7 @@ def expand_led_bbox(box, image_shape):
     return _clamp_bbox_to_image(expanded, image_shape)
 
 
-# Handle component areas in box.
+# Restituisce le aree dei connected components interni al bbox.
 def _component_areas_in_box(image_binary, box):
     x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)
     if x2 <= x1 or y2 <= y1:
@@ -214,80 +219,331 @@ def _component_areas_in_box(image_binary, box):
         reverse=True,
     )
 
+# =========================================================
+# HELPER GEOMETRICI PER CONNECTOR
+# =========================================================
 
-# Count connector pin rows.
-def _count_connector_pin_rows(image_binary, box):
-    x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)
-    width = max(x2 - x1, 1)
-    height = max(y2 - y1, 1)
-    xc = int(round((x1 + x2) / 2))
-    band_half = max(3, int(round(width * 0.22)))
-    bx1 = max(x1, xc - band_half)
-    bx2 = min(x2, xc + band_half)
-
-    projection = [
-        int(cv2.countNonZero(image_binary[y:y + 1, bx1:bx2 + 1]))
-        for y in range(y1, y2 + 1)
-    ]
+# Estrae i centri dei pin da una proiezione monodimensionale.
+def _extract_connector_pin_centers(projection, axis_offset, axis_span, max_gap=6):
     if not projection:
-        return 0
+        return []
 
     threshold = max(2, int(round(max(projection) * 0.32)))
     groups = _group_close_indices(
         [i for i, score in enumerate(projection) if score >= threshold],
-        max_gap=6,
+        max_gap=max_gap,
     )
     centers = [
-        y1 + int(round((group[0] + group[-1]) / 2.0))
+        axis_offset + int(round((group[0] + group[-1]) / 2.0))
         for group in groups
     ]
-    centers = _merge_close_values(
+    return _merge_close_values(
         sorted(centers),
-        min_gap=max(18, int(round(height * 0.10))),
+        min_gap=max(16, int(round(axis_span * 0.10))),
     )
-    return len(centers)
 
+# Fallback: recupera i centri dei pin verticali usando i cerchi interni.
+def _find_connector_pin_circle_centers_vertical(image_gray, box):
+    x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_gray.shape)
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
 
-# Handle is connector like bounding box.
-def is_connector_like_bbox(image_binary, box) -> bool:
+    inset = max(3, int(round(width * 0.08)))
+    band_w = max(8, int(round(width * 0.28)))
+
+    candidate_bands = [
+        (
+            min(x2, x1 + inset),
+            min(x2, x1 + inset + band_w),
+        ),
+        (
+            max(x1, x2 - inset - band_w),
+            max(x1, x2 - inset),
+        ),
+    ]
+
+    best_centers = []
+
+    for bx1, bx2 in candidate_bands:
+        roi = image_gray[y1:y2 + 1, bx1:bx2 + 1]
+        circles = cv2.HoughCircles(
+            roi,
+            cv2.HOUGH_GRADIENT,
+            dp=1.2,
+            minDist=max(18, int(round(height * 0.10))),
+            param1=80,
+            param2=12,
+            minRadius=max(6, int(round(width * 0.08))),
+            maxRadius=max(18, int(round(width * 0.22))),
+        )
+
+        if circles is None:
+            continue
+
+        ys = []
+        for c in circles[0]:
+            cy = float(c[1]) + float(y1)
+            ys.append(cy)
+
+        centers = _merge_close_values(
+            sorted(ys),
+            min_gap=max(18, int(round(height * 0.10))),
+        )
+
+        if len(centers) > len(best_centers):
+            best_centers = centers
+
+    return best_centers
+
+# Cerca i pin di un connector verticale usando due bande laterali strette.
+def _find_connector_pin_centers_vertical(image_binary, box):
     x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)
     width = max(x2 - x1, 1)
     height = max(y2 - y1, 1)
 
-    if height < width * 1.8 or width < 30 or height < 110:
-        return False
+    inset = max(3, int(round(width * 0.08)))
+    band_w = max(4, int(round(width * 0.20)))
 
-    xc = int(round((x1 + x2) / 2))
-    band_half = max(3, int(round(width * 0.22)))
-    bx1 = max(x1, xc - band_half)
-    bx2 = min(x2, xc + band_half)
-
-    projection = [
-        int(cv2.countNonZero(image_binary[y:y + 1, bx1:bx2 + 1]))
-        for y in range(y1, y2 + 1)
+    candidate_bands = [
+        (
+            min(x2, x1 + inset),
+            min(x2, x1 + inset + band_w),
+        ),
+        (
+            max(x1, x2 - inset - band_w),
+            max(x1, x2 - inset),
+        ),
     ]
-    if not projection:
-        return False
 
-    threshold = max(2, int(round(max(projection) * 0.32)))
-    groups = _group_close_indices(
-        [i for i, score in enumerate(projection) if score >= threshold],
-        max_gap=6,
-    )
-    centers = [
-        y1 + int(round((group[0] + group[-1]) / 2.0))
-        for group in groups
+    best_centers = []
+    for bx1, bx2 in candidate_bands:
+        projection = [
+            int(cv2.countNonZero(image_binary[y:y + 1, bx1:bx2 + 1]))
+            for y in range(y1, y2 + 1)
+        ]
+        centers = _extract_connector_pin_centers(projection, y1, height, max_gap=6)
+        if len(centers) > len(best_centers):
+            best_centers = centers
+
+    return best_centers
+
+# Se vengono trovati piu di 3 centri, sceglie la tripletta piu plausibile.
+def _pick_best_three_centers(centers):
+    values = sorted(int(v) for v in centers)
+    if len(values) <= 3:
+        return values
+
+    best_triplet = values[:3]
+    best_score = None
+
+    for i in range(len(values) - 2):
+        triplet = values[i:i + 3]
+        reg = _connector_spacing_regularity(triplet)
+        span = float(triplet[-1] - triplet[0])
+
+        # meglio regolarità bassa, meglio span grande
+        score = (reg, -span)
+
+        if best_score is None or score < best_score:
+            best_score = score
+            best_triplet = triplet
+
+    return best_triplet
+
+
+# Cerca i pin di un connector orizzontale usando due bande superiore/inferiore.
+def _find_connector_pin_centers_horizontal(image_binary, box):
+    x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+
+    side_band = max(6, int(round(height * 0.36)))
+
+    candidate_bands = [
+        (y1, min(y2, y1 + side_band)),                  # lato alto
+        (max(y1, y2 - side_band), y2),                  # lato basso
     ]
-    centers = _merge_close_values(
-        sorted(centers),
-        min_gap=max(18, int(round(height * 0.10))),
+
+    best_centers = []
+    for by1, by2 in candidate_bands:
+        projection = [
+            int(cv2.countNonZero(image_binary[by1:by2 + 1, x:x + 1]))
+            for x in range(x1, x2 + 1)
+        ]
+        centers = _extract_connector_pin_centers(projection, x1, width, max_gap=6)
+        if len(centers) > len(best_centers):
+            best_centers = centers
+
+    return best_centers
+
+
+# Misura quanto la spaziatura dei pin e regolare.
+def _connector_spacing_regularity(centers):
+    if len(centers) <= 2:
+        return 0.0
+
+    diffs = [
+        float(centers[i + 1] - centers[i])
+        for i in range(len(centers) - 1)
+        if float(centers[i + 1] - centers[i]) > 0.0
+    ]
+    if not diffs:
+        return 1.0
+
+    mean_diff = sum(diffs) / float(len(diffs))
+    variance = sum((d - mean_diff) ** 2 for d in diffs) / float(len(diffs))
+    std_diff = math.sqrt(max(variance, 0.0))
+    return std_diff / float(max(mean_diff, 1e-6))
+
+
+# Conta i cerchi interni al connector con parametri adattivi.
+def _count_connector_circles(image_gray, box):
+    x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_gray.shape)
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+    min_side = max(12, min(width, height))
+
+    return _count_hough_circles(
+        image_gray,
+        box,
+        min_dist=max(16, int(round(min_side * 0.22))),
+        param1=80,
+        param2=13,
+        min_radius=max(5, int(round(min_side * 0.08))),
+        max_radius=max(14, int(round(min_side * 0.24))),
     )
-    component_areas = _component_areas_in_box(image_binary, box)
-    medium_components = [area for area in component_areas[1:] if area >= 80]
-    return 4 <= len(centers) <= 6 and len(medium_components) >= 3
 
 
-# Handle is analog meter like bounding box.
+# Descrive il layout del connector e decide se il bbox e plausibile.
+def get_connector_layout(image_binary, box, image_gray=None):
+    x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+
+    # Elimina i connector quasi quadrati.
+    elongation = max(width, height) / float(max(min(width, height), 1))
+    if elongation < 1.35:
+        return {
+            "is_connector": False,
+            "orientation": None,
+            "pin_count": 0,
+            "pin_centers": [],
+            "regularity": 1.0,
+            "circle_count": 0,
+        }
+
+    vertical_centers = _find_connector_pin_centers_vertical(image_binary, box)
+    horizontal_centers = _find_connector_pin_centers_horizontal(image_binary, box)
+
+    vertical_circle_centers = []
+    if image_gray is not None and len(vertical_centers) < 3:
+        vertical_circle_centers = _find_connector_pin_circle_centers_vertical(image_gray, box)
+        if len(vertical_circle_centers) > len(vertical_centers):
+            vertical_centers = vertical_circle_centers
+
+    vertical_reg = _connector_spacing_regularity(vertical_centers)
+    horizontal_reg = _connector_spacing_regularity(horizontal_centers)
+
+    circle_count = 0
+    if image_gray is not None:
+        circle_count = _count_connector_circles(image_gray, box)
+
+    vertical_ok = (
+        3 <= len(vertical_centers) <= 6
+        and vertical_reg <= 0.34
+        and (
+            height >= width * 1.20
+            or (
+                height >= width * 0.90
+                and circle_count >= max(3, len(vertical_centers) - 1)
+            )
+        )
+    )
+
+    horizontal_ok = (
+        3 <= len(horizontal_centers) <= 6
+        and horizontal_reg <= 0.34
+        and (
+            width >= height * 1.20
+            or (
+                width >= height * 0.90
+                and circle_count >= max(3, len(horizontal_centers) - 1)
+            )
+        )
+    )
+
+    # -------------------------------------------------
+    # Fallback rilassato: connector verticale stretto con 3 pin
+    # -------------------------------------------------
+    if not vertical_ok:
+        relaxed_three_pin_centers = []
+
+        if len(vertical_centers) >= 3:
+            relaxed_three_pin_centers = _pick_best_three_centers(vertical_centers)
+        elif len(vertical_circle_centers) >= 3:
+            relaxed_three_pin_centers = _pick_best_three_centers(vertical_circle_centers)
+
+        if relaxed_three_pin_centers:
+            relaxed_reg = _connector_spacing_regularity(relaxed_three_pin_centers)
+
+            vertical_three_pin_relaxed = (
+                height >= width * 2.4
+                and width <= 130
+                and circle_count >= 8
+                and len(relaxed_three_pin_centers) == 3
+                and relaxed_reg <= 0.65
+            )
+
+            if vertical_three_pin_relaxed:
+                return {
+                    "is_connector": True,
+                    "orientation": "vertical",
+                    "pin_count": len(relaxed_three_pin_centers),
+                    "pin_centers": relaxed_three_pin_centers,
+                    "regularity": relaxed_reg,
+                    "circle_count": circle_count,
+                }
+
+    if vertical_ok and (not horizontal_ok or len(vertical_centers) >= len(horizontal_centers)):
+        return {
+            "is_connector": True,
+            "orientation": "vertical",
+            "pin_count": len(vertical_centers),
+            "pin_centers": vertical_centers,
+            "regularity": vertical_reg,
+            "circle_count": circle_count,
+        }
+
+    if horizontal_ok:
+        return {
+            "is_connector": True,
+            "orientation": "horizontal",
+            "pin_count": len(horizontal_centers),
+            "pin_centers": horizontal_centers,
+            "regularity": horizontal_reg,
+            "circle_count": circle_count,
+        }
+
+    return {
+        "is_connector": False,
+        "orientation": None,
+        "pin_count": 0,
+        "pin_centers": [],
+        "regularity": 1.0,
+        "circle_count": circle_count,
+    }
+
+
+# Wrapper booleano usato nelle regole di remap e soppressione.
+def is_connector_like_bbox(image_binary, box, image_gray=None) -> bool:
+    layout = get_connector_layout(image_binary, box, image_gray=image_gray)
+    return bool(layout["is_connector"])
+
+# =========================================================
+# HEURISTICHE DI CLASSE PER SIMBOLI AMBIGUI
+# =========================================================
+
+# Verifica se un simbolo circolare/quadrato e un analog meter.
 def is_analog_meter_like_bbox(image_binary, box) -> bool:
     x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)
     width = max(x2 - x1, 1)
@@ -324,6 +580,93 @@ def is_analog_meter_like_bbox(image_binary, box) -> bool:
         and center_density <= 0.38
         and len(component_areas) <= 6
     )
+
+# Verifica se un simbolo circolare con grafica interna e una signal source.
+def is_signal_source_like_bbox(image_gray, image_binary, box) -> bool:
+    x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_gray.shape)
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+    ratio = width / float(height)
+
+    # Il simbolo e quasi circolare/quadrato.
+    if min(width, height) < 70 or not (0.78 <= ratio <= 1.28):
+        return False
+
+    # Deve esserci il cerchio esterno.
+    circle_count = _count_hough_circles(
+        image_gray,
+        box,
+        min_dist=max(20, int(round(min(width, height) * 0.30))),
+        param1=80,
+        param2=13,
+        min_radius=max(18, int(round(min(width, height) * 0.22))),
+        max_radius=max(60, int(round(min(width, height) * 0.48))),
+    )
+    if circle_count < 1:
+        return False
+
+    roi_gray = image_gray[y1:y2 + 1, x1:x2 + 1]
+    roi_bin = image_binary[y1:y2 + 1, x1:x2 + 1]
+
+    # Guarda solo la parte interna, escludendo il bordo del cerchio.
+    cx1 = int(round(width * 0.22))
+    cx2 = int(round(width * 0.78))
+    cy1 = int(round(height * 0.22))
+    cy2 = int(round(height * 0.78))
+    inner_gray = roi_gray[cy1:cy2, cx1:cx2]
+    inner_bin = roi_bin[cy1:cy2, cx1:cx2]
+
+    if inner_gray.size == 0 or inner_bin.size == 0:
+        return False
+
+    inner_density = cv2.countNonZero(inner_bin) / float(max(inner_bin.size, 1))
+
+    # Una sorgente sinusoidale ha contenuto centrale moderato.
+    if not (0.05 <= inner_density <= 0.28):
+        return False
+
+    # Evita i meter con lancetta/segmenti forti.
+    edges = cv2.Canny(inner_gray, 50, 150)
+    lines = cv2.HoughLinesP(
+        edges,
+        1,
+        math.pi / 180.0,
+        threshold=10,
+        minLineLength=max(16, int(round(min(inner_gray.shape[:2]) * 0.28))),
+        maxLineGap=5,
+    )
+
+    strong_straight_lines = 0
+    if lines is not None:
+        for line in lines[:, 0, :]:
+            lx1, ly1, lx2, ly2 = map(int, line)
+            dx = lx2 - lx1
+            dy = ly2 - ly1
+            length = math.hypot(dx, dy)
+            if length < max(16, min(width, height) * 0.22):
+                continue
+
+            angle = abs(math.degrees(math.atan2(dy, dx)))
+            angle = min(angle, 180.0 - angle)
+
+            # linee molto dritte orizzontali/verticali/diagonali lunghe
+            if angle <= 18.0 or 72.0 <= angle <= 108.0 or angle >= 150.0:
+                strong_straight_lines += 1
+
+    if strong_straight_lines >= 2:
+        return False
+
+    component_areas = _component_areas_in_box(
+        image_binary,
+        [x1 + cx1, y1 + cy1, x1 + cx2, y1 + cy2],
+    )
+    medium_components = [
+        a for a in component_areas
+        if a >= max(20, int(round(inner_bin.shape[0] * inner_bin.shape[1] * 0.015)))
+    ]
+
+    # Dentro ci aspettiamo pochi tratti, non tanti pezzi sparsi.
+    return 1 <= len(medium_components) <= 3
 
 
 # Handle is memristor like bounding box.
@@ -627,8 +970,11 @@ def is_voltage_source_like_bbox(image_binary, box) -> bool:
     height_ratio = max(float(top_comp["height"]), float(bottom_comp["height"])) / float(max(min(top_comp["height"], bottom_comp["height"]), 1))
     return area_ratio <= 1.55 and height_ratio <= 1.6
 
+# =========================================================
+# CANDIDATI STRUTTURATI ED EURISTICHE DA BINARIO
+# =========================================================
 
-# Handle dedupe candidate boxes.
+# Rimuove candidati strutturati duplicati o troppo sovrapposti.
 def _dedupe_candidate_boxes(candidates, max_overlap=0.55):
     ordered = sorted(
         candidates,
@@ -643,7 +989,7 @@ def _dedupe_candidate_boxes(candidates, max_overlap=0.55):
     return kept
 
 
-# Find structured symbol candidates.
+# Cerca candidati strutturati aggiuntivi direttamente dal binario.
 def find_structured_symbol_candidates(image_gray, image_binary):
     contours, hierarchy = cv2.findContours(
         image_binary,
@@ -665,8 +1011,10 @@ def find_structured_symbol_candidates(image_gray, image_binary):
         extent = area / float(max(w * h, 1))
         ratio = w / float(max(h, 1))
         box = [float(x), float(y), float(x + w - 1), float(y + h - 1)]
-        circle_count = 0
 
+        # -------------------------------------------------
+        # Analog meter candidates
+        # -------------------------------------------------
         if (
             0.82 <= ratio <= 1.15
             and 145 <= w <= 240
@@ -683,33 +1031,47 @@ def find_structured_symbol_candidates(image_gray, image_binary):
             )
             component_areas = _component_areas_in_box(image_binary, box)
             medium_components = [a for a in component_areas[1:] if a >= 80]
+
             if circle_count >= 5 and len(component_areas) <= 6 and len(medium_components) >= 2:
                 analog_candidates.append({
                     "bbox": box,
                     "score": 10.0 * extent + float(circle_count),
                 })
 
+        # -------------------------------------------------
+        # Connector candidates
+        # Supporta sia verticali sia orizzontali
+        # -------------------------------------------------
         if (
-            h >= w * 3.2
-            and 55 <= w <= 130
-            and h >= 250
-            and extent >= 0.78
+            min(w, h) >= 45
+            and max(w, h) >= 120
+            and extent >= 0.72
         ):
-            circle_count = _count_hough_circles(
-                image_gray,
+            connector_layout = get_connector_layout(
+                image_binary,
                 box,
-                min_dist=18,
-                param2=14,
-                min_radius=7,
-                max_radius=20,
+                image_gray=image_gray,
             )
-            row_count = _count_connector_pin_rows(image_binary, box)
-            component_areas = _component_areas_in_box(image_binary, box)
-            medium_components = [area for area in component_areas[1:] if area >= 80]
-            if circle_count >= 4 and 4 <= row_count <= 6 and len(medium_components) >= 3:
+
+            if connector_layout["is_connector"]:
+                orientation_bonus = 0.0
+                if connector_layout["orientation"] in {"vertical", "horizontal"}:
+                    orientation_bonus = 0.4
+
+                regularity_bonus = max(
+                    0.0,
+                    0.35 - float(connector_layout["regularity"])
+                )
+
                 connector_candidates.append({
                     "bbox": box,
-                    "score": 10.0 * extent + float(circle_count) + 0.5 * float(row_count),
+                    "score": (
+                        10.0 * extent
+                        + 0.8 * float(connector_layout["pin_count"])
+                        + 0.5 * float(connector_layout["circle_count"])
+                        + orientation_bonus
+                        + regularity_bonus
+                    ),
                 })
 
     return {
@@ -718,7 +1080,7 @@ def find_structured_symbol_candidates(image_gray, image_binary):
     }
 
 
-# Handle box matches candidate.
+# Verifica se una detection combacia con un candidato euristico.
 def _box_matches_candidate(box, candidate_box, min_iou=0.28, min_ioa=0.55):
     return (
         _bbox_iou(box, candidate_box) >= min_iou
@@ -726,8 +1088,11 @@ def _box_matches_candidate(box, candidate_box, min_iou=0.28, min_ioa=0.55):
         or _bbox_ioa(candidate_box, box) >= min_ioa
     )
 
+# =========================================================
+# REMAP E NORMALIZZAZIONE DELLE CLASSI
+# =========================================================
 
-# Handle remap special component.
+# Corregge alcune confusioni note del modello usando regole geometriche.
 def remap_special_component(image_gray, image_binary, box, predicted_class_name: str, structured_candidates):
     connector_candidates = structured_candidates.get("Connector", [])
     analog_candidates = structured_candidates.get("Analog_Meter", [])
@@ -735,8 +1100,12 @@ def remap_special_component(image_gray, image_binary, box, predicted_class_name:
     if predicted_class_name == "Integrated_Circuit":
         if any(_box_matches_candidate(box, candidate["bbox"]) for candidate in connector_candidates):
             return "Connector"
-        if is_connector_like_bbox(image_binary, box):
+        if is_connector_like_bbox(image_binary, box, image_gray=image_gray):
             return "Connector"
+        
+    if predicted_class_name == "Meter":
+        if is_signal_source_like_bbox(image_gray, image_binary, box):
+            return "Signal_Source"
 
     if predicted_class_name in {"Meter", "Integrated_Circuit", "Inductor"}:
         if any(_box_matches_candidate(box, candidate["bbox"]) for candidate in analog_candidates):
@@ -759,8 +1128,11 @@ def remap_special_component(image_gray, image_binary, box, predicted_class_name:
 
     return predicted_class_name
 
+# =========================================================
+# POST-PROCESSING DELLE DETECTION
+# =========================================================
 
-# Build component record.
+# Costruisce il record standard di un componente.
 def _build_component_record(
     class_id,
     class_name,
@@ -790,7 +1162,7 @@ def _build_component_record(
     }
 
 
-# Add missing structured components.
+# Aggiunge componenti strutturati mancanti trovati dalle euristiche.
 def add_missing_structured_components(components, structured_candidates, class_meta, class_id_by_name):
     target_conf = {
         "Connector": 0.72,
@@ -828,8 +1200,8 @@ def add_missing_structured_components(components, structured_candidates, class_m
     return updated
 
 
-# Suppress conflicting components.
-def suppress_conflicting_components(components, image_binary):
+# Risolve conflitti tra classi che occupano la stessa regione.
+def suppress_conflicting_components(components, image_binary, image_gray):
     suppressed = set()
 
     for i in range(len(components)):
@@ -868,11 +1240,25 @@ def suppress_conflicting_components(components, image_binary):
 
                 if (
                     is_analog_meter_like_bbox(image_binary, analog_box)
-                    or not is_connector_like_bbox(image_binary, connector_box)
+                    or not is_connector_like_bbox(image_binary, connector_box, image_gray=image_gray)
                 ):
                     suppressed.add(connector_idx)
                 else:
                     suppressed.add(analog_idx)
+                continue
+
+            if pair in ({"Connector", "Meter"}, {"Connector", "Signal_Source"}):
+                connector_idx = i if class_a == "Connector" else j
+                other_idx = j if connector_idx == i else i
+
+                connector_box = components[connector_idx]["bbox"]
+                cx1, cy1, cx2, cy2 = connector_box
+                cw = max(float(cx2 - cx1), 1.0)
+                ch = max(float(cy2 - cy1), 1.0)
+                elongation = max(cw, ch) / float(max(min(cw, ch), 1.0))
+
+                if elongation < 1.35:
+                    suppressed.add(connector_idx)
                 continue
 
             if pair == {"Connector", "Integrated_Circuit"}:
@@ -913,7 +1299,7 @@ def suppress_conflicting_components(components, image_binary):
     ]
 
 
-# Handle dedupe overlapping same class.
+# Elimina duplicati della stessa classe con forte sovrapposizione.
 def dedupe_overlapping_same_class(components):
     suppressed = set()
     ordered = sorted(
@@ -953,7 +1339,7 @@ def dedupe_overlapping_same_class(components):
     ]
 
 
-# Suppress nested terminals.
+# Rimuove terminal annidati dentro simboli che li inglobano.
 def suppress_nested_terminals(components):
     blocking_classes = {"Connector", "Switch", "Analog_Meter", "Meter", "Integrated_Circuit"}
     filtered = []
@@ -978,12 +1364,12 @@ def suppress_nested_terminals(components):
     return filtered
 
 
-# Get required confidence.
+# Restituisce la soglia di confidence per una classe.
 def get_required_confidence(class_name: str) -> float:
     return float(CLASS_CONF_THRES.get(class_name, CONF_THRES))
 
 
-# Add secondary class predictions.
+# Esegue un secondo pass mirato su classi difficili.
 def add_secondary_class_predictions(
     image_path: Path,
     image_bgr,
@@ -997,8 +1383,9 @@ def add_secondary_class_predictions(
     updated = list(components)
 
     for target_class_name, spec in SECONDARY_CLASS_PREDICTION_SPECS.items():
-        if any(comp.get("class_name") == target_class_name for comp in updated):
-            continue
+        if target_class_name != "Connector":
+            if any(comp.get("class_name") == target_class_name for comp in updated):
+                continue
 
         target_class_id = class_id_by_name.get(target_class_name)
         if target_class_id is None:
@@ -1037,6 +1424,9 @@ def add_secondary_class_predictions(
                 continue
             if yaml_class_name == "Switch" and not is_switch_like_bbox(image_gray, box):
                 continue
+            if yaml_class_name == "Connector":
+                if not is_connector_like_bbox(image_binary, box, image_gray=image_gray):
+                    continue
 
             final_box = expand_led_bbox(box, image_bgr.shape) if yaml_class_name == "LED" else box
             updated.append(
@@ -1055,7 +1445,7 @@ def add_secondary_class_predictions(
     return updated
 
 
-# Get model inference confidence.
+# Sceglie la confidence di inferenza del pass principale.
 def get_model_inference_confidence(class_meta) -> float:
     class_names = [meta.get("name", "") for meta in class_meta.values()]
     per_class_thresholds = [get_required_confidence(name) for name in class_names if name]
@@ -1066,7 +1456,7 @@ def get_model_inference_confidence(class_meta) -> float:
     return min([CONF_THRES, *per_class_thresholds])
 
 
-# Handle is terminal detection valid.
+# Filtra i terminal rumorosi con probe vicini e lontani.
 def is_terminal_detection_valid(image_binary, bbox) -> bool:
     near_scores = get_terminal_class_probe_scores(image_binary, bbox)
     far_scores = get_terminal_class_far_probe_scores(image_binary, bbox)
@@ -1085,6 +1475,9 @@ def is_terminal_detection_valid(image_binary, bbox) -> bool:
         or (best_score >= 10.0 and second_score >= 5.0)
     )
 
+# =========================================================
+# I/O E ORCHESTRAZIONE DELLO STAGE
+# =========================================================
 
 # Load YAML.
 def load_yaml(path: Path):
@@ -1114,7 +1507,7 @@ def load_class_metadata(class_terminals_path: Path):
     return class_meta, detect_class_ids, terminal_class_ids, masking_class_ids
 
 
-# Normalize model names.
+# Normalizza model.names in un dizionario class_id -> nome.
 def normalize_model_names(model_names):
     if isinstance(model_names, list):
         return {i: name for i, name in enumerate(model_names)}
@@ -1125,7 +1518,7 @@ def normalize_model_names(model_names):
     raise TypeError("Formato model.names non riconosciuto.")
 
 
-# Get input images.
+# Elenca le immagini di input della pipeline.
 def get_input_images():
     if not INPUT_IMAGES_DIR.exists():
         raise FileNotFoundError(f"Cartella immagini non trovata: {INPUT_IMAGES_DIR}")
@@ -1141,7 +1534,7 @@ def get_input_images():
     return images
 
 
-# Draw components.
+# Disegna i componenti rilevati sull'immagine debug.
 def draw_components(image_bgr, components):
     out = image_bgr.copy()
     box_color = (220, 170, 40)
@@ -1197,7 +1590,7 @@ def draw_components(image_bgr, components):
     return out
 
 
-# Predict components on image.
+# Esegue detection, remap, second pass ed euristiche su una singola immagine.
 def predict_components_on_image(
     image_path: Path,
     model,
@@ -1308,7 +1701,7 @@ def predict_components_on_image(
         class_meta=class_meta,
         class_id_by_name=class_id_by_name,
     )
-    components = suppress_conflicting_components(components, image_binary)
+    components = suppress_conflicting_components(components, image_binary, image_gray)
     components = dedupe_overlapping_same_class(components)
     components = suppress_nested_terminals(components)
 
