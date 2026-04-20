@@ -38,7 +38,7 @@ from estimate_terminals.strategies_opamp import snap_opamp_top_aux_to_nearby_ter
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PIPELINE_DATASET = os.environ.get(
     "PIPELINE_DATASET",
-    "pipeline2.0/topology_v8_polarita_componenti"
+    "pipeline2.0/batch_v7_npn_transistor_mosfet"
 )
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "02_assign_instances"

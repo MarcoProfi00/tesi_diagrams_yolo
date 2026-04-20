@@ -224,7 +224,6 @@ def _diode_bar_scores(score_map: dict, orientation: str) -> dict:
 
 # Handle plus marker scores by side.
 def _plus_marker_scores_by_side(binary, bbox, orientation: str):
-    # Handle plus like patch score.
     def plus_like_patch_score(cx: int, cy: int, half_w: int, half_h: int) -> float:
         xa = max(0, cx - half_w)
         xb = min(binary.shape[1], cx + half_w + 1)
@@ -236,37 +235,75 @@ def _plus_marker_scores_by_side(binary, bbox, orientation: str):
 
         row_proj = np.count_nonzero(roi > 0, axis=1)
         col_proj = np.count_nonzero(roi > 0, axis=0)
+
         row_max = float(row_proj.max()) if row_proj.size else 0.0
         col_max = float(col_proj.max()) if col_proj.size else 0.0
-        return row_max + col_max + 0.8 * min(row_max, col_max)
+
+        # Il '+' ha sia barra orizzontale sia barra verticale.
+        # Il '-' tende ad avere quasi solo la barra orizzontale.
+        balance = min(row_max, col_max) / max(max(row_max, col_max), 1.0)
+
+        # Supporto sulla colonna centrale: aiuta a riconoscere la barretta verticale del '+'
+        cx_local = roi.shape[1] // 2
+        band_x1 = max(0, cx_local - 1)
+        band_x2 = min(roi.shape[1], cx_local + 2)
+        center_col_support = float(np.count_nonzero(roi[:, band_x1:band_x2] > 0))
+
+        return (
+            0.90 * row_max
+            + 1.55 * col_max
+            + 1.80 * balance * min(row_max, col_max)
+            + 0.06 * center_col_support
+        )
 
     x1, y1, x2, y2, width, height = _bbox_dims(bbox, binary)
-    patch_half_w = max(2, int(round(width * 0.18)))
-    patch_half_h = max(2, int(round(height * 0.10)))
 
+    # Lascio invariato il caso orizzontale, che nei tuoi batch sta andando bene.
     if orientation == "horizontal":
+        patch_half_w = max(2, int(round(width * 0.18)))
+        patch_half_h = max(2, int(round(height * 0.10)))
+
         left_cx = int(round(x1 + width * 0.10))
         right_cx = int(round(x1 + width * 0.90))
         top_cy = int(round(y1 + height * 0.20))
+
         left_score = plus_like_patch_score(left_cx, top_cy, patch_half_w, patch_half_h)
         right_score = plus_like_patch_score(right_cx, top_cy, patch_half_w, patch_half_h)
+
         return {
             "left": round(float(left_score), 4),
             "right": round(float(right_score), 4),
             "patch_half_w": patch_half_w,
             "patch_half_h": patch_half_h,
+            "score_mode": "plus_marker_generic_horizontal",
         }
 
+    # Caso verticale: patch più stretti e più interni,
+    # per leggere il '+' e il '-' ed evitare wire/bordo ellisse.
     cx = int(round((x1 + x2) / 2.0))
-    top_cy = int(round(y1 + height * 0.18))
-    bottom_cy = int(round(y1 + height * 0.82))
+    patch_half_w = max(2, int(round(width * 0.10)))
+    patch_half_h = max(2, int(round(height * 0.07)))
+
+    top_cy = int(round(y1 + height * 0.30))
+    bottom_cy = int(round(y1 + height * 0.70))
+
     top_score = plus_like_patch_score(cx, top_cy, patch_half_w, patch_half_h)
     bottom_score = plus_like_patch_score(cx, bottom_cy, patch_half_w, patch_half_h)
+
+    # Nei Voltage_Source verticali del tuo dataset il '+' è quasi sempre sopra.
+    # Se i due score sono quasi pari, preferiamo top.
+    near_tie_margin = max(4.0, 0.10 * max(top_score, bottom_score, 1.0))
+    if abs(top_score - bottom_score) <= near_tie_margin:
+        top_score += 4.0
+
     return {
         "top": round(float(top_score), 4),
         "bottom": round(float(bottom_score), 4),
         "patch_half_w": patch_half_w,
         "patch_half_h": patch_half_h,
+        "top_cy": int(top_cy),
+        "bottom_cy": int(bottom_cy),
+        "score_mode": "plus_marker_voltage_source_vertical_tight",
     }
 
 

@@ -535,29 +535,48 @@ def resolve_three_terminal_semantics(binary, bbox, orientation, terminals, meta)
         return terminals
 
     if semantic_strategy == "npn_emitter_from_arrow_branch":
-        arrow_scores, arrow_debug = _three_terminal_arrow_branch_probe(
+        # -------------------------------------------------
+        # NPN: per left/right il probe vicino al trunk è più
+        # affidabile del probe generico, perché la freccia
+        # dell'emitter sta vicino al ramo centrale e non
+        # verso l'estremità lontana del bbox.
+        # -------------------------------------------------
+
+        generic_scores, generic_debug = _three_terminal_arrow_branch_probe(
             working_binary,
             bbox,
             orientation,
         )
-        arrow_branch_position = max(
+        generic_arrow_branch = max(
             pair_positions,
-            key=lambda rel_pos: arrow_scores.get(rel_pos, 0.0),
+            key=lambda rel_pos: generic_scores.get(rel_pos, 0.0),
         )
-        other_branch_position = next(
+        generic_other_branch = next(
             rel_pos for rel_pos in pair_positions
-            if rel_pos != arrow_branch_position
+            if rel_pos != generic_arrow_branch
         )
-        best_score, second_score, pair_confidence = _semantic_pair_confidence(
-            arrow_scores,
-            arrow_branch_position,
-            other_branch_position,
+        generic_best, generic_second, generic_conf = _semantic_pair_confidence(
+            generic_scores,
+            generic_arrow_branch,
+            generic_other_branch,
         )
+
+        arrow_scores = generic_scores
+        arrow_debug = generic_debug
+        arrow_branch_position = generic_arrow_branch
+        other_branch_position = generic_other_branch
+        best_score = generic_best
+        second_score = generic_second
+        pair_confidence = generic_conf
 
         fallback_scores = None
         fallback_debug = None
         fallback_used = False
-        if pair_confidence < THREE_TERMINAL_ARROW_CONFIDENCE_MIN:
+        selection_mode = "generic_probe"
+
+        # Per NPN left/right proviamo SEMPRE il probe dedicato vicino al trunk
+        # e lo preferiamo quando ha una confidence almeno decente.
+        if orientation in {"left", "right"}:
             fallback_scores, fallback_debug = _npn_arrow_branch_probe(
                 working_binary,
                 bbox,
@@ -577,7 +596,17 @@ def resolve_three_terminal_semantics(binary, bbox, orientation, terminals, meta)
                 fallback_other_branch,
             )
 
-            if fb_conf > pair_confidence:
+            use_fallback = False
+
+            # Caso normale: il probe NPN dedicato è sufficientemente affidabile
+            if fb_conf >= THREE_TERMINAL_ARROW_CONFIDENCE_MIN:
+                use_fallback = True
+
+            # Caso residuale: entrambi deboli, ma il probe NPN è comunque migliore
+            elif generic_conf < THREE_TERMINAL_ARROW_CONFIDENCE_MIN and fb_conf > generic_conf:
+                use_fallback = True
+
+            if use_fallback:
                 arrow_scores = fallback_scores
                 arrow_debug = fallback_debug
                 arrow_branch_position = fallback_arrow_branch
@@ -586,45 +615,47 @@ def resolve_three_terminal_semantics(binary, bbox, orientation, terminals, meta)
                 second_score = fb_second
                 pair_confidence = fb_conf
                 fallback_used = True
+                selection_mode = "npn_trunk_probe"
 
-    else:
-        return terminals
-
-    role_by_position = {
-        orientation: ("single_side", semantic_roles.get("single_side")),
-        arrow_branch_position: ("arrow_branch", semantic_roles.get("arrow_branch")),
-        other_branch_position: ("other_branch", semantic_roles.get("other_branch")),
-    }
-
-    for term in terminals:
-        rel_pos = term.get("relative_position")
-        semantic_slot, semantic_name = role_by_position.get(rel_pos, (None, None))
-
-        if semantic_name is None:
-            continue
-
-        term["semantic_terminal_name"] = semantic_name
-        term["semantic_terminal_id"] = f"{term['instance_id']}:{semantic_name}"
-        term["semantic_slot"] = semantic_slot
-        term["semantic_confidence"] = (
-            1.0 if semantic_slot == "single_side" else round(pair_confidence, 4)
-        )
-        term["semantic_resolution_mode"] = semantic_strategy
-        term["semantic_resolution_debug"] = {
-            "orientation": orientation,
-            "arrow_branch_position": arrow_branch_position,
-            "other_branch_position": other_branch_position,
-            "arrow_scores": arrow_scores,
-            "arrow_score_best": best_score,
-            "arrow_score_second": second_score,
-            "arrow_probe_debug": arrow_debug,
-            "fallback_used": fallback_used,
-            "fallback_arrow_scores": fallback_scores,
-            "fallback_arrow_probe_debug": fallback_debug,
-            "support_binary_debug": support_binary_debug,
+        role_by_position = {
+            orientation: ("single_side", semantic_roles.get("single_side")),
+            arrow_branch_position: ("arrow_branch", semantic_roles.get("arrow_branch")),
+            other_branch_position: ("other_branch", semantic_roles.get("other_branch")),
         }
-        term["display_name"] = semantic_name
-        term["display_terminal_id"] = term["semantic_terminal_id"]
+
+        for term in terminals:
+            rel_pos = term.get("relative_position")
+            semantic_slot, semantic_name = role_by_position.get(rel_pos, (None, None))
+
+            if semantic_name is None:
+                continue
+
+            term["semantic_terminal_name"] = semantic_name
+            term["semantic_terminal_id"] = f"{term['instance_id']}:{semantic_name}"
+            term["semantic_slot"] = semantic_slot
+            term["semantic_confidence"] = (
+                1.0 if semantic_slot == "single_side" else round(pair_confidence, 4)
+            )
+            term["semantic_resolution_mode"] = semantic_strategy
+            term["semantic_resolution_debug"] = {
+                "orientation": orientation,
+                "arrow_branch_position": arrow_branch_position,
+                "other_branch_position": other_branch_position,
+                "arrow_scores": arrow_scores,
+                "arrow_score_best": best_score,
+                "arrow_score_second": second_score,
+                "arrow_probe_debug": arrow_debug,
+                "fallback_used": fallback_used,
+                "fallback_arrow_scores": fallback_scores,
+                "fallback_arrow_probe_debug": fallback_debug,
+                "generic_arrow_scores": generic_scores,
+                "generic_arrow_probe_debug": generic_debug,
+                "generic_confidence": round(generic_conf, 4),
+                "selection_mode": selection_mode,
+                "support_binary_debug": support_binary_debug,
+            }
+            term["display_name"] = semantic_name
+            term["display_terminal_id"] = term["semantic_terminal_id"]
 
     return terminals
 

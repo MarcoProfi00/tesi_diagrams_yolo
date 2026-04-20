@@ -18,7 +18,7 @@ import cv2
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PIPELINE_DATASET = os.environ.get(
     "PIPELINE_DATASET",
-    "pipeline2.0/topology_v8_polarita_componenti"
+    "pipeline2.0/batch_v9_2_set_successivo_analog_meter_connector_transformer"
 )
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "01_detect_components"
