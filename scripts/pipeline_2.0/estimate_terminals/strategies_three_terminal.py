@@ -706,7 +706,38 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
         best_base_side = "left" if base_side_scores["left"] >= base_side_scores["right"] else "right"
         other_base_side = "right" if best_base_side == "left" else "left"
 
-        if base_side_scores[best_base_side] > base_side_scores[other_base_side] * 1.12:
+        accept_base_override = base_side_scores[best_base_side] > base_side_scores[other_base_side] * 1.12
+        base_override_veto_debug = None
+
+        if accept_base_override and THREE_TERMINAL_POINT_VALIDATION_ENABLE:
+            best_point_score, best_point_debug = score_three_terminal_orientation_by_terminal_points(
+                working_binary,
+                bbox,
+                best_base_side,
+                single_weight=THREE_TERMINAL_POINT_VALIDATION_SINGLE_WEIGHT,
+            )
+            other_point_score, other_point_debug = score_three_terminal_orientation_by_terminal_points(
+                working_binary,
+                bbox,
+                other_base_side,
+                single_weight=THREE_TERMINAL_POINT_VALIDATION_SINGLE_WEIGHT,
+            )
+
+            if other_point_score > best_point_score * NPN_BASE_OVERRIDE_POINT_VETO_MARGIN:
+                accept_base_override = False
+                base_override_veto_debug = {
+                    "enabled": True,
+                    "reason": "opposite_side_point_validation_stronger",
+                    "best_base_side": best_base_side,
+                    "other_base_side": other_base_side,
+                    "best_base_side_point_score": round(float(best_point_score), 4),
+                    "other_base_side_point_score": round(float(other_point_score), 4),
+                    "margin": float(NPN_BASE_OVERRIDE_POINT_VETO_MARGIN),
+                    "best_base_side_point_debug": best_point_debug,
+                    "other_base_side_point_debug": other_point_debug,
+                }
+
+        if accept_base_override:
             debug_scores = dict(multi_scores)
             debug_scores["single_side_scores"] = {
                 "top": single_side_scores["top"],
@@ -724,6 +755,9 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
             debug_scores["bjt_combined_base_side_scores"] = base_side_scores
             debug_scores["three_terminal_support_binary_debug"] = support_binary_debug
             return best_base_side, debug_scores
+
+        if base_override_veto_debug is not None:
+            bjt_base_side_scores["base_override_veto"] = base_override_veto_debug
 
     ordered_single = sorted(
         ("top", "bottom", "left", "right"),
@@ -885,7 +919,11 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
             generic_orientation_scores[cand] = cand_score
             generic_orientation_point_debug[cand] = cand_debug
 
-            if class_name == "NPN_Transistor" and bjt_base_side_scores is not None:
+            if (
+                class_name == "NPN_Transistor"
+                and bjt_base_side_scores is not None
+                and not bjt_base_side_scores.get("base_override_veto")
+            ):
                 if "left" in generic_orientation_scores:
                     generic_orientation_scores["left"] += 0.8 * bjt_base_side_scores["left"]
 

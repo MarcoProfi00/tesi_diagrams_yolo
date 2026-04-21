@@ -41,7 +41,7 @@ Nota sul debug:
 # PATHS / INPUT-OUTPUT
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline2.0/batch_v6_operational_amplifier")
+PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline2.0/batch_v8_polarita_componenti")
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "04_extract_wires"
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "05_build_terminal_graph"
@@ -67,6 +67,46 @@ TERMINAL_SQUARE_FALLBACK_RADIUS = 12
 MAX_REASONABLE_SNAP_DISTANCE = 24.0
 
 # =========================================================
+# HEURISTICHE SPECIALI
+# =========================================================
+BJT_BASE_ALIGN_Y_TOL = 10
+BJT_BASE_MAX_DX = 180
+BJT_BASE_LABEL_MAX_GAP = 180
+
+MOSFET_GATE_ALIGN_Y_TOL = 10
+MOSFET_GATE_MAX_DX = 260
+MOSFET_GATE_LABEL_MAX_GAP = 120
+MOSFET_GATE_SUPPLY_ALIGN_Y_TOL = 85
+
+OPAMP_AUX_EXTERNAL_MAX_DX = 12
+OPAMP_AUX_EXTERNAL_MAX_DY = 180
+
+COMPONENT_BODY_ERASE_PADDING = 3
+COMPONENT_BODY_ERASE_EXCLUDED_CLASSES = {
+    "terminal",
+    "gnd",
+    "ground",
+}
+
+BRIDGE_MIN_RUN = 25
+BRIDGE_MIN_PIXELS_PER_DIRECTION = 6
+BRIDGE_HUMP_Y_MIN = 2
+BRIDGE_HUMP_Y_MAX = 8
+BRIDGE_HUMP_X_MIN = 3
+BRIDGE_HUMP_X_MAX = 14
+BRIDGE_CUT_HALF_WIDTH = 6
+BRIDGE_CUT_HALF_HEIGHT = 8
+BRIDGE_PROBE_DISTANCE = 18
+
+PLAIN_CROSSING_MIN_RUN = 25
+PLAIN_CROSSING_MIN_PIXELS_PER_DIRECTION = 6
+PLAIN_CROSSING_DOT_RADIUS = 8
+PLAIN_CROSSING_DOT_AREA_MIN = 210
+PLAIN_CROSSING_CUT_HALF_WIDTH = 4
+PLAIN_CROSSING_CUT_HALF_HEIGHT = 4
+PLAIN_CROSSING_PROBE_DISTANCE = 18
+
+# =========================================================
 # DEBUG VISIVO
 # =========================================================
 SAVE_DEBUG_IMAGES = True
@@ -85,6 +125,7 @@ TEXT_COLOR = (255, 255, 0)                # giallo
 TEXT_OUTLINE_COLOR = (0, 0, 0)            # nero
 
 
+
 # =========================================================
 # UTILITY BASE
 # =========================================================
@@ -96,6 +137,65 @@ def load_binary_image(path: Path) -> np.ndarray:
 
     # Normalizziamo a 0/255 per evitare ambiguità.
     return np.where(img > 0, 255, 0).astype(np.uint8)
+
+
+# =========================================================
+# PULIZIA SKELETON DENTRO I COMPONENTI A DUE TERMINALI
+# =========================================================
+# Il passo 04 puo' lasciare nello skeleton tratti del corpo del componente
+# (ad esempio la zig-zag del resistore). Se quei pixel restano collegati ai
+# fili esterni, i due capi del componente finiscono nella stessa connected
+# component e il grafo crea un "mega nodo" non reale.
+#
+# Per il passo 05 il corpo di un componente a due terminali non e' un filo:
+# deve separare i due morsetti. Per questo cancelliamo solo l'interno del
+# bbox dei componenti a due terminali, lasciando vivi i piccoli stub esterni
+# vicino ai terminali.
+
+def should_erase_component_body_from_skeleton(component: dict):
+    class_name = normalize_class_name(component.get("class_name"))
+    terminals = component.get("terminals", [])
+
+    if class_name in COMPONENT_BODY_ERASE_EXCLUDED_CLASSES:
+        return False
+
+    return len(terminals) == 2
+
+
+def erase_component_bodies_from_skeleton(
+    skeleton_binary: np.ndarray,
+    components: list[dict],
+):
+    cleaned = skeleton_binary.copy()
+    h, w = cleaned.shape[:2]
+
+    for component in components:
+        if not should_erase_component_body_from_skeleton(component):
+            continue
+
+        bbox = component.get("bbox")
+        if not bbox or len(bbox) != 4:
+            continue
+
+        x1, y1, x2, y2 = map(float, bbox)
+        pad = float(COMPONENT_BODY_ERASE_PADDING)
+
+        erase_window = clamp_window(
+            x1 + pad,
+            y1 + pad,
+            x2 - pad,
+            y2 - pad,
+            w,
+            h,
+        )
+        ex1, ey1, ex2, ey2 = erase_window
+
+        if ex2 <= ex1 or ey2 <= ey1:
+            continue
+
+        cleaned[ey1:ey2, ex1:ex2] = 0
+
+    return cleaned
 
 
 # Clamp di una finestra dentro i limiti immagine.
@@ -357,6 +457,1035 @@ def build_label_to_terminal_ids(match_debug_by_terminal_id: dict):
 
 
 # =========================================================
+# FUSIONE LABEL SPEZZATE DA SIMBOLI BJT
+# =========================================================
+# In alcuni schemi il filo della base passa visivamente attraverso/accanto
+# al simbolo del transistor, ma il passo 04 spezza lo skeleton perche'
+# maschera il componente. Qui fondiamo solo casi molto conservativi:
+# terminali B di BJT, quasi alla stessa y, con bbox vicine e label vicine.
+
+def is_bjt_base_terminal(term: dict) -> bool:
+    class_name = normalize_class_name(term.get("component_class_name"))
+    terminal_name = str(get_preferred_terminal_public_name(term) or "").strip().upper()
+    return "transistor" in class_name and terminal_name == "B"
+
+
+def build_component_bbox_by_instance(components: list[dict]):
+    bbox_by_instance = {}
+    for comp in components:
+        instance_id = comp.get("instance_id")
+        bbox = comp.get("bbox")
+        if instance_id is None or not bbox or len(bbox) != 4:
+            continue
+        bbox_by_instance[str(instance_id)] = [float(v) for v in bbox]
+    return bbox_by_instance
+
+
+def horizontal_bbox_gap(bbox_a, bbox_b):
+    ax1, _, ax2, _ = bbox_a
+    bx1, _, bx2, _ = bbox_b
+
+    if ax2 < bx1:
+        return float(bx1 - ax2)
+    if bx2 < ax1:
+        return float(ax1 - bx2)
+    return 0.0
+
+
+def min_label_distance(labels: np.ndarray, label_a: int, label_b: int):
+    ys_a, xs_a = np.where(labels == int(label_a))
+    ys_b, xs_b = np.where(labels == int(label_b))
+
+    if len(xs_a) == 0 or len(xs_b) == 0:
+        return None
+
+    # Le label dei fili sono piccole; questo calcolo esplicito resta semplice
+    # e ci restituisce la vera distanza minima tra i due spezzoni.
+    best = None
+    points_a = np.column_stack((xs_a, ys_a)).astype(np.float32)
+    for xb, yb in zip(xs_b, ys_b):
+        d2 = (points_a[:, 0] - float(xb)) ** 2 + (points_a[:, 1] - float(yb)) ** 2
+        dist = float(np.sqrt(np.min(d2)))
+        if best is None or dist < best:
+            best = dist
+
+    return best
+
+
+def merge_bjt_base_aligned_labels(
+    label_to_terminal_ids: dict,
+    terminals: list[dict],
+    components: list[dict],
+    terminal_match_debug: dict,
+    labels: np.ndarray,
+):
+    parent = {int(label): int(label) for label in label_to_terminal_ids.keys()}
+
+    def find(label):
+        label = int(label)
+        parent.setdefault(label, label)
+        while parent[label] != label:
+            parent[label] = parent[parent[label]]
+            label = parent[label]
+        return label
+
+    def union(label_a, label_b):
+        root_a = find(label_a)
+        root_b = find(label_b)
+        if root_a != root_b:
+            parent[max(root_a, root_b)] = min(root_a, root_b)
+
+    bbox_by_instance = build_component_bbox_by_instance(components)
+    base_terms = [term for term in terminals if is_bjt_base_terminal(term)]
+
+    for i, term_a in enumerate(base_terms):
+        info_a = terminal_match_debug.get(term_a["terminal_id"], {})
+        label_a = info_a.get("matched_label")
+        if label_a is None:
+            continue
+
+        bbox_a = bbox_by_instance.get(str(term_a.get("instance_id")))
+        if bbox_a is None:
+            continue
+
+        for term_b in base_terms[i + 1:]:
+            info_b = terminal_match_debug.get(term_b["terminal_id"], {})
+            label_b = info_b.get("matched_label")
+            if label_b is None or int(label_a) == int(label_b):
+                continue
+
+            bbox_b = bbox_by_instance.get(str(term_b.get("instance_id")))
+            if bbox_b is None:
+                continue
+
+            if abs(float(term_a["y"]) - float(term_b["y"])) > BJT_BASE_ALIGN_Y_TOL:
+                continue
+
+            if horizontal_bbox_gap(bbox_a, bbox_b) > BJT_BASE_MAX_DX:
+                continue
+
+            label_gap = min_label_distance(labels, int(label_a), int(label_b))
+            if label_gap is None or label_gap > BJT_BASE_LABEL_MAX_GAP:
+                continue
+
+            union(int(label_a), int(label_b))
+
+    merged = {}
+    for label, terminal_ids in label_to_terminal_ids.items():
+        root = find(int(label))
+        merged.setdefault(root, []).extend(terminal_ids)
+
+    return {
+        int(label): sorted(set(terminal_ids))
+        for label, terminal_ids in merged.items()
+    }
+
+
+# =========================================================
+# FUSIONE LABEL SPEZZATE TRA GATE MOSFET
+# =========================================================
+# Nei mirror e negli stadi differenziali le gate dei MOSFET possono essere
+# unite da un filo orizzontale che passa vicino ai simboli. Se il passo 04
+# spezza quel filo in due tronconi, fondiamo solo coppie di gate MOSFET
+# quasi allineate, con componenti vicini e spezzoni di skeleton vicini.
+
+def is_mosfet_gate_terminal(term: dict) -> bool:
+    class_name = normalize_class_name(term.get("component_class_name"))
+    terminal_name = str(get_preferred_terminal_public_name(term) or "").strip().upper()
+    return "mosfet" in class_name and terminal_name == "G"
+
+
+def is_mosfet_terminal(term: dict) -> bool:
+    class_name = normalize_class_name(term.get("component_class_name"))
+    return "mosfet" in class_name
+
+
+def is_battery_terminal(term: dict) -> bool:
+    class_name = normalize_class_name(term.get("component_class_name"))
+    return class_name == "battery"
+
+
+def merge_mosfet_gate_aligned_labels(
+    label_to_terminal_ids: dict,
+    terminals: list[dict],
+    components: list[dict],
+    terminal_match_debug: dict,
+    labels: np.ndarray,
+):
+    parent = {int(label): int(label) for label in label_to_terminal_ids.keys()}
+
+    def find(label):
+        label = int(label)
+        parent.setdefault(label, label)
+        while parent[label] != label:
+            parent[label] = parent[parent[label]]
+            label = parent[label]
+        return label
+
+    def union(label_a, label_b):
+        root_a = find(label_a)
+        root_b = find(label_b)
+        if root_a != root_b:
+            parent[max(root_a, root_b)] = min(root_a, root_b)
+
+    bbox_by_instance = build_component_bbox_by_instance(components)
+    gate_terms = [term for term in terminals if is_mosfet_gate_terminal(term)]
+    terminal_by_id = {term["terminal_id"]: term for term in terminals}
+
+    def label_group_is_only_mosfet_gates(label):
+        terminal_ids = label_to_terminal_ids.get(int(label), [])
+        if not terminal_ids:
+            return False
+
+        return all(
+            is_mosfet_gate_terminal(terminal_by_id[terminal_id])
+            for terminal_id in terminal_ids
+            if terminal_id in terminal_by_id
+        )
+
+    for i, term_a in enumerate(gate_terms):
+        info_a = terminal_match_debug.get(term_a["terminal_id"], {})
+        label_a = info_a.get("matched_label")
+        if label_a is None:
+            continue
+
+        bbox_a = bbox_by_instance.get(str(term_a.get("instance_id")))
+        if bbox_a is None:
+            continue
+
+        for term_b in gate_terms[i + 1:]:
+            info_b = terminal_match_debug.get(term_b["terminal_id"], {})
+            label_b = info_b.get("matched_label")
+            if label_b is None or int(label_a) == int(label_b):
+                continue
+
+            bbox_b = bbox_by_instance.get(str(term_b.get("instance_id")))
+            if bbox_b is None:
+                continue
+
+            # Questa fusione serve a ricucire fili di gate spezzati dal passo 04.
+            # Se una delle due label contiene gia' induttori, resistori, terminali
+            # o altri componenti, allora non e' uno spezzone isolato di gate ma un
+            # nodo elettrico gia' formato: fonderlo rischia di unire reti distinte.
+            if not label_group_is_only_mosfet_gates(label_a):
+                continue
+            if not label_group_is_only_mosfet_gates(label_b):
+                continue
+
+            if abs(float(term_a["y"]) - float(term_b["y"])) > MOSFET_GATE_ALIGN_Y_TOL:
+                continue
+
+            if horizontal_bbox_gap(bbox_a, bbox_b) > MOSFET_GATE_MAX_DX:
+                continue
+
+            label_gap = min_label_distance(labels, int(label_a), int(label_b))
+            if label_gap is None or label_gap > MOSFET_GATE_LABEL_MAX_GAP:
+                continue
+
+            union(int(label_a), int(label_b))
+
+    merged = {}
+    for label, terminal_ids in label_to_terminal_ids.items():
+        root = find(int(label))
+        merged.setdefault(root, []).extend(terminal_ids)
+
+    return {
+        int(label): sorted(set(terminal_ids))
+        for label, terminal_ids in merged.items()
+    }
+
+
+# =========================================================
+# MATCH VIRTUALE AUX OPAMP -> TERMINALE ESTERNO
+# =========================================================
+# Gli ingressi ausiliari degli opamp (aux1 / aux2) possono cadere dentro o
+# vicino al triangolo del simbolo. In quel caso il passo 04 maschera il
+# componente e lo skeleton puo' perdere il tratto fino al terminale esterno
+# VCC/VEE. Se un aux e un componente Terminal sono quasi verticalmente
+# allineati, li trattiamo come la stessa connessione elettrica.
+
+def is_opamp_aux_terminal(term: dict) -> bool:
+    class_name = normalize_class_name(term.get("component_class_name"))
+    terminal_name = str(get_preferred_terminal_public_name(term) or "").strip().lower()
+    return class_name == "operational_amplifier" and terminal_name.startswith("aux")
+
+
+def is_external_terminal_component(term: dict) -> bool:
+    class_name = normalize_class_name(term.get("component_class_name"))
+    return class_name == "terminal"
+
+
+def is_terminal_in_aux_direction(aux_term: dict, candidate_term: dict):
+    aux_y = float(aux_term["y"])
+    candidate_y = float(candidate_term["y"])
+    relative_position = aux_term.get("relative_position")
+
+    if relative_position == "top":
+        return candidate_y < aux_y
+    if relative_position == "bottom":
+        return candidate_y > aux_y
+
+    return False
+
+
+def attach_unmatched_opamp_aux_to_external_terminals(
+    terminals: list[dict],
+    terminal_match_debug: dict,
+):
+    terminal_candidates = [
+        term
+        for term in terminals
+        if is_external_terminal_component(term)
+        and terminal_match_debug.get(term["terminal_id"], {}).get("matched_label") is not None
+    ]
+
+    for aux_term in terminals:
+        aux_id = aux_term["terminal_id"]
+        aux_match = terminal_match_debug.get(aux_id, {})
+
+        if aux_match.get("matched_label") is not None:
+            continue
+
+        if not is_opamp_aux_terminal(aux_term):
+            continue
+
+        candidates = []
+        for candidate in terminal_candidates:
+            if not is_terminal_in_aux_direction(aux_term, candidate):
+                continue
+
+            dx = abs(float(candidate["x"]) - float(aux_term["x"]))
+            dy = abs(float(candidate["y"]) - float(aux_term["y"]))
+
+            if dx > OPAMP_AUX_EXTERNAL_MAX_DX:
+                continue
+            if dy > OPAMP_AUX_EXTERNAL_MAX_DY:
+                continue
+
+            candidate_match = terminal_match_debug.get(candidate["terminal_id"], {})
+            candidates.append({
+                "term": candidate,
+                "match": candidate_match,
+                "dx": dx,
+                "dy": dy,
+            })
+
+        if not candidates:
+            continue
+
+        best = min(candidates, key=lambda item: (item["dx"], item["dy"]))
+        best_term = best["term"]
+        best_match = best["match"]
+        snap_point = best_match.get("snap_point")
+
+        terminal_match_debug[aux_id] = {
+            "terminal_id": aux_id,
+            "candidate_labels": [int(best_match["matched_label"])],
+            "matched_label": int(best_match["matched_label"]),
+            "match_mode": "opamp_aux_external_terminal_virtual",
+            "search_window": None,
+            "snap_point": snap_point,
+            "snap_distance": round(float(best["dy"]), 3),
+            "is_suspicious": False,
+            "virtual_match": True,
+            "virtual_match_reason": "unmatched_opamp_aux_aligned_to_external_terminal",
+            "external_terminal_id": best_term["terminal_id"],
+            "external_terminal_point": [
+                round(float(best_term["x"]), 3),
+                round(float(best_term["y"]), 3),
+            ],
+            "axis_delta": [
+                round(float(best["dx"]), 3),
+                round(float(best["dy"]), 3),
+            ],
+        }
+
+
+def collect_opamp_aux_external_terminal_pairs(
+    terminals: list[dict],
+    terminal_match_debug: dict,
+):
+    pairs = []
+    terminal_candidates = [
+        term
+        for term in terminals
+        if is_external_terminal_component(term)
+        and terminal_match_debug.get(term["terminal_id"], {}).get("matched_label") is not None
+    ]
+
+    for aux_term in terminals:
+        if not is_opamp_aux_terminal(aux_term):
+            continue
+
+        aux_match = terminal_match_debug.get(aux_term["terminal_id"], {})
+        if aux_match.get("matched_label") is None:
+            continue
+
+        candidates = []
+        for candidate in terminal_candidates:
+            if not is_terminal_in_aux_direction(aux_term, candidate):
+                continue
+
+            dx = abs(float(candidate["x"]) - float(aux_term["x"]))
+            dy = abs(float(candidate["y"]) - float(aux_term["y"]))
+
+            if dx > OPAMP_AUX_EXTERNAL_MAX_DX:
+                continue
+            if dy > OPAMP_AUX_EXTERNAL_MAX_DY:
+                continue
+
+            candidates.append({
+                "aux_term": aux_term,
+                "external_term": candidate,
+                "dx": dx,
+                "dy": dy,
+            })
+
+        if not candidates:
+            continue
+
+        best = min(candidates, key=lambda item: (item["dx"], item["dy"]))
+        pairs.append(best)
+
+    return pairs
+
+
+def merge_opamp_aux_external_terminal_labels(
+    label_to_terminal_ids: dict,
+    terminals: list[dict],
+    terminal_match_debug: dict,
+):
+    pairs = collect_opamp_aux_external_terminal_pairs(terminals, terminal_match_debug)
+    if not pairs:
+        return label_to_terminal_ids
+
+    parent = {int(label): int(label) for label in label_to_terminal_ids.keys()}
+
+    def find(label):
+        label = int(label)
+        parent.setdefault(label, label)
+        while parent[label] != label:
+            parent[label] = parent[parent[label]]
+            label = parent[label]
+        return label
+
+    def union(label_a, label_b):
+        root_a = find(label_a)
+        root_b = find(label_b)
+        if root_a != root_b:
+            parent[max(root_a, root_b)] = min(root_a, root_b)
+
+    for pair in pairs:
+        aux_id = pair["aux_term"]["terminal_id"]
+        external_id = pair["external_term"]["terminal_id"]
+        aux_label = terminal_match_debug.get(aux_id, {}).get("matched_label")
+        external_label = terminal_match_debug.get(external_id, {}).get("matched_label")
+
+        if aux_label is None or external_label is None:
+            continue
+
+        union(int(aux_label), int(external_label))
+
+    merged = {}
+    for label, terminal_ids in label_to_terminal_ids.items():
+        root = find(int(label))
+        merged.setdefault(root, []).extend(terminal_ids)
+
+    return {
+        int(label): sorted(set(terminal_ids))
+        for label, terminal_ids in merged.items()
+    }
+
+
+def merge_battery_gate_rail_groups(
+    label_to_terminal_ids: dict,
+    terminals: list[dict],
+):
+    terminal_by_id = {term["terminal_id"]: term for term in terminals}
+
+    parent = {int(label): int(label) for label in label_to_terminal_ids.keys()}
+
+    def find(label):
+        label = int(label)
+        parent.setdefault(label, label)
+        while parent[label] != label:
+            parent[label] = parent[parent[label]]
+            label = parent[label]
+        return label
+
+    def union(label_a, label_b):
+        root_a = find(label_a)
+        root_b = find(label_b)
+        if root_a != root_b:
+            parent[max(root_a, root_b)] = min(root_a, root_b)
+
+    def known_terms_for_label(label):
+        return [
+            terminal_by_id[terminal_id]
+            for terminal_id in label_to_terminal_ids.get(int(label), [])
+            if terminal_id in terminal_by_id
+        ]
+
+    def is_battery_only_group(label):
+        known_terms = known_terms_for_label(label)
+        return bool(known_terms) and all(is_battery_terminal(term) for term in known_terms)
+
+    def is_gate_only_group(label):
+        known_terms = known_terms_for_label(label)
+        return bool(known_terms) and all(is_mosfet_gate_terminal(term) for term in known_terms)
+
+    battery_groups = [
+        (label, known_terms_for_label(label))
+        for label in label_to_terminal_ids
+        if is_battery_only_group(label)
+    ]
+    gate_groups = [
+        (label, known_terms_for_label(label))
+        for label in label_to_terminal_ids
+        if is_gate_only_group(label)
+    ]
+
+    for battery_label, battery_terms in battery_groups:
+        for battery_term in battery_terms:
+            battery_y = float(battery_term["y"])
+
+            for gate_label, gate_terms in gate_groups:
+                gate_y_values = [float(term["y"]) for term in gate_terms]
+                if not gate_y_values:
+                    continue
+
+                nearest_gate_dy = min(abs(gate_y - battery_y) for gate_y in gate_y_values)
+                if nearest_gate_dy > MOSFET_GATE_SUPPLY_ALIGN_Y_TOL:
+                    continue
+
+                union(int(battery_label), int(gate_label))
+
+    merged = {}
+    for label, terminal_ids in label_to_terminal_ids.items():
+        root = find(int(label))
+        merged.setdefault(root, []).extend(terminal_ids)
+
+    return {
+        int(label): sorted(set(terminal_ids))
+        for label, terminal_ids in merged.items()
+    }
+
+
+def merge_mosfet_gate_rail_groups(
+    label_to_terminal_ids: dict,
+    terminals: list[dict],
+    components: list[dict],
+):
+    terminal_by_id = {term["terminal_id"]: term for term in terminals}
+    bbox_by_instance = build_component_bbox_by_instance(components)
+
+    parent = {int(label): int(label) for label in label_to_terminal_ids.keys()}
+
+    def find(label):
+        label = int(label)
+        parent.setdefault(label, label)
+        while parent[label] != label:
+            parent[label] = parent[parent[label]]
+            label = parent[label]
+        return label
+
+    def union(label_a, label_b):
+        root_a = find(label_a)
+        root_b = find(label_b)
+        if root_a != root_b:
+            parent[max(root_a, root_b)] = min(root_a, root_b)
+
+    def known_terms_for_label(label):
+        return [
+            terminal_by_id[terminal_id]
+            for terminal_id in label_to_terminal_ids.get(int(label), [])
+            if terminal_id in terminal_by_id
+        ]
+
+    def gate_terms_for_mosfet_only_group(label):
+        known_terms = known_terms_for_label(label)
+        if not known_terms:
+            return []
+
+        # Dopo gli split una net di soli MOSFET puo' contenere gate e piccoli
+        # residui di source/drain dello stesso rail. La consideriamo ricucibile
+        # solo se non contiene passivi, ground, batteria o terminali esterni.
+        if not all(is_mosfet_terminal(term) for term in known_terms):
+            return []
+
+        return [term for term in known_terms if is_mosfet_gate_terminal(term)]
+
+    gate_groups = [
+        (label, gate_terms_for_mosfet_only_group(label))
+        for label in label_to_terminal_ids
+    ]
+    gate_groups = [
+        (label, gate_terms)
+        for label, gate_terms in gate_groups
+        if gate_terms
+    ]
+
+    for i, (label_a, gate_terms_a) in enumerate(gate_groups):
+        for label_b, gate_terms_b in gate_groups[i + 1:]:
+            best_pair = None
+
+            for gate_a in gate_terms_a:
+                bbox_a = bbox_by_instance.get(str(gate_a.get("instance_id")))
+                if bbox_a is None:
+                    continue
+
+                for gate_b in gate_terms_b:
+                    bbox_b = bbox_by_instance.get(str(gate_b.get("instance_id")))
+                    if bbox_b is None:
+                        continue
+
+                    dy = abs(float(gate_a["y"]) - float(gate_b["y"]))
+                    if dy > MOSFET_GATE_ALIGN_Y_TOL:
+                        continue
+
+                    gap = horizontal_bbox_gap(bbox_a, bbox_b)
+                    if gap > MOSFET_GATE_MAX_DX:
+                        continue
+
+                    candidate = (dy, gap)
+                    if best_pair is None or candidate < best_pair:
+                        best_pair = candidate
+
+            if best_pair is None:
+                continue
+
+            union(int(label_a), int(label_b))
+
+    merged = {}
+    for label, terminal_ids in label_to_terminal_ids.items():
+        root = find(int(label))
+        merged.setdefault(root, []).extend(terminal_ids)
+
+    return {
+        int(label): sorted(set(terminal_ids))
+        for label, terminal_ids in merged.items()
+    }
+
+
+# =========================================================
+# SPLIT LABEL IN CORRISPONDENZA DEI PONTI
+# =========================================================
+# Nei disegni circuitali un ponticello indica un incrocio senza giunzione.
+# Lo skeleton, pero', puo' trasformarlo in una croce connessa. Rileviamo
+# la gobba sopra l'incrocio e separiamo la label in due reti: verticale e
+# orizzontale.
+
+def count_run(binary: np.ndarray, x: int, y: int, dx: int, dy: int, limit: int):
+    h, w = binary.shape[:2]
+    count = 0
+    cx = int(x) + int(dx)
+    cy = int(y) + int(dy)
+
+    while 0 <= cx < w and 0 <= cy < h and count < limit:
+        if binary[cy, cx] == 0:
+            break
+        count += 1
+        cx += int(dx)
+        cy += int(dy)
+
+    return count
+
+
+def has_bridge_hump(binary: np.ndarray, x: int, y: int):
+    h, w = binary.shape[:2]
+    left_count = 0
+    right_count = 0
+
+    for dy in range(BRIDGE_HUMP_Y_MIN, BRIDGE_HUMP_Y_MAX + 1):
+        yy = int(y) - dy
+        if yy < 0:
+            continue
+
+        for dx in range(BRIDGE_HUMP_X_MIN, BRIDGE_HUMP_X_MAX + 1):
+            lx = int(x) - dx
+            rx = int(x) + dx
+            if 0 <= lx < w and binary[yy, lx] > 0:
+                left_count += 1
+            if 0 <= rx < w and binary[yy, rx] > 0:
+                right_count += 1
+
+    return left_count >= 2 and right_count >= 2
+
+
+def detect_wire_bridges(skeleton_binary: np.ndarray, labels: np.ndarray):
+    binary = np.where(skeleton_binary > 0, 1, 0).astype(np.uint8)
+    h, w = binary.shape[:2]
+    candidates = []
+
+    for y in range(BRIDGE_HUMP_Y_MAX + 1, h - BRIDGE_PROBE_DISTANCE):
+        for x in range(BRIDGE_PROBE_DISTANCE, w - BRIDGE_PROBE_DISTANCE):
+            if binary[y, x] == 0:
+                continue
+
+            if labels[y, x] <= 0:
+                continue
+
+            left = int(np.sum(binary[y, x - BRIDGE_MIN_RUN:x]))
+            right = int(np.sum(binary[y, x + 1:x + BRIDGE_MIN_RUN + 1]))
+            up = int(np.sum(binary[y - BRIDGE_MIN_RUN:y, x]))
+            down = int(np.sum(binary[y + 1:y + BRIDGE_MIN_RUN + 1, x]))
+
+            if min(left, right, up, down) < BRIDGE_MIN_PIXELS_PER_DIRECTION:
+                continue
+
+            if not has_bridge_hump(binary, x, y):
+                continue
+
+            candidates.append({
+                "x": int(x),
+                "y": int(y),
+                "label": int(labels[y, x]),
+            })
+
+    # Collassiamo piu' pixel dello stesso ponte in un solo candidato.
+    collapsed = []
+    for cand in candidates:
+        if any(abs(cand["x"] - prev["x"]) <= 4 and abs(cand["y"] - prev["y"]) <= 4 for prev in collapsed):
+            continue
+        collapsed.append(cand)
+
+    return collapsed
+
+
+# Carica, quando disponibile, una maschera piu' spessa dello skeleton.
+# Serve per distinguere un vero nodo con pallino da un semplice incrocio
+# geometrico: nello skeleton entrambi sembrano croci, ma nella maschera piena
+# il nodo con pallino ha molta piu' area nera locale.
+def load_junction_support_binary(wire_extraction: dict):
+    for key in ("filtered_path", "bridged_path", "closed_path", "binary_path"):
+        path = wire_extraction.get(key)
+        if not path:
+            continue
+
+        try:
+            return load_binary_image(Path(path))
+        except FileNotFoundError:
+            continue
+
+    return None
+
+
+def has_filled_junction_dot(junction_binary: np.ndarray | None, x: int, y: int):
+    if junction_binary is None:
+        return False
+
+    h, w = junction_binary.shape[:2]
+    radius = PLAIN_CROSSING_DOT_RADIUS
+    best_area = 0
+
+    # Il candidato puo' cadere sul bordo del pallino per via dello spessore
+    # della maschera. Cerchiamo quindi anche in una piccola griglia vicina.
+    for dy in (-4, 0, 4):
+        for dx in (-4, 0, 4):
+            cx = int(x) + dx
+            cy = int(y) + dy
+            x1, y1, x2, y2 = clamp_window(
+                cx - radius,
+                cy - radius,
+                cx + radius + 1,
+                cy + radius + 1,
+                w,
+                h,
+            )
+
+            dot_area = int(np.count_nonzero(junction_binary[y1:y2, x1:x2] > 0))
+            best_area = max(best_area, dot_area)
+
+    return best_area >= PLAIN_CROSSING_DOT_AREA_MIN
+
+
+# Rileva incroci ortogonali senza pallino di giunzione.
+# Convenzione grafica: un incrocio con pallino e' un nodo reale, mentre una
+# croce sottile senza pallino rappresenta due fili che si attraversano senza
+# connessione. Lo skeleton da solo li fonderebbe in una stessa label.
+def detect_plain_wire_crossings(
+    skeleton_binary: np.ndarray,
+    labels: np.ndarray,
+    junction_binary: np.ndarray | None,
+):
+    crossing_source = junction_binary if junction_binary is not None else skeleton_binary
+    binary = np.where(crossing_source > 0, 1, 0).astype(np.uint8)
+    h, w = binary.shape[:2]
+    candidates = []
+
+    run = PLAIN_CROSSING_MIN_RUN
+    min_pixels = PLAIN_CROSSING_MIN_PIXELS_PER_DIRECTION
+
+    for y in range(run, h - run):
+        for x in range(run, w - run):
+            if binary[y, x] == 0:
+                continue
+
+            source_label = nearest_split_label(labels, x, y, radius=3)
+            if source_label is None:
+                continue
+
+            left = int(np.sum(binary[y, x - run:x]))
+            right = int(np.sum(binary[y, x + 1:x + run + 1]))
+            up = int(np.sum(binary[y - run:y, x]))
+            down = int(np.sum(binary[y + 1:y + run + 1, x]))
+
+            if min(left, right, up, down) < min_pixels:
+                continue
+
+            if has_filled_junction_dot(junction_binary, x, y):
+                continue
+
+            candidates.append({
+                "x": int(x),
+                "y": int(y),
+                "label": int(source_label),
+            })
+
+    collapsed = []
+    for cand in candidates:
+        if any(abs(cand["x"] - prev["x"]) <= 5 and abs(cand["y"] - prev["y"]) <= 5 for prev in collapsed):
+            continue
+        collapsed.append(cand)
+
+    return collapsed
+
+
+def labels_with_multi_terminal_self_short(
+    terminals: list[dict],
+    terminal_match_debug: dict,
+):
+    by_component_and_label = {}
+
+    for term in terminals:
+        matched_label = terminal_match_debug.get(term["terminal_id"], {}).get("matched_label")
+        if matched_label is None:
+            continue
+
+        class_name = normalize_class_name(term.get("component_class_name"))
+        if class_name in COMPONENT_BODY_ERASE_EXCLUDED_CLASSES:
+            continue
+
+        instance_id = term.get("instance_id")
+        if instance_id is None:
+            continue
+
+        key = (str(instance_id), int(matched_label))
+        by_component_and_label.setdefault(key, set()).add(term["terminal_id"])
+
+    return {
+        int(label)
+        for (_, label), terminal_ids in by_component_and_label.items()
+        if len(terminal_ids) >= 2
+    }
+
+
+def nearest_split_label(split_labels: np.ndarray, x: int, y: int, radius: int = 6):
+    h, w = split_labels.shape[:2]
+    window = clamp_window(x - radius, y - radius, x + radius + 1, y + radius + 1, w, h)
+    x1, y1, x2, y2 = window
+    roi = split_labels[y1:y2, x1:x2]
+    ys, xs = np.where(roi > 0)
+
+    if len(xs) == 0:
+        return None
+
+    abs_xs = xs + x1
+    abs_ys = ys + y1
+    d2 = (abs_xs - float(x)) ** 2 + (abs_ys - float(y)) ** 2
+    best_idx = int(np.argmin(d2))
+    return int(split_labels[int(abs_ys[best_idx]), int(abs_xs[best_idx])])
+
+
+def split_bridge_labels(
+    label_to_terminal_ids: dict,
+    terminals: list[dict],
+    terminal_match_debug: dict,
+    skeleton_binary: np.ndarray,
+    labels: np.ndarray,
+    wire_extraction: dict | None = None,
+):
+    bridges = detect_wire_bridges(skeleton_binary, labels)
+    bridge_labels = {int(bridge["label"]) for bridge in bridges}
+    junction_binary = load_junction_support_binary(wire_extraction or {})
+    self_short_labels = labels_with_multi_terminal_self_short(
+        terminals,
+        terminal_match_debug,
+    )
+
+    # I ponticelli a gobba sono un segnale grafico esplicito di "non giunzione".
+    # Se una label contiene gia' un ponte, lasciamo che sia quel detector a
+    # guidare lo split ed evitiamo tagli plain aggiuntivi sulla stessa label.
+    plain_crossings = [
+        crossing
+        for crossing in detect_plain_wire_crossings(skeleton_binary, labels, junction_binary)
+        if int(crossing["label"]) in self_short_labels
+        and int(crossing["label"]) not in bridge_labels
+    ]
+
+    split_points = []
+    for bridge in bridges:
+        split_points.append({
+            **bridge,
+            "split_kind": "bridge_hump",
+            "cut_half_width": BRIDGE_CUT_HALF_WIDTH,
+            "cut_half_height": BRIDGE_CUT_HALF_HEIGHT,
+            "probe_distance": BRIDGE_PROBE_DISTANCE,
+        })
+
+    for crossing in plain_crossings:
+        split_points.append({
+            **crossing,
+            "split_kind": "plain_crossing_without_dot",
+            "cut_half_width": PLAIN_CROSSING_CUT_HALF_WIDTH,
+            "cut_half_height": PLAIN_CROSSING_CUT_HALF_HEIGHT,
+            "probe_distance": PLAIN_CROSSING_PROBE_DISTANCE,
+        })
+
+    if not split_points:
+        return label_to_terminal_ids
+
+    plain_crossing_labels = {int(crossing["label"]) for crossing in plain_crossings}
+    split_labels_to_rebuild = {int(point["label"]) for point in split_points}
+    if not split_labels_to_rebuild:
+        return label_to_terminal_ids
+
+    cut_skeleton = skeleton_binary.copy()
+    h, w = cut_skeleton.shape[:2]
+    for split_point in split_points:
+        x = int(split_point["x"])
+        y = int(split_point["y"])
+        cut_half_width = int(split_point["cut_half_width"])
+        cut_half_height = int(split_point["cut_half_height"])
+        x1, y1, x2, y2 = clamp_window(
+            x - cut_half_width,
+            y - cut_half_height,
+            x + cut_half_width + 1,
+            y + cut_half_height + 1,
+            w,
+            h,
+        )
+        cut_skeleton[y1:y2, x1:x2] = 0
+
+    _, split_labels, _, _ = cv2.connectedComponentsWithStats(cut_skeleton, connectivity=8)
+
+    parent = {}
+
+    def find(label):
+        label = int(label)
+        parent.setdefault(label, label)
+        while parent[label] != label:
+            parent[label] = parent[parent[label]]
+            label = parent[label]
+        return label
+
+    def union(label_a, label_b):
+        if label_a is None or label_b is None:
+            return
+        root_a = find(label_a)
+        root_b = find(label_b)
+        if root_a != root_b:
+            parent[max(root_a, root_b)] = min(root_a, root_b)
+
+    for split_point in split_points:
+        x = int(split_point["x"])
+        y = int(split_point["y"])
+        probe_distance = int(split_point["probe_distance"])
+        top_label = nearest_split_label(split_labels, x, y - probe_distance)
+        bottom_label = nearest_split_label(split_labels, x, y + probe_distance)
+        left_label = nearest_split_label(split_labels, x - probe_distance, y)
+        right_label = nearest_split_label(split_labels, x + probe_distance, y)
+
+        union(top_label, bottom_label)
+        union(left_label, right_label)
+
+    terminal_by_id = {term["terminal_id"]: term for term in terminals}
+    split_groups = {}
+
+    for original_label, terminal_ids in label_to_terminal_ids.items():
+        if int(original_label) not in split_labels_to_rebuild:
+            split_groups[(int(original_label), 0)] = list(terminal_ids)
+            continue
+
+        for terminal_id in terminal_ids:
+            term = terminal_by_id.get(terminal_id)
+            if term is None:
+                continue
+
+            split_label = nearest_split_label(
+                split_labels,
+                int(round(term["x"])),
+                int(round(term["y"])),
+                radius=max(
+                    TERMINAL_SQUARE_FALLBACK_RADIUS,
+                    BRIDGE_PROBE_DISTANCE,
+                    PLAIN_CROSSING_PROBE_DISTANCE,
+                ),
+            )
+
+            if split_label is None:
+                matched_label = terminal_match_debug.get(terminal_id, {}).get("matched_label")
+                split_key = ("unresolved", int(original_label), int(matched_label or original_label))
+            else:
+                split_key = ("split", int(original_label), find(split_label))
+
+            split_groups.setdefault(split_key, []).append(terminal_id)
+
+    final_groups = []
+    handled_original_labels = set()
+
+    for original_label, terminal_ids in label_to_terminal_ids.items():
+        original_label = int(original_label)
+        if original_label not in split_labels_to_rebuild:
+            continue
+
+        related_groups = [
+            group_terminal_ids
+            for key, group_terminal_ids in split_groups.items()
+            if isinstance(key, tuple)
+            and len(key) >= 2
+            and key[0] in {"split", "unresolved"}
+            and int(key[1]) == original_label
+        ]
+
+        if not related_groups:
+            final_groups.append(list(terminal_ids))
+            handled_original_labels.add(original_label)
+            continue
+
+        plain_touched_split = original_label in plain_crossing_labels
+        creates_singleton = any(len(set(group)) < 2 for group in related_groups)
+
+        if plain_touched_split and creates_singleton:
+            final_groups.append(list(terminal_ids))
+        else:
+            final_groups.extend(related_groups)
+
+        handled_original_labels.add(original_label)
+
+    for key, terminal_ids in split_groups.items():
+        if (
+            isinstance(key, tuple)
+            and len(key) >= 2
+            and key[0] in {"split", "unresolved"}
+            and int(key[1]) in handled_original_labels
+        ):
+            continue
+
+        final_groups.append(terminal_ids)
+
+    relabeled = {}
+    next_label = 1
+    for terminal_ids in final_groups:
+        while next_label in relabeled:
+            next_label += 1
+        relabeled[next_label] = sorted(set(terminal_ids))
+        next_label += 1
+
+    return relabeled
+
+
+# =========================================================
 # COSTRUZIONE DEL GRAFO FINALE TRA TERMINALI
 # =========================================================
 # Per ogni gruppo di filo:
@@ -432,14 +1561,21 @@ def build_canonical_components(components: list[dict]):
                 "relative_position": term.get("relative_position"),
             })
 
-        canonical_components.append({
+        canonical_component = {
             "component_id": make_simple_component_id(instance_id, class_name),
             "instance_id": instance_id,
             "class_name": class_name,
             "terminals": canonical_terminals,
-        })
+        }
+
+        if comp.get("state") is not None:
+            canonical_component["state"] = comp.get("state")
+            canonical_component["state_confidence"] = comp.get("state_confidence")
+
+        canonical_components.append(canonical_component)
 
     return canonical_components
+
 
 
 # =========================================================
@@ -533,16 +1669,19 @@ def build_terminal_graph_for_image(data: dict):
         raise ValueError("skeleton_path mancante nel JSON del passo 04.")
 
     skeleton = load_binary_image(Path(skeleton_path))
+    skeleton_for_graph = erase_component_bodies_from_skeleton(skeleton, components)
 
     # Connected components dello skeleton.
     # Ogni label > 0 rappresenta un tratto di filo connesso.
-    _, labels, _, _ = cv2.connectedComponentsWithStats(skeleton, connectivity=8)
+    _, labels, _, _ = cv2.connectedComponentsWithStats(skeleton_for_graph, connectivity=8)
 
     # Match semplice: ogni terminale viene agganciato alla label dello skeleton
     # trovata nella sua zona locale.
     terminal_match_debug = {}
     for term in terminals:
         terminal_match_debug[term["terminal_id"]] = match_terminal_to_skeleton_label(labels, term)
+
+    attach_unmatched_opamp_aux_to_external_terminals(terminals, terminal_match_debug)
 
     unmatched_terminals = sorted([
         terminal_id
@@ -560,6 +1699,42 @@ def build_terminal_graph_for_image(data: dict):
 
     # Gruppi di terminali che insistono sullo stesso tratto di filo.
     label_to_terminal_ids = build_label_to_terminal_ids(terminal_match_debug)
+    label_to_terminal_ids = merge_bjt_base_aligned_labels(
+        label_to_terminal_ids,
+        terminals,
+        components,
+        terminal_match_debug,
+        labels,
+    )
+    label_to_terminal_ids = merge_mosfet_gate_aligned_labels(
+        label_to_terminal_ids,
+        terminals,
+        components,
+        terminal_match_debug,
+        labels,
+    )
+    label_to_terminal_ids = merge_opamp_aux_external_terminal_labels(
+        label_to_terminal_ids,
+        terminals,
+        terminal_match_debug,
+    )
+    label_to_terminal_ids = split_bridge_labels(
+        label_to_terminal_ids,
+        terminals,
+        terminal_match_debug,
+        skeleton_for_graph,
+        labels,
+        wire_extraction,
+    )
+    label_to_terminal_ids = merge_mosfet_gate_rail_groups(
+        label_to_terminal_ids,
+        terminals,
+        components,
+    )
+    label_to_terminal_ids = merge_battery_gate_rail_groups(
+        label_to_terminal_ids,
+        terminals,
+    )
 
     # Grafo finale interno e sua vista canonica leggibile.
     terminal_graph = build_terminal_graph(terminals, label_to_terminal_ids)
@@ -584,7 +1759,7 @@ def build_terminal_graph_for_image(data: dict):
         "components": canonical_components,
         "graph": simple_terminal_graph,
         "warnings": warnings,
-        "skeleton_binary": skeleton,
+        "skeleton_binary": skeleton_for_graph,
         "terminal_match_debug": terminal_match_debug,
         "simple_id_map": original_to_simple,
     }

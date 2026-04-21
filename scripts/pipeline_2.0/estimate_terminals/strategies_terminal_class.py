@@ -135,6 +135,79 @@ def _component_is_side_aligned_external(component_bbox, bbox):
 
     return False
 
+
+# Check whether a short external fragment is actually the bar of a polarity "+".
+def _component_is_polarity_plus_marker(binary, component_bbox):
+    cx1, cy1, cx2, cy2 = map(int, component_bbox)
+    comp_w = max(cx2 - cx1 + 1, 1)
+    comp_h = max(cy2 - cy1 + 1, 1)
+    probe = TERMINAL_CLASS_POLARITY_MARKER_PROBE
+    min_cross_pixels = TERMINAL_CLASS_POLARITY_MARKER_MIN_CROSS_PIXELS
+
+    debug = {
+        "enabled": True,
+        "component_bbox": [cx1, cy1, cx2, cy2],
+        "probe": int(probe),
+        "min_cross_pixels": int(min_cross_pixels),
+        "is_plus_marker": False,
+    }
+
+    # Horizontal bar of a "+": look for a vertical stroke crossing it.
+    if comp_w >= comp_h:
+        best_above = 0
+        best_below = 0
+
+        for x in range(cx1, cx2 + 1):
+            above = int(np.count_nonzero(binary[max(0, cy1 - probe):cy1, x] > 0))
+            below = int(np.count_nonzero(binary[cy2 + 1:min(binary.shape[0], cy2 + 1 + probe), x] > 0))
+            best_above = max(best_above, above)
+            best_below = max(best_below, below)
+
+            if above >= min_cross_pixels and below >= min_cross_pixels:
+                debug.update({
+                    "axis": "horizontal_bar",
+                    "cross_x": int(x),
+                    "above_pixels": above,
+                    "below_pixels": below,
+                    "is_plus_marker": True,
+                })
+                return True, debug
+
+        debug.update({
+            "axis": "horizontal_bar",
+            "best_above_pixels": best_above,
+            "best_below_pixels": best_below,
+        })
+        return False, debug
+
+    # Vertical bar of a "+": symmetric check for a horizontal stroke.
+    best_left = 0
+    best_right = 0
+
+    for y in range(cy1, cy2 + 1):
+        left = int(np.count_nonzero(binary[y, max(0, cx1 - probe):cx1] > 0))
+        right = int(np.count_nonzero(binary[y, cx2 + 1:min(binary.shape[1], cx2 + 1 + probe)] > 0))
+        best_left = max(best_left, left)
+        best_right = max(best_right, right)
+
+        if left >= min_cross_pixels and right >= min_cross_pixels:
+            debug.update({
+                "axis": "vertical_bar",
+                "cross_y": int(y),
+                "left_pixels": left,
+                "right_pixels": right,
+                "is_plus_marker": True,
+            })
+            return True, debug
+
+    debug.update({
+        "axis": "vertical_bar",
+        "best_left_pixels": best_left,
+        "best_right_pixels": best_right,
+    })
+    return False, debug
+
+
 # Build terminal text suppressed binary image.
 def _build_terminal_text_suppressed_binary(binary, bbox):
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
@@ -175,6 +248,8 @@ def _build_terminal_text_suppressed_binary(binary, bbox):
     cleaned_roi = np.zeros_like(roi, dtype=np.uint8)
     kept_labels = []
     kept_external_labels = []
+    rejected_external_labels = []
+    external_label_debug = []
 
     for lab in seed_labels:
         if lab == 0:
@@ -200,6 +275,17 @@ def _build_terminal_text_suppressed_binary(binary, bbox):
         if not _component_is_side_aligned_external(comp_bbox, (x1, y1, x2, y2)):
             continue
 
+        is_plus_marker, plus_debug = _component_is_polarity_plus_marker(binary, comp_bbox)
+        external_label_debug.append({
+            "label": int(lab),
+            "component_bbox": [int(v) for v in comp_bbox],
+            "polarity_plus_debug": plus_debug,
+        })
+
+        if is_plus_marker:
+            rejected_external_labels.append(int(lab))
+            continue
+
         cleaned_roi[labels == lab] = 255
         kept_external_labels.append(int(lab))
 
@@ -213,6 +299,8 @@ def _build_terminal_text_suppressed_binary(binary, bbox):
         "connected_components": int(num_labels - 1),
         "kept_labels": kept_labels,
         "kept_external_labels": kept_external_labels,
+        "rejected_external_labels": rejected_external_labels,
+        "external_label_debug": external_label_debug,
     }
 
     return cleaned, debug
@@ -428,6 +516,12 @@ def classify_terminal_cardinality(binary, bbox, default_side="right", text_suppr
             single_eval["second_score"] * RELAXED_TWO_SINGLE_VETO_RATIO,
         )
     )
+    relaxed_fragmented_can_override_single_veto = (
+        relaxed_external_fragmented
+        and shape_info["is_near_square"]
+        and single_eval["second_score"] >= TERMINAL_CLASS_FAR_MIN
+    )
+    local_scores["relaxed_fragmented_can_override_single_veto"] = relaxed_fragmented_can_override_single_veto
     horizontal_relaxed_shape_ok = shape_info["is_near_square"] or shape_info["is_horizontal"]
     vertical_relaxed_shape_ok = shape_info["is_near_square"] or shape_info["is_vertical"]
     relaxed_two_single_margin = 1.12
@@ -450,6 +544,7 @@ def classify_terminal_cardinality(binary, bbox, default_side="right", text_suppr
         and not vert_relaxed["valid"]
         and (
             not relaxed_single_veto
+            or relaxed_fragmented_can_override_single_veto
             or (
                 shape_info["is_horizontal"]
                 and horiz_relaxed["pair_score"] >= single_eval["best_score"] * relaxed_two_single_margin
@@ -477,6 +572,7 @@ def classify_terminal_cardinality(binary, bbox, default_side="right", text_suppr
         and not horiz_relaxed["valid"]
         and (
             not relaxed_single_veto
+            or relaxed_fragmented_can_override_single_veto
             or (
                 shape_info["is_vertical"]
                 and vert_relaxed["pair_score"] >= single_eval["best_score"] * relaxed_two_single_margin

@@ -9,11 +9,17 @@ def draw_terminals(image_bgr, components, terminals):
     out = image_bgr.copy()
     comp_box_color = (220, 170, 40)
     term_box_color = (58, 92, 190)
+    state_box_colors = {
+        "open": (30, 120, 230),
+        "closed": (55, 150, 65),
+        "unknown": (120, 120, 120),
+    }
     text_color = (35, 35, 35)
     label_bg_color = (245, 245, 245)
     font = cv2.FONT_HERSHEY_SIMPLEX
     comp_font_scale = 0.46
     term_font_scale = 0.43
+    state_font_scale = 0.43
     font_thickness = 1
     box_thickness = 2
     padding_x = 5
@@ -42,6 +48,23 @@ def draw_terminals(image_bgr, components, terminals):
             cv2.LINE_AA,
         )
 
+    # Draw semantic state labels, when the component estimator produced one.
+    # This keeps the 03 debug image aligned with the JSON output without
+    # hardcoding any specific class: ogni componente con "state" viene annotato.
+    def draw_component_state(comp, x1, y2):
+        state = comp.get("state")
+        if not state:
+            return
+
+        confidence = comp.get("state_confidence")
+        if isinstance(confidence, (int, float)):
+            label = f"state: {state} ({confidence:.2f})"
+        else:
+            label = f"state: {state}"
+
+        state_color = state_box_colors.get(state, state_box_colors["unknown"])
+        draw_label(label, x1, y2 + 18, state_color, state_font_scale)
+
     for comp in components:
         x1, y1, x2, y2 = map(int, comp["bbox"])
         label = comp.get("instance_id", "N/A")
@@ -49,6 +72,7 @@ def draw_terminals(image_bgr, components, terminals):
             label = f"{label} ({comp['estimated_orientation'][0]})"
         cv2.rectangle(out, (x1, y1), (x2, y2), comp_box_color, box_thickness)
         draw_label(label, x1, y1, comp_box_color, comp_font_scale)
+        draw_component_state(comp, x1, y2)
 
     for term in terminals:
         x = int(round(term["x"]))

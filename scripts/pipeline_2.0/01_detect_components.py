@@ -140,6 +140,13 @@ def _bbox_iou(box_a, box_b) -> float:
     return inter / union
 
 
+def _axis_overlap_ratio(a1, a2, b1, b2) -> float:
+    """Misura quanto due intervalli si sovrappongono rispetto al piu' corto."""
+    inter = max(0.0, min(float(a2), float(b2)) - max(float(a1), float(b1)))
+    base = max(1.0, min(abs(float(a2) - float(a1)), abs(float(b2) - float(b1))))
+    return inter / base
+
+
 def _bbox_ioa(box_inner, box_outer) -> float:
     area_inner = _bbox_area(box_inner)
     if area_inner <= 0.0:
@@ -1587,6 +1594,76 @@ def dedupe_overlapping_same_class(components):
     ]
 
 
+def suppress_partial_low_conf_mosfet_duplicates(components):
+    """Rimuove crop parziali Mosfet prodotti attorno a simboli gia' rilevati.
+
+    Alcune frecce o scritte vicine a un MOSFET possono generare un bbox Mosfet
+    largo e poco affidabile che include solo una parte del simbolo reale. Non e'
+    abbastanza sovrapposto per la NMS classica, ma ha quasi lo stesso asse X,
+    una piccola sovrapposizione verticale e confidenza molto piu' bassa.
+    """
+    suppressed = set()
+    mosfet_indices = [
+        idx
+        for idx, comp in enumerate(components)
+        if comp.get("class_name") == "Mosfet"
+    ]
+
+    for idx_low in mosfet_indices:
+        low = components[idx_low]
+        low_conf = float(low.get("conf", 0.0))
+        if low_conf >= 0.50:
+            continue
+
+        low_box = low.get("bbox", [])
+        if len(low_box) != 4:
+            continue
+
+        lx1, ly1, lx2, ly2 = map(float, low_box)
+        low_w = max(lx2 - lx1, 1.0)
+        low_h = max(ly2 - ly1, 1.0)
+        low_cx, low_cy = _bbox_center(low_box)
+
+        for idx_high in mosfet_indices:
+            if idx_high == idx_low:
+                continue
+
+            high = components[idx_high]
+            high_conf = float(high.get("conf", 0.0))
+            if high_conf < 0.75 or high_conf <= low_conf:
+                continue
+
+            high_box = high.get("bbox", [])
+            if len(high_box) != 4:
+                continue
+
+            hx1, hy1, hx2, hy2 = map(float, high_box)
+            high_w = max(hx2 - hx1, 1.0)
+            high_h = max(hy2 - hy1, 1.0)
+            high_cx, high_cy = _bbox_center(high_box)
+
+            x_overlap = _axis_overlap_ratio(lx1, lx2, hx1, hx2)
+            y_overlap = _axis_overlap_ratio(ly1, ly2, hy1, hy2)
+            center_dx = abs(low_cx - high_cx)
+            center_dy = abs(low_cy - high_cy)
+
+            partial_same_column = (
+                x_overlap >= 0.82
+                and 0.06 <= y_overlap <= 0.35
+                and center_dx <= 0.18 * max(low_w, high_w)
+                and center_dy <= 1.05 * max(low_h, high_h)
+            )
+
+            if partial_same_column:
+                suppressed.add(idx_low)
+                break
+
+    return [
+        comp for idx, comp in enumerate(components)
+        if idx not in suppressed
+    ]
+
+
 def suppress_nested_terminals(components):
     """Rimuove Terminal rilevati dentro simboli strutturati dove i pallini fanno parte del simbolo."""
     blocking_classes = {"Connector", "Switch", "Analog_Meter", "Meter", "Integrated_Circuit"}
@@ -1883,6 +1960,7 @@ def predict_components_on_image(
     )
     components = suppress_conflicting_components(components, image_binary)
     components = dedupe_overlapping_same_class(components)
+    components = suppress_partial_low_conf_mosfet_duplicates(components)
     components = suppress_nested_terminals(components)
 
     output_data = {

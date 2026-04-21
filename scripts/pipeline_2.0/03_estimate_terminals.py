@@ -33,6 +33,7 @@ from estimate_terminals.processor import estimate_terminals_for_component
 from estimate_terminals.debug_draw import draw_terminals
 from estimate_terminals.config import SAVE_DEBUG_IMAGES
 from estimate_terminals.strategies_opamp import snap_opamp_top_aux_to_nearby_terminal
+from estimate_terminals.state_switch import estimate_switch_open_closed_state
 
 #PATH / INPUT-OUTPUT
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -46,6 +47,33 @@ OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "03_estimate_terminal
 DEBUG_IMAGES_DIR = OUTPUT_DIR / "debug_images"
 
 CLASS_TERMINALS_PATH = PROJECT_ROOT / "metadata" / "class_terminals_v1.yaml"
+
+
+# =========================================================
+# STATO COMPONENTI
+# =========================================================
+# Alcuni simboli hanno una proprieta' semantica oltre ai terminali.
+# Lo switch, ad esempio, puo' essere open/closed: questa informazione nasce
+# nel passo 03 perche' dipende dalla grafica del componente, non dal grafo.
+def apply_component_state_if_needed(component: dict, meta: dict, image_binary):
+    state_strategy = meta.get("state_strategy")
+
+    if state_strategy is None:
+        return
+
+    if state_strategy == "switch_open_closed":
+        state_info = estimate_switch_open_closed_state(image_binary, component)
+        component["state"] = state_info["state"]
+        component["state_confidence"] = state_info["confidence"]
+        component["state_debug"] = state_info["debug"]
+        return
+
+    component["state"] = "unknown"
+    component["state_confidence"] = 0.0
+    component["state_debug"] = {
+        "state_strategy": state_strategy,
+        "reason": "unsupported_state_strategy",
+    }
 
 # =========================================================
 # MAIN
@@ -94,6 +122,11 @@ def main() -> None:
                 comp_copy["estimated_connection_side"] = connected_side
             if side_scores is not None:
                 comp_copy["connection_side_scores"] = side_scores
+            apply_component_state_if_needed(
+                comp_copy,
+                class_meta.get(comp_copy.get("class_id"), {}),
+                image_binary,
+            )
             updated_components.append(comp_copy)
             all_terminals.extend(terminals)
 

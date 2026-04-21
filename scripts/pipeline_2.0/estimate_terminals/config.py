@@ -86,6 +86,8 @@ TERMINAL_CLASS_EXTERNAL_KEEP_GAP = 16
 TERMINAL_CLASS_EXTERNAL_KEEP_OVERLAP_RATIO = 0.25
 TERMINAL_CLASS_EXTERNAL_MIN_LONG_SPAN = 5
 TERMINAL_CLASS_EXTERNAL_LONG_TO_SHORT_RATIO = 1.5
+TERMINAL_CLASS_POLARITY_MARKER_PROBE = 12
+TERMINAL_CLASS_POLARITY_MARKER_MIN_CROSS_PIXELS = 2
 
 # Bias geometrico per la classe Terminal
 # Molto più conservativo: i terminali piccoli / quasi quadrati
@@ -212,7 +214,11 @@ THREE_TERMINAL_ARROW_PROBE_HALFSPAN_X_RATIO = 0.12
 THREE_TERMINAL_ARROW_PROBE_HALFSPAN_Y_RATIO = 0.10
 THREE_TERMINAL_ARROW_PROBE_HALFSPAN_MIN = 3
 THREE_TERMINAL_ARROW_CONFIDENCE_MIN = 0.10
-MOSFET_ARROW_BRANCH_CONFIDENCE_MIN = 0.05
+
+# Per i MOSFET assegniamo S/D solo se il probe della freccia/ramo e'
+# sufficientemente sbilanciato. Se l'evidenza e' debole, manteniamo solo G
+# e lasciamo gli altri due morsetti come t2/t3.
+MOSFET_ARROW_BRANCH_CONFIDENCE_MIN = 0.10
 
 # NPN: fallback più vicino al trunk centrale per catturare la freccia
 # dell'emitter quando il probe generico è ambiguo.
@@ -220,6 +226,12 @@ NPN_ARROW_BRANCH_TRUNK_LEFT_RATIO = 0.42
 NPN_ARROW_BRANCH_TRUNK_RIGHT_RATIO = 0.58
 NPN_ARROW_BRANCH_TOP_RATIO = 0.30
 NPN_ARROW_BRANCH_BOTTOM_RATIO = 0.70
+
+# Se il probe speciale per la base BJT sceglie un lato ma la validazione
+# geometrica dei tre terminali preferisce chiaramente il lato opposto, non
+# accettiamo l'override: spesso il conteggio interno viene disturbato dal
+# ramo verticale collector/emitter vicino al bordo del bbox.
+NPN_BASE_OVERRIDE_POINT_VETO_MARGIN = 1.08
 
 # =========================================================
 # ROUND SOURCES / METERS - STIMA ORIENTAZIONE
