@@ -10,6 +10,7 @@ from .geometry import (
 from .strategies_three_terminal import (
     get_three_terminal_working_binary,
     resolve_three_terminal_semantics,
+    snap_bjt_pair_terminal_to_lateral_wire,
 )
 from .semantic_two_terminal import resolve_two_terminal_semantics
 # =========================================================
@@ -60,6 +61,16 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
                 estimated_orientation,
                 rel_pos
             )
+            if component.get("class_name") == "NPN_Transistor":
+                point, snap_debug = snap_bjt_pair_terminal_to_lateral_wire(
+                    point_binary,
+                    bbox,
+                    estimated_orientation,
+                    rel_pos,
+                    point,
+                )
+                if snap_debug is not None:
+                    structured_debug.update(snap_debug)
             x, y = point
             point_debug.update(structured_debug)
 

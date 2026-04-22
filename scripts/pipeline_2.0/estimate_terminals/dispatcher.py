@@ -1,8 +1,10 @@
 from .config import *
 from .geometry import geom_infer_orientation_from_bbox
 from .strategies_basic import (
+    detect_breaker_terminals,
     detect_two_terminal_orientation_capacitor,
     detect_two_terminal_orientation_led,
+    detect_two_terminal_orientation_inductor,
     detect_two_terminal_orientation_round_source,
     detect_two_terminal_orientation_variable_resistor,
     resolve_one_terminal_orientation,
@@ -92,6 +94,13 @@ def _resolve_two_terminal_orientation(strategy: str, class_name: str, image_bina
             default_orientation=default_orientation,
         )
 
+    if class_name == "Inductor":
+        return detect_two_terminal_orientation_inductor(
+            image_binary,
+            bbox,
+            default_orientation=default_orientation,
+        )
+
     if (
         strategy == "two_terminal_round_source"
         or class_name in {"Signal_Source", "Voltage_Source", "Current_Source", "Meter"}
@@ -173,6 +182,14 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
 
         default_orientation = meta.get("default_orientation", "horizontal")
         class_name = meta.get("name", "")
+
+        if class_name == "Breaker":
+            terminals_def, orientation, side_scores = detect_breaker_terminals(
+                image_binary,
+                bbox,
+            )
+            if terminals_def is not None:
+                return terminals_def, orientation, None, side_scores
 
         orientation, side_scores = _resolve_two_terminal_orientation(
             strategy=strategy,

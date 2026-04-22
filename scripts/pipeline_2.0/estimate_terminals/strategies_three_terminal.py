@@ -85,6 +85,91 @@ def get_three_terminal_working_binary(binary, bbox):
     return binary
 
 
+def snap_bjt_pair_terminal_to_lateral_wire(binary, bbox, orientation, relative_position, point):
+    if orientation not in {"left", "right"} or relative_position not in {"top", "bottom"}:
+        return point, None
+
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+    center_y = (float(y1) + float(y2)) / 2.0
+    px = int(round(float(point[0])))
+    py = int(round(float(point[1])))
+    local_support = img_count_foreground_pixels(binary, px - 3, py - 3, px + 4, py + 4)
+    if local_support >= 2:
+        return point, {
+            "bjt_lateral_snap": False,
+            "reason": "original_point_has_support",
+            "original_point_support": int(local_support),
+        }
+
+    if relative_position == "top":
+        y_start = int(round(y1 + 0.05 * height))
+        y_end = int(round(center_y - 0.06 * height))
+    else:
+        y_start = int(round(center_y + 0.06 * height))
+        y_end = int(round(y2 - 0.05 * height))
+
+    if y_end < y_start:
+        y_start, y_end = min(y1, y2), max(y1, y2)
+
+    branch_side = "left" if orientation == "right" else "right"
+    outward = max(20, int(round(0.55 * width)))
+    inward = max(14, int(round(0.30 * width)))
+    halfspan = max(2, min(5, int(round(0.05 * height))))
+
+    if branch_side == "left":
+        scan_x1 = max(0, x1 - outward)
+        scan_x2 = min(binary.shape[1] - 1, x1 + inward)
+        target_x = x1
+    else:
+        scan_x1 = max(0, x2 - inward)
+        scan_x2 = min(binary.shape[1] - 1, x2 + outward)
+        target_x = x2
+
+    best = None
+    for y in range(max(0, y_start), min(binary.shape[0] - 1, y_end) + 1):
+        ya = max(0, y - halfspan)
+        yb = min(binary.shape[0], y + halfspan + 1)
+        roi = binary[ya:yb, scan_x1:scan_x2 + 1]
+        _, xs = np.nonzero(roi > 0)
+        if len(xs) == 0:
+            continue
+
+        abs_xs = xs + scan_x1
+        x_dist = np.abs(abs_xs.astype(np.float32) - float(target_x))
+        nearest_idx = int(np.argmin(x_dist))
+        score = int(len(xs))
+        candidate_x = int(abs_xs[nearest_idx])
+        candidate = (
+            score,
+            -float(x_dist[nearest_idx]),
+            -abs(float(y) - (float(y_start + y_end) / 2.0)),
+            candidate_x,
+            int(y),
+        )
+        if best is None or candidate > best:
+            best = candidate
+
+    if best is None:
+        return point, {
+            "bjt_lateral_snap": False,
+            "reason": "no_lateral_wire_support",
+            "branch_side": branch_side,
+            "scan_box": [int(scan_x1), int(y_start), int(scan_x2), int(y_end)],
+        }
+
+    _, _, _, best_x, best_y = best
+    snapped = [round(float(best_x), 2), round(float(best_y), 2)]
+    return snapped, {
+        "bjt_lateral_snap": True,
+        "branch_side": branch_side,
+        "scan_box": [int(scan_x1), int(y_start), int(scan_x2), int(y_end)],
+        "original_point": [round(float(point[0]), 2), round(float(point[1]), 2)],
+        "snapped_point": snapped,
+    }
+
+
 # Handle candidate mosfet orientations from bounding box.
 def candidate_mosfet_orientations_from_bbox(bbox):
     return ("left", "right", "top", "bottom")

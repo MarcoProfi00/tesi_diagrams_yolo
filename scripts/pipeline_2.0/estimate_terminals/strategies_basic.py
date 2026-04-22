@@ -207,6 +207,134 @@ def strategy_detect_two_terminal_orientation_generic(binary, bbox, default_orien
     return geom_infer_orientation_from_bbox(bbox, default_orientation=default_orientation), side_scores
 
 
+def detect_two_terminal_orientation_inductor(binary, bbox, default_orientation="horizontal"):
+    orientation, side_scores = strategy_detect_two_terminal_orientation_generic(
+        binary,
+        bbox,
+        default_orientation=default_orientation,
+    )
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+
+    if height >= width * INDUCTOR_ELONGATED_RATIO:
+        side_scores["inductor_shape_override"] = "vertical"
+        side_scores["inductor_width"] = width
+        side_scores["inductor_height"] = height
+        return "vertical", side_scores
+
+    if width >= height * INDUCTOR_ELONGATED_RATIO:
+        side_scores["inductor_shape_override"] = "horizontal"
+        side_scores["inductor_width"] = width
+        side_scores["inductor_height"] = height
+        return "horizontal", side_scores
+
+    return orientation, side_scores
+
+
+def _longest_row_run(binary, y, x_min, x_max):
+    row = binary[y, x_min:x_max] > 0
+    xs = np.where(row)[0]
+    if xs.size == 0:
+        return None
+
+    best = None
+    start = prev = int(xs[0])
+    for value in xs[1:]:
+        value = int(value)
+        if value > prev + 1:
+            length = prev - start + 1
+            if best is None or length > best["length"]:
+                best = {"start": x_min + start, "end": x_min + prev, "length": length}
+            start = value
+        prev = value
+
+    length = prev - start + 1
+    if best is None or length > best["length"]:
+        best = {"start": x_min + start, "end": x_min + prev, "length": length}
+    return best
+
+
+def _find_breaker_contact_row(binary, y_start, y_end, x_min, x_max, bbox_left):
+    best = None
+    min_run = 18
+    max_gap_to_bbox = 12
+
+    for y in range(max(0, y_start), min(binary.shape[0], y_end)):
+        run = _longest_row_run(binary, y, x_min, x_max)
+        if run is None or run["length"] < min_run:
+            continue
+        if run["end"] < bbox_left - max_gap_to_bbox:
+            continue
+
+        gap = max(0, int(round(bbox_left)) - run["end"])
+        score = run["length"] - gap * 2
+        candidate = {
+            "y": int(y),
+            "run": run,
+            "gap_to_bbox": int(gap),
+            "score": int(score),
+        }
+        if best is None or candidate["score"] > best["score"]:
+            best = candidate
+
+    return best
+
+
+def detect_breaker_terminals(binary, bbox):
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+    center_y = int(round((y1 + y2) / 2))
+
+    x_min = max(0, int(round(x1 - max(70, width * 2.2))))
+    x_max = min(binary.shape[1], int(round(x1 + max(12, width * 0.25))))
+    contact_x = float(max(0, x1 - 2))
+
+    top = _find_breaker_contact_row(
+        binary,
+        int(round(y1 - max(6, height * 0.08))),
+        center_y,
+        x_min,
+        x_max,
+        x1,
+    )
+    bottom = _find_breaker_contact_row(
+        binary,
+        center_y,
+        int(round(y2 + max(6, height * 0.08))),
+        x_min,
+        x_max,
+        x1,
+    )
+
+    debug = {
+        "decision_mode": "breaker_left_contact_rows",
+        "search_roi": [int(x_min), int(max(0, y1)), int(x_max), int(min(binary.shape[0], y2))],
+        "top_contact": top,
+        "bottom_contact": bottom,
+        "contact_x": round(contact_x, 2),
+    }
+
+    if top is None or bottom is None:
+        debug["fallback_reason"] = "missing_top_or_bottom_left_contact_row"
+        return None, None, debug
+
+    terminals_def = [
+        {
+            "name": "t1",
+            "relative_position": "left",
+            "point": [contact_x, float(top["y"])],
+        },
+        {
+            "name": "t2",
+            "relative_position": "left",
+            "point": [contact_x, float(bottom["y"])],
+        },
+    ]
+    return terminals_def, "left_contact_pair", debug
+
+
 # Detect two terminal orientation capacitor.
 def detect_two_terminal_orientation_capacitor(binary, bbox, default_orientation="horizontal"):
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)

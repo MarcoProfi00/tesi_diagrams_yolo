@@ -1496,6 +1496,57 @@ def _scan_external_wire_x_in_range(binary, box, side, x_start, x_end, outward_le
     }
 
 
+def _support_point_on_lateral_transformer_port(binary, box, side, y_coord, outward_len=18, inward_len=36, halfspan=5):
+    x1, _, x2, _ = [int(round(v)) for v in box]
+    cy = int(round(float(y_coord)))
+    ya = max(0, cy - halfspan)
+    yb = min(binary.shape[0], cy + halfspan + 1)
+    if side == "left":
+        xa = max(0, x1 - outward_len)
+        xb = min(binary.shape[1], x1 + inward_len + 1)
+    else:
+        xa = max(0, x2 - inward_len)
+        xb = min(binary.shape[1], x2 + outward_len + 1)
+
+    if xb <= xa or yb <= ya:
+        fallback_x = x1 - TERMINAL_OUTWARD_OFFSET if side == "left" else x2 + TERMINAL_OUTWARD_OFFSET
+        return [round(float(fallback_x), 2), round(float(y_coord), 2)], {
+            "point_source": "lateral_fallback_no_roi",
+        }
+
+    roi = binary[ya:yb, xa:xb]
+    _, xs = np.nonzero(roi)
+    if len(xs) == 0:
+        fallback_x = x1 - TERMINAL_OUTWARD_OFFSET if side == "left" else x2 + TERMINAL_OUTWARD_OFFSET
+        return [round(float(fallback_x), 2), round(float(y_coord), 2)], {
+            "point_source": "lateral_fallback_no_support",
+        }
+
+    edge_x = int(xs.min()) if side == "left" else int(xs.max())
+    support_x = xa + edge_x
+    return [round(float(support_x), 2), round(float(y_coord), 2)], {
+        "point_source": "lateral_support_pixel",
+        "support_roi": [int(xa), int(ya), int(xb), int(yb)],
+        "support_pixels": int(len(xs)),
+    }
+
+
+def _is_inner_quadrant_x_candidate(debug, inner_side, inner_ratio=0.78):
+    start = debug.get("scan_start")
+    end = debug.get("scan_end")
+    run_start = debug.get("selected_run_start")
+    run_end = debug.get("selected_run_end")
+    if start is None or end is None or run_start is None or run_end is None:
+        return False
+
+    span = max(float(end) - float(start), 1.0)
+    run_center = (float(run_start) + float(run_end)) / 2.0
+    ratio = (run_center - float(start)) / span
+    if inner_side == "right":
+        return ratio >= float(inner_ratio)
+    return ratio <= 1.0 - float(inner_ratio)
+
+
 # Detect transformer terminals.
 def detect_transformer_terminals(meta: dict, binary, bbox):
     del meta
@@ -1540,6 +1591,38 @@ def detect_transformer_terminals(meta: dict, binary, bbox):
         side="right",
         y_start=bottom_range[0],
         y_end=bottom_range[1],
+    )
+    relaxed_left_top_y, relaxed_left_top_debug = _scan_external_wire_y_in_range(
+        binary,
+        det_box,
+        side="left",
+        y_start=top_range[0],
+        y_end=top_range[1],
+        inward_len=36,
+    )
+    relaxed_left_bottom_y, relaxed_left_bottom_debug = _scan_external_wire_y_in_range(
+        binary,
+        det_box,
+        side="left",
+        y_start=bottom_range[0],
+        y_end=bottom_range[1],
+        inward_len=36,
+    )
+    relaxed_right_top_y, relaxed_right_top_debug = _scan_external_wire_y_in_range(
+        binary,
+        det_box,
+        side="right",
+        y_start=top_range[0],
+        y_end=top_range[1],
+        inward_len=36,
+    )
+    relaxed_right_bottom_y, relaxed_right_bottom_debug = _scan_external_wire_y_in_range(
+        binary,
+        det_box,
+        side="right",
+        y_start=bottom_range[0],
+        y_end=bottom_range[1],
+        inward_len=36,
     )
     top_left_x, top_left_debug = _scan_external_wire_x_in_range(
         binary,
@@ -1593,6 +1676,19 @@ def detect_transformer_terminals(meta: dict, binary, bbox):
         bottom_right_x = float(x2 - 0.24 * width)
         bottom_left_debug["fallback_quadrant_anchor"] = True
         bottom_right_debug["fallback_quadrant_anchor"] = True
+
+    relaxed_lateral = {
+        "t1": ("left", relaxed_left_top_y, relaxed_left_top_debug),
+        "t2": ("right", relaxed_right_top_y, relaxed_right_top_debug),
+        "t3": ("left", relaxed_left_bottom_y, relaxed_left_bottom_debug),
+        "t4": ("right", relaxed_right_bottom_y, relaxed_right_bottom_debug),
+    }
+    top_bottom_debug_by_term = {
+        "t1": ("top", top_left_debug, "right"),
+        "t2": ("top", top_right_debug, "left"),
+        "t3": ("bottom", bottom_left_debug, "right"),
+        "t4": ("bottom", bottom_right_debug, "left"),
+    }
 
     left_right_score = (
         float(left_top_debug.get("max_score", 0))
@@ -1670,6 +1766,34 @@ def detect_transformer_terminals(meta: dict, binary, bbox):
                 1 if kv[0] in {"left", "right"} and left_right_score > top_bottom_score else 0,
             ),
         )
+        top_bottom_side, top_bottom_debug, inner_side = top_bottom_debug_by_term[term_name]
+        relaxed_side, relaxed_y, relaxed_debug = relaxed_lateral[term_name]
+        relaxed_score = float(relaxed_debug.get("max_score", 0))
+        selected_score = float(selected_info["score"])
+        if (
+            selected_side == top_bottom_side
+            and _is_inner_quadrant_x_candidate(top_bottom_debug, inner_side)
+            and relaxed_score >= max(40.0, selected_score * 0.65)
+        ):
+            point, point_debug = _support_point_on_lateral_transformer_port(
+                binary,
+                det_box,
+                relaxed_side,
+                relaxed_y,
+            )
+            selected_side = relaxed_side
+            selected_info = {
+                "score": relaxed_score,
+                "relative_position": relaxed_side,
+                "point": point,
+            }
+            top_bottom_debug["relaxed_lateral_override"] = {
+                "term_name": term_name,
+                "side": relaxed_side,
+                "score": round(float(relaxed_score), 3),
+                **point_debug,
+            }
+
         side_counts[selected_side] += 1
         terminals_def.append(
             {
@@ -1711,6 +1835,10 @@ def detect_transformer_terminals(meta: dict, binary, bbox):
         "left_bottom_debug": left_bottom_debug,
         "right_top_debug": right_top_debug,
         "right_bottom_debug": right_bottom_debug,
+        "relaxed_left_top_debug": relaxed_left_top_debug,
+        "relaxed_left_bottom_debug": relaxed_left_bottom_debug,
+        "relaxed_right_top_debug": relaxed_right_top_debug,
+        "relaxed_right_bottom_debug": relaxed_right_bottom_debug,
         "top_left_debug": top_left_debug,
         "top_right_debug": top_right_debug,
         "bottom_left_debug": bottom_left_debug,

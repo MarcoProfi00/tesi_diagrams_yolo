@@ -39,7 +39,7 @@ from estimate_terminals.state_switch import estimate_switch_open_closed_state
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PIPELINE_DATASET = os.environ.get(
     "PIPELINE_DATASET",
-    "pipeline2.0/batch_v7_npn_transistor_mosfet"
+    "pipeline2.0/batch_v9_2_set_successivo_analog_meter_connector_transformer"
 )
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "02_assign_instances"

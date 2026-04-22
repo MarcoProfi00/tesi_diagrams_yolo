@@ -41,7 +41,7 @@ Nota sul debug:
 # PATHS / INPUT-OUTPUT
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline2.0/batch_v8_polarita_componenti")
+PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline2.0/batch_v9_2_set_successivo_analog_meter_connector_transformer")
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "04_extract_wires"
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "05_build_terminal_graph"
@@ -65,6 +65,12 @@ TERMINAL_SQUARE_FALLBACK_RADIUS = 12
 # Se il pixel etichettato trovato è troppo lontano dal terminale,
 # lo marchiamo come sospetto nel debug.
 MAX_REASONABLE_SNAP_DISTANCE = 24.0
+ANALOG_METER_FALLBACK_RADIUS = 140
+ANALOG_METER_MAX_SNAP_DISTANCE = 160.0
+NON_SHORTING_MULTI_TERMINAL_CLASSES = {
+    "connector",
+    "transformer",
+}
 
 # =========================================================
 # HEURISTICHE SPECIALI
@@ -80,6 +86,32 @@ MOSFET_GATE_SUPPLY_ALIGN_Y_TOL = 85
 
 OPAMP_AUX_EXTERNAL_MAX_DX = 12
 OPAMP_AUX_EXTERNAL_MAX_DY = 180
+HORIZONTAL_STUB_LABEL_MAX_GAP = 70
+HORIZONTAL_STUB_LABEL_Y_TOL = 24
+HORIZONTAL_STUB_SOURCE_CLASSES = {
+    "diode",
+    "led",
+}
+INDUCTOR_PARALLEL_BRANCH_MAX_LABEL_DISTANCE = 34.0
+INDUCTOR_PARALLEL_BRANCH_MAX_TERMINAL_DISTANCE = 220.0
+
+SUPPLY_ARROW_SOURCE_CLASSES = {
+    "battery",
+    "current_source",
+    "voltage_source",
+}
+SUPPLY_ARROW_EXCLUDED_CLASSES = {
+    "breaker",
+    "terminal",
+    "gnd",
+    "ground",
+}
+SUPPLY_ARROW_MIN_STUB_HEIGHT = 20
+SUPPLY_ARROW_MAX_STUB_WIDTH = 34
+SUPPLY_ARROW_X_TOL = 10
+SUPPLY_ARROW_Y_GAP = 12
+SUPPLY_ARROW_TOP_BORDER_RATIO = 0.22
+SUPPLY_ARROW_BOTTOM_BORDER_RATIO = 0.78
 
 COMPONENT_BODY_ERASE_PADDING = 3
 COMPONENT_BODY_ERASE_EXCLUDED_CLASSES = {
@@ -432,6 +464,50 @@ def match_terminal_to_skeleton_label(labels: np.ndarray, term: dict):
         "snap_distance": None,
         "is_suspicious": True,
     }
+
+
+def attach_unmatched_analog_meter_terminals(
+    components: list[dict],
+    terminal_match_debug: dict,
+    labels: np.ndarray,
+):
+    """Fallback mirato per i post dell'analog meter, che spesso sono dentro il simbolo."""
+    for component in components:
+        if normalize_class_name(component.get("class_name")) != "analog_meter":
+            continue
+
+        for term in component.get("terminals", []):
+            terminal_id = term.get("terminal_id")
+            if terminal_id is None:
+                continue
+
+            current_match = terminal_match_debug.get(terminal_id, {})
+            if current_match.get("matched_label") is not None:
+                continue
+
+            sq_window = get_square_window(
+                term,
+                labels.shape,
+                radius=ANALOG_METER_FALLBACK_RADIUS,
+            )
+            sq_labels = collect_labels_in_window(labels, sq_window)
+            nearest = find_nearest_labeled_pixel(labels, term, sq_window)
+
+            if nearest is None:
+                continue
+            if float(nearest["snap_distance"]) > ANALOG_METER_MAX_SNAP_DISTANCE:
+                continue
+
+            terminal_match_debug[terminal_id] = {
+                "terminal_id": terminal_id,
+                "candidate_labels": sq_labels,
+                "matched_label": int(nearest["label"]),
+                "match_mode": "analog_meter_wide_fallback",
+                "search_window": [int(v) for v in sq_window],
+                "snap_point": nearest["snap_point"],
+                "snap_distance": nearest["snap_distance"],
+                "is_suspicious": False,
+            }
 
 
 # =========================================================
@@ -897,6 +973,276 @@ def merge_opamp_aux_external_terminal_labels(
     }
 
 
+def merge_near_horizontal_stub_labels(
+    label_to_terminal_ids: dict,
+    terminals: list[dict],
+    terminal_match_debug: dict,
+    labels: np.ndarray,
+):
+    terminal_by_id = {term["terminal_id"]: term for term in terminals}
+    parent = {int(label): int(label) for label in label_to_terminal_ids.keys()}
+
+    def find(label):
+        label = int(label)
+        parent.setdefault(label, label)
+        while parent[label] != label:
+            parent[label] = parent[parent[label]]
+            label = parent[label]
+        return label
+
+    def union(label_a, label_b):
+        root_a = find(label_a)
+        root_b = find(label_b)
+        if root_a != root_b:
+            parent[max(root_a, root_b)] = min(root_a, root_b)
+
+    boxes = {
+        int(label): label_bbox(labels, int(label))
+        for label in label_to_terminal_ids.keys()
+    }
+
+    for source_label, terminal_ids in label_to_terminal_ids.items():
+        source_label = int(source_label)
+        unique_ids = sorted(set(terminal_ids))
+        if len(unique_ids) != 1:
+            continue
+
+        terminal_id = unique_ids[0]
+        term = terminal_by_id.get(terminal_id)
+        if term is None:
+            continue
+
+        class_name = normalize_class_name(term.get("component_class_name"))
+        if class_name not in HORIZONTAL_STUB_SOURCE_CLASSES:
+            continue
+
+        relative_position = str(term.get("relative_position") or "").lower()
+        if relative_position not in {"left", "right"}:
+            continue
+
+        source_box = boxes.get(source_label)
+        if source_box is None:
+            continue
+
+        tx = float(term.get("x"))
+        ty = float(term.get("y"))
+        best = None
+
+        for target_label, target_ids in label_to_terminal_ids.items():
+            target_label = int(target_label)
+            if target_label == source_label:
+                continue
+
+            target_box = boxes.get(target_label)
+            if target_box is None:
+                continue
+
+            sx1, sy1, sx2, sy2 = source_box
+            tx1, ty1, tx2, ty2 = target_box
+            if relative_position == "right":
+                gap = float(tx1 - sx2)
+                direction_ok = tx1 >= sx2
+            else:
+                gap = float(sx1 - tx2)
+                direction_ok = tx2 <= sx1
+
+            if not direction_ok or gap < 0 or gap > HORIZONTAL_STUB_LABEL_MAX_GAP:
+                continue
+
+            if ty < ty1:
+                y_gap = float(ty1) - ty
+            elif ty > ty2:
+                y_gap = ty - float(ty2)
+            else:
+                y_gap = 0.0
+
+            if y_gap > HORIZONTAL_STUB_LABEL_Y_TOL:
+                continue
+
+            score = (gap, y_gap, len(set(target_ids)))
+            if best is None or score < best[0]:
+                best = (score, target_label)
+
+        if best is not None:
+            union(source_label, best[1])
+
+    merged = {}
+    for label, terminal_ids in label_to_terminal_ids.items():
+        root = find(int(label))
+        merged.setdefault(root, []).extend(terminal_ids)
+
+    return {
+        int(label): sorted(set(terminal_ids))
+        for label, terminal_ids in merged.items()
+    }
+
+
+def merge_vertical_inductor_parallel_branch_labels(
+    label_to_terminal_ids: dict,
+    terminals: list[dict],
+    terminal_match_debug: dict,
+    labels: np.ndarray,
+):
+    terminal_by_id = {term["terminal_id"]: term for term in terminals}
+    parent = {int(label): int(label) for label in label_to_terminal_ids.keys()}
+
+    def find(label):
+        label = int(label)
+        parent.setdefault(label, label)
+        while parent[label] != label:
+            parent[label] = parent[parent[label]]
+            label = parent[label]
+        return label
+
+    def union(label_a, label_b):
+        root_a = find(label_a)
+        root_b = find(label_b)
+        if root_a != root_b:
+            parent[max(root_a, root_b)] = min(root_a, root_b)
+
+    def terms_for_label(label):
+        return [
+            terminal_by_id[terminal_id]
+            for terminal_id in label_to_terminal_ids.get(int(label), [])
+            if terminal_id in terminal_by_id
+        ]
+
+    def is_inductor_vertical_terminal(term):
+        class_name = normalize_class_name(term.get("component_class_name"))
+        relative_position = str(term.get("relative_position") or "").lower()
+        return class_name == "inductor" and relative_position in {"top", "bottom"}
+
+    def is_matching_parallel_target(inductor_term, target_terms):
+        relative_position = str(inductor_term.get("relative_position") or "").lower()
+        for target_term in target_terms:
+            class_name = normalize_class_name(target_term.get("component_class_name"))
+            public_name = str(get_preferred_terminal_public_name(target_term) or "").lower()
+            polarity = str(target_term.get("semantic_polarity") or "").lower()
+
+            if relative_position == "top":
+                if class_name == "antenna":
+                    return True
+                if "capacitor" in class_name and (public_name == "positive" or polarity == "positive"):
+                    return True
+
+            if relative_position == "bottom":
+                if class_name in {"gnd", "ground"}:
+                    return True
+                if "capacitor" in class_name and (public_name == "negative" or polarity == "negative"):
+                    return True
+
+        return False
+
+    inductor_items = []
+    for terminal_id, info in terminal_match_debug.items():
+        label = info.get("matched_label")
+        if label is None:
+            continue
+        term = terminal_by_id.get(terminal_id)
+        if term is None or not is_inductor_vertical_terminal(term):
+            continue
+        inductor_items.append((term, int(label)))
+
+    for inductor_term, inductor_label in inductor_items:
+        for target_label in label_to_terminal_ids:
+            target_label = int(target_label)
+            if target_label == inductor_label:
+                continue
+
+            target_terms = terms_for_label(target_label)
+            if not target_terms:
+                continue
+            if not is_matching_parallel_target(inductor_term, target_terms):
+                continue
+
+            distance = min_label_distance(labels, inductor_label, target_label)
+            if distance is None or distance > INDUCTOR_PARALLEL_BRANCH_MAX_LABEL_DISTANCE:
+                continue
+
+            union(inductor_label, target_label)
+
+    merged = {}
+    for label, terminal_ids in label_to_terminal_ids.items():
+        root = find(int(label))
+        merged.setdefault(root, []).extend(terminal_ids)
+
+    return {
+        int(label): sorted(set(terminal_ids))
+        for label, terminal_ids in merged.items()
+    }
+
+
+def build_vertical_inductor_parallel_direct_edges(
+    terminals: list[dict],
+    terminal_match_debug: dict,
+    labels: np.ndarray,
+):
+    edges = []
+
+    def is_vertical_inductor_terminal(term):
+        class_name = normalize_class_name(term.get("component_class_name"))
+        relative_position = str(term.get("relative_position") or "").lower()
+        return class_name == "inductor" and relative_position in {"top", "bottom"}
+
+    def is_target_for_inductor_side(inductor_term, target_term):
+        relative_position = str(inductor_term.get("relative_position") or "").lower()
+        class_name = normalize_class_name(target_term.get("component_class_name"))
+        public_name = str(get_preferred_terminal_public_name(target_term) or "").lower()
+        polarity = str(target_term.get("semantic_polarity") or "").lower()
+
+        if relative_position == "top":
+            if class_name == "antenna":
+                return True
+            return "capacitor" in class_name and (public_name == "positive" or polarity == "positive")
+
+        if relative_position == "bottom":
+            if class_name in {"gnd", "ground"}:
+                return True
+            return "capacitor" in class_name and (public_name == "negative" or polarity == "negative")
+
+        return False
+
+    def terminal_distance(term_a, term_b):
+        ax = float(term_a.get("x", 0.0))
+        ay = float(term_a.get("y", 0.0))
+        bx = float(term_b.get("x", 0.0))
+        by = float(term_b.get("y", 0.0))
+        return float(np.hypot(ax - bx, ay - by))
+
+    inductor_terms = [term for term in terminals if is_vertical_inductor_terminal(term)]
+
+    for inductor_term in inductor_terms:
+        inductor_id = inductor_term["terminal_id"]
+        inductor_label = terminal_match_debug.get(inductor_id, {}).get("matched_label")
+        if inductor_label is None:
+            continue
+
+        for target_term in terminals:
+            target_id = target_term["terminal_id"]
+            if target_id == inductor_id:
+                continue
+            if not is_target_for_inductor_side(inductor_term, target_term):
+                continue
+
+            target_label = terminal_match_debug.get(target_id, {}).get("matched_label")
+            if target_label is None:
+                continue
+
+            distance = min_label_distance(labels, int(inductor_label), int(target_label))
+            if distance is None or distance > INDUCTOR_PARALLEL_BRANCH_MAX_LABEL_DISTANCE:
+                continue
+            target_class = normalize_class_name(target_term.get("component_class_name"))
+            if (
+                target_class != "antenna"
+                and terminal_distance(inductor_term, target_term) > INDUCTOR_PARALLEL_BRANCH_MAX_TERMINAL_DISTANCE
+            ):
+                continue
+
+            edges.append(tuple(sorted((inductor_id, target_id))))
+
+    return sorted(set(edges))
+
+
 def merge_battery_gate_rail_groups(
     label_to_terminal_ids: dict,
     terminals: list[dict],
@@ -1109,7 +1455,7 @@ def has_bridge_hump(binary: np.ndarray, x: int, y: int):
             if 0 <= rx < w and binary[yy, rx] > 0:
                 right_count += 1
 
-    return left_count >= 2 and right_count >= 2
+    return left_count >= 1 and right_count >= 1
 
 
 def detect_wire_bridges(skeleton_binary: np.ndarray, labels: np.ndarray):
@@ -1510,6 +1856,57 @@ def build_terminal_graph(terminals, label_to_terminal_ids: dict):
     return graph
 
 
+def label_bbox(labels: np.ndarray, label: int):
+    ys, xs = np.where(labels == int(label))
+    if len(xs) == 0:
+        return None
+    return [int(xs.min()), int(ys.min()), int(xs.max()), int(ys.max())]
+
+
+def remove_non_shorting_component_self_matches(
+    label_to_terminal_ids: dict,
+    terminals: list[dict],
+    terminal_match_debug: dict,
+):
+    terminal_by_id = {term["terminal_id"]: term for term in terminals}
+    cleaned = {}
+
+    for label, terminal_ids in label_to_terminal_ids.items():
+        unique_ids = sorted(set(terminal_ids))
+        if len(unique_ids) < 2:
+            cleaned[int(label)] = unique_ids
+            continue
+
+        terms = [terminal_by_id.get(terminal_id) for terminal_id in unique_ids]
+        if any(term is None for term in terms):
+            cleaned[int(label)] = unique_ids
+            continue
+
+        instance_ids = {str(term.get("instance_id")) for term in terms}
+        class_names = {normalize_class_name(term.get("component_class_name")) for term in terms}
+        if (
+            len(instance_ids) != 1
+            or len(class_names) != 1
+            or next(iter(class_names)) not in NON_SHORTING_MULTI_TERMINAL_CLASSES
+        ):
+            cleaned[int(label)] = unique_ids
+            continue
+
+        for terminal_id in unique_ids:
+            terminal_match_debug[terminal_id] = {
+                "terminal_id": terminal_id,
+                "candidate_labels": terminal_match_debug.get(terminal_id, {}).get("candidate_labels", []),
+                "matched_label": None,
+                "match_mode": "unmatched_same_component_artifact",
+                "search_window": terminal_match_debug.get(terminal_id, {}).get("search_window"),
+                "snap_point": None,
+                "snap_distance": None,
+                "is_suspicious": False,
+            }
+
+    return cleaned
+
+
 # Costruisce la mappa original_id -> simple_id.
 def build_simple_id_map(terminals: list[dict]):
     original_to_simple = {}
@@ -1534,6 +1931,105 @@ def build_simple_terminal_graph(terminal_graph: dict, original_to_simple: dict):
 # Converte una lista di id interni in una lista di id semplici.
 def build_simple_list(values: list[str], original_to_simple: dict):
     return sorted([original_to_simple.get(v, v) for v in values])
+
+
+def infer_supply_arrow_connection_for_terminal(
+    term: dict,
+    label_box: list[int],
+    image_height: int | None,
+):
+    class_name = normalize_class_name(term.get("component_class_name"))
+    if class_name in SUPPLY_ARROW_EXCLUDED_CLASSES:
+        return None
+
+    x1, y1, x2, y2 = map(float, label_box)
+    tx = float(term.get("x"))
+    ty = float(term.get("y"))
+    width = max(0.0, x2 - x1)
+    height = max(0.0, y2 - y1)
+
+    if height < SUPPLY_ARROW_MIN_STUB_HEIGHT:
+        return None
+    if width > max(float(SUPPLY_ARROW_MAX_STUB_WIDTH), height * 0.75):
+        return None
+    if tx < x1 - SUPPLY_ARROW_X_TOL or tx > x2 + SUPPLY_ARROW_X_TOL:
+        return None
+
+    relative_position = str(term.get("relative_position") or "").strip().lower()
+    needs_border_evidence = class_name not in SUPPLY_ARROW_SOURCE_CLASSES
+    top_border_limit = image_height * SUPPLY_ARROW_TOP_BORDER_RATIO if image_height else None
+    bottom_border_limit = image_height * SUPPLY_ARROW_BOTTOM_BORDER_RATIO if image_height else None
+    confidence = 0.86 if class_name in SUPPLY_ARROW_SOURCE_CLASSES else 0.78
+
+    if relative_position == "top" and y1 < ty - SUPPLY_ARROW_Y_GAP:
+        if needs_border_evidence and top_border_limit is not None and y1 > top_border_limit:
+            return None
+        return {
+            "type": "supply_arrow",
+            "label": "VDD",
+            "direction": "up",
+            "polarity": "positive_supply",
+            "confidence": confidence,
+            "evidence_type": "geometry_heuristic",
+            "reason": "single_terminal_vertical_stub_to_up_supply_arrow",
+        }
+
+    if relative_position == "bottom" and y2 > ty + SUPPLY_ARROW_Y_GAP:
+        if needs_border_evidence and bottom_border_limit is not None and y2 < bottom_border_limit:
+            return None
+        return {
+            "type": "supply_arrow",
+            "label": "VSS",
+            "direction": "down",
+            "polarity": "negative_supply",
+            "confidence": confidence,
+            "evidence_type": "geometry_heuristic",
+            "reason": "single_terminal_vertical_stub_to_down_supply_arrow",
+        }
+
+    return None
+
+
+def build_supply_graph_links(
+    terminals: list[dict],
+    label_to_terminal_ids: dict,
+    terminal_match_debug: dict,
+    labels: np.ndarray,
+    image_height: int | None,
+    original_to_simple: dict,
+):
+    terminal_by_id = {term["terminal_id"]: term for term in terminals}
+    supply_links = {}
+
+    for terminal_ids in label_to_terminal_ids.values():
+        unique_terminal_ids = sorted(set(terminal_ids))
+        if len(unique_terminal_ids) != 1:
+            continue
+
+        terminal_id = unique_terminal_ids[0]
+        term = terminal_by_id.get(terminal_id)
+        if term is None:
+            continue
+
+        matched_label = terminal_match_debug.get(terminal_id, {}).get("matched_label")
+        if matched_label is None:
+            continue
+
+        bbox = label_bbox(labels, int(matched_label))
+        if bbox is None:
+            continue
+
+        connection = infer_supply_arrow_connection_for_terminal(term, bbox, image_height)
+        if connection is None:
+            continue
+
+        simple_terminal_id = original_to_simple.get(terminal_id, terminal_id)
+        supply_links.setdefault(simple_terminal_id, set()).add(connection["label"])
+
+    return {
+        terminal_id: sorted(labels)
+        for terminal_id, labels in supply_links.items()
+    }
 
 
 # =========================================================
@@ -1681,19 +2177,8 @@ def build_terminal_graph_for_image(data: dict):
     for term in terminals:
         terminal_match_debug[term["terminal_id"]] = match_terminal_to_skeleton_label(labels, term)
 
+    attach_unmatched_analog_meter_terminals(components, terminal_match_debug, labels)
     attach_unmatched_opamp_aux_to_external_terminals(terminals, terminal_match_debug)
-
-    unmatched_terminals = sorted([
-        terminal_id
-        for terminal_id, info in terminal_match_debug.items()
-        if info.get("matched_label") is None
-    ])
-
-    suspicious_matches = sorted([
-        terminal_id
-        for terminal_id, info in terminal_match_debug.items()
-        if info.get("is_suspicious", False) and info.get("matched_label") is not None
-    ])
 
     original_to_simple = build_simple_id_map(terminals)
 
@@ -1718,6 +2203,12 @@ def build_terminal_graph_for_image(data: dict):
         terminals,
         terminal_match_debug,
     )
+    label_to_terminal_ids = merge_near_horizontal_stub_labels(
+        label_to_terminal_ids,
+        terminals,
+        terminal_match_debug,
+        labels,
+    )
     label_to_terminal_ids = split_bridge_labels(
         label_to_terminal_ids,
         terminals,
@@ -1735,16 +2226,57 @@ def build_terminal_graph_for_image(data: dict):
         label_to_terminal_ids,
         terminals,
     )
+    label_to_terminal_ids = remove_non_shorting_component_self_matches(
+        label_to_terminal_ids,
+        terminals,
+        terminal_match_debug,
+    )
 
     # Grafo finale interno e sua vista canonica leggibile.
     terminal_graph = build_terminal_graph(terminals, label_to_terminal_ids)
+    for source_id, target_id in build_vertical_inductor_parallel_direct_edges(
+        terminals,
+        terminal_match_debug,
+        labels,
+    ):
+        terminal_graph.setdefault(source_id, [])
+        terminal_graph.setdefault(target_id, [])
+        terminal_graph[source_id].append(target_id)
+        terminal_graph[target_id].append(source_id)
+    for terminal_id in terminal_graph:
+        terminal_graph[terminal_id] = sorted(set(terminal_graph[terminal_id]))
     simple_terminal_graph = build_simple_terminal_graph(terminal_graph, original_to_simple)
+    supply_graph_links = build_supply_graph_links(
+        terminals,
+        label_to_terminal_ids,
+        terminal_match_debug,
+        labels,
+        data.get("image_height"),
+        original_to_simple,
+    )
+    for terminal_id, supply_labels in supply_graph_links.items():
+        simple_terminal_graph.setdefault(terminal_id, [])
+        simple_terminal_graph[terminal_id] = sorted(set(simple_terminal_graph[terminal_id]) | set(supply_labels))
+        for supply_label in supply_labels:
+            simple_terminal_graph.setdefault(supply_label, [])
+            simple_terminal_graph[supply_label] = sorted(set(simple_terminal_graph[supply_label]) | {terminal_id})
+    simple_terminal_graph = {key: simple_terminal_graph[key] for key in sorted(simple_terminal_graph.keys())}
 
     # Terminali isolati nel grafo finale.
     unconnected_terminals = sorted([
         terminal_id
         for terminal_id, neighbors in simple_terminal_graph.items()
         if len(neighbors) == 0
+    ])
+    unmatched_terminals = sorted([
+        terminal_id
+        for terminal_id, info in terminal_match_debug.items()
+        if info.get("matched_label") is None
+    ])
+    suspicious_matches = sorted([
+        terminal_id
+        for terminal_id, info in terminal_match_debug.items()
+        if info.get("is_suspicious", False) and info.get("matched_label") is not None
     ])
 
     canonical_components = build_canonical_components(components)
