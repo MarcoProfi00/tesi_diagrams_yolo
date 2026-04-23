@@ -1,0 +1,105 @@
+# =========================================================
+# MATCH TERMINALE -> FILO
+# =========================================================
+# Finestra di ricerca principale, coerente con il lato del terminale.
+TERMINAL_SEARCH_OUTWARD = 16
+TERMINAL_SEARCH_INWARD = 4
+TERMINAL_DIRECTIONAL_HALFSPAN = 5
+
+# Fallback semplice: se la finestra direzionale non trova nulla,
+# cerchiamo in un piccolo quadrato attorno al terminale.
+TERMINAL_SQUARE_FALLBACK_RADIUS = 12
+
+# Se il pixel etichettato trovato è troppo lontano dal terminale,
+# lo marchiamo come sospetto nel debug.
+MAX_REASONABLE_SNAP_DISTANCE = 24.0
+ANALOG_METER_FALLBACK_RADIUS = 140
+ANALOG_METER_MAX_SNAP_DISTANCE = 160.0
+NON_SHORTING_MULTI_TERMINAL_CLASSES = {
+    "connector",
+    "transformer",
+}
+
+# =========================================================
+# HEURISTICHE SPECIALI
+# =========================================================
+BJT_BASE_ALIGN_Y_TOL = 10
+BJT_BASE_MAX_DX = 180
+BJT_BASE_LABEL_MAX_GAP = 180
+
+MOSFET_GATE_ALIGN_Y_TOL = 10
+MOSFET_GATE_MAX_DX = 260
+MOSFET_GATE_LABEL_MAX_GAP = 120
+MOSFET_GATE_SUPPLY_ALIGN_Y_TOL = 85
+
+OPAMP_AUX_EXTERNAL_MAX_DX = 12
+OPAMP_AUX_EXTERNAL_MAX_DY = 180
+HORIZONTAL_STUB_LABEL_MAX_GAP = 70
+HORIZONTAL_STUB_LABEL_Y_TOL = 24
+HORIZONTAL_STUB_SOURCE_CLASSES = {
+    "diode",
+    "led",
+}
+INDUCTOR_PARALLEL_BRANCH_MAX_LABEL_DISTANCE = 34.0
+INDUCTOR_PARALLEL_BRANCH_MAX_TERMINAL_DISTANCE = 220.0
+
+SUPPLY_ARROW_SOURCE_CLASSES = {
+    "battery",
+    "current_source",
+    "voltage_source",
+}
+SUPPLY_ARROW_EXCLUDED_CLASSES = {
+    "breaker",
+    "terminal",
+    "gnd",
+    "ground",
+}
+SUPPLY_ARROW_MIN_STUB_HEIGHT = 20
+SUPPLY_ARROW_MAX_STUB_WIDTH = 34
+SUPPLY_ARROW_X_TOL = 10
+SUPPLY_ARROW_Y_GAP = 12
+SUPPLY_ARROW_TOP_BORDER_RATIO = 0.22
+SUPPLY_ARROW_BOTTOM_BORDER_RATIO = 0.78
+
+COMPONENT_BODY_ERASE_PADDING = 3
+COMPONENT_BODY_ERASE_EXCLUDED_CLASSES = {
+    "terminal",
+    "gnd",
+    "ground",
+}
+
+BRIDGE_MIN_RUN = 25
+BRIDGE_MIN_PIXELS_PER_DIRECTION = 6
+BRIDGE_HUMP_Y_MIN = 2
+BRIDGE_HUMP_Y_MAX = 8
+BRIDGE_HUMP_X_MIN = 3
+BRIDGE_HUMP_X_MAX = 14
+BRIDGE_CUT_HALF_WIDTH = 6
+BRIDGE_CUT_HALF_HEIGHT = 8
+BRIDGE_PROBE_DISTANCE = 18
+
+PLAIN_CROSSING_MIN_RUN = 25
+PLAIN_CROSSING_MIN_PIXELS_PER_DIRECTION = 6
+PLAIN_CROSSING_DOT_RADIUS = 8
+PLAIN_CROSSING_DOT_AREA_MIN = 210
+PLAIN_CROSSING_CUT_HALF_WIDTH = 4
+PLAIN_CROSSING_CUT_HALF_HEIGHT = 4
+PLAIN_CROSSING_PROBE_DISTANCE = 18
+
+# =========================================================
+# DEBUG VISIVO
+# =========================================================
+SAVE_DEBUG_IMAGES = True
+TEXT_FONT_SCALE = 0.42
+TEXT_THICKNESS = 1
+TEXT_OUTLINE_THICKNESS = 3
+TERMINAL_RADIUS = 4
+SNAP_RADIUS = 3
+
+MATCHED_TERMINAL_COLOR = (0, 180, 0)      # verde
+UNMATCHED_TERMINAL_COLOR = (0, 0, 255)    # rosso
+SUSPICIOUS_TERMINAL_COLOR = (0, 165, 255) # arancione
+SNAP_POINT_COLOR = (255, 0, 0)            # blu
+LINK_COLOR = (255, 0, 255)                # magenta
+TEXT_COLOR = (255, 255, 0)                # giallo
+TEXT_OUTLINE_COLOR = (0, 0, 0)            # nero
