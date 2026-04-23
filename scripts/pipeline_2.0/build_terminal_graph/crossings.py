@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-
+# Verifica la presenza del ponte
+# Se c'è la gobba allora è un ponte
 def has_bridge_hump(binary: np.ndarray, x: int, y: int):
     h, w = binary.shape[:2]
     left_count = 0
@@ -21,7 +22,11 @@ def has_bridge_hump(binary: np.ndarray, x: int, y: int):
 
     return left_count >= 1 and right_count >= 1
 
-
+# Rileva ponte sullo skeleton
+# Cerca punti con:
+#   continuita nelle 4 dir
+#   hump
+#   label valida
 def detect_wire_bridges(skeleton_binary: np.ndarray, labels: np.ndarray):
     binary = np.where(skeleton_binary > 0, 1, 0).astype(np.uint8)
     h, w = binary.shape[:2]
@@ -61,10 +66,7 @@ def detect_wire_bridges(skeleton_binary: np.ndarray, labels: np.ndarray):
 
     return collapsed
 
-
-
-
-
+# Verifica se esiste il pallino pieno, se c'è allora il crossing è un nodod reale e non va spezzato
 def has_filled_junction_dot(junction_binary: np.ndarray | None, x: int, y: int):
     if junction_binary is None:
         return False
@@ -145,7 +147,7 @@ def detect_plain_wire_crossings(
 
     return collapsed
 
-
+# Trova label che contengono due o più terminali dello stesso componente
 def labels_with_multi_terminal_self_short(
     terminals: list[dict],
     terminal_match_debug: dict,
@@ -174,7 +176,8 @@ def labels_with_multi_terminal_self_short(
         if len(terminal_ids) >= 2
     }
 
-
+# Dopo uno split, trova una nuova label più vicina a un certo punto
+# Riassocia i terminali alle nuove connected components dopo il taglio
 def nearest_split_label(split_labels: np.ndarray, x: int, y: int, radius: int = 6):
     h, w = split_labels.shape[:2]
     window = clamp_window(x - radius, y - radius, x + radius + 1, y + radius + 1, w, h)
@@ -191,7 +194,14 @@ def nearest_split_label(split_labels: np.ndarray, x: int, y: int, radius: int = 
     best_idx = int(np.argmin(d2))
     return int(split_labels[int(abs_ys[best_idx]), int(abs_xs[best_idx])])
 
-
+# Esegue gli split dovuti ai ponti e a incroci senza il nodo (dot)
+# Rileva i ponti
+# Rileva incroci da spezzare
+# Taglia localmente lo skeleton
+# Ricalcola le connected components
+# Riaggancia i terminali alle nuove lable
+# Ricrea i gruppi finali
+# Evita fusioni topologiche sbagliate
 def split_bridge_labels(
     label_to_terminal_ids: dict,
     terminals: list[dict],
@@ -387,6 +397,7 @@ def split_bridge_labels(
 # la gobba sopra l'incrocio e separiamo la label in due reti: verticale e
 # orizzontale.
 
+# Conta quanti pixel ci sono lungo una direzione per capire se ci sono davvero segmenti di filo sufficientemente lunghi nelle 4 direzioni
 def count_run(binary: np.ndarray, x: int, y: int, dx: int, dy: int, limit: int):
     h, w = binary.shape[:2]
     count = 0

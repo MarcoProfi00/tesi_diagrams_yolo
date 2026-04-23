@@ -5,9 +5,10 @@ from .ids import normalize_class_name
 # =========================================================
 # COSTRUZIONE DEI GRUPPI INTERNI DI FILO
 # =========================================================
-# Trasforma il debug terminale -> label in una struttura:
-#   label -> [terminal_id, terminal_id, ...]
-# Questa struttura serve solo internamente.
+# Costruisce la mappa interna label -> [terminal_id, terminal_id, ...]
+# Legge matched_label di ogni terminale
+# raggruppa i terminali per label
+# deduplica e ordina 
 def build_label_to_terminal_ids(match_debug_by_terminal_id: dict):
     label_to_terminal_ids = {}
 
@@ -23,6 +24,8 @@ def build_label_to_terminal_ids(match_debug_by_terminal_id: dict):
 
     return cleaned
 
+# Elimina gruppi in cui più terminali dello stesso connector o transformer sono finiti sulla stessa label
+# Connector e Transformer non devono essere cortocircuitati internamente
 def remove_non_shorting_component_self_matches(
     label_to_terminal_ids: dict,
     terminals: list[dict],
@@ -66,6 +69,8 @@ def remove_non_shorting_component_self_matches(
 
     return cleaned
 
+# Costruisce una mappa instance_id -> bbox
+# è usato in molte heuristics che confrontano distanze tra componenti
 def build_component_bbox_by_instance(components: list[dict]):
     bbox_by_instance = {}
     for comp in components:

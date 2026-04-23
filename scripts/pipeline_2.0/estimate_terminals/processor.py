@@ -1,3 +1,6 @@
+"""
+Prende un singolo componente e lo trasforma in una lista di terminali con coordinate, metadati geometrici e metadati semantici
+"""
 from .config import *
 from .dispatcher import get_terminals_definition, resolve_terminal_point_mode
 from .geometry import (
@@ -13,28 +16,35 @@ from .strategies_three_terminal import (
     snap_bjt_pair_terminal_to_lateral_wire,
 )
 from .semantic_two_terminal import resolve_two_terminal_semantics
+
 # =========================================================
 # COMPONENT PROCESSING
 # =========================================================
-# Estimate terminals for component.
+# Stima i terminali di un singolo componente partendo da:
+# dizionario del componente
+# metadati della classe
+# img binaria del diagramma
+# Return: lista terminali, orientazione stimata, lato connesso
 def estimate_terminals_for_component(component: dict, class_meta: dict, image_binary):
     class_id = component["class_id"]
     meta = class_meta.get(class_id, {})
+
+    # Caso use_for_terminals = False
     if not component.get("use_for_terminals", False):
         return [], None, None, None
 
     bbox = component["bbox"]
     instance_id = component["instance_id"]
-
+    
+    # Definizione strutturale dei terminali
     terminals_def, estimated_orientation, connected_side, side_scores = get_terminals_definition(
         meta,
         bbox,
         image_binary=image_binary
     )
 
-    # Per quasi tutti i componenti useremo il centro del lato.
-    # Per i 3-terminal invece usiamo una localizzazione più strutturata:
-    # prima il lato singolo, poi la coppia ortogonale coerente con quel lato.
+    # Per quasi tutti i componenti usa il centro del lato.
+    # Per i 3-terminal invece usa una localizzazione più strutturata: prima il lato singolo, poi la coppia ortogonale coerente con quel lato.
     point_mode = resolve_terminal_point_mode(meta)
     point_binary = image_binary
     if point_mode == "three_terminal_structured":
@@ -49,12 +59,14 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
             "point_mode": point_mode
         }
 
+        #Se term_def["point"] esiste, il terminale usa direttamente quel punto.
         if term_def.get("point") is not None:
             x, y = [round(float(v), 2) for v in term_def["point"]]
             point_debug["point_mode"] = "strategy_absolute_point"
             point_debug["point_source"] = "term_def.point"
 
         elif point_mode == "three_terminal_structured":
+            # localizza terminale "singolo" e coppia di terminali ortogonale
             point, structured_debug = geom_terminal_point_three_terminal(
                 point_binary,
                 bbox,
@@ -75,6 +87,7 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
             point_debug.update(structured_debug)
 
         elif point_mode == OPAMP_POINT_MODE:
+            # gestisce terminali obbligatori (in1 in2 e out) e terminali ausiliari (aux1 aux2)
             point, opamp_debug = geom_terminal_point_opamp(
                 image_binary,
                 bbox,
@@ -85,6 +98,7 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
             point_debug.update(opamp_debug)
 
         elif point_mode == "two_terminal_side_peak":
+            # Diode usa il centro del lato e non il side-peak
             if component.get("class_name") == "Diode":
                 x, y = geom_terminal_point_from_bbox(bbox, rel_pos)
                 point_debug["point_mode"] = "two_terminal_axis_center"
@@ -93,12 +107,12 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
                 else:
                     point_debug["anchor_offset_ratio"] = 0.5
             elif component.get("class_name") == "GND":
-                # Ground symbols have a centered stem, so text near the symbol
-                # should not influence the final terminal point location.
+                # GND usa il centro del lato superiore per non farsi influenzare dal testo vicino
                 x, y = geom_terminal_point_from_bbox(bbox, rel_pos)
                 point_debug["point_mode"] = "one_terminal_axis_center"
                 point_debug["anchor_offset_ratio"] = 0.5
             else:
+                # altrimenti usa la classica
                 point, peak_debug = geom_terminal_point_by_side_peak(
                     image_binary,
                     bbox,
@@ -129,6 +143,7 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
                 else:
                     point_debug["anchor_offset_ratio"] = round((y - y1) / height, 4)
 
+        #arricchimento semantico
         terminals.append({
             "terminal_id": f"{instance_id}:{term_name}",
             "instance_id": instance_id,

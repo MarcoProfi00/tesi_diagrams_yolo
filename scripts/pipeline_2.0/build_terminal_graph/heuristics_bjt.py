@@ -6,18 +6,13 @@ from .grouping import build_component_bbox_by_instance
 from .ids import get_preferred_terminal_public_name, normalize_class_name
 
 
-# =========================================================
-# In alcuni schemi il filo della base passa visivamente attraverso/accanto
-# al simbolo del transistor, ma il passo 04 spezza lo skeleton perche'
-# maschera il componente. Qui fondiamo solo casi molto conservativi:
-# terminali B di BJT, quasi alla stessa y, con bbox vicine e label vicine.
-
+# Dice se un terminale è una base (B) del transistor
 def is_bjt_base_terminal(term: dict) -> bool:
     class_name = normalize_class_name(term.get("component_class_name"))
     terminal_name = str(get_preferred_terminal_public_name(term) or "").strip().upper()
     return "transistor" in class_name and terminal_name == "B"
 
-
+# Unisce label spezzate che rappresentano la stessa linea della base (B) transistor perchè la linea della B può essere spezzata dalla maschera
 def merge_bjt_base_aligned_labels(
     label_to_terminal_ids: dict,
     terminals: list[dict],

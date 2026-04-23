@@ -7,7 +7,9 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-
+# Legge img in Grayscale
+# Controlla se esiste
+# Normalizza con una codifica coerente 255
 def load_binary_image(path: Path) -> np.ndarray:
     img = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
     if img is None:

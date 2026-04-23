@@ -27,10 +27,24 @@ from .skeleton_ops import erase_component_bodies_from_skeleton
 # =========================================================
 # MAIN LOGIC PER UNA SINGOLA IMMAGINE
 # =========================================================
-# Costruisce il grafo dei terminali a partire da:
-# - terminals del passo 03
-# - skeleton del passo 04
-
+# prende terminali, componenti e wire extraction dal JSON;
+# carica lo skeleton;
+# cancella i corpi dei componenti a due terminali;
+# calcola le connected components;
+# fa il match di tutti i terminali;
+# applica fallback analog meter;
+# applica fallback opamp aux;
+# costruisce label_to_terminal_ids;
+# applica tutte le fusioni euristiche;
+# applica gli split per ponti/crossing;
+# fonde rail MOSFET/battery dove serve;
+# rimuove self-short non validi;
+# costruisce il grafo finale;
+# aggiunge direct edges per induttori;
+# aggiunge VDD / VSS;
+# costruisce warning;
+# costruisce componenti canonici;
+# restituisce tutto il necessario per export e debug.
 def build_terminal_graph_for_image(data: dict):
     terminals = data.get("terminals", [])
     components = data.get("components", [])

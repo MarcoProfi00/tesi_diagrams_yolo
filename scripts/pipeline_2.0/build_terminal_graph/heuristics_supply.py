@@ -15,12 +15,12 @@ from .geometry import label_bbox
 from .heuristics_mosfet import is_mosfet_gate_terminal
 from .ids import normalize_class_name
 
-
+# Dice se un terminale appartiene a una battery
 def is_battery_terminal(term: dict) -> bool:
     class_name = normalize_class_name(term.get("component_class_name"))
     return class_name == "battery"
 
-
+# unisce gruppi di batteria con gruppi di gate mosfet se sono allineati verticalmente (caso particolare)
 def merge_battery_gate_rail_groups(
     label_to_terminal_ids: dict,
     terminals: list[dict],
@@ -94,6 +94,14 @@ def merge_battery_gate_rail_groups(
         for label, terminal_ids in merged.items()
     }
 
+# Inferenza: inferisce se un terminale singolo su uno stub verticale rappresenta una rail simbolica
+# Esiti possibili: VDD - VSS
+# Criteri:
+#   altezza minima dello stub
+#   larghezza ridotta
+#   coerenza con relative_position
+#   posizione rispetto ai bordi (alto/basso) dell'img
+#   classe sorgente compatibile
 def infer_supply_arrow_connection_for_terminal(
     term: dict,
     label_box: list[int],
@@ -150,7 +158,7 @@ def infer_supply_arrow_connection_for_terminal(
 
     return None
 
-
+# Costruisce gli archi terminali VDD e VSS
 def build_supply_graph_links(
     terminals: list[dict],
     label_to_terminal_ids: dict,

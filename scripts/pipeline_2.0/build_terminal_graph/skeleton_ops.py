@@ -13,7 +13,8 @@
 
 from __future__ import annotations
 
-
+# Decide se cancellare il corpo del componente dallo skeleton
+# Cancella i componenti con 2 terminali perchè i terminali non devono risultare cortocircuitati dal corpo del simbolo
 def should_erase_component_body_from_skeleton(component: dict):
     class_name = normalize_class_name(component.get("class_name"))
     terminals = component.get("terminals", [])
@@ -23,7 +24,12 @@ def should_erase_component_body_from_skeleton(component: dict):
 
     return len(terminals) == 2
 
-
+# Cancella i body dei componenti a due terminali dallo skeleton
+# Per ogni componente
+#   prende il bbox
+#   applica un padding interno
+#   azzera i pixel interni
+# Rompe i nodi FP generati dal simbolo del componente
 def erase_component_bodies_from_skeleton(
     skeleton_binary: np.ndarray,
     components: list[dict],
@@ -62,8 +68,8 @@ def erase_component_bodies_from_skeleton(
 # =========================================================
 # LETTURA DELLE LABEL NELLA FINESTRA
 # =========================================================
-# Restituisce tutte le label positive (quindi esclude lo sfondo = 0)
-# trovate dentro una finestra.
+# Restituisce tutte le label positive (quindi esclude lo sfondo = 0) trovate dentro una finestra.
+# Aiuta a sapere quali candidati di filo esistono vicino al terminale
 def collect_labels_in_window(labels: np.ndarray, window):
     x1, y1, x2, y2 = window
     roi = labels[y1:y2, x1:x2]

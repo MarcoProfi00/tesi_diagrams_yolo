@@ -1,10 +1,12 @@
 # =========================================================
 # COSTRUZIONE DEL GRAFO FINALE TRA TERMINALI
 # =========================================================
-# Per ogni gruppo di filo:
-# - se il gruppo contiene almeno 2 terminali
-# - allora ogni terminale è collegato a tutti gli altri terminali del gruppo
-
+# Per ogni label
+#   prende i terminali di quel gruppo
+#   crea una clique completa tra loro trasformando i nodi impliciti in archi espliciti
+# Es:   A -> [B, C]
+#       B -> [A, C]
+#       C -> [A, B]
 def build_terminal_graph(terminals, label_to_terminal_ids: dict):
     graph = {term["terminal_id"]: [] for term in terminals}
 

@@ -1,7 +1,11 @@
 # Trova il pixel etichettato più vicino al terminale dentro una finestra.
 from __future__ import annotations
 
-
+# Trova il pixel etichettato vicino al terminale in una finestra
+# Return
+#   label del pixel
+#   snap point
+#   distance
 def find_nearest_labeled_pixel(labels: np.ndarray, term: dict, window):
     x1, y1, x2, y2 = window
     roi = labels[y1:y2, x1:x2]
@@ -34,11 +38,17 @@ def find_nearest_labeled_pixel(labels: np.ndarray, term: dict, window):
 # =========================================================
 # MATCH DI UN SINGOLO TERMINALE
 # =========================================================
-# Versione volutamente semplice:
 # 1. prova finestra direzionale
 # 2. se non trova nulla, prova finestra quadrata
 # 3. se ancora nulla, terminale unmatched
-
+#
+# Return:
+#   matched_label
+#   match_mode
+#   search_window
+#   snap_point
+#   snap_distance
+#   is_suspicious
 def match_terminal_to_skeleton_label(labels: np.ndarray, term: dict):
     # Primo tentativo: finestra direzionale
     dir_window = get_directional_window(
@@ -93,12 +103,13 @@ def match_terminal_to_skeleton_label(labels: np.ndarray, term: dict):
     }
 
 
+# Recupera terminali di analog meter rimasti unmatched
+# Usa una finestra più grande
 def attach_unmatched_analog_meter_terminals(
     components: list[dict],
     terminal_match_debug: dict,
     labels: np.ndarray,
 ):
-    """Fallback mirato per i post dell'analog meter, che spesso sono dentro il simbolo."""
     for component in components:
         if normalize_class_name(component.get("class_name")) != "analog_meter":
             continue
@@ -136,6 +147,8 @@ def attach_unmatched_analog_meter_terminals(
                 "is_suspicious": False,
             }
 
+# Matcha un aux opamp unmatched se esiste un terminale esterno allineato
+# Gli aux degli opamp possono cadere dentro il traingolo dell'opamp e perdere lo skeleton reale
 def attach_unmatched_opamp_aux_to_external_terminals(
     terminals: list[dict],
     terminal_match_debug: dict,

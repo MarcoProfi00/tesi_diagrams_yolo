@@ -14,7 +14,7 @@ from .ids import (
 # - instance_id
 # - class_name
 # - terminals con terminal_id, name e relative_position
-# NIENTE bbox, coordinate o altri dettagli geometrici.
+# state e state_confidence per componenti come lo switch
 def build_canonical_components(components: list[dict]):
     canonical_components = []
 

@@ -1,11 +1,12 @@
 # Normalizza il nome classe per usarlo in una chiave semplice.
+# Converte in lowercase e sostituisce gli spazi con "_"
 def normalize_class_name(class_name: str) -> str:
     class_name = str(class_name or "component").strip().lower()
     class_name = class_name.replace(" ", "_")
     return class_name
 
 
-# Costruisce un id di componente leggibile, ad esempio:
+# Costruisce un id di componente usato nel json finale, ad esempio:
 #   Mosfet + 16.2 -> mosfet16.2
 def make_simple_component_id(instance_id: str, class_name: str) -> str:
     return f"{normalize_class_name(class_name)}{instance_id}"
@@ -14,7 +15,7 @@ def make_simple_component_id(instance_id: str, class_name: str) -> str:
 # Normalizza un id pubblico per usarlo come chiave semplice.
 # Esempio:
 #   16.2:G -> 16.2_G
-# Manteniamo le MAIUSCOLE del terminale per non perdere G/S/D, B/C/E.
+# Mantiene le MAIUSCOLE del terminale per non perdere G/S/D, B/C/E.
 def normalize_public_terminal_id(value: str) -> str:
     value = str(value or "").strip()
     value = value.replace(":", "_")
@@ -22,7 +23,12 @@ def normalize_public_terminal_id(value: str) -> str:
     return value
 
 
-# Restituisce l'id pubblico migliore del terminale, riusando quanto creato nel 03.
+# Recupera il più semnatico id per un terminale dal passo 03
+# Ordine di priorità:
+#   display_terminal_id
+#   semantic_terminal_id
+#   terminal_id
+#   instance_id:name
 def get_preferred_terminal_public_id(term: dict) -> str:
     return (
         term.get("display_terminal_id")
@@ -33,6 +39,11 @@ def get_preferred_terminal_public_id(term: dict) -> str:
 
 
 # Restituisce il nome corto migliore del terminale, riusando quanto creato nel 03.
+# Ordine di priorita:
+#   display_name
+#   semantic_terminal_name
+#   name
+#   "t"
 def get_preferred_terminal_public_name(term: dict) -> str:
     return (
         term.get("display_name")
@@ -42,10 +53,10 @@ def get_preferred_terminal_public_name(term: dict) -> str:
     )
 
 
-# Costruisce la chiave umana semplice del terminale.
+# Costruisce la chiave del grafo finale del terminale.
 # Esempi:
 #   display_terminal_id = 16.2:G        -> mosfet16.2_G
-#   display_terminal_id = 2.1:positive -> battery2.1_positive
+#   display_terminal_id = 2.1:positive  -> battery2.1_positive
 #   display_terminal_id assente         -> resistor22.1_t1
 def make_simple_terminal_key(term: dict) -> str:
     class_name = normalize_class_name(term.get("component_class_name"))
@@ -63,6 +74,7 @@ def build_simple_id_map(terminals: list[dict]):
 
 
 # Converte il grafo interno in un dizionario semplice e leggibile.
+# Es: 18.2:G -> mosfet18.2_G
 def build_simple_terminal_graph(terminal_graph: dict, original_to_simple: dict):
     public_graph = {}
 

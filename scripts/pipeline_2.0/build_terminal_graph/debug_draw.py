@@ -53,6 +53,9 @@ def draw_outlined_text(
     )
 
 # Sceglie il colore del terminale in base allo stato del match.
+# verde = matched
+# roso = unmatched
+#arancione = suspicious
 def get_terminal_debug_color(match_info: dict):
     if match_info.get("matched_label") is None:
         return UNMATCHED_TERMINAL_COLOR

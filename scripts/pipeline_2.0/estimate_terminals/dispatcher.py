@@ -1,3 +1,6 @@
+"""
+Sceglie quale strategia usare in base ai metadati YAML della classe
+"""
 from .config import *
 from .geometry import geom_infer_orientation_from_bbox
 from .strategies_basic import (
@@ -22,7 +25,7 @@ from .strategies_structured_symbols import (
 )
 
 
-# Get oriented terminals.
+# Estrae dalla sezione "orientations" dello yaml la definizione terminale corretta
 def _get_oriented_terminals(meta: dict, orientation: str):
     terminals_def = meta.get("orientations", {}).get(orientation)
     if terminals_def is None:
@@ -30,12 +33,14 @@ def _get_oriented_terminals(meta: dict, orientation: str):
     return terminals_def
 
 
-# Resolve terminal point mode.
+# Stabilisce come sono localizzati i punti temrinali, indipendentemente dal numero
 def resolve_terminal_point_mode(meta: dict):
+    #controlla se c'è un terminal_point_mode esplicito
     explicit_mode = meta.get("terminal_point_mode")
     if explicit_mode is not None:
         return explicit_mode
 
+    # altrimenti ne sceglie uno implicito tramite terminal_strategy e class_name
     strategy = meta.get("terminal_strategy", "")
     class_name = meta.get("name", "")
 
@@ -64,7 +69,7 @@ def resolve_terminal_point_mode(meta: dict):
     return "bbox_side_center"
 
 
-# Resolve two terminal orientation.
+# Sceglie il risolutore giusto per l'orientazione dei componenti a 2 terminali perchè alcuni hanno una logica a parte
 def _resolve_two_terminal_orientation(strategy: str, class_name: str, image_binary, bbox, default_orientation: str):
     if strategy == "two_terminal_capacitor" or class_name in {"Capacitor", "Polarized_Capacitor"}:
         return detect_two_terminal_orientation_capacitor(
@@ -128,13 +133,15 @@ def _resolve_two_terminal_orientation(strategy: str, class_name: str, image_bina
 # =========================================================
 # STRATEGY DISPATCHER
 # =========================================================
-# Get terminals definition.
+# Restituisce la definizione astratta dei terminali e l'orientazione tramite metadata
 def get_terminals_definition(meta: dict, bbox, image_binary=None):
     strategy = meta.get("terminal_strategy", "fixed")
 
+    # fixed -> nessuna stima, ritorna direttamente meta["terminals"]
     if strategy == "fixed":
         return meta.get("terminals", []), None, None, None
 
+    # auto_by_aspect_ratio -> rapporto tra altezza e larghezza del bbox
     if strategy == "auto_by_aspect_ratio":
         class_name = meta.get("name", "")
         default_orientation = meta.get("default_orientation", "horizontal")
@@ -153,6 +160,7 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
         )
         return _get_oriented_terminals(meta, orientation), orientation, None, None
 
+    # one_terminal_by_orientation -> strategie a 2 terminali basate sull'asse di connessione
     if strategy == "one_terminal_by_orientation":
         if image_binary is None:
             raise ValueError("one_terminal_by_orientation richiede image_binary.")
@@ -201,6 +209,7 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
 
         return _get_oriented_terminals(meta, orientation), orientation, None, side_scores
 
+    # terminal_auto_one_or_two -> classe terminal che può comportarsi come mono o bi terminale
     if strategy == "terminal_auto_one_or_two":
         if image_binary is None:
             raise ValueError("terminal_auto_one_or_two richiede image_binary.")
@@ -213,6 +222,7 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
         )
         return terminals_def, orientation, None, side_scores
 
+    # connector
     if strategy == "connector_by_projection":
         if image_binary is None:
             raise ValueError("connector_by_projection richiede image_binary.")
@@ -226,6 +236,7 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
         )
         return terminals_def, orientation, None, side_scores
 
+    # analog meter
     if strategy == "analog_meter_by_posts":
         if image_binary is None:
             raise ValueError("analog_meter_by_posts richiede image_binary.")
@@ -237,6 +248,7 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
         )
         return terminals_def, orientation, connected_side, side_scores
 
+    # transformer
     if strategy == "transformer_external_wires":
         if image_binary is None:
             raise ValueError("transformer_external_wires richiede image_binary.")
@@ -248,6 +260,7 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
         )
         return terminals_def, orientation, connected_side, side_scores
 
+    #opamp
     if strategy == "opamp_by_orientation_and_optional_supply":
         if image_binary is None:
             raise ValueError("opamp_by_orientation_and_optional_supply richiede image_binary.")

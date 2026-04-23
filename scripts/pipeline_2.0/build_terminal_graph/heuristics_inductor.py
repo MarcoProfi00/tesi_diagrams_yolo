@@ -10,7 +10,7 @@ from .config import (
 from .geometry import label_bbox, min_label_distance
 from .ids import get_preferred_terminal_public_name, normalize_class_name
 
-
+# Unisce piccoli stub orizzontali vicini a una label principale per diodi e led
 def merge_near_horizontal_stub_labels(
     label_to_terminal_ids: dict,
     terminals: list[dict],
@@ -114,7 +114,11 @@ def merge_near_horizontal_stub_labels(
         for label, terminal_ids in merged.items()
     }
 
-
+# Unisce lable di rami paralleli legati a inductors verticali
+# Casi particolari:
+#   antenna
+#   capacitor positivo e negatico
+#   gnd
 def merge_vertical_inductor_parallel_branch_labels(
     label_to_terminal_ids: dict,
     terminals: list[dict],
@@ -209,7 +213,7 @@ def merge_vertical_inductor_parallel_branch_labels(
         for label, terminal_ids in merged.items()
     }
 
-
+# Aggiunge collegamenti (edges) diretti per alcuni casi di rami paralleli verticali con induttori
 def build_vertical_inductor_parallel_direct_edges(
     terminals: list[dict],
     terminal_match_debug: dict,

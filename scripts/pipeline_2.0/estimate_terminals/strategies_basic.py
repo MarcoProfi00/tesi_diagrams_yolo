@@ -1,3 +1,14 @@
+"""
+Questo file contiene strategie base per:
+- componenti a un terminale
+- componenti a due terminali
+- componenti speiciali (2 terminali):
+    - capacitor
+    - switch
+    - LED
+    - round source
+    - variable resistor
+"""
 import numpy as np
 from .config import *
 from .geometry import (
@@ -18,7 +29,8 @@ from .probes import (
 )
 
 
-# Group consecutive indices.
+# Raggruppa indici consecutivi in sottoliste
+# Usato per le proiezioni interne del condensatore
 def _group_consecutive_indices(indices):
     if not indices:
         return []
@@ -35,7 +47,13 @@ def _group_consecutive_indices(indices):
 # =========================================================
 # STRATEGY: ONE-TERMINAL COMPONENTS
 # =========================================================
-# Score one terminal candidate side.
+# Valuta un lato candidato come lato connesso di un componente mono-terminale.
+# Localizza un punto candidato sul lato
+# Valuta il supporto direzionale attorno al punto
+# Ritorna:
+#   punteggio
+#   punto
+#   debug del side peak
 def _score_one_terminal_candidate_side(binary, bbox, side):
     point, peak_debug = geom_terminal_point_by_side_peak(binary, bbox, side)
     px, py = point
@@ -53,11 +71,15 @@ def _score_one_terminal_candidate_side(binary, bbox, side):
     return dir_score, point, peak_debug
 
 
-# Handle strategy detect connected side.
+# Determina quale lato del bbox è realmente connesso per un simbolo a un solo terminale
 def strategy_detect_connected_side(binary, bbox):
     # -------------------------------------------------
     # 1) Validazione diretta sui 4 lati candidati
     # -------------------------------------------------
+    # Per ogni lato genera un punto candidato e misura il supporto direzionale
+    # Poi ordina i lati e controlla se:
+    # il miglior lato supera una soglia minima
+    # il miglior lato è sufficientemente migliore del secondo
     point_scores = {}
     point_debug = {}
 
@@ -97,8 +119,11 @@ def strategy_detect_connected_side(binary, bbox):
         return best_side, debug_scores
 
     # -------------------------------------------------
-    # 2) Fallback: vecchia strategia a bande centrali
+    # 2) Fallback: strategia a bande centrali
     # -------------------------------------------------
+    # Campiona bande centrali sui 4 lati del bbox
+    # sceglie il lato con più foreground
+    # se il punteggio è troppo basso ritorna None
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     xc = int(round((x1 + x2) / 2))
     yc = int(round((y1 + y2) / 2))
@@ -148,7 +173,9 @@ def strategy_detect_connected_side(binary, bbox):
 
     return coarse_best_side, side_scores
 
-# Resolve one terminal orientation.
+# Dato il lato connesso, trova l'oreintazione del simbolo che corrisponde al lato
+# Scorre meta["orientations"] e cerca la definizione in cui il terminale ha relative_position == connected_side.
+# Se non la trova usa  default_orientation
 def resolve_one_terminal_orientation(meta: dict, connected_side: str):
     orientations = meta.get("orientations", {})
     for orientation_name, terminals_def in orientations.items():
@@ -167,27 +194,33 @@ def resolve_one_terminal_orientation(meta: dict, connected_side: str):
 # =========================================================
 # STRATEGY: TWO-TERMINAL COMPONENTS
 # =========================================================
-# Handle decide axis from scores.
+# Decide se l'asse di connessione è orizzontale, verticale o indeterminato
+# Calcola left/right e top/bottom
+
 def _decide_axis_from_scores(side_scores):
     lr_pair = min(side_scores["left"], side_scores["right"])
     tb_pair = min(side_scores["top"], side_scores["bottom"])
     lr_score = side_scores["left"] + side_scores["right"]
     tb_score = side_scores["top"] + side_scores["bottom"]
 
+    # Se entrambi i lati sono abbastanza attivi e dominano top/bottom -> orientazione orizzontale
     if lr_pair >= TERMINAL_PROBE_MIN_SIDE_SCORE and lr_score > tb_score * TERMINAL_PROBE_AXIS_MARGIN:
         return "horizontal"
+    # Se dominano top/bottom -> orientazione verticale
     if tb_pair >= TERMINAL_PROBE_MIN_SIDE_SCORE and tb_score > lr_score * TERMINAL_PROBE_AXIS_MARGIN:
         return "vertical"
     return None
 
-# Handle strategy detect two terminal orientation generic.
+# Stima l'orientazione di un componente a 2 terminali senza assumere una struttura interna speciale
 def strategy_detect_two_terminal_orientation_generic(binary, bbox, default_orientation="horizontal"):
+    # Probe locali centrati
     side_scores = get_local_terminal_probe_scores_center(binary, bbox)
     orientation = _decide_axis_from_scores(side_scores)
     if orientation is not None:
         side_scores["decision_mode"] = "local_terminal_probes_center"
         return orientation, side_scores
 
+    # Fallback con bande laterali più grandi
     coarse_scores = probe_get_side_scores(binary, bbox)
     coarse_orientation = None
     lr_score = coarse_scores["left"] + coarse_scores["right"]
@@ -204,6 +237,7 @@ def strategy_detect_two_terminal_orientation_generic(binary, bbox, default_orien
         return coarse_orientation, merged
 
     side_scores["decision_mode"] = "bbox_fallback_after_local_probes"
+    #Fallback finale sul bbox
     return geom_infer_orientation_from_bbox(bbox, default_orientation=default_orientation), side_scores
 
 
@@ -335,7 +369,7 @@ def detect_breaker_terminals(binary, bbox):
     return terminals_def, "left_contact_pair", debug
 
 
-# Detect two terminal orientation capacitor.
+# Riconosce l'orientazione di condensatori sfruttando la struttura interna delle due piastre
 def detect_two_terminal_orientation_capacitor(binary, bbox, default_orientation="horizontal"):
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     width = max(x2 - x1 + 1, 1)
@@ -423,7 +457,7 @@ def detect_two_terminal_orientation_capacitor(binary, bbox, default_orientation=
     return geom_infer_orientation_from_bbox(bbox, default_orientation=default_orientation), side_scores
 
 
-# Handle strategy detect two terminal orientation switch.
+# Stima l'orientazione degli switch, che spesso non hanno una massa di foreground distribuita in modo simmetrico
 def strategy_detect_two_terminal_orientation_switch(binary, bbox, default_orientation="horizontal"):
     side_scores = get_local_terminal_probe_scores_multi_anchor(binary, bbox)
     orientation = _decide_axis_from_scores(side_scores)
@@ -449,7 +483,7 @@ def strategy_detect_two_terminal_orientation_switch(binary, bbox, default_orient
     side_scores["decision_mode"] = "switch_default_orientation_fallback"
     return default_orientation, side_scores
 
-# Score two terminal candidate by points.
+# Valutare una orientazione ipotetica (horizontal o vertical) attraverso due punti terminali candidati.
 def _score_two_terminal_candidate_by_points(binary, bbox, orientation):
     if orientation == "horizontal":
         sides = ("left", "right")
@@ -489,7 +523,7 @@ def _score_two_terminal_candidate_by_points(binary, bbox, orientation):
 
     return total_score, side_scores, point_debug
 
-# Detect two terminal orientation LED.
+# Stimare l’orientazione di un LED con una strategia dedicata.
 def detect_two_terminal_orientation_led(binary, bbox, default_orientation="vertical"):
 
     # -------------------------------------------------
