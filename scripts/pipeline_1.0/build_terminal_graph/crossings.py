@@ -105,8 +105,11 @@ def detect_plain_wire_crossings(
     labels: np.ndarray,
     junction_binary: np.ndarray | None,
 ):
-    crossing_source = junction_binary if junction_binary is not None else skeleton_binary
-    binary = np.where(crossing_source > 0, 1, 0).astype(np.uint8)
+    # Use the one-pixel skeleton to test the actual crossing geometry.  The
+    # thicker junction mask is useful only to decide whether a filled dot is
+    # present; using it for directional runs can turn tight bends or stubs into
+    # false four-way crossings.
+    binary = np.where(skeleton_binary > 0, 1, 0).astype(np.uint8)
     h, w = binary.shape[:2]
     candidates = []
 
@@ -122,10 +125,10 @@ def detect_plain_wire_crossings(
             if source_label is None:
                 continue
 
-            left = int(np.sum(binary[y, x - run:x]))
-            right = int(np.sum(binary[y, x + 1:x + run + 1]))
-            up = int(np.sum(binary[y - run:y, x]))
-            down = int(np.sum(binary[y + 1:y + run + 1, x]))
+            left = count_run(binary, x, y, -1, 0, run)
+            right = count_run(binary, x, y, 1, 0, run)
+            up = count_run(binary, x, y, 0, -1, run)
+            down = count_run(binary, x, y, 0, 1, run)
 
             if min(left, right, up, down) < min_pixels:
                 continue
