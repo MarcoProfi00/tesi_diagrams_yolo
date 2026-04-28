@@ -94,8 +94,8 @@ Data: 27/04/2026
 |---|---|---:|---:|---:|---:|---:|---:|---|
 | GPT-5.4 / modello forte | Solo JSON | 1 | 2 | 2 | 2 | 2 | 9 | Topologia chiara, ma componenti parzialmente corretti |
 | GPT-5.3 Instant / modello veloce | Solo JSON | 1 | 2 | 2 | 2 | 2 | 9 | Topologia chiara, ma componenti parzialmente corretti |
-| GPT-5.2 Instant / economico | Solo JSON |  |  |  |  |  |  |  |
-| o3 / reasoning legacy | Solo JSON |  |  |  |  |  |  |  |
+| GPT-5.2 Instant / economico | Solo JSON | 1 | 2 | 2 | 2 | 2 | 9 | Topologia chiara, ma componenti parzialmente corretti |
+| o3 / reasoning legacy | Solo JSON | 1 | 1 | 1 | 2 | 1 | 6 | Topologia parzialmente chiara, interpretazione troppo assertiva |
 
 ### Legenda
 
@@ -188,6 +188,34 @@ Il limite principale non dipende direttamente dal modello, ma dal JSON: il compo
 
 ### Valutazione manuale GPT-5.2 Instant
 
+Report corretto e abbastanza prudente. Il modello elenca correttamente i componenti presenti nel JSON e ricostruisce i 13 nodi principali. La topologia descritta è coerente con il circuito: ingresso tramite trasformatore, secondario collegato a una rete di diodi e resistori, transistor NPN, ramo con fusibile e terminali esterni. La classificazione come alimentatore con trasformatore, rete di raddrizzamento e stadio transistor è plausibile e non eccessivamente forzata.
 
+Il limite principale non dipende direttamente dal modello, ma dal JSON: il componente H1 / 2N3668, che nello schema reale sembra essere uno SCR/thyristor, è rappresentato come `diode7.2`. Di conseguenza il modello non può riconoscere con certezza il circuito come “battery charger using SCR”.
+
+| Criterio | Punteggio | Motivazione |
+|---|---:|---|
+| Componenti | 1 | Il modello elenca correttamente i componenti presenti nel JSON, ma rispetto all’immagine reale manca la semantica dello SCR/H1, rappresentato come `diode7.2`. |
+| Nodi / topologia | 2 | Ricostruisce correttamente i 13 nodi principali e descrive bene i collegamenti tra trasformatore, diodi, resistori, transistor, fusibile e terminali. |
+| Tipo circuito | 2 | Propone una classificazione prudente come alimentatore con trasformatore, rete di raddrizzamento e stadio transistor, senza forzare una funzione certa. |
+| Ambiguità | 2 | Segnala correttamente assenza di valori, polarità del trasformatore, verso fisico dei collegamenti, ruolo preciso del transistor e configurazione non certa dei diodi. |
+| Assenza allucinazioni | 2 | Non inventa valori, collegamenti o funzioni certe. Rimane fedele al JSON e distingue bene tra topologia ricostruibile e funzione non completamente determinabile. |
+
+**Totale:** 9/10  
+**Giudizio:** Topologia chiara, ma componenti parzialmente corretti
 
 ### Valutazione manuale o3
+
+Report utile, ma meno solido rispetto ai GPT-5.x. Il modello elenca correttamente i componenti presenti nel JSON e ricostruisce una tabella dei 13 nodi principali abbastanza coerente. Tuttavia, rispetto all’immagine reale, il componente H1 / 2N3668, che sembra essere uno SCR/thyristor, è rappresentato nel JSON come `diode7.2`. Questo limita la possibilità di riconoscere correttamente il circuito come battery charger using SCR.
+
+Inoltre il report contiene una piccola incoerenza interna: nella tabella dei nodi il transistor ha collettore su `N2`, base su `N7` ed emettitore su `N10`, ma nella descrizione generale viene indicato come transistor “connesso tra `N4` e `N10`”. Questa frase non è coerente con la tabella dei nodi e rischia di alterare la lettura topologica del circuito. Anche la classificazione come regolatore serie pass è troppo specifica rispetto alle sole informazioni presenti nel JSON.
+
+| Criterio | Punteggio | Motivazione |
+|---|---:|---|
+| Componenti | 1 | Il modello elenca correttamente i componenti presenti nel JSON, ma il JSON perde la semantica dello SCR/H1, rappresentato come `diode7.2`. |
+| Nodi / topologia | 1 | La tabella dei 13 nodi è in gran parte corretta, ma nella descrizione discorsiva introduce un’incoerenza dicendo che il transistor è connesso tra `N4` e `N10`, mentre dalla tabella risulta su `N2`, `N7` e `N10`. |
+| Tipo circuito | 1 | Propone una classificazione troppo specifica come alimentatore lineare con raddrizzamento e regolatore serie a transistor. È plausibile, ma non dimostrabile dal solo JSON, soprattutto perché manca la semantica dello SCR. |
+| Ambiguità | 2 | Segnala correttamente assenza di valori, mancanza di net label, assenza di riferimento GND, incertezza sul trasformatore, sul fusibile e sulla funzione precisa. |
+| Assenza allucinazioni | 1 | Non inventa collegamenti completamente nuovi, ma introduce una lettura funzionale troppo forte e una frase topologica incoerente sul collegamento del transistor. |
+
+**Totale:** 6/10  
+**Giudizio:** Topologia parzialmente chiara, interpretazione troppo assertiva
