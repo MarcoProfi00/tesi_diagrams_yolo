@@ -85,6 +85,9 @@ def main() -> None:
         # 1) Eventuali immagini di debug
         # -------------------------------------------------
         if SAVE_DEBUG_IMAGES:
+            problem_terminal_ids = set(graph_info["warnings"].get("unconnected_terminals", []))
+            problem_terminal_ids.update(graph_info["warnings"].get("unmatched_terminals", []))
+
             image_path = Path(data["image_path"])
             image_bgr = cv2.imread(str(image_path))
             if image_bgr is not None:
@@ -93,6 +96,7 @@ def main() -> None:
                     data.get("terminals", []),
                     graph_info["terminal_match_debug"],
                     graph_info["simple_id_map"],
+                    problem_terminal_ids,
                 )
                 terminal_overlay_path = DEBUG_TERMINAL_OVERLAY_DIR / f"{json_path.stem}_terminal_overlay.jpg"
                 cv2.imwrite(str(terminal_overlay_path), terminal_overlay)
@@ -102,6 +106,7 @@ def main() -> None:
                 data.get("terminals", []),
                 graph_info["terminal_match_debug"],
                 graph_info["simple_id_map"],
+                problem_terminal_ids,
             )
             skeleton_overlay_path = DEBUG_SKELETON_OVERLAY_DIR / f"{json_path.stem}_skeleton_overlay.jpg"
             cv2.imwrite(str(skeleton_overlay_path), skeleton_overlay)

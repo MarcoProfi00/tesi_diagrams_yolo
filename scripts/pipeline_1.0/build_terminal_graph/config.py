@@ -99,6 +99,7 @@ SNAP_RADIUS = 3
 MATCHED_TERMINAL_COLOR = (0, 180, 0)      # verde
 UNMATCHED_TERMINAL_COLOR = (0, 0, 255)    # rosso
 SUSPICIOUS_TERMINAL_COLOR = (0, 165, 255) # arancione
+PROBLEM_TERMINAL_COLOR = (0, 220, 255)    # giallo-arancio acceso
 SNAP_POINT_COLOR = (255, 0, 0)            # blu
 LINK_COLOR = (255, 0, 255)                # magenta
 TEXT_COLOR = (255, 255, 0)                # giallo

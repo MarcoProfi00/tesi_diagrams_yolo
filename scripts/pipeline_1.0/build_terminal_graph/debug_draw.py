@@ -3,6 +3,7 @@ import cv2
 from .config import (
     LINK_COLOR,
     MATCHED_TERMINAL_COLOR,
+    PROBLEM_TERMINAL_COLOR,
     SNAP_POINT_COLOR,
     SNAP_RADIUS,
     SUSPICIOUS_TERMINAL_COLOR,
@@ -52,11 +53,13 @@ def draw_outlined_text(
         cv2.LINE_AA,
     )
 
-# Sceglie il colore del terminale in base allo stato del match.
+# Sceglie il colore del terminale in base allo stato del match/grafo.
 # verde = matched
-# roso = unmatched
-#arancione = suspicious
-def get_terminal_debug_color(match_info: dict):
+# giallo-arancio acceso = unmatched o unconnected
+# arancione = suspicious
+def get_terminal_debug_color(match_info: dict, is_problem_terminal=False):
+    if is_problem_terminal:
+        return PROBLEM_TERMINAL_COLOR
     if match_info.get("matched_label") is None:
         return UNMATCHED_TERMINAL_COLOR
     if match_info.get("is_suspicious", False):
@@ -64,9 +67,22 @@ def get_terminal_debug_color(match_info: dict):
     return MATCHED_TERMINAL_COLOR
 
 
+def is_problem_terminal(terminal_id, simple_id, problem_terminal_ids):
+    if not problem_terminal_ids:
+        return False
+    return terminal_id in problem_terminal_ids or simple_id in problem_terminal_ids
+
+
 # Disegna overlay sul diagramma originale.
-def draw_terminal_overlay(image_bgr, terminals, terminal_match_debug, original_to_simple):
+def draw_terminal_overlay(
+    image_bgr,
+    terminals,
+    terminal_match_debug,
+    original_to_simple,
+    problem_terminal_ids=None,
+):
     out = image_bgr.copy()
+    problem_terminal_ids = set(problem_terminal_ids or [])
 
     for term in terminals:
         terminal_id = term["terminal_id"]
@@ -75,7 +91,8 @@ def draw_terminal_overlay(image_bgr, terminals, terminal_match_debug, original_t
 
         tx = int(round(term["x"]))
         ty = int(round(term["y"]))
-        color = get_terminal_debug_color(info)
+        problem = is_problem_terminal(terminal_id, simple_id, problem_terminal_ids)
+        color = get_terminal_debug_color(info, problem)
 
         cv2.circle(out, (tx, ty), TERMINAL_RADIUS, color, -1)
         cv2.circle(out, (tx, ty), TERMINAL_RADIUS + 1, (0, 0, 0), 1)
@@ -88,19 +105,29 @@ def draw_terminal_overlay(image_bgr, terminals, terminal_match_debug, original_t
             cv2.line(out, (tx, ty), (sx, sy), LINK_COLOR, 1)
 
         label_text = simple_id
-        if info.get("matched_label") is None:
+        if problem:
+            label_text += " [problem]"
+        elif info.get("matched_label") is None:
             label_text += " [none]"
         elif info.get("is_suspicious", False):
             label_text += f" [d={info.get('snap_distance')}]"
 
-        draw_outlined_text(out, label_text, (tx + 8, max(16, ty - 6)))
+        text_color = PROBLEM_TERMINAL_COLOR if problem else TEXT_COLOR
+        draw_outlined_text(out, label_text, (tx + 8, max(16, ty - 6)), color=text_color)
 
     return out
 
 
 # Disegna overlay sullo skeleton, utile per capire se il match cade davvero sul filo.
-def draw_skeleton_overlay(skeleton_binary, terminals, terminal_match_debug, original_to_simple):
+def draw_skeleton_overlay(
+    skeleton_binary,
+    terminals,
+    terminal_match_debug,
+    original_to_simple,
+    problem_terminal_ids=None,
+):
     out = cv2.cvtColor(skeleton_binary, cv2.COLOR_GRAY2BGR)
+    problem_terminal_ids = set(problem_terminal_ids or [])
 
     for term in terminals:
         terminal_id = term["terminal_id"]
@@ -109,7 +136,8 @@ def draw_skeleton_overlay(skeleton_binary, terminals, terminal_match_debug, orig
 
         tx = int(round(term["x"]))
         ty = int(round(term["y"]))
-        color = get_terminal_debug_color(info)
+        problem = is_problem_terminal(terminal_id, simple_id, problem_terminal_ids)
+        color = get_terminal_debug_color(info, problem)
 
         cv2.circle(out, (tx, ty), TERMINAL_RADIUS, color, -1)
         cv2.circle(out, (tx, ty), TERMINAL_RADIUS + 1, (255, 255, 255), 1)
@@ -121,6 +149,10 @@ def draw_skeleton_overlay(skeleton_binary, terminals, terminal_match_debug, orig
             cv2.circle(out, (sx, sy), SNAP_RADIUS + 1, (255, 255, 255), 1)
             cv2.line(out, (tx, ty), (sx, sy), LINK_COLOR, 1)
 
-        draw_outlined_text(out, simple_id, (tx + 8, max(16, ty - 6)))
+        label_text = simple_id
+        if problem:
+            label_text += " [problem]"
+        text_color = PROBLEM_TERMINAL_COLOR if problem else TEXT_COLOR
+        draw_outlined_text(out, label_text, (tx + 8, max(16, ty - 6)), color=text_color)
 
     return out
