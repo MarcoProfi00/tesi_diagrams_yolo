@@ -8,6 +8,24 @@
 | C01 | F02_led_lamp_branch_short | GPT-5.4 | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 12 | Diagnosi corretta |
 | C01 | F02_led_lamp_branch_short | GPT-5.3 Instant | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 12 | Diagnosi corretta |
 | C01 | F02_led_lamp_branch_short | GPT-5.2 Instant | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 12 | Diagnosi corretta |
+| C02 | F01_top_rail_open | GPT-5.4 | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 12 | Diagnosi corretta |
+| C02 | F01_top_rail_open | GPT-5.3 Instant | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 12 | Diagnosi corretta |
+| C02 | F01_top_rail_open | GPT-5.2 Instant | 2 | 2 | 2 | 1 | 2 | 2 | 9 | 11 | Diagnosi corretta con lieve imprecisione topologica |
+| C02 | F02_bottom_return_open | GPT-5.4 | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 12 | Diagnosi corretta |
+| C02 | F02_bottom_return_open | GPT-5.3 Instant | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 12 | Diagnosi corretta |
+| C02 | F02_bottom_return_open | GPT-5.2 Instant | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 12 | Diagnosi corretta |
+| C03 | F01_switch_open_state | GPT-5.4 | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 12 | Diagnosi corretta |
+| C03 | F01_switch_open_state | GPT-5.3 Instant | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 12 | Diagnosi corretta |
+| C03 | F01_switch_open_state | GPT-5.2 Instant | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 12 | Diagnosi corretta |
+| C03 | F02_capacitor_branch_open | GPT-5.4 | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 12 | Diagnosi corretta |
+| C03 | F02_capacitor_branch_open | GPT-5.3 Instant | 2 | 2 | 2 | 1 | 2 | 2 | 9 | 11 | Diagnosi corretta con lieve imprecisione topologica |
+| C03 | F02_capacitor_branch_open | GPT-5.2 Instant | 2 | 2 | 2 | 1 | 2 | 2 | 9 | 11 | Diagnosi corretta con lieve imprecisione topologica |
+| C04 | F01_feedback_open | GPT-5.4 | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 12 | Diagnosi corretta |
+| C04 | F01_feedback_open | GPT-5.3 Instant | 2 | 2 | 2 | 2 | 2 | 1 | 9 | 11 | Diagnosi corretta con lieve interpretazione funzionale troppo assertiva |
+| C04 | F01_feedback_open | GPT-5.2 Instant | 2 | 2 | 2 | 2 | 2 | 1 | 9 | 11 | Diagnosi corretta con lieve interpretazione funzionale troppo assertiva |
+| C04 | F02_noninv_input_floating | GPT-5.4 | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 12 | Diagnosi corretta |
+| C04 | F02_noninv_input_floating | GPT-5.3 Instant | 2 | 2 | 2 | 2 | 2 | 1 | 9 | 11 | Diagnosi corretta con lieve interpretazione funzionale troppo assertiva |
+| C04 | F02_noninv_input_floating | GPT-5.2 Instant | 2 | 2 | 2 | 2 | 2 | 1 | 9 | 11 | Diagnosi corretta con lieve interpretazione dei pin troppo assertiva |
 
 ## Rubrica valutazione AI
 
