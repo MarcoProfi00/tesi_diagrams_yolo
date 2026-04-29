@@ -8,8 +8,10 @@ Il JSON contiene:
 - eventuali warning della pipeline.
 
 Scenario:
+Il ramo di uscita verso il terminale finale non conduce.
 
 Componenti o terminali di interesse:
+Non specificati. Devi individuarli analizzando il JSON.
 
 Obiettivo:
 Analizza SOLO il JSON e produci una diagnosi topologica del problema.  

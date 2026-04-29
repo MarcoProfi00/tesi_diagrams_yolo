@@ -8,8 +8,11 @@ Il JSON contiene:
 - eventuali warning della pipeline.
 
 Scenario:
+Il controllo del circuito non funziona correttamente.
 
 Componenti o terminali di interesse:
+Non specificati. Devi individuarli analizzando il JSON.
+
 
 Obiettivo:
 Analizza SOLO il JSON e produci una diagnosi topologica del problema.  

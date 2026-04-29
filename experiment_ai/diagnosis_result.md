@@ -26,6 +26,27 @@
 | C04 | F02_noninv_input_floating | GPT-5.4 | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 12 | Diagnosi corretta |
 | C04 | F02_noninv_input_floating | GPT-5.3 Instant | 2 | 2 | 2 | 2 | 2 | 1 | 9 | 11 | Diagnosi corretta con lieve interpretazione funzionale troppo assertiva |
 | C04 | F02_noninv_input_floating | GPT-5.2 Instant | 2 | 2 | 2 | 2 | 2 | 1 | 9 | 11 | Diagnosi corretta con lieve interpretazione dei pin troppo assertiva |
+| C05 | F01_base_q2_open | GPT-5.4 | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 12 | Diagnosi corretta |
+| C05 | F01_base_q2_open | GPT-5.3 Instant | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 12 | Diagnosi corretta |
+| C05 | F01_base_q2_open | GPT-5.2 Instant | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 12 | Diagnosi corretta |
+| C06 | F01_inductor_open | GPT-5.4 | 2 | 2 | 2 | 2 | 1 | 1 | 8 | 10 | Diagnosi buona ma non centrata sul guasto principale |
+| C06 | F01_inductor_open | GPT-5.3 Instant | 2 | 2 | 2 | 2 | 2 | 1 | 9 | 11 | Diagnosi corretta con lieve interpretazione funzionale troppo assertiva |
+| C06 | F01_inductor_open | GPT-5.2 Instant | 2 | 2 | 2 | 1 | 0 | 1 | 6 | 8 | Diagnosi parziale; guasto principale non individuato |
+| C06 | F02_output_switch_open | GPT-5.4 | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 12 | Diagnosi corretta |
+| C06 | F02_output_switch_open | GPT-5.3 Instant | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 12 | Diagnosi corretta |
+| C06 | F02_output_switch_open | GPT-5.2 Instant | 2 | 2 | 2 | 2 | 2 | 1 | 9 | 11 | Diagnosi corretta con lieve interpretazione funzionale troppo assertiva |
+| C07 | F01_fuse_to_output_open | GPT-5.4 | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 12 | Diagnosi corretta |
+| C07 | F01_fuse_to_output_open | GPT-5.3 Instant | 2 | 2 | 2 | 1 | 1 | 1 | 7 | 9 | Diagnosi parziale; guasto principale non centrato |
+| C07 | F01_fuse_to_output_open | GPT-5.2 Instant | 2 | 2 | 2 | 2 | 2 | 1 | 9 | 11 | Diagnosi corretta con lieve ambiguità sul terminale finale |
+| C07 | F02_control_path_open | GPT-5.4 | 2 | 2 | 2 | 2 | 2 | 2 | 10 | 12 | Diagnosi corretta |
+| C07 | F02_control_path_open | GPT-5.3 Instant | 2 | 2 | 2 | 1 | 2 | 1 | 8 | 10 | Diagnosi buona ma incompleta |
+| C07 | F02_control_path_open | GPT-5.2 Instant | 2 | 2 | 2 | 2 | 2 | 1 | 9 | 11 | Diagnosi corretta con lieve interpretazione funzionale troppo assertiva |
+
+## Test non valutabili / pipeline non cattura il fault
+
+| Circuito | Fault | Motivo | Pipeline capture | Decisione |
+|---|---|---|---:|---|
+| C05 | F02_output_short_to_gnd | Il corto VOUT-GND non è rappresentato nel JSON: `terminal26.4_t1` e `terminal26.3_t1` / `gnd9.1_t1` restano su nodi distinti e non sono presenti warning coerenti. | 0/2 | GPT non eseguiti; test da ripetere o sostituire |
 
 ## Rubrica valutazione AI
 
