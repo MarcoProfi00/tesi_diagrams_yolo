@@ -469,6 +469,59 @@ def _relaxed_two_side_evidence(local_scores, far_scores, orientation):
     }
 
 
+def _are_adjacent_sides(side_a: str, side_b: str) -> bool:
+    return {side_a, side_b} in (
+        {"top", "left"},
+        {"top", "right"},
+        {"bottom", "left"},
+        {"bottom", "right"},
+    )
+
+
+# Handle adjacent two side evidence for corner-like Terminal symbols.
+def _adjacent_two_side_evidence(local_scores, far_scores, shape_info, combined_scores):
+    ordered = sorted(combined_scores.items(), key=lambda kv: kv[1], reverse=True)
+    if len(ordered) < 3:
+        return {
+            "valid": False,
+            "orientation": None,
+            "reason": "not_enough_sides",
+        }
+
+    best_side, best_score = ordered[0]
+    second_side, second_score = ordered[1]
+    third_side, third_score = ordered[2]
+
+    valid = (
+        shape_info["is_near_square"]
+        and _are_adjacent_sides(best_side, second_side)
+        and best_score >= TERMINAL_CLASS_ADJACENT_TWO_SIDE_STRONG
+        and second_score >= TERMINAL_CLASS_ADJACENT_TWO_SIDE_MIN
+        and second_score >= max(
+            TERMINAL_CLASS_ADJACENT_TWO_SIDE_MIN,
+            third_score * TERMINAL_CLASS_ADJACENT_THIRD_MARGIN,
+        )
+        and float(local_scores.get(best_side, 0)) >= TERMINAL_CLASS_ADJACENT_LOCAL_MIN
+        and float(local_scores.get(second_side, 0)) >= TERMINAL_CLASS_ADJACENT_LOCAL_MIN
+        and float(far_scores.get(best_side, 0)) >= TERMINAL_CLASS_FAR_MIN
+        and float(far_scores.get(second_side, 0)) >= TERMINAL_CLASS_FAR_MIN
+    )
+
+    orientation = f"corner_{best_side}_{second_side}" if valid else None
+    return {
+        "valid": valid,
+        "orientation": orientation,
+        "best_side": best_side,
+        "second_side": second_side,
+        "third_side": third_side,
+        "best_score": float(best_score),
+        "second_score": float(second_score),
+        "third_score": float(third_score),
+        "second_vs_third_margin": round(float(second_score) / max(float(third_score), 1.0), 4),
+        "shape_is_near_square": bool(shape_info["is_near_square"]),
+    }
+
+
 # Classify terminal cardinality.
 def classify_terminal_cardinality(binary, bbox, default_side="right", text_suppression_debug=None):
     local_scores = get_terminal_class_probe_scores(binary, bbox)
@@ -480,6 +533,12 @@ def classify_terminal_cardinality(binary, bbox, default_side="right", text_suppr
     vert_eval = _vertical_two_side_evidence(local_scores, far_scores)
     horiz_relaxed = _relaxed_two_side_evidence(local_scores, far_scores, "horizontal")
     vert_relaxed = _relaxed_two_side_evidence(local_scores, far_scores, "vertical")
+    adjacent_eval = _adjacent_two_side_evidence(
+        local_scores,
+        far_scores,
+        shape_info,
+        single_eval["combined_scores"],
+    )
 
     local_scores["far_scores"] = far_scores
     local_scores["single_side_evaluation"] = single_eval
@@ -491,6 +550,8 @@ def classify_terminal_cardinality(binary, bbox, default_side="right", text_suppr
         "horizontal": horiz_relaxed,
         "vertical": vert_relaxed,
     }
+    if adjacent_eval["valid"]:
+        local_scores["adjacent_two_side_evaluation"] = adjacent_eval
 
     relaxed_external_fragmented = False
     if text_suppression_debug is not None:
@@ -564,6 +625,14 @@ def classify_terminal_cardinality(binary, bbox, default_side="right", text_suppr
     ):
         local_scores["decision_mode"] = "terminal_cardinality_two_vertical"
         return 2, "vertical", local_scores
+
+    if (
+        adjacent_eval["valid"]
+        and not horiz_eval["valid"]
+        and not vert_eval["valid"]
+    ):
+        local_scores["decision_mode"] = "terminal_cardinality_two_adjacent"
+        return 2, adjacent_eval["orientation"], local_scores
 
     if (
         vertical_relaxed_shape_ok
@@ -787,6 +856,15 @@ def detect_terminal_two_sides(binary, bbox, precomputed_scores=None):
     far_scores = scores.get("far_scores")
     if far_scores is None:
         far_scores = get_terminal_class_far_probe_scores(binary, bbox)
+
+    adjacent_eval = scores.get("adjacent_two_side_evaluation") or {}
+    orientation = adjacent_eval.get("orientation")
+    if isinstance(orientation, str) and orientation.startswith("corner_"):
+        _, side_a, side_b = orientation.split("_", 2)
+        return [
+            {"name": "t1", "relative_position": side_a},
+            {"name": "t2", "relative_position": side_b},
+        ], orientation
 
     lr_score = scores["left"] + scores["right"] + 1.0 * (far_scores["left"] + far_scores["right"])
     tb_score = scores["top"] + scores["bottom"] + 1.0 * (far_scores["top"] + far_scores["bottom"])

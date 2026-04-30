@@ -53,7 +53,7 @@ Valutare se diversi modelli linguistici sono in grado di ricostruire la topologi
 | GPT-5.4 / forte | 67/70 | 9.57 | Molto buono, ma ha avuto una contraddizione interna sul Circuito 05 |
 | GPT-5.3 Instant | 69/70 | 9.86 | Miglior compromesso: molto accurato e più leggero |
 | GPT-5.2 Instant | 69/70 | 9.86 | Molto simile a 5.3, ottimo candidato economico |
-| o3 / reasoning legacy | 58/70 | 8.29 | Capisce spesso i nodi, ma tende a interpretare troppo |
+| o3 / reasoning  | 58/70 | 8.29 | Capisce spesso i nodi, ma tende a interpretare troppo |
 
 ### Legenda
 
