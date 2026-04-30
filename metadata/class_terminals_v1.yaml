@@ -210,9 +210,120 @@
 11:
   name: Integrated_Circuit
   symbol_type: multi_terminal
-  use_for_terminals: false
+  use_for_terminals: true
   use_for_masking: true
-  notes: "Per ora solo masking"
+
+  terminal_strategy: integrated_circuit_wire_contacts
+  terminal_point_mode: ic_body_side_contact
+  terminal_count: variable
+  default_orientation: auto
+
+  body_refinement:
+    enabled: true
+    method: rectangular_body_from_bbox
+    search_margin_ratio: 0.10
+    edge_snap_max_px: 12
+    min_body_width_px: 35
+    min_body_height_px: 35
+    allow_colored_fill: true
+    store_body_bbox: true
+
+  pin_detection:
+    enabled: true
+    source: foreground_binary
+    sides:
+      - left
+      - right
+      - top
+      - bottom
+
+    require_wire_contact: true
+
+    scan_band_px: 18
+    outward_probe_px: 28
+    inward_probe_px: 6
+    min_contact_run_px: 5
+    min_wire_length_px: 14
+    merge_gap_px: 10
+    corner_exclusion_ratio: 0.04
+
+    create_unconnected_pins_from_ocr: false
+
+  terminal_naming:
+    default_prefix: pin
+    name_from: pin_number
+    fallback_name_pattern: "{side}_{index}"
+
+    side_order:
+      left: top_to_bottom
+      right: top_to_bottom
+      top: left_to_right
+      bottom: left_to_right
+
+  ocr:
+    enabled: true
+
+    ic_marking:
+      enabled: true
+      search_regions:
+        - body_inner
+        - above_body
+        - below_body
+        - left_of_body
+        - right_of_body
+        - expanded_bbox
+      expanded_bbox_pad_ratio: 0.35
+      min_chars: 3
+      prefer_alphanumeric: true
+
+      reject_designator_patterns:
+        - '^R[0-9]+[A-Z]?$'
+        - '^C[0-9]+[A-Z]?$'
+        - '^L[0-9]+[A-Z]?$'
+        - '^D[0-9]+[A-Z]?$'
+        - '^Q[0-9]+[A-Z]?$'
+        - '^K[0-9]+[A-Z]?$'
+        - '^S[0-9]+[A-Z]?$'
+        - '^J[0-9]+[A-Z]?$'
+        - '^TP[0-9]+[A-Z]?$'
+
+      deprioritize_net_labels:
+        - GND
+        - VIN
+        - VOUT
+        - VCC
+        - VDD
+        - VSS
+        - EN
+        - FB
+        - PG
+        - COMP
+        - SYNC
+        - BOOT
+        - PHASE
+
+    pin_labels:
+      enabled: true
+      search_near_terminal: true
+      search_radius_px: 32
+      attach_to_nearest_terminal: true
+      allowed_patterns:
+        - '^[0-9]{1,2}$'
+        - '^[A-Z][A-Z0-9_/+-]{0,10}$'
+
+  output_fields:
+    store_body_bbox: true
+    store_ic_marking: true
+    store_pin_number: true
+    store_pin_label_text: true
+    store_ocr_confidence: true
+    store_detection_debug: true
+
+  mask:
+    prefer_body_bbox: true
+    padding_px: 4
+
+  notes: "IC generico: terminali variabili stimati dai contatti filo-corpo sui quattro lati; nome IC e nomi/numero pin associati tramite OCR locale."
 
 12:
   name: LED

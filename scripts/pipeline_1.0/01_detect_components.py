@@ -27,9 +27,9 @@ from estimate_terminals.probes import (
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PIPELINE_DATASET = os.environ.get(
     "PIPELINE_DATASET",
-    "pipeline1.0/batch_v9_2_set_successivo_analog_meter_connector_transformer"
+    "pipeline1.0/batch_v10_ic"
 )
-PIPELINE_INPUT_BATCH = os.environ.get("PIPELINE_INPUT_BATCH", "batch_v9_2_set_successivo_analog_meter_connector_transformer")
+PIPELINE_INPUT_BATCH = os.environ.get("PIPELINE_INPUT_BATCH", "batch_v10_ic")
 
 # === MODELLO ===
 MODEL_PATH = (
@@ -66,7 +66,7 @@ CLASS_CONF_THRES = {
     "Meter": 0.18,
     "Mosfet": 0.22,
     "Switch": 0.02,
-    "Terminal": 0.35,
+    "Terminal": 0.28,
     "Transformer": 0.22,
 }
 
@@ -1080,18 +1080,12 @@ def get_connector_layout(image_binary, box, image_gray=None):
     x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)
     width = max(x2 - x1, 1)
     height = max(y2 - y1, 1)
+    short_side = min(width, height)
+    long_side = max(width, height)
 
-    # Elimina i connector quasi quadrati.
-    elongation = max(width, height) / float(max(min(width, height), 1))
-    if elongation < 1.35:
-        return {
-            "is_connector": False,
-            "orientation": None,
-            "pin_count": 0,
-            "pin_centers": [],
-            "regularity": 1.0,
-            "circle_count": 0,
-        }
+    # Supporta sia connector molto allungati sia alcuni connector compatti
+    # che hanno pin interni regolari in un box piccolo quasi quadrato.
+    elongation = long_side / float(max(short_side, 1))
 
     vertical_centers = _find_connector_pin_centers_vertical(image_binary, box)
     horizontal_centers = _find_connector_pin_centers_horizontal(image_binary, box)
@@ -1108,6 +1102,54 @@ def get_connector_layout(image_binary, box, image_gray=None):
     circle_count = 0
     if image_gray is not None:
         circle_count = _count_connector_circles(image_gray, box)
+
+    compact_vertical_ok = (
+        elongation < 1.35
+        and short_side <= 95
+        and long_side <= 130
+        and 4 <= len(vertical_centers) <= 6
+        and vertical_reg <= 0.18
+        and circle_count >= max(6, len(vertical_centers) + 2)
+    )
+
+    compact_horizontal_ok = (
+        elongation < 1.35
+        and short_side <= 95
+        and long_side <= 130
+        and 4 <= len(horizontal_centers) <= 6
+        and horizontal_reg <= 0.18
+        and circle_count >= max(6, len(horizontal_centers) + 2)
+    )
+
+    if compact_vertical_ok and (not compact_horizontal_ok or len(vertical_centers) >= len(horizontal_centers)):
+        return {
+            "is_connector": True,
+            "orientation": "vertical",
+            "pin_count": len(vertical_centers),
+            "pin_centers": vertical_centers,
+            "regularity": vertical_reg,
+            "circle_count": circle_count,
+        }
+
+    if compact_horizontal_ok:
+        return {
+            "is_connector": True,
+            "orientation": "horizontal",
+            "pin_count": len(horizontal_centers),
+            "pin_centers": horizontal_centers,
+            "regularity": horizontal_reg,
+            "circle_count": circle_count,
+        }
+
+    if elongation < 1.35:
+        return {
+            "is_connector": False,
+            "orientation": None,
+            "pin_count": 0,
+            "pin_centers": [],
+            "regularity": 1.0,
+            "circle_count": circle_count,
+        }
 
     vertical_ok = (
         3 <= len(vertical_centers) <= 6
@@ -1267,13 +1309,13 @@ def find_structured_symbol_candidates(image_gray, image_binary):
 
     for idx, cnt in enumerate(contours):
         x, y, w, h = cv2.boundingRect(cnt)
-        if w < 40 or h < 40:
-            continue
-
         area = float(cv2.contourArea(cnt))
         extent = area / float(max(w * h, 1))
         ratio = w / float(max(h, 1))
         box = [float(x), float(y), float(x + w - 1), float(y + h - 1)]
+
+        if w < 40 or h < 40:
+            continue
 
         # -------------------------------------------------
         # Analog meter candidates
@@ -1351,6 +1393,43 @@ def _box_matches_candidate(box, candidate_box, min_iou=0.28, min_ioa=0.55):
     )
 
 
+def _ic_can_remap_to_connector(box, connector_layout):
+    """Keep IC->Connector remap only for narrow, strongly elongated multipin connectors."""
+    if not connector_layout.get("is_connector", False):
+        return False
+
+    orientation = connector_layout.get("orientation")
+    if orientation not in {"vertical", "horizontal"}:
+        return False
+
+    x1, y1, x2, y2 = box
+    width = max(float(x2 - x1), 1.0)
+    height = max(float(y2 - y1), 1.0)
+    short_side = min(width, height)
+    long_side = max(width, height)
+    elongation = long_side / short_side
+    pin_count = int(connector_layout.get("pin_count", 0))
+    regularity = float(connector_layout.get("regularity", 1.0))
+    circle_count = int(connector_layout.get("circle_count", 0))
+
+    compact_connector_ok = (
+        short_side <= 95.0
+        and long_side <= 130.0
+        and 4 <= pin_count <= 6
+        and regularity <= 0.18
+        and circle_count >= max(6, pin_count + 2)
+    )
+
+    return (
+        compact_connector_ok
+        or (
+            elongation >= 4.0
+            and short_side <= 130.0
+            and 3 <= pin_count <= 6
+        )
+    )
+
+
 def remap_special_component(image_gray, image_binary, box, predicted_class_name: str, structured_candidates):
     """Rimappa alcune classi YOLO verso Connector/Analog_Meter quando la forma locale lo suggerisce chiaramente."""
     connector_candidates = structured_candidates.get("Connector", [])
@@ -1361,9 +1440,13 @@ def remap_special_component(image_gray, image_binary, box, predicted_class_name:
             return "Analog_Meter"
         if is_analog_meter_like_bbox(image_binary, box):
             return "Analog_Meter"
-        if any(_box_matches_candidate(box, candidate["bbox"]) for candidate in connector_candidates):
+        connector_layout = get_connector_layout(image_binary, box, image_gray=image_gray)
+        if (
+            any(_box_matches_candidate(box, candidate["bbox"]) for candidate in connector_candidates)
+            and _ic_can_remap_to_connector(box, connector_layout)
+        ):
             return "Connector"
-        if get_connector_layout(image_binary, box, image_gray=image_gray)["is_connector"]:
+        if _ic_can_remap_to_connector(box, connector_layout):
             return "Connector"
         
     if predicted_class_name == "Meter":
@@ -1504,6 +1587,18 @@ def suppress_conflicting_components(components, image_binary):
                 drop_idx = i if class_a == "Integrated_Circuit" else j
                 suppressed.add(drop_idx)
                 continue
+
+            if pair == {"Transformer", "Inductor"}:
+                transformer_idx = i if class_a == "Transformer" else j
+                inductor_idx = j if transformer_idx == i else i
+                transformer = components[transformer_idx]
+                inductor = components[inductor_idx]
+                if (
+                    float(transformer.get("conf", 0.0)) <= float(inductor.get("conf", 0.0))
+                    or overlap >= 0.68
+                ):
+                    suppressed.add(transformer_idx)
+                    continue
 
             if pair == {"LED", "Diode"}:
                 drop_idx = i if class_a == "Diode" else j
@@ -1913,7 +2008,7 @@ def predict_components_on_image(
             #    continue
             if yaml_class_name == "Switch":
                 if not is_switch_like_bbox(image_gray, box):
-                    if float(conf) < 0.75:
+                    if float(conf) < 0.55:
                         continue
 
             #if yaml_class_name == "Current_Source" and not is_current_source_like_bbox(image_gray, image_binary, box):
