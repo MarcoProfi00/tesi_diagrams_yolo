@@ -65,6 +65,9 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
             point_debug["point_mode"] = "strategy_absolute_point"
             point_debug["point_source"] = "term_def.point"
 
+            if term_def.get("point_debug") is not None:
+                point_debug.update(term_def["point_debug"])
+
         elif point_mode == "three_terminal_structured":
             # localizza terminale "singolo" e coppia di terminali ortogonale
             point, structured_debug = geom_terminal_point_three_terminal(
@@ -160,6 +163,9 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
             "x": x,
             "y": y,
         })
+
+    if meta.get("terminal_strategy") == "integrated_circuit_wire_contacts":
+        return terminals, estimated_orientation, connected_side, side_scores
 
     if point_mode == "three_terminal_structured":
         terminals = resolve_three_terminal_semantics(

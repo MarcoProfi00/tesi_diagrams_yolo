@@ -9,6 +9,9 @@ def draw_terminals(image_bgr, components, terminals):
     out = image_bgr.copy()
     comp_box_color = (220, 170, 40)
     term_box_color = (58, 92, 190)
+    default_terminal_color = (0, 0, 255)      # rosso per terminali standard
+    ic_terminal_color = (0, 165, 255)         # arancione per terminali Integrated_Circuit (BGR OpenCV)
+    ic_label_border_color = (0, 140, 255)     # arancione leggermente più scuro per label IC
     state_box_colors = {
         "open": (30, 120, 230),
         "closed": (55, 150, 65),
@@ -78,6 +81,13 @@ def draw_terminals(image_bgr, components, terminals):
         x = int(round(term["x"]))
         y = int(round(term["y"]))
         label = term.get("display_terminal_id", term["terminal_id"])
-        cv2.circle(out, (x, y), TERMINAL_RADIUS, (0, 0, 255), -1)
-        draw_label(label, x + 8, max(y - 8, 0), term_box_color, term_font_scale)
+
+        is_ic_terminal = term.get("component_class_name") == "Integrated_Circuit"
+        circle_color = ic_terminal_color if is_ic_terminal else default_terminal_color
+        label_border_color = ic_label_border_color if is_ic_terminal else term_box_color
+        radius = TERMINAL_RADIUS + 1 if is_ic_terminal else TERMINAL_RADIUS
+
+        cv2.circle(out, (x, y), radius, circle_color, -1)
+        cv2.circle(out, (x, y), radius, (0, 0, 0), 1)
+        draw_label(label, x + 8, max(y - 8, 0), label_border_color, term_font_scale)
     return out

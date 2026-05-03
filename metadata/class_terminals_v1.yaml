@@ -243,7 +243,7 @@
     outward_probe_px: 28
     inward_probe_px: 6
     min_contact_run_px: 5
-    min_wire_length_px: 14
+    min_wire_length_px: 8
     merge_gap_px: 10
     corner_exclusion_ratio: 0.04
 
@@ -697,25 +697,20 @@
 
 24:
   name: Speaker
-  symbol_type: one_terminal
+  symbol_type: two_terminal
   use_for_terminals: true
   use_for_masking: true
-  terminal_strategy: one_terminal_by_orientation
+  terminal_strategy: speaker_by_connected_side
   default_orientation: right
-  orientations:
-    up:
-      - name: t1
-        relative_position: bottom
-    down:
-      - name: t1
-        relative_position: top
-    left:
-      - name: t1
-        relative_position: right
-    right:
-      - name: t1
-        relative_position: left
-  notes: "Richiede aggiornamento di 03_estimate_terminals.py"
+  pin_detection:
+    scan_band_px: 18
+    outward_probe_px: 24
+    inward_probe_px: 4
+    min_contact_run_px: 4
+    min_wire_length_px: 8
+    merge_gap_px: 10
+    corner_exclusion_ratio: 0.08
+  notes: "Speaker: due terminali sul lato connesso del simbolo, stimati come coppia di contatti alto-basso."
 
 25:
   name: Switch

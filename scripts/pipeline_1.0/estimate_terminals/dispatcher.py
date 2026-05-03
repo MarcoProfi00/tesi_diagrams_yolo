@@ -23,6 +23,8 @@ from .strategies_structured_symbols import (
     detect_analog_meter_terminals,
     detect_transformer_terminals,
 )
+from .strategies_integrated_circuit import detect_integrated_circuit_terminals
+from .strategies_speaker import detect_speaker_terminals
 
 
 # Estrae dalla sezione "orientations" dello yaml la definizione terminale corretta
@@ -55,6 +57,12 @@ def resolve_terminal_point_mode(meta: dict):
 
     if strategy in {"analog_meter_by_posts", "transformer_external_wires"}:
         return "strategy_absolute_point"
+    
+    if strategy == "integrated_circuit_wire_contacts":
+        return "strategy_absolute_point"
+
+    if strategy == "speaker_by_connected_side":
+        return "strategy_absolute_point"
 
     if strategy in {
         "two_terminal_led",
@@ -62,6 +70,7 @@ def resolve_terminal_point_mode(meta: dict):
         "one_terminal_by_orientation",
     }:
         return "two_terminal_side_peak"
+    
 
     if class_name in {"LED", "Diode"}:
         return "two_terminal_side_peak"
@@ -221,6 +230,18 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
             default_side=default_side,
         )
         return terminals_def, orientation, None, side_scores
+    
+    # integrated circuit
+    if strategy == "integrated_circuit_wire_contacts":
+        if image_binary is None:
+            raise ValueError("integrated_circuit_wire_contacts richiede image_binary.")
+
+        terminals_def, orientation, side_scores = detect_integrated_circuit_terminals(
+            meta,
+            image_binary,
+            bbox,
+        )
+        return terminals_def, orientation, None, side_scores
 
     # connector
     if strategy == "connector_by_projection":
@@ -242,6 +263,18 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
             raise ValueError("analog_meter_by_posts richiede image_binary.")
 
         terminals_def, orientation, connected_side, side_scores = detect_analog_meter_terminals(
+            meta,
+            image_binary,
+            bbox,
+        )
+        return terminals_def, orientation, connected_side, side_scores
+
+    # speaker
+    if strategy == "speaker_by_connected_side":
+        if image_binary is None:
+            raise ValueError("speaker_by_connected_side richiede image_binary.")
+
+        terminals_def, orientation, connected_side, side_scores = detect_speaker_terminals(
             meta,
             image_binary,
             bbox,
