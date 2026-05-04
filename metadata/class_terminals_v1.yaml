@@ -268,13 +268,21 @@
       search_regions:
         - body_inner
         - above_body
-        - below_body
-        - left_of_body
-        - right_of_body
         - expanded_bbox
       expanded_bbox_pad_ratio: 0.35
       min_chars: 3
       prefer_alphanumeric: true
+
+      easyocr_fallback:
+        enabled: true
+        languages:
+          - en
+        gpu: false
+        model_storage_directory: .tmp/easyocr
+        min_confidence: 0.0
+        run_when_no_candidates: true
+        run_when_best_confidence_below: 0.30
+        run_when_best_score_below: 1.20
 
       reject_designator_patterns:
         - '^R[0-9]+[A-Z]?$'

@@ -34,6 +34,7 @@ from estimate_terminals.debug_draw import draw_terminals
 from estimate_terminals.config import SAVE_DEBUG_IMAGES
 from estimate_terminals.strategies_opamp import snap_opamp_top_aux_to_nearby_terminal
 from estimate_terminals.state_switch import estimate_switch_open_closed_state
+from estimate_terminals.ocr_integrated_circuit import enrich_ic_marking_ocr
 
 #PATH / INPUT-OUTPUT
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -127,8 +128,31 @@ def main() -> None:
                 class_meta.get(comp_copy.get("class_id"), {}),
                 image_binary,
             )
+
+            # ---------------------------------------------------------
+            # OCR Integrated Circuit - step 1: nome/marking IC
+            # ---------------------------------------------------------
+            # Qui siamo ancora nello script 03, quindi abbiamo:
+            # - immagine originale BGR, utile per OCR;
+            # - terminali geometrici già stimati;
+            # - body_bbox raffinato dentro connection_side_scores/terminal debug.
+            # Per ora NON modifichiamo i terminali: aggiungiamo solo campi
+            # semantici al componente, come ic_marking e ic_ocr_debug.
+            if comp_copy.get("class_name") == "Integrated_Circuit":
+                ic_meta = class_meta.get(comp_copy.get("class_id"), {})
+                comp_copy = enrich_ic_marking_ocr(
+                    component=comp_copy,
+                    image_bgr=image_bgr,
+                    meta=ic_meta,
+                )
+
             updated_components.append(comp_copy)
-            all_terminals.extend(terminals)
+
+            # Usiamo comp_copy["terminals"] invece della variabile locale terminals:
+            # oggi l'OCR legge solo il marking e non modifica i terminali, ma nello
+            # step successivo l'OCR dei pin aggiornerà proprio comp_copy["terminals"].
+            # Così il codice è già pronto per l'estensione successiva.
+            all_terminals.extend(comp_copy.get("terminals", []))
 
         snap_opamp_top_aux_to_nearby_terminal(updated_components, image_binary)
 

@@ -68,6 +68,22 @@ def draw_terminals(image_bgr, components, terminals):
         state_color = state_box_colors.get(state, state_box_colors["unknown"])
         draw_label(label, x1, y2 + 18, state_color, state_font_scale)
 
+    def draw_ic_marking(comp, x1, y1):
+        if comp.get("class_name") != "Integrated_Circuit":
+            return
+
+        marking = comp.get("ic_marking")
+        if not marking:
+            return
+
+        confidence = comp.get("ic_marking_confidence")
+        if isinstance(confidence, (int, float)):
+            label = f"OCR: {marking} ({confidence:.2f})"
+        else:
+            label = f"OCR: {marking}"
+
+        draw_label(label, x1, y1 + 36, ic_label_border_color, state_font_scale)
+
     for comp in components:
         x1, y1, x2, y2 = map(int, comp["bbox"])
         label = comp.get("instance_id", "N/A")
@@ -75,6 +91,7 @@ def draw_terminals(image_bgr, components, terminals):
             label = f"{label} ({comp['estimated_orientation'][0]})"
         cv2.rectangle(out, (x1, y1), (x2, y2), comp_box_color, box_thickness)
         draw_label(label, x1, y1, comp_box_color, comp_font_scale)
+        draw_ic_marking(comp, x1, y1)
         draw_component_state(comp, x1, y2)
 
     for term in terminals:
