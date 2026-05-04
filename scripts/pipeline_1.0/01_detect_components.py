@@ -1635,6 +1635,11 @@ def suppress_conflicting_components(components, image_binary):
                 suppressed.add(drop_idx)
                 continue
 
+            if pair == {"Battery", "Polarized_Capacitor"}:
+                drop_idx = i if class_a == "Battery" else j
+                suppressed.add(drop_idx)
+                continue
+
             if pair in ({"Battery", "GND"}, {"Capacitor", "GND"}):
                 gnd_idx = i if class_a == "GND" else j
                 other_idx = j if gnd_idx == i else i

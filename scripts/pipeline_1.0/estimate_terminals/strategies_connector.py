@@ -2,6 +2,11 @@ import cv2
 
 from .geometry import geom_clamp_bbox_to_image, geom_infer_orientation_from_bbox
 from .image_ops import img_count_foreground_pixels
+from .strategies_integrated_circuit import (
+    _anchor_offset_ratio,
+    _make_terminal_point,
+    refine_ic_body_bbox,
+)
 
 
 CONNECTOR_CENTER_BAND_RATIO = 0.48
@@ -12,6 +17,10 @@ CONNECTOR_SIDE_PROBE_OUT_LEN = 12
 CONNECTOR_SIDE_PROBE_INSET = 2
 CONNECTOR_SIDE_PROBE_HALFSPAN_MIN = 3
 CONNECTOR_SIDE_PROBE_HALFSPAN_MAX = 8
+CONNECTOR_EDGE_CONTACT_MIN_PINS = 2
+CONNECTOR_EDGE_MIN_PROJECTION_SCORE = 3
+CONNECTOR_EDGE_KEEP_RATIO = 0.45
+CONNECTOR_EDGE_MAX_GAP = 3
 
 
 # Group close indices.
@@ -166,6 +175,227 @@ def _side_score_horizontal(binary, bbox, center_x, side, halfspan):
     )
 
 
+# Build connector body refinement meta.
+def _connector_body_refinement_meta(bbox):
+    x1, y1, x2, y2 = bbox
+    width = max(int(round(x2 - x1 + 1)), 1)
+    height = max(int(round(y2 - y1 + 1)), 1)
+    min_dim = max(1, min(width, height))
+
+    return {
+        "body_refinement": {
+            "enabled": True,
+            "min_body_width_px": max(14, int(round(width * 0.40))),
+            "min_body_height_px": max(14, int(round(height * 0.40))),
+            "outer_parallel_edge_gap_px": max(6, int(round(min_dim * 0.12))),
+        }
+    }
+
+
+# Build edge contact cfg.
+def _connector_edge_contact_cfg(body_bbox):
+    x1, y1, x2, y2 = body_bbox
+    width = max(int(round(x2 - x1 + 1)), 1)
+    height = max(int(round(y2 - y1 + 1)), 1)
+    min_dim = max(1, min(width, height))
+    max_dim = max(width, height)
+
+    return {
+        "sides": ["left", "right", "top", "bottom"],
+        "outward_probe_px": max(12, int(round(max_dim * 0.22))),
+        "corner_exclusion_ratio": 0.03,
+    }
+
+
+# Handle connector side order.
+def _connector_side_order(orientation):
+    if orientation == "horizontal":
+        return ("left", "top", "bottom", "right")
+    return ("top", "left", "right", "bottom")
+
+
+# Handle external projection groups.
+def _external_projection_groups(values):
+    if not values:
+        return [], 0
+
+    max_score = max(values)
+    threshold = max(CONNECTOR_EDGE_MIN_PROJECTION_SCORE, int(round(max_score * CONNECTOR_EDGE_KEEP_RATIO)))
+    kept = [i for i, score in enumerate(values) if score >= threshold]
+    return _group_close_indices(kept, max_gap=CONNECTOR_EDGE_MAX_GAP), threshold
+
+
+# Build side external projection.
+def _build_side_external_projection(binary, body_bbox, side, cfg):
+    x1, y1, x2, y2 = body_bbox
+    width = max(int(round(x2 - x1 + 1)), 1)
+    height = max(int(round(y2 - y1 + 1)), 1)
+    corner_skip_y = max(1, int(round(height * cfg["corner_exclusion_ratio"])))
+    corner_skip_x = max(1, int(round(width * cfg["corner_exclusion_ratio"])))
+    outward = int(cfg["outward_probe_px"])
+
+    if side == "left":
+        return [
+            img_count_foreground_pixels(binary, x1 - outward, y, x1, y + 1)
+            for y in range(y1 + corner_skip_y, y2 - corner_skip_y + 1)
+        ], y1 + corner_skip_y
+
+    if side == "right":
+        return [
+            img_count_foreground_pixels(binary, x2 + 1, y, x2 + outward + 1, y + 1)
+            for y in range(y1 + corner_skip_y, y2 - corner_skip_y + 1)
+        ], y1 + corner_skip_y
+
+    if side == "top":
+        return [
+            img_count_foreground_pixels(binary, x, y1 - outward, x + 1, y1)
+            for x in range(x1 + corner_skip_x, x2 - corner_skip_x + 1)
+        ], x1 + corner_skip_x
+
+    return [
+        img_count_foreground_pixels(binary, x, y2 + 1, x + 1, y2 + outward + 1)
+        for x in range(x1 + corner_skip_x, x2 - corner_skip_x + 1)
+    ], x1 + corner_skip_x
+
+
+# Handle build connector edge contacts.
+def _build_connector_edge_contacts(binary, bbox, orientation):
+    body_meta = _connector_body_refinement_meta(bbox)
+    body_bbox, body_debug = refine_ic_body_bbox(binary, bbox, body_meta)
+    cfg = _connector_edge_contact_cfg(body_bbox)
+    if orientation == "horizontal":
+        cfg["sides"] = ["top", "bottom"]
+    else:
+        cfg["sides"] = ["left", "right"]
+
+    rows_by_side = {}
+    projection_debug = {}
+    active_sides = []
+
+    for side in cfg["sides"]:
+        projection, start_coord = _build_side_external_projection(
+            binary,
+            body_bbox,
+            side,
+            cfg,
+        )
+        groups, threshold = _external_projection_groups(projection)
+        centers = [
+            start_coord + int(round((group[0] + group[-1]) / 2.0))
+            for group in groups
+        ]
+        rows_by_side[side] = centers
+        projection_debug[side] = {
+            "max_score": int(max(projection) if projection else 0),
+            "threshold": int(threshold),
+            "group_count": len(groups),
+            "centers": [int(center) for center in centers],
+        }
+        if centers:
+            active_sides.append(side)
+
+    terminals_def = []
+    debug_rows = []
+    pin_index = 1
+
+    for side in _connector_side_order(orientation):
+        centers = sorted(rows_by_side.get(side, []))
+
+        for center in centers:
+            anchor_ratio = _anchor_offset_ratio(body_bbox, side, center)
+            point = _make_terminal_point(body_bbox, side, center)
+            terminals_def.append({
+                "name": f"pin{pin_index}",
+                "relative_position": side,
+                "anchor_offset_ratio": anchor_ratio,
+                "point": point,
+                "point_debug": {
+                    "point_mode": "connector_body_edge_contact",
+                    "body_bbox": [int(v) for v in body_bbox],
+                    "side": side,
+                    "coord": int(center),
+                    "anchor_offset_ratio": anchor_ratio,
+                    "external_projection": projection_debug.get(side, {}),
+                },
+            })
+            debug_rows.append({
+                "pin_name": f"pin{pin_index}",
+                "side": side,
+                "coord": int(center),
+                "point": point,
+                "anchor_offset_ratio": anchor_ratio,
+                "external_projection": projection_debug.get(side, {}),
+            })
+            pin_index += 1
+
+    total_best_score = sum(
+        int(side_debug.get("max_score", 0))
+        for side_debug in projection_debug.values()
+    )
+    estimated_orientation = "multi_side" if len(active_sides) > 1 else orientation
+
+    return terminals_def, estimated_orientation, {
+        "decision_mode": "connector_body_edge_contacts",
+        "pin_count": len(terminals_def),
+        "active_sides": active_sides,
+        "body_bbox": [int(v) for v in body_bbox],
+        "body_refinement": body_debug,
+        "pin_detection_cfg": cfg,
+        "external_side_projection": projection_debug,
+        "total_best_score": int(total_best_score),
+        "rows": debug_rows,
+    }
+
+
+# Handle projection selected scores.
+def _projection_selected_scores(debug_rows):
+    scores = []
+
+    for row in debug_rows:
+        if "left_score" in row and "right_score" in row:
+            scores.append(max(int(row.get("left_score", 0)), int(row.get("right_score", 0))))
+        elif "top_score" in row and "bottom_score" in row:
+            scores.append(max(int(row.get("top_score", 0)), int(row.get("bottom_score", 0))))
+
+    return scores
+
+
+# Handle should use edge contacts.
+def _should_use_edge_contacts(projection_debug, edge_debug):
+    if bool(projection_debug.get("used_hole_detection")):
+        return False, "hole_detection_already_reliable"
+
+    projection_pin_count = int(projection_debug.get("pin_count", 0))
+    edge_pin_count = int(edge_debug.get("pin_count", 0))
+
+    if edge_pin_count < CONNECTOR_EDGE_CONTACT_MIN_PINS:
+        return False, "edge_contact_pin_count_too_low"
+
+    projection_scores = _projection_selected_scores(projection_debug.get("rows", []))
+    projection_max_score = max(projection_scores, default=0)
+    projection_total_score = sum(projection_scores)
+    projection_zero_rows = sum(1 for score in projection_scores if score <= 0)
+
+    if projection_max_score <= 0 and edge_pin_count >= projection_pin_count:
+        return True, "projection_side_scores_missing"
+
+    if (
+        edge_pin_count >= projection_pin_count + 2
+        and projection_zero_rows * 2 >= max(projection_pin_count, 1)
+    ):
+        return True, "projection_pin_count_incomplete"
+
+    edge_total_score = int(edge_debug.get("total_best_score", 0))
+    if (
+        edge_pin_count >= projection_pin_count
+        and edge_total_score > 0
+        and projection_total_score <= 0
+    ):
+        return True, "edge_contacts_have_real_wire_support"
+
+    return False, "projection_result_kept"
+
+
 # Build vertical connector.
 def _build_vertical_connector(binary, bbox):
     x1, y1, x2, y2 = bbox
@@ -316,6 +546,43 @@ def detect_connector_terminals(meta: dict, binary, bbox, default_orientation="ve
     else:
         terminals_def, debug = _build_horizontal_connector(binary, bbox)
 
+    projection_debug = debug
+    final_orientation = orientation
+    selection_reason = "projection_result_kept"
+
+    if not bool(projection_debug.get("used_hole_detection")):
+        edge_terminals_def, edge_orientation, edge_debug = _build_connector_edge_contacts(
+            binary,
+            bbox,
+            orientation,
+        )
+        use_edge_contacts, selection_reason = _should_use_edge_contacts(
+            projection_debug,
+            edge_debug,
+        )
+
+        projection_debug["edge_contact_candidate"] = {
+            "pin_count": int(edge_debug.get("pin_count", 0)),
+            "active_sides": edge_debug.get("active_sides", []),
+            "total_best_score": int(edge_debug.get("total_best_score", 0)),
+            "selection_reason": selection_reason,
+        }
+
+        if use_edge_contacts:
+            terminals_def = edge_terminals_def
+            debug = edge_debug
+            final_orientation = edge_orientation
+            debug["projection_candidate"] = {
+                "pin_count": int(projection_debug.get("pin_count", 0)),
+                "used_hole_detection": bool(projection_debug.get("used_hole_detection")),
+                "decision_mode": projection_debug.get("decision_mode"),
+                "rows": projection_debug.get("rows", []),
+            }
+        else:
+            debug = projection_debug
+
     debug["estimated_orientation"] = orientation
+    debug["resolved_orientation"] = final_orientation
+    debug["selection_reason"] = selection_reason
     debug["strategy"] = meta.get("terminal_strategy", "connector_by_projection")
-    return terminals_def, orientation, debug
+    return terminals_def, final_orientation, debug

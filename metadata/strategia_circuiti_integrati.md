@@ -1,4 +1,4 @@
-rei due concetti:
+
 
 bbox_yolo       = bbox grezzo del componente rilevato
 ic_body_bbox    = rettangolo reale del corpo IC

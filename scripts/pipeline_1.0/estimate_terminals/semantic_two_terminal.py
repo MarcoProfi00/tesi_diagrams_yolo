@@ -209,7 +209,23 @@ def _diode_bar_scores(score_map: dict, orientation: str) -> dict:
     best_group = max(groups, key=lambda group: (bar_score(group), group_center(group)), default=[])
     best_center = group_center(best_group) if best_group else 0.0
     axis_mid = float(max(axis_size - 1, 0)) / 2.0
-    marker_side = keys[0] if best_center <= axis_mid else keys[1]
+
+    body_group = max(
+        [group for group in groups if group != best_group],
+        key=lambda group: (
+            max(int(projection[idx]) for idx in group) * len(group),
+            -abs(group_center(group) - axis_mid),
+        ),
+        default=[],
+    )
+    body_center = group_center(body_group) if body_group else None
+
+    marker_side = None
+    if body_group and body_center is not None and abs(best_center - body_center) >= 2.0:
+        marker_side = keys[0] if best_center < body_center else keys[1]
+    else:
+        marker_side = keys[0] if best_center <= axis_mid else keys[1]
+
     other_side = keys[1] if marker_side == keys[0] else keys[0]
 
     adjusted = dict(score_map)
@@ -218,6 +234,8 @@ def _diode_bar_scores(score_map: dict, orientation: str) -> dict:
     adjusted["projection_mode"] = "diode_bar_thin_group"
     adjusted["selected_bar_group"] = best_group
     adjusted["selected_bar_center"] = round(float(best_center), 4)
+    adjusted["selected_body_group"] = body_group
+    adjusted["selected_body_center"] = None if body_center is None else round(float(body_center), 4)
     adjusted["selected_bar_side"] = marker_side
     return adjusted
 
@@ -344,7 +362,14 @@ def _inner_half_mass_scores(binary, bbox, orientation: str):
 
 
 # Choose side.
-def _choose_side(score_map: dict, positive_key: str, negative_key: str, fallback_side: str):
+def _choose_side(
+    score_map: dict,
+    positive_key: str,
+    negative_key: str,
+    fallback_side: str,
+    force_fallback_when_uncertain: bool = False,
+    uncertainty_threshold: float = 0.03,
+):
     positive_score = float(score_map.get(positive_key, 0.0))
     negative_score = float(score_map.get(negative_key, 0.0))
 
@@ -372,8 +397,8 @@ def _choose_side(score_map: dict, positive_key: str, negative_key: str, fallback
         used_fallback = True
 
     evidence_type = "symbol_heuristic"
-    if used_fallback or confidence < 0.03:
-        chosen = fallback_side if used_fallback else chosen
+    if used_fallback or confidence < float(uncertainty_threshold):
+        chosen = fallback_side if (used_fallback or force_fallback_when_uncertain) else chosen
         other = negative_key if chosen == positive_key else positive_key
         confidence = max(0.2, confidence)
         evidence_type = "orientation_fallback"
@@ -436,7 +461,15 @@ def _assign_pair_roles(
 
 
 # Assign strategy result.
-def _assign_strategy_result(terminals, orientation, meta, score_map, resolution_mode):
+def _assign_strategy_result(
+    terminals,
+    orientation,
+    meta,
+    score_map,
+    resolution_mode,
+    force_fallback_when_uncertain: bool = False,
+    uncertainty_threshold: float = 0.03,
+):
     if orientation == "horizontal":
         primary_side = "left"
         secondary_side = "right"
@@ -449,6 +482,8 @@ def _assign_strategy_result(terminals, orientation, meta, score_map, resolution_
         primary_side,
         secondary_side,
         DEFAULT_FALLBACK_SIDE.get(orientation, primary_side),
+        force_fallback_when_uncertain=force_fallback_when_uncertain,
+        uncertainty_threshold=uncertainty_threshold,
     )
 
     debug = {
@@ -512,6 +547,8 @@ def resolve_two_terminal_semantics(binary, bbox, orientation, terminals, meta):
             meta,
             score_map,
             resolution_mode=semantic_strategy,
+            force_fallback_when_uncertain=True,
+            uncertainty_threshold=0.02,
         )
 
     if semantic_strategy == "battery_positive_from_long_plate":

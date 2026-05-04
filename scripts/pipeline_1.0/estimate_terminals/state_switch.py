@@ -12,6 +12,7 @@ import numpy as np
 SWITCH_STATE_WINDOW_MARGIN = 10
 SWITCH_STATE_CONTACT_RADIUS = 8
 SWITCH_STATE_DILATE_ITERATIONS = 1
+SWITCH_STATE_NEAR_TOUCH_GAP = 3.25
 
 
 # Clamp di una finestra dentro i limiti immagine.
@@ -145,10 +146,15 @@ def estimate_switch_open_closed_state(binary, component):
         gap = 0.0
         reason = "contacts_share_connected_component"
     else:
-        state = "open"
         gap = _min_component_distance(labels, int(label_a), int(label_b))
-        confidence = min(0.95, 0.55 + float(gap or 0.0) / 30.0)
-        reason = "contacts_on_separate_connected_components"
+        if gap is not None and float(gap) <= float(SWITCH_STATE_NEAR_TOUCH_GAP):
+            state = "closed"
+            confidence = 0.75
+            reason = "contacts_on_nearly_touching_components"
+        else:
+            state = "open"
+            confidence = min(0.95, 0.55 + float(gap or 0.0) / 30.0)
+            reason = "contacts_on_separate_connected_components"
 
     return {
         "state": state,
@@ -159,6 +165,7 @@ def estimate_switch_open_closed_state(binary, component):
             "window": [int(wx1), int(wy1), int(wx2), int(wy2)],
             "contact_radius": int(SWITCH_STATE_CONTACT_RADIUS),
             "dilate_iterations": int(SWITCH_STATE_DILATE_ITERATIONS),
+            "near_touch_gap_threshold": float(SWITCH_STATE_NEAR_TOUCH_GAP),
             "contacts": contact_infos,
             "component_gap": None if gap is None else round(float(gap), 3),
         },
