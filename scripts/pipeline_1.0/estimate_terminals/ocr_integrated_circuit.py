@@ -155,7 +155,116 @@ def get_ic_body_bbox_from_component(component: Dict, image_shape) -> List[int]:
 # OCR REGIONS
 # =========================================================
 
-def build_ic_marking_regions(component: Dict, image_bgr, meta: Dict) -> List[Dict]:
+def _build_dynamic_top_text_region(image_bgr, body_bbox: List[int], meta: Dict) -> Optional[Dict]:
+    """
+    Isola automaticamente una riga di testo nella parte alta del package IC.
+
+    E' una ROI generale: non conosce il nome del componente, cerca solo una
+    banda orizzontale con abbastanza pixel scuri dentro il corpo dell'IC.
+    """
+    ocr_cfg = ((meta.get("ocr") or {}).get("ic_marking") or {})
+    image_shape = image_bgr.shape
+    x1, y1, x2, y2 = body_bbox
+    bw = max(1, x2 - x1)
+    bh = max(1, y2 - y1)
+
+    margin_x = int(round(bw * float(ocr_cfg.get("dynamic_text_margin_x_ratio", 0.06))))
+    search_h = max(18, int(round(bh * float(ocr_cfg.get("dynamic_top_text_height_ratio", 0.16)))))
+
+    sx1 = x1 + margin_x
+    sx2 = x2 - margin_x
+    sy1 = y1 + 1
+    sy2 = min(y2, y1 + search_h)
+    search_bbox = _clamp_bbox([sx1, sy1, sx2, sy2], image_shape)
+    search_crop = _crop(image_bgr, search_bbox)
+    if search_crop is None:
+        return None
+
+    gray = cv2.cvtColor(search_crop, cv2.COLOR_BGR2GRAY)
+    if gray.shape[0] < 8 or gray.shape[1] < 20:
+        return None
+
+    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+    _, binary = cv2.threshold(
+        blurred,
+        0,
+        255,
+        cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU,
+    )
+
+    # Rimuove bordi sottili: ci interessa la riga di testo, non il rettangolo IC.
+    edge_y = max(1, int(round(binary.shape[0] * 0.08)))
+    edge_x = max(1, int(round(binary.shape[1] * 0.03)))
+    binary[:edge_y, :] = 0
+    binary[:, :edge_x] = 0
+    binary[:, binary.shape[1] - edge_x:] = 0
+
+    row_counts = np.count_nonzero(binary, axis=1).astype(np.float32)
+    if row_counts.size < 3 or float(row_counts.max(initial=0.0)) <= 0.0:
+        return None
+
+    kernel = np.ones(5, dtype=np.float32) / 5.0
+    smooth = np.convolve(row_counts, kernel, mode="same")
+    min_row_pixels = max(4, int(round(binary.shape[1] * 0.035)))
+    active = smooth >= min_row_pixels
+
+    bands = []
+    start = None
+    for idx, is_active in enumerate(active):
+        if is_active and start is None:
+            start = idx
+        elif not is_active and start is not None:
+            bands.append((start, idx - 1))
+            start = None
+    if start is not None:
+        bands.append((start, len(active) - 1))
+
+    if not bands:
+        return None
+
+    best_band = max(
+        bands,
+        key=lambda band: (
+            float(smooth[band[0]:band[1] + 1].sum()),
+            -(band[0]),
+        ),
+    )
+
+    y_start, y_end = best_band
+    band_mask = binary[y_start:y_end + 1, :]
+    col_counts = np.count_nonzero(band_mask, axis=0)
+    active_cols = np.where(col_counts > 0)[0]
+    if active_cols.size < 8:
+        return None
+
+    x_start = int(active_cols.min())
+    x_end = int(active_cols.max())
+
+    pad_x = max(4, int(round(bw * 0.025)))
+    pad_y = max(3, int(round(bh * 0.012)))
+    rx1, ry1, _, _ = search_bbox
+    bbox = _clamp_bbox(
+        [
+            rx1 + x_start - pad_x,
+            ry1 + y_start - pad_y,
+            rx1 + x_end + pad_x,
+            ry1 + y_end + pad_y,
+        ],
+        image_shape,
+    )
+    crop = _crop(image_bgr, bbox)
+    if crop is None:
+        return None
+
+    return {
+        "name": "body_top_text_line",
+        "bbox": bbox,
+        "image": crop,
+        "psm": int(ocr_cfg.get("body_top_marking_psm", 7)),
+    }
+
+
+def build_ic_marking_regions(component: Dict, image_bgr, meta: Dict, mode: str = "fast") -> List[Dict]:
     """
     Costruisce le ROI dove cercare il marking dell'integrato.
 
@@ -268,6 +377,63 @@ def build_ic_marking_regions(component: Dict, image_bgr, meta: Dict) -> List[Dic
             "image": crop,
         })
 
+    if ocr_cfg.get("body_top_marking_region_enabled", True):
+        top_margin_x_ratio = float(ocr_cfg.get("body_top_marking_margin_x_ratio", 0.08))
+        top_height_ratio = float(ocr_cfg.get("body_top_marking_height_ratio", 0.07))
+
+        tx1 = x1 + int(round(bw * top_margin_x_ratio))
+        tx2 = x2 - int(round(bw * top_margin_x_ratio))
+        ty2 = y1 + max(12, int(round(bh * top_height_ratio)))
+        bbox = _clamp_bbox([tx1, y1, tx2, ty2], image_shape)
+        crop = _crop(image_bgr, bbox)
+        if crop is not None:
+            regions.append({
+                "name": "body_top_marking",
+                "bbox": bbox,
+                "image": crop,
+                "psm": int(ocr_cfg.get("body_top_marking_psm", 7)),
+            })
+
+        if mode == "deep":
+            dynamic_region = _build_dynamic_top_text_region(image_bgr, body_bbox, meta)
+            if dynamic_region is not None:
+                regions.append(dynamic_region)
+
+            tight_offset_ratio = float(ocr_cfg.get("body_top_marking_tight_offset_ratio", 0.017))
+            tight_height_ratio = float(ocr_cfg.get("body_top_marking_tight_height_ratio", 0.068))
+            ty1 = y1 + int(round(bh * tight_offset_ratio))
+            ty2 = ty1 + max(12, int(round(bh * tight_height_ratio)))
+            bbox = _clamp_bbox([tx1, ty1, tx2, ty2], image_shape)
+            crop = _crop(image_bgr, bbox)
+            if crop is not None:
+                regions.append({
+                    "name": "body_top_marking_tight",
+                    "bbox": bbox,
+                    "image": crop,
+                    "psm": int(ocr_cfg.get("body_top_marking_psm", 7)),
+                })
+
+            for idx, (offset_ratio, height_ratio) in enumerate(
+                ocr_cfg.get("body_top_marking_extra_bands", [
+                    [0.012, 0.075],
+                    [0.032, 0.060],
+                ]),
+                start=1,
+            ):
+                ty1 = y1 + int(round(bh * float(offset_ratio)))
+                ty2 = ty1 + max(12, int(round(bh * float(height_ratio))))
+                bbox = _clamp_bbox([tx1, ty1, tx2, ty2], image_shape)
+                crop = _crop(image_bgr, bbox)
+                if crop is None:
+                    continue
+
+                regions.append({
+                    "name": f"body_top_marking_{idx}",
+                    "bbox": bbox,
+                    "image": crop,
+                    "psm": int(ocr_cfg.get("body_top_marking_psm", 7)),
+                })
+
     # ---------------------------------------------------------
     # ROI di riga interne al body.
     #
@@ -350,6 +516,151 @@ def _preprocess_for_ocr(crop_bgr):
         th = cv2.bitwise_not(th)
 
     return th, scale
+
+
+def _make_ocr_image_variants(crop_bgr, region_name: str, meta: Dict, mode: str = "fast") -> List[Dict]:
+    """
+    Crea poche varianti visive della ROI senza cambiare il testo OCR.
+
+    Per semplicità le varianti extra sono usate solo sulla fascia alta del
+    package, dove i marking piccoli soffrono di piu'.
+    """
+    ocr_cfg = ((meta.get("ocr") or {}).get("ic_marking") or {})
+    if (
+        mode != "deep"
+        or not str(region_name).startswith("body_top_marking")
+        or not ocr_cfg.get("ocr_variants_enabled", True)
+    ):
+        return [{
+            "name": "raw",
+            "image": crop_bgr,
+            "scale_x": 1.0,
+            "scale_y": 1.0,
+        }]
+
+    variants = [{
+        "name": "raw",
+        "image": crop_bgr,
+        "scale_x": 1.0,
+        "scale_y": 1.0,
+    }]
+
+    gray = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2GRAY)
+
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)).apply(gray)
+    clahe_bgr = cv2.cvtColor(clahe, cv2.COLOR_GRAY2BGR)
+    variants.append({
+        "name": "clahe",
+        "image": clahe_bgr,
+        "scale_x": 1.0,
+        "scale_y": 1.0,
+    })
+
+    adaptive = cv2.adaptiveThreshold(
+        clahe,
+        255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY,
+        21,
+        9,
+    )
+    if np.mean(adaptive) < 127:
+        adaptive = cv2.bitwise_not(adaptive)
+    variants.append({
+        "name": "adaptive",
+        "image": cv2.cvtColor(adaptive, cv2.COLOR_GRAY2BGR),
+        "scale_x": 1.0,
+        "scale_y": 1.0,
+    })
+
+    scale = float(ocr_cfg.get("ocr_variant_upscale", 2.0))
+    if scale > 1.0:
+        upscaled = cv2.resize(
+            clahe_bgr,
+            None,
+            fx=scale,
+            fy=scale,
+            interpolation=cv2.INTER_CUBIC,
+        )
+        variants.append({
+            "name": "upscaled_clahe",
+            "image": upscaled,
+            "scale_x": scale,
+            "scale_y": scale,
+        })
+
+    return variants
+
+
+def _easyocr_variants_for_region(region_name: str, variants: List[Dict]) -> List[Dict]:
+    """
+    Limita EasyOCR alle prove che valgono davvero il costo.
+
+    Tesseract resta il motore economico che esplora piu' varianti; EasyOCR e'
+    usato solo sulle regioni interne al package e con poche immagini.
+    """
+    if _region_priority(region_name) < 2:
+        return []
+
+    if str(region_name).startswith("body_top_marking"):
+        return [
+            variant for variant in variants
+            if variant.get("name", "raw") in {"raw", "clahe"}
+        ]
+
+    return [
+        variant for variant in variants
+        if variant.get("name", "raw") == "raw"
+    ]
+
+
+def _select_easyocr_regions(regions: List[Dict], candidates: List[Dict], meta: Dict) -> set:
+    """
+    Sceglie poche ROI interne su cui vale la pena provare EasyOCR.
+    """
+    available = {region["name"] for region in regions}
+    selected = []
+
+    for candidate in _candidates_with_consensus(candidates, meta):
+        region_name = candidate.get("source_region")
+        if region_name in available and _region_priority(region_name) >= 2:
+            if region_name not in selected:
+                selected.append(region_name)
+        if len(selected) >= 2:
+            break
+
+    if "body_inner" in available and "body_inner" not in selected:
+        selected.append("body_inner")
+
+    if not selected:
+        for region_name in ("body_inner", "body_top_marking", "body_line_2"):
+            if region_name in available:
+                selected.append(region_name)
+
+    return set(selected[:3])
+
+
+def _words_to_original_variant_scale(words: List[Dict], variant: Dict) -> List[Dict]:
+    """
+    Riporta le bbox di una variante scalata alle coordinate della ROI originale.
+    """
+    scale_x = max(float(variant.get("scale_x", 1.0)), 1e-6)
+    scale_y = max(float(variant.get("scale_y", 1.0)), 1e-6)
+
+    normalized_words = []
+    for word in words:
+        lx1, ly1, lx2, ly2 = word["bbox_local"]
+        normalized = dict(word)
+        normalized["bbox_local"] = [
+            int(round(lx1 / scale_x)),
+            int(round(ly1 / scale_y)),
+            int(round(lx2 / scale_x)),
+            int(round(ly2 / scale_y)),
+        ]
+        normalized["variant"] = variant.get("name", "raw")
+        normalized_words.append(normalized)
+
+    return normalized_words
 
 
 def _run_tesseract_words(crop_bgr, whitelist: Optional[str] = None, psm: int = 6) -> Tuple[List[Dict], Dict]:
@@ -785,10 +1096,18 @@ def _score_ic_marking_candidate(text: str, confidence: float, region_name: str, 
     elif longest_digit_run == 2:
         score += 0.08
 
+    if _looks_like_structured_alternative_marking(text):
+        score += 0.55
+
     # Peso della regione.
     # expanded_bbox è utile ma pericolosa, quindi nessun bonus.
     region_bonus = {
         "body_inner": 0.18,
+        "body_top_marking": 0.28,
+        "body_top_marking_tight": 0.33,
+        "body_top_text_line": 0.30,
+        "body_top_marking_1": 0.28,
+        "body_top_marking_2": 0.28,
         "body_line_1": 0.24,
         "body_line_2": 0.24,
         "body_line_3": 0.24,
@@ -835,6 +1154,7 @@ def _add_ocr_words_as_candidates(
 
         cand_debug["raw_text"] = word["text"]
         cand_debug["engine"] = engine_name
+        cand_debug["variant"] = word.get("variant", "raw")
 
         lx1, ly1, lx2, ly2 = word["bbox_local"]
         abs_bbox = [rx1 + lx1, ry1 + ly1, rx1 + lx2, ry1 + ly2]
@@ -865,6 +1185,7 @@ def _add_ocr_words_as_candidates(
             "source_region": region["name"],
             "raw_text": word["text"],
             "engine": engine_name,
+            "variant": word.get("variant", "raw"),
         })
 
 
@@ -920,10 +1241,26 @@ def _candidates_with_consensus(candidates: List[Dict], meta: Optional[Dict] = No
         key=lambda c: (
             c["consensus_score"],
             c.get("score", 0.0),
+            _region_priority(c.get("source_region")),
             c.get("confidence", 0.0),
         ),
         reverse=True,
     )
+
+
+def _region_priority(region_name: Optional[str]) -> int:
+    """
+    Preferisce letture dentro il package rispetto a testo esterno vicino.
+    """
+    if region_name in {"body_top_marking", "body_top_text_line", "body_inner"}:
+        return 2
+    if str(region_name or "").startswith("body_top_marking_"):
+        return 2
+    if str(region_name or "").startswith("body_line_"):
+        return 2
+    if region_name == "expanded_bbox":
+        return 1
+    return 0
 
 
 def _best_candidate(candidates: List[Dict], meta: Optional[Dict] = None) -> Optional[Dict]:
@@ -934,6 +1271,29 @@ def _best_candidate(candidates: List[Dict], meta: Optional[Dict] = None) -> Opti
     if not ranked:
         return None
     return ranked[0]
+
+
+def _ocr_engines_used(region_debug: List[Dict]) -> List[str]:
+    """
+    Elenca i motori OCR realmente disponibili/provati durante la lettura.
+    """
+    engines = set()
+
+    for region in region_debug:
+        engine_debug = region.get("engine_debug") or {}
+        for engine_name, debug_info in engine_debug.items():
+            if isinstance(debug_info, dict) and debug_info.get("available") is not None:
+                if debug_info.get("available"):
+                    engines.add(engine_name)
+                continue
+
+            if isinstance(debug_info, dict):
+                for variant_debug in debug_info.values():
+                    if isinstance(variant_debug, dict) and variant_debug.get("available"):
+                        engines.add(engine_name)
+                        break
+
+    return sorted(engines)
 
 
 def _should_run_easyocr_fallback(candidates: List[Dict], meta: Dict) -> bool:
@@ -951,11 +1311,7 @@ def _should_run_easyocr_fallback(candidates: List[Dict], meta: Dict) -> bool:
         return bool(easy_cfg.get("run_when_no_candidates", True))
 
     min_conf = float(easy_cfg.get("run_when_best_confidence_below", 0.30))
-    min_score = float(easy_cfg.get("run_when_best_score_below", 1.20))
-    return (
-        float(best.get("confidence", 0.0)) < min_conf
-        or float(best.get("score", 0.0)) < min_score
-    )
+    return float(best.get("confidence", 0.0)) < min_conf
 
 
 def _has_pin_label_family_evidence(region_debug: List[Dict], suffix: str) -> bool:
@@ -1005,6 +1361,34 @@ def _looks_like_ic_family_marking(text: str) -> bool:
         return digit_count >= 3 and longest_digit_run >= 3
 
     return digit_count >= 2
+
+
+def _looks_like_structured_alternative_marking(text: str) -> bool:
+    """
+    True per marking del tipo CODICE/CODICE.
+
+    Alcuni datasheet o simboli indicano varianti compatibili separate da slash.
+    Questo non corregge il testo: aiuta solo il ranking a preferire una lettura
+    strutturata rispetto a una stringa lunga fusa.
+    """
+    if "/" not in text:
+        return False
+
+    parts = [part for part in text.split("/") if part]
+    if len(parts) != 2:
+        return False
+
+    for part in parts:
+        if len(part) < 4 or len(part) > 14:
+            return False
+        if not any(ch.isalpha() for ch in part):
+            return False
+        if sum(ch.isdigit() for ch in part) < 3:
+            return False
+        if not re.match(r"^[A-Z0-9+_.-]+$", part):
+            return False
+
+    return True
 
 
 def _split_possible_pin_suffix_from_part_number(text: str, region_debug: List[Dict]) -> Tuple[str, Dict]:
@@ -1217,6 +1601,176 @@ def _detect_seven_segment_display(component: Dict, image_bgr, body_bbox: List[in
     }
 
 
+def _collect_ocr_candidates(
+    regions: List[Dict],
+    meta: Dict,
+    body_bbox: List[int],
+    whitelist: str,
+    mode: str = "fast",
+    run_easyocr: bool = False,
+    easyocr_region_names: Optional[set] = None,
+) -> Tuple[List[Dict], List[Dict]]:
+    """
+    Esegue un pass OCR e raccoglie candidati/debug.
+
+    mode="fast":
+      - solo immagini raw;
+      - niente bande extra;
+      - normalmente solo Tesseract.
+
+    mode="deep":
+      - abilita varianti immagine sulle fasce alte;
+      - puo' usare EasyOCR come secondo motore.
+    """
+    all_candidates = []
+    region_debug = []
+
+    for region in regions:
+        region_info = {
+            "region": region["name"],
+            "bbox": region["bbox"],
+            "ocr_mode": mode,
+            "engine_debug": {
+                "tesseract": {},
+            },
+            "raw_words": [],
+            "candidate_debug": [],
+        }
+
+        variants = _make_ocr_image_variants(
+            region["image"],
+            region["name"],
+            meta,
+            mode=mode,
+        )
+
+        for variant in variants:
+            words, engine_debug = _run_tesseract_words(
+                variant["image"],
+                whitelist=whitelist,
+                psm=int(region.get("psm", 6)),
+            )
+            words = _words_to_original_variant_scale(words, variant)
+
+            variant_name = variant.get("name", "raw")
+            region_info["engine_debug"]["tesseract"][variant_name] = engine_debug
+            region_info["raw_words"].extend(words)
+
+            _add_ocr_words_as_candidates(
+                words=words,
+                region=region,
+                engine_name="tesseract",
+                meta=meta,
+                body_bbox=body_bbox,
+                all_candidates=all_candidates,
+                region_info=region_info,
+            )
+
+        if run_easyocr and (
+            easyocr_region_names is None
+            or region["name"] in easyocr_region_names
+        ):
+            region_info["engine_debug"]["easyocr"] = {}
+            region_info["raw_words_easyocr"] = []
+
+            for variant in _easyocr_variants_for_region(region["name"], variants):
+                easy_words, easy_debug = _run_easyocr_words(variant["image"], meta)
+                easy_words = _words_to_original_variant_scale(easy_words, variant)
+
+                variant_name = variant.get("name", "raw")
+                region_info["engine_debug"]["easyocr"][variant_name] = easy_debug
+                region_info["raw_words_easyocr"].extend(easy_words)
+
+                _add_ocr_words_as_candidates(
+                    words=easy_words,
+                    region=region,
+                    engine_name="easyocr",
+                    meta=meta,
+                    body_bbox=body_bbox,
+                    all_candidates=all_candidates,
+                    region_info=region_info,
+                )
+
+        region_debug.append(region_info)
+
+    return all_candidates, region_debug
+
+
+def _append_easyocr_candidates(
+    regions: List[Dict],
+    region_debug: List[Dict],
+    meta: Dict,
+    body_bbox: List[int],
+    mode: str,
+    easyocr_region_names: set,
+) -> List[Dict]:
+    """
+    Aggiunge solo EasyOCR ai debug/candidati gia' raccolti con Tesseract.
+    """
+    all_candidates = []
+
+    for region, region_info in zip(regions, region_debug):
+        if region["name"] not in easyocr_region_names:
+            continue
+
+        variants = _make_ocr_image_variants(
+            region["image"],
+            region["name"],
+            meta,
+            mode=mode,
+        )
+
+        region_info.setdefault("engine_debug", {}).setdefault("easyocr", {})
+        region_info.setdefault("raw_words_easyocr", [])
+
+        for variant in _easyocr_variants_for_region(region["name"], variants):
+            easy_words, easy_debug = _run_easyocr_words(variant["image"], meta)
+            easy_words = _words_to_original_variant_scale(easy_words, variant)
+
+            variant_name = variant.get("name", "raw")
+            region_info["engine_debug"]["easyocr"][variant_name] = easy_debug
+            region_info["raw_words_easyocr"].extend(easy_words)
+
+            _add_ocr_words_as_candidates(
+                words=easy_words,
+                region=region,
+                engine_name="easyocr",
+                meta=meta,
+                body_bbox=body_bbox,
+                all_candidates=all_candidates,
+                region_info=region_info,
+            )
+
+    return all_candidates
+
+
+def _should_run_deep_ocr(candidates: List[Dict], meta: Dict) -> bool:
+    """
+    Decide se passare dalla lettura veloce a quella profonda.
+
+    Non corregge il testo: controlla solo se vale la pena spendere tempo con
+    ROI/varianti piu' robuste.
+    """
+    if not candidates:
+        return True
+
+    best = _best_candidate(candidates, meta)
+    if best is None:
+        return True
+
+    if _should_run_easyocr_fallback(candidates, meta):
+        return True
+
+    source_region = best.get("source_region")
+    if source_region == "above_body":
+        return True
+
+    if source_region == "expanded_bbox" and float(best.get("confidence", 0.0)) < 0.75:
+        return True
+
+    return False
+
+
 # =========================================================
 # PUBLIC API
 # =========================================================
@@ -1253,130 +1807,74 @@ def enrich_ic_marking_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
     # Sarà utile per debug, script 04 e OCR pin.
     component["body_bbox"] = body_bbox
 
-    regions = build_ic_marking_regions(component, image_bgr, meta)
+    regions = build_ic_marking_regions(component, image_bgr, meta, mode="fast")
 
     # Whitelist per marking IC.
     # Include slash perché alcuni OCR leggono LM317T come LM31/T.
     whitelist = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_/-+."
 
-    all_candidates = []
-    region_debug = []
+    all_candidates, region_debug = _collect_ocr_candidates(
+        regions=regions,
+        meta=meta,
+        body_bbox=body_bbox,
+        whitelist=whitelist,
+        mode="fast",
+        run_easyocr=False,
+    )
 
-    for region in regions:
-        words, engine_debug = _run_tesseract_words(
-            region["image"],
-            whitelist=whitelist,
-            psm=int(region.get("psm", 6)),
-        )
-
-        region_info = {
-            "region": region["name"],
-            "bbox": region["bbox"],
-            "engine_debug": {
-                "tesseract": engine_debug,
-            },
-            "raw_words": words,
-            "candidate_debug": [],
-        }
-
-        _add_ocr_words_as_candidates(
-            words=words,
-            region=region,
-            engine_name="tesseract",
-            meta=meta,
-            body_bbox=body_bbox,
-            all_candidates=all_candidates,
-            region_info=region_info,
-        )
-
-        region_debug.append(region_info)
-        continue
-
-        rx1, ry1, _, _ = region["bbox"]
-
-        for word in words:
-            normalized = _normalize_text(word["text"])
-
-            score, cand_debug = _score_ic_marking_candidate(
-                normalized,
-                word.get("confidence", 0.0),
-                region["name"],
-                meta,
-            )
-
-            cand_debug["raw_text"] = word["text"]
-
-            # Converte bbox locale ROI in bbox assoluto immagine.
-            lx1, ly1, lx2, ly2 = word["bbox_local"]
-            abs_bbox = [rx1 + lx1, ry1 + ly1, rx1 + lx2, ry1 + ly2]
-            cand_debug["bbox"] = abs_bbox
-
-            # ---------------------------------------------------------
-            # Filtro speciale per expanded_bbox.
-            #
-            # expanded_bbox può leggere testi lontani:
-            # watermark, valori, altri componenti, label di rete.
-            #
-            # Accettiamo un candidato da expanded_bbox solo se il centro
-            # del testo cade dentro il body_bbox leggermente espanso.
-            # ---------------------------------------------------------
-            if region["name"] == "expanded_bbox":
-                bw = max(1, body_bbox[2] - body_bbox[0])
-                bh = max(1, body_bbox[3] - body_bbox[1])
-                pad_px = int(round(max(bw, bh) * 0.08))
-
-                if not _center_inside_bbox(abs_bbox, body_bbox, pad_px=pad_px):
-                    cand_debug["accepted"] = False
-                    cand_debug["reject_reason"] = "expanded_bbox_candidate_outside_body"
-                    cand_debug["score"] = 0.0
-                    region_info["candidate_debug"].append(cand_debug)
-                    continue
-
-            region_info["candidate_debug"].append(cand_debug)
-
-            if score <= -900:
-                continue
-
-            all_candidates.append({
-                "text": normalized,
-                "score": round(float(score), 4),
-                "confidence": round(float(word.get("confidence", 0.0)), 4),
-                "bbox": abs_bbox,
-                "source_region": region["name"],
-                "raw_text": word["text"],
-                "engine": "tesseract",
-            })
-
-        region_debug.append(region_info)
-
-    if _should_run_easyocr_fallback(all_candidates, meta):
-        for region, region_info in zip(regions, region_debug):
-            easy_words, easy_debug = _run_easyocr_words(region["image"], meta)
-            region_info["engine_debug"]["easyocr"] = easy_debug
-            region_info["raw_words_easyocr"] = easy_words
-
-            _add_ocr_words_as_candidates(
-                words=easy_words,
-                region=region,
-                engine_name="easyocr",
-                meta=meta,
-                body_bbox=body_bbox,
-                all_candidates=all_candidates,
-                region_info=region_info,
-            )
-
+    subtype_info = None
     if not all_candidates:
-        component["ic_marking"] = None
-        component["ic_marking_confidence"] = 0.0
-        component["ic_marking_bbox"] = None
-        component["ic_marking_source_region"] = None
-
         subtype_info = _detect_seven_segment_display(
             component,
             image_bgr,
             body_bbox,
             region_debug,
         )
+
+    ocr_mode = "fast"
+    if subtype_info is None and _should_run_deep_ocr(all_candidates, meta):
+        regions = build_ic_marking_regions(component, image_bgr, meta, mode="deep")
+        easy_cfg = ic_marking_cfg.get("easyocr_fallback") or {}
+        all_candidates, region_debug = _collect_ocr_candidates(
+            regions=regions,
+            meta=meta,
+            body_bbox=body_bbox,
+            whitelist=whitelist,
+            mode="deep",
+            run_easyocr=False,
+        )
+
+        if bool(easy_cfg.get("enabled", False)) and _should_run_easyocr_fallback(all_candidates, meta):
+            easyocr_region_names = _select_easyocr_regions(regions, all_candidates, meta)
+            easy_candidates = _append_easyocr_candidates(
+                regions=regions,
+                region_debug=region_debug,
+                meta=meta,
+                body_bbox=body_bbox,
+                mode="deep",
+                easyocr_region_names=easyocr_region_names,
+            )
+            all_candidates.extend(easy_candidates)
+
+        ocr_mode = "deep"
+
+    if not all_candidates:
+        component["ic_marking"] = None
+        component["ic_marking_confidence"] = 0.0
+        component["ic_marking_bbox"] = None
+        component["ic_marking_source_region"] = None
+        component["ic_marking_engine"] = None
+        component["ic_marking_variant"] = None
+        component["ic_ocr_mode"] = ocr_mode
+        component["ic_ocr_engines_used"] = _ocr_engines_used(region_debug)
+
+        if subtype_info is None:
+            subtype_info = _detect_seven_segment_display(
+                component,
+                image_bgr,
+                body_bbox,
+                region_debug,
+            )
         if subtype_info:
             component["component_subtype"] = subtype_info["component_subtype"]
             component["display_type"] = subtype_info["display_type"]
@@ -1384,6 +1882,7 @@ def enrich_ic_marking_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
 
         component["ic_ocr_debug"] = {
             "enabled": True,
+            "ocr_mode": ocr_mode,
             "body_bbox": body_bbox,
             "selected": None,
             "candidate_count": 0,
@@ -1403,11 +1902,16 @@ def enrich_ic_marking_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
     component["ic_marking_confidence"] = best["confidence"]
     component["ic_marking_bbox"] = best["bbox"]
     component["ic_marking_source_region"] = best["source_region"]
+    component["ic_marking_engine"] = best.get("engine")
+    component["ic_marking_variant"] = best.get("variant", "raw")
+    component["ic_ocr_mode"] = ocr_mode
+    component["ic_ocr_engines_used"] = _ocr_engines_used(region_debug)
 
     ranked_candidates = _candidates_with_consensus(all_candidates, meta)
 
     component["ic_ocr_debug"] = {
         "enabled": True,
+        "ocr_mode": ocr_mode,
         "body_bbox": body_bbox,
         "selected": best,
         "marking_normalization": marking_normalization,
