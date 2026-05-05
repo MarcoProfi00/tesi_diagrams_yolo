@@ -1243,3 +1243,4 @@ Il prossimo passo consigliato è:
 3. mantenere terminal_id stabile;
 4. usare datasheet/AI solo dopo avere marking e pin OCR.
 ```
+
