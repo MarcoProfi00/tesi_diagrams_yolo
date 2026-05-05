@@ -28,6 +28,11 @@ import numpy as np
 _EASYOCR_READER = None
 _EASYOCR_READER_ERROR = None
 
+IC_MARKING_PREFIXES = (
+    "NE", "LM", "TDA", "TPS", "ISL", "ADC", "AT",
+    "HT", "TC", "CD", "L", "TL", "UA", "MC", "MAX",
+)
+
 
 # =========================================================
 # BASIC GEOMETRY HELPERS
@@ -724,7 +729,7 @@ def _score_ic_marking_candidate(text: str, confidence: float, region_name: str, 
         debug["reject_reason"] = "watermark_or_website"
         return -999.0, debug
 
-    if _matches_any_pattern(text, reject_patterns):
+    if _matches_any_pattern(text, reject_patterns) and not _looks_like_ic_family_marking(text):
         debug["reject_reason"] = "component_designator_or_non_ic"
         return -999.0, debug
 
@@ -765,11 +770,7 @@ def _score_ic_marking_candidate(text: str, confidence: float, region_name: str, 
         score += 0.20
 
     # Bonus per prefissi frequenti nei tuoi esempi.
-    common_ic_prefixes = (
-        "NE", "LM", "TDA", "TPS", "ISL", "ADC", "AT",
-        "HT", "TC", "CD", "L", "TL", "UA", "MC", "MAX",
-    )
-    if text.startswith(common_ic_prefixes):
+    if text.startswith(IC_MARKING_PREFIXES):
         score += 0.25
 
     # I codici IC reali spesso hanno una parte numerica forte:
@@ -951,7 +952,6 @@ def _should_run_easyocr_fallback(candidates: List[Dict], meta: Dict) -> bool:
 
     min_conf = float(easy_cfg.get("run_when_best_confidence_below", 0.30))
     min_score = float(easy_cfg.get("run_when_best_score_below", 1.20))
-
     return (
         float(best.get("confidence", 0.0)) < min_conf
         or float(best.get("score", 0.0)) < min_score
@@ -977,6 +977,34 @@ def _has_pin_label_family_evidence(region_debug: List[Dict], suffix: str) -> boo
                 return True
 
     return False
+
+
+def _looks_like_ic_family_marking(text: str) -> bool:
+    """
+    True se il token sembra un marking IC plausibile di una famiglia nota.
+
+    Serve per non scartare testi come L298 solo perche' somigliano anche
+    a designatori schematici.
+    """
+    if not text:
+        return False
+
+    if not text.startswith(IC_MARKING_PREFIXES):
+        return False
+
+    digit_count = sum(ch.isdigit() for ch in text)
+    digit_runs = re.findall(r"[0-9]+", text)
+    longest_digit_run = max((len(run) for run in digit_runs), default=0)
+
+    if len(text) < 4:
+        return False
+
+    # Il prefisso singolo "L" e' ambiguo con designatori tipo L1/L2.
+    # Lo sblocchiamo solo quando c'e' una parte numerica abbastanza forte.
+    if text.startswith("L") and not text.startswith(("LM", "LF")):
+        return digit_count >= 3 and longest_digit_run >= 3
+
+    return digit_count >= 2
 
 
 def _split_possible_pin_suffix_from_part_number(text: str, region_debug: List[Dict]) -> Tuple[str, Dict]:
