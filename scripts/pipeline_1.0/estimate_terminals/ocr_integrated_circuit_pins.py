@@ -122,6 +122,7 @@ def _get_pin_ocr_cfg(meta: Dict) -> Dict:
         "number_psm": int(number_cfg.get("psm", 11)),
         "number_min_confidence": float(number_cfg.get("min_confidence", 0.25)),
         "label_enabled": bool(label_cfg.get("enabled", True)),
+        "label_guard_enabled": bool(label_cfg.get("guard_numbers", True)),
         "label_psm": int(label_cfg.get("psm", 11)),
         "label_min_confidence": float(label_cfg.get("min_confidence", 0.20)),
         "number_pattern": cfg.get("number_pattern", r"^[0-9]{1,3}$"),
@@ -351,7 +352,12 @@ def _ocr_digit_variants(image_bgr, bbox: List[int], variants: List[Tuple[int, fl
     return votes
 
 
-def _ocr_digit_candidates_batch(image_bgr, candidates: List[Dict], cfg: Dict) -> Dict[int, Dict[str, int]]:
+def _ocr_digit_candidates_batch(
+    image_bgr,
+    candidates: List[Dict],
+    cfg: Dict,
+    expanded_variants: bool = False,
+) -> Dict[int, Dict[str, int]]:
     if not candidates:
         return {}
 
@@ -366,6 +372,12 @@ def _ocr_digit_candidates_batch(image_bgr, candidates: List[Dict], cfg: Dict) ->
         (10, 8.0, "gray", 6),
         (14, 6.0, "bin", 8),
     ]
+    if expanded_variants:
+        variants.extend([
+            (6, 10.0, "bin", 6),
+            (10, 8.0, "gray", 11),
+            (14, 8.0, "gray", 11),
+        ])
 
     votes_by_candidate = {idx: {} for idx in range(len(candidates))}
     tmp_root = Path(os.environ.get("IC_PIN_OCR_TMP_DIR", ".tmp/ic_pin_ocr"))
@@ -560,7 +572,13 @@ def _component_number_words(image_bgr, side_run: Dict, cfg: Dict, target_lanes: 
             continue
         candidates.append(candidate)
 
-    votes_by_candidate = _ocr_digit_candidates_batch(image_bgr, candidates, cfg)
+    expanded_variants = side_run["side"] == "top" and len(side_run.get("lanes") or []) <= 2
+    votes_by_candidate = _ocr_digit_candidates_batch(
+        image_bgr,
+        candidates,
+        cfg,
+        expanded_variants=expanded_variants,
+    )
     words = []
     for idx, candidate in enumerate(candidates):
         votes = votes_by_candidate.get(idx, {})
@@ -610,7 +628,7 @@ def _run_tesseract_words(
             "-c tessedit_char_whitelist=0123456789"
         )
     else:
-        if not cfg["label_enabled"]:
+        if not cfg["label_enabled"] and not cfg["label_guard_enabled"]:
             return [], {"ok": True, "skipped": "label_disabled"}
         whitelist = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_./+-"
         config = (
@@ -701,7 +719,12 @@ def _assign_words_to_lanes(words: List[Dict], lanes: List[Dict]) -> Dict[str, Li
 
 
 def _is_number_text(text: str, cfg: Dict) -> bool:
-    return bool(re.match(cfg["number_pattern"], text or ""))
+    if not re.match(cfg["number_pattern"], text or ""):
+        return False
+    try:
+        return int(text) >= 1
+    except Exception:
+        return False
 
 
 def _is_label_candidate(word: Dict, cfg: Dict) -> bool:
@@ -726,6 +749,31 @@ def _is_label_candidate(word: Dict, cfg: Dict) -> bool:
     return len(upper) >= 3 and confidence >= max(cfg["label_min_confidence"], 0.45)
 
 
+def _is_label_guard_candidate(word: Dict, cfg: Dict) -> bool:
+    text = str(word.get("text") or "")
+    confidence = float(word.get("confidence") or 0.0)
+    if not text or not re.search(r"[A-Za-z]", text):
+        return False
+    if not re.match(cfg["label_pattern"], text):
+        return False
+
+    upper = text.upper()
+    if upper in _SHORT_PIN_LABELS:
+        return confidence >= 0.08
+    if re.match(r"^[A-Z][0-9]{1,2}(?:\.[0-9])?$", upper):
+        return confidence >= 0.05
+    if re.match(r"^[A-Z]{1,3}[0-9]{1,2}(?:\.[0-9])?$", upper):
+        return confidence >= 0.08
+    return _is_label_candidate(word, cfg)
+
+
+def _number_pick_distance(side: str, cfg: Dict, has_side_label_guards: bool = False) -> float:
+    max_distance = float(cfg["max_number_distance_px"])
+    if side in {"left", "right"}:
+        return min(max_distance, 22.0 if has_side_label_guards else 30.0)
+    return max_distance
+
+
 def _pick_best_word(words: List[Dict], side: str, body_bbox: List[float], max_distance_px: float) -> Optional[Dict]:
     if not words:
         return None
@@ -746,9 +794,51 @@ def _pick_best_word(words: List[Dict], side: str, body_bbox: List[float], max_di
     return chosen
 
 
-def _assign_lane_semantics(side_run: Dict, text_words: List[Dict], number_words: List[Dict], body_bbox, cfg: Dict) -> None:
+def _pick_best_lane_word(words: List[Dict], lane: Dict, side: str, body_bbox: List[float], max_distance_px: float) -> Optional[Dict]:
+    if not words:
+        return None
+
+    term = lane["term"]
+    term_axis = float(term.get("y", 0.0)) if side in {"left", "right"} else float(term.get("x", 0.0))
+    ranked = []
+    for word in words:
+        edge_distance = _word_edge_distance(word, side, body_bbox)
+        if edge_distance > max_distance_px:
+            continue
+
+        cx, cy = word["center"]
+        word_axis = cy if side in {"left", "right"} else cx
+        axis_distance = abs(float(word_axis) - term_axis)
+        ranked.append((axis_distance, edge_distance, -float(word["confidence"]), -len(word["text"]), word))
+
+    if not ranked:
+        return None
+
+    ranked.sort(key=lambda item: item[:4])
+    chosen = dict(ranked[0][4])
+    chosen["axis_distance"] = round(float(ranked[0][0]), 3)
+    chosen["edge_distance"] = round(float(ranked[0][1]), 3)
+    return chosen
+
+
+def _overlaps_any_label_guard(word: Dict, label_words: List[Dict], cfg: Dict) -> bool:
+    return any(
+        _bbox_overlap_ratio(word["bbox"], label_word["bbox"]) >= cfg["reject_overlap_ratio"]
+        for label_word in label_words
+    )
+
+
+def _assign_lane_semantics(
+    side_run: Dict,
+    text_words: List[Dict],
+    number_words: List[Dict],
+    body_bbox,
+    cfg: Dict,
+    side_label_guard_words: Optional[List[Dict]] = None,
+) -> None:
     side = side_run["side"]
     lanes = side_run["lanes"]
+    has_side_label_guards = bool(side_label_guard_words)
     text_map = _assign_words_to_lanes(text_words, lanes)
     number_map = _assign_words_to_lanes(number_words, lanes)
 
@@ -759,7 +849,7 @@ def _assign_lane_semantics(side_run: Dict, text_words: List[Dict], number_words:
 
         label_candidates = [
             word for word in lane_text_words
-            if _is_label_candidate(word, cfg)
+            if _is_label_guard_candidate(word, cfg)
         ]
         numeric_from_text = [
             word for word in lane_text_words
@@ -773,11 +863,7 @@ def _assign_lane_semantics(side_run: Dict, text_words: List[Dict], number_words:
         if label_candidates:
             filtered_fallback = []
             for number_word in numeric_fallback:
-                overlaps_label = any(
-                    _bbox_overlap_ratio(number_word["bbox"], label_word["bbox"]) >= cfg["reject_overlap_ratio"]
-                    for label_word in label_candidates
-                )
-                if not overlaps_label:
+                if not _overlaps_any_label_guard(number_word, label_candidates, cfg):
                     filtered_fallback.append(number_word)
             numeric_fallback = filtered_fallback
 
@@ -791,14 +877,14 @@ def _assign_lane_semantics(side_run: Dict, text_words: List[Dict], number_words:
             numeric_from_text,
             side=side,
             body_bbox=body_bbox,
-            max_distance_px=cfg["max_number_distance_px"],
+            max_distance_px=_number_pick_distance(side, cfg, has_side_label_guards),
         )
         if best_number is None:
             best_number = _pick_best_word(
                 numeric_fallback,
                 side=side,
                 body_bbox=body_bbox,
-                max_distance_px=cfg["max_number_distance_px"],
+                max_distance_px=_number_pick_distance(side, cfg, has_side_label_guards),
             )
 
         debug_payload = {
@@ -814,32 +900,50 @@ def _assign_lane_semantics(side_run: Dict, text_words: List[Dict], number_words:
             term["pin_number_bbox"] = best_number["bbox"]
             debug_payload["best_number"] = best_number
 
-        if best_label is not None:
+        if best_label is not None and cfg["label_enabled"]:
             term["pin_label_text"] = best_label["text"]
             term["pin_label_confidence"] = round(float(best_label["confidence"]), 3)
             term["pin_label_bbox"] = best_label["bbox"]
             debug_payload["best_label"] = best_label
 
+        if label_candidates:
+            debug_payload["label_guard_words"] = label_candidates
+
         if best_number is not None or best_label is not None or lane_text_words or lane_number_words:
             term["pin_ocr_debug"] = debug_payload
 
 
-def _assign_component_number_fallback(side_run: Dict, component_words: List[Dict], body_bbox, cfg: Dict) -> None:
+def _assign_component_number_fallback(
+    side_run: Dict,
+    component_words: List[Dict],
+    body_bbox,
+    cfg: Dict,
+    label_guard_words: Optional[List[Dict]] = None,
+) -> None:
     side = side_run["side"]
+    has_side_label_guards = bool(label_guard_words)
     component_map = _assign_words_to_lanes(component_words, side_run["lanes"])
+    label_guard_map = _assign_words_to_lanes(label_guard_words or [], side_run["lanes"])
 
     for lane in side_run["lanes"]:
         term = lane["term"]
+        lane_label_guards = label_guard_map.get(lane["terminal_id"], [])
         candidates = [
             word for word in component_map.get(lane["terminal_id"], [])
             if _is_number_text(word["text"], cfg)
             and _closest_body_side(word, body_bbox) == side
+            and not _overlaps_any_label_guard(word, lane_label_guards, cfg)
         ]
-        best = _pick_best_word(
+        best = _pick_best_lane_word(
             candidates,
+            lane=lane,
             side=side,
             body_bbox=body_bbox,
-            max_distance_px=max(cfg["max_number_distance_px"], 64.0),
+            max_distance_px=(
+                _number_pick_distance(side, cfg, has_side_label_guards)
+                if side in {"left", "right"}
+                else max(cfg["max_number_distance_px"], 64.0)
+            ),
         )
         if best is None:
             continue
@@ -1001,7 +1105,18 @@ def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
         prepared, scale = _prepare_side_band(crop, cfg)
         text_words, text_info = _run_tesseract_words(prepared, side_run["band_bbox"], scale, cfg, mode="text")
         number_words, number_info = _run_tesseract_words(prepared, side_run["band_bbox"], scale, cfg, mode="number")
-        _assign_lane_semantics(side_run, text_words, number_words, body_bbox, cfg)
+        label_guard_words = [
+            word for word in text_words
+            if _is_label_guard_candidate(word, cfg)
+        ]
+        _assign_lane_semantics(
+            side_run,
+            text_words,
+            number_words,
+            body_bbox,
+            cfg,
+            side_label_guard_words=label_guard_words,
+        )
         component_words = []
         if cfg["component_fallback_enabled"] and cfg["number_enabled"]:
             fallback_lanes = _lanes_needing_component_fallback(
@@ -1010,7 +1125,13 @@ def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
             )
             if fallback_lanes:
                 component_words = _component_number_words(image_bgr, side_run, cfg, target_lanes=fallback_lanes)
-                _assign_component_number_fallback(side_run, component_words, body_bbox, cfg)
+                _assign_component_number_fallback(
+                    side_run,
+                    component_words,
+                    body_bbox,
+                    cfg,
+                    label_guard_words=label_guard_words,
+                )
 
         debug["side_runs"].append({
             "side": side,
