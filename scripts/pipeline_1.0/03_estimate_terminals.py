@@ -35,6 +35,7 @@ from estimate_terminals.config import SAVE_DEBUG_IMAGES
 from estimate_terminals.strategies_opamp import snap_opamp_top_aux_to_nearby_terminal
 from estimate_terminals.state_switch import estimate_switch_open_closed_state
 from estimate_terminals.ocr_integrated_circuit import enrich_ic_marking_ocr
+from estimate_terminals.ocr_integrated_circuit_pins import enrich_ic_pin_ocr
 
 #PATH / INPUT-OUTPUT
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -81,6 +82,53 @@ def apply_component_state_if_needed(component: dict, meta: dict, image_binary):
         "reason": "unsupported_state_strategy",
     }
 
+    # =========================================================
+# OCR INTEGRATED CIRCUIT
+# =========================================================
+def enrich_integrated_circuit_if_needed(component: dict, class_meta: dict, image_bgr):
+    """
+    Applica gli arricchimenti OCR solo agli Integrated_Circuit.
+
+    Ordine:
+      1. OCR nome/marking IC:
+         - NE555
+         - LM317T
+         - TDA7000
+         - ADC0804
+         ecc.
+
+      2. OCR pin:
+         - pin_number
+         - pin_label_text
+
+    Regole importanti:
+      - NON crea nuovi terminali;
+      - NON cambia terminal_id;
+      - NON cambia name/display_name;
+      - aggiunge solo informazioni semantiche ai terminali già stimati.
+    """
+
+    if component.get("class_name") != "Integrated_Circuit":
+        return component
+
+    ic_meta = class_meta.get(component.get("class_id"), {}) or {}
+
+    # Step 1: OCR nome/marking IC.
+    component = enrich_ic_marking_ocr(
+        component=component,
+        image_bgr=image_bgr,
+        meta=ic_meta,
+    )
+
+    # Step 2: OCR pin number / pin label.
+    component = enrich_ic_pin_ocr(
+        component=component,
+        image_bgr=image_bgr,
+        meta=ic_meta,
+    )
+
+    return component
+
 
 # =========================================================
 # OUTPUT JSON PUBBLICO
@@ -92,11 +140,28 @@ def _round_bbox(bbox):
 
 
 def _extract_body_bbox(component: dict):
+    """
+    Recupera il body_bbox raffinato dell'IC.
+
+    Lo cerchiamo in più punti perché, a seconda della strategia usata,
+    può essere salvato:
+      1. direttamente nel componente;
+      2. dentro connection_side_scores;
+      3. dentro terminal_point_debug dei terminali.
+    """
+
+    # Caso migliore: body_bbox già salvato direttamente nel componente.
+    body_bbox = component.get("body_bbox")
+    if body_bbox:
+        return _round_bbox(body_bbox)
+
+    # Caso usato spesso dalla strategia di rilevazione terminali IC.
     side_scores = component.get("connection_side_scores") or {}
     body_bbox = side_scores.get("body_bbox")
     if body_bbox:
         return _round_bbox(body_bbox)
 
+    # Fallback: alcuni terminali possono avere il body_bbox nel debug.
     for terminal in component.get("terminals", []):
         point_debug = terminal.get("terminal_point_debug") or {}
         body_bbox = point_debug.get("body_bbox")
@@ -125,11 +190,42 @@ def _public_terminal(term: dict, include_pin_fields: bool = False) -> dict:
         public["semantic_terminal_name"] = term.get("semantic_terminal_name")
 
     if include_pin_fields:
+        # ---------------------------------------------------------
+        # Campi semantici OCR dei pin IC.
+        #
+        # Nota: questi campi NON sostituiscono il nome geometrico del
+        # terminale, che rimane in name/display_name/display_terminal_id.
+        # Servono solo ad arricchire il JSON con quello che leggiamo
+        # vicino al pin nello schema.
+        #
+        # Esempi:
+        #   name = "left_2", pin_number = "2", pin_label_text = "VIN"
+        #   name = "right_1", pin_number = "3", pin_label_text = None
+        #   name = "left_1", pin_number = None, pin_label_text = "IN"
+        # ---------------------------------------------------------
         public["pin_number"] = term.get("pin_number")
-        public["pin_label"] = term.get("pin_label")
-        public["pin_ocr_confidence"] = term.get("pin_ocr_confidence")
+        public["pin_label_text"] = term.get("pin_label_text")
 
-    return {key: value for key, value in public.items() if value is not None}
+        # Le confidence sono utili per debug, ma le aggiungiamo solo se
+        # esistono davvero, così il JSON resta pulito.
+        if term.get("pin_number_confidence") is not None:
+            public["pin_number_confidence"] = term.get("pin_number_confidence")
+        if term.get("pin_label_confidence") is not None:
+            public["pin_label_confidence"] = term.get("pin_label_confidence")
+
+    # Per gli IC vogliamo vedere sempre pin_number e pin_label_text,
+    # anche quando uno dei due manca. Questo rende chiaro il caso LM317T
+    # senza numero o TDA7000 senza label. Per gli altri campi continuiamo
+    # a rimuovere i None come prima.
+    keep_null_keys = set()
+    if include_pin_fields:
+        keep_null_keys.update({"pin_number", "pin_label_text"})
+
+    return {
+        key: value
+        for key, value in public.items()
+        if value is not None or key in keep_null_keys
+    }
 
 
 def _public_integrated_circuit(component: dict) -> dict:
@@ -269,13 +365,20 @@ def main() -> None:
             # - body_bbox raffinato dentro connection_side_scores/terminal debug.
             # Per ora NON modifichiamo i terminali: aggiungiamo solo campi
             # semantici al componente, come ic_marking e ic_ocr_debug.
-            if comp_copy.get("class_name") == "Integrated_Circuit":
-                ic_meta = class_meta.get(comp_copy.get("class_id"), {})
-                comp_copy = enrich_ic_marking_ocr(
-                    component=comp_copy,
-                    image_bgr=image_bgr,
-                    meta=ic_meta,
-                )
+            # ---------------------------------------------------------
+            # OCR Integrated Circuit.
+            #
+            # Per gli IC aggiungiamo:
+            #   - ic_marking a livello componente;
+            #   - pin_number / pin_label_text a livello terminale.
+            #
+            # Questa funzione NON crea terminali e NON cambia gli ID.
+            # ---------------------------------------------------------
+            comp_copy = enrich_integrated_circuit_if_needed(
+                component=comp_copy,
+                class_meta=class_meta,
+                image_bgr=image_bgr,
+)
 
             updated_components.append(comp_copy)
 
@@ -286,6 +389,20 @@ def main() -> None:
             all_terminals.extend(comp_copy.get("terminals", []))
 
         snap_opamp_top_aux_to_nearby_terminal(updated_components, image_binary)
+
+        # ---------------------------------------------------------
+        # Ricostruiamo all_terminals dopo eventuali post-processing.
+        #
+        # Alcune funzioni, come snap_opamp_top_aux_to_nearby_terminal,
+        # possono modificare i terminali dentro updated_components.
+        # Ricostruire la lista globale qui evita incoerenze tra:
+        #   - components[*].terminals
+        #   - terminals globale
+        #   - immagini debug
+        # ---------------------------------------------------------
+        all_terminals = []
+        for component in updated_components:
+            all_terminals.extend(component.get("terminals", []))
 
         public_components, public_terminals = _public_output_components_and_terminals(
             updated_components,
