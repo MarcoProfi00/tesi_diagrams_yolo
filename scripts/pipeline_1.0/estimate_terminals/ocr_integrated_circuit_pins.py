@@ -17,6 +17,7 @@ import os
 import re
 import shutil
 import subprocess
+import time
 import uuid
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -34,6 +35,15 @@ _SHORT_PIN_LABELS = {
     "RESET", "RST", "LSB", "MSB", "VIN", "VOUT", "VCC", "GND", "VAUX",
     "BOOT", "SYNC", "COMP", "PHASE", "PAD", "CLK", "FS",
 }
+
+
+def _timing_enabled() -> bool:
+    value = str(os.environ.get("IC_OCR_TIMING", "")).strip().lower()
+    return value in {"1", "true", "yes", "on"}
+
+
+def _elapsed_ms(start_time: float) -> float:
+    return round((time.perf_counter() - start_time) * 1000.0, 1)
 
 
 def _clamp_bbox(bbox, image_shape) -> List[int]:
@@ -580,7 +590,14 @@ def _ocr_digit_component_candidate(image_bgr, bbox: List[int], component_count: 
         return None
 
     confidence = min(0.74, 0.44 + 0.015 * votes.get(text, 1))
-    if component_count == 1 and _component_hole_count(image_bgr, bbox) >= 2:
+    width, height = _bbox_size(bbox)
+    if (
+        component_count == 1
+        and text in {"3", "4", "5"}
+        and width >= 6.0
+        and height >= 12.0
+        and _component_hole_count(image_bgr, bbox) >= 2
+    ):
         text = "8"
         confidence = max(confidence, 0.76)
     return {
@@ -1266,6 +1283,8 @@ def _lanes_needing_component_fallback(side_run: Dict, component_terminal_count: 
 def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
     cfg = _get_pin_ocr_cfg(meta)
     _reset_pin_fields(component)
+    timing_on = _timing_enabled()
+    total_start = time.perf_counter() if timing_on else None
 
     debug = {
         "enabled": bool(cfg["ocr_enabled"] and cfg["enabled"]),
@@ -1276,6 +1295,12 @@ def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
         "side_runs": [],
         "assigned_count": 0,
     }
+    if timing_on:
+        debug["timing_ms"] = {
+            "side_ocr_ms": 0.0,
+            "component_fallback_ms": 0.0,
+            "sides": {},
+        }
 
     if not cfg["ocr_enabled"] or not cfg["enabled"]:
         debug["skipped"] = True
@@ -1308,11 +1333,13 @@ def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
         side_run = side_runs.get(side)
         if side_run is None:
             continue
+        side_start = time.perf_counter() if timing_on else None
 
         crop = _crop(image_bgr, side_run["band_bbox"])
         if crop is None:
             continue
 
+        side_ocr_start = time.perf_counter() if timing_on else None
         prepared, scale = _prepare_side_band(crop, cfg)
         text_words, text_info = _run_tesseract_words(prepared, side_run["band_bbox"], scale, cfg, mode="text")
         number_words, number_info = _run_tesseract_words(prepared, side_run["band_bbox"], scale, cfg, mode="number")
@@ -1328,8 +1355,11 @@ def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
             cfg,
             side_label_guard_words=label_guard_words,
         )
+        side_ocr_ms = _elapsed_ms(side_ocr_start) if side_ocr_start is not None else 0.0
         component_words = []
+        component_fallback_ms = 0.0
         if cfg["component_fallback_enabled"] and cfg["number_enabled"]:
+            fallback_start = time.perf_counter() if timing_on else None
             fallback_lanes = _lanes_needing_component_fallback(
                 side_run,
                 component_terminal_count=len(component.get("terminals", []) or []),
@@ -1344,6 +1374,17 @@ def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
                     cfg,
                     label_guard_words=label_guard_words,
                 )
+            component_fallback_ms = _elapsed_ms(fallback_start) if fallback_start is not None else 0.0
+
+        if timing_on:
+            debug["timing_ms"]["side_ocr_ms"] += side_ocr_ms
+            debug["timing_ms"]["component_fallback_ms"] += component_fallback_ms
+            debug["timing_ms"]["sides"][side] = {
+                "lane_count": len(side_run["lanes"]),
+                "ocr_ms": side_ocr_ms,
+                "component_fallback_ms": component_fallback_ms,
+                "total_ms": _elapsed_ms(side_start) if side_start is not None else 0.0,
+            }
 
         debug["side_runs"].append({
             "side": side,
@@ -1372,5 +1413,7 @@ def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
         if term.get("pin_number") not in (None, "") or term.get("pin_label_text") not in (None, "")
     )
     debug["assigned_count"] = assigned_count
+    if timing_on and total_start is not None:
+        debug["timing_ms"]["total_ms"] = _elapsed_ms(total_start)
     component["ic_pin_ocr_debug"] = debug
     return component

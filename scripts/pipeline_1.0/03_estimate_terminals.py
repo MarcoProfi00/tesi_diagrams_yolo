@@ -26,6 +26,7 @@ Casi speciali:
 from pathlib import Path
 import os
 import json
+import time
 import cv2
 
 from estimate_terminals.io_utils import io_load_class_metadata, img_build_foreground_binary
@@ -54,6 +55,22 @@ DEBUG_IMAGES_DIR = OUTPUT_DIR / "debug_images"
 IC_OCR_DEBUG_IMAGES_DIR = DEBUG_IMAGES_DIR / "ic_ocr"
 
 CLASS_TERMINALS_PATH = PROJECT_ROOT / "metadata" / "class_terminals_v1.yaml"
+
+
+def _env_flag(name: str, default: bool = False) -> bool:
+    value = str(os.environ.get(name, "")).strip().lower()
+    if value in {"1", "true", "yes", "on"}:
+        return True
+    if value in {"0", "false", "no", "off"}:
+        return False
+    return default
+
+
+IC_OCR_TIMING_ENABLED = _env_flag("IC_OCR_TIMING", default=False)
+
+
+def _elapsed_ms(start_time: float) -> float:
+    return round((time.perf_counter() - start_time) * 1000.0, 1)
 
 
 # =========================================================
@@ -112,20 +129,32 @@ def enrich_integrated_circuit_if_needed(component: dict, class_meta: dict, image
         return component
 
     ic_meta = class_meta.get(component.get("class_id"), {}) or {}
+    total_start = time.perf_counter() if IC_OCR_TIMING_ENABLED else None
 
     # Step 1: OCR nome/marking IC.
+    marking_start = time.perf_counter() if IC_OCR_TIMING_ENABLED else None
     component = enrich_ic_marking_ocr(
         component=component,
         image_bgr=image_bgr,
         meta=ic_meta,
     )
+    marking_ms = _elapsed_ms(marking_start) if marking_start is not None else None
 
     # Step 2: OCR pin number / pin label.
+    pin_start = time.perf_counter() if IC_OCR_TIMING_ENABLED else None
     component = enrich_ic_pin_ocr(
         component=component,
         image_bgr=image_bgr,
         meta=ic_meta,
     )
+    pin_ms = _elapsed_ms(pin_start) if pin_start is not None else None
+
+    if total_start is not None:
+        component["_ic_timing"] = {
+            "marking_ms": marking_ms,
+            "pin_ms": pin_ms,
+            "total_ms": _elapsed_ms(total_start),
+        }
 
     return component
 
@@ -325,7 +354,24 @@ def main() -> None:
     print(f"Class yaml      : {CLASS_TERMINALS_PATH}")
     print(f"File trovati    : {len(json_files)}\n")
 
+    batch_timing = {
+        "ic_count": 0,
+        "marking_ms": 0.0,
+        "pin_ms": 0.0,
+        "ic_total_ms": 0.0,
+        "pin_side_ocr_ms": 0.0,
+        "pin_side_fallback_ms": 0.0,
+    }
+
     for i, json_path in enumerate(json_files, start=1):
+        file_timing = {
+            "ic_count": 0,
+            "marking_ms": 0.0,
+            "pin_ms": 0.0,
+            "ic_total_ms": 0.0,
+            "pin_side_ocr_ms": 0.0,
+            "pin_side_fallback_ms": 0.0,
+        }
         with open(json_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
@@ -379,6 +425,17 @@ def main() -> None:
                 class_meta=class_meta,
                 image_bgr=image_bgr,
 )
+
+            if IC_OCR_TIMING_ENABLED and comp_copy.get("class_name") == "Integrated_Circuit":
+                timing = comp_copy.get("_ic_timing") or {}
+                pin_debug = comp_copy.get("ic_pin_ocr_debug") or {}
+                pin_timing = pin_debug.get("timing_ms") or {}
+                file_timing["ic_count"] += 1
+                file_timing["marking_ms"] += float(timing.get("marking_ms") or 0.0)
+                file_timing["pin_ms"] += float(timing.get("pin_ms") or 0.0)
+                file_timing["ic_total_ms"] += float(timing.get("total_ms") or 0.0)
+                file_timing["pin_side_ocr_ms"] += float(pin_timing.get("side_ocr_ms") or 0.0)
+                file_timing["pin_side_fallback_ms"] += float(pin_timing.get("component_fallback_ms") or 0.0)
 
             updated_components.append(comp_copy)
 
@@ -440,9 +497,33 @@ def main() -> None:
             cv2.imwrite(str(ic_ocr_img_path), ic_ocr_img)
 
         print(f"[{i}/{len(json_files)}] {json_path.name} -> {len(updated_components)} componenti, {len(all_terminals)} terminali")
+        if IC_OCR_TIMING_ENABLED and file_timing["ic_count"] > 0:
+            for key in batch_timing:
+                batch_timing[key] += file_timing[key]
+            print(
+                "  IC timing:"
+                f" count={int(file_timing['ic_count'])}"
+                f" marking={file_timing['marking_ms']:.1f}ms"
+                f" pin={file_timing['pin_ms']:.1f}ms"
+                f" pin_side_ocr={file_timing['pin_side_ocr_ms']:.1f}ms"
+                f" pin_fallback={file_timing['pin_side_fallback_ms']:.1f}ms"
+                f" total={file_timing['ic_total_ms']:.1f}ms"
+            )
 
     print("\nCompletato.")
     print(f"JSON salvati in: {OUTPUT_DIR}")
+    if IC_OCR_TIMING_ENABLED and batch_timing["ic_count"] > 0:
+        avg_ic_ms = batch_timing["ic_total_ms"] / max(1, batch_timing["ic_count"])
+        print(
+            "IC OCR timing summary:"
+            f" count={int(batch_timing['ic_count'])}"
+            f" marking={batch_timing['marking_ms']:.1f}ms"
+            f" pin={batch_timing['pin_ms']:.1f}ms"
+            f" pin_side_ocr={batch_timing['pin_side_ocr_ms']:.1f}ms"
+            f" pin_fallback={batch_timing['pin_side_fallback_ms']:.1f}ms"
+            f" total={batch_timing['ic_total_ms']:.1f}ms"
+            f" avg_per_ic={avg_ic_ms:.1f}ms"
+        )
     if SAVE_DEBUG_IMAGES:
         print(f"Immagini debug terminali salvate in: {DEBUG_IMAGES_DIR}")
         print(f"Immagini debug OCR IC salvate in: {IC_OCR_DEBUG_IMAGES_DIR}")
