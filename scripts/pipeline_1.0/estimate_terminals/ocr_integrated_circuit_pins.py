@@ -363,11 +363,15 @@ def _ocr_digit_candidates_batch(
 
     tesseract_cmd = os.environ.get("TESSERACT_CMD", "tesseract")
     variants = [
+        (2, 6.0, "bin", 6),
         (4, 4.0, "bin", 6),
+        (4, 4.0, "bin", 8),
         (4, 4.0, "gray", 8),
         (4, 6.0, "bin", 10),
+        (4, 6.0, "bin", 8),
         (4, 6.0, "gray", 13),
         (6, 4.0, "gray", 6),
+        (6, 6.0, "bin", 8),
         (10, 8.0, "bin", 6),
         (10, 8.0, "gray", 6),
         (14, 6.0, "bin", 8),
@@ -466,6 +470,29 @@ def _ocr_digit_candidates_batch(
     return votes_by_candidate
 
 
+def _component_hole_count(image_bgr, bbox: List[int]) -> int:
+    crop = _crop(image_bgr, bbox)
+    if crop is None or crop.size == 0:
+        return 0
+
+    gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+    gray = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(4, 4)).apply(gray)
+    _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    inv = 255 - binary
+    contours, hierarchy = cv2.findContours(inv, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+    if hierarchy is None:
+        return 0
+
+    holes = 0
+    for idx, contour in enumerate(contours):
+        parent = hierarchy[0][idx][3]
+        if parent < 0:
+            continue
+        if cv2.contourArea(contour) >= 1.5:
+            holes += 1
+    return holes
+
+
 def _best_voted_number(votes: Dict[str, int], component_count: int, cfg: Dict) -> Optional[str]:
     filtered = {}
     max_len = 2 if component_count <= 2 else 3
@@ -553,6 +580,9 @@ def _ocr_digit_component_candidate(image_bgr, bbox: List[int], component_count: 
         return None
 
     confidence = min(0.74, 0.44 + 0.015 * votes.get(text, 1))
+    if component_count == 1 and _component_hole_count(image_bgr, bbox) >= 2:
+        text = "8"
+        confidence = max(confidence, 0.76)
     return {
         "text": text,
         "confidence": confidence,
@@ -560,6 +590,95 @@ def _ocr_digit_component_candidate(image_bgr, bbox: List[int], component_count: 
         "center": [(bbox[0] + bbox[2]) * 0.5, (bbox[1] + bbox[3]) * 0.5],
         "mode": "number_component",
     }
+
+
+def _expand_component_bbox_for_refine(bbox: List[int], side: str, image_shape, pad_px: int) -> List[int]:
+    if side in {"left", "right"}:
+        return _clamp_bbox([bbox[0] - pad_px, bbox[1], bbox[2] + pad_px, bbox[3]], image_shape)
+    return _clamp_bbox([bbox[0], bbox[1] - pad_px, bbox[2], bbox[3] + pad_px], image_shape)
+
+
+def _prefer_component_refinement(current: Dict, refined: Dict) -> bool:
+    current_text = str(current.get("text") or "")
+    refined_text = str(refined.get("text") or "")
+    if not refined_text:
+        return False
+
+    current_conf = float(current.get("confidence") or 0.0)
+    refined_conf = float(refined.get("confidence") or 0.0)
+    if len(refined_text) > len(current_text) and refined_conf >= (current_conf - 0.08):
+        return True
+    if len(refined_text) == len(current_text) and refined_conf >= (current_conf + 0.04):
+        return True
+    return False
+
+
+def _refine_component_fallback_word(image_bgr, word: Dict, side: str, cfg: Dict) -> Dict:
+    refined = dict(word)
+    component_count = int(word.get("component_count") or 0)
+    bbox = word.get("bbox")
+    if not bbox or component_count <= 0:
+        return refined
+    current_text = str(word.get("text") or "")
+    current_conf = float(word.get("confidence") or 0.0)
+
+    if component_count == 1 and len(current_text) == 1 and current_conf < 0.72:
+        local = _ocr_digit_component_candidate(image_bgr, bbox, component_count, cfg)
+        if local is not None and _prefer_component_refinement(refined, local):
+            refined = {
+                **refined,
+                **local,
+                "component_count": component_count,
+                "mode": "number_component_refine",
+            }
+
+    if component_count >= 2 and side in {"left", "right"} and len(current_text) == 1 and current_conf < 0.64:
+        expanded_bbox = _expand_component_bbox_for_refine(bbox, side, image_bgr.shape, pad_px=4)
+        expanded = _ocr_digit_component_candidate(image_bgr, expanded_bbox, component_count, cfg)
+        if expanded is not None and _prefer_component_refinement(refined, expanded):
+            refined = {
+                **refined,
+                **expanded,
+                "component_count": component_count,
+                "mode": "number_component_refine_wide",
+            }
+
+    width, height = _bbox_size(bbox)
+    if (
+        component_count == 1
+        and side in {"left", "right"}
+        and refined.get("text") == "1"
+        and float(refined.get("confidence") or 0.0) < 0.70
+        and width >= 6.0
+        and height >= 18.0
+    ):
+        expanded_bbox = _expand_component_bbox_for_refine(bbox, side, image_bgr.shape, pad_px=4)
+        votes = _ocr_digit_variants(
+            image_bgr,
+            expanded_bbox,
+            [
+                (4, 3.0, "bin", 8),
+                (4, 3.0, "bin", 13),
+                (4, 4.0, "bin", 8),
+                (4, 4.0, "bin", 13),
+                (4, 6.0, "bin", 8),
+                (4, 6.0, "bin", 13),
+            ],
+        )
+        alt_text = _best_voted_number(votes, 1, cfg)
+        alt_score = int(votes.get(alt_text, 0)) if alt_text else 0
+        if alt_text and alt_text != "1" and alt_score >= 12:
+            refined = {
+                **refined,
+                "text": alt_text,
+                "confidence": max(float(refined.get("confidence") or 0.0), min(0.74, 0.44 + 0.015 * alt_score)),
+                "bbox": expanded_bbox,
+                "center": [(expanded_bbox[0] + expanded_bbox[2]) * 0.5, (expanded_bbox[1] + expanded_bbox[3]) * 0.5],
+                "mode": "number_component_refine_side_alt",
+                "component_count": component_count,
+            }
+
+    return refined
 
 
 def _component_number_words(image_bgr, side_run: Dict, cfg: Dict, target_lanes: Optional[List[Dict]] = None) -> List[Dict]:
@@ -770,7 +889,7 @@ def _is_label_guard_candidate(word: Dict, cfg: Dict) -> bool:
 def _number_pick_distance(side: str, cfg: Dict, has_side_label_guards: bool = False) -> float:
     max_distance = float(cfg["max_number_distance_px"])
     if side in {"left", "right"}:
-        return min(max_distance, 22.0 if has_side_label_guards else 30.0)
+        return min(max_distance, 22.0 if has_side_label_guards else 32.0)
     return max_distance
 
 
@@ -794,7 +913,14 @@ def _pick_best_word(words: List[Dict], side: str, body_bbox: List[float], max_di
     return chosen
 
 
-def _pick_best_lane_word(words: List[Dict], lane: Dict, side: str, body_bbox: List[float], max_distance_px: float) -> Optional[Dict]:
+def _pick_best_lane_word(
+    words: List[Dict],
+    lane: Dict,
+    side: str,
+    body_bbox: List[float],
+    max_distance_px: float,
+    prefer_edge_first: bool = False,
+) -> Optional[Dict]:
     if not words:
         return None
 
@@ -809,7 +935,10 @@ def _pick_best_lane_word(words: List[Dict], lane: Dict, side: str, body_bbox: Li
         cx, cy = word["center"]
         word_axis = cy if side in {"left", "right"} else cx
         axis_distance = abs(float(word_axis) - term_axis)
-        ranked.append((axis_distance, edge_distance, -float(word["confidence"]), -len(word["text"]), word))
+        if prefer_edge_first:
+            ranked.append((edge_distance, axis_distance, -float(word["confidence"]), -len(word["text"]), word))
+        else:
+            ranked.append((axis_distance, edge_distance, -float(word["confidence"]), -len(word["text"]), word))
 
     if not ranked:
         return None
@@ -819,6 +948,76 @@ def _pick_best_lane_word(words: List[Dict], lane: Dict, side: str, body_bbox: Li
     chosen["axis_distance"] = round(float(ranked[0][0]), 3)
     chosen["edge_distance"] = round(float(ranked[0][1]), 3)
     return chosen
+
+
+def _bbox_size(box: List[int]) -> Tuple[float, float]:
+    return float(max(0, box[2] - box[0])), float(max(0, box[3] - box[1]))
+
+
+def _bbox_contains_box(outer: List[int], inner: List[int], tolerance_px: int = 2) -> bool:
+    return (
+        outer[0] <= inner[0] + tolerance_px
+        and outer[1] <= inner[1] + tolerance_px
+        and outer[2] >= inner[2] - tolerance_px
+        and outer[3] >= inner[3] - tolerance_px
+    )
+
+
+def _should_replace_with_component_candidate(term: Dict, candidate: Dict, side: str) -> bool:
+    current_text = str(term.get("pin_number") or "")
+    if not current_text:
+        return True
+    if len(candidate["text"]) > len(current_text):
+        return True
+    if len(candidate["text"]) != len(current_text):
+        return False
+
+    current_conf = float(term.get("pin_number_confidence") or 0.0)
+    candidate_conf = float(candidate.get("confidence") or 0.0)
+    debug_payload = term.get("pin_ocr_debug") or {}
+    current_best = debug_payload.get("best_number") or {}
+    current_mode = str(current_best.get("mode") or "")
+    if current_mode not in {"text", "number"}:
+        return False
+
+    current_bbox = current_best.get("bbox") or term.get("pin_number_bbox")
+    if not current_bbox:
+        return False
+
+    current_w, current_h = _bbox_size(current_bbox)
+    candidate_w, candidate_h = _bbox_size(candidate["bbox"])
+    current_area = current_w * current_h
+    candidate_area = max(1.0, candidate_w * candidate_h)
+    candidate_inside_current = _bbox_contains_box(current_bbox, candidate["bbox"])
+    oversized_current = (
+        (side in {"left", "right"} and current_w >= 28.0)
+        or (side in {"top", "bottom"} and current_h >= 28.0)
+    )
+    much_larger_current = current_area >= (candidate_area * 2.0)
+    clearly_better_confidence = candidate_conf >= (current_conf + 0.12)
+    candidate_axis_distance = float(candidate.get("axis_distance") or 999.0)
+    candidate_edge_distance = float(candidate.get("edge_distance") or 999.0)
+    strong_local_component = (
+        candidate_axis_distance <= 20.0
+        and candidate_edge_distance <= 18.0
+    )
+    contained_component = (
+        candidate_inside_current
+        and candidate_conf >= (current_conf + 0.08)
+        and current_area >= (candidate_area * 1.5)
+        and candidate_axis_distance <= 30.0
+        and candidate_edge_distance <= 24.0
+    )
+
+    return (
+        (
+            current_conf < 0.40
+            and clearly_better_confidence
+            and (oversized_current or much_larger_current)
+            and strong_local_component
+        )
+        or contained_component
+    )
 
 
 def _overlaps_any_label_guard(word: Dict, label_words: List[Dict], cfg: Dict) -> bool:
@@ -914,6 +1113,7 @@ def _assign_lane_semantics(
 
 
 def _assign_component_number_fallback(
+    image_bgr,
     side_run: Dict,
     component_words: List[Dict],
     body_bbox,
@@ -924,6 +1124,7 @@ def _assign_component_number_fallback(
     has_side_label_guards = bool(label_guard_words)
     component_map = _assign_words_to_lanes(component_words, side_run["lanes"])
     label_guard_map = _assign_words_to_lanes(label_guard_words or [], side_run["lanes"])
+    prefer_edge_first = side in {"top", "bottom"} and len(side_run["lanes"]) <= 2
 
     for lane in side_run["lanes"]:
         term = lane["term"]
@@ -931,7 +1132,7 @@ def _assign_component_number_fallback(
         candidates = [
             word for word in component_map.get(lane["terminal_id"], [])
             if _is_number_text(word["text"], cfg)
-            and _closest_body_side(word, body_bbox) == side
+            and (side not in {"left", "right"} or _closest_body_side(word, body_bbox) == side)
             and not _overlaps_any_label_guard(word, lane_label_guards, cfg)
         ]
         best = _pick_best_lane_word(
@@ -944,12 +1145,13 @@ def _assign_component_number_fallback(
                 if side in {"left", "right"}
                 else max(cfg["max_number_distance_px"], 64.0)
             ),
+            prefer_edge_first=prefer_edge_first,
         )
         if best is None:
             continue
+        best = _refine_component_fallback_word(image_bgr, best, side, cfg)
 
-        current = str(term.get("pin_number") or "")
-        should_assign = not current or len(best["text"]) > len(current)
+        should_assign = _should_replace_with_component_candidate(term, best, side)
         if not should_assign:
             continue
 
@@ -966,18 +1168,27 @@ def _repair_unique_pin_numbers(component: Dict) -> None:
         return
 
     max_pin = len(terminals)
+    observed_numeric_values = []
     valid_terms = []
     bad_terms = []
     for term in terminals:
         text = str(term.get("pin_number") or "")
         if re.match(r"^[0-9]+$", text):
             value = int(text)
+            observed_numeric_values.append(value)
             if 1 <= value <= max_pin:
                 valid_terms.append((value, term))
             else:
                 bad_terms.append(term)
         else:
             bad_terms.append(term)
+
+    # This repair is only safe for ICs whose visible numbering appears to
+    # follow a compact 1..N scheme. If we already observe a credible number
+    # above N (for example 13 on a 12-terminal drawing), do not "normalize"
+    # it back into range.
+    if any(value > max_pin for value in observed_numeric_values):
+        return
 
     values = [value for value, _ in valid_terms]
     duplicate_terms = []
@@ -1047,7 +1258,7 @@ def _lanes_needing_component_fallback(side_run: Dict, component_terminal_count: 
             lanes.append(lane)
         elif component_terminal_count > 9 and len(number) == 1:
             lanes.append(lane)
-        elif confidence < 0.62:
+        elif confidence <= 0.62:
             lanes.append(lane)
     return lanes
 
@@ -1126,6 +1337,7 @@ def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
             if fallback_lanes:
                 component_words = _component_number_words(image_bgr, side_run, cfg, target_lanes=fallback_lanes)
                 _assign_component_number_fallback(
+                    image_bgr,
                     side_run,
                     component_words,
                     body_bbox,
