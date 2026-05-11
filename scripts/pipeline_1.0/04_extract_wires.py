@@ -25,7 +25,7 @@ from skimage.morphology import skeletonize
 # PATHS / INPUT-OUTPUT
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline1.0/batch_v9_2_set_successivo_analog_meter_connector_transformer")
+PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline1.0/batch_v10_ic")
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "03_estimate_terminals"
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "04_extract_wires"
@@ -91,6 +91,12 @@ CLASS_TERMINAL_KEEP_OVERRIDES = {
         "inward_len": 4,
         "outward_len": 14,
     },
+    "Integrated_Circuit": {
+        "radius": 6,
+        "thickness": 5,
+        "inward_len": 2,
+        "outward_len": 16,
+    },
 }
 
 # =========================================================
@@ -139,6 +145,13 @@ def expand_bbox(bbox, pad=0):
     x1, y1, x2, y2 = bbox
     return [x1 - pad, y1 - pad, x2 + pad, y2 + pad]
 
+
+def component_mask_bbox(comp):
+    if comp.get("class_name") == "Integrated_Circuit" and comp.get("body_bbox"):
+        return comp["body_bbox"]
+    return comp["bbox"]
+
+
 # costruzione maschere
 # Build base component mask.
 def build_base_component_mask(image_shape, components):
@@ -149,7 +162,7 @@ def build_base_component_mask(image_shape, components):
         if not comp.get("use_for_masking", False):
             continue
 
-        bbox = shrink_bbox(comp["bbox"], shrink_factor=MASK_SHRINK_FACTOR)
+        bbox = shrink_bbox(component_mask_bbox(comp), shrink_factor=MASK_SHRINK_FACTOR)
         bbox = expand_bbox(
             bbox,
             pad=int(CLASS_MASK_PADDING.get(str(comp.get("class_name", "")).strip(), 0)),
