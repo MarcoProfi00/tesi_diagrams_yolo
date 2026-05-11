@@ -115,7 +115,7 @@ def apply_component_state_if_needed(component: dict, meta: dict, image_binary):
         "reason": "unsupported_state_strategy",
     }
 
-    # =========================================================
+# =========================================================
 # OCR INTEGRATED CIRCUIT
 # =========================================================
 def enrich_integrated_circuit_if_needed(component: dict, class_meta: dict, image_bgr):
@@ -419,31 +419,31 @@ def main() -> None:
             )
 
             # ---------------------------------------------------------
-            # OCR Integrated Circuit - step 1: nome/marking IC
+            # OCR Integrated Circuit.
             # ---------------------------------------------------------
             # Qui siamo ancora nello script 03, quindi abbiamo:
             # - immagine originale BGR, utile per OCR;
             # - terminali geometrici già stimati;
             # - body_bbox raffinato dentro connection_side_scores/terminal debug.
-            # Per ora NON modifichiamo i terminali: aggiungiamo solo campi
-            # semantici al componente, come ic_marking e ic_ocr_debug.
+            # Non creiamo terminali nuovi: aggiungiamo campi OCR ai componenti
+            # e ai terminali geometrici gia' stimati.
             # ---------------------------------------------------------
             # OCR Integrated Circuit.
             #
-            # Per gli IC aggiungiamo:
+            # Per gli IC aggiungiamo, senza creare terminali nuovi:
             #   - ic_marking a livello componente;
             #   - pin_number / pin_label_text a livello terminale.
             #
-            # Questa funzione NON crea terminali e NON cambia gli ID.
+            # L'arricchimento OCR viene lanciato dopo il loop sui componenti,
+            # cosi possiamo parallelizzare gli IC della stessa immagine.
             # ---------------------------------------------------------
             updated_components.append(comp_copy)
             if comp_copy.get("class_name") == "Integrated_Circuit":
                 ic_component_indexes.append(comp_idx)
 
-            # Usiamo comp_copy["terminals"] invece della variabile locale terminals:
-            # oggi l'OCR legge solo il marking e non modifica i terminali, ma nello
-            # step successivo l'OCR dei pin aggiornerà proprio comp_copy["terminals"].
-            # Così il codice è già pronto per l'estensione successiva.
+            # Nota: i terminali sono gia' dentro comp_copy["terminals"].
+            # enrich_integrated_circuit_if_needed li aggiorna direttamente
+            # con i campi OCR senza cambiare terminal_id/name/display_name.
         if len(ic_component_indexes) <= 1:
             for comp_idx in ic_component_indexes:
                 updated_components[comp_idx] = enrich_integrated_circuit_if_needed(

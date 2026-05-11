@@ -2,8 +2,10 @@
 OCR per Integrated_Circuit.
 
 Versione attuale:
-- legge SOLO il nome/marking del circuito integrato;
-- NON legge ancora i pin;
+- legge il nome/marking del circuito integrato;
+- riconosce il sottotipo seven_segment_display quando un falso IC e' in realta'
+  un display a 7 segmenti;
+- NON legge i pin: quelli sono gestiti da ocr_integrated_circuit_pins.py;
 - NON modifica terminal_id;
 - NON cambia la geometria dei terminali;
 - aggiunge campi semantici al componente:
@@ -12,6 +14,15 @@ Versione attuale:
     ic_marking_bbox
     ic_marking_source_region
     ic_ocr_debug
+
+Ordine logico del modulo:
+1. helper geometrici e recupero body_bbox;
+2. costruzione delle regioni OCR candidate;
+3. preprocessing e varianti immagine;
+4. motori OCR Tesseract/EasyOCR;
+5. normalizzazione, scoring e consenso dei candidati;
+6. riconoscimento display 7 segmenti;
+7. entry point pubblico enrich_ic_marking_ocr().
 
 La logica resta:
 1. i terminali vengono trovati geometricamente dai fili;
@@ -474,7 +485,7 @@ def build_ic_marking_regions(component: Dict, image_bgr, meta: Dict, mode: str =
 
 
 # =========================================================
-# OCR ENGINE
+# OCR PREPROCESSING E MOTORI OCR
 # =========================================================
 
 def _preprocess_for_ocr(crop_bgr):
@@ -884,7 +895,7 @@ def _run_easyocr_words(crop_bgr, meta: Dict) -> Tuple[List[Dict], Dict]:
 
 
 # =========================================================
-# TEXT NORMALIZATION / FILTERING
+# NORMALIZZAZIONE, FILTRI E SCORING DEI CANDIDATI
 # =========================================================
 
 def _normalize_text(text: str) -> str:
@@ -1437,6 +1448,10 @@ def _split_possible_pin_suffix_from_part_number(text: str, region_debug: List[Di
     return base, debug
 
 
+# =========================================================
+# RICONOSCIMENTO DISPLAY 7 SEGMENTI
+# =========================================================
+
 def _abs_word_bbox(region: Dict, word: Dict) -> List[int]:
     """
     Converte il bbox locale di una raw word OCR in coordinate immagine.
@@ -1600,6 +1615,10 @@ def _detect_seven_segment_display(component: Dict, image_bgr, body_bbox: List[in
         },
     }
 
+
+# =========================================================
+# RACCOLTA CANDIDATI E MODALITA' FAST/DEEP
+# =========================================================
 
 def _collect_ocr_candidates(
     regions: List[Dict],

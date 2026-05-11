@@ -8,6 +8,7 @@ from .strategies_basic import (
     detect_two_terminal_orientation_capacitor,
     detect_two_terminal_orientation_led,
     detect_two_terminal_orientation_inductor,
+    detect_two_terminal_orientation_resistor,
     detect_two_terminal_orientation_round_source,
     detect_two_terminal_orientation_variable_resistor,
     resolve_one_terminal_orientation,
@@ -115,6 +116,13 @@ def _resolve_two_terminal_orientation(strategy: str, class_name: str, image_bina
             default_orientation=default_orientation,
         )
 
+    if class_name == "Resistor":
+        return detect_two_terminal_orientation_resistor(
+            image_binary,
+            bbox,
+            default_orientation=default_orientation,
+        )
+
     if (
         strategy == "two_terminal_round_source"
         or class_name in {"Signal_Source", "Voltage_Source", "Current_Source", "Meter"}
@@ -125,7 +133,7 @@ def _resolve_two_terminal_orientation(strategy: str, class_name: str, image_bina
             default_orientation=default_orientation,
         )
 
-    if strategy == "two_terminal_variable_resistor" or class_name == "Resistor":
+    if strategy == "two_terminal_variable_resistor" or class_name == "Variable_Resistor":
         return detect_two_terminal_orientation_variable_resistor(
             image_binary,
             bbox,

@@ -241,6 +241,50 @@ def strategy_detect_two_terminal_orientation_generic(binary, bbox, default_orien
     return geom_infer_orientation_from_bbox(bbox, default_orientation=default_orientation), side_scores
 
 
+def detect_two_terminal_orientation_resistor(binary, bbox, default_orientation="horizontal"):
+    """
+    Stima l'asse di una resistenza normale.
+
+    Per la resistenza il corpo a zig-zag/rettangolare e' spesso molto piu'
+    affidabile dei pixel appena fuori dal bbox: frecce, label e fili vicini
+    possono cadere nelle bande laterali e simulare terminali sul lato sbagliato.
+    Se il bbox e' chiaramente allungato usiamo quindi l'asse lungo del simbolo;
+    sui casi quasi quadrati torniamo alla strategia generica.
+    """
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+    ratio_hw = height / width
+    ratio_wh = width / height
+    elongated_ratio = 1.12
+
+    if ratio_hw >= elongated_ratio:
+        return "vertical", {
+            "decision_mode": "resistor_bbox_long_axis_vertical",
+            "bbox_width": width,
+            "bbox_height": height,
+            "bbox_ratio_hw": round(ratio_hw, 4),
+        }
+
+    if ratio_wh >= elongated_ratio:
+        return "horizontal", {
+            "decision_mode": "resistor_bbox_long_axis_horizontal",
+            "bbox_width": width,
+            "bbox_height": height,
+            "bbox_ratio_wh": round(ratio_wh, 4),
+        }
+
+    orientation, side_scores = strategy_detect_two_terminal_orientation_generic(
+        binary,
+        bbox,
+        default_orientation=default_orientation,
+    )
+    side_scores["decision_mode"] = "resistor_generic_fallback"
+    side_scores["bbox_width"] = width
+    side_scores["bbox_height"] = height
+    return orientation, side_scores
+
+
 def detect_two_terminal_orientation_inductor(binary, bbox, default_orientation="horizontal"):
     orientation, side_scores = strategy_detect_two_terminal_orientation_generic(
         binary,

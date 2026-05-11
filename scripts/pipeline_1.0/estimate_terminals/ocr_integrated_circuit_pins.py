@@ -8,6 +8,23 @@ Strategia side_lane_candidates_v1:
 - assegna le parole OCR alla "corsia" del terminale piu' vicino sullo stesso lato;
 - separa pin_number e pin_label_text.
 
+Ordine logico del modulo:
+1. helper base e configurazione;
+2. costruzione delle corsie OCR laterali;
+3. OCR numerico e fallback sui componenti connessi;
+4. OCR testuale Tesseract/EasyOCR;
+5. normalizzazione, filtri e scoring;
+6. assegnazione dei candidati ai terminali;
+7. riparazioni post-OCR e filtro display 7 segmenti;
+8. entry point pubblico enrich_ic_pin_ocr().
+
+Nota sui display 7 segmenti:
+- restano Integrated_Circuit con component_subtype="seven_segment_display";
+- passano nello stesso OCR pin degli altri IC;
+- accettano label singole a..h come pin_label_text;
+- dopo l'OCR viene applicato un filtro di dominio: massimo 9 terminali
+  a-h + com, scegliendo il lato verticale piu' coerente con le label OCR.
+
 Se una lettura non e' affidabile, il campo resta None.
 """
 
@@ -62,6 +79,10 @@ _PIN_LABEL_REJECT_PATTERNS = (
     re.compile(r"^TP[0-9]+[A-Z]?$", re.IGNORECASE),
 )
 
+
+# =========================================================
+# CONFIGURAZIONE E HELPER BASE
+# =========================================================
 
 def _get_marking_bbox(component: Dict) -> Optional[List[int]]:
     bbox = component.get("ic_marking_bbox")
@@ -151,6 +172,13 @@ def _bbox_overlap_ratio(box_a: List[int], box_b: List[int]) -> float:
 
 
 def _get_pin_ocr_cfg(meta: Dict) -> Dict:
+    """
+    Legge dal metadata YAML tutte le soglie e le opzioni OCR dei pin.
+
+    Questa configurazione e' indipendente dal componente corrente: eventuali
+    dettagli del singolo componente, come component_subtype, vengono aggiunti
+    in enrich_ic_pin_ocr().
+    """
     ocr_root = meta.get("ocr") or {}
     cfg = ocr_root.get("pin_labels") or {}
     number_cfg = cfg.get("number_ocr") or {}
@@ -197,6 +225,12 @@ def _get_pin_ocr_cfg(meta: Dict) -> Dict:
 
 
 def _reset_pin_fields(component: Dict) -> None:
+    """
+    Pulisce i campi OCR pin prima di una nuova esecuzione.
+
+    Rende lo step idempotente: se una lettura precedente era presente ma quella
+    corrente fallisce, il vecchio valore non rimane nel JSON.
+    """
     for term in component.get("terminals", []) or []:
         term["pin_number"] = None
         term["pin_label_text"] = None
@@ -213,7 +247,17 @@ def _lane_zone_px(side: str, cfg: Dict) -> Tuple[float, float]:
     return float(cfg["top_bottom_inside_px"]), float(cfg["top_bottom_outside_px"])
 
 
+# =========================================================
+# CORSIE GEOMETRICHE DEI TERMINALI
+# =========================================================
+
 def _build_side_lanes(component: Dict, body_bbox, image_shape, cfg: Dict) -> Dict[str, Dict]:
+    """
+    Costruisce una corsia OCR per ogni terminale geometrico dell'IC.
+
+    Ogni corsia e' una ROI sottile intorno al bordo del body_bbox. Le parole
+    OCR vengono poi associate alla corsia che contiene il loro centro.
+    """
     bx1, by1, bx2, by2 = [float(v) for v in body_bbox]
     side_runs: Dict[str, Dict] = {}
 
@@ -273,6 +317,12 @@ def _build_side_lanes(component: Dict, body_bbox, image_shape, cfg: Dict) -> Dic
 
 
 def _remove_long_lines(binary: np.ndarray, cfg: Dict) -> np.ndarray:
+    """
+    Rimuove linee lunghe dalla banda OCR.
+
+    I fili del circuito possono attraversare la crop e confondere Tesseract;
+    qui li attenuiamo con una pulizia morfologica generale, non basata su testi.
+    """
     inv = 255 - binary
     h, w = inv.shape[:2]
     ratio = max(0.10, min(float(cfg["line_kernel_ratio"]), 0.60))
@@ -290,6 +340,10 @@ def _remove_long_lines(binary: np.ndarray, cfg: Dict) -> np.ndarray:
 
 
 def _prepare_side_band(crop_bgr, cfg: Dict) -> Tuple[np.ndarray, float]:
+    """
+    Prepara una banda laterale per Tesseract: grayscale, upscale, threshold e
+    rimozione delle linee lunghe.
+    """
     gray = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2GRAY)
     gray = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(4, 4)).apply(gray)
     scale = max(float(cfg["upscale"]), 1.0)
@@ -300,7 +354,14 @@ def _prepare_side_band(crop_bgr, cfg: Dict) -> Tuple[np.ndarray, float]:
     return cleaned, scale
 
 
+# =========================================================
+# OCR NUMERICO E FALLBACK SU COMPONENTI CONNESSI
+# =========================================================
+
 def _extract_digit_components(image_bgr, band_bbox: List[int]) -> List[Dict]:
+    """
+    Estrae piccoli componenti connessi candidati a cifre vicino al body.
+    """
     crop = _crop(image_bgr, band_bbox)
     if crop is None:
         return []
@@ -328,6 +389,10 @@ def _extract_digit_components(image_bgr, band_bbox: List[int]) -> List[Dict]:
 
 
 def _group_digit_components(components: List[Dict]) -> List[Dict]:
+    """
+    Raggruppa componenti connessi allineati, cosi numeri a due cifre come 10 o
+    13 possono essere letti come un unico candidato.
+    """
     lines: List[List[Dict]] = []
     for comp in sorted(components, key=lambda item: item["center"][1]):
         for line in lines:
@@ -371,6 +436,9 @@ def _group_digit_components(components: List[Dict]) -> List[Dict]:
 
 
 def _ocr_digit_variants(image_bgr, bbox: List[int], variants: List[Tuple[int, float, str, int]]) -> Dict[str, int]:
+    """
+    Rilegge una cifra con piu' varianti di pad/scala/PSM e restituisce voti.
+    """
     try:
         import pytesseract
     except Exception:
@@ -413,6 +481,10 @@ def _ocr_digit_candidates_batch(
     cfg: Dict,
     expanded_variants: bool = False,
 ) -> Dict[int, Dict[str, int]]:
+    """
+    Versione batch del fallback numerico: chiama Tesseract una volta per gruppo
+    di crop invece che una volta per cifra.
+    """
     if not candidates:
         return {}
 
@@ -526,6 +598,9 @@ def _ocr_digit_candidates_batch(
 
 
 def _component_hole_count(image_bgr, bbox: List[int]) -> int:
+    """
+    Conta buchi interni nella cifra candidata; aiuta nei casi ambigui 3/4/5/8.
+    """
     crop = _crop(image_bgr, bbox)
     if crop is None or crop.size == 0:
         return 0
@@ -549,6 +624,10 @@ def _component_hole_count(image_bgr, bbox: List[int]) -> int:
 
 
 def _best_voted_number(votes: Dict[str, int], component_count: int, cfg: Dict) -> Optional[str]:
+    """
+    Sceglie il numero migliore dai voti OCR, rispettando pattern e lunghezza
+    attesa.
+    """
     filtered = {}
     max_len = 2 if component_count <= 2 else 3
     for text, score in votes.items():
@@ -678,6 +757,12 @@ def _prefer_component_refinement(current: Dict, refined: Dict) -> bool:
 
 
 def _refine_component_fallback_word(image_bgr, word: Dict, side: str, cfg: Dict) -> Dict:
+    """
+    Raffina un candidato numerico del fallback in modo conservativo.
+
+    Non sostituisce un numero gia' credibile con una rilettura appena migliore:
+    il refinement deve dare un vantaggio chiaro.
+    """
     refined = dict(word)
     component_count = int(word.get("component_count") or 0)
     bbox = word.get("bbox")
@@ -779,6 +864,10 @@ def _refine_component_fallback_word(image_bgr, word: Dict, side: str, cfg: Dict)
 
 
 def _component_number_words(image_bgr, side_run: Dict, cfg: Dict, target_lanes: Optional[List[Dict]] = None) -> List[Dict]:
+    """
+    Produce parole numeriche candidate a partire dai componenti connessi della
+    banda laterale.
+    """
     components = _extract_digit_components(image_bgr, side_run["band_bbox"])
     lanes = target_lanes if target_lanes is not None else side_run["lanes"]
     candidates = []
@@ -814,6 +903,10 @@ def _component_number_words(image_bgr, side_run: Dict, cfg: Dict, target_lanes: 
     return words
 
 
+# =========================================================
+# OCR TESSERACT SULLE BANDE LATERALI
+# =========================================================
+
 def _clean_token_text(raw: str) -> str:
     text = _TEXT_ALLOWED_RE.sub("", str(raw or ""))
     return text.strip()
@@ -826,6 +919,11 @@ def _run_tesseract_words(
     cfg: Dict,
     mode: str,
 ) -> Tuple[List[Dict], Dict]:
+    """
+    Esegue Tesseract su una banda OCR e ritorna parole con bbox assoluti.
+
+    mode="number" usa whitelist numerica; mode="text" usa whitelist testuale.
+    """
     try:
         import pytesseract
         from pytesseract import Output
@@ -899,6 +997,10 @@ def _run_tesseract_words(
     return words, {"ok": True, "word_count": len(words), "mode": mode}
 
 
+# =========================================================
+# NORMALIZZAZIONE, FILTRI E SCORING DEI CANDIDATI
+# =========================================================
+
 def _word_edge_distance(word: Dict, side: str, body_bbox: List[float]) -> float:
     bx1, by1, bx2, by2 = [float(v) for v in body_bbox]
     cx, cy = word["center"]
@@ -944,6 +1046,11 @@ def _is_number_text(text: str, cfg: Dict) -> bool:
 
 
 def _normalize_pin_label_text(text: str) -> str:
+    """
+    Normalizza una label pin senza contesto del componente.
+
+    Esempi: P17 -> P1.7, NTR -> INTR, VREFI2 -> VREF/2.
+    """
     text = str(text or "").strip()
     if not text:
         return ""
@@ -973,6 +1080,12 @@ def _normalize_pin_label_text(text: str) -> str:
 
 
 def _normalize_label_text_for_cfg(text: str, cfg: Dict) -> str:
+    """
+    Normalizza una label usando anche il contesto del componente.
+
+    Per i display 7 segmenti accetta confusioni OCR tipiche delle lettere
+    minuscole, come 4 -> a e q -> g.
+    """
     normalized = _normalize_pin_label_text(text)
     if cfg.get("component_subtype") != "seven_segment_display":
         return normalized
@@ -1014,6 +1127,12 @@ def _is_ocr_alias_acceptable(raw_text: str, normalized_text: str, word: Dict, cf
 
 
 def _is_label_candidate(word: Dict, cfg: Dict) -> bool:
+    """
+    Decide se una parola OCR puo' diventare pin_label_text.
+
+    Sugli IC normali resta selettiva per evitare marking/net label; sui display
+    7 segmenti accetta anche label singole a..h.
+    """
     raw_text = str(word.get("text") or "")
     text = _normalize_label_text_for_cfg(word.get("text") or "", cfg)
     confidence = float(word.get("confidence") or 0.0)
@@ -1060,6 +1179,12 @@ def _is_label_candidate(word: Dict, cfg: Dict) -> bool:
 
 
 def _is_label_guard_candidate(word: Dict, cfg: Dict) -> bool:
+    """
+    Decide se una parola testuale deve proteggere una zona da falsi numeri.
+
+    Una guard word non e' necessariamente la label finale, ma impedisce per
+    esempio che BOOT/COM venga interpretato come numero.
+    """
     text = _normalize_label_text_for_cfg(word.get("text") or "", cfg)
     confidence = float(word.get("confidence") or 0.0)
     if not text or not re.search(r"[A-Za-z]", text):
@@ -1096,6 +1221,10 @@ def _number_pick_distance(side: str, cfg: Dict, has_side_label_guards: bool = Fa
 
 
 def _pick_best_word(words: List[Dict], side: str, body_bbox: List[float], max_distance_px: float) -> Optional[Dict]:
+    """
+    Sceglie il miglior candidato numerico privilegiando vicinanza al bordo,
+    confidenza e lunghezza.
+    """
     if not words:
         return None
 
@@ -1141,6 +1270,9 @@ def _overlaps_marking_bbox(word: Dict, cfg: Dict) -> bool:
 
 
 def _dedupe_words(words: List[Dict]) -> List[Dict]:
+    """
+    Rimuove duplicati OCR quasi sovrapposti mantenendo il piu' confidente.
+    """
     deduped: List[Dict] = []
     for word in words:
         text = str(word.get("text") or "")
@@ -1169,12 +1301,21 @@ def _normalize_label_word(word: Dict, cfg: Dict) -> Dict:
     return updated
 
 
+# =========================================================
+# OCR SU STRIP INTERNA ED EASYOCR DI SUPPORTO
+# =========================================================
+
 def _build_inner_label_strip_bbox(
     side_run: Dict,
     body_bbox: List[float],
     image_shape,
     cfg: Dict,
 ) -> Optional[List[int]]:
+    """
+    Costruisce una strip dentro il body vicino al lato corrente.
+
+    Serve per leggere label disegnate appena all'interno del package.
+    """
     side = side_run["side"]
     bx1, by1, bx2, by2 = [int(round(v)) for v in body_bbox]
     band = side_run["band_bbox"]
@@ -1224,6 +1365,9 @@ def _run_inner_label_strip_words(
     body_bbox: List[float],
     cfg: Dict,
 ) -> Tuple[List[Dict], Dict]:
+    """
+    Esegue Tesseract sulla strip interna del lato corrente.
+    """
     if not cfg["label_enabled"] and not cfg["label_guard_enabled"]:
         return [], {"ok": True, "skipped": "label_disabled"}
 
@@ -1270,6 +1414,12 @@ def _get_easyocr_pin_reader(cfg: Dict):
 
 
 def _run_easyocr_body_label_words(image_bgr, body_bbox: List[int], cfg: Dict) -> Tuple[List[Dict], Dict]:
+    """
+    Fallback EasyOCR sulle label nel body.
+
+    Viene usato solo quando non c'e' ic_marking: se abbiamo il part number,
+    preferiamo ricavare il significato dei pin dal datasheet.
+    """
     if not cfg.get("easyocr_label_enabled", True):
         return [], {"ok": True, "skipped": "easyocr_label_disabled"}
 
@@ -1329,6 +1479,10 @@ def _run_easyocr_body_label_words(image_bgr, body_bbox: List[int], cfg: Dict) ->
     }
 
 
+# =========================================================
+# ASSEGNAZIONE DEI CANDIDATI ALLE CORSIE
+# =========================================================
+
 def _pick_best_label_word(
     words: List[Dict],
     lane: Dict,
@@ -1336,6 +1490,10 @@ def _pick_best_label_word(
     body_bbox: List[float],
     max_distance_px: float,
 ) -> Optional[Dict]:
+    """
+    Sceglie la migliore label per una corsia, usando priorita' testuale,
+    allineamento al terminale, distanza dal bordo e confidenza.
+    """
     if not words:
         return None
 
@@ -1372,6 +1530,9 @@ def _pick_best_lane_word(
     max_distance_px: float,
     prefer_edge_first: bool = False,
 ) -> Optional[Dict]:
+    """
+    Sceglie un candidato numerico per corsia nel fallback sui componenti.
+    """
     if not words:
         return None
 
@@ -1415,6 +1576,9 @@ def _bbox_contains_box(outer: List[int], inner: List[int], tolerance_px: int = 2
 
 
 def _should_replace_with_component_candidate(term: Dict, candidate: Dict, side: str) -> bool:
+    """
+    Decide se il fallback numerico deve sostituire il numero gia' presente.
+    """
     current_text = str(term.get("pin_number") or "")
     if not current_text:
         return True
@@ -1502,6 +1666,13 @@ def _assign_lane_semantics(
     cfg: Dict,
     side_label_guard_words: Optional[List[Dict]] = None,
 ) -> None:
+    """
+    Assegna pin_number e pin_label_text ai terminali di un lato.
+
+    Questa e' la funzione centrale del modulo pin OCR: prende parole testuali e
+    numeriche gia' lette, le filtra per corsia e scrive i campi finali sui
+    terminali locali.
+    """
     side = side_run["side"]
     lanes = side_run["lanes"]
     has_side_label_guards = bool(side_label_guard_words)
@@ -1591,6 +1762,9 @@ def _assign_component_number_fallback(
     cfg: Dict,
     label_guard_words: Optional[List[Dict]] = None,
 ) -> None:
+    """
+    Applica il fallback numerico solo alle corsie che ne hanno bisogno.
+    """
     side = side_run["side"]
     has_side_label_guards = bool(label_guard_words)
     component_map = _assign_words_to_lanes(component_words, side_run["lanes"])
@@ -1780,7 +1954,14 @@ def _lanes_needing_component_fallback(side_run: Dict, component_terminal_count: 
     return lanes
 
 
+# =========================================================
+# ESECUZIONE PER LATO E RICOMPOSIZIONE DEI RISULTATI
+# =========================================================
+
 def _copy_side_run_with_terms(side_run: Dict) -> Tuple[Dict, Dict[str, Dict]]:
+    """
+    Copia corsie e terminali prima di processare un lato in parallelo.
+    """
     term_map: Dict[str, Dict] = {}
     lanes = []
     for lane in side_run["lanes"]:
@@ -1810,6 +1991,11 @@ def _process_ic_pin_side(
     timing_on: bool,
     body_label_words: Optional[List[Dict]] = None,
 ) -> Optional[Dict]:
+    """
+    Pipeline OCR completa per un singolo lato:
+    crop banda, OCR text/number, strip interna, assegnazione alle corsie e
+    fallback numerico.
+    """
     side = side_run["side"]
     side_start = time.perf_counter() if timing_on else None
     crop = _crop(image_bgr, side_run["band_bbox"])
@@ -1906,6 +2092,9 @@ def _process_ic_pin_side(
 
 
 def _apply_side_term_updates(component: Dict, term_updates: Dict[str, Dict]) -> None:
+    """
+    Riporta nel componente principale i risultati calcolati sui terminali copia.
+    """
     for term in component.get("terminals", []) or []:
         updated = term_updates.get(term.get("terminal_id"))
         if updated is None:
@@ -1948,6 +2137,10 @@ def _score_label_for_lane(word: Dict, lane: Dict, side: str, body_bbox: List[flo
 
 
 def _reassign_cross_side_labels(component: Dict, side_runs: Dict[str, Dict], body_bbox: List[float], cfg: Dict) -> None:
+    """
+    Sposta una label su una corsia migliore se il bbox OCR cade chiaramente
+    nella corsia di un terminale vicino.
+    """
     lane_by_terminal: Dict[str, Dict] = {}
     for side_run in side_runs.values():
         for lane in side_run.get("lanes", []) or []:
@@ -2030,11 +2223,19 @@ def _split_sequential_pin_label(label: str) -> Optional[Tuple[str, int]]:
     return None
 
 
+# =========================================================
+# RIPARAZIONI POST-OCR E FILTRI DI DOMINIO
+# =========================================================
+
 def _format_sequential_pin_label(prefix: str, index_value: int) -> str:
     return f"{prefix}{index_value}"
 
 
 def _repair_sequential_pin_labels(component: Dict) -> None:
+    """
+    Completa sequenze di label tipo D0, D1, D2 quando esiste sufficiente
+    supporto locale sullo stesso lato.
+    """
     for side in ("left", "right", "top", "bottom"):
         side_terms = [
             term for term in sorted(component.get("terminals", []) or [], key=_terminal_sort_key)
@@ -2101,6 +2302,10 @@ def _repair_sequential_pin_labels(component: Dict) -> None:
 
 
 def _remove_duplicate_sequential_labels(component: Dict) -> None:
+    """
+    Rimuove duplicati in sequenze come P1.0/P1.1 quando la stessa label finisce
+    su piu' terminali.
+    """
     side_prefix_support: Dict[Tuple[str, str], int] = {}
     for side in ("left", "right", "top", "bottom"):
         for term in component.get("terminals", []) or []:
@@ -2146,6 +2351,10 @@ def _has_ic_marking(component: Dict) -> bool:
 
 
 def _clear_pin_labels_when_number_and_marking(component: Dict) -> int:
+    """
+    Policy datasheet-first: se l'IC ha marking e il terminale ha pin_number,
+    rimuove pin_label_text per evitare una lettura OCR non necessaria.
+    """
     if not _has_ic_marking(component):
         return 0
 
@@ -2174,6 +2383,13 @@ def _is_seven_segment_label(label: str) -> bool:
 
 
 def _prune_seven_segment_display_terminals(component: Dict) -> int:
+    """
+    Filtro di dominio per display 7 segmenti.
+
+    Il display passa nello stesso OCR pin degli altri IC. Dopo la lettura,
+    teniamo al massimo 9 terminali: a-h + com. Il lato verticale viene scelto
+    in base alle label OCR lette, non in base a coordinate o ID immagine.
+    """
     if (
         component.get("component_subtype") != "seven_segment_display"
         and component.get("display_type") != "seven_segment"
@@ -2292,7 +2508,17 @@ def _prune_seven_segment_display_terminals(component: Dict) -> int:
     return removed
 
 
+# =========================================================
+# ENTRY POINT PUBBLICO
+# =========================================================
+
 def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
+    """
+    Arricchisce un Integrated_Circuit con OCR dei pin.
+
+    Non crea terminali: aggiorna pin_number, pin_label_text, confidence e debug
+    sui terminali geometrici gia' stimati.
+    """
     cfg = _get_pin_ocr_cfg(meta)
     cfg["component_subtype"] = component.get("component_subtype")
     cfg["marking_bbox"] = _get_marking_bbox(component)
