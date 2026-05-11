@@ -13,6 +13,7 @@ Se una lettura non e' affidabile, il campo resta None.
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import os
 import re
 import shutil
@@ -28,6 +29,8 @@ import numpy as np
 from .ocr_integrated_circuit import get_ic_body_bbox_from_component
 
 
+_EASYOCR_PIN_READER = None
+_EASYOCR_PIN_READER_ERROR = None
 _SIDES = {"left", "right", "top", "bottom"}
 _TEXT_ALLOWED_RE = re.compile(r"[^A-Za-z0-9_./+\-]")
 _SHORT_PIN_LABELS = {
@@ -35,6 +38,39 @@ _SHORT_PIN_LABELS = {
     "RESET", "RST", "LSB", "MSB", "VIN", "VOUT", "VCC", "GND", "VAUX",
     "BOOT", "SYNC", "COMP", "PHASE", "PAD", "CLK", "FS",
 }
+_PIN_LABEL_OCR_ALIASES = {
+    "0UT": "OUT",
+    "OI": "OUT",
+    "OL": "OUT",
+    "OU": "OUT",
+    "AD": "ADJ",
+    "ADI": "ADJ",
+    "LI": "L1",
+    "LF": "L1",
+    "PSISY": "PS/SYNC",
+    "PSISYNC": "PS/SYNC",
+    "PSSYNC": "PS/SYNC",
+}
+_PIN_LABEL_REJECT_PATTERNS = (
+    re.compile(r"^R[0-9]+[A-Z]?$", re.IGNORECASE),
+    re.compile(r"^C[0-9]+[A-Z]?$", re.IGNORECASE),
+    re.compile(r"^Q[0-9]+[A-Z]?$", re.IGNORECASE),
+    re.compile(r"^IC[0-9]+[A-Z]?$", re.IGNORECASE),
+    re.compile(r"^U[0-9]+[A-Z]?$", re.IGNORECASE),
+    re.compile(r"^J[0-9]+[A-Z]?$", re.IGNORECASE),
+    re.compile(r"^K[0-9]+[A-Z]?$", re.IGNORECASE),
+    re.compile(r"^TP[0-9]+[A-Z]?$", re.IGNORECASE),
+)
+
+
+def _get_marking_bbox(component: Dict) -> Optional[List[int]]:
+    bbox = component.get("ic_marking_bbox")
+    if not bbox:
+        return None
+    try:
+        return [int(round(float(v))) for v in bbox]
+    except Exception:
+        return None
 
 
 def _timing_enabled() -> bool:
@@ -119,6 +155,7 @@ def _get_pin_ocr_cfg(meta: Dict) -> Dict:
     cfg = ocr_root.get("pin_labels") or {}
     number_cfg = cfg.get("number_ocr") or {}
     label_cfg = cfg.get("label_ocr") or {}
+    easy_cfg = cfg.get("easyocr_fallback") or {}
     lane_cfg = cfg.get("lane_search") or {}
     attach_cfg = cfg.get("attach") or {}
 
@@ -135,6 +172,14 @@ def _get_pin_ocr_cfg(meta: Dict) -> Dict:
         "label_guard_enabled": bool(label_cfg.get("guard_numbers", True)),
         "label_psm": int(label_cfg.get("psm", 11)),
         "label_min_confidence": float(label_cfg.get("min_confidence", 0.20)),
+        "skip_labels_when_marking_and_number": bool(
+            label_cfg.get("skip_when_marking_and_number", True)
+        ),
+        "easyocr_label_enabled": bool(easy_cfg.get("enabled", True)),
+        "easyocr_label_languages": easy_cfg.get("languages", ["en"]),
+        "easyocr_label_gpu": bool(easy_cfg.get("gpu", False)),
+        "easyocr_label_model_storage_directory": easy_cfg.get("model_storage_directory", ".tmp/easyocr"),
+        "easyocr_label_min_confidence": float(easy_cfg.get("min_confidence", 0.20)),
         "number_pattern": cfg.get("number_pattern", r"^[0-9]{1,3}$"),
         "label_pattern": cfg.get("label_pattern", r"^[A-Za-z][A-Za-z0-9_./+-]{0,15}$"),
         "lane_padding_px": int(lane_cfg.get("lane_padding_px", 6)),
@@ -625,6 +670,8 @@ def _prefer_component_refinement(current: Dict, refined: Dict) -> bool:
     refined_conf = float(refined.get("confidence") or 0.0)
     if len(refined_text) > len(current_text) and refined_conf >= (current_conf - 0.08):
         return True
+    if len(refined_text) == len(current_text) == 1 and current_conf >= 0.60:
+        return refined_conf >= (current_conf + 0.18)
     if len(refined_text) == len(current_text) and refined_conf >= (current_conf + 0.04):
         return True
     return False
@@ -692,6 +739,39 @@ def _refine_component_fallback_word(image_bgr, word: Dict, side: str, cfg: Dict)
                 "bbox": expanded_bbox,
                 "center": [(expanded_bbox[0] + expanded_bbox[2]) * 0.5, (expanded_bbox[1] + expanded_bbox[3]) * 0.5],
                 "mode": "number_component_refine_side_alt",
+                "component_count": component_count,
+            }
+
+    if (
+        component_count == 1
+        and side in {"left", "right"}
+        and refined.get("text") == "8"
+        and width >= 6.0
+        and height >= 18.0
+    ):
+        expanded_bbox = _expand_component_bbox_for_refine(bbox, side, image_bgr.shape, pad_px=2)
+        votes = _ocr_digit_variants(
+            image_bgr,
+            expanded_bbox,
+            [
+                (4, 3.0, "bin", 8),
+                (4, 3.0, "bin", 13),
+                (4, 4.0, "bin", 8),
+                (4, 4.0, "bin", 13),
+                (4, 6.0, "bin", 8),
+                (4, 6.0, "bin", 13),
+            ],
+        )
+        alt_text = _best_voted_number(votes, 1, cfg)
+        alt_score = int(votes.get(alt_text, 0)) if alt_text else 0
+        if alt_text == "9" and alt_score >= 6:
+            refined = {
+                **refined,
+                "text": "9",
+                "confidence": max(float(refined.get("confidence") or 0.0), min(0.74, 0.44 + 0.015 * alt_score)),
+                "bbox": expanded_bbox,
+                "center": [(expanded_bbox[0] + expanded_bbox[2]) * 0.5, (expanded_bbox[1] + expanded_bbox[3]) * 0.5],
+                "mode": "number_component_refine_side_89",
                 "component_count": component_count,
             }
 
@@ -863,10 +943,68 @@ def _is_number_text(text: str, cfg: Dict) -> bool:
         return False
 
 
+def _normalize_pin_label_text(text: str) -> str:
+    text = str(text or "").strip()
+    if not text:
+        return ""
+
+    compact = re.sub(r"\s+", "", text)
+    upper = compact.upper()
+
+    if upper in _SHORT_PIN_LABELS:
+        return upper
+    if upper in _PIN_LABEL_OCR_ALIASES:
+        return _PIN_LABEL_OCR_ALIASES[upper]
+    if upper == "NTR":
+        return "INTR"
+    if re.fullmatch(r"VREF(?:[IL1]|/)?2", upper):
+        return "VREF/2"
+    if re.fullmatch(r"D[0-9]{1,2}", upper):
+        return upper
+    if re.fullmatch(r"P[0-3]\.?[0-7]", upper):
+        return f"P{upper[1]}.{upper[-1]}"
+    if re.fullmatch(r"P[IL1]\.?[0-7]", upper):
+        return f"P1.{upper[-1]}"
+    if re.fullmatch(r"P[OQ0]\.?[0-7]", upper):
+        return f"P0.{upper[-1]}"
+    return compact
+
+
+def _is_rejected_pin_label(text: str) -> bool:
+    upper = str(text or "").upper()
+    return any(pattern.match(upper) for pattern in _PIN_LABEL_REJECT_PATTERNS)
+
+
+def _is_ocr_alias_acceptable(raw_text: str, normalized_text: str, word: Dict, cfg: Dict) -> bool:
+    raw_upper = re.sub(r"\s+", "", str(raw_text or "")).upper()
+    if _PIN_LABEL_OCR_ALIASES.get(raw_upper) != normalized_text:
+        return False
+
+    confidence = float(word.get("confidence") or 0.0)
+    if normalized_text == "OUT":
+        return confidence >= 0.25
+
+    if normalized_text == "ADJ":
+        if confidence >= 0.20:
+            return True
+        body_bbox = cfg.get("body_bbox")
+        word_bbox = word.get("bbox")
+        if not body_bbox or not word_bbox:
+            return False
+        body_w = max(1.0, float(body_bbox[2]) - float(body_bbox[0]))
+        word_w = max(0.0, float(word_bbox[2]) - float(word_bbox[0]))
+        return word_w >= body_w * 0.20
+
+    return confidence >= 0.35
+
+
 def _is_label_candidate(word: Dict, cfg: Dict) -> bool:
-    text = str(word.get("text") or "")
+    raw_text = str(word.get("text") or "")
+    text = _normalize_pin_label_text(word.get("text") or "")
     confidence = float(word.get("confidence") or 0.0)
     if not text or _is_number_text(text, cfg):
+        return False
+    if _is_rejected_pin_label(text):
         return False
     if not re.search(r"[A-Za-z]", text):
         return False
@@ -874,21 +1012,39 @@ def _is_label_candidate(word: Dict, cfg: Dict) -> bool:
         return False
 
     upper = text.upper()
+    digit_count = sum(ch.isdigit() for ch in upper)
     if len(upper) < 2:
         return False
     if upper in _SHORT_PIN_LABELS:
+        if upper == "CS" and word.get("mode") == "text_inner_strip":
+            return confidence >= 0.15
+        if _is_ocr_alias_acceptable(raw_text, upper, word, cfg):
+            return True
+        return confidence >= max(cfg["label_min_confidence"], 0.35)
+    if re.match(r"^[A-Z]{1,4}[0-9]{3,}[A-Z0-9]*$", upper):
+        return False
+    if (
+        word.get("mode") == "easyocr_body_label"
+        and re.fullmatch(r"L[0-9]{1,2}", upper)
+    ):
+        return confidence >= 0.30
+    if re.fullmatch(r"P[0-3]\.[0-7]", upper):
         return confidence >= max(cfg["label_min_confidence"], 0.35)
     if re.match(r"^[A-Z][0-9]{1,2}(?:\.[0-9])?$", upper):
-        return confidence >= max(cfg["label_min_confidence"], 0.25)
+        return confidence >= max(cfg["label_min_confidence"], 0.55)
     if re.match(r"^[A-Z]{1,3}[0-9]{1,2}(?:\.[0-9])?$", upper):
         return confidence >= max(cfg["label_min_confidence"], 0.35)
+    if digit_count >= 3:
+        return confidence >= max(cfg["label_min_confidence"], 0.80)
     return len(upper) >= 3 and confidence >= max(cfg["label_min_confidence"], 0.45)
 
 
 def _is_label_guard_candidate(word: Dict, cfg: Dict) -> bool:
-    text = str(word.get("text") or "")
+    text = _normalize_pin_label_text(word.get("text") or "")
     confidence = float(word.get("confidence") or 0.0)
     if not text or not re.search(r"[A-Za-z]", text):
+        return False
+    if _is_rejected_pin_label(text):
         return False
     if not re.match(cfg["label_pattern"], text):
         return False
@@ -901,6 +1057,10 @@ def _is_label_guard_candidate(word: Dict, cfg: Dict) -> bool:
     if re.match(r"^[A-Z]{1,3}[0-9]{1,2}(?:\.[0-9])?$", upper):
         return confidence >= 0.08
     return _is_label_candidate(word, cfg)
+
+
+def _label_pick_distance(side: str, cfg: Dict) -> float:
+    return float(cfg["max_label_distance_px"])
 
 
 def _number_pick_distance(side: str, cfg: Dict, has_side_label_guards: bool = False) -> float:
@@ -927,6 +1087,255 @@ def _pick_best_word(words: List[Dict], side: str, body_bbox: List[float], max_di
     ranked.sort(key=lambda item: item[:3])
     chosen = dict(ranked[0][3])
     chosen["edge_distance"] = round(float(ranked[0][0]), 3)
+    return chosen
+
+
+def _label_priority(text: str) -> int:
+    upper = str(text or "").upper()
+    if re.fullmatch(r"P[0-3]\.[0-7]", upper):
+        return 5
+    if re.fullmatch(r"D[0-9]{1,2}", upper):
+        return 5
+    if upper in _SHORT_PIN_LABELS:
+        return 4
+    if re.fullmatch(r"[A-Z]{1,3}[0-9]{1,2}(?:\.[0-9])?", upper):
+        return 3
+    if "/" in upper:
+        return 3
+    return 1
+
+
+def _overlaps_marking_bbox(word: Dict, cfg: Dict) -> bool:
+    marking_bbox = cfg.get("marking_bbox")
+    word_bbox = word.get("bbox")
+    if not marking_bbox or not word_bbox:
+        return False
+    return _bbox_overlap_ratio(word_bbox, marking_bbox) >= float(
+        cfg.get("marking_reject_overlap_ratio", 0.20)
+    )
+
+
+def _dedupe_words(words: List[Dict]) -> List[Dict]:
+    deduped: List[Dict] = []
+    for word in words:
+        text = str(word.get("text") or "")
+        cx, cy = word.get("center") or [0.0, 0.0]
+        replaced = False
+        for idx, existing in enumerate(deduped):
+            if str(existing.get("text") or "") != text:
+                continue
+            ex, ey = existing.get("center") or [0.0, 0.0]
+            if abs(float(cx) - float(ex)) <= 8.0 and abs(float(cy) - float(ey)) <= 8.0:
+                if float(word.get("confidence") or 0.0) > float(existing.get("confidence") or 0.0):
+                    deduped[idx] = word
+                replaced = True
+                break
+        if not replaced:
+            deduped.append(word)
+    return deduped
+
+
+def _normalize_label_word(word: Dict) -> Dict:
+    normalized = _normalize_pin_label_text(word.get("text") or "")
+    if normalized == str(word.get("text") or ""):
+        return word
+    updated = dict(word)
+    updated["text"] = normalized
+    return updated
+
+
+def _build_inner_label_strip_bbox(
+    side_run: Dict,
+    body_bbox: List[float],
+    image_shape,
+    cfg: Dict,
+) -> Optional[List[int]]:
+    side = side_run["side"]
+    bx1, by1, bx2, by2 = [int(round(v)) for v in body_bbox]
+    band = side_run["band_bbox"]
+    body_w = max(1, bx2 - bx1)
+    body_h = max(1, by2 - by1)
+
+    if side in {"left", "right"}:
+        strip_w = max(28, min(int(round(body_w * 0.40)), int(cfg["side_inside_px"])))
+        y1 = max(by1, int(band[1]))
+        y2 = min(by2, int(band[3]))
+        if side == "left":
+            x1 = bx1 + 2
+            x2 = min(bx2 - 2, bx1 + strip_w)
+        else:
+            x1 = max(bx1 + 2, bx2 - strip_w)
+            x2 = bx2 - 2
+    else:
+        strip_h = max(24, min(int(round(body_h * 0.28)), int(cfg["top_bottom_inside_px"])))
+        x1 = max(bx1, int(band[0]))
+        x2 = min(bx2, int(band[2]))
+        if side == "top":
+            y1 = by1 + 2
+            y2 = min(by2 - 2, by1 + strip_h)
+        else:
+            y1 = max(by1 + 2, by2 - strip_h)
+            y2 = by2 - 2
+
+    bbox = _clamp_bbox([x1, y1, x2, y2], image_shape)
+    if bbox[2] <= bbox[0] or bbox[3] <= bbox[1]:
+        return None
+    return bbox
+
+
+def _prepare_inner_label_strip(crop_bgr, cfg: Dict) -> Tuple[np.ndarray, float]:
+    gray = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2GRAY)
+    gray = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(4, 4)).apply(gray)
+    scale = max(float(cfg["upscale"]), 5.0)
+    if scale != 1.0:
+        gray = cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+    _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    return binary, scale
+
+
+def _run_inner_label_strip_words(
+    image_bgr,
+    side_run: Dict,
+    body_bbox: List[float],
+    cfg: Dict,
+) -> Tuple[List[Dict], Dict]:
+    if not cfg["label_enabled"] and not cfg["label_guard_enabled"]:
+        return [], {"ok": True, "skipped": "label_disabled"}
+
+    strip_bbox = _build_inner_label_strip_bbox(side_run, body_bbox, image_bgr.shape, cfg)
+    if strip_bbox is None:
+        return [], {"ok": True, "skipped": "missing_strip_bbox"}
+
+    crop = _crop(image_bgr, strip_bbox)
+    if crop is None:
+        return [], {"ok": True, "skipped": "empty_strip_crop"}
+
+    prepared, scale = _prepare_inner_label_strip(crop, cfg)
+    strip_cfg = dict(cfg)
+    strip_cfg["label_psm"] = 6
+    words, info = _run_tesseract_words(prepared, strip_bbox, scale, strip_cfg, mode="text")
+    for word in words:
+        word["mode"] = "text_inner_strip"
+    info["strip_bbox"] = strip_bbox
+    return words, info
+
+
+def _get_easyocr_pin_reader(cfg: Dict):
+    global _EASYOCR_PIN_READER, _EASYOCR_PIN_READER_ERROR
+
+    if _EASYOCR_PIN_READER is not None:
+        return _EASYOCR_PIN_READER
+    if _EASYOCR_PIN_READER_ERROR is not None:
+        return None
+
+    try:
+        import easyocr
+        model_dir = Path(cfg.get("easyocr_label_model_storage_directory") or ".tmp/easyocr")
+        model_dir.mkdir(parents=True, exist_ok=True)
+        _EASYOCR_PIN_READER = easyocr.Reader(
+            cfg.get("easyocr_label_languages") or ["en"],
+            gpu=bool(cfg.get("easyocr_label_gpu", False)),
+            model_storage_directory=str(model_dir),
+            user_network_directory=str(model_dir),
+        )
+        return _EASYOCR_PIN_READER
+    except Exception as exc:
+        _EASYOCR_PIN_READER_ERROR = str(exc)
+        return None
+
+
+def _run_easyocr_body_label_words(image_bgr, body_bbox: List[int], cfg: Dict) -> Tuple[List[Dict], Dict]:
+    if not cfg.get("easyocr_label_enabled", True):
+        return [], {"ok": True, "skipped": "easyocr_label_disabled"}
+
+    reader = _get_easyocr_pin_reader(cfg)
+    if reader is None:
+        return [], {
+            "ok": False,
+            "error": _EASYOCR_PIN_READER_ERROR or "easyocr_unavailable",
+        }
+
+    crop = _crop(image_bgr, body_bbox)
+    if crop is None:
+        return [], {"ok": True, "skipped": "empty_body_crop"}
+
+    x0, y0, _, _ = body_bbox
+    try:
+        results = reader.readtext(
+            crop,
+            detail=1,
+            paragraph=False,
+            allowlist="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789/._+-",
+        )
+    except Exception as exc:
+        return [], {"ok": False, "error": str(exc)}
+
+    words = []
+    for box, text, confidence in results:
+        raw_text = str(text or "").strip()
+        if not raw_text:
+            continue
+
+        xs = [float(point[0]) for point in box]
+        ys = [float(point[1]) for point in box]
+        bbox = [
+            int(round(x0 + min(xs))),
+            int(round(y0 + min(ys))),
+            int(round(x0 + max(xs))),
+            int(round(y0 + max(ys))),
+        ]
+        normalized = _normalize_pin_label_text(raw_text)
+        if not normalized:
+            continue
+        words.append({
+            "text": normalized,
+            "raw_text": raw_text,
+            "confidence": round(float(confidence or 0.0), 4),
+            "bbox": bbox,
+            "center": [(bbox[0] + bbox[2]) * 0.5, (bbox[1] + bbox[3]) * 0.5],
+            "mode": "easyocr_body_label",
+        })
+
+    return words, {
+        "ok": True,
+        "word_count": len(words),
+        "engine": "easyocr",
+        "body_bbox": body_bbox,
+    }
+
+
+def _pick_best_label_word(
+    words: List[Dict],
+    lane: Dict,
+    side: str,
+    body_bbox: List[float],
+    max_distance_px: float,
+) -> Optional[Dict]:
+    if not words:
+        return None
+
+    term = lane["term"]
+    term_axis = float(term.get("y", 0.0)) if side in {"left", "right"} else float(term.get("x", 0.0))
+    ranked = []
+    for word in words:
+        edge_distance = _word_edge_distance(word, side, body_bbox)
+        if edge_distance > max_distance_px:
+            continue
+
+        cx, cy = word["center"]
+        word_axis = cy if side in {"left", "right"} else cx
+        axis_distance = abs(float(word_axis) - term_axis)
+        priority = _label_priority(word.get("text") or "")
+        ranked.append((-priority, axis_distance, edge_distance, -float(word["confidence"]), -len(word["text"]), word))
+
+    if not ranked:
+        return None
+
+    ranked.sort(key=lambda item: item[:5])
+    chosen = dict(ranked[0][5])
+    chosen["axis_distance"] = round(float(ranked[0][1]), 3)
+    chosen["edge_distance"] = round(float(ranked[0][2]), 3)
+    chosen["label_priority"] = int(-ranked[0][0])
     return chosen
 
 
@@ -1038,10 +1447,26 @@ def _should_replace_with_component_candidate(term: Dict, candidate: Dict, side: 
 
 
 def _overlaps_any_label_guard(word: Dict, label_words: List[Dict], cfg: Dict) -> bool:
-    return any(
-        _bbox_overlap_ratio(word["bbox"], label_word["bbox"]) >= cfg["reject_overlap_ratio"]
-        for label_word in label_words
-    )
+    body_bbox = cfg.get("body_bbox")
+    for label_word in label_words:
+        if _bbox_overlap_ratio(word["bbox"], label_word["bbox"]) < cfg["reject_overlap_ratio"]:
+            continue
+
+        # Inner-strip OCR can occasionally hallucinate a weak alphanumeric
+        # token over the real outline digit. Keep strong labels as guards, but
+        # do not let a weak inner token block a digit sitting right on the IC
+        # edge while the token itself is clearly deeper inside the body.
+        if body_bbox and float(label_word.get("confidence") or 0.0) < 0.30:
+            side = _closest_body_side(word, body_bbox)
+            if (
+                _closest_body_side(label_word, body_bbox) == side
+                and _word_edge_distance(word, side, body_bbox) <= 8.0
+                and _word_edge_distance(label_word, side, body_bbox) >= 18.0
+            ):
+                continue
+
+        return True
+    return False
 
 
 def _assign_lane_semantics(
@@ -1064,12 +1489,15 @@ def _assign_lane_semantics(
         lane_number_words = number_map.get(lane["terminal_id"], [])
 
         label_candidates = [
-            word for word in lane_text_words
-            if _is_label_guard_candidate(word, cfg)
+            _normalize_label_word(word) for word in lane_text_words
+            if not _overlaps_marking_bbox(word, cfg)
+            and _is_label_candidate(word, cfg)
         ]
         numeric_from_text = [
             word for word in lane_text_words
-            if word["confidence"] >= cfg["label_min_confidence"] and _is_number_text(word["text"], cfg)
+            if word["confidence"] >= cfg["label_min_confidence"]
+            and word.get("mode") != "text_inner_strip"
+            and _is_number_text(word["text"], cfg)
         ]
         numeric_fallback = [
             word for word in lane_number_words
@@ -1083,11 +1511,12 @@ def _assign_lane_semantics(
                     filtered_fallback.append(number_word)
             numeric_fallback = filtered_fallback
 
-        best_label = _pick_best_word(
+        best_label = _pick_best_label_word(
             label_candidates,
+            lane=lane,
             side=side,
             body_bbox=body_bbox,
-            max_distance_px=cfg["max_label_distance_px"],
+            max_distance_px=_label_pick_distance(side, cfg),
         )
         best_number = _pick_best_word(
             numeric_from_text,
@@ -1265,7 +1694,48 @@ def _repair_unique_pin_numbers(component: Dict) -> None:
         }
 
 
-def _lanes_needing_component_fallback(side_run: Dict, component_terminal_count: int) -> List[Dict]:
+def _valid_lane_numeric_words(debug_payload: Dict, cfg: Dict) -> List[Dict]:
+    words = []
+    for word in debug_payload.get("text_words") or []:
+        if float(word.get("confidence") or 0.0) >= cfg["label_min_confidence"] and _is_number_text(word.get("text", ""), cfg):
+            words.append(word)
+    for word in debug_payload.get("number_words") or []:
+        if float(word.get("confidence") or 0.0) >= cfg["number_min_confidence"] and _is_number_text(word.get("text", ""), cfg):
+            words.append(word)
+    return words
+
+
+def _single_digit_fallback_hint(term: Dict, lane: Dict, cfg: Dict) -> bool:
+    debug_payload = term.get("pin_ocr_debug") or {}
+    numeric_words = _valid_lane_numeric_words(debug_payload, cfg)
+    if len(numeric_words) >= 2:
+        return True
+    if any(len(str(word.get("text") or "")) >= 2 for word in numeric_words):
+        return True
+
+    best_number = debug_payload.get("best_number") or {}
+    bbox = best_number.get("bbox") or term.get("pin_number_bbox")
+    if not bbox:
+        return False
+
+    side = lane.get("side") or _terminal_side(term)
+    width, height = _bbox_size(bbox)
+    if side in {"left", "right"}:
+        return width >= 18.0 and height >= 18.0
+    return width >= 10.0 and height >= 18.0
+
+
+def _single_digit_fallback_strong_hint(term: Dict, cfg: Dict) -> bool:
+    debug_payload = term.get("pin_ocr_debug") or {}
+    numeric_words = _valid_lane_numeric_words(debug_payload, cfg)
+    if len(numeric_words) >= 2:
+        return True
+    if any(len(str(word.get("text") or "")) >= 2 for word in numeric_words):
+        return True
+    return False
+
+
+def _lanes_needing_component_fallback(side_run: Dict, component_terminal_count: int, cfg: Dict) -> List[Dict]:
     lanes = []
     for lane in side_run["lanes"]:
         term = lane["term"]
@@ -1273,15 +1743,415 @@ def _lanes_needing_component_fallback(side_run: Dict, component_terminal_count: 
         confidence = float(term.get("pin_number_confidence") or 0.0)
         if not number:
             lanes.append(lane)
-        elif component_terminal_count > 9 and len(number) == 1:
+        elif len(number) >= 2:
+            if confidence <= 0.62:
+                lanes.append(lane)
+        elif confidence <= 0.40:
             lanes.append(lane)
-        elif confidence <= 0.62:
+        elif _single_digit_fallback_strong_hint(term, cfg):
+            lanes.append(lane)
+        elif component_terminal_count > 9 and confidence <= 0.68 and _single_digit_fallback_hint(term, lane, cfg):
             lanes.append(lane)
     return lanes
 
 
+def _copy_side_run_with_terms(side_run: Dict) -> Tuple[Dict, Dict[str, Dict]]:
+    term_map: Dict[str, Dict] = {}
+    lanes = []
+    for lane in side_run["lanes"]:
+        original_term = lane["term"]
+        terminal_id = lane["terminal_id"]
+        term_copy = dict(original_term)
+        if original_term.get("pin_ocr_debug") is not None:
+            term_copy["pin_ocr_debug"] = dict(original_term.get("pin_ocr_debug") or {})
+        term_map[terminal_id] = term_copy
+        lanes.append({
+            **lane,
+            "term": term_copy,
+        })
+
+    return {
+        **side_run,
+        "lanes": lanes,
+    }, term_map
+
+
+def _process_ic_pin_side(
+    image_bgr,
+    side_run: Dict,
+    body_bbox,
+    cfg: Dict,
+    component_terminal_count: int,
+    timing_on: bool,
+    body_label_words: Optional[List[Dict]] = None,
+) -> Optional[Dict]:
+    side = side_run["side"]
+    side_start = time.perf_counter() if timing_on else None
+    crop = _crop(image_bgr, side_run["band_bbox"])
+    if crop is None:
+        return None
+
+    local_side_run, term_map = _copy_side_run_with_terms(side_run)
+
+    side_ocr_start = time.perf_counter() if timing_on else None
+    prepared, scale = _prepare_side_band(crop, cfg)
+    text_words, text_info = _run_tesseract_words(prepared, local_side_run["band_bbox"], scale, cfg, mode="text")
+    inner_label_words, inner_label_info = _run_inner_label_strip_words(
+        image_bgr,
+        local_side_run,
+        body_bbox,
+        cfg,
+    )
+    if inner_label_words:
+        text_words = _dedupe_words(text_words + inner_label_words)
+    if body_label_words:
+        side_body_words = [
+            word for word in body_label_words
+            if _bbox_overlap_ratio(word["bbox"], local_side_run["band_bbox"]) > 0.0
+        ]
+        if side_body_words:
+            text_words = _dedupe_words(text_words + side_body_words)
+    number_words, number_info = _run_tesseract_words(prepared, local_side_run["band_bbox"], scale, cfg, mode="number")
+    label_guard_words = [
+        word for word in text_words
+        if _is_label_guard_candidate(word, cfg)
+    ]
+    _assign_lane_semantics(
+        local_side_run,
+        text_words,
+        number_words,
+        body_bbox,
+        cfg,
+        side_label_guard_words=label_guard_words,
+    )
+    side_ocr_ms = _elapsed_ms(side_ocr_start) if side_ocr_start is not None else 0.0
+
+    component_words = []
+    component_fallback_ms = 0.0
+    if cfg["component_fallback_enabled"] and cfg["number_enabled"]:
+        fallback_start = time.perf_counter() if timing_on else None
+        fallback_lanes = _lanes_needing_component_fallback(
+            local_side_run,
+            component_terminal_count=component_terminal_count,
+            cfg=cfg,
+        )
+        if fallback_lanes:
+            component_words = _component_number_words(image_bgr, local_side_run, cfg, target_lanes=fallback_lanes)
+            _assign_component_number_fallback(
+                image_bgr,
+                local_side_run,
+                component_words,
+                body_bbox,
+                cfg,
+                label_guard_words=label_guard_words,
+            )
+        component_fallback_ms = _elapsed_ms(fallback_start) if fallback_start is not None else 0.0
+
+    side_debug = {
+        "side": side,
+        "band_bbox": local_side_run["band_bbox"],
+        "lane_count": len(local_side_run["lanes"]),
+        "ocr_text": text_info,
+        "ocr_number": number_info,
+        "lanes": [
+            {
+                "terminal_id": lane["terminal_id"],
+                "lane_bbox": lane["lane_bbox"],
+                "axis_range": lane["axis_range"],
+            }
+            for lane in local_side_run["lanes"]
+        ] if cfg["store_debug"] else [],
+        "text_words": text_words if cfg["store_debug"] else [],
+        "inner_label_ocr": inner_label_info,
+        "number_words": number_words if cfg["store_debug"] else [],
+        "component_words": component_words if cfg["store_debug"] else [],
+    }
+
+    return {
+        "side": side,
+        "terms": term_map,
+        "side_debug": side_debug,
+        "timing": {
+            "lane_count": len(local_side_run["lanes"]),
+            "ocr_ms": side_ocr_ms,
+            "component_fallback_ms": component_fallback_ms,
+            "total_ms": _elapsed_ms(side_start) if side_start is not None else 0.0,
+        },
+    }
+
+
+def _apply_side_term_updates(component: Dict, term_updates: Dict[str, Dict]) -> None:
+    for term in component.get("terminals", []) or []:
+        updated = term_updates.get(term.get("terminal_id"))
+        if updated is None:
+            continue
+        term["pin_number"] = updated.get("pin_number")
+        term["pin_label_text"] = updated.get("pin_label_text")
+        term["pin_number_confidence"] = updated.get("pin_number_confidence")
+        term["pin_label_confidence"] = updated.get("pin_label_confidence")
+        if updated.get("pin_number_bbox") is not None:
+            term["pin_number_bbox"] = updated.get("pin_number_bbox")
+        else:
+            term.pop("pin_number_bbox", None)
+        if updated.get("pin_label_bbox") is not None:
+            term["pin_label_bbox"] = updated.get("pin_label_bbox")
+        else:
+            term.pop("pin_label_bbox", None)
+        if updated.get("pin_ocr_debug") is not None:
+            term["pin_ocr_debug"] = updated.get("pin_ocr_debug")
+        else:
+            term.pop("pin_ocr_debug", None)
+
+
+def _score_label_for_lane(word: Dict, lane: Dict, side: str, body_bbox: List[float], cfg: Dict) -> Optional[Tuple[int, float, float, float, int]]:
+    chosen = _pick_best_label_word(
+        [word],
+        lane=lane,
+        side=side,
+        body_bbox=body_bbox,
+        max_distance_px=_label_pick_distance(side, cfg),
+    )
+    if chosen is None:
+        return None
+    return (
+        int(chosen.get("label_priority") or 0),
+        float(chosen.get("axis_distance") or 999.0),
+        float(chosen.get("edge_distance") or 999.0),
+        -float(chosen.get("confidence") or 0.0),
+        -len(str(chosen.get("text") or "")),
+    )
+
+
+def _reassign_cross_side_labels(component: Dict, side_runs: Dict[str, Dict], body_bbox: List[float], cfg: Dict) -> None:
+    lane_by_terminal: Dict[str, Dict] = {}
+    for side_run in side_runs.values():
+        for lane in side_run.get("lanes", []) or []:
+            lane_by_terminal[str(lane.get("terminal_id"))] = lane
+
+    for term in component.get("terminals", []) or []:
+        label = str(term.get("pin_label_text") or "").strip()
+        if not label:
+            continue
+
+        terminal_id = str(term.get("terminal_id") or "")
+        current_lane = lane_by_terminal.get(terminal_id)
+        if current_lane is None:
+            continue
+
+        bbox = term.get("pin_label_bbox")
+        if not bbox:
+            continue
+        word = {
+            "text": label,
+            "confidence": float(term.get("pin_label_confidence") or 0.0),
+            "bbox": bbox,
+            "center": [(float(bbox[0]) + float(bbox[2])) * 0.5, (float(bbox[1]) + float(bbox[3])) * 0.5],
+            "mode": ((term.get("pin_ocr_debug") or {}).get("best_label") or {}).get("mode", "text"),
+        }
+
+        current_side = _terminal_side(term) or ""
+        current_score = _score_label_for_lane(word, current_lane, current_side, body_bbox, cfg)
+        if current_score is None:
+            continue
+
+        best_lane = current_lane
+        best_score = current_score
+        for other_side, side_run in side_runs.items():
+            for lane in side_run.get("lanes", []) or []:
+                if lane["terminal_id"] == terminal_id:
+                    continue
+                if not _bbox_contains_point(lane["lane_bbox"], word["center"][0], word["center"][1]):
+                    continue
+                score = _score_label_for_lane(word, lane, other_side, body_bbox, cfg)
+                if score is None:
+                    continue
+                if score[:2] < best_score[:2]:
+                    best_lane = lane
+                    best_score = score
+
+        if best_lane["terminal_id"] == terminal_id:
+            continue
+
+        target = best_lane["term"]
+        target_label = str(target.get("pin_label_text") or "").strip()
+        target_conf = float(target.get("pin_label_confidence") or 0.0)
+        if target_label and target_conf >= float(term.get("pin_label_confidence") or 0.0):
+            continue
+
+        target["pin_label_text"] = term.get("pin_label_text")
+        target["pin_label_confidence"] = term.get("pin_label_confidence")
+        if term.get("pin_label_bbox") is not None:
+            target["pin_label_bbox"] = term.get("pin_label_bbox")
+        target_debug = target.setdefault("pin_ocr_debug", {})
+        best_label = ((term.get("pin_ocr_debug") or {}).get("best_label") or {})
+        if best_label:
+            target_debug["best_label"] = dict(best_label)
+
+        term["pin_label_text"] = None
+        term["pin_label_confidence"] = None
+        term.pop("pin_label_bbox", None)
+
+
+def _split_sequential_pin_label(label: str) -> Optional[Tuple[str, int]]:
+    upper = str(label or "").strip().upper()
+    if not upper:
+        return None
+    dot_match = re.fullmatch(r"([A-Z]+[0-9]+\.)\s*([0-9]{1,2})", upper)
+    if dot_match:
+        return dot_match.group(1), int(dot_match.group(2))
+    plain_match = re.fullmatch(r"([A-Z]+)\s*([0-9]{1,2})", upper)
+    if plain_match:
+        return plain_match.group(1), int(plain_match.group(2))
+    return None
+
+
+def _format_sequential_pin_label(prefix: str, index_value: int) -> str:
+    return f"{prefix}{index_value}"
+
+
+def _repair_sequential_pin_labels(component: Dict) -> None:
+    for side in ("left", "right", "top", "bottom"):
+        side_terms = [
+            term for term in sorted(component.get("terminals", []) or [], key=_terminal_sort_key)
+            if _terminal_side(term) == side
+        ]
+        if len(side_terms) < 3:
+            continue
+
+        groups: Dict[str, List[Tuple[int, Dict, int]]] = {}
+        for pos, term in enumerate(side_terms, start=1):
+            parsed = _split_sequential_pin_label(term.get("pin_label_text") or "")
+            if parsed is None:
+                continue
+            prefix, index_value = parsed
+            groups.setdefault(prefix, []).append((pos, term, index_value))
+
+        for prefix, entries in groups.items():
+            if len(entries) < 2:
+                continue
+
+            ascending_offsets: Dict[int, int] = {}
+            descending_offsets: Dict[int, int] = {}
+            for pos, _, index_value in entries:
+                ascending_offsets[index_value - pos] = ascending_offsets.get(index_value - pos, 0) + 1
+                descending_offsets[index_value + pos] = descending_offsets.get(index_value + pos, 0) + 1
+
+            best_asc = max(ascending_offsets.items(), key=lambda item: item[1])
+            best_desc = max(descending_offsets.items(), key=lambda item: item[1])
+            direction = 1
+            parameter = best_asc[0]
+            support = best_asc[1]
+            if best_desc[1] > support:
+                direction = -1
+                parameter = best_desc[0]
+                support = best_desc[1]
+            if support < 2:
+                continue
+
+            positions = [pos for pos, _, _ in entries]
+            min_pos = min(positions)
+            max_pos = max(positions)
+            start_pos = min_pos
+            end_pos = max_pos
+            if direction == 1:
+                start_pos = max(1, -parameter)
+            for pos in range(start_pos, end_pos + 1):
+                term = side_terms[pos - 1]
+                expected_index = (pos + parameter) if direction == 1 else (parameter - pos)
+                if expected_index < 0 or expected_index > 99:
+                    continue
+                desired = _format_sequential_pin_label(prefix, expected_index)
+                current = str(term.get("pin_label_text") or "").strip().upper()
+                current_conf = float(term.get("pin_label_confidence") or 0.0)
+                if current == desired:
+                    continue
+
+                current_parsed = _split_sequential_pin_label(current)
+                current_prefix = current_parsed[0] if current_parsed is not None else ""
+                if current and current_prefix not in {"", prefix} and current_conf >= 0.75:
+                    continue
+                if current and current_prefix == prefix and current_conf >= 0.75:
+                    continue
+                term["pin_label_text"] = desired
+
+
+def _remove_duplicate_sequential_labels(component: Dict) -> None:
+    side_prefix_support: Dict[Tuple[str, str], int] = {}
+    for side in ("left", "right", "top", "bottom"):
+        for term in component.get("terminals", []) or []:
+            if _terminal_side(term) != side:
+                continue
+            parsed = _split_sequential_pin_label(term.get("pin_label_text") or "")
+            if parsed is None:
+                continue
+            prefix, _ = parsed
+            key = (side, prefix)
+            side_prefix_support[key] = side_prefix_support.get(key, 0) + 1
+
+    by_label: Dict[str, List[Dict]] = {}
+    for term in component.get("terminals", []) or []:
+        label = str(term.get("pin_label_text") or "").strip().upper()
+        if not label or _split_sequential_pin_label(label) is None:
+            continue
+        by_label.setdefault(label, []).append(term)
+
+    for label, terms in by_label.items():
+        if len(terms) <= 1:
+            continue
+
+        def _term_score(term: Dict) -> Tuple[int, float]:
+            side = _terminal_side(term) or ""
+            parsed = _split_sequential_pin_label(term.get("pin_label_text") or "")
+            prefix = parsed[0] if parsed is not None else ""
+            support = side_prefix_support.get((side, prefix), 0)
+            confidence = float(term.get("pin_label_confidence") or 0.0)
+            return support, confidence
+
+        keep = max(terms, key=_term_score)
+        for term in terms:
+            if term is keep:
+                continue
+            term["pin_label_text"] = None
+            term["pin_label_confidence"] = None
+            term.pop("pin_label_bbox", None)
+
+
+def _has_ic_marking(component: Dict) -> bool:
+    return bool(str(component.get("ic_marking") or "").strip())
+
+
+def _clear_pin_labels_when_number_and_marking(component: Dict) -> int:
+    if not _has_ic_marking(component):
+        return 0
+
+    cleared = 0
+    for term in component.get("terminals", []) or []:
+        if term.get("pin_number") in (None, ""):
+            continue
+        if term.get("pin_label_text") in (None, ""):
+            continue
+
+        term["pin_label_text"] = None
+        term["pin_label_confidence"] = None
+        term.pop("pin_label_bbox", None)
+        debug_payload = term.get("pin_ocr_debug")
+        if isinstance(debug_payload, dict):
+            debug_payload["label_cleared_reason"] = "ic_marking_and_pin_number_present"
+            debug_payload.pop("best_label", None)
+        cleared += 1
+
+    return cleared
+
+
 def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
     cfg = _get_pin_ocr_cfg(meta)
+    cfg["marking_bbox"] = _get_marking_bbox(component)
+    cfg["marking_reject_overlap_ratio"] = float(
+        ((meta.get("ocr") or {}).get("pin_labels") or {}).get(
+            "marking_reject_overlap_ratio",
+            0.20,
+        )
+    )
     _reset_pin_fields(component)
     timing_on = _timing_enabled()
     total_start = time.perf_counter() if timing_on else None
@@ -1322,6 +2192,7 @@ def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
         return component
 
     component["body_bbox"] = body_bbox
+    cfg["body_bbox"] = body_bbox
     side_runs = _build_side_lanes(component, body_bbox, image_bgr.shape, cfg)
     if not side_runs:
         debug["skipped"] = True
@@ -1329,83 +2200,71 @@ def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
         component["ic_pin_ocr_debug"] = debug
         return component
 
-    for side in ("left", "right", "top", "bottom"):
-        side_run = side_runs.get(side)
-        if side_run is None:
-            continue
-        side_start = time.perf_counter() if timing_on else None
+    if _has_ic_marking(component):
+        body_label_words = []
+        body_label_info = {
+            "ok": True,
+            "skipped": "ic_marking_present_datasheet_preferred",
+        }
+    else:
+        body_label_words, body_label_info = _run_easyocr_body_label_words(image_bgr, body_bbox, cfg)
+    debug["body_label_ocr"] = body_label_info
+    if cfg["store_debug"]:
+        debug["body_label_words"] = body_label_words
 
-        crop = _crop(image_bgr, side_run["band_bbox"])
-        if crop is None:
-            continue
-
-        side_ocr_start = time.perf_counter() if timing_on else None
-        prepared, scale = _prepare_side_band(crop, cfg)
-        text_words, text_info = _run_tesseract_words(prepared, side_run["band_bbox"], scale, cfg, mode="text")
-        number_words, number_info = _run_tesseract_words(prepared, side_run["band_bbox"], scale, cfg, mode="number")
-        label_guard_words = [
-            word for word in text_words
-            if _is_label_guard_candidate(word, cfg)
-        ]
-        _assign_lane_semantics(
-            side_run,
-            text_words,
-            number_words,
-            body_bbox,
-            cfg,
-            side_label_guard_words=label_guard_words,
-        )
-        side_ocr_ms = _elapsed_ms(side_ocr_start) if side_ocr_start is not None else 0.0
-        component_words = []
-        component_fallback_ms = 0.0
-        if cfg["component_fallback_enabled"] and cfg["number_enabled"]:
-            fallback_start = time.perf_counter() if timing_on else None
-            fallback_lanes = _lanes_needing_component_fallback(
-                side_run,
+    ordered_sides = [side for side in ("left", "right", "top", "bottom") if side_runs.get(side) is not None]
+    side_results: Dict[str, Dict] = {}
+    max_workers = min(4, len(ordered_sides))
+    if max_workers <= 1:
+        for side in ordered_sides:
+            result = _process_ic_pin_side(
+                image_bgr,
+                side_runs[side],
+                body_bbox,
+                cfg,
                 component_terminal_count=len(component.get("terminals", []) or []),
+                timing_on=timing_on,
+                body_label_words=body_label_words,
             )
-            if fallback_lanes:
-                component_words = _component_number_words(image_bgr, side_run, cfg, target_lanes=fallback_lanes)
-                _assign_component_number_fallback(
+            if result is not None:
+                side_results[side] = result
+    else:
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                side: executor.submit(
+                    _process_ic_pin_side,
                     image_bgr,
-                    side_run,
-                    component_words,
+                    side_runs[side],
                     body_bbox,
                     cfg,
-                    label_guard_words=label_guard_words,
+                    len(component.get("terminals", []) or []),
+                    timing_on,
+                    body_label_words,
                 )
-            component_fallback_ms = _elapsed_ms(fallback_start) if fallback_start is not None else 0.0
-
-        if timing_on:
-            debug["timing_ms"]["side_ocr_ms"] += side_ocr_ms
-            debug["timing_ms"]["component_fallback_ms"] += component_fallback_ms
-            debug["timing_ms"]["sides"][side] = {
-                "lane_count": len(side_run["lanes"]),
-                "ocr_ms": side_ocr_ms,
-                "component_fallback_ms": component_fallback_ms,
-                "total_ms": _elapsed_ms(side_start) if side_start is not None else 0.0,
+                for side in ordered_sides
             }
+            for side in ordered_sides:
+                result = futures[side].result()
+                if result is not None:
+                    side_results[side] = result
 
-        debug["side_runs"].append({
-            "side": side,
-            "band_bbox": side_run["band_bbox"],
-            "lane_count": len(side_run["lanes"]),
-            "ocr_text": text_info,
-            "ocr_number": number_info,
-            "lanes": [
-                {
-                    "terminal_id": lane["terminal_id"],
-                    "lane_bbox": lane["lane_bbox"],
-                    "axis_range": lane["axis_range"],
-                }
-                for lane in side_run["lanes"]
-            ] if cfg["store_debug"] else [],
-            "text_words": text_words if cfg["store_debug"] else [],
-            "number_words": number_words if cfg["store_debug"] else [],
-            "component_words": component_words if cfg["store_debug"] else [],
-        })
+    for side in ordered_sides:
+        result = side_results.get(side)
+        if result is None:
+            continue
+        _apply_side_term_updates(component, result["terms"])
+        if timing_on:
+            debug["timing_ms"]["side_ocr_ms"] += float(result["timing"]["ocr_ms"])
+            debug["timing_ms"]["component_fallback_ms"] += float(result["timing"]["component_fallback_ms"])
+            debug["timing_ms"]["sides"][side] = result["timing"]
+        debug["side_runs"].append(result["side_debug"])
 
+    _reassign_cross_side_labels(component, side_runs, body_bbox, cfg)
+    _repair_sequential_pin_labels(component)
+    _remove_duplicate_sequential_labels(component)
     _repair_unique_pin_numbers(component)
+    if cfg["skip_labels_when_marking_and_number"]:
+        debug["labels_cleared_count"] = _clear_pin_labels_when_number_and_marking(component)
 
     assigned_count = sum(
         1

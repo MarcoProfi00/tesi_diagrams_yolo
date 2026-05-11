@@ -124,6 +124,8 @@ def draw_ic_ocr_summary(image_bgr, components):
     weak_ocr_color = (0, 165, 255)          # arancione: OCR debole/incerto
     very_weak_ocr_color = (0, 0, 255)       # rosso: OCR molto debole o assente
     display_color = (180, 60, 180)          # viola: display 7 segmenti / non-IC marking
+    pin_number_color = (40, 190, 40)        # verde: numero pin OCR
+    pin_label_color = (210, 80, 210)        # magenta: label pin OCR
 
     text_color = (35, 35, 35)
     label_bg_color = (245, 245, 245)
@@ -339,6 +341,56 @@ def draw_ic_ocr_summary(image_bgr, components):
         suffix = "?" if conf is not None and conf < 0.40 else ""
         return f"{instance_id}: {marking} ({conf_text}) [{'/' .join(parts)}] {suffix}".strip()
 
+    def draw_pin_ocr_boxes(comp):
+        """
+        Disegna i valori finali selezionati per pin_number e pin_label_text.
+
+        Non usiamo il bbox OCR come riferimento principale: alcune label possono
+        essere normalizzate o ricostruite, quindi il bbox grezzo potrebbe
+        circondare una parola diversa dal valore finale salvato nel JSON.
+        """
+        def pin_label_anchor(term, line_index):
+            x = int(round(float(term.get("x", 0.0))))
+            y = int(round(float(term.get("y", 0.0))))
+            side = term.get("relative_position")
+            line_gap = 17
+
+            if side == "left":
+                return max(0, x - 74), max(18, y - 8 + line_index * line_gap)
+            if side == "right":
+                return x + 10, max(18, y - 8 + line_index * line_gap)
+            if side == "top":
+                return max(0, x - 28), max(18, y - 24 - line_index * line_gap)
+            if side == "bottom":
+                return max(0, x - 28), y + 22 + line_index * line_gap
+            return x + 10, y + 10 + line_index * line_gap
+
+        for term in comp.get("terminals", []):
+            pin_number = term.get("pin_number")
+            pin_label = term.get("pin_label_text")
+            line_index = 0
+
+            if pin_number not in (None, ""):
+                ax, ay = pin_label_anchor(term, line_index)
+                draw_label(
+                    f"pin {pin_number}",
+                    ax,
+                    ay,
+                    pin_number_color,
+                    small_font_scale,
+                )
+                line_index += 1
+
+            if pin_label not in (None, ""):
+                ax, ay = pin_label_anchor(term, line_index)
+                draw_label(
+                    str(pin_label),
+                    ax,
+                    ay,
+                    pin_label_color,
+                    small_font_scale,
+                )
+
     # ---------------------------------------------------------
     # Disegno di ogni Integrated_Circuit.
     # ---------------------------------------------------------
@@ -384,6 +436,7 @@ def draw_ic_ocr_summary(image_bgr, components):
             label = f"{instance_id}: DISPLAY_7SEG"
             draw_label(label, bx1, max(by1 - 6, 0), display_color, label_font_scale)
             cv2.rectangle(out, (bx1, by1), (bx2, by2), display_color, 2)
+            draw_pin_ocr_boxes(comp)
             continue
 
         # -----------------------------------------------------
@@ -407,6 +460,7 @@ def draw_ic_ocr_summary(image_bgr, components):
                 ocr_mode=ocr_mode,
             )
             draw_label(label, bx1, max(by1 - 6, 0), result_color, label_font_scale)
+            draw_pin_ocr_boxes(comp)
             continue
 
         # -----------------------------------------------------
@@ -421,10 +475,11 @@ def draw_ic_ocr_summary(image_bgr, components):
 
         draw_label(label, bx1, max(by1 - 6, 0), very_weak_ocr_color, label_font_scale)
         cv2.rectangle(out, (bx1, by1), (bx2, by2), very_weak_ocr_color, 1)
+        draw_pin_ocr_boxes(comp)
 
     # Piccola legenda compatta in alto a sinistra.
     draw_label(
-        "IC OCR: cyan=body, gray=YOLO, text box=result | green good, yellow mid, orange weak, red none/low, purple display",
+        "IC OCR: cyan=body, gray=YOLO, OCR box=marking | green pin number, magenta pin label",
         8,
         24,
         body_bbox_color,

@@ -23,6 +23,7 @@ Casi speciali:
     prima stimiamo i lati attivi, poi cerchiamo il picco di connessione lungo il lato.
 """
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import os
 import json
@@ -71,6 +72,21 @@ IC_OCR_TIMING_ENABLED = _env_flag("IC_OCR_TIMING", default=False)
 
 def _elapsed_ms(start_time: float) -> float:
     return round((time.perf_counter() - start_time) * 1000.0, 1)
+
+
+def _collect_ic_timing(file_timing: dict, component: dict) -> None:
+    if not IC_OCR_TIMING_ENABLED or component.get("class_name") != "Integrated_Circuit":
+        return
+
+    timing = component.get("_ic_timing") or {}
+    pin_debug = component.get("ic_pin_ocr_debug") or {}
+    pin_timing = pin_debug.get("timing_ms") or {}
+    file_timing["ic_count"] += 1
+    file_timing["marking_ms"] += float(timing.get("marking_ms") or 0.0)
+    file_timing["pin_ms"] += float(timing.get("pin_ms") or 0.0)
+    file_timing["ic_total_ms"] += float(timing.get("total_ms") or 0.0)
+    file_timing["pin_side_ocr_ms"] += float(pin_timing.get("side_ocr_ms") or 0.0)
+    file_timing["pin_side_fallback_ms"] += float(pin_timing.get("component_fallback_ms") or 0.0)
 
 
 # =========================================================
@@ -383,10 +399,10 @@ def main() -> None:
 
         image_binary = img_build_foreground_binary(image_bgr)
         components = data.get("components", [])
-        all_terminals = []
         updated_components = []
+        ic_component_indexes = []
 
-        for comp in components:
+        for comp_idx, comp in enumerate(components):
             comp_copy = dict(comp)
             terminals, estimated_orientation, connected_side, side_scores = estimate_terminals_for_component(comp_copy, class_meta, image_binary)
             comp_copy["terminals"] = terminals
@@ -420,30 +436,36 @@ def main() -> None:
             #
             # Questa funzione NON crea terminali e NON cambia gli ID.
             # ---------------------------------------------------------
-            comp_copy = enrich_integrated_circuit_if_needed(
-                component=comp_copy,
-                class_meta=class_meta,
-                image_bgr=image_bgr,
-)
-
-            if IC_OCR_TIMING_ENABLED and comp_copy.get("class_name") == "Integrated_Circuit":
-                timing = comp_copy.get("_ic_timing") or {}
-                pin_debug = comp_copy.get("ic_pin_ocr_debug") or {}
-                pin_timing = pin_debug.get("timing_ms") or {}
-                file_timing["ic_count"] += 1
-                file_timing["marking_ms"] += float(timing.get("marking_ms") or 0.0)
-                file_timing["pin_ms"] += float(timing.get("pin_ms") or 0.0)
-                file_timing["ic_total_ms"] += float(timing.get("total_ms") or 0.0)
-                file_timing["pin_side_ocr_ms"] += float(pin_timing.get("side_ocr_ms") or 0.0)
-                file_timing["pin_side_fallback_ms"] += float(pin_timing.get("component_fallback_ms") or 0.0)
-
             updated_components.append(comp_copy)
+            if comp_copy.get("class_name") == "Integrated_Circuit":
+                ic_component_indexes.append(comp_idx)
 
             # Usiamo comp_copy["terminals"] invece della variabile locale terminals:
             # oggi l'OCR legge solo il marking e non modifica i terminali, ma nello
             # step successivo l'OCR dei pin aggiornerà proprio comp_copy["terminals"].
             # Così il codice è già pronto per l'estensione successiva.
-            all_terminals.extend(comp_copy.get("terminals", []))
+        if len(ic_component_indexes) <= 1:
+            for comp_idx in ic_component_indexes:
+                updated_components[comp_idx] = enrich_integrated_circuit_if_needed(
+                    component=updated_components[comp_idx],
+                    class_meta=class_meta,
+                    image_bgr=image_bgr,
+                )
+                _collect_ic_timing(file_timing, updated_components[comp_idx])
+        elif ic_component_indexes:
+            with ThreadPoolExecutor(max_workers=min(2, len(ic_component_indexes))) as executor:
+                futures = {
+                    comp_idx: executor.submit(
+                        enrich_integrated_circuit_if_needed,
+                        component=updated_components[comp_idx],
+                        class_meta=class_meta,
+                        image_bgr=image_bgr,
+                    )
+                    for comp_idx in ic_component_indexes
+                }
+                for comp_idx in ic_component_indexes:
+                    updated_components[comp_idx] = futures[comp_idx].result()
+                    _collect_ic_timing(file_timing, updated_components[comp_idx])
 
         snap_opamp_top_aux_to_nearby_terminal(updated_components, image_binary)
 
