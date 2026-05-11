@@ -163,7 +163,7 @@ def _get_pin_ocr_cfg(meta: Dict) -> Dict:
         "ocr_enabled": bool(ocr_root.get("enabled", False)),
         "enabled": bool(cfg.get("enabled", False)),
         "strategy": cfg.get("strategy", "side_lane_candidates_v1"),
-        "skip_component_subtypes": set(cfg.get("skip_component_subtypes", ["seven_segment_display"])),
+        "skip_component_subtypes": set(cfg.get("skip_component_subtypes", [])),
         "store_debug": bool(cfg.get("store_debug", True)),
         "number_enabled": bool(number_cfg.get("enabled", True)),
         "number_psm": int(number_cfg.get("psm", 11)),
@@ -951,6 +951,8 @@ def _normalize_pin_label_text(text: str) -> str:
     compact = re.sub(r"\s+", "", text)
     upper = compact.upper()
 
+    if re.fullmatch(r"[A-H]", upper):
+        return upper.lower()
     if upper in _SHORT_PIN_LABELS:
         return upper
     if upper in _PIN_LABEL_OCR_ALIASES:
@@ -968,6 +970,19 @@ def _normalize_pin_label_text(text: str) -> str:
     if re.fullmatch(r"P[OQ0]\.?[0-7]", upper):
         return f"P0.{upper[-1]}"
     return compact
+
+
+def _normalize_label_text_for_cfg(text: str, cfg: Dict) -> str:
+    normalized = _normalize_pin_label_text(text)
+    if cfg.get("component_subtype") != "seven_segment_display":
+        return normalized
+
+    compact = re.sub(r"\s+", "", str(text or "")).upper()
+    seven_segment_aliases = {
+        "4": "a",
+        "Q": "g",
+    }
+    return seven_segment_aliases.get(compact, normalized)
 
 
 def _is_rejected_pin_label(text: str) -> bool:
@@ -1000,7 +1015,7 @@ def _is_ocr_alias_acceptable(raw_text: str, normalized_text: str, word: Dict, cf
 
 def _is_label_candidate(word: Dict, cfg: Dict) -> bool:
     raw_text = str(word.get("text") or "")
-    text = _normalize_pin_label_text(word.get("text") or "")
+    text = _normalize_label_text_for_cfg(word.get("text") or "", cfg)
     confidence = float(word.get("confidence") or 0.0)
     if not text or _is_number_text(text, cfg):
         return False
@@ -1014,6 +1029,11 @@ def _is_label_candidate(word: Dict, cfg: Dict) -> bool:
     upper = text.upper()
     digit_count = sum(ch.isdigit() for ch in upper)
     if len(upper) < 2:
+        if (
+            cfg.get("component_subtype") == "seven_segment_display"
+            and re.fullmatch(r"[A-H]", upper)
+        ):
+            return confidence >= max(cfg["label_min_confidence"], 0.05)
         return False
     if upper in _SHORT_PIN_LABELS:
         if upper == "CS" and word.get("mode") == "text_inner_strip":
@@ -1040,7 +1060,7 @@ def _is_label_candidate(word: Dict, cfg: Dict) -> bool:
 
 
 def _is_label_guard_candidate(word: Dict, cfg: Dict) -> bool:
-    text = _normalize_pin_label_text(word.get("text") or "")
+    text = _normalize_label_text_for_cfg(word.get("text") or "", cfg)
     confidence = float(word.get("confidence") or 0.0)
     if not text or not re.search(r"[A-Za-z]", text):
         return False
@@ -1050,6 +1070,11 @@ def _is_label_guard_candidate(word: Dict, cfg: Dict) -> bool:
         return False
 
     upper = text.upper()
+    if (
+        cfg.get("component_subtype") == "seven_segment_display"
+        and re.fullmatch(r"[A-H]", upper)
+    ):
+        return confidence >= 0.03
     if upper in _SHORT_PIN_LABELS:
         return confidence >= 0.08
     if re.match(r"^[A-Z][0-9]{1,2}(?:\.[0-9])?$", upper):
@@ -1135,8 +1160,8 @@ def _dedupe_words(words: List[Dict]) -> List[Dict]:
     return deduped
 
 
-def _normalize_label_word(word: Dict) -> Dict:
-    normalized = _normalize_pin_label_text(word.get("text") or "")
+def _normalize_label_word(word: Dict, cfg: Dict) -> Dict:
+    normalized = _normalize_label_text_for_cfg(word.get("text") or "", cfg)
     if normalized == str(word.get("text") or ""):
         return word
     updated = dict(word)
@@ -1489,7 +1514,7 @@ def _assign_lane_semantics(
         lane_number_words = number_map.get(lane["terminal_id"], [])
 
         label_candidates = [
-            _normalize_label_word(word) for word in lane_text_words
+            _normalize_label_word(word, cfg) for word in lane_text_words
             if not _overlaps_marking_bbox(word, cfg)
             and _is_label_candidate(word, cfg)
         ]
@@ -2143,8 +2168,133 @@ def _clear_pin_labels_when_number_and_marking(component: Dict) -> int:
     return cleared
 
 
+def _is_seven_segment_label(label: str) -> bool:
+    upper = str(label or "").strip().upper()
+    return bool(re.fullmatch(r"[A-H]", upper) or upper == "COM")
+
+
+def _prune_seven_segment_display_terminals(component: Dict) -> int:
+    if (
+        component.get("component_subtype") != "seven_segment_display"
+        and component.get("display_type") != "seven_segment"
+    ):
+        return 0
+
+    terminals = component.get("terminals") or []
+    if not terminals:
+        return 0
+
+    for term in terminals:
+        term["pin_number"] = None
+        term["pin_number_confidence"] = None
+        term.pop("pin_number_bbox", None)
+
+    by_side = {
+        side: [
+            term for term in sorted(terminals, key=_terminal_sort_key)
+            if _terminal_side(term) == side
+        ]
+        for side in ("left", "right", "top", "bottom")
+    }
+
+    def _label_support(side_terms: List[Dict]) -> Tuple[int, int]:
+        labels = {
+            str(term.get("pin_label_text") or "").strip().lower()
+            for term in side_terms
+            if _is_seven_segment_label(term.get("pin_label_text") or "")
+        }
+        segment_labels = {label for label in labels if re.fullmatch(r"[a-h]", label)}
+        return len(segment_labels), len(labels)
+
+    candidates = []
+    for side in ("left", "right"):
+        side_terms = by_side[side]
+        segment_count, label_count = _label_support(side_terms)
+        candidates.append((
+            segment_count,
+            label_count,
+            len(side_terms),
+            side,
+        ))
+    candidates.sort(reverse=True)
+    _, _, vertical_count, label_side = candidates[0]
+    if vertical_count < 7:
+        return 0
+
+    cap_terms = by_side["bottom"] if by_side["bottom"] else by_side["top"]
+    if not cap_terms:
+        return 0
+
+    label_terms = by_side[label_side]
+    if vertical_count >= 8:
+        keep_terms = label_terms[:8] + cap_terms[:1]
+    elif vertical_count == 7 and len(cap_terms) >= 2:
+        keep_terms = label_terms[:7] + cap_terms[:2]
+    else:
+        return 0
+
+    if len(keep_terms) > 9:
+        keep_terms = keep_terms[:9]
+
+    keep_ids = {id(term) for term in keep_terms}
+    removed_terms = [
+        term for term in terminals
+        if id(term) not in keep_ids
+    ]
+    removed = len(terminals) - len(keep_terms)
+    if removed <= 0:
+        return 0
+
+    kept_labels = {
+        str(term.get("pin_label_text") or "").strip().lower()
+        for term in keep_terms
+        if term.get("pin_label_text")
+    }
+    if "com" not in kept_labels:
+        removed_com = [
+            term for term in removed_terms
+            if str(term.get("pin_label_text") or "").strip().lower() == "com"
+        ]
+        cap_unlabeled = [
+            term for term in keep_terms
+            if _terminal_side(term) in {"top", "bottom"}
+            and not term.get("pin_label_text")
+        ]
+        if removed_com and cap_unlabeled:
+            source = max(
+                removed_com,
+                key=lambda term: float(term.get("pin_label_confidence") or 0.0),
+            )
+            target = cap_unlabeled[-1]
+            target["pin_label_text"] = "com"
+            target["pin_label_confidence"] = source.get("pin_label_confidence")
+            if source.get("pin_label_bbox") is not None:
+                target["pin_label_bbox"] = source.get("pin_label_bbox")
+            target_debug = target.setdefault("pin_ocr_debug", {})
+            target_debug["seven_segment_label_transfer"] = {
+                "from_terminal_id": source.get("terminal_id"),
+                "label": "com",
+                "reason": "com_label_read_on_pruned_side",
+            }
+
+    component["terminals"] = [
+        term for term in terminals
+        if id(term) in keep_ids
+    ]
+    debug = component.setdefault("seven_segment_terminal_filter_debug", {})
+    debug.update({
+        "removed_count": removed,
+        "kept_count": len(component["terminals"]),
+        "label_side": label_side,
+        "side_counts": {side: len(terms) for side, terms in by_side.items()},
+        "reason": "keep_best_label_side_plus_common_side",
+    })
+    return removed
+
+
 def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
     cfg = _get_pin_ocr_cfg(meta)
+    cfg["component_subtype"] = component.get("component_subtype")
     cfg["marking_bbox"] = _get_marking_bbox(component)
     cfg["marking_reject_overlap_ratio"] = float(
         ((meta.get("ocr") or {}).get("pin_labels") or {}).get(
@@ -2265,6 +2415,7 @@ def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
     _repair_unique_pin_numbers(component)
     if cfg["skip_labels_when_marking_and_number"]:
         debug["labels_cleared_count"] = _clear_pin_labels_when_number_and_marking(component)
+    debug["seven_segment_removed_terminals"] = _prune_seven_segment_display_terminals(component)
 
     assigned_count = sum(
         1
