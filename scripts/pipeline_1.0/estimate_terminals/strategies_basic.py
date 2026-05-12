@@ -527,6 +527,42 @@ def strategy_detect_two_terminal_orientation_switch(binary, bbox, default_orient
     side_scores["decision_mode"] = "switch_default_orientation_fallback"
     return default_orientation, side_scores
 
+
+def detect_switch_terminals(binary, bbox, default_orientation="horizontal"):
+    """
+    Stima i terminali dello switch.
+
+    Di solito lo switch e' orizzontale o verticale, ma alcuni simboli aperti
+    hanno un contatto sul lato e l'altro su un rail sopra/sotto.
+    In quei casi ritorniamo direttamente due lati non opposti.
+    """
+    side_scores = get_local_terminal_probe_scores_multi_anchor(binary, bbox)
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+
+    # Esempio tipico: contatto verso il pin a sinistra e rail sopra.
+    if (
+        height >= width * 1.8
+        and side_scores.get("top", 0) >= 20
+        and side_scores.get("bottom", 0) <= 3
+        and side_scores.get("left", 0) >= 10
+    ):
+        side_scores["decision_mode"] = "switch_corner_top_left"
+        side_scores["bbox_width"] = width
+        side_scores["bbox_height"] = height
+        return [
+            {"name": "t1", "relative_position": "left"},
+            {"name": "t2", "relative_position": "top"},
+        ], "top_left", side_scores
+
+    orientation, orientation_scores = strategy_detect_two_terminal_orientation_switch(
+        binary,
+        bbox,
+        default_orientation=default_orientation,
+    )
+    return None, orientation, orientation_scores
+
 # Valutare una orientazione ipotetica (horizontal o vertical) attraverso due punti terminali candidati.
 def _score_two_terminal_candidate_by_points(binary, bbox, orientation):
     if orientation == "horizontal":

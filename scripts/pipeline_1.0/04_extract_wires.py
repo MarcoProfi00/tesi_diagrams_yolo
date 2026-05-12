@@ -74,9 +74,9 @@ CLASS_TERMINAL_KEEP_OVERRIDES = {
         "outward_len": 14,
     },
     "Connector": {
-        "radius": 8,
-        "thickness": 6,
-        "inward_len": 3,
+        "radius": 3,
+        "thickness": 3,
+        "inward_len": 1,
         "outward_len": 14,
     },
     "Switch": {

@@ -146,6 +146,18 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
                 else:
                     point_debug["anchor_offset_ratio"] = round((y - y1) / height, 4)
 
+        if (
+            component.get("class_name") == "Motor"
+            and estimated_orientation == "vertical"
+            and rel_pos == "bottom"
+        ):
+            x1, _, _, y2 = bbox
+            x = round(float(x1) - TERMINAL_OUTWARD_OFFSET, 2)
+            y = round(float(y2), 2)
+            rel_pos = "left"
+            point_debug["point_mode"] = "motor_vertical_lower_side_contact"
+            point_debug["anchor_offset_ratio"] = 1.0
+
         #arricchimento semantico
         terminals.append({
             "terminal_id": f"{instance_id}:{term_name}",

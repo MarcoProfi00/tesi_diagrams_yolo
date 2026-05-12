@@ -6,13 +6,14 @@ from .canonical_export import build_canonical_components
 from .crossings import split_bridge_labels
 from .graph_utils import build_terminal_graph
 from .grouping import build_label_to_terminal_ids, remove_non_shorting_component_self_matches
-from .heuristics_bjt import merge_bjt_base_aligned_labels
+from .heuristics_connector import build_connector_aligned_gnd_edges, fix_stacked_connector_gnd_crossing_edges
 from .heuristics_inductor import (
     build_vertical_inductor_parallel_direct_edges,
     merge_near_horizontal_stub_labels,
 )
 from .heuristics_mosfet import merge_mosfet_gate_aligned_labels, merge_mosfet_gate_rail_groups
 from .heuristics_opamp import merge_opamp_aux_external_terminal_labels
+from .heuristics_seven_segment import build_seven_segment_shared_segment_edges
 from .heuristics_supply import build_supply_graph_links, merge_battery_gate_rail_groups
 from .ids import build_simple_id_map, build_simple_list, build_simple_terminal_graph
 from .io_utils import load_binary_image
@@ -74,13 +75,6 @@ def build_terminal_graph_for_image(data: dict):
 
     # Gruppi di terminali che insistono sullo stesso tratto di filo.
     label_to_terminal_ids = build_label_to_terminal_ids(terminal_match_debug)
-    label_to_terminal_ids = merge_bjt_base_aligned_labels(
-        label_to_terminal_ids,
-        terminals,
-        components,
-        terminal_match_debug,
-        labels,
-    )
     label_to_terminal_ids = merge_mosfet_gate_aligned_labels(
         label_to_terminal_ids,
         terminals,
@@ -129,6 +123,17 @@ def build_terminal_graph_for_image(data: dict):
         terminal_match_debug,
         labels,
     ):
+        terminal_graph.setdefault(source_id, [])
+        terminal_graph.setdefault(target_id, [])
+        terminal_graph[source_id].append(target_id)
+        terminal_graph[target_id].append(source_id)
+    for source_id, target_id in build_connector_aligned_gnd_edges(terminals, terminal_graph):
+        terminal_graph.setdefault(source_id, [])
+        terminal_graph.setdefault(target_id, [])
+        terminal_graph[source_id].append(target_id)
+        terminal_graph[target_id].append(source_id)
+    fix_stacked_connector_gnd_crossing_edges(terminals, terminal_graph)
+    for source_id, target_id in build_seven_segment_shared_segment_edges(components):
         terminal_graph.setdefault(source_id, [])
         terminal_graph.setdefault(target_id, [])
         terminal_graph[source_id].append(target_id)

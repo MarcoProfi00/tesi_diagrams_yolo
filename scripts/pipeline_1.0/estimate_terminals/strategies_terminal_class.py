@@ -522,6 +522,36 @@ def _adjacent_two_side_evidence(local_scores, far_scores, shape_info, combined_s
     }
 
 
+def _border_inward_one_side(binary, bbox, combined_scores, far_scores):
+    x1, y1, x2, y2 = bbox
+    h, w = binary.shape[:2]
+    border_margin = max(
+        TERMINAL_BORDER_MARGIN_MIN,
+        int(round(TERMINAL_BORDER_MARGIN_RATIO * min(w, h))),
+    )
+
+    candidates = []
+    if y1 <= border_margin:
+        candidates.append("bottom")
+    if y2 >= h - border_margin:
+        candidates.append("top")
+    if x1 <= border_margin:
+        candidates.append("right")
+    if x2 >= w - border_margin:
+        candidates.append("left")
+
+    valid = [
+        side
+        for side in candidates
+        if far_scores.get(side, 0) >= TERMINAL_CLASS_FAR_MIN
+        and combined_scores.get(side, 0) >= TERMINAL_CLASS_ONE_SIDE_MIN
+    ]
+    if not valid:
+        return None
+
+    return max(valid, key=lambda side: combined_scores.get(side, 0))
+
+
 # Classify terminal cardinality.
 def classify_terminal_cardinality(binary, bbox, default_side="right", text_suppression_debug=None):
     local_scores = get_terminal_class_probe_scores(binary, bbox)
@@ -586,6 +616,17 @@ def classify_terminal_cardinality(binary, bbox, default_side="right", text_suppr
     horizontal_relaxed_shape_ok = shape_info["is_near_square"] or shape_info["is_horizontal"]
     vertical_relaxed_shape_ok = shape_info["is_near_square"] or shape_info["is_vertical"]
     relaxed_two_single_margin = 1.12
+    border_inward_side = _border_inward_one_side(
+        binary,
+        bbox,
+        single_eval["combined_scores"],
+        far_scores,
+    )
+    local_scores["border_inward_one_side"] = border_inward_side
+
+    if border_inward_side is not None:
+        local_scores["decision_mode"] = "terminal_cardinality_border_inward_one"
+        return 1, border_inward_side, local_scores
 
     if (
         horiz_eval["valid"]
@@ -906,6 +947,10 @@ def detect_terminal_auto_one_or_two(binary, bbox, default_side="right"):
     scores["terminal_text_suppression_debug"] = text_suppression_debug
 
     if cardinality == 1:
+        if scores.get("decision_mode") == "terminal_cardinality_border_inward_one":
+            scores["final_mode"] = "one_terminal"
+            return [{"name": "t1", "relative_position": mode}], mode, scores
+
         terminals_def, orientation = detect_terminal_one_side(
             working_binary,
             bbox,

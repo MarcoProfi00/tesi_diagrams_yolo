@@ -37,7 +37,10 @@ from estimate_terminals.config import SAVE_DEBUG_IMAGES
 from estimate_terminals.strategies_opamp import snap_opamp_top_aux_to_nearby_terminal
 from estimate_terminals.state_switch import estimate_switch_open_closed_state
 from estimate_terminals.ocr_integrated_circuit import enrich_ic_marking_ocr
-from estimate_terminals.ocr_integrated_circuit_pins import enrich_ic_pin_ocr
+from estimate_terminals.ocr_integrated_circuit_pins import (
+    enrich_ic_pin_ocr,
+    normalize_seven_segment_display_terminals,
+)
 
 #PATH / INPUT-OUTPUT
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -468,6 +471,8 @@ def main() -> None:
                     _collect_ic_timing(file_timing, updated_components[comp_idx])
 
         snap_opamp_top_aux_to_nearby_terminal(updated_components, image_binary)
+        for component in updated_components:
+            normalize_seven_segment_display_terminals(component)
 
         # ---------------------------------------------------------
         # Ricostruiamo all_terminals dopo eventuali post-processing.

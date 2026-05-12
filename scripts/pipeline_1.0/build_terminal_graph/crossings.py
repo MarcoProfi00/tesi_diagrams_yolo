@@ -253,7 +253,6 @@ def split_bridge_labels(
     if not split_points:
         return label_to_terminal_ids
 
-    plain_crossing_labels = {int(crossing["label"]) for crossing in plain_crossings}
     split_labels_to_rebuild = {int(point["label"]) for point in split_points}
     if not split_labels_to_rebuild:
         return label_to_terminal_ids
@@ -361,10 +360,9 @@ def split_bridge_labels(
             handled_original_labels.add(original_label)
             continue
 
-        plain_touched_split = original_label in plain_crossing_labels
         creates_singleton = any(len(set(group)) < 2 for group in related_groups)
 
-        if plain_touched_split and creates_singleton:
+        if creates_singleton:
             final_groups.append(list(terminal_ids))
         else:
             final_groups.extend(related_groups)

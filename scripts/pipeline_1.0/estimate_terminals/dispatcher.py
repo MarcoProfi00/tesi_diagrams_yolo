@@ -11,6 +11,7 @@ from .strategies_basic import (
     detect_two_terminal_orientation_resistor,
     detect_two_terminal_orientation_round_source,
     detect_two_terminal_orientation_variable_resistor,
+    detect_switch_terminals,
     resolve_one_terminal_orientation,
     strategy_detect_connected_side,
     strategy_detect_two_terminal_orientation_generic,
@@ -182,6 +183,12 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
         if image_binary is None:
             raise ValueError("one_terminal_by_orientation richiede image_binary.")
 
+        if meta.get("name") == "GND":
+            default_orientation = meta.get("default_orientation", "up")
+            return _get_oriented_terminals(meta, default_orientation), default_orientation, "top", {
+                "decision_mode": "gnd_fixed_top"
+            }
+
         connected_side, side_scores = strategy_detect_connected_side(image_binary, bbox)
 
         if connected_side is not None:
@@ -212,6 +219,15 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
             terminals_def, orientation, side_scores = detect_breaker_terminals(
                 image_binary,
                 bbox,
+            )
+            if terminals_def is not None:
+                return terminals_def, orientation, None, side_scores
+
+        if class_name == "Switch":
+            terminals_def, orientation, side_scores = detect_switch_terminals(
+                image_binary,
+                bbox,
+                default_orientation=default_orientation,
             )
             if terminals_def is not None:
                 return terminals_def, orientation, None, side_scores

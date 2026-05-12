@@ -2382,6 +2382,58 @@ def _is_seven_segment_label(label: str) -> bool:
     return bool(re.fullmatch(r"[A-H]", upper) or upper == "COM")
 
 
+def _rename_terminal_for_side(component: Dict, term: Dict, side: str, index: int) -> None:
+    instance_id = str(component.get("instance_id") or term.get("instance_id") or "")
+    name = f"{side}_{index}"
+    term["name"] = name
+    term["display_name"] = name
+    term["relative_position"] = side
+    if instance_id:
+        term["terminal_id"] = f"{instance_id}:{name}"
+        term["display_terminal_id"] = f"{instance_id}:{name}"
+
+
+def _normalize_seven_segment_h_terminal(
+    component: Dict,
+    label_side: str,
+    label_terms: List[Dict],
+    cap_terms: List[Dict],
+) -> None:
+    if len(label_terms) != 7 or len(cap_terms) < 2:
+        return
+
+    label_values = {
+        str(term.get("pin_label_text") or "").strip().lower()
+        for term in label_terms
+    }
+    if not all(label in label_values for label in ("a", "b", "c", "d", "e", "f", "g")):
+        return
+
+    h_terms = [
+        term for term in cap_terms
+        if str(term.get("pin_label_text") or "").strip().lower() in {"h", "dp"}
+    ]
+    com_terms = [
+        term for term in cap_terms
+        if str(term.get("pin_label_text") or "").strip().lower() == "com"
+    ]
+    if not h_terms or not com_terms:
+        return
+
+    target = max(h_terms, key=lambda term: float(term.get("pin_label_confidence") or 0.0))
+    _rename_terminal_for_side(component, target, label_side, len(label_terms) + 1)
+    target_debug = target.setdefault("pin_ocr_debug", {})
+    target_debug["seven_segment_side_repair"] = {
+        "reason": "h_or_dp_read_on_common_side",
+        "target_side": label_side,
+    }
+
+
+def _renumber_side_terms(component: Dict, side: str, terms: List[Dict]) -> None:
+    for idx, term in enumerate(sorted(terms, key=_terminal_sort_key), start=1):
+        _rename_terminal_for_side(component, term, side, idx)
+
+
 def _prune_seven_segment_display_terminals(component: Dict) -> int:
     """
     Filtro di dominio per display 7 segmenti.
@@ -2441,6 +2493,19 @@ def _prune_seven_segment_display_terminals(component: Dict) -> int:
     if not cap_terms:
         return 0
 
+    _normalize_seven_segment_h_terminal(component, label_side, by_side[label_side], cap_terms)
+    by_side = {
+        side: [
+            term for term in sorted(terminals, key=_terminal_sort_key)
+            if _terminal_side(term) == side
+        ]
+        for side in ("left", "right", "top", "bottom")
+    }
+    label_terms = by_side[label_side]
+    cap_side = "bottom" if by_side["bottom"] else "top"
+    cap_terms = by_side[cap_side]
+    vertical_count = len(label_terms)
+
     label_terms = by_side[label_side]
     if vertical_count >= 8:
         keep_terms = label_terms[:8] + cap_terms[:1]
@@ -2459,6 +2524,8 @@ def _prune_seven_segment_display_terminals(component: Dict) -> int:
     ]
     removed = len(terminals) - len(keep_terms)
     if removed <= 0:
+        _renumber_side_terms(component, label_side, by_side[label_side])
+        _renumber_side_terms(component, cap_side, by_side[cap_side])
         return 0
 
     kept_labels = {
@@ -2497,6 +2564,12 @@ def _prune_seven_segment_display_terminals(component: Dict) -> int:
         term for term in terminals
         if id(term) in keep_ids
     ]
+    _renumber_side_terms(component, label_side, [
+        term for term in component["terminals"] if _terminal_side(term) == label_side
+    ])
+    _renumber_side_terms(component, cap_side, [
+        term for term in component["terminals"] if _terminal_side(term) == cap_side
+    ])
     debug = component.setdefault("seven_segment_terminal_filter_debug", {})
     debug.update({
         "removed_count": removed,
@@ -2506,6 +2579,16 @@ def _prune_seven_segment_display_terminals(component: Dict) -> int:
         "reason": "keep_best_label_side_plus_common_side",
     })
     return removed
+
+
+def normalize_seven_segment_display_terminals(component: Dict) -> int:
+    """
+    Normalizza i terminali dei display a 7 segmenti gia' arricchiti dall'OCR.
+
+    E' un wrapper pubblico usato anche dallo step 03 prima dell'export: non
+    aggiunge dati nuovi, rende solo coerenti lato/nome dei terminali letti.
+    """
+    return _prune_seven_segment_display_terminals(component)
 
 
 # =========================================================

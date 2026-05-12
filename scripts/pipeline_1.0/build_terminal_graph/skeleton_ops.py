@@ -19,6 +19,9 @@ def should_erase_component_body_from_skeleton(component: dict):
     class_name = normalize_class_name(component.get("class_name"))
     terminals = component.get("terminals", [])
 
+    if class_name in {"connector", "integrated_circuit", "npn_transistor", "pnp_transistor"}:
+        return True
+
     if class_name in COMPONENT_BODY_ERASE_EXCLUDED_CLASSES:
         return False
 
@@ -41,12 +44,18 @@ def erase_component_bodies_from_skeleton(
         if not should_erase_component_body_from_skeleton(component):
             continue
 
-        bbox = component.get("bbox")
+        bbox = component.get("body_bbox") or component.get("bbox")
         if not bbox or len(bbox) != 4:
             continue
 
         x1, y1, x2, y2 = map(float, bbox)
-        pad = float(COMPONENT_BODY_ERASE_PADDING)
+        class_name = normalize_class_name(component.get("class_name"))
+        if class_name == "connector":
+            pad = -10.0
+        elif class_name == "integrated_circuit":
+            pad = -2.0
+        else:
+            pad = float(COMPONENT_BODY_ERASE_PADDING)
 
         erase_window = clamp_window(
             x1 + pad,
@@ -62,8 +71,45 @@ def erase_component_bodies_from_skeleton(
             continue
 
         cleaned[ey1:ey2, ex1:ex2] = 0
+        if class_name == "connector":
+            cut_connector_pin_separators(cleaned, component)
 
     return cleaned
+
+
+def cut_connector_pin_separators(cleaned: np.ndarray, component: dict):
+    terminals = component.get("terminals", [])
+    h, w = cleaned.shape[:2]
+
+    for side in ("top", "bottom"):
+        side_terms = sorted(
+            [term for term in terminals if term.get("relative_position") == side],
+            key=lambda term: float(term.get("x", 0.0)),
+        )
+        for left_term, right_term in zip(side_terms, side_terms[1:]):
+            x_mid = int(round((float(left_term["x"]) + float(right_term["x"])) / 2.0))
+            y_anchor = int(round((float(left_term["y"]) + float(right_term["y"])) / 2.0))
+            if side == "bottom":
+                window = clamp_window(x_mid - 2, y_anchor - 4, x_mid + 3, y_anchor + 90, w, h)
+            else:
+                window = clamp_window(x_mid - 2, y_anchor - 90, x_mid + 3, y_anchor + 4, w, h)
+            x1, y1, x2, y2 = window
+            cleaned[y1:y2, x1:x2] = 0
+
+    for side in ("left", "right"):
+        side_terms = sorted(
+            [term for term in terminals if term.get("relative_position") == side],
+            key=lambda term: float(term.get("y", 0.0)),
+        )
+        for top_term, bottom_term in zip(side_terms, side_terms[1:]):
+            y_mid = int(round((float(top_term["y"]) + float(bottom_term["y"])) / 2.0))
+            x_anchor = int(round((float(top_term["x"]) + float(bottom_term["x"])) / 2.0))
+            if side == "right":
+                window = clamp_window(x_anchor - 4, y_mid - 2, x_anchor + 90, y_mid + 3, w, h)
+            else:
+                window = clamp_window(x_anchor - 90, y_mid - 2, x_anchor + 4, y_mid + 3, w, h)
+            x1, y1, x2, y2 = window
+            cleaned[y1:y2, x1:x2] = 0
 
 # =========================================================
 # LETTURA DELLE LABEL NELLA FINESTRA
