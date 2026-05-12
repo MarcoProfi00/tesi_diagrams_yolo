@@ -197,6 +197,44 @@ def nearest_split_label(split_labels: np.ndarray, x: int, y: int, radius: int = 
     best_idx = int(np.argmin(d2))
     return int(split_labels[int(abs_ys[best_idx]), int(abs_xs[best_idx])])
 
+
+def has_four_way_split_support(
+    skeleton_binary: np.ndarray,
+    x: int,
+    y: int,
+    cut_half_width: int,
+    cut_half_height: int,
+    probe_distance: int,
+):
+    """
+    Accetta uno split plain solo se, dopo un taglio locale, restano quattro
+    rami reali attorno al crossing. Cosi' evitiamo di spezzare nodi pieni o
+    T-junction che il detector grezzo puo' scambiare per incroci.
+    """
+    cut_skeleton = skeleton_binary.copy()
+    h, w = cut_skeleton.shape[:2]
+    x1, y1, x2, y2 = clamp_window(
+        int(x) - int(cut_half_width),
+        int(y) - int(cut_half_height),
+        int(x) + int(cut_half_width) + 1,
+        int(y) + int(cut_half_height) + 1,
+        w,
+        h,
+    )
+    cut_skeleton[y1:y2, x1:x2] = 0
+
+    _, split_labels, _, _ = cv2.connectedComponentsWithStats(cut_skeleton, connectivity=8)
+    branch_labels = [
+        nearest_split_label(split_labels, int(x), int(y) - int(probe_distance)),
+        nearest_split_label(split_labels, int(x), int(y) + int(probe_distance)),
+        nearest_split_label(split_labels, int(x) - int(probe_distance), int(y)),
+        nearest_split_label(split_labels, int(x) + int(probe_distance), int(y)),
+    ]
+    if any(label is None for label in branch_labels):
+        return False
+
+    return len({int(label) for label in branch_labels}) >= 2
+
 # Esegue gli split dovuti ai ponti e a incroci senza il nodo (dot)
 # Rileva i ponti
 # Rileva incroci da spezzare
@@ -229,6 +267,14 @@ def split_bridge_labels(
         for crossing in detect_plain_wire_crossings(skeleton_binary, labels, junction_binary)
         if int(crossing["label"]) in self_short_labels
         and int(crossing["label"]) not in bridge_labels
+        and has_four_way_split_support(
+            skeleton_binary,
+            int(crossing["x"]),
+            int(crossing["y"]),
+            PLAIN_CROSSING_CUT_HALF_WIDTH,
+            PLAIN_CROSSING_CUT_HALF_HEIGHT,
+            PLAIN_CROSSING_PROBE_DISTANCE,
+        )
     ]
 
     split_points = []

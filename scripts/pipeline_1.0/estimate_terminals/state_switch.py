@@ -12,7 +12,8 @@ import numpy as np
 SWITCH_STATE_WINDOW_MARGIN = 10
 SWITCH_STATE_CONTACT_RADIUS = 8
 SWITCH_STATE_DILATE_ITERATIONS = 1
-SWITCH_STATE_NEAR_TOUCH_GAP = 3.25
+SWITCH_STATE_AXIS_ALIGN_TOL = 8.0
+SWITCH_STATE_AXIS_NEAR_TOUCH_GAP = 6.0
 
 
 # Clamp di una finestra dentro i limiti immagine.
@@ -77,6 +78,23 @@ def _get_switch_terminal_pair(component):
         return None
 
     return sorted(terminals, key=lambda term: str(term.get("terminal_id", "")))
+
+
+def _terminals_are_axis_aligned(term_a, term_b):
+    side_a = str(term_a.get("relative_position") or "")
+    side_b = str(term_b.get("relative_position") or "")
+    x_a = float(term_a.get("x", 0.0))
+    y_a = float(term_a.get("y", 0.0))
+    x_b = float(term_b.get("x", 0.0))
+    y_b = float(term_b.get("y", 0.0))
+    tol = float(SWITCH_STATE_AXIS_ALIGN_TOL)
+
+    if {side_a, side_b} == {"left", "right"}:
+        return abs(y_a - y_b) <= tol
+    if {side_a, side_b} == {"top", "bottom"}:
+        return abs(x_a - x_b) <= tol
+
+    return False
 
 
 # Stima open/closed per uno switch.
@@ -147,10 +165,14 @@ def estimate_switch_open_closed_state(binary, component):
         reason = "contacts_share_connected_component"
     else:
         gap = _min_component_distance(labels, int(label_a), int(label_b))
-        if gap is not None and float(gap) <= float(SWITCH_STATE_NEAR_TOUCH_GAP):
+        if (
+            gap is not None
+            and float(gap) <= float(SWITCH_STATE_AXIS_NEAR_TOUCH_GAP)
+            and _terminals_are_axis_aligned(terminals[0], terminals[1])
+        ):
             state = "closed"
             confidence = 0.75
-            reason = "contacts_on_nearly_touching_components"
+            reason = "axis_aligned_contacts_nearly_touch"
         else:
             state = "open"
             confidence = min(0.95, 0.55 + float(gap or 0.0) / 30.0)
@@ -165,7 +187,8 @@ def estimate_switch_open_closed_state(binary, component):
             "window": [int(wx1), int(wy1), int(wx2), int(wy2)],
             "contact_radius": int(SWITCH_STATE_CONTACT_RADIUS),
             "dilate_iterations": int(SWITCH_STATE_DILATE_ITERATIONS),
-            "near_touch_gap_threshold": float(SWITCH_STATE_NEAR_TOUCH_GAP),
+            "axis_align_tol": float(SWITCH_STATE_AXIS_ALIGN_TOL),
+            "axis_near_touch_gap_threshold": float(SWITCH_STATE_AXIS_NEAR_TOUCH_GAP),
             "contacts": contact_infos,
             "component_gap": None if gap is None else round(float(gap), 3),
         },
