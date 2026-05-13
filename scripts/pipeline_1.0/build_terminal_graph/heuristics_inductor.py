@@ -116,7 +116,6 @@ def merge_near_horizontal_stub_labels(
 
 # Unisce lable di rami paralleli legati a inductors verticali
 # Casi particolari:
-#   antenna
 #   capacitor positivo e negatico
 #   gnd
 def merge_vertical_inductor_parallel_branch_labels(
@@ -162,8 +161,6 @@ def merge_vertical_inductor_parallel_branch_labels(
             polarity = str(target_term.get("semantic_polarity") or "").lower()
 
             if relative_position == "top":
-                if class_name == "antenna":
-                    return True
                 if "capacitor" in class_name and (public_name == "positive" or polarity == "positive"):
                     return True
 
@@ -233,8 +230,6 @@ def build_vertical_inductor_parallel_direct_edges(
         polarity = str(target_term.get("semantic_polarity") or "").lower()
 
         if relative_position == "top":
-            if class_name == "antenna":
-                return True
             return "capacitor" in class_name and (public_name == "positive" or polarity == "positive")
 
         if relative_position == "bottom":

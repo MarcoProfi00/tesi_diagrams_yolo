@@ -69,6 +69,84 @@ def remove_non_shorting_component_self_matches(
 
     return cleaned
 
+
+def split_polarized_capacitor_self_short_groups(
+    label_to_terminal_ids: dict,
+    terminals: list[dict],
+):
+    terminal_by_id = {term["terminal_id"]: term for term in terminals}
+    relabeled_groups = []
+
+    for _, terminal_ids in label_to_terminal_ids.items():
+        unique_ids = sorted(set(terminal_ids))
+        split_groups = _split_group_on_polarized_capacitor_axis(unique_ids, terminal_by_id)
+        relabeled_groups.extend(split_groups)
+
+    relabeled = {}
+    for index, terminal_ids in enumerate(relabeled_groups, start=1):
+        relabeled[index] = sorted(set(terminal_ids))
+
+    return relabeled
+
+
+def _split_group_on_polarized_capacitor_axis(
+    terminal_ids: list[str],
+    terminal_by_id: dict,
+):
+    terms = [terminal_by_id.get(terminal_id) for terminal_id in terminal_ids]
+    terms = [term for term in terms if term is not None]
+
+    by_instance = {}
+    for term in terms:
+        if normalize_class_name(term.get("component_class_name")) != "polarized_capacitor":
+            continue
+        by_instance.setdefault(str(term.get("instance_id")), []).append(term)
+
+    for cap_terms in by_instance.values():
+        if len(cap_terms) != 2:
+            continue
+
+        term_a, term_b = cap_terms
+        try:
+            ax = float(term_a["x"])
+            ay = float(term_a["y"])
+            bx = float(term_b["x"])
+            by = float(term_b["y"])
+        except (KeyError, TypeError, ValueError):
+            continue
+
+        if abs(ax - bx) >= abs(ay - by):
+            midpoint = (ax + bx) / 2.0
+            first_side = [
+                term["terminal_id"]
+                for term in terms
+                if float(term.get("x", midpoint)) <= midpoint
+            ]
+            second_side = [
+                term["terminal_id"]
+                for term in terms
+                if float(term.get("x", midpoint)) > midpoint
+            ]
+        else:
+            midpoint = (ay + by) / 2.0
+            first_side = [
+                term["terminal_id"]
+                for term in terms
+                if float(term.get("y", midpoint)) <= midpoint
+            ]
+            second_side = [
+                term["terminal_id"]
+                for term in terms
+                if float(term.get("y", midpoint)) > midpoint
+            ]
+
+        # Non accettiamo split che lasciano un polo isolato: in quei casi il
+        # gruppo e' ambiguo e il grafo validato e' piu' affidabile dello split.
+        if len(set(first_side)) >= 2 and len(set(second_side)) >= 2:
+            return [first_side, second_side]
+
+    return [terminal_ids]
+
 # Costruisce una mappa instance_id -> bbox
 # è usato in molte heuristics che confrontano distanze tra componenti
 def build_component_bbox_by_instance(components: list[dict]):

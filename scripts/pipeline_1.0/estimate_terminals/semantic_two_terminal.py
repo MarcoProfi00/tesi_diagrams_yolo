@@ -541,6 +541,7 @@ def resolve_two_terminal_semantics(binary, bbox, orientation, terminals, meta):
             center_band_ratio=0.50,
             edge_inset_ratio=0.10,
         )
+        uncertainty_threshold = 0.06 if orientation == "vertical" else 0.02
         return _assign_strategy_result(
             terminals,
             orientation,
@@ -548,7 +549,7 @@ def resolve_two_terminal_semantics(binary, bbox, orientation, terminals, meta):
             score_map,
             resolution_mode=semantic_strategy,
             force_fallback_when_uncertain=True,
-            uncertainty_threshold=0.02,
+            uncertainty_threshold=uncertainty_threshold,
         )
 
     if semantic_strategy == "battery_positive_from_long_plate":

@@ -22,12 +22,44 @@ def has_bridge_hump(binary: np.ndarray, x: int, y: int):
 
     return left_count >= 1 and right_count >= 1
 
+
+def bridge_direction_support(binary: np.ndarray, x: int, y: int):
+    h, w = binary.shape[:2]
+    local_radius = max(2, BRIDGE_CUT_HALF_WIDTH // 2)
+
+    left = int(np.sum(binary[y, max(0, x - BRIDGE_MIN_RUN):x]))
+    right = int(np.sum(binary[y, x + 1:min(w, x + BRIDGE_MIN_RUN + 1)]))
+    up = int(np.sum(binary[max(0, y - BRIDGE_MIN_RUN):y, x]))
+    down = int(np.sum(binary[y + 1:min(h, y + BRIDGE_MIN_RUN + 1), x]))
+
+    # La gobba e il tratto verticale possono cadere su pixel vicini ma non
+    # identici dopo skeletonizzazione. Manteniamo orizzontale e gobba ancorate
+    # al candidato, ma cerchiamo il supporto verticale in una piccola finestra.
+    for dy in range(-local_radius, local_radius + 1):
+        yy = int(y) + dy
+        if yy < 0 or yy >= h:
+            continue
+        for dx in range(-local_radius, local_radius + 1):
+            xx = int(x) + dx
+            if xx < 0 or xx >= w or binary[yy, xx] == 0:
+                continue
+
+            up = max(up, int(np.sum(binary[max(0, yy - BRIDGE_MIN_RUN):yy, xx])))
+            down = max(down, int(np.sum(binary[yy + 1:min(h, yy + BRIDGE_MIN_RUN + 1), xx])))
+
+    return left, right, up, down
+
+
 # Rileva ponte sullo skeleton
 # Cerca punti con:
 #   continuita nelle 4 dir
 #   hump
 #   label valida
-def detect_wire_bridges(skeleton_binary: np.ndarray, labels: np.ndarray):
+def detect_wire_bridges(
+    skeleton_binary: np.ndarray,
+    labels: np.ndarray,
+    junction_binary: np.ndarray | None = None,
+):
     binary = np.where(skeleton_binary > 0, 1, 0).astype(np.uint8)
     h, w = binary.shape[:2]
     candidates = []
@@ -37,25 +69,31 @@ def detect_wire_bridges(skeleton_binary: np.ndarray, labels: np.ndarray):
             if binary[y, x] == 0:
                 continue
 
-            if labels[y, x] <= 0:
-                continue
-
-            left = int(np.sum(binary[y, x - BRIDGE_MIN_RUN:x]))
-            right = int(np.sum(binary[y, x + 1:x + BRIDGE_MIN_RUN + 1]))
-            up = int(np.sum(binary[y - BRIDGE_MIN_RUN:y, x]))
-            down = int(np.sum(binary[y + 1:y + BRIDGE_MIN_RUN + 1, x]))
-
-            if min(left, right, up, down) < BRIDGE_MIN_PIXELS_PER_DIRECTION:
-                continue
-
             if not has_bridge_hump(binary, x, y):
+                continue
+
+            left, right, up, down = bridge_direction_support(binary, x, y)
+            # Nei ponti a gobba il filo che "salta" e' continuo a sinistra e
+            # destra, mentre lo stelo verticale puo' essere forte solo da un
+            # lato del candidato dopo skeleton/closing. Non richiediamo quindi
+            # quattro direzioni piene come per un normale crossing.
+            if min(left, right) < BRIDGE_MIN_PIXELS_PER_DIRECTION:
+                continue
+            if max(up, down) < BRIDGE_MIN_PIXELS_PER_DIRECTION:
+                continue
+
+            source_label = nearest_split_label(labels, x, y, radius=5)
+            if source_label is None:
                 continue
 
             candidates.append({
                 "x": int(x),
                 "y": int(y),
-                "label": int(labels[y, x]),
+                "label": int(source_label),
+                "bridge_style": "hump",
             })
+
+    candidates.extend(detect_micro_wire_bridges(binary, labels, junction_binary))
 
     # Collassiamo piu' pixel dello stesso ponte in un solo candidato.
     collapsed = []
@@ -65,6 +103,109 @@ def detect_wire_bridges(skeleton_binary: np.ndarray, labels: np.ndarray):
         collapsed.append(cand)
 
     return collapsed
+
+
+def detect_micro_wire_bridges(
+    binary: np.ndarray,
+    labels: np.ndarray,
+    junction_binary: np.ndarray | None = None,
+):
+    h, w = binary.shape[:2]
+    candidates = []
+
+    for y in range(MICRO_BRIDGE_VERTICAL_BAND_DEPTH, h - MICRO_BRIDGE_VERTICAL_BAND_DEPTH):
+        for x in range(BRIDGE_PROBE_DISTANCE, w - BRIDGE_PROBE_DISTANCE):
+            if binary[y, x] == 0:
+                continue
+
+            if junction_binary is not None and has_filled_junction_dot(junction_binary, x, y):
+                continue
+
+            left_gap, left_run = count_run_after_gap(
+                binary,
+                x,
+                y,
+                -1,
+                MICRO_BRIDGE_MAX_SIDE_GAP,
+                BRIDGE_MIN_RUN,
+            )
+            right_gap, right_run = count_run_after_gap(
+                binary,
+                x,
+                y,
+                1,
+                MICRO_BRIDGE_MAX_SIDE_GAP,
+                BRIDGE_MIN_RUN,
+            )
+            if left_gap is None or right_gap is None:
+                continue
+            if min(left_gap, right_gap) < MICRO_BRIDGE_MIN_SIDE_GAP:
+                continue
+            if min(left_run, right_run) < MICRO_BRIDGE_MIN_HORIZONTAL_RUN:
+                continue
+
+            up_pixels = count_vertical_band_pixels(binary, x, y, -1)
+            down_pixels = count_vertical_band_pixels(binary, x, y, 1)
+            if min(up_pixels, down_pixels) < MICRO_BRIDGE_MIN_VERTICAL_PIXELS:
+                continue
+
+            source_label = nearest_split_label(labels, x, y, radius=6)
+            if source_label is None:
+                continue
+
+            candidates.append({
+                "x": int(x),
+                "y": int(y),
+                "label": int(source_label),
+                "bridge_style": "micro_gap",
+                "max_side_gap": int(max(left_gap, right_gap)),
+            })
+
+    return candidates
+
+
+def count_run_after_gap(
+    binary: np.ndarray,
+    x: int,
+    y: int,
+    dx: int,
+    max_gap: int,
+    run_limit: int,
+):
+    h, w = binary.shape[:2]
+    for offset in range(1, int(max_gap) + 1):
+        sx = int(x) + int(dx) * offset
+        if sx < 0 or sx >= w or y < 0 or y >= h:
+            continue
+        if binary[int(y), sx] == 0:
+            continue
+
+        return offset, 1 + count_run(binary, sx, int(y), int(dx), 0, int(run_limit))
+
+    return None, 0
+
+
+def count_vertical_band_pixels(binary: np.ndarray, x: int, y: int, direction: int):
+    h, w = binary.shape[:2]
+    x1, y1, x2, y2 = clamp_window(
+        int(x) - MICRO_BRIDGE_VERTICAL_BAND_RADIUS,
+        int(y) + int(direction) * MICRO_BRIDGE_VERTICAL_BAND_DEPTH,
+        int(x) + MICRO_BRIDGE_VERTICAL_BAND_RADIUS + 1,
+        int(y),
+        w,
+        h,
+    )
+    if direction > 0:
+        x1, y1, x2, y2 = clamp_window(
+            int(x) - MICRO_BRIDGE_VERTICAL_BAND_RADIUS,
+            int(y) + 1,
+            int(x) + MICRO_BRIDGE_VERTICAL_BAND_RADIUS + 1,
+            int(y) + MICRO_BRIDGE_VERTICAL_BAND_DEPTH + 1,
+            w,
+            h,
+        )
+
+    return int(np.count_nonzero(binary[y1:y2, x1:x2] > 0))
 
 # Verifica se esiste il pallino pieno, se c'è allora il crossing è un nodod reale e non va spezzato
 def has_filled_junction_dot(junction_binary: np.ndarray | None, x: int, y: int):
@@ -163,7 +304,7 @@ def labels_with_multi_terminal_self_short(
             continue
 
         class_name = normalize_class_name(term.get("component_class_name"))
-        if class_name in COMPONENT_BODY_ERASE_EXCLUDED_CLASSES:
+        if class_name in PLAIN_CROSSING_SELF_SHORT_EXCLUDED_CLASSES:
             continue
 
         instance_id = term.get("instance_id")
@@ -251,9 +392,16 @@ def split_bridge_labels(
     labels: np.ndarray,
     wire_extraction: dict | None = None,
 ):
-    bridges = detect_wire_bridges(skeleton_binary, labels)
-    bridge_labels = {int(bridge["label"]) for bridge in bridges}
     junction_binary = load_junction_support_binary(wire_extraction or {})
+    raw_bridges = filter_micro_bridge_candidates(
+        detect_wire_bridges(skeleton_binary, labels, junction_binary),
+        label_to_terminal_ids,
+        terminals,
+        terminal_match_debug,
+        skeleton_binary,
+    )
+    bridges = raw_bridges
+    bridge_labels = {int(bridge["label"]) for bridge in raw_bridges}
     self_short_labels = labels_with_multi_terminal_self_short(
         terminals,
         terminal_match_debug,
@@ -426,6 +574,13 @@ def split_bridge_labels(
 
         final_groups.append(terminal_ids)
 
+    final_groups = split_ambiguous_micro_bridge_groups(
+        final_groups,
+        split_points,
+        terminals,
+        terminal_match_debug,
+    )
+
     relabeled = {}
     next_label = 1
     for terminal_ids in final_groups:
@@ -435,6 +590,246 @@ def split_bridge_labels(
         next_label += 1
 
     return relabeled
+
+
+def split_ambiguous_micro_bridge_groups(
+    terminal_groups: list[list[str]],
+    split_points: list[dict],
+    terminals: list[dict],
+    terminal_match_debug: dict,
+):
+    micro_points = [
+        point
+        for point in split_points
+        if point.get("bridge_style") == "micro_gap"
+    ]
+    if not micro_points:
+        return terminal_groups
+
+    terminal_by_id = {term["terminal_id"]: term for term in terminals}
+    groups = [list(group) for group in terminal_groups]
+
+    for point in micro_points:
+        next_groups = []
+        for terminal_ids in groups:
+            if not any(
+                int(terminal_match_debug.get(terminal_id, {}).get("matched_label") or -1)
+                == int(point["label"])
+                for terminal_id in terminal_ids
+            ):
+                next_groups.append(terminal_ids)
+                continue
+
+            split_groups = split_group_by_micro_bridge_geometry(
+                terminal_ids,
+                terminal_by_id,
+                point,
+            )
+            next_groups.extend(split_groups)
+        groups = next_groups
+
+    return groups
+
+
+def split_group_by_micro_bridge_geometry(
+    terminal_ids: list[str],
+    terminal_by_id: dict,
+    point: dict,
+):
+    if not any(
+        normalize_class_name((terminal_by_id.get(terminal_id) or {}).get("component_class_name")) == "diode"
+        for terminal_id in terminal_ids
+    ):
+        return [terminal_ids]
+
+    horizontal_ids = []
+    vertical_ids = []
+    px = float(point["x"])
+    py = float(point["y"])
+
+    for terminal_id in terminal_ids:
+        term = terminal_by_id.get(terminal_id)
+        if term is None:
+            vertical_ids.append(terminal_id)
+            continue
+
+        try:
+            tx = float(term["x"])
+            ty = float(term["y"])
+        except (KeyError, TypeError, ValueError):
+            vertical_ids.append(terminal_id)
+            continue
+
+        if abs(ty - py) <= MICRO_BRIDGE_TERMINAL_HORIZONTAL_BAND:
+            horizontal_ids.append(terminal_id)
+        else:
+            vertical_ids.append(terminal_id)
+
+    if len(set(horizontal_ids)) >= 2 and len(set(vertical_ids)) >= 2:
+        return [horizontal_ids, vertical_ids]
+
+    return [terminal_ids]
+
+
+def filter_micro_bridge_candidates(
+    bridges: list[dict],
+    label_to_terminal_ids: dict,
+    terminals: list[dict],
+    terminal_match_debug: dict,
+    skeleton_binary: np.ndarray,
+):
+    filtered = []
+    micro_by_label = {}
+
+    for bridge in bridges:
+        if bridge.get("bridge_style") != "micro_gap":
+            filtered.append(bridge)
+            continue
+
+        label = int(bridge["label"])
+        if label_contains_class(label, terminals, terminal_match_debug, {"diode"}):
+            if int(bridge.get("max_side_gap", 0)) >= 3:
+                filtered.append(bridge)
+            continue
+
+        if int(bridge.get("max_side_gap", 0)) >= 2:
+            micro_by_label.setdefault(label, []).append(bridge)
+
+    for label, label_bridges in micro_by_label.items():
+        ys = [int(item["y"]) for item in label_bridges]
+        if len(label_bridges) < 2 or max(ys) - min(ys) < MICRO_BRIDGE_COLUMN_MIN_Y_SPAN:
+            continue
+
+        if micro_bridge_cluster_creates_valid_split(
+            int(label),
+            label_bridges,
+            label_to_terminal_ids,
+            terminals,
+            skeleton_binary,
+        ):
+            filtered.extend(label_bridges)
+
+    return filtered
+
+
+def build_vertical_micro_bridge_clusters(bridges: list[dict]):
+    clusters = []
+    for bridge in sorted(bridges, key=lambda item: (int(item["x"]), int(item["y"]))):
+        placed = False
+        for cluster in clusters:
+            avg_x = sum(int(item["x"]) for item in cluster) / float(len(cluster))
+            if abs(int(bridge["x"]) - avg_x) <= MICRO_BRIDGE_COLUMN_X_TOL:
+                cluster.append(bridge)
+                placed = True
+                break
+        if not placed:
+            clusters.append([bridge])
+
+    valid_clusters = []
+    for cluster in clusters:
+        if len(cluster) < 2:
+            continue
+        ys = [int(item["y"]) for item in cluster]
+        if max(ys) - min(ys) < MICRO_BRIDGE_COLUMN_MIN_Y_SPAN:
+            continue
+        valid_clusters.append(cluster)
+
+    return valid_clusters
+
+
+def micro_bridge_cluster_creates_valid_split(
+    label: int,
+    cluster: list[dict],
+    label_to_terminal_ids: dict,
+    terminals: list[dict],
+    skeleton_binary: np.ndarray,
+):
+    terminal_ids = label_to_terminal_ids.get(int(label), [])
+    if len(set(terminal_ids)) < 4:
+        return False
+
+    terminal_by_id = {term["terminal_id"]: term for term in terminals}
+    cut_skeleton = skeleton_binary.copy()
+    h, w = cut_skeleton.shape[:2]
+    for point in cluster:
+        x = int(point["x"])
+        y = int(point["y"])
+        x1, y1, x2, y2 = clamp_window(
+            x - BRIDGE_CUT_HALF_WIDTH,
+            y - BRIDGE_CUT_HALF_HEIGHT,
+            x + BRIDGE_CUT_HALF_WIDTH + 1,
+            y + BRIDGE_CUT_HALF_HEIGHT + 1,
+            w,
+            h,
+        )
+        cut_skeleton[y1:y2, x1:x2] = 0
+
+    _, split_labels, _, _ = cv2.connectedComponentsWithStats(cut_skeleton, connectivity=8)
+    parent = {}
+
+    def find(label_value):
+        label_value = int(label_value)
+        parent.setdefault(label_value, label_value)
+        while parent[label_value] != label_value:
+            parent[label_value] = parent[parent[label_value]]
+            label_value = parent[label_value]
+        return label_value
+
+    def union(label_a, label_b):
+        if label_a is None or label_b is None:
+            return
+        root_a = find(label_a)
+        root_b = find(label_b)
+        if root_a != root_b:
+            parent[max(root_a, root_b)] = min(root_a, root_b)
+
+    for point in cluster:
+        x = int(point["x"])
+        y = int(point["y"])
+        top_label = nearest_split_label(split_labels, x, y - BRIDGE_PROBE_DISTANCE)
+        bottom_label = nearest_split_label(split_labels, x, y + BRIDGE_PROBE_DISTANCE)
+        left_label = nearest_split_label(split_labels, x - BRIDGE_PROBE_DISTANCE, y)
+        right_label = nearest_split_label(split_labels, x + BRIDGE_PROBE_DISTANCE, y)
+        union(top_label, bottom_label)
+        union(left_label, right_label)
+
+    groups = {}
+    for terminal_id in terminal_ids:
+        term = terminal_by_id.get(terminal_id)
+        if term is None:
+            continue
+        split_label = nearest_split_label(
+            split_labels,
+            int(round(term["x"])),
+            int(round(term["y"])),
+            radius=max(
+                TERMINAL_SQUARE_FALLBACK_RADIUS,
+                BRIDGE_PROBE_DISTANCE,
+                PLAIN_CROSSING_PROBE_DISTANCE,
+            ),
+        )
+        if split_label is None:
+            return False
+        groups.setdefault(find(split_label), []).append(terminal_id)
+
+    return len(groups) >= 2 and all(len(set(group)) >= 2 for group in groups.values())
+
+
+def label_contains_class(
+    label: int,
+    terminals: list[dict],
+    terminal_match_debug: dict,
+    class_names: set[str],
+):
+    wanted = {normalize_class_name(class_name) for class_name in class_names}
+    for term in terminals:
+        matched_label = terminal_match_debug.get(term["terminal_id"], {}).get("matched_label")
+        if matched_label is None or int(matched_label) != int(label):
+            continue
+        if normalize_class_name(term.get("component_class_name")) in wanted:
+            return True
+
+    return False
 
 # =========================================================
 # SPLIT LABEL IN CORRISPONDENZA DEI PONTI
@@ -472,7 +867,16 @@ from .config import (
     BRIDGE_MIN_PIXELS_PER_DIRECTION,
     BRIDGE_MIN_RUN,
     BRIDGE_PROBE_DISTANCE,
-    COMPONENT_BODY_ERASE_EXCLUDED_CLASSES,
+    MICRO_BRIDGE_MAX_SIDE_GAP,
+    MICRO_BRIDGE_COLUMN_MIN_Y_SPAN,
+    MICRO_BRIDGE_COLUMN_X_TOL,
+    MICRO_BRIDGE_MIN_HORIZONTAL_RUN,
+    MICRO_BRIDGE_MIN_SIDE_GAP,
+    MICRO_BRIDGE_MIN_VERTICAL_PIXELS,
+    MICRO_BRIDGE_TERMINAL_HORIZONTAL_BAND,
+    MICRO_BRIDGE_VERTICAL_BAND_DEPTH,
+    MICRO_BRIDGE_VERTICAL_BAND_RADIUS,
+    PLAIN_CROSSING_SELF_SHORT_EXCLUDED_CLASSES,
     PLAIN_CROSSING_CUT_HALF_HEIGHT,
     PLAIN_CROSSING_CUT_HALF_WIDTH,
     PLAIN_CROSSING_DOT_AREA_MIN,
