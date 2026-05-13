@@ -91,3 +91,40 @@ def build_canonical_components(components: list[dict]):
         canonical_components.append(canonical_component)
 
     return canonical_components
+
+
+def build_terminal_metadata(canonical_components: list[dict]):
+    metadata = {}
+
+    for comp in canonical_components:
+        class_name = comp.get("class_name")
+        component_id = comp.get("component_id")
+        component_display_name = comp.get("display_name")
+        ic_marking = comp.get("ic_marking")
+        component_subtype = comp.get("component_subtype")
+
+        for term in comp.get("terminals", []):
+            terminal_id = term.get("terminal_id")
+            if terminal_id in (None, ""):
+                continue
+
+            entry = {}
+            if term.get("display_name") not in (None, ""):
+                entry["display_name"] = term.get("display_name")
+            if term.get("pin_number") not in (None, ""):
+                entry["pin_number"] = term.get("pin_number")
+            if term.get("pin_label") not in (None, ""):
+                entry["pin_label"] = term.get("pin_label")
+            if component_display_name not in (None, ""):
+                entry["component_display_name"] = component_display_name
+            if ic_marking not in (None, ""):
+                entry["ic_marking"] = ic_marking
+            if component_subtype not in (None, ""):
+                entry["component_subtype"] = component_subtype
+
+            if entry:
+                entry["component_id"] = component_id
+                entry["class_name"] = class_name
+                metadata[str(terminal_id)] = entry
+
+    return {key: metadata[key] for key in sorted(metadata.keys())}

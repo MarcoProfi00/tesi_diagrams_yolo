@@ -2,7 +2,7 @@ from pathlib import Path
 
 import cv2
 
-from .canonical_export import build_canonical_components
+from .canonical_export import build_canonical_components, build_terminal_metadata
 from .crossings import split_bridge_labels
 from .graph_utils import build_terminal_graph
 from .grouping import (
@@ -11,10 +11,7 @@ from .grouping import (
     split_polarized_capacitor_self_short_groups,
 )
 from .heuristics_connector import build_connector_aligned_gnd_edges, fix_stacked_connector_gnd_crossing_edges
-from .heuristics_inductor import (
-    build_vertical_inductor_parallel_direct_edges,
-    merge_near_horizontal_stub_labels,
-)
+from .heuristics_inductor import merge_near_horizontal_stub_labels
 from .heuristics_mosfet import merge_mosfet_gate_aligned_labels, merge_mosfet_gate_rail_groups
 from .heuristics_opamp import merge_opamp_aux_external_terminal_labels
 from .heuristics_seven_segment import build_seven_segment_shared_segment_edges
@@ -45,7 +42,6 @@ from .skeleton_ops import erase_component_bodies_from_skeleton
 # fonde rail MOSFET/battery dove serve;
 # rimuove self-short non validi;
 # costruisce il grafo finale;
-# aggiunge direct edges per induttori;
 # aggiunge VDD / VSS;
 # costruisce warning;
 # costruisce componenti canonici;
@@ -126,15 +122,6 @@ def build_terminal_graph_for_image(data: dict):
 
     # Grafo finale interno e sua vista canonica leggibile.
     terminal_graph = build_terminal_graph(terminals, label_to_terminal_ids)
-    for source_id, target_id in build_vertical_inductor_parallel_direct_edges(
-        terminals,
-        terminal_match_debug,
-        labels,
-    ):
-        terminal_graph.setdefault(source_id, [])
-        terminal_graph.setdefault(target_id, [])
-        terminal_graph[source_id].append(target_id)
-        terminal_graph[target_id].append(source_id)
     for source_id, target_id in build_connector_aligned_gnd_edges(terminals, terminal_graph):
         terminal_graph.setdefault(source_id, [])
         terminal_graph.setdefault(target_id, [])
@@ -183,6 +170,7 @@ def build_terminal_graph_for_image(data: dict):
     ])
 
     canonical_components = build_canonical_components(components)
+    terminal_metadata = build_terminal_metadata(canonical_components)
 
     warnings = {
         "unconnected_terminals": unconnected_terminals,
@@ -192,6 +180,7 @@ def build_terminal_graph_for_image(data: dict):
 
     return {
         "components": canonical_components,
+        "terminal_metadata": terminal_metadata,
         "graph": simple_terminal_graph,
         "warnings": warnings,
         "skeleton_binary": skeleton_for_graph,

@@ -26,6 +26,7 @@ Output principale:
     - image_id
     - image_name
     - components -> lista dei componenti con terminali semantici minimali
+    - terminal_metadata -> lookup opzionale per display_name/pin degli stessi terminali
     - graph      -> collegamenti terminale -> terminali collegati
     - warnings   -> piccole segnalazioni utili (terminali isolati / unmatched / suspicious)
 
@@ -118,6 +119,7 @@ def main() -> None:
             "image_id": data.get("image_id"),
             "image_name": data.get("image_name"),
             "components": graph_info["components"],
+            "terminal_metadata": graph_info["terminal_metadata"],
             "graph": graph_info["graph"],
             "warnings": graph_info["warnings"],
         }
