@@ -11,7 +11,7 @@ import mimetypes
 
 MODEL = "gpt-5.4"
 
-PROBLEM = "Il circuito non produce audio sugli altoparlanti. Quali sono le cause più probabili?"
+PROBLEM = "Il motore M1 non gira. Quali sono le cause più probabili?"
 
 # Lo script si trova in: scripts/GPT/run_one_image.py
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -19,7 +19,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 # Root del progetto: salgo da scripts/GPT a cartella principale
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-CIRCUIT_NAME = "ic3"
+CIRCUIT_NAME = "ic11"
 
 CIRCUIT_DIR = (
     PROJECT_ROOT
@@ -111,7 +111,7 @@ response = client.responses.create(
             ],
         }
     ],
-    max_output_tokens=3000,
+    max_output_tokens=10000,
 )
 
 answer = response.output_text

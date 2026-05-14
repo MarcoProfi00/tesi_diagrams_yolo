@@ -1,0 +1,291 @@
+MODELLO: gpt-5.4
+CIRCUITO: ic11
+INPUT: immagine + datasheet
+IMMAGINE: C:\Users\m.profilo\Desktop\tesi_diagrams_yolo\experiment_ai\circuiti_complessi\batch_v1\ic11\ic11.jpg
+PROBLEMA: Il motore M1 non gira. Quali sono le cause più probabili?
+
+USAGE:
+ResponseUsage(input_tokens=2426, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=3032, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=5458)
+
+RISPOSTA:
+Di seguito l’analisi del circuito e delle cause più probabili per cui **il motore M1 non gira**.
+
+## 1) Cosa sembra fare il circuito
+
+Questo schema usa **IC1 della famiglia TC4423/TC4424/TC4425** come **driver a due uscite** per pilotare direttamente un motore DC **M1** in modo bidirezionale.
+
+Dallo schema:
+- **M1** è collegato tra le due uscite del driver:
+  - **pin 7 = OUT A**
+  - **pin 5 = OUT B**
+- **pin 6 = VDD** è alimentato da **10 a 18 V DC**
+- **pin 3 = GND** va a massa
+- **pin 2 = IN A** riceve il segnale **Power**
+- **pin 4 = IN B** riceve il segnale **Direction**
+- **R1 e R2 (10 kΩ)** sono pull-up verso **+5 V DC** sugli ingressi
+- **C1 = 1 µF** e **C2 = 0.1 µF** sono condensatori di bypass tra alimentazione e massa
+- **D1…D4 (1N5817)** sono diodi di ricircolo/clamp per il carico induttivo
+
+Quindi il circuito vuole usare le due uscite complementari per applicare una polarità o l’altra ai capi del motore.
+
+---
+
+## 2) Componenti e pin più importanti rispetto al problema
+
+### IC1
+Lo schema mostra **TC4423**, ma sotto l’immagine c’è scritto **“Motor driver using TC4424”**.  
+Questa è una **ambiguità importante** e va dichiarata esplicitamente.
+
+Pin rilevanti:
+- **Pin 2 = IN A**
+- **Pin 3 = GND**
+- **Pin 4 = IN B**
+- **Pin 5 = OUT B**
+- **Pin 6 = VDD**
+- **Pin 7 = OUT A**
+
+### Alimentazioni
+- **+5 V DC**: usato per i segnali di ingresso tramite R1/R2
+- **10–18 V DC**: alimenta il driver e quindi il motore
+- **Massa comune**: necessaria tra logica e potenza
+
+### Carico
+- **M1** collegato tra **pin 7** e **pin 5**
+
+### Protezioni
+- **D1-D4**: clamp ai rail di alimentazione e massa
+- **C1, C2**: disaccoppiamento vicino a VDD
+
+---
+
+## 3) Verifica dei collegamenti visibili nello schema
+
+## Alimentazione e massa
+Sembrano collegate così:
+- **pin 6** a **10–18 V**
+- **pin 3** a **GND**
+- i condensatori **C1 e C2** sembrano collegati tra rail positivo e massa
+
+Questo, per quanto visibile, **sembra corretto**.
+
+## Ingressi
+- **pin 2** collegato alla linea **Power**
+- **pin 4** collegato alla linea **Direction**
+- entrambe le linee hanno pull-up da **10 kΩ** a **+5 V**
+
+Anche questo appare plausibile, ma dipende da come vengono pilotati davvero i segnali esterni.
+
+## Uscite e motore
+- **pin 7** e **pin 5** vanno ai due capi di **M1**
+- sono presenti diodi verso il rail alto e verso massa
+
+Visivamente il collegamento c’è.
+
+## Punto critico
+Il problema più evidente è che il componente indicato nel disegno è **TC4423**, mentre il titolo dice **TC4424**.  
+Questo conta moltissimo perché:
+- **TC4423 = dual inverting**
+- **TC4424 = dual non-inverting**
+
+Se il circuito/logica è stata pensata per uno e montato l’altro, il comportamento delle uscite può non essere quello atteso.
+
+---
+
+## 4) Cause più probabili, dalla più probabile alla meno probabile
+
+## 1. È stato usato il modello sbagliato della famiglia TC442x
+### Perché è molto probabile
+Nello schema c’è una contraddizione visibile:
+- nel corpo dell’IC è scritto **TC4423**
+- nella didascalia è scritto **TC4424**
+
+Questa famiglia ha versioni con logica diversa:
+- **TC4423**: entrambe le uscite invertenti
+- **TC4424**: entrambe le uscite non invertenti
+- **TC4425**: una invertente e una non invertente
+
+Se il circuito richiede una certa relazione tra **IN A / IN B** e **OUT A / OUT B**, montare il chip sbagliato può fare sì che:
+- i due capi del motore vadano spesso allo stesso livello
+- non si ottenga la polarità prevista
+- il motore resti fermo
+
+### Controllo pratico
+- Leggere la sigla realmente montata sull’integrato.
+- Misurare i livelli ai **pin 2 e 4** e confrontarli con quelli ai **pin 7 e 5**.
+- Verificare se le uscite si comportano come **invertenti** o **non invertenti**.
+
+---
+
+## 2. Le combinazioni di ingresso stanno portando le due uscite allo stesso potenziale
+### Perché è probabile
+Il motore gira solo se tra i suoi due capi c’è una **differenza di tensione**.  
+Se **OUT A** e **OUT B** risultano entrambe alte oppure entrambe basse, su M1 c’è circa **0 V**, quindi non gira.
+
+Dato che:
+- un ingresso è chiamato **Power**
+- l’altro **Direction**
+- il chip può essere invertente o non invertente a seconda del modello
+
+è facile che la tabella logica reale non corrisponda a quella attesa.
+
+### Controllo pratico
+Con il circuito acceso:
+- misurare la tensione tra **pin 7 e GND**
+- misurare la tensione tra **pin 5 e GND**
+- misurare la tensione **direttamente ai capi del motore**
+- provare tutte le combinazioni di **Power** e **Direction**
+
+Se ai capi del motore non compare differenza di potenziale, il motore resta fermo anche se il driver “commuta”.
+
+---
+
+## 3. Manca o non è corretta una delle alimentazioni
+### Perché è probabile
+Il circuito richiede **due alimentazioni distinte**:
+- **+5 V** per i segnali d’ingresso/pull-up
+- **10–18 V** per **VDD** del TC442x e quindi per il motore
+
+Se manca la 10–18 V:
+- il driver non può applicare tensione al motore
+
+Se manca la +5 V:
+- gli ingressi tramite R1/R2 non vengono portati ai livelli logici previsti
+
+Se le masse non sono comuni:
+- i livelli logici potrebbero non essere riconosciuti
+
+### Controllo pratico
+Verificare sul circuito reale:
+- tensione tra **pin 6 e pin 3**
+- presenza del **+5 V**
+- continuità della **massa comune** tra logica e potenza
+
+---
+
+## 4. Il TC442x non è adatto a pilotare direttamente quel motore
+### Perché è molto plausibile
+Dal datasheet il TC4423/24/25 è un **MOSFET driver**, non un driver H-bridge per motori.  
+Il datasheet dice che può pilotare anche carichi induttivi, ma qui il motore è collegato **direttamente** alle uscite del chip.
+
+Le uscite possono erogare **forte corrente di picco**, ma questo non significa che possano alimentare in modo continuo un motore reale senza superare i limiti termici/elettrici del dispositivo.
+
+Quindi se il motore richiede troppa corrente:
+- il chip può non riuscire a farlo partire
+- la tensione sulle uscite può collassare
+- il driver può danneggiarsi
+
+Questa è una causa un po’ più “da datasheet” che da schema, ma resta molto concreta.
+
+### Controllo pratico
+- Scollegare M1 e verificare se le uscite **pin 5** e **pin 7** commutano correttamente a vuoto.
+- Provare con un carico più leggero.
+- Controllare se IC1 scalda anormalmente.
+
+---
+
+## 5. Cablaggio ambiguo o errato dei diodi di ricircolo / possibile limitazione anomala delle uscite
+### Perché è possibile
+I diodi **D1-D4** sembrano messi come clamp verso:
+- rail positivo
+- massa
+
+L’idea è corretta per un carico induttivo, ma il disegno è un po’ fitto e alcuni incroci sono poco leggibili.  
+Se uno dei diodi è montato al contrario o in corto:
+- una delle uscite può restare bloccata verso VDD o verso GND
+- il motore non riceve la corretta polarità
+
+### Controllo pratico
+- Verificare orientamento reale di **D1-D4**
+- Misurare con tester in prova diodo
+- Controllare se un’uscita risulta forzata a un rail anche quando il driver dovrebbe commutare
+
+---
+
+## 6. Segnali “Power” e “Direction” non stanno realmente arrivando ai pin 2 e 4 come previsto
+### Perché è possibile
+Dallo schema i pin 2 e 4 sono collegati ai segnali esterni con pull-up da 10 kΩ a +5 V.  
+Se però:
+- il comando esterno è sempre aperto,
+- è invertito,
+- non porta mai il livello basso,
+- oppure lavora senza massa comune,
+
+gli ingressi possono restare sempre nello stesso stato.
+
+### Controllo pratico
+Misurare direttamente:
+- tensione al **pin 2**
+- tensione al **pin 4**
+mentre si azionano i comandi **Power** e **Direction**.
+
+---
+
+## 7. Condensatori di bypass mancanti, guasti o lontani dal chip
+### Perché è meno probabile, ma possibile
+**C1** e **C2** sono importanti perché il driver commuta correnti elevate e il motore è un carico induttivo.  
+Se il bypass non è presente fisicamente o non è ben collegato:
+- il chip può comportarsi in modo instabile
+- possono esserci reset o commutazioni errate
+- il motore può non partire
+
+### Controllo pratico
+- Verificare fisicamente che **C1** e **C2** siano montati tra **pin 6** e **GND**
+- controllare saldature e continuità
+
+---
+
+## 8. Integrato danneggiato
+### Perché è possibile
+Se il TC442x è stato usato direttamente su un motore che assorbe troppo, oppure ha subito picchi o collegamenti errati, può essersi guastato.
+
+### Controllo pratico
+- Controllare se gli ingressi cambiano ma le uscite no
+- Verificare se una o entrambe le uscite sono sempre fisse
+- Sostituire temporaneamente IC1 con uno noto funzionante
+
+---
+
+## 5) Riassunto finale delle cause più probabili
+
+Ordine di probabilità:
+
+1. **Modello IC sbagliato o confusione tra TC4423 e TC4424**  
+   È la causa più forte perché la contraddizione è visibile nello schema.
+
+2. **Le due uscite finiscono allo stesso livello logico, quindi ai capi del motore c’è 0 V**  
+   Molto probabile, specie se la logica degli ingressi non corrisponde al tipo di driver montato.
+
+3. **Assenza o errore di alimentazione: 10–18 V, +5 V o massa comune**  
+   Sempre da verificare subito.
+
+4. **Il TC442x non riesce a pilotare direttamente il motore reale**  
+   Molto plausibile, perché nasce come MOSFET driver, non come driver motore di potenza diretto.
+
+5. **Errore di montaggio/orientamento dei diodi D1-D4**  
+   Possibile, soprattutto se una linea è clampata in modo permanente.
+
+6. **Segnali Power/Direction non corretti o non presenti ai pin 2 e 4**  
+   Possibile se il problema è nel comando esterno.
+
+7. **Problemi di bypass/alimentazione impulsiva**
+8. **IC già guasto**
+
+---
+
+## 6) Controlli pratici minimi consigliati, in ordine
+
+1. **Verificare la sigla esatta dell’IC montato**: TC4423, TC4424 o TC4425.
+2. **Misurare VDD** tra **pin 6** e **pin 3**.
+3. **Misurare i livelli ai pin 2 e 4** mentre si azionano i comandi.
+4. **Misurare i livelli ai pin 7 e 5** rispetto a GND.
+5. **Misurare la tensione direttamente ai capi di M1**.
+6. **Controllare orientamento e integrità di D1-D4**.
+7. **Provare il driver senza motore** o con carico più leggero.
+8. **Verificare surriscaldamento del chip**.
+
+Se vuoi, posso anche ricavarti una **tabella logica attesa degli stati di OUT A, OUT B e del motore** per i tre casi:
+- TC4423
+- TC4424
+- TC4425
+
+così puoi capire subito quale combinazione dovrebbe far girare M1.

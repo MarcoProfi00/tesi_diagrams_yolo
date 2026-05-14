@@ -1,0 +1,55 @@
+IC: L298
+
+Descrizione:
+Il L298 è un driver integrato dual full-bridge ad alta tensione e alta corrente.
+È progettato per pilotare carichi induttivi come relè, solenoidi, motori DC e motori stepper.
+Accetta livelli logici TTL.
+Sono presenti ingressi Enable per abilitare o disabilitare indipendentemente i bridge.
+È presente una alimentazione separata per la logica.
+
+Alimentazioni:
+- Pin 4: VS, alimentazione degli stadi di potenza.
+- Pin 9: VSS, alimentazione della logica.
+- Pin 8: GND.
+- Range VS operativo indicato dal datasheet: fino a 46 V.
+- Range VSS indicato dal datasheet: 4.5 V - 7 V.
+- Il datasheet indica che deve essere collegato un condensatore non induttivo da 100 nF tra VS e GND.
+- Il datasheet indica che deve essere collegato un condensatore da 100 nF tra VSS e GND.
+
+Pin principali del bridge B:
+- Pin 10: Input 3.
+- Pin 11: Enable B.
+- Pin 12: Input 4.
+- Pin 13: Out 3.
+- Pin 14: Out 4.
+- Pin 15: Sense B.
+
+Funzione dei pin:
+- Pin 10 e pin 12 sono ingressi logici TTL del bridge B.
+- Pin 11 è l’ingresso Enable B.
+- Se Enable B è basso, il bridge B viene disabilitato.
+- Pin 13 e pin 14 sono le uscite del bridge B.
+- Il carico del bridge B è collegato tra pin 13 e pin 14.
+- Pin 15 Sense B è usato per il sensing della corrente del bridge B tramite una resistenza verso massa.
+
+Livelli logici:
+- Input Low sui pin di ingresso: circa <= 1.5 V.
+- Input High sui pin di ingresso: circa >= 2.3 V.
+- Enable Low: circa <= 1.5 V.
+- Enable High: circa >= 2.3 V.
+
+Tabella funzionale per controllo motore DC:
+- Enable = H, C = H, D = L: Forward.
+- Enable = H, C = L, D = H: Reverse.
+- Enable = H, C = D: Fast Motor Stop.
+- Enable = L, C = X, D = X: Free Running Motor Stop.
+
+Diodi esterni:
+- Il datasheet indica che per carichi induttivi sono richiesti diodi esterni.
+- I diodi D1-D4 devono essere di tipo fast recovery.
+- Il datasheet indica trr <= 200 ns per i diodi esterni nel circuito di controllo motore DC.
+
+Note applicative:
+- Ogni ingresso deve essere collegato alla sorgente dei segnali di pilotaggio con un percorso breve.
+- Prima di accendere o spegnere l’alimentazione, l’ingresso Enable deve essere portato basso.
+- La resistenza di sense deve essere collegata a massa vicino al polo negativo di VS e vicino al pin GND dell’integrato.

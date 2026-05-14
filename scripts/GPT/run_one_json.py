@@ -7,9 +7,13 @@ from openai import OpenAI
 # CONFIGURAZIONE
 # =========================
 
+# gpt-4o-mini
+# gpt-4.1-mini
+# gpt-4.1-nano
+# gpt-5.4-nano
 MODEL = "gpt-5.4-nano"
 
-PROBLEM = "Il circuito non produce audio sugli altoparlanti. Quali sono le cause più probabili?"
+PROBLEM = "Il motore M1 non gira. Quali sono le cause più probabili?"
 
 # Lo script si trova in: scripts/GPT/run_one_json.py
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -17,16 +21,18 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 # Root del progetto: salgo da scripts/GPT a cartella principale
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
+CIRCUIT_NAME = "ic11"
+
 CIRCUIT_DIR = (
     PROJECT_ROOT
     / "experiment_ai"
     / "circuiti_complessi"
     / "batch_v1"
-    / "ic3"
+    / CIRCUIT_NAME
 )
 
 # File di input
-JSON_PATH = CIRCUIT_DIR / "ic3.json"
+JSON_PATH = CIRCUIT_DIR / f"{CIRCUIT_NAME}.json"
 DATASHEET_PATH = CIRCUIT_DIR / "datasheet" / "datasheet.txt"
 PROMPT_PATH = CIRCUIT_DIR / "prompt_json.txt"
 
@@ -71,7 +77,7 @@ prompt = (
 # CHIAMATA API
 # =========================
 
-print(f"\nEseguo {MODEL} su circuito ic3...")
+print(f"\nEseguo {MODEL} su circuito {CIRCUIT_NAME}...")
 print(f"JSON: {JSON_PATH}")
 print(f"DATASHEET: {DATASHEET_PATH}")
 print(f"PROMPT: {PROMPT_PATH}\n")
@@ -79,7 +85,7 @@ print(f"PROMPT: {PROMPT_PATH}\n")
 response = client.responses.create(
     model=MODEL,
     input=prompt,
-    max_output_tokens=3000,
+    max_output_tokens=4000,
 )
 
 answer = response.output_text
@@ -89,11 +95,11 @@ answer = response.output_text
 # =========================
 
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-output_path = RESULTS_DIR / f"ic3_{MODEL}_{timestamp}.txt"
+output_path = RESULTS_DIR / f"{CIRCUIT_NAME}_{MODEL}_{timestamp}.txt"
 
 with output_path.open("w", encoding="utf-8") as f:
     f.write(f"MODELLO: {MODEL}\n")
-    f.write(f"CIRCUITO: ic3\n")
+    f.write(f"CIRCUITO: {CIRCUIT_NAME}\n")
     f.write(f"PROBLEMA: {PROBLEM}\n\n")
 
     if response.usage:

@@ -1,0 +1,59 @@
+IC: NE555
+
+Descrizione:
+Il NE555 è un circuito integrato timer. Può generare ritardi temporali oppure oscillazioni periodiche.
+Nel circuito considerato sono presenti due NE555 usati per generare un suono tipo “ding-dong”.
+Un NE555 può funzionare come oscillatore/timer lento, mentre l’altro può generare il segnale audio verso lo speaker.
+
+Pin principali NE555:
+- Pin 1: GND, massa.
+- Pin 2: TRIGGER, ingresso trigger.
+- Pin 3: OUTPUT, uscita del timer.
+- Pin 4: RESET, reset attivo basso. Per funzionamento normale deve essere alto, di solito collegato a VCC.
+- Pin 5: CONTROL VOLTAGE, controllo della soglia interna. Spesso collegato a GND tramite condensatore piccolo, tipicamente circa 0.01 uF.
+- Pin 6: THRESHOLD, ingresso soglia.
+- Pin 7: DISCHARGE, transistor interno di scarica del condensatore di temporizzazione.
+- Pin 8: VCC, alimentazione positiva.
+
+Alimentazione:
+- Il NE555 funziona tipicamente con alimentazione da circa 4.5 V a 16 V per NE555.
+- Nel circuito considerato l’alimentazione è +9 V DC.
+- Pin 8 deve essere collegato a +V.
+- Pin 1 deve essere collegato a GND.
+- Pin 4 RESET deve essere tenuto alto per permettere al timer di oscillare o generare impulsi.
+
+Funzionamento astabile tipico:
+- In configurazione astabile, il 555 genera un’onda quadra sul pin 3.
+- Pin 2 e pin 6 sono spesso collegati insieme al condensatore di temporizzazione.
+- Pin 7 è collegato alla rete resistiva che carica/scarica il condensatore.
+- Il condensatore di temporizzazione va verso GND.
+- La frequenza dipende dai resistori e dal condensatore collegati a pin 2/6/7.
+
+Soglie interne:
+- Il pin 2 TRIGGER commuta quando scende sotto circa 1/3 VCC.
+- Il pin 6 THRESHOLD commuta quando sale sopra circa 2/3 VCC.
+- Il pin 5 CONTROL VOLTAGE influenza queste soglie; se non usato, spesso viene filtrato con un condensatore verso GND.
+
+Uscita:
+- Pin 3 è l’uscita del 555.
+- L’uscita può pilotare un carico moderato, ma nel circuito reale il segnale verso lo speaker può passare tramite condensatore di accoppiamento.
+- Se il pin 3 del secondo NE555 non oscilla, lo speaker non emetterà suono.
+
+Collegamenti attesi in questo circuito:
+- Entrambi i NE555 devono avere pin 8 collegato a +9 V.
+- Entrambi i NE555 devono avere pin 1 collegato a GND.
+- Entrambi i pin 4 RESET devono essere collegati a +9 V o comunque a livello alto.
+- Le reti R-C attorno a pin 2, 6 e 7 devono essere collegate correttamente per generare oscillazione.
+- Il pin 3 del secondo NE555 deve essere collegato allo speaker tramite il condensatore di uscita.
+- Lo speaker deve avere l’altro terminale collegato a GND.
+- I pin 5 possono essere collegati a GND tramite piccoli condensatori di stabilizzazione.
+
+Controlli diagnostici utili:
+- Verificare +9 V sui pin 8 di entrambi i NE555.
+- Verificare GND sui pin 1 di entrambi i NE555.
+- Verificare che i pin 4 RESET siano alti; se sono bassi, il 555 resta resettato e non produce uscita.
+- Verificare con oscilloscopio o multimetro se il pin 3 del secondo NE555 oscilla.
+- Verificare che il segnale sul pin 3 del secondo NE555 passi attraverso il condensatore di uscita verso lo speaker.
+- Verificare che lo speaker sia collegato e non interrotto.
+- Verificare che le reti resistore-condensatore sui pin 2, 6 e 7 siano presenti e collegate correttamente.
+- Verificare che i condensatori di temporizzazione non siano in corto, aperti o montati con polarità sbagliata se polarizzati.
