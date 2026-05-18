@@ -1,0 +1,97 @@
+IC: ISL85410 / ISL854102
+
+Descrizione:
+L'ISL85410 / ISL854102 e' un regolatore switching buck sincrono wide-input.
+Integra MOSFET high-side e low-side, controllo PWM/PFM, soft-start, enable, power-good e protezioni interne.
+Nel circuito considerato viene usato come convertitore DC-DC step-down per generare una tensione di uscita regolata.
+
+Caratteristiche principali:
+- Regolatore buck sincrono.
+- Ampio range di tensione di ingresso.
+- ISL85410: corrente di uscita fino a circa 1 A.
+- ISL854102: corrente di uscita fino a circa 1.2 A.
+- MOSFET high-side e low-side integrati.
+- Frequenza di switching fissa o regolabile.
+- Funzionamento PWM o PFM a carichi leggeri.
+- Soft-start interno o esterno.
+- Uscita Power-Good.
+- Protezione da sovracorrente e sovratemperatura.
+
+Pin principali:
+- Pin 1: SS, soft-start.
+- Pin 2: SYNC, sincronizzazione e selezione modalita' PWM/PFM.
+- Pin 3: BOOT, bootstrap per il gate driver high-side.
+- Pin 4: VIN, alimentazione di ingresso del regolatore.
+- Pin 5: PHASE, nodo switching verso l'induttore.
+- Pin 6: PGND, massa di potenza.
+- Pin 7: EN, enable del regolatore.
+- Pin 8: PG, uscita Power-Good open-drain.
+- Pin 9: VCC, uscita del regolatore lineare interno a 5 V.
+- Pin 10: FB, feedback della tensione di uscita.
+- Pin 11: COMP, compensazione dell'anello di controllo.
+- Pin 12: FS, selezione frequenza di switching.
+- EPAD / GND: massa segnale e pad termico, da collegare al piano di massa.
+
+Alimentazione:
+- VIN e' l'ingresso di alimentazione principale del convertitore.
+- Il datasheet dell'ISL854102 indica un range di ingresso circa 3 V - 40 V.
+- VIN deve essere disaccoppiato verso GND con condensatori vicini all'IC.
+- VCC e' l'uscita del regolatore lineare interno e va disaccoppiata verso PGND con un condensatore vicino al pin.
+- PGND e GND / EPAD devono essere collegati al riferimento di massa del circuito.
+
+Nodo switching e uscita:
+- PHASE e' il nodo switching interno tra i MOSFET e l'induttore esterno.
+- L'induttore di potenza deve essere collegato tra PHASE e il nodo di uscita.
+- I condensatori di uscita devono essere collegati tra VOUT e GND.
+- Il nodo PHASE e' rumoroso e non deve essere collegato direttamente a segnali sensibili.
+
+Bootstrap:
+- BOOT alimenta il driver del MOSFET high-side.
+- Il datasheet richiede un condensatore bootstrap tra BOOT e PHASE, tipicamente 100 nF.
+- Se il condensatore bootstrap manca o e' collegato male, il MOSFET high-side puo' non pilotarsi correttamente.
+
+Feedback:
+- FB e' l'ingresso di feedback del regolatore.
+- La tensione di uscita e' impostata tramite un partitore resistivo da VOUT a FB e da FB a GND.
+- Il riferimento interno del feedback e' circa 0.6 V.
+- Se il partitore FB e' aperto, in corto o collegato al nodo sbagliato, la tensione di uscita non viene regolata correttamente.
+
+Enable:
+- EN abilita il regolatore.
+- Se EN e' basso, il regolatore e il bias interno restano spenti.
+- Il datasheet indica che il chip si abilita quando EN supera circa 1 V.
+- EN puo' essere collegato a VIN per avvio automatico.
+- EN non deve essere collegato a VCC per l'avvio automatico, perche' VCC dipende dall'abilitazione.
+
+Soft-start:
+- SS controlla la rampa di avvio della tensione di uscita.
+- Un condensatore tra SS e GND imposta il tempo di soft-start.
+- Se SS e' collegato a VCC, viene usato il soft-start interno.
+
+Frequenza e modalita':
+- FS seleziona la frequenza di switching.
+- FS collegato a VCC imposta la frequenza fissa interna, tipicamente 500 kHz.
+- Una resistenza da FS a GND permette una frequenza regolabile, circa 300 kHz - 2 MHz.
+- SYNC puo' selezionare il funzionamento PWM/PFM oppure sincronizzare il convertitore a un clock esterno.
+
+Power-Good:
+- PG e' una uscita open-drain di power-good.
+- PG viene tenuto basso quando la tensione di uscita non e' entro i limiti di regolazione o durante il soft-start.
+- Quando l'uscita e' regolata, PG diventa ad alta impedenza e richiede una pull-up se usato come segnale logico.
+
+Compensazione:
+- COMP e' l'uscita dell'amplificatore d'errore.
+- Se COMP e' collegato a VCC viene usata la compensazione interna.
+- Una rete RC da COMP a GND permette compensazione esterna.
+
+Collegamenti attesi nel circuito:
+- VIN collegato alla tensione di ingresso.
+- PGND e GND / EPAD collegati a massa.
+- VCC disaccoppiato con condensatore verso PGND.
+- PHASE collegato all'induttore di uscita.
+- BOOT collegato a PHASE tramite condensatore bootstrap.
+- FB collegato al partitore resistivo della tensione di uscita.
+- EN portato alto o collegato a VIN per abilitare il regolatore.
+- FS collegato a VCC o a una resistenza verso GND per impostare la frequenza.
+- SS collegato a condensatore verso GND oppure a VCC per soft-start interno.
+- PG collegato a pull-up se viene usato come segnale power-good.

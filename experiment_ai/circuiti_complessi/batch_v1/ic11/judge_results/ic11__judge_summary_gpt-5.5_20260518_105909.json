@@ -1,0 +1,963 @@
+[
+  {
+    "metadata": {
+      "circuit": "ic11",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic11\\results_json\\ic11_gpt-4.1-mini_20260518_103814.txt",
+      "model_under_test": "gpt-4.1-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 33.504,
+      "timestamp": "2026-05-18 10:51:07",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9330, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1511, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10841)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 15,
+      "max_score": 21,
+      "normalized_score": 0.7142857142857143,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Segnali logici sugli ingressi pin 2 e pin 4 assenti, non validi o in combinazione tale da produrre la stessa tensione sui due capi del motore",
+        "Alimentazione VDD del TC4423 su pin 6 assente o fuori dal range operativo 4.5-18 V",
+        "Massa comune pin 3/GND o riferimento dei segnali di ingresso mancante",
+        "TC4423 guasto o inadatto se il motore richiede corrente continua superiore alla capacità del driver",
+        "Motore aperto/bloccato o diodi di clamp in corto"
+      ],
+      "model_primary_cause": "Ingressi logici del driver TC4423 non attivi o assenti",
+      "major_errors": [
+        "Non evidenzia che il TC4423 è un driver duale invertente e quindi la relazione tra livelli logici su pin 2/pin 4 e tensione ai capi del motore è essenziale.",
+        "Descrive i diodi come collegati in antiparallelo attorno al motore, mentre dal JSON sono diodi di clamp verso VDD e GND sui due nodi di uscita.",
+        "Dice che il motore è collegato alle uscite tramite i diodi, ma dal grafo i terminali del motore sono direttamente sugli stessi nodi delle uscite pin 7 e pin 5; i diodi sono protezioni/clamp."
+      ],
+      "hallucinations": [
+        "Assume una alimentazione '12 V o simile' senza che il JSON fornisca il valore, anche se è una supposizione ragionevole e non centrale.",
+        "Afferma che i diodi sono correttamente collegati in antiparallelo attorno al motore, cosa non supportata dalla topologia del JSON."
+      ],
+      "missed_important_points": [
+        "Manca una discussione esplicita delle condizioni di funzionamento del motore: per avere rotazione serve una differenza di potenziale tra OUT A pin 7 e OUT B pin 5; se le uscite sono entrambe alte o entrambe basse il motore non gira.",
+        "Non collega la diagnosi al fatto che il TC4423 è invertente: OUT A e OUT B sono l'inverso dei rispettivi ingressi.",
+        "Non considera chiaramente che il TC4423 è un MOSFET driver, non un vero ponte H per motori, quindi la corrente del motore e lo stress induttivo possono essere critici."
+      ],
+      "strengths": [
+        "Identifica correttamente pinout principali del TC4423: pin 2/4 ingressi, pin 3 GND, pin 6 VDD, pin 7/5 uscite.",
+        "Riconosce correttamente che pin 1 e pin 8 sono NC e che il warning sugli unconnected terminals non è un guasto.",
+        "Propone controlli pratici utili: misura VDD-GND, verifica soglie logiche sugli ingressi, misura tensione ai capi del motore, test continuità motore e diodi.",
+        "La causa principale indicata, segnali di ingresso assenti o non validi, è plausibile e coerente con il sintomo."
+      ],
+      "short_explanation": "La risposta è complessivamente utile e propone controlli diagnostici realistici, con buon uso del pinout e delle soglie del datasheet. Tuttavia resta generica e perde un punto tecnico importante: il componente nel JSON è un TC4423, quindi dual driver invertente, e per far girare il motore occorre che le due uscite pin 7 e pin 5 siano a livelli opposti. Inoltre interpreta in modo impreciso i diodi, che sono clamp verso alimentazione e massa, non semplici antiparalleli sul motore. Diagnosi principale plausibile, ma priorità e spiegazione topologica non ottimali."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic11",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic11\\results_json\\ic11_gpt-4.1-nano_20260518_103839.txt",
+      "model_under_test": "gpt-4.1-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 30.866,
+      "timestamp": "2026-05-18 10:51:37",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8776, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1546, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10322)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 1,
+        "datasheet_use": 1,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 1,
+        "cause_priority": 1,
+        "practical_checks": 2,
+        "hallucination_absence": 1
+      },
+      "total_score": 8,
+      "max_score": 21,
+      "normalized_score": 0.38095238095238093,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Alimentazione VDD del TC4423/motore assente o fuori range sul pin 6, che nel JSON è collegato al terminale di alimentazione e ai condensatori di bypass",
+        "Ingressi di comando pin 2 e pin 4 non pilotati con livelli logici validi o in combinazione non adatta: con due uscite allo stesso stato il motore non vede differenza di potenziale",
+        "Uso del TC4423 inverting: la logica dei segnali Power/Direction deve tener conto dell'inversione; se il circuito era pensato per TC4424 non-inverting la logica può risultare errata",
+        "Mancanza della +5 V sui pull-up degli ingressi tramite R1/R2 o linee Power/Direction lasciate inattive",
+        "Guasto o corto/apertura del motore, delle uscite del driver o dei diodi di clamp"
+      ],
+      "model_primary_cause": "Ingressi di controllo inattivi o non applicati correttamente",
+      "major_errors": [
+        "Identifica erroneamente il pin 6/right_2 come ingresso IN B, mentre dal datasheet e dal JSON è VDD",
+        "Indica pin 4/left_2 come IN A, mentre il pin 4 è IN B; il pin 2 è IN A",
+        "Afferma che con ingressi bassi le uscite del TC4423 vanno basse, ma il TC4423 è un driver invertente: con ingresso basso l'uscita corrispondente va alta",
+        "Considera i pin bottom_1 e bottom_2 non collegati come possibile problema di alimentazione/terra, ma sono pin 1 e 8 NC secondo il datasheet e devono restare non connessi",
+        "Descrive il motore come collegato alle uscite attraverso i diodi, mentre nel JSON il motore è collegato direttamente alle uscite pin 7 e pin 5; i diodi sono clamp/flyback verso alimentazione e massa"
+      ],
+      "hallucinations": [
+        "Riferimento a bobine del motore e collegamento tramite diodi di commutazione non supportato dalla topologia JSON",
+        "Possibile necessità di collegare i pin bottom NC come se potessero essere alimentazione o massa",
+        "Menzione di una 'corretta oscillazione di output', non pertinente a questo circuito di pilotaggio motore"
+      ],
+      "missed_important_points": [
+        "Non riconosce correttamente che il pin 6 è VDD ed è già collegato al nodo di alimentazione nel JSON",
+        "Non evidenzia che pin 1 e pin 8 sono NC e che il warning sugli unconnected terminals non è un difetto",
+        "Non discute la necessità di avere una differenza di potenziale tra OUT A pin 7 e OUT B pin 5 per far girare il motore",
+        "Non tiene conto della natura invertente del TC4423 nella diagnosi dei livelli logici",
+        "Non menziona la possibile incoerenza tra circuito tipico per TC4424 non invertente e IC marcato TC4423 invertente"
+      ],
+      "strengths": [
+        "Propone controlli pratici utili su alimentazione, massa, ingressi, uscite, motore e diodi",
+        "Cita correttamente il range operativo VDD 4.5-18 V",
+        "Individua genericamente come causa probabile comandi di ingresso non corretti o assenti",
+        "Riconosce la presenza di condensatori di alimentazione e diodi di protezione"
+      ],
+      "short_explanation": "La risposta è solo parzialmente utile: suggerisce controlli sensati e individua genericamente ingressi e alimentazione come cause probabili, ma commette errori gravi sul pinout del TC4423, in particolare scambia VDD pin 6 per un ingresso, interpreta male la logica invertente e tratta i pin NC come possibile problema. Inoltre descrive in modo impreciso il collegamento del motore rispetto ai diodi di clamp."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic11",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic11\\results_json\\ic11_gpt-4o-mini_20260518_103639.txt",
+      "model_under_test": "gpt-4o-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 28.347,
+      "timestamp": "2026-05-18 10:52:06",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8178, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1412, output_tokens_details=OutputTokensDetails(reasoning_tokens=415), total_tokens=9590)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 1,
+        "cause_priority": 1,
+        "practical_checks": 2,
+        "hallucination_absence": 1
+      },
+      "total_score": 10,
+      "max_score": 21,
+      "normalized_score": 0.47619047619047616,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Assenza o tensione insufficiente dell'alimentazione motore/driver sul nodo terminal26.4 collegato al pin 6 VDD, che deve essere nel range operativo del TC4423",
+        "Ingressi IN A pin 2 e IN B pin 4 non comandati correttamente o a livelli logici non idonei, causando uscite senza differenza di potenziale utile sul motore",
+        "Entrambe le uscite OUT A pin 7 e OUT B pin 5 nello stesso stato logico, quindi nessuna tensione ai capi del motore",
+        "Guasto o corto su motore, diodi di clamp o uscite del driver",
+        "Massa comune o ritorni di alimentazione non corretti"
+      ],
+      "model_primary_cause": "Nessuna alimentazione al TC4423 perché il pin VDD pin 6 sarebbe non collegato nel graph",
+      "major_errors": [
+        "Ha letto erroneamente il JSON: il pin 6 VDD del TC4423 è collegato al nodo di alimentazione terminal26.4, ai condensatori e ai diodi, non è non connesso.",
+        "Ha considerato quasi solo OUT A pin 7 e IN A pin 2, trascurando che il motore è collegato tra OUT A pin 7 e OUT B pin 5.",
+        "Non ha considerato che il TC4423 è un driver dual inverting: lo stato relativo dei due ingressi determina la polarità/tensione ai capi del motore.",
+        "Ha trattato IN A come possibile 'abilitazione', ma dal datasheet è solo un ingresso logico del driver, non un enable dedicato."
+      ],
+      "hallucinations": [
+        "Pin VDD non collegato nel graph",
+        "Ingresso IN A descritto come input di abilitazione",
+        "Possibile problema di 'capacitori non collegati' senza supporto specifico dal JSON, dato che i condensatori risultano collegati tra VDD e GND"
+      ],
+      "missed_important_points": [
+        "Il pin 5 OUT B è connesso al secondo terminale del motore ed è fondamentale per la rotazione.",
+        "Il pin 6 VDD è effettivamente collegato al nodo di alimentazione, quindi il controllo corretto è verificare la presenza della tensione esterna sul terminale26.4, non dichiarare il pin scollegato.",
+        "I pin 1 e 8 sono NC e risultano non connessi correttamente, quindi il warning JSON su quei pin non è una causa del guasto.",
+        "Non valuta la necessità di avere livelli logici complementari/appropriati sui due ingressi per creare tensione differenziale sul motore.",
+        "Non cita il range operativo VDD 4.5-18 V e il fatto che lo schema richiede una alimentazione motore/driver separata sul nodo VDD."
+      ],
+      "strengths": [
+        "Identifica correttamente il componente principale come TC4423 e richiama alcuni pin principali del datasheet.",
+        "Propone controlli pratici utili come misurare alimentazione, ingressi logici, massa e testare il motore separatamente.",
+        "Riconosce la presenza dei diodi di protezione/clamp e suggerisce di verificarli per cortocircuiti."
+      ],
+      "short_explanation": "La risposta è solo parzialmente utile. Contiene controlli pratici sensati, ma la diagnosi principale è basata su una lettura errata del JSON: il pin 6 VDD non è scollegato, è connesso al nodo di alimentazione. Inoltre trascura che il motore è pilotato tra le due uscite pin 7 e pin 5 del driver duale e non solo da OUT A. Manca anche l'analisi della logica inverting del TC4423 e della necessità di una tensione differenziale ai capi del motore."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic11",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic11\\results_json\\ic11_gpt-5-mini_20260518_104042.txt",
+      "model_under_test": "gpt-5-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 33.344,
+      "timestamp": "2026-05-18 10:52:39",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9905, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1575, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=11480)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 17,
+      "max_score": 21,
+      "normalized_score": 0.8095,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Assenza o valore errato della tensione VDD sul pin6 del TC4423/TC4424 rispetto a GND",
+        "Ingressi logici Power/Direction non portati a livelli validi o comando errato sui pin2 e pin4",
+        "Mancanza della alimentazione/pull-up logica a +5 V sul nodo comune delle resistenze R1/R2",
+        "Uscite pin7/pin5 non complementari o driver danneggiato",
+        "Motore aperto/bloccato o collegamenti del motore interrotti",
+        "Diodi di clamp in corto o montati in modo errato"
+      ],
+      "model_primary_cause": "Ingressi logici non attivi o non portati a livello valido, quindi il driver non commuta",
+      "major_errors": [
+        "Interpreta in modo impreciso le resistenze sugli ingressi come se i segnali passassero attraverso resistenze verso i terminali esterni; dal JSON le resistenze sono pull-up verso il nodo terminal26.3, mentre i terminali di comando sono collegati direttamente ai pin di ingresso.",
+        "Non dà sufficiente evidenza al nodo terminal26.3, che nel circuito reale corrisponde alla alimentazione logica/pull-up a +5 V: se assente, gli ingressi possono non assumere gli stati previsti.",
+        "Include come possibile causa i pin 1 e 8 non connessi nonostante per il pinout fornito siano NC; lo cita con cautela, ma resta una causa poco supportata."
+      ],
+      "hallucinations": [
+        "Ipotesi di partitori o pull resistors che impediscono il livello HIGH non chiaramente supportata dalla topologia JSON: le resistenze sono pull-up, non un partitore documentato.",
+        "Possibile problema di pin duplicati non collegati è poco pertinente perché il datasheet indica pin1 e pin8 come NC per il package 8-pin indicato."
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che terminal26.3 alimenta il lato alto di entrambe le resistenze di pull-up degli ingressi e va verificato come rail logico separato.",
+        "Non discute esplicitamente che il circuito richiede due uscite a stati opposti per applicare tensione al motore; se le due uscite sono entrambe alte o entrambe basse, il motore non gira.",
+        "Non segnala la possibile incongruenza tra marcatura JSON TC4423, che è invertente, e schema reale/titolo che sembra riferirsi a TC4424 non invertente; non è necessariamente causa di mancata rotazione, ma può cambiare la logica di comando."
+      ],
+      "strengths": [
+        "Identifica correttamente pinout, VDD, GND, ingressi e uscite del TC4423 secondo datasheet e JSON.",
+        "Riconosce che il motore è collegato direttamente tra OUT A pin7 e OUT B pin5.",
+        "Propone controlli pratici molto utili: misura VDD, livelli logici, uscite, continuità motore, diodi e condensatori.",
+        "Usa correttamente le soglie logiche del datasheet, HIGH >= 2.4 V e LOW <= 0.8 V.",
+        "Considera cause realistiche: alimentazione assente, ingressi non comandati, driver guasto, motore guasto, diodi/capacitori in corto."
+      ],
+      "short_explanation": "La risposta è complessivamente utile e tecnicamente coerente: individua correttamente IC, pin principali, motore tra le due uscite, alimentazione e controlli diagnostici essenziali. Tuttavia legge in modo non del tutto corretto la rete degli ingressi, perché le resistenze sono pull-up verso un nodo comune e non semplici resistenze in serie verso i terminali di comando. Inoltre dà spazio a una causa poco pertinente sui pin 1 e 8, che dal datasheet sono NC. La diagnosi principale sugli ingressi non attivi è plausibile e le prime tre cause includono quelle importanti, ma la priorità e alcuni dettagli topologici non sono perfetti."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic11",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic11\\results_json\\ic11_gpt-5-nano_20260518_104002.txt",
+      "model_under_test": "gpt-5-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 31.931,
+      "timestamp": "2026-05-18 10:53:11",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10094, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1658, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=11752)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 13,
+      "max_score": 21,
+      "normalized_score": 0.6190476190476191,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "VDD del TC4423 assente/fuori range sul pin 6 o alimentazione motore 10-18 V non presente",
+        "Ingressi IN A/IN B non in stati logici tali da creare differenza di tensione tra OUT A e OUT B",
+        "Uso/comportamento del TC4423 inverting non considerato rispetto alla logica attesa: con ingressi uguali le uscite sono uguali e il motore non riceve tensione",
+        "Problemi su GND comune o ritorni di massa",
+        "Guasto/corto del motore o delle uscite/diodi di clamp"
+      ],
+      "model_primary_cause": "Alimentazione VDD non presente o flottante sul nodo terminal26.4_t1",
+      "major_errors": [
+        "Non evidenzia la caratteristica essenziale del TC4423: entrambi i driver sono invertenti, quindi la logica degli ingressi determina direttamente se le due uscite sono uguali o opposte.",
+        "Non identifica come causa molto probabile il caso in cui IN A e IN B siano allo stesso livello, producendo uscite allo stesso livello e quindi nessuna tensione sul motore.",
+        "Confusione nei nomi dei pin di ingresso: pin 2 è IN A e pin 4 è IN B, ma in varie parti della risposta vengono scambiati o citati in modo incoerente.",
+        "Interpreta in modo improprio la nota 'Duplicate pins must both be connected', che non è pertinente a IN A/IN B in questo package/pinout fornito."
+      ],
+      "hallucinations": [
+        "Parla di 'due motori' anche se nel circuito c'è un solo motore.",
+        "Suggerisce una possibile 'protezione latched' o blocco latched del driver, non supportata dal datasheet fornito: il datasheet cita protezione latch-up/reverse current, non una protezione di spegnimento latched da sovracorrente.",
+        "Afferma che i diodi devono consentire la corrente del motore in entrambe le direzioni; in realtà sono diodi di clamp/flyback verso VDD e GND, non il percorso normale di alimentazione del motore.",
+        "Indica in modo ambiguo che il motore è collegato 'tramite diodi e condensatori', mentre dal JSON il motore è direttamente tra OUT A pin7 e OUT B pin5, con diodi di protezione verso le rail."
+      ],
+      "missed_important_points": [
+        "Manca una diagnosi esplicita basata sulla tensione differenziale tra pin 7 e pin 5: il motore gira solo se OUT A e OUT B sono a livelli opposti.",
+        "Non propone di misurare direttamente V(OUTA)-V(OUTB) ai capi del motore durante il comando.",
+        "Non discute l'effetto dei pull-up da 10 kΩ sugli ingressi: se i segnali Power/Direction sono lasciati aperti, entrambi gli ingressi vanno alti e con TC4423 entrambe le uscite vanno basse, quindi il motore resta fermo.",
+        "Non segnala la possibile incongruenza tra circuito tipico indicato per TC4424 e IC marcato nel JSON come TC4423."
+      ],
+      "strengths": [
+        "Riconosce correttamente VDD pin 6, GND pin 3, OUT A pin 7 e OUT B pin 5.",
+        "Usa correttamente le soglie logiche principali del datasheet, HIGH >= 2.4 V e LOW <= 0.8 V.",
+        "Propone controlli pratici utili su alimentazione, massa, ingressi, uscite, motore e cortocircuiti.",
+        "Riconosce correttamente che i pin 1 e 8 sono NC e che il warning JSON sui terminali non connessi non è un problema."
+      ],
+      "short_explanation": "La risposta è utile come checklist generale e usa abbastanza bene JSON e datasheet per alimentazione, pinout e soglie. Tuttavia manca il punto diagnostico più specifico: il TC4423 è un doppio driver invertente e il motore, collegato tra OUT A e OUT B, gira solo se le uscite sono opposte. Con ingressi uguali, specialmente se entrambi tirati alti dai pull-up, le uscite sono uguali e non c'è tensione sul motore. Ci sono inoltre alcune confusioni sui pin IN A/IN B e alcune affermazioni non supportate, come la protezione latched."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic11",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic11\\results_json\\ic11_gpt-5.4-mini_20260518_104215.txt",
+      "model_under_test": "gpt-5.4-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 32.344,
+      "timestamp": "2026-05-18 10:53:43",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9242, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1538, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10780)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 16,
+      "max_score": 21,
+      "normalized_score": 0.7619047619,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Ingressi Power/Direction non nello stato logico corretto: con un TC4423 dual inverting le uscite devono essere in stati opposti per avere tensione sul motore",
+        "Possibile uso della variante errata TC4423 invece della TC4424/non-inverting prevista dalla logica del circuito",
+        "Alimentazione VDD del driver assente o fuori range rispetto a massa",
+        "Linea di pull-up a +5 V degli ingressi assente, non collegata o non valida",
+        "Guasto o cortocircuito di diodi di clamp, uscite driver o motore"
+      ],
+      "model_primary_cause": "Ingressi di comando non pilotati correttamente o flottanti",
+      "major_errors": [
+        "Descrive gli ingressi come potenzialmente flottanti senza evidenziare adeguatamente che nel JSON sono presenti resistenze di pull-up comuni verso terminal26.3, anche se la sorgente +5 V è solo un terminale esterno.",
+        "Non distingue chiaramente la condizione logica necessaria: con TC4423 inverting il motore riceve tensione solo se i due ingressi sono in stati opposti; se sono uguali le due uscite sono uguali e il motore resta fermo.",
+        "La priorità data alla topologia non adeguata/H-bridge è un po' speculativa: il datasheet ammette carichi induttivi e il circuito è chiaramente una configurazione push-pull tra due uscite, sebbene limitata dalla corrente e dal tipo di motore."
+      ],
+      "hallucinations": [
+        "L'ipotesi che serva necessariamente una vera H-bridge o uno stadio esterno non è direttamente supportata dai dati disponibili; può essere una verifica ragionevole ma non una causa primaria dimostrata.",
+        "Il riferimento a ingressi 'tramite resistor22.1/22.2' verso i terminali esterni è impreciso: i terminali di comando sono sullo stesso nodo degli ingressi, mentre le resistenze appaiono come pull-up verso un terminale comune."
+      ],
+      "missed_important_points": [
+        "Non cita esplicitamente le soglie logiche del datasheet, 0.8 V massimo per LOW e 2.4 V minimo per HIGH.",
+        "Non cita esplicitamente il range operativo VDD 4.5-18 V come controllo quantitativo.",
+        "Non evidenzia abbastanza che terminal26.3 è verosimilmente la linea +5 V dei pull-up degli ingressi, quindi la sua assenza può lasciare i comandi non validi.",
+        "Non considera in modo esplicito che, con entrambi gli ingressi alti tramite pull-up, un TC4423 porta entrambe le uscite basse e quindi il motore non gira."
+      ],
+      "strengths": [
+        "Identifica correttamente il TC4423, i pin di ingresso, uscita, VDD e GND secondo il datasheet.",
+        "Capisce correttamente che il motore è collegato tra OUT A e OUT B.",
+        "Riconosce correttamente che il TC4423 è dual inverting e che gli ingressi devono produrre uscite differenziali.",
+        "Propone controlli pratici utili su alimentazione, massa, ingressi, uscite e diodi.",
+        "Riconosce correttamente che i pin 1 e 8 sono NC e quindi non sono un problema."
+      ],
+      "short_explanation": "La risposta è tecnicamente utile e in gran parte coerente: identifica correttamente pinout, motore tra le due uscite e natura inverting del TC4423. La causa principale sugli ingressi è plausibile, ma è formulata in modo troppo generico perché il JSON mostra pull-up verso un terminale comune; il punto chiave doveva essere lo stato logico relativo dei due ingressi e l'eventuale assenza del +5 V di pull-up. Buoni i controlli pratici, ma alcune cause sono speculative o non prioritarie."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic11",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic11\\results_json\\ic11_gpt-5.4-nano_20260518_104143.txt",
+      "model_under_test": "gpt-5.4-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 34.677,
+      "timestamp": "2026-05-18 10:54:18",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9452, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1714, output_tokens_details=OutputTokensDetails(reasoning_tokens=731), total_tokens=11166)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 15,
+      "max_score": 21,
+      "normalized_score": 0.7142857142857143,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Assenza o valore errato della tensione di alimentazione VDD sul pin 6 del TC4423, che deve essere nel range operativo 4.5-18 V e nel circuito è fornita dal terminale di alimentazione motore",
+        "Ingressi IN A e IN B non comandati a livelli logici validi rispetto a GND, oppure terminale +5 V dei pull-up non alimentato",
+        "Uso di TC4423 inverting al posto del TC4424 non-inverting previsto/atteso dal circuito, con logica di comando invertita",
+        "Motore o carico con corrente di avviamento/stallo superiore alla capacità pratica del driver da 3 A di picco",
+        "Diodi di clamp o condensatori di alimentazione guasti, in corto o montati male"
+      ],
+      "model_primary_cause": "Mancanza o errata tensione di alimentazione al driver VDD su pin 6",
+      "major_errors": [
+        "Ha scambiato la corrispondenza tra i terminali JSON e i pin di uscita: integrated_circuit11.1_right_1 è pin 7 OUT A, mentre integrated_circuit11.1_right_3 è pin 5 OUT B; nella risposta vengono indicati in modo incoerente/invertito.",
+        "Descrive la rete di diodi e condensatori come qualcosa che probabilmente forma o filtra la tensione verso il motore o realizza un ponte, ma in realtà i diodi sono principalmente clamp/flyback verso alimentazione e massa."
+      ],
+      "hallucinations": [
+        "L'ipotesi di scambiare i terminali del motore come controllo diagnostico non è ben supportata: invertirebbe il verso di rotazione, ma non è una causa tipica di motore fermo in questo schema.",
+        "La descrizione della rete di diodi come possibile ponte/commutazione controllata è imprecisa rispetto alla topologia reale."
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che i resistori R1/R2 sono pull-up verso un terminale comune, verosimilmente +5 V; quindi il problema può essere anche l'assenza del +5 V su terminal26.3.",
+        "Non cita la possibile insufficienza del TC4423/TC4424 a pilotare direttamente un motore con corrente di spunto/stallo elevata rispetto ai 3 A di picco del datasheet.",
+        "Non chiarisce bene che per avere tensione sul motore le due uscite devono trovarsi a livelli opposti; se entrambe sono alte o entrambe basse il motore non gira."
+      ],
+      "strengths": [
+        "Identifica correttamente i nodi principali di alimentazione, massa, ingressi e uscite usando il JSON.",
+        "Usa correttamente molte informazioni del datasheet: range VDD, soglie logiche, pin NC e natura inverting del TC4423.",
+        "Propone controlli pratici utili: misura di VDD su pin 6, verifica GND, misura degli ingressi e delle uscite, controllo diodi e condensatori.",
+        "Riconosce come causa plausibile la possibile confusione TC4423/TC4424/TC4425."
+      ],
+      "short_explanation": "La risposta è complessivamente utile e propone cause diagnostiche plausibili, in particolare alimentazione VDD assente/errata, ingressi non validi e possibile uso del TC4423 inverting al posto di un driver non-inverting. Tuttavia contiene un errore rilevante di mappatura dei pin di uscita rispetto al JSON e alcune descrizioni imprecise della rete di diodi. Buoni i controlli pratici, ma mancano alcuni punti importanti come il ruolo dei pull-up a +5 V e il limite di corrente del driver con un motore reale."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic11",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic11\\results_json\\ic11_gpt-5.4_20260518_104350.txt",
+      "model_under_test": "gpt-5.4",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 30.965,
+      "timestamp": "2026-05-18 10:54:49",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10197, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1438, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=11635)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 17,
+      "max_score": 21,
+      "normalized_score": 0.8095238095,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Uso di TC4423 invertente al posto del TC4424/non invertente previsto dal circuito, con logica di comando potenzialmente non compatibile",
+        "Comandi IN A/IN B non in stati opposti quando serve tensione differenziale sul motore",
+        "Alimentazione reale assente o insufficiente su VDD/pin 6 o riferimento GND errato",
+        "Motore pilotato direttamente da un MOSFET driver: possibile corrente di spunto superiore alla capacità utile del TC4423",
+        "Ingressi esterni Power/Direction non pilotati correttamente o cablaggio esterno errato"
+      ],
+      "model_primary_cause": "I due ingressi ricevono lo stesso comando tramite il nodo comune delle resistenze, quindi le due uscite del TC4423 risultano uguali e il motore non vede tensione differenziale",
+      "major_errors": [
+        "La causa principale proposta è solo parzialmente supportata: il nodo comune delle due resistenze è il lato comune di pull-up/alimentazione, non implica di per sé che i due ingressi siano comandati dallo stesso segnale.",
+        "La risposta non dà massima priorità alla discrepanza funzionale più forte: il componente nel JSON è TC4423 dual invertente, mentre il circuito tipico mostrato/atteso è compatibile con TC4424 non invertente."
+      ],
+      "hallucinations": [
+        "Assume come scenario principale che terminal26.3 possa essere usato come unico segnale di comando, cosa non indicata dal JSON.",
+        "Parla di ingressi potenzialmente flottanti: dal solo JSON i terminali esterni non hanno sorgenti definite, quindi è una possibilità, ma la presenza delle resistenze verso un nodo comune rende l'affermazione meno solida senza sapere che terminal26.3 sia effettivamente non alimentato."
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che le resistenze R1/R2 sono verosimilmente pull-up a +5 V, quindi gli ingressi non sono necessariamente cortocircuitati o comandati insieme.",
+        "Non formula come causa primaria il possibile montaggio/selezione errata TC4423 invece di TC4424, che è molto rilevante per la logica di Power/Direction.",
+        "Non distingue abbastanza tra stato di comando normale che produce 0 V sul motore e guasto vero e proprio."
+      ],
+      "strengths": [
+        "Ricostruisce correttamente pinout e connessioni principali dal JSON: VDD, GND, ingressi, uscite e motore tra pin 5 e pin 7.",
+        "Usa correttamente il datasheet nel riconoscere che il TC4423 è dual inverting.",
+        "Propone controlli pratici sensati: misura degli ingressi, delle uscite, della VDD e prova del motore.",
+        "Riconosce il limite del TC4423 come driver diretto di un motore e la possibilità di sovracorrente/corrente di spunto."
+      ],
+      "short_explanation": "La risposta è tecnicamente utile e ben strutturata, con buon uso di pinout e JSON. Tuttavia la causa messa al primo posto è troppo speculativa: il nodo comune delle resistenze non prova che i due ingressi ricevano lo stesso comando, ma più probabilmente rappresenta un pull-up comune. La diagnosi corretta più forte è la possibile incompatibilità tra TC4423 invertente e logica/circuito previsto per TC4424, che il modello cita ma non prioritizza adeguatamente."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic11",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic11\\results_json_img\\ic11_gpt-4.1-mini_20260518_104430.txt",
+      "model_under_test": "gpt-4.1-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 33.943,
+      "timestamp": "2026-05-18 10:55:23",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9118, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1649, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10767)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 13,
+      "max_score": 21,
+      "normalized_score": 0.6190476190476191,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Assenza o livelli errati dei segnali di comando sui pin 2 e 4: se le due uscite non assumono stati opposti non c'è tensione utile ai capi del motore",
+        "Alimentazione VDD pin 6 o massa pin 3 assenti/errate",
+        "Motore scollegato o guasto, oppure collegamenti interrotti tra pin 5/7 e motore",
+        "Diodi di clamp/flyback in corto che bloccano una o entrambe le uscite",
+        "Possibile confusione TC4423/TC4424 solo in relazione alla logica di comando, non come causa autonoma certa"
+      ],
+      "model_primary_cause": "Segnali di ingresso errati o mancanti al TC4423, con possibile discrepanza TC4423/TC4424",
+      "major_errors": [
+        "Descrive R1 e R2 come partitore, mentre nello schema/JSON sono resistenze di pull-up a +5 V sugli ingressi Power e Direction.",
+        "Afferma che l'immagine mostra chiaramente un TC4424, ma nel simbolo dell'IC è indicato TC4423; solo la didascalia dell'immagine menziona TC4424.",
+        "Dice che il motore è alimentato attraverso i diodi, mentre il motore è collegato direttamente tra le due uscite del driver e i diodi sono clamp/flyback verso VDD/GND.",
+        "Non evidenzia in modo esplicito che il motore gira solo se le uscite pin 5 e pin 7 sono a livelli opposti; se sono entrambe alte o entrambe basse la tensione sul motore è circa zero."
+      ],
+      "hallucinations": [
+        "Partitore formato da R1 e R2.",
+        "Immagine indicata come TC4424 senza qualificare correttamente la contraddizione tra marcatura interna TC4423 e didascalia.",
+        "Motore alimentato attraverso i diodi.",
+        "Alimentazione del driver indicata come necessariamente 10-18 V, mentre il datasheet specifica funzionamento 4.5-18 V; 10-18 V è il range indicato dallo schema."
+      ],
+      "missed_important_points": [
+        "Manca una diagnosi mirata sulla tensione differenziale ai capi del motore: misurare V(pin7)-V(pin5) durante il comando.",
+        "Non spiega la tabella logica attesa per TC4423 invertente: ingressi uguali producono uscite uguali e quindi motore fermo; ingressi diversi producono tensione sul motore.",
+        "Non considera esplicitamente che un diodo di clamp in corto verso VDD o GND su uno dei due nodi motore può forzare l'uscita e impedire la rotazione.",
+        "Non distingue bene tra guasto di alimentazione logica/ingressi e guasto di potenza sul nodo VDD del motore/driver."
+      ],
+      "strengths": [
+        "Identifica correttamente i pin principali del TC4423: pin 2 e 4 ingressi, pin 5 e 7 uscite, pin 6 VDD, pin 3 GND.",
+        "Riconosce correttamente i condensatori come disaccoppiamento/filtraggio dell'alimentazione.",
+        "Riconosce i diodi come protezioni flyback/clamp per il motore.",
+        "Propone controlli pratici utili: misure su ingressi, alimentazione, massa, diodi e continuità del motore.",
+        "Nota la possibile ambiguità TC4423/TC4424, anche se la formula in modo non del tutto accurato."
+      ],
+      "short_explanation": "La risposta è utile e contiene controlli pratici sensati, soprattutto su ingressi, alimentazione e motore. Tuttavia commette alcuni errori di lettura del circuito: R1/R2 sono pull-up e non un partitore, il motore non è alimentato attraverso i diodi, e la presunta discrepanza TC4423/TC4424 è presentata in modo troppo forte rispetto all'immagine. La causa principale indicata, cioè segnali di ingresso errati o mancanti, è plausibile, ma manca il punto diagnostico più specifico: il motore riceve coppia solo se le due uscite del driver sono a stati opposti e quindi va misurata la tensione differenziale tra pin 7 e pin 5."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic11",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic11\\results_json_img\\ic11_gpt-4.1-nano_20260518_104520.txt",
+      "model_under_test": "gpt-4.1-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 30.922,
+      "timestamp": "2026-05-18 10:55:54",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8679, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1523, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10202)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 13,
+      "max_score": 21,
+      "normalized_score": 0.6190476190476191,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Alimentazione VDD/motore assente o fuori range sul pin 6 rispetto al pin 3",
+        "Ingressi IN A e IN B non in stati logici adatti: essendo TC4423 dual inverting, se le due uscite pin 7 e pin 5 sono allo stesso livello non c'è tensione differenziale sul motore",
+        "Segnali Power/Direction mancanti, flottanti o non compatibili con soglie logiche, oppure pull-up a +5 V non presente",
+        "Guasto del TC4423 o uscita pin 7/pin 5 bloccata",
+        "Motore guasto/bloccato o diodi di clamp in corto che bloccano una delle uscite"
+      ],
+      "model_primary_cause": "Alimentazione del driver o del motore assente o discutibile",
+      "major_errors": [
+        "Non evidenzia chiaramente che il motore gira solo se le due uscite del TC4423 sono a livelli opposti; con uscite uguali il motore non riceve tensione differenziale.",
+        "Tratta i pin 1 e 8 non connessi come potenzialmente problematici, ma dal datasheet sono NC e il JSON li segnala scollegati correttamente.",
+        "Descrive i diodi come elementi attraverso cui il motore sarebbe pilotato, mentre nello schema/JSON il motore è collegato direttamente alle uscite e i diodi sono clamp di protezione verso VDD/GND."
+      ],
+      "hallucinations": [
+        "Indica 'motore trolley', dettaglio non presente nelle fonti.",
+        "Suggerisce che i pin NC possano essere necessari come alimentazione o reset, non supportato dal datasheet.",
+        "Parla di alimentazione 'standard' 10-18 V del driver, mentre il datasheet specifica 4.5-18 V; 10-18 V è indicato nello schema come alimentazione motore/VDD del circuito specifico."
+      ],
+      "missed_important_points": [
+        "Manca una diagnosi prioritaria basata sulla logica inverting del TC4423: IN A e IN B determinano OUT A e OUT B invertite, quindi bisogna misurare la tensione differenziale direttamente ai capi del motore.",
+        "Non discute la possibile incoerenza tra immagine/caption 'TC4424' e JSON/IC 'TC4423', rilevante perché TC4423 è invertente mentre TC4424 è non invertente.",
+        "Non chiarisce che i diodi di protezione normalmente non conducono durante il funzionamento ordinario e diventano causa probabile solo se in corto o montati male.",
+        "Non dà priorità alla verifica dello stato combinato Power/Direction rispetto al solo controllo generico della presenza di segnali."
+      ],
+      "strengths": [
+        "Identifica correttamente pin principali del TC4423: pin 2 e 4 ingressi, pin 3 GND, pin 6 VDD, pin 7 e 5 uscite.",
+        "Propone controlli pratici utili su VDD, ingressi, uscite e motore.",
+        "Usa correttamente le soglie logiche del datasheet, alto maggiore di 2.4 V e basso minore di 0.8 V.",
+        "Include cause realistiche come assenza alimentazione, segnali di ingresso errati, IC guasto e motore guasto."
+      ],
+      "short_explanation": "La risposta è utile come checklist generale, ma non coglie con sufficiente priorità la causa funzionale più specifica: il motore riceve coppia solo se le due uscite del TC4423 sono opposte, e il TC4423 è invertente. Inoltre interpreta male i diodi come percorso di pilotaggio e considera erroneamente sospetti i pin NC 1 e 8. Buoni i controlli pratici e l'uso base del pinout, ma diagnosi e priorità restano generiche."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic11",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic11\\results_json_img\\ic11_gpt-4o-mini_20260518_103935.txt",
+      "model_under_test": "gpt-4o-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 37.712,
+      "timestamp": "2026-05-18 10:56:32",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8354, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1715, output_tokens_details=OutputTokensDetails(reasoning_tokens=770), total_tokens=10069)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 1,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 2,
+        "hallucination_absence": 1
+      },
+      "total_score": 11,
+      "max_score": 21,
+      "normalized_score": 0.5238095238,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Assenza o valore errato della tensione di alimentazione/motore sul pin 6 VDD e sul nodo 10-18 V rispetto a GND",
+        "Ingressi pin 2 e pin 4 non nello stato logico corretto o non sopra/sotto le soglie del datasheet; per TC4423 le uscite sono invertenti",
+        "Uscite pin 7 e pin 5 non assumono stati opposti, quindi non c'è differenza di potenziale ai capi del motore",
+        "Possibile uso del modello errato TC4423 rispetto a un circuito presumibilmente pensato per TC4424/non-inverting, con logica di comando invertita",
+        "Driver sovraccaricato o motore che richiede corrente superiore a quella realisticamente erogabile dal TC4423",
+        "Diodo di clamp in corto o collegamento errato che blocca una delle uscite"
+      ],
+      "model_primary_cause": "Alimentazione insufficiente o assente",
+      "major_errors": [
+        "Afferma che i pin 1 e 8 non connessi devono essere messi a terra, ma dal datasheet sono NC; la nota sul grounding riguarda ingressi driver inutilizzati, non i pin NC.",
+        "Non considera che il TC4423 è un driver dual inverting e quindi la relazione tra ingressi e uscite è invertita.",
+        "Descrive il circuito come pilotaggio tramite MOSFET, ma nello schema non ci sono MOSFET: il motore è collegato direttamente alle uscite del TC4423.",
+        "Interpreta i resistori come limitatori di corrente, mentre sono pull-up degli ingressi a +5 V."
+      ],
+      "hallucinations": [
+        "Presenza di MOSFET nel circuito",
+        "Necessità di collegare a massa i pin 1 e 8 NC",
+        "Resistori usati per limitare la corrente"
+      ],
+      "missed_important_points": [
+        "Mancata evidenziazione della natura invertente del TC4423.",
+        "Mancata verifica esplicita della tensione differenziale tra pin 7 e pin 5/motore.",
+        "Mancata discussione del possibile mismatch TC4423 vs TC4424 suggerito dallo schema/caption e dal funzionamento atteso.",
+        "Non distingue chiaramente alimentazione logica ingressi +5 V dalla tensione motore/driver 10-18 V.",
+        "Non valuta la capacità del TC4423 di pilotare direttamente un motore reale in corrente continua, dato che il datasheet parla di 3 A di picco e non necessariamente corrente continua di motore."
+      ],
+      "strengths": [
+        "Identifica correttamente pin 6 come VDD e pin 3 come GND.",
+        "Usa correttamente le soglie logiche principali del datasheet, in particolare VIH >= 2.4 V.",
+        "Propone controlli pratici ragionevoli su alimentazione, ingressi, diodi e collegamenti.",
+        "Riconosce il ruolo generale dei diodi come protezione/clamp per il carico induttivo."
+      ],
+      "short_explanation": "La risposta è parzialmente utile perché suggerisce controlli fondamentali su alimentazione e ingressi, che sono cause plausibili del motore fermo. Tuttavia contiene errori tecnici importanti: tratta i pin NC come da mettere a massa, inventa MOSFET non presenti, interpreta male i resistori e non considera che il TC4423 è invertente. Inoltre non dà priorità alla verifica della tensione differenziale sulle due uscite del driver né al possibile problema di logica/modello TC4423 rispetto al funzionamento atteso."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic11",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic11\\results_json_img\\ic11_gpt-5-mini_20260518_104637.txt",
+      "model_under_test": "gpt-5-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 30.685,
+      "timestamp": "2026-05-18 10:57:02",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9626, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1458, output_tokens_details=OutputTokensDetails(reasoning_tokens=484), total_tokens=11084)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 17,
+      "max_score": 21,
+      "normalized_score": 0.8095,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "assenza o valore insufficiente della tensione 10-18 V/VDD sul pin 6 del TC4423/TC4424",
+        "massa assente o collegamento GND difettoso sul pin 3",
+        "ingressi pin 2 e pin 4 non a livelli logici validi o non comandati in modo da generare tensione differenziale sul motore",
+        "uso del modello errato TC4423 invertente rispetto a TC4424 non invertente, con logica di comando non coerente",
+        "uscite pin 5 e pin 7 guaste o bloccate",
+        "motore aperto/scollegato o guasto",
+        "diodi di clamp o condensatori di alimentazione in corto o montati in modo errato"
+      ],
+      "model_primary_cause": "Assenza o tensione VDD insufficiente sul pin 6 del driver",
+      "major_errors": [
+        "Non evidenzia abbastanza chiaramente che il motore gira solo se le due uscite ai capi del motore sono in stati opposti; se gli ingressi producono due uscite uguali, ai capi del motore non c'è tensione utile.",
+        "La discrepanza TC4423/TC4424 viene attribuita al silkscreen dell'immagine, ma nell'immagine il corpo dell'IC riporta TC4423 mentre il titolo dello schema cita TC4424."
+      ],
+      "hallucinations": [
+        "Descrive una possibile 'protezione interna latch-up intervenuta' come causa operativa; il datasheet indica una capacità di sopportare corrente inversa/latch-up, non una protezione resettabile che interviene normalmente.",
+        "Afferma che l'immagine mostra il silkscreen TC4424; l'immagine mostra TC4423 sull'IC, mentre TC4424 appare nel titolo dello schema."
+      ],
+      "missed_important_points": [
+        "Manca una spiegazione esplicita della condizione funzionale essenziale: per far girare il motore i pin 5 e 7 devono essere uno alto e uno basso; se entrambi sono alti o bassi il motore non gira.",
+        "Non distingue in modo sufficientemente netto il comportamento invertente del TC4423 rispetto al TC4424 nel caso specifico dei segnali Power e Direction.",
+        "Non discute che i resistori da 10 k sono pull-up a +5 V e che eventuali terminali di comando lasciati aperti portano gli ingressi a livello alto."
+      ],
+      "strengths": [
+        "Identifica correttamente pinout essenziale: pin 6 VDD, pin 3 GND, pin 2/4 ingressi, pin 5/7 uscite.",
+        "Usa correttamente le soglie logiche del datasheet, in particolare VIN alto minimo 2.4 V.",
+        "Propone misure pratiche utili e ordinate: VDD, GND, ingressi, uscite, motore, diodi e condensatori.",
+        "Riconosce che i pin 1 e 8 sono NC e quindi il warning JSON sugli unconnected non è un guasto.",
+        "Considera correttamente diodi e condensatori come possibili cause in caso di corto o montaggio errato."
+      ],
+      "short_explanation": "La risposta è complessivamente utile e tecnicamente solida: comprende il circuito, usa bene il datasheet e propone controlli pratici pertinenti. Tuttavia resta un po' generica nella priorità delle cause e non mette sufficientemente al centro la condizione fondamentale per il motore: serve una tensione differenziale tra le due uscite, quindi ingressi/logica e versione TC4423/TC4424 sono critici. Sono presenti anche piccole imprecisioni sull'immagine e una causa poco supportata relativa alla protezione latch-up."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic11",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic11\\results_json_img\\ic11_gpt-5-nano_20260518_104604.txt",
+      "model_under_test": "gpt-5-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 41.836,
+      "timestamp": "2026-05-18 10:57:44",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9920, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1947, output_tokens_details=OutputTokensDetails(reasoning_tokens=890), total_tokens=11867)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 13,
+      "max_score": 21,
+      "normalized_score": 0.6190476190476191,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Assenza o insufficienza di VDD sul pin 6 del TC4423/TC4424 o massa non comune sul pin 3",
+        "Livelli logici errati su IN A pin 2 e IN B pin 4: se le due uscite risultano allo stesso livello non c'è tensione ai capi del motore",
+        "Uso di TC4423 invece di TC4424, o viceversa, con conseguente inversione della logica di comando rispetto a quella attesa",
+        "Motore collegato direttamente alle uscite del driver: corrente di avviamento/stallo del motore superiore alle capacità reali del TC4423, possibile protezione/danno o caduta di tensione",
+        "Diodi di ricircolo D1-D4 montati male, in corto o interrotti, o collegamenti OUT A/OUT B-motore interrotti"
+      ],
+      "model_primary_cause": "Alimentazione e riferimento di ground non corretti",
+      "major_errors": [
+        "Non evidenzia chiaramente che il motore gira solo se OUT A e OUT B sono a livelli opposti; se gli ingressi producono due uscite uguali non c'è differenza di potenziale sul motore.",
+        "Interpreta in modo improprio la nota del datasheet sui pin duplicati, applicandola agli ingressi o ai pin NC del DIP, mentre nel circuito i pin 1 e 8 sono NC reali.",
+        "Descrive la rete D1-D4 come una configurazione tipo ponte/raddrizzamento, mentre sono diodi di clamp/freewheel verso alimentazione e massa sulle due uscite.",
+        "Attribuisce agli ingressi una rete di pull-up/pull-down, ma dallo schema/JSON risultano resistenze di pull-up verso +5 V."
+      ],
+      "hallucinations": [
+        "Riferimento a ingressi o pin da duplicare per il corretto funzionamento nel package mostrato.",
+        "Indicazione che i pin NC non connessi sarebbero normali se non si usano canali secondari: il TC4423 ha due canali attivi e i pin 1 e 8 sono semplicemente NC.",
+        "Presenza di pull-down sugli ingressi, non supportata dal JSON né dall'immagine."
+      ],
+      "missed_important_points": [
+        "Non valuta esplicitamente la tensione differenziale ai capi del motore come controllo principale: misurare OUT A-OUT B durante il comando.",
+        "Non discute adeguatamente il limite del TC4423 come driver da 3 A di picco, potenzialmente inadatto alla corrente continua o di spunto di un motore DC.",
+        "Non distingue bene tra problema di comando Power/Direction e semplice problema di alimentazione.",
+        "Non segnala che i pull-up da 10 k portano gli ingressi alti se i segnali Power/Direction sono aperti, condizione che può lasciare il motore fermo a seconda della logica e del tipo di IC."
+      ],
+      "strengths": [
+        "Identifica correttamente pinout principale del TC4423: IN A, IN B, GND, VDD, OUT A e OUT B.",
+        "Usa correttamente il range VDD 4.5-18 V e le soglie logiche principali del datasheet.",
+        "Propone controlli pratici utili su alimentazione, massa, ingressi, uscite, diodi e continuità verso il motore.",
+        "Rileva la possibile discrepanza TC4423/TC4424 e il relativo effetto di inversione/non inversione della logica."
+      ],
+      "short_explanation": "La risposta è utile e contiene diversi controlli corretti, soprattutto su VDD, GND, ingressi e identificazione TC4423/TC4424. Tuttavia la priorità diagnostica è troppo generica: la causa circuitalmente più specifica è verificare se le due uscite generano davvero una tensione differenziale sul motore. Inoltre ci sono errori e interpretazioni improprie su pin duplicati, pin NC, pull-down e funzione dei diodi. Nel complesso è una diagnosi parziale, non completamente centrata."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic11",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic11\\results_json_img\\ic11_gpt-5.4-mini_20260518_104803.txt",
+      "model_under_test": "gpt-5.4-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 30.694,
+      "timestamp": "2026-05-18 10:58:15",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9084, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1420, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10504)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9523809523809523,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Ingressi pin 2 e pin 4 entrambi allo stesso livello, in particolare alti tramite pull-up, quindi le uscite pin 7 e pin 5 del TC4423 invertente sono entrambe basse e il motore non vede differenza di potenziale",
+        "Confusione tra TC4423 invertente e TC4424 non invertente indicato nella didascalia dell'immagine, con logica di comando potenzialmente invertita rispetto a quella attesa",
+        "Mancanza o valore errato dell'alimentazione VDD sul pin 6 o massa assente sul pin 3",
+        "Motore o cablaggio del motore aperto",
+        "Diodi di clamp/flyback guasti, in corto o montati male che bloccano uno dei nodi del motore"
+      ],
+      "model_primary_cause": "Entrambi gli ingressi del TC4423 risultano alti o non pilotati correttamente, quindi le due uscite vanno nello stesso stato e il motore non vede tensione ai suoi capi",
+      "major_errors": [],
+      "hallucinations": [
+        "Attribuisce esplicitamente agli ingressi le funzioni 'Power' e 'Direction' come se fossero certe funzioni logiche interne del circuito; sono etichette dello schema e l'effettiva logica dipende dal pilotaggio esterno",
+        "Dice che il circuito è 'coerente con TC4423 nei collegamenti': i collegamenti dei pin sono corretti, ma la funzionalità attesa potrebbe derivare da uno schema originariamente pensato per TC4424, come suggerito dalla didascalia"
+      ],
+      "missed_important_points": [
+        "Non evidenzia che il TC4423 è un MOSFET driver con corrente di picco, quindi un motore DC reale potrebbe richiedere corrente continuativa o di spunto non compatibile, anche se il datasheet ammette carichi induttivi",
+        "Non esplicita una tabella completa degli stati logici ingresso-uscita per capire quando il motore gira e quando è frenato/spento"
+      ],
+      "strengths": [
+        "Identifica correttamente pinout e funzione dei pin principali del TC4423",
+        "Riconosce correttamente che il motore è collegato tra OUT A pin 7 e OUT B pin 5",
+        "Usa correttamente la natura invertente del TC4423 per spiegare perché due ingressi alti producono due uscite basse e quindi nessuna tensione sul motore",
+        "Nota l'incongruenza tra TC4423 nello schema/JSON e didascalia TC4424 nell'immagine",
+        "Propone controlli pratici sensati su ingressi, alimentazione, motore e diodi"
+      ],
+      "short_explanation": "La risposta è tecnicamente molto buona: comprende il circuito, usa correttamente il datasheet e individua come causa primaria plausibile il fatto che i due ingressi, tirati su a +5 V, possano lasciare entrambe le uscite del TC4423 allo stesso livello, impedendo tensione sul motore. Corretta anche la segnalazione dell'incongruenza TC4423/TC4424 e dei controlli su VDD, GND, motore e diodi. Le imprecisioni sono minori e riguardano soprattutto alcune inferenze sulle funzioni Power/Direction e la mancata discussione della corrente reale del motore rispetto a un MOSFET driver."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic11",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic11\\results_json_img\\ic11_gpt-5.4-nano_20260518_104714.txt",
+      "model_under_test": "gpt-5.4-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 33.466,
+      "timestamp": "2026-05-18 10:58:49",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9304, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1663, output_tokens_details=OutputTokensDetails(reasoning_tokens=697), total_tokens=10967)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 13,
+      "max_score": 21,
+      "normalized_score": 0.619,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "livelli di comando su IN A/IN B non corretti o non differenziali, con OUT A e OUT B allo stesso potenziale e quindi nessuna tensione sul motore",
+        "alimentazione VDD/motore assente o fuori range 4.5-18 V, da verificare tra pin 6 e pin 3",
+        "confusione tra TC4423 invertente e TC4424 non invertente, che può rendere errata la logica di comando prevista",
+        "diodi o collegamenti del ponte di ricircolo errati/cortocircuitati che bloccano i nodi del motore"
+      ],
+      "model_primary_cause": "Pin 6 VDD del TC4423 non alimentato o cablato su nodo sbagliato",
+      "major_errors": [
+        "Il modello considera come causa principale un VDD non chiaramente alimentato, ma nel JSON il pin 6 è collegato al nodo con terminal26.4, condensatori di bypass e diodi verso la rete di potenza; nell'immagine questo è chiaramente il rail 10-18 V.",
+        "La discrepanza TC4423/TC4424 è sovrastimata: l'immagine mostra il componente etichettato IC1 TC4423, anche se la didascalia in basso riporta TC4424.",
+        "Non evidenzia abbastanza che il motore gira solo se OUT A e OUT B sono a stati opposti; se gli ingressi producono due uscite uguali, ai capi del motore non c'è tensione utile."
+      ],
+      "hallucinations": [
+        "Afferma che nel JSON non c'è una connessione esplicita e univoca del pin 6 a una alimentazione, mentre terminal26.4 è connesso proprio al nodo VDD/potenza.",
+        "Interpreta la rete come possibile comando a due direzioni in modo un po' vago e parla di coincidenza JSON/immagine non certa più di quanto giustificato dai dati."
+      ],
+      "missed_important_points": [
+        "Manca una spiegazione diretta degli stati logici del TC4423 invertente: IN A e IN B determinano OUT A e OUT B invertiti, e il motore riceve tensione solo quando le due uscite sono diverse.",
+        "Non distingue chiaramente tra alimentazione logica dei pull-up a +5 V e alimentazione di potenza/VDD a 10-18 V.",
+        "Non segnala che i pin 1 e 8 risultano non connessi ma sono NC secondo datasheet, quindi il warning non è un guasto."
+      ],
+      "strengths": [
+        "Usa correttamente il pinout del TC4423: pin 2 IN A, pin 4 IN B, pin 3 GND, pin 5 OUT B, pin 6 VDD, pin 7 OUT A.",
+        "Richiama correttamente le soglie logiche e il range operativo VDD dal datasheet.",
+        "Propone misure pratiche utili su VDD-GND, ingressi e uscite.",
+        "Considera correttamente possibili problemi di ingressi flottanti/fuori soglia e di diodi invertiti o cortocircuitati."
+      ],
+      "short_explanation": "La risposta è utile e contiene buoni controlli pratici, ma la priorità diagnostica è discutibile: il pin 6 non risulta affatto scollegato, bensì collegato al rail di alimentazione nel JSON e nello schema. La causa più forte da discutere sarebbe lo stato degli ingressi e quindi la tensione differenziale effettiva sul motore, oltre alla possibile confusione TC4423/TC4424. Buon uso del datasheet, ma lettura imperfetta di JSON/immagine."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic11",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic11\\results_json_img\\ic11_gpt-5.4_20260518_104946.txt",
+      "model_under_test": "gpt-5.4",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 20.021,
+      "timestamp": "2026-05-18 10:59:09",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10641, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1080, output_tokens_details=OutputTokensDetails(reasoning_tokens=408), total_tokens=11721)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 3
+      },
+      "total_score": 21,
+      "max_score": 21,
+      "normalized_score": 1.0,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Con entrambi gli ingressi tirati alti dai pull-up, le due uscite del TC4423 invertente vanno entrambe basse, quindi non c'è differenza di tensione ai capi del motore",
+        "Gli ingressi devono essere comandati in stati opposti per ottenere tensione sul motore",
+        "Possibile confusione tra TC4423 invertente e TC4424 non invertente indicata dal titolo dell'immagine",
+        "Alimentazione VDD sul pin 6 assente, insufficiente o non riferita correttamente a GND",
+        "Motore o driver sovraccaricato/danneggiato, oppure cablaggio/motore guasto"
+      ],
+      "model_primary_cause": "I due ingressi del TC4423 assumono lo stesso stato logico, probabilmente entrambi alti tramite pull-up, quindi le due uscite sono uguali e sul motore non c'è differenza di tensione.",
+      "major_errors": [],
+      "hallucinations": [],
+      "missed_important_points": [],
+      "strengths": [
+        "Identifica correttamente il motore collegato tra OUT A pin 7 e OUT B pin 5.",
+        "Usa correttamente il pinout del TC4423 e la distinzione TC4423 invertente / TC4424 non invertente.",
+        "Riconosce la discrepanza tra marcatura TC4423 nello schema/JSON e titolo dell'immagine riferito a TC4424.",
+        "Prioritizza correttamente la causa più probabile: ingressi uguali e quindi uscite uguali.",
+        "Propone verifiche pratiche mirate su pin 2, 4, 5, 6, 7 e GND.",
+        "Distingue bene le cause fortemente supportate da quelle possibili ma meno probabili, come diodi guasti, motore guasto o sovracorrente."
+      ],
+      "short_explanation": "La risposta interpreta correttamente la topologia: TC4423 dual driver con motore tra le due uscite, ingressi pull-up a 5 V, alimentazione su pin 6 e clamp diodi. La diagnosi principale è tecnicamente centrata: se i due ingressi sono nello stesso stato, le due uscite sono allo stesso potenziale e il motore non gira. Ottimo anche il rilievo della possibile confusione TC4423/TC4424 e i controlli pratici proposti."
+    }
+  }
+]

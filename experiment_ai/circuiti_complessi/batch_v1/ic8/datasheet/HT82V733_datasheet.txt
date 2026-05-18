@@ -1,0 +1,62 @@
+IC: HT82V733
+
+Descrizione:
+L'HT82V733 e' un amplificatore audio mono in classe AB per altoparlanti.
+E' progettato per applicazioni audio portatili e puo' pilotare direttamente uno speaker.
+Nel circuito considerato amplifica il segnale audio proveniente dall'HT8950A e pilota lo speaker.
+
+Caratteristiche principali:
+- Amplificatore audio mono in classe AB.
+- Corrente massima di uscita indicata: circa 240 mA con alimentazione a 5 V.
+- Basso consumo.
+- Bassa distorsione.
+- Buon rapporto segnale/rumore.
+- Controllo power-off tramite pin CE.
+- Pilotaggio diretto dello speaker.
+- Package 8 pin.
+
+Pin principali:
+- Pin 1: OUTN, uscita negativa verso speaker.
+- Pin 2: Aud In, ingresso audio.
+- Pin 3: VREF, riferimento per l'ingresso non invertente dello speaker amplifier.
+- Pin 4: VSS, massa.
+- Pin 5: CE, chip enable, attivo basso.
+- Pin 6: NC, non collegato.
+- Pin 7: OUTP, uscita positiva verso speaker.
+- Pin 8: VDD, alimentazione positiva.
+
+Alimentazione:
+- Il datasheet indica un range VDD circa 2.4 V - 5.5 V.
+- Pin 8 VDD deve essere collegato alla tensione positiva.
+- Pin 4 VSS deve essere collegato a GND.
+- Il riferimento di massa deve essere comune con lo stadio audio precedente.
+
+Ingresso audio:
+- Pin 2 Aud In riceve il segnale audio da amplificare.
+- Il segnale di ingresso deve essere riferito correttamente rispetto alla massa e alla polarizzazione interna.
+- Se Aud In non riceve il segnale audio, lo speaker non produce uscita utile.
+
+Uscita speaker:
+- Pin 7 OUTP e pin 1 OUTN sono le due uscite verso lo speaker.
+- Lo speaker deve essere collegato tra OUTP e OUTN.
+- Lo speaker non deve essere collegato come carico singolo tra una sola uscita e GND, se il circuito usa l'uscita differenziale.
+
+Enable:
+- Pin 5 CE abilita o disabilita l'amplificatore.
+- CE e' attivo basso.
+- Se CE non e' nello stato attivo, l'amplificatore resta spento o in standby.
+- Quando CE diventa attivo, l'uscita richiede un tempo di salita prima di essere pienamente disponibile.
+
+Riferimento:
+- Pin 3 VREF e' il riferimento interno dell'amplificatore.
+- Il datasheet usa una capacita' esterna associata a VREF per ridurre rumori o click di accensione.
+- Un collegamento errato di VREF puo' causare rumore, distorsione o uscita assente.
+
+Collegamenti attesi nel circuito:
+- Pin 8 VDD collegato alla tensione positiva.
+- Pin 4 VSS collegato a GND.
+- Pin 2 Aud In collegato all'uscita audio del modulatore vocale.
+- Pin 1 OUTN e pin 7 OUTP collegati ai due terminali dello speaker.
+- Pin 5 CE portato allo stato attivo basso per abilitare l'amplificatore.
+- Pin 3 VREF collegato alla rete di riferimento prevista dal datasheet.
+- Pin 6 NC lasciato non collegato.

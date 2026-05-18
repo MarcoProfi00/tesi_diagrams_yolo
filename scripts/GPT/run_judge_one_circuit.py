@@ -12,10 +12,10 @@ import re
 # CONFIGURAZIONE
 # =========================
 JUDGE_MODEL = "gpt-5.5"
-CIRCUIT_NAME = "ic7"
+CIRCUIT_NAME = "ic15"
 
 # Lo stesso problema usato per generare gli output del circuito
-PROBLEM = "Il circuito non produce audio sullo speaker. Quali sono le cause più probabili?"
+PROBLEM = "Il circuito si accende, ma la tensione in uscita non e' corretta. Quale potrebbe essere il problema?"
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -30,7 +30,7 @@ CIRCUIT_DIR = (
 
 JSON_PATH = CIRCUIT_DIR / f"{CIRCUIT_NAME}.json"
 IMAGE_PATH = CIRCUIT_DIR / f"{CIRCUIT_NAME}.jpg"
-DATASHEET_PATH = CIRCUIT_DIR / "datasheet" / "datasheet.txt"
+DATASHEET_DIR = CIRCUIT_DIR / "datasheet"
 JUDGE_PROMPT_PATH = SCRIPT_DIR / "prompt_judge.txt"
 
 RESULTS_JSON_DIR = CIRCUIT_DIR / "results_json"
@@ -206,7 +206,7 @@ def judge_one_file(result_path: Path, input_type: str, context):
 required_paths = [
     JSON_PATH,
     IMAGE_PATH,
-    DATASHEET_PATH,
+    DATASHEET_DIR,
     JUDGE_PROMPT_PATH,
 ]
 
@@ -214,13 +214,21 @@ for path in required_paths:
     if not path.exists():
         raise FileNotFoundError(f"File non trovato: {path}")
 
+DATASHEET_PATHS = sorted(DATASHEET_DIR.glob("*.txt"))
+
+if not DATASHEET_PATHS:
+    raise FileNotFoundError(f"Nessun file datasheet .txt trovato in: {DATASHEET_DIR}")
+
 # =========================
 # LETTURA CONTESTO
 # =========================
 
 context = {
     "circuit_json": read_text(JSON_PATH),
-    "datasheet": read_text(DATASHEET_PATH),
+    "datasheet": "\n\n---\n\n".join(
+        read_text(path)
+        for path in DATASHEET_PATHS
+    ),
     "judge_prompt_template": read_text(JUDGE_PROMPT_PATH),
     "image_data_url": encode_image_data_url(IMAGE_PATH),
     "problem": PROBLEM,
@@ -246,6 +254,9 @@ if not result_files:
 print(f"\nCircuito: {CIRCUIT_NAME}")
 print(f"File da giudicare: {len(result_files)}")
 print(f"Judge model: {JUDGE_MODEL}")
+print("Datasheet:")
+for path in DATASHEET_PATHS:
+    print(f"- {path}")
 
 # =========================
 # ESECUZIONE JUDGE

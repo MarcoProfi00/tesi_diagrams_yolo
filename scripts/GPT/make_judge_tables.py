@@ -8,7 +8,7 @@ from collections import defaultdict
 # CONFIGURAZIONE
 # =========================
 
-CIRCUIT_NAME = "ic7"
+CIRCUIT_NAME = "ic15"
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = Path(__file__).resolve().parents[2]

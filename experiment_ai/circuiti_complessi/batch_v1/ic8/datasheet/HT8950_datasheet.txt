@@ -1,0 +1,79 @@
+IC: HT8950 / HT8950A
+
+Descrizione:
+L'HT8950 / HT8950A e' un integrato CMOS per modulazione della voce.
+Riceve un segnale audio, lo campiona tramite convertitore A/D interno, lo elabora digitalmente e genera un'uscita audio tramite convertitore D/A interno.
+Permette di modificare la voce con shift di frequenza verso l'alto o verso il basso e con effetti Robot e Vibrato.
+Nel circuito considerato lavora come voice modulator prima dello stadio amplificatore audio.
+
+Caratteristiche principali:
+- Tensione operativa: circa 2.4 V - 4.0 V.
+- Campionamento audio: circa 8 kHz.
+- Convertitore A/D interno a 8 bit.
+- Convertitore D/A interno a 8 bit.
+- SRAM interna.
+- Effetto Robot.
+- Effetto Vibrato.
+- Selezione della modulazione tramite ingressi di controllo.
+- Uscita LED/lamp per indicazione del livello voce.
+
+Pin principali HT8950A 16-pin:
+- Pin 1: OSC1, ingresso oscillatore.
+- Pin 2: VIB, ingresso selezione effetto Vibrato.
+- Pin 3: TGU, ingresso step verso l'alto.
+- Pin 4: TGD, ingresso step verso il basso.
+- Pin 5: ROB, ingresso selezione effetto Robot.
+- Pin 6: VSS, massa.
+- Pin 7: NC, non collegato.
+- Pin 8: AO, uscita amplificatore interno.
+- Pin 9: AIN, ingresso amplificatore interno.
+- Pin 10: VDD, alimentazione positiva.
+- Pin 11: LAMP / LED, uscita indicatore livello voce.
+- Pin 12: AUDIO, uscita audio modulata.
+- Pin 13: VREF, riferimento interno dell'amplificatore.
+- Pin 14: TS, ingresso di test.
+- Pin 15: FVIB, controllo frequenza Vibrato.
+- Pin 16: OSC2, uscita oscillatore.
+
+Alimentazione:
+- Pin VDD deve essere collegato alla tensione positiva.
+- Pin VSS deve essere collegato a GND.
+- Il range operativo indicato dal datasheet e' circa 2.4 V - 4.0 V.
+- Le tensioni sui pin di ingresso non devono superare il range VSS - VDD.
+
+Ingresso audio:
+- AIN e' l'ingresso dell'amplificatore interno.
+- AO e' l'uscita dell'amplificatore interno e viene usata nella rete analogica di ingresso.
+- VREF fornisce il riferimento interno dell'amplificatore.
+- Il segnale audio in ingresso deve essere polarizzato correttamente rispetto a VREF.
+- Se il segnale non arriva ad AIN o la rete AO/AIN/VREF non e' corretta, l'uscita audio modulata puo' essere assente o distorta.
+
+Oscillatore:
+- OSC1 e OSC2 sono i pin dell'oscillatore.
+- Il datasheet usa una rete esterna per impostare la frequenza di oscillazione.
+- Con ROSC = 47 kohm la frequenza tipica indicata e' circa 512 kHz.
+- Se l'oscillatore non funziona, il campionamento e la modulazione vocale non funzionano correttamente.
+
+Selezione effetti:
+- VIB seleziona o commuta l'effetto Vibrato.
+- TGU incrementa lo step di modulazione verso l'alto.
+- TGD decrementa lo step di modulazione verso il basso.
+- ROB seleziona l'effetto Robot.
+- Questi ingressi hanno pull-up interni.
+- Un livello basso o un impulso verso massa puo' essere usato per attivare la funzione associata.
+
+Uscite:
+- AUDIO e' l'uscita audio modulata.
+- L'uscita AUDIO e' destinata allo stadio amplificatore successivo.
+- LAMP / LED e' una uscita open-drain usata per indicare il livello del segnale vocale.
+- FVIB e' usato con una rete esterna per controllare la frequenza dell'effetto Vibrato.
+
+Collegamenti attesi nel circuito:
+- VDD collegato alla tensione positiva adatta all'HT8950A.
+- VSS collegato a GND.
+- OSC1 e OSC2 collegati alla rete di oscillatore.
+- AIN, AO e VREF collegati alla rete analogica di ingresso audio.
+- AUDIO collegato allo stadio amplificatore audio successivo.
+- VIB, TGU, TGD e ROB collegati ai pulsanti di selezione effetto.
+- LAMP / LED collegato alla rete LED, se usato.
+- TS non deve essere usato come ingresso funzionale normale.

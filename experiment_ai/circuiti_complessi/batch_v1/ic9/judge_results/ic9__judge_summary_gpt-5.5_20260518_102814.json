@@ -1,0 +1,939 @@
+[
+  {
+    "metadata": {
+      "circuit": "ic9",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic9\\results_json\\ic9_gpt-4.1-mini_20260518_095416.txt",
+      "model_under_test": "gpt-4.1-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 21.517,
+      "timestamp": "2026-05-18 10:21:40",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10674, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1018, output_tokens_details=OutputTokensDetails(reasoning_tokens=308), total_tokens=11692)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 3
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9524,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Assenza di oscillazione sul pin 3 del secondo NE555 per problema di alimentazione, reset o rete RC",
+        "Condensatore di accoppiamento C4 verso lo speaker aperto, invertito o mal collegato",
+        "Speaker guasto, scollegato o collegamento a massa interrotto",
+        "Mancanza di +9 V sui pin 8 o massa sui pin 1 dei NE555",
+        "Pin RESET dei NE555 non alto"
+      ],
+      "model_primary_cause": "Il pin 3 output del secondo NE555 non oscilla",
+      "major_errors": [],
+      "hallucinations": [
+        "Definisce implicitamente un terminale positivo dello speaker, ma lo speaker nel JSON non ha polarità; è comunque un dettaglio minore e non incide sulla diagnosi."
+      ],
+      "missed_important_points": [
+        "Non evidenzia in modo esplicito che l'uscita del primo NE555 è collegata al pin 5 CONTROL VOLTAGE del secondo NE555, quindi un guasto del primo stadio o del collegamento di modulazione può influenzare il suono.",
+        "La priorità diagnostica poteva partire dalle misure di alimentazione/reset prima dell'analisi dell'oscillazione, anche se i controlli sono comunque inclusi."
+      ],
+      "strengths": [
+        "Comprende correttamente la struttura a due NE555 e il ruolo del secondo 555 come generatore audio verso lo speaker.",
+        "Usa bene il JSON per identificare pin, nodi di alimentazione, massa, reset, rete RC, condensatore di uscita e speaker.",
+        "Le cause indicate sono tecnicamente coerenti con il datasheet del NE555 e con il sintomo di assenza audio.",
+        "Propone controlli pratici pertinenti: misura +9 V, reset alto, oscillazione sul pin 3 del secondo 555, verifica C4 e speaker.",
+        "Non inventa errori di cablaggio inesistenti e riconosce correttamente che il grafo non mostra terminali scollegati."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida: identifica correttamente il secondo NE555, il pin 3, il condensatore di accoppiamento e lo speaker come catena critica per l'audio, e propone verifiche realistiche. Usa correttamente pinout e collegamenti dal JSON. Le uniche limitazioni sono una priorità non perfetta e la mancata enfasi sul collegamento IC1 pin 3 verso pin 5 del secondo 555, che può essere rilevante per il funzionamento ding-dong."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic9",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic9\\results_json\\ic9_gpt-4.1-nano_20260518_095930.txt",
+      "model_under_test": "gpt-4.1-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 23.662,
+      "timestamp": "2026-05-18 10:22:04",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10372, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=1254, output_tokens_details=OutputTokensDetails(reasoning_tokens=330), total_tokens=11626)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 16,
+      "max_score": 21,
+      "normalized_score": 0.7619047619,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Secondo NE555 non alimentato correttamente o con RESET basso",
+        "Secondo NE555 non oscillante per guasto/errore nella rete RC su pin 2, 6 e 7",
+        "Uscita pin 3 del secondo NE555 assente o bloccata",
+        "Condensatore di accoppiamento C4 aperto, in corto o montato male",
+        "Speaker o collegamento speaker-GND interrotto",
+        "Primo NE555 o collegamento dal pin 3 del primo al pin 5 del secondo difettoso, con conseguente mancata modulazione/controllo"
+      ],
+      "model_primary_cause": "NE555 non alimentato correttamente o resettato",
+      "major_errors": [
+        "Afferma che le uscite pin 3 di entrambi i NE555 sono collegate allo speaker tramite condensatori, ma dal JSON solo il pin 3 del secondo NE555 va allo speaker tramite il condensatore di uscita; il pin 3 del primo NE555 va al pin 5 del secondo.",
+        "Descrive in modo poco preciso il collegamento del pin 3 allo speaker, parlando di condensatori di accoppiamento al plurale e di entrambi i timer."
+      ],
+      "hallucinations": [
+        "Collegamento di entrambe le uscite dei NE555 allo speaker non supportato dal JSON.",
+        "Riferimento a corrosioni come causa finale senza supporto specifico nel circuito o nel sintomo."
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che il pin 3 di IC1 pilota il pin 5 CONTROL VOLTAGE di IC2, quindi IC1 modula il secondo 555 invece di pilotare direttamente lo speaker.",
+        "Non identifica esplicitamente C4 come unico condensatore di accoppiamento tra pin 3 di IC2 e speaker.",
+        "Non dà sufficiente priorità al percorso finale audio IC2 pin 3 -> C4 -> speaker -> GND.",
+        "Non sfrutta il fatto che nel JSON non ci sono terminali scollegati o warning, quindi le cause più probabili sono guasti di componenti, alimentazione reale o montaggio, non errori topologici evidenti."
+      ],
+      "strengths": [
+        "Usa correttamente il pinout essenziale del NE555: pin 8 alimentazione, pin 1 massa, pin 4 reset, pin 3 uscita, pin 2/6/7 rete astabile.",
+        "Propone controlli pratici validi: misura +9 V, verifica reset alto, oscilloscopio sul pin 3 del secondo NE555, controllo RC, condensatore di uscita e speaker.",
+        "Le cause indicate sono tecnicamente plausibili per un circuito a due NE555 che non produce audio.",
+        "Riconosce correttamente che la mancata oscillazione del secondo NE555 è una causa centrale del mancato suono."
+      ],
+      "short_explanation": "La risposta è utile e in gran parte coerente con il datasheet: identifica alimentazione, reset, oscillazione del secondo 555, rete RC, condensatore di uscita e speaker come punti diagnostici corretti. Tuttavia legge in modo impreciso il circuito dal JSON, affermando che entrambi i pin 3 pilotano lo speaker tramite condensatori, mentre solo il secondo NE555 pilota lo speaker tramite C4 e il primo NE555 è collegato al pin 5 del secondo. La priorità è ragionevole ma generica e non focalizzata abbastanza sul percorso audio finale IC2 pin 3-C4-speaker-GND."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic9",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic9\\results_json\\ic9_gpt-4o-mini_20260518_095318.txt",
+      "model_under_test": "gpt-4o-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 25.902,
+      "timestamp": "2026-05-18 10:22:30",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9618, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1284, output_tokens_details=OutputTokensDetails(reasoning_tokens=368), total_tokens=10902)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 15,
+      "max_score": 21,
+      "normalized_score": 0.7142857142857143,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "assenza o valore errato della +9 V sul nodo di alimentazione comune ai pin 8 e ai pin 4 RESET dei due NE555",
+        "pin RESET di uno dei NE555 non mantenuto alto, anche se nel JSON risultano collegati al nodo +9 V",
+        "IC2 NE555 non oscillante per problema nella rete R-C sui pin 2, 6 e 7",
+        "mancato trasferimento del segnale audio dal pin 3 di IC2 allo speaker per condensatore di accoppiamento C4 difettoso, invertito o collegamento interrotto",
+        "speaker aperto, guasto o non correttamente collegato a massa"
+      ],
+      "model_primary_cause": "Mancata alimentazione corretta ai pin VCC dei NE555",
+      "major_errors": [
+        "Afferma che il collegamento dei pin 8 a +9 V non è esplicitamente segnalato nel JSON, mentre il graph mostra i pin 8 collegati allo stesso nodo del terminale di alimentazione, dei reset e dei resistori superiori.",
+        "Elenca come causa il RESET collegato a GND senza chiarire che, secondo il JSON, i pin 4 sono invece collegati al nodo di alimentazione comune."
+      ],
+      "hallucinations": [
+        "Attribuisce polarità positiva/negativa ai terminali dello speaker, non supportata dal JSON e in generale non necessaria per un altoparlante passivo.",
+        "Descrive il secondo NE555 come se 'elaborasse il segnale finale' in modo un po' vago; dal circuito è più precisamente l'oscillatore audio che pilota lo speaker tramite condensatore."
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che nel JSON non ci sono terminali scollegati o warning, quindi le cause sono più da guasto fisico/componente che da errore topologico evidente.",
+        "Non riconosce esplicitamente che il pin 3 del primo NE555 è collegato al pin 5 CONTROL del secondo NE555, quindi un guasto del primo stadio può modulare o influenzare il secondo.",
+        "Non menziona la possibile polarità/integrità dei condensatori elettrolitici di temporizzazione e di accoppiamento come controllo specifico, salvo in modo generico sul condensatore di uscita."
+      ],
+      "strengths": [
+        "Identifica correttamente i pin principali dei NE555: GND, OUTPUT, RESET e VCC.",
+        "Propone controlli pratici utili: misura della +9 V, verifica RESET alto, oscilloscopio sul pin 3 del secondo NE555, controllo della rete R-C e dello speaker.",
+        "Riconosce correttamente che il segnale verso lo speaker passa dal pin 3 del secondo NE555 attraverso un condensatore di accoppiamento.",
+        "Le cause proposte sono in gran parte tecnicamente plausibili per il sintomo di assenza audio."
+      ],
+      "short_explanation": "La risposta è utile e tecnicamente abbastanza coerente: individua alimentazione, reset, oscillazione del secondo 555, rete R-C, condensatore di uscita e speaker come controlli chiave. Tuttavia usa il JSON in modo non perfetto, perché sostiene che il VCC non sia esplicitamente indicato e tratta il RESET a massa come causa senza notare che nel graph i reset sono collegati al nodo +9 V. È quindi una diagnosi valida ma generica, con priorità non completamente basata sulle evidenze topologiche disponibili."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic9",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic9\\results_json\\ic9_gpt-5-mini_20260518_101212.txt",
+      "model_under_test": "gpt-5-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 33.315,
+      "timestamp": "2026-05-18 10:23:03",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=11201, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=1637, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=12838)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 15,
+      "max_score": 21,
+      "normalized_score": 0.7142857142857143,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Assenza o insufficienza di +9 V sui pin 8 dei due NE555 o massa mancante sui pin 1",
+        "Pin RESET 4 non alto, anche se dal JSON risulta collegato al nodo VCC",
+        "Secondo NE555 non oscillante per guasto o errore nella rete RC su pin 2/6/7",
+        "Segnale assente sul pin 3 del secondo NE555",
+        "Condensatore di accoppiamento C4 verso lo speaker aperto, guasto o collegato male",
+        "Speaker guasto o collegamento speaker-massa interrotto",
+        "NE555 danneggiato"
+      ],
+      "model_primary_cause": "Uso di condensatori polarizzati sui nodi di temporizzazione/controllo come causa più probabile",
+      "major_errors": [
+        "Attribuisce priorità eccessiva al fatto che alcuni condensatori siano marcati come polarizzati nel JSON: nei timer 555 i condensatori di temporizzazione verso massa possono essere elettrolitici se correttamente orientati, perché il nodo resta positivo rispetto a massa.",
+        "Considera sospetta la connessione IC1 pin 3 verso IC2 pin 5 CONTROL, ma nello schema ding-dong questa può essere una tecnica intenzionale di modulazione delle soglie del secondo 555, non necessariamente un errore.",
+        "Suggerisce di scollegare la connessione tra i due 555 e mettere un condensatore da pin 5 a massa come prova, ma questo può alterare la funzione ding-dong prevista invece di diagnosticare direttamente l'assenza di oscillazione audio."
+      ],
+      "hallucinations": [
+        "Afferma che i condensatori di temporizzazione richiedono di solito condensatori non polarizzati: non è generalmente vero per un 555 con condensatore verso massa e tensione sempre positiva.",
+        "Afferma che la polarità dei condensatori di timing può invertirsi durante il ciclo: in una configurazione astabile 555 standard il condensatore si carica/scarica tra circa 1/3 e 2/3 VCC rispetto a massa, quindi non si inverte.",
+        "Definisce il collegamento del pin 3 del primo 555 al pin 5 del secondo come probabilmente errato senza sufficiente supporto dal datasheet o dal JSON."
+      ],
+      "missed_important_points": [
+        "Non dà abbastanza priorità alla verifica diretta dell'oscillazione sul pin 3 del secondo NE555, che è il controllo diagnostico centrale per assenza di audio.",
+        "Non enfatizza abbastanza che alimentazione e reset risultano topologicamente corretti nel JSON ma vanno comunque misurati elettricamente.",
+        "Non distingue chiaramente tra difetto fisico di un componente e normale topologia del circuito.",
+        "Non considera che C4 con positivo verso l'uscita del 555 e negativo verso lo speaker a massa è plausibilmente orientato correttamente, dato che l'uscita ha componente continua positiva."
+      ],
+      "strengths": [
+        "Comprende correttamente la struttura generale a due NE555 e identifica il secondo 555 come generatore audio verso lo speaker.",
+        "Usa bene il JSON per ricostruire i nodi principali: alimentazione, massa, reset, uscita IC2, condensatore di accoppiamento e speaker.",
+        "Individua correttamente il percorso IC2 pin 3 → condensatore C4 → speaker → massa.",
+        "Propone controlli pratici utili: misure su pin 8/pin 1, verifica dello speaker, misura dell'uscita pin 3, controllo di resistori e condensatori.",
+        "Riconosce correttamente che i pin RESET sono collegati al nodo alto e quindi non sembrano la causa topologica principale."
+      ],
+      "short_explanation": "La risposta è utile e mostra buona comprensione del circuito e del JSON, con controlli pratici validi. Tuttavia la causa messa al primo posto, cioè l'uso di condensatori polarizzati nei nodi di temporizzazione/controllo, è tecnicamente debole: in un 555 astabile i condensatori verso massa possono essere polarizzati se orientati correttamente. Anche la connessione IC1 pin 3 verso IC2 pin 5 viene trattata come sospetta, ma nello schema ding-dong può essere intenzionale per modulare il secondo 555. La diagnosi quindi è parzialmente corretta ma con priorità non ottimale e alcune affermazioni speculative."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic9",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic9\\results_json\\ic9_gpt-5-nano_20260518_100859.txt",
+      "model_under_test": "gpt-5-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 33.153,
+      "timestamp": "2026-05-18 10:23:36",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=11553, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=1544, output_tokens_details=OutputTokensDetails(reasoning_tokens=420), total_tokens=13097)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 16,
+      "max_score": 21,
+      "normalized_score": 0.7619,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Il secondo NE555 non genera oscillazione sul pin 3, quindi non arriva segnale audio allo speaker",
+        "Alimentazione, massa o RESET non corretti su uno o entrambi i NE555",
+        "Rete RC dei pin 2/6/7 del secondo NE555 difettosa o scollegata",
+        "Condensatore di accoppiamento in uscita C4/20.4 aperto, invertito o scollegato",
+        "Speaker aperto o collegamento di ritorno a GND difettoso",
+        "Rete RC del primo NE555 o modulazione tramite pin 5 del secondo NE555 non funzionante"
+      ],
+      "model_primary_cause": "Il secondo NE555 non oscilla, per reset basso o ingresso non attivo, quindi non produce segnale sul pin 3 verso il condensatore di uscita e lo speaker.",
+      "major_errors": [
+        "La risposta in alcuni punti interpreta in modo errato il collegamento tra il primo e il secondo NE555: nel JSON l'uscita del primo NE555, pin 3, è collegata al pin 5 CONTROL VOLTAGE del secondo NE555, non ai pin 2/6/7 del secondo.",
+        "Attribuisce talvolta al primo NE555 un ruolo di ingresso diretto del secondo oscillatore, mentre nel circuito reale il secondo NE555 ha la propria rete astabile su pin 2/6/7 e viene verosimilmente modulato tramite pin 5.",
+        "Dice che integrated_circuit11.1_right_4 è collegato al resto della rete RC o può influire sull'alimentazione del secondo NE555; dal graph è collegato solo a integrated_circuit11.2_bottom_2, cioè pin 5 del secondo 555."
+      ],
+      "hallucinations": [
+        "Riferimento a collegamenti da integrated_circuit11.1_right_1/2/3 verso i pin 2/6/7 del secondo NE555, non presenti nel graph.",
+        "Descrizione dell'uscita del primo NE555 come possibile segnale di alimentazione o avvio del secondo, non supportata dal JSON o dal datasheet.",
+        "Indicazione che integrated_circuit11.1_right_4 sia collegato al resto della rete RC, non vera secondo il graph."
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che il pin 5 del secondo NE555 è pilotato dall'uscita del primo NE555, quindi un guasto a IC1 può alterare la modulazione ma non necessariamente la rete astabile base di IC2.",
+        "Non distingue bene tra rete RC del primo NE555 e rete RC del secondo NE555: per assenza totale di audio la rete RC del secondo NE555 è almeno altrettanto critica, se non più direttamente critica.",
+        "Non sottolinea che il pin 5 normalmente richiede un condensatore di stabilizzazione a GND, mentre qui è usato come ingresso di controllo dal primo NE555."
+      ],
+      "strengths": [
+        "Comprende correttamente la struttura generale con due NE555 e uscita audio dal pin 3 del secondo NE555 tramite condensatore di accoppiamento verso lo speaker.",
+        "Usa correttamente il pinout principale del NE555: pin 8 VCC, pin 1 GND, pin 4 RESET, pin 3 OUTPUT, pin 2/6/7 rete astabile.",
+        "Propone controlli pratici utili: verifica +9 V, massa, RESET alto, oscillazione sul pin 3 del secondo NE555, continuità del condensatore di uscita e speaker.",
+        "Riconosce correttamente dal JSON che lo speaker ha un terminale a GND e l'altro collegato attraverso il condensatore 20.4 all'uscita del secondo NE555.",
+        "La causa principale proposta, assenza di oscillazione sul secondo NE555, è tecnicamente coerente con il sintomo."
+      ],
+      "short_explanation": "La risposta è complessivamente utile e diagnostica: identifica correttamente il secondo NE555, il suo pin 3, il condensatore di uscita e lo speaker come catena critica per l'audio, e propone controlli pratici corretti. Tuttavia contiene una lettura imprecisa del collegamento tra i due timer: l'uscita del primo NE555 va al pin 5 CONTROL del secondo, non ai pin 2/6/7 del secondo. Questo porta ad alcune affermazioni errate sulla funzione del primo 555 e sulla priorità delle reti RC."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic9",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic9\\results_json\\ic9_gpt-5.4-mini_20260518_101338.txt",
+      "model_under_test": "gpt-5.4-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 22.751,
+      "timestamp": "2026-05-18 10:23:59",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10872, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=1133, output_tokens_details=OutputTokensDetails(reasoning_tokens=242), total_tokens=12005)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 17,
+      "max_score": 21,
+      "normalized_score": 0.8095238095238095,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Assenza di oscillazione sul pin 3 del secondo NE555 per guasto o errore nella rete RC su pin 2, 6 e 7",
+        "Condensatore di accoppiamento di uscita C4/polarized_capacitor20.4 guasto, aperto o montato male",
+        "Speaker interrotto o collegamento speaker-GND difettoso",
+        "Alimentazione +9 V assente sul nodo comune ai pin 8 e reset pin 4",
+        "Reset pin 4 basso per difetto reale di cablaggio o corto",
+        "Primo NE555 non funzionante o segnale di modulazione/controllo verso pin 5 del secondo NE555 anomalo"
+      ],
+      "model_primary_cause": "Il secondo NE555 non sta oscillando per un problema nella rete RC attorno ai pin 2, 6 e 7",
+      "major_errors": [
+        "Interpreta il collegamento dal pin 3 del primo NE555 al pin 5 del secondo come possibile comando/trigger o abilitazione del secondo stadio; in realtà dal JSON e dal datasheet è il pin CONTROL VOLTAGE, quindi è più correttamente una modulazione/controllo soglie, non un trigger o reset."
+      ],
+      "hallucinations": [
+        "L'idea che il primo NE555 possa 'attivare' il secondo non è ben supportata dal pinout: il collegamento è al pin 5 del secondo NE555, non al trigger pin 2 né al reset pin 4."
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che il collegamento tra i due 555 è dal pin 3 del primo al pin 5 CONTROL VOLTAGE del secondo, quindi un guasto del primo può alterare la modulazione ma non necessariamente impedire del tutto l'oscillazione audio.",
+        "Non distingue esplicitamente il condensatore sul pin 5 del primo NE555 come condensatore di controllo/stabilizzazione, non parte principale della rete di temporizzazione.",
+        "Non usa soglie 1/3 e 2/3 VCC per suggerire misure diagnostiche sui pin 2 e 6."
+      ],
+      "strengths": [
+        "Comprende correttamente la struttura a due NE555 e identifica il secondo 555 come stadio audio.",
+        "Legge correttamente dal JSON alimentazione, massa, reset alto e percorso pin 3 del secondo NE555 tramite condensatore verso speaker.",
+        "La causa principale proposta, assenza di oscillazione del secondo NE555, è tecnicamente coerente con il sintomo.",
+        "Propone controlli pratici utili: misura sul pin 3, verifica rete RC, condensatore di uscita, speaker e alimentazione.",
+        "Non segnala falsi errori di cablaggio dove il JSON mostra connessioni corrette."
+      ],
+      "short_explanation": "Risposta complessivamente buona e utile: usa bene il JSON, riconosce alimentazione/reset/GND corretti e individua come causa principale plausibile il mancato oscillare del secondo NE555 o un problema nello stadio speaker. Il limite principale è l'interpretazione del collegamento tra primo e secondo 555: il pin 3 del primo va al pin 5 CONTROL VOLTAGE del secondo, non a un vero ingresso trigger/abilitazione, quindi la priorità e la spiegazione della terza causa sono parzialmente imprecise."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic9",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic9\\results_json\\ic9_gpt-5.4-nano_20260518_101249.txt",
+      "model_under_test": "gpt-5.4-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 29.514,
+      "timestamp": "2026-05-18 10:24:29",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10857, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=1454, output_tokens_details=OutputTokensDetails(reasoning_tokens=429), total_tokens=12311)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 1,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 12,
+      "max_score": 21,
+      "normalized_score": 0.5714,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Assenza reale della +9 V sul nodo di alimentazione comune/terminal26.1_t1, da verificare sui pin 8 di entrambi i NE555",
+        "Pin RESET 4 non alto solo se il nodo di alimentazione/reset non è effettivamente a +9 V",
+        "Assenza di oscillazione sul pin 3 del secondo NE555 per guasto o errore nella rete R-C dei pin 2/6/7",
+        "Guasto o collegamento errato del condensatore di accoppiamento C4/polarized_capacitor20.4 verso lo speaker",
+        "Speaker interrotto o collegamento speaker/GND difettoso"
+      ],
+      "model_primary_cause": "Mancanza di collegamento dei pin VCC pin 8 dei due NE555 nel grafo",
+      "major_errors": [
+        "Il modello afferma che i pin 8 non compaiono nel graph, ma nel JSON integrated_circuit11.1_top_2 e integrated_circuit11.2_top_2 sono presenti e collegati alla stessa rete dei pin 4, delle resistenze di pull-up e di terminal26.1_t1.",
+        "Interpreta l'assenza di un'etichetta esplicita VCC nel JSON come assenza di alimentazione, mentre la topologia mostra un nodo comune di alimentazione coerente con lo schema e con il terminale +9 V.",
+        "Dà priorità a un difetto non supportato dal circuito reale: nello schema i pin 8 sono collegati alla linea +9 V.",
+        "Anche l'ipotesi RESET flottante/non collegato a VCC è sovrastimata: i pin 4 sono collegati allo stesso nodo dei pin 8 e quindi, se l'alimentazione è presente, sono tenuti alti."
+      ],
+      "hallucinations": [
+        "Mancanza di connessione dei pin 8 nel graph",
+        "Reset non riferito a VCC come difetto probabile basato sul JSON"
+      ],
+      "missed_important_points": [
+        "Non riconosce terminal26.1_t1 come probabile nodo di alimentazione +9 V collegato ai pin 8 e ai pin 4.",
+        "Non evidenzia chiaramente che, secondo JSON e schema, i collegamenti fondamentali di alimentazione, reset, GND e uscita speaker risultano topologicamente presenti.",
+        "Non mette abbastanza in alto la verifica dell'oscillazione del secondo NE555 sul pin 3 come discriminante principale, dato che è il generatore audio.",
+        "Non distingue tra assenza reale della tensione +9 V misurata e assenza topologica del collegamento, che nel JSON non è supportata."
+      ],
+      "strengths": [
+        "Comprende correttamente che il circuito usa due NE555 e che il secondo pilota lo speaker tramite condensatore di accoppiamento.",
+        "Identifica correttamente pinout e funzioni principali del NE555: pin 1 GND, pin 3 uscita, pin 4 reset, pin 8 VCC.",
+        "Propone controlli pratici utili: misura dei pin 8, verifica dei reset, controllo dell'oscillazione sul pin 3 del secondo 555, verifica di speaker e condensatore di uscita.",
+        "Descrive correttamente il percorso uscita IC2 pin 3 -> condensatore C4 -> speaker -> GND."
+      ],
+      "short_explanation": "La risposta è utile come checklist diagnostica generale, ma la diagnosi principale è basata su una lettura errata del JSON: i pin 8 dei NE555 sono effettivamente collegati al nodo comune che include anche i pin reset, le resistenze verso alimentazione e terminal26.1_t1, coerente con la linea +9 V dello schema. Quindi non è corretto indicare come causa più probabile una mancanza topologica di alimentazione o reset flottante. Restano validi i controlli pratici e alcune cause secondarie, come assenza di oscillazione del secondo 555, C4 o speaker guasti."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic9",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic9\\results_json\\ic9_gpt-5.4_20260518_101435.txt",
+      "model_under_test": "gpt-5.4",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 26.399,
+      "timestamp": "2026-05-18 10:24:55",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=11352, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=1191, output_tokens_details=OutputTokensDetails(reasoning_tokens=378), total_tokens=12543)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 3
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9524,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "assenza o caduta dell'alimentazione +9 V sui pin 8 dei due NE555 e sui pin RESET",
+        "pin RESET basso o non correttamente mantenuto alto",
+        "secondo NE555 audio non oscillante per guasto del NE555 o della rete RC su pin 2/6/7",
+        "condensatore di uscita verso speaker aperto, guasto, invertito o saldatura difettosa",
+        "speaker aperto, scollegato o guasto",
+        "condensatori di temporizzazione guasti, in corto, aperti o montati con polarità errata",
+        "anomalia del primo NE555 che altera il pin 5 CONTROL del secondo NE555"
+      ],
+      "model_primary_cause": "Manca realmente l’alimentazione sul nodo positivo terminal26.1_t1",
+      "major_errors": [],
+      "hallucinations": [],
+      "missed_important_points": [
+        "La priorità data all'assenza di alimentazione è plausibile ma generica: dal JSON il nodo di alimentazione è collegato correttamente, quindi non è più supportata di altre cause reali come guasto dello speaker, condensatore di uscita o oscillatore audio fermo.",
+        "Non evidenzia esplicitamente che il controllo del pin 4 RESET va fatto su entrambi i 555 come possibile causa autonoma se il nodo positivo non fosse realmente alto, anche se lo cita nella sezione alimentazione."
+      ],
+      "strengths": [
+        "Comprende correttamente la struttura a due NE555, con primo stadio lento/modulatore e secondo stadio audio.",
+        "Interpreta correttamente il pinout del NE555: pin 8 alimentazione, pin 1 massa, pin 4 reset, pin 3 uscita, pin 5 control voltage, pin 2/6/7 rete astabile.",
+        "Usa molto bene il JSON per ricostruire i collegamenti effettivi, inclusi uscita del secondo 555, condensatore di accoppiamento e ritorno dello speaker a massa.",
+        "Riconosce che dal grafo non emergono errori grossolani di cablaggio.",
+        "Propone controlli pratici sensati: misura alimentazione, verifica oscillazione sul pin 3 del secondo 555, controllo del condensatore di uscita e dello speaker, verifica delle reti RC.",
+        "La causa relativa al collegamento tra uscita del primo 555 e pin 5 del secondo 555 è supportata dal JSON ed è tecnicamente plausibile."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida: ricostruisce correttamente il circuito dal JSON, usa bene il datasheet del NE555 e propone cause coerenti con il sintomo di assenza audio. Le verifiche pratiche sono utili e realistiche. L'unico limite è una priorità leggermente generica: mettere come prima causa l'assenza reale di alimentazione è sempre corretto nel troubleshooting, ma non è particolarmente più indicato dal JSON rispetto a guasto dello stadio audio, condensatore di uscita o speaker."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic9",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic9\\results_json_img\\ic9_gpt-4.1-mini_20260518_101457.txt",
+      "model_under_test": "gpt-4.1-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 28.32,
+      "timestamp": "2026-05-18 10:25:23",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10236, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1379, output_tokens_details=OutputTokensDetails(reasoning_tokens=475), total_tokens=11615)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 17,
+      "max_score": 21,
+      "normalized_score": 0.8095,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "mancata oscillazione del secondo NE555, verificabile sul pin 3 di IC2",
+        "guasto o collegamento errato del condensatore di accoppiamento C4 tra pin 3 di IC2 e speaker",
+        "speaker guasto, scollegato o circuito speaker aperto",
+        "alimentazione assente o errata sui pin 8 dei NE555 o massa assente sui pin 1",
+        "pin RESET 4 di uno dei NE555 basso o non correttamente collegato a +9 V",
+        "guasti o errori nei componenti RC sui pin 2, 6 e 7, specialmente della sezione IC2"
+      ],
+      "model_primary_cause": "Condensatore di uscita C4 guasto o polarità invertita",
+      "major_errors": [
+        "Interpreta in modo non corretto i pin 5: nel JSON IC1 pin 5 è collegato a un condensatore verso massa, ma IC2 pin 5 è collegato al pin 3 di IC1, non a un condensatore di bypass verso massa.",
+        "Afferma che l'immagine mostra C2 e C3 come condensatori corretti sui pin 5, ma nello schema C3 è il condensatore di temporizzazione di IC2 sui pin 2/6 verso massa, non il condensatore sul pin 5."
+      ],
+      "hallucinations": [
+        "Citazione di un condensatore di stabilizzazione sul pin 5 di IC2 non supportata da JSON o schema.",
+        "Riferimento non del tutto preciso a C3 come possibile componente legato al pin 5, mentre è nella rete astabile di IC2."
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che il pin 5 di IC2 è pilotato dal pin 3 di IC1, collegamento rilevante per la modulazione ding-dong.",
+        "Non distingue abbastanza tra assenza totale di audio dovuta alla sezione audio IC2/speaker e difetti di IC1 che potrebbero alterare o modulare il tono."
+      ],
+      "strengths": [
+        "Comprende correttamente la struttura generale con due NE555 e uscita audio dal pin 3 del secondo NE555.",
+        "Usa correttamente pinout e condizioni essenziali del NE555: alimentazione, massa, RESET alto, pin 3 come uscita.",
+        "Verifica correttamente dal JSON che alimentazioni, reset, reti RC principali, C4 e speaker risultano connessi.",
+        "Propone controlli pratici utili: misura del pin 3 di IC2, verifica di C4, speaker, alimentazioni, reset e reti RC.",
+        "La lista delle cause è tecnicamente plausibile per un circuito che non produce audio."
+      ],
+      "short_explanation": "La risposta è complessivamente utile e coerente: identifica correttamente il ruolo dei due NE555, l'uscita audio da IC2 tramite C4 e le verifiche principali. Le cause proposte sono plausibili e i controlli pratici sono validi. Tuttavia contiene un errore di lettura importante sui pin 5, soprattutto di IC2: nello schema/JSON IC2 pin 5 è collegato al pin 3 di IC1, non a un condensatore verso massa. La priorità delle cause è ragionevole ma non perfetta: sarebbe più diagnostico partire dalla verifica dell'oscillazione sul pin 3 di IC2 e poi separare se il problema è a monte o nello speaker/C4."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic9",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic9\\results_json_img\\ic9_gpt-4.1-nano_20260518_101530.txt",
+      "model_under_test": "gpt-4.1-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 23.321,
+      "timestamp": "2026-05-18 10:25:47",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10118, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1229, output_tokens_details=OutputTokensDetails(reasoning_tokens=291), total_tokens=11347)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 16,
+      "max_score": 21,
+      "normalized_score": 0.7619,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Assenza di oscillazione sul pin 3 del secondo NE555 dovuta a guasto o errore nella rete R-C su pin 2/6/7",
+        "Mancanza di +9 V sui pin 8 o massa sui pin 1 dei NE555",
+        "Pin RESET 4 non alto, anche se nel JSON risulta correttamente collegato al nodo +9 V",
+        "Guasto/interruzione del condensatore di accoppiamento C4 o dello speaker",
+        "Condensatori di temporizzazione o di uscita guasti, in corto, aperti o polarizzati al contrario"
+      ],
+      "model_primary_cause": "L’oscillatore IC2 non sta generando il segnale audio sul pin 3, probabilmente per problema nella rete R-C o componente difettoso.",
+      "major_errors": [
+        "Afferma che il pin RESET non è evidenziato nel JSON, mentre il JSON mostra chiaramente i pin 4 di entrambi i NE555 collegati al nodo +9 V insieme ai pin 8.",
+        "Descrive in modo impreciso la relazione fra i due 555 parlando di segnali combinati; nello schema l'uscita del primo NE555 va al pin 5 CONTROL del secondo, quindi modula/influenza le soglie del secondo più che combinarsi direttamente con l'uscita audio."
+      ],
+      "hallucinations": [
+        "Il riferimento a un condensatore di bypass sul pin 5 'non visibile' è formulato in modo ambiguo: nel circuito reale IC1 ha C2 da pin 5 a massa, mentre IC2 ha il pin 5 collegato all'uscita di IC1 e non a un condensatore verso massa.",
+        "La voce 'circuito in cortocircuito o connessione sospetta/ambigua' non è supportata da warning del JSON né da evidenze specifiche dello schema."
+      ],
+      "missed_important_points": [
+        "Non evidenzia esplicitamente che il pin 5 di IC2 è pilotato dall'uscita pin 3 di IC1, collegamento importante per il funzionamento ding-dong.",
+        "Non sfrutta pienamente il JSON per confermare che alimentazione, reset, massa, uscita IC2, C4 e speaker risultano topologicamente collegati correttamente.",
+        "Non distingue bene tra guasto probabile reale e semplice controllo generico: dato che il JSON non mostra errori di collegamento, le cause più plausibili sono componenti guasti, assenza di alimentazione reale, speaker/C4 interrotto o mancata oscillazione."
+      ],
+      "strengths": [
+        "Identifica correttamente il secondo NE555 come generatore del segnale audio verso lo speaker.",
+        "Propone come primo controllo la verifica dell'oscillazione sul pin 3 di IC2, che è il punto diagnostico più utile.",
+        "Controlli pratici appropriati: alimentazione, massa, reset, uscita IC2, condensatore di accoppiamento e speaker.",
+        "Le cause principali indicate sono tecnicamente coerenti con datasheet e schema."
+      ],
+      "short_explanation": "La risposta è sostanzialmente corretta e utile: individua come causa primaria l'assenza di oscillazione sul pin 3 del secondo NE555 e propone controlli pratici sensati su alimentazione, reset, rete R-C, C4 e speaker. Ha però alcune imprecisioni nell'uso del JSON e dello schema, in particolare sul RESET già visibile nel JSON e sul ruolo del pin 5 di IC2 pilotato da IC1. Include anche qualche ipotesi generica poco supportata, ma la diagnosi principale resta coerente."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic9",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic9\\results_json_img\\ic9_gpt-4o-mini_20260518_101330.txt",
+      "model_under_test": "gpt-4o-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 28.484,
+      "timestamp": "2026-05-18 10:26:15",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9681, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1432, output_tokens_details=OutputTokensDetails(reasoning_tokens=425), total_tokens=11113)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 13,
+      "max_score": 21,
+      "normalized_score": 0.619,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Mancanza o errore di alimentazione +9 V sui pin 8 dei due NE555 o massa assente sui pin 1",
+        "Pin RESET dei NE555 non alto, anche se nello schema/JSON risultano collegati alla stessa rete di +9 V",
+        "IC2 non oscilla per guasto o collegamento errato della rete astabile R3/R4/C3 sui pin 2, 6 e 7",
+        "Segnale di uscita assente sul pin 3 di IC2",
+        "Condensatore di accoppiamento C4 verso lo speaker aperto, invertito o scollegato",
+        "Speaker interrotto o collegamento dello speaker a massa/uscita difettoso",
+        "Guasto o collegamento errato dei condensatori di temporizzazione/controllo, inclusi C1, C2, C3"
+      ],
+      "model_primary_cause": "Errata alimentazione o pin di reset basso",
+      "major_errors": [
+        "Afferma che nel JSON i pin RESET non mostrano collegamenti specifici, mentre il JSON collega i pin 4 dei due NE555 alla stessa rete dei pin 8, dei resistori verso VCC e del terminale di alimentazione.",
+        "Descrive in modo impreciso il collegamento dello speaker dicendo che entrambi i terminali sono associati a GND e all'uscita del secondo NE555; in realtà un terminale va a GND e l'altro è collegato all'uscita di IC2 tramite C4.",
+        "La priorità diagnostica non sfrutta bene l'evidenza topologica: il reset basso è meno probabile come difetto di cablaggio perché nello schema è legato direttamente alla rete +9 V."
+      ],
+      "hallucinations": [
+        "Asserzione non supportata che alcuni collegamenti di resistori e condensatori non siano completamente visibili nel JSON rispetto all'immagine.",
+        "Formulazione fuorviante secondo cui lo speaker avrebbe entrambi i terminali associati a GND e all'uscita."
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che il pin 3 di IC2 è collegato allo speaker tramite il condensatore C4 e che C4 è una causa specifica molto rilevante di assenza audio.",
+        "Non nota che i pin 4 RESET sono già collegati alla rete +9 V nello schema/JSON, quindi il controllo va fatto come verifica della rete di alimentazione più che come sospetto primario indipendente.",
+        "Non analizza in modo specifico la rete astabile di IC2: R3/R4/C3 sui pin 7, 6 e 2, che è essenziale per generare la frequenza audio.",
+        "Non distingue fra assenza di oscillazione del primo 555 e assenza di oscillazione del secondo 555, che hanno effetti diagnostici diversi."
+      ],
+      "strengths": [
+        "Riconosce correttamente la presenza di due NE555 e la funzione generale di generazione ding-dong/audio.",
+        "Usa correttamente il pinout principale del NE555: pin 1 GND, pin 8 VCC, pin 4 RESET, pin 3 uscita.",
+        "Propone controlli pratici utili: misura alimentazione, massa, reset, oscillazione su pin 3 di IC2, verifica speaker e condensatori.",
+        "Le cause elencate sono in gran parte tecnicamente plausibili per un circuito con due 555 e speaker accoppiato in AC."
+      ],
+      "short_explanation": "Risposta utile ma generica e con alcune letture errate del JSON/schema. Le verifiche suggerite sono sensate, soprattutto alimentazione, reset e oscillazione del pin 3 di IC2. Tuttavia il modello non nota che i reset sono già collegati alla rete +9 V, descrive male il collegamento dello speaker e non dà abbastanza priorità a IC2, alla sua rete RC e al condensatore di uscita C4."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic9",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic9\\results_json_img\\ic9_gpt-5-mini_20260518_101711.txt",
+      "model_under_test": "gpt-5-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 30.805,
+      "timestamp": "2026-05-18 10:26:46",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=11440, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=1438, output_tokens_details=OutputTokensDetails(reasoning_tokens=465), total_tokens=12878)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 18,
+      "max_score": 21,
+      "normalized_score": 0.8571428571428571,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Assenza o insufficienza di +9 V sui pin 8 dei NE555 o massa mancante sui pin 1",
+        "Pin RESET pin 4 di uno dei NE555 non alto",
+        "IC2 non oscillante per guasto o rete RC su pin 2/6/7 errata o componenti aperti/corti",
+        "Uscita pin 3 di IC2 non funzionante o non accoppiata allo speaker tramite C4",
+        "C4 aperto, in corto, invertito o scollegato",
+        "Speaker guasto, scollegato o terminale di massa interrotto"
+      ],
+      "model_primary_cause": "Condensatore di accoppiamento C4 collegato male, aperto o con polarità invertita",
+      "major_errors": [
+        "Segnala una discrepanza tra JSON e immagine su IC1 pin3 e IC2 pin5 che non è realmente ben supportata: lo schema mostra effettivamente il collegamento di IC1 pin3 verso IC2 pin5 tramite la linea di controllo, con ponti grafici sui nodi non connessi.",
+        "Interpreta in modo un po' ambiguo alcuni collegamenti attorno a IC1, suggerendo che C1 sia collegato al pin3 di IC1, mentre nello schema C1 è il condensatore di temporizzazione sui pin 2/6 verso massa."
+      ],
+      "hallucinations": [
+        "Dichiarazione di non coincidenza JSON/immagine sui collegamenti IC1 pin3/IC2 pin5 e C1 non sufficientemente fondata.",
+        "Riferimento a possibili discrepanze di montaggio tra immagine e JSON più forte di quanto giustificato dai dati forniti."
+      ],
+      "missed_important_points": [
+        "Non evidenzia abbastanza chiaramente che, secondo JSON e schema, pin 4 RESET e pin 8 VCC sono già collegati alla stessa rete +9 V, quindi un problema lì sarebbe più un guasto reale di alimentazione/cablaggio che un errore topologico dello schema.",
+        "La causa IC2 non oscillante per rete RC o guasto del 555 avrebbe potuto essere messa alla pari o prima di C4/speaker, dato che il sintomo è assenza totale di audio."
+      ],
+      "strengths": [
+        "Comprende correttamente la struttura generale: due NE555, IC1 come modulatore/lento e IC2 come oscillatore audio.",
+        "Identifica correttamente pin critici: pin 8 alimentazione, pin 1 massa, pin 4 reset, pin 3 uscita, pin 2/6/7 rete astabile, pin 5 controllo.",
+        "Usa bene il JSON per riconoscere C4 tra uscita IC2 e speaker e lo speaker con ritorno a massa.",
+        "Propone controlli pratici validi: misure di alimentazione, reset, oscilloscopio sul pin 3 di IC2, continuità dello speaker, verifica C4 e rete RC.",
+        "Le cause proposte sono quasi tutte tecnicamente plausibili e coerenti con datasheet e schema."
+      ],
+      "short_explanation": "Risposta tecnicamente solida e utile: individua correttamente i blocchi del circuito, i pin rilevanti dei NE555 e propone controlli diagnostici realistici. Le cause principali indicate, come C4/speaker, IC2 non oscillante, alimentazione/reset e rete RC, sono coerenti con il circuito. Il limite principale è una presunta discrepanza tra JSON e immagine sui collegamenti di IC1 che appare in gran parte frutto di una lettura errata dello schema; inoltre la priorità delle cause è plausibile ma non ottimale, perché l'assenza di oscillazione di IC2 è almeno altrettanto centrale quanto C4."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic9",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic9\\results_json_img\\ic9_gpt-5-nano_20260518_101617.txt",
+      "model_under_test": "gpt-5-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 23.408,
+      "timestamp": "2026-05-18 10:27:09",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=11343, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=1215, output_tokens_details=OutputTokensDetails(reasoning_tokens=287), total_tokens=12558)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 17,
+      "max_score": 21,
+      "normalized_score": 0.8095238095238095,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "IC2 NE555 non oscilla o non produce segnale sul pin 3 per guasto/rete RC errata/reset/alimentazione",
+        "Condensatore di uscita C4 aperto, in corto, polarizzato male o collegamento verso speaker interrotto",
+        "Speaker K1 guasto o non collegato a GND",
+        "Mancanza di +9 V sui pin 8, GND sui pin 1 o RESET pin 4 non alto su uno dei due NE555",
+        "Reti di temporizzazione sui pin 2/6/7 difettose o componenti R/C errati, aperti o in corto"
+      ],
+      "model_primary_cause": "Il secondo NE555 non oscilla o non genera segnale utile sul pin 3 verso lo speaker",
+      "major_errors": [
+        "Descrive in modo impreciso il ruolo del collegamento tra IC1 e IC2: nel circuito l'uscita di IC1 pin 3 è collegata al pin 5 control voltage di IC2, non ai pin 2/6 come trigger diretto.",
+        "Attribuisce a C3 un possibile ruolo di condensatore sul pin 5/control voltage, mentre nello schema C3 è il condensatore di temporizzazione di IC2 collegato al nodo pin 2/6 verso massa."
+      ],
+      "hallucinations": [
+        "Afferma che C2 e C3 sono entrambi vicino ai pin di controllo/pin 5; C3 non è sul pin 5 ma sulla rete temporizzatrice di IC2.",
+        "Parla di 'uscita del primo 555 che fornisce impulso di innesco al secondo pin 6/2', non supportato dal JSON: IC1 pin 3 va al pin 5 di IC2."
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che IC1 modula il pin 5 control voltage di IC2, aspetto importante per il funzionamento ding-dong.",
+        "Non distingue abbastanza tra assenza completa di audio per guasto della catena di uscita C4/speaker e assenza di oscillazione del solo IC2.",
+        "Non suggerisce valori attesi indicativi sui nodi 2/6 dei 555, ad esempio rampe tra circa 1/3 e 2/3 VCC."
+      ],
+      "strengths": [
+        "Identifica correttamente i due NE555, l'alimentazione a 9 V, reset alto, massa comune e uscita del secondo 555 tramite C4 allo speaker.",
+        "La causa principale proposta, assenza di oscillazione sul pin 3 di IC2, è tecnicamente coerente con il sintomo.",
+        "Propone controlli pratici utili: misurare pin 8, pin 1, pin 4, verificare oscillazione su pin 3 di IC2, controllare C4 e speaker.",
+        "Usa sia JSON sia immagine per riconoscere componenti, valori e topologia generale."
+      ],
+      "short_explanation": "La risposta è complessivamente utile e la diagnosi principale è corretta: senza oscillazione sul pin 3 del secondo NE555 o con guasto nella catena C4-speaker non ci sarà audio. Buoni anche i controlli pratici suggeriti. Tuttavia contiene alcune imprecisioni topologiche: IC1 pin 3 pilota il pin 5 di IC2, non direttamente i pin 2/6, e C3 è il condensatore di temporizzazione di IC2, non un condensatore di controllo sul pin 5. La priorità delle cause è ragionevole ma resta abbastanza generica."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic9",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic9\\results_json_img\\ic9_gpt-5.4-mini_20260518_101828.txt",
+      "model_under_test": "gpt-5.4-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 20.262,
+      "timestamp": "2026-05-18 10:27:30",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10410, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=1148, output_tokens_details=OutputTokensDetails(reasoning_tokens=347), total_tokens=11558)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 19,
+      "max_score": 21,
+      "normalized_score": 0.9048,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "IC2 NE555 non oscilla o non genera segnale audio sul pin 3",
+        "IC2 non alimentato correttamente o pin RESET basso/flottante",
+        "percorso di uscita interrotto: pin 3 IC2, condensatore C4, speaker o massa speaker",
+        "speaker guasto o scollegato",
+        "rete RC di temporizzazione di IC2 su pin 2/6/7 guasta o scollegata",
+        "problema su IC1 o sulla modulazione tramite pin 5 di IC2"
+      ],
+      "model_primary_cause": "IC2 non oscilla, quindi sul pin 3 non c’è segnale audio",
+      "major_errors": [
+        "Nella sezione su IC1 afferma che IC1 pin 3 è collegato al nodo con C1, ma dal JSON e dallo schema IC1 pin 3 è collegato al pin 5 di IC2; il condensatore di temporizzazione IC1 è sui pin 2/6 verso massa, mentre il pin 5 di IC1 ha il condensatore di controllo verso massa."
+      ],
+      "hallucinations": [
+        "La connessione IC1 pin 3 al nodo con C1 è errata rispetto a JSON e immagine."
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che IC1 pin 3 modula/controlla IC2 tramite il pin 5 CONTROL VOLTAGE, quindi un guasto in quel nodo può influire sulla tonalità o sul funzionamento audio.",
+        "Non distingue del tutto correttamente tra condensatore di controllo pin 5 e condensatore di temporizzazione del primo 555 nella descrizione finale."
+      ],
+      "strengths": [
+        "Comprende correttamente la struttura generale a due NE555, con IC2 come oscillatore audio e uscita tramite C4 verso speaker.",
+        "Usa correttamente pinout e funzioni essenziali del NE555: VCC pin 8, GND pin 1, RESET pin 4, OUTPUT pin 3, rete astabile su pin 2/6/7.",
+        "Verifica correttamente dal JSON il percorso IC2 pin 3 -> C4 -> speaker -> GND.",
+        "Propone controlli pratici realistici e ordinati: alimentazione, reset, oscillazione su pin 3, continuità di C4 e speaker.",
+        "La causa principale indicata è tecnicamente coerente con il sintomo."
+      ],
+      "short_explanation": "Risposta complessivamente molto buona: identifica correttamente IC2 e il suo pin 3 come punto chiave per l’audio, usa bene datasheet, JSON e immagine, e propone controlli diagnostici utili. L’unico errore rilevante è una lettura errata della connessione di IC1 pin 3, che non va al nodo con C1 ma al pin 5 di IC2. Questo non compromette la diagnosi principale, ma riduce leggermente accuratezza topologica e assenza di allucinazioni."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic9",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic9\\results_json_img\\ic9_gpt-5.4-nano_20260518_101752.txt",
+      "model_under_test": "gpt-5.4-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 28.045,
+      "timestamp": "2026-05-18 10:27:58",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=11306, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=1323, output_tokens_details=OutputTokensDetails(reasoning_tokens=441), total_tokens=12629)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 16,
+      "max_score": 21,
+      "normalized_score": 0.7619,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "IC2 non alimentato correttamente o pin 4 RESET non alto",
+        "IC2 non oscilla per guasto/errore nella rete RC su pin 2, 6 e 7",
+        "Interruzione o guasto nel percorso di uscita: pin 3 IC2, C4, speaker o massa speaker",
+        "Speaker aperto o scollegato",
+        "Condensatori di temporizzazione o accoppiamento guasti, in corto, aperti o con polarità errata"
+      ],
+      "model_primary_cause": "IC2 in reset o non alimentato",
+      "major_errors": [
+        "Afferma che JSON e immagine non coincidono in modo significativo, ma la topologia principale è sostanzialmente coerente: il terminale26 rappresenta il nodo +9 V collegato ai pin 4 e 8 e alle resistenze superiori.",
+        "Interpreta come sospetto il collegamento IC1 pin 3 verso IC2 pin 5, ma tale collegamento è presente anche nello schema e può essere parte della modulazione del circuito ding-dong.",
+        "Dà troppo peso a presunte anomalie del JSON invece di riconoscere che molti collegamenti critici sono corretti e corrispondono allo schema."
+      ],
+      "hallucinations": [
+        "L'idea che il pin 3 di IC1 'non dovrebbe' andare al pin 5 di IC2 è non supportata dallo schema fornito.",
+        "La dichiarazione che nel JSON manchi un vero nodo +9 V come possibile incongruenza forte è fuorviante: il terminale di alimentazione è presente come terminal26.1_t1 e connesso ai nodi corretti."
+      ],
+      "missed_important_points": [
+        "Non riconosce chiaramente che il JSON conferma il collegamento di IC2 pin 3 a C4 e speaker, e dello speaker a GND.",
+        "Non distingue abbastanza tra guasti reali possibili e presunti errori di estrazione del JSON.",
+        "Non evidenzia che, se IC2 pin 3 oscilla, la diagnosi si restringe quasi direttamente a C4/speaker/cablaggio di uscita."
+      ],
+      "strengths": [
+        "Comprende correttamente la funzione generale del circuito con due NE555: uno lento/modulante e uno audio.",
+        "Usa correttamente il pinout del NE555, in particolare pin 1, 3, 4, 5, 8 e rete 2/6/7.",
+        "Propone controlli pratici molto utili: misura VCC/GND, RESET, oscillazione su pin 3 di IC2, continuità di C4 e speaker.",
+        "Le cause proposte sono in gran parte tecnicamente plausibili per il sintomo di assenza audio."
+      ],
+      "short_explanation": "La risposta è utile e tecnicamente in gran parte corretta: identifica alimentazione/reset di IC2, oscillazione su pin 3, rete RC, C4 e speaker come punti diagnostici chiave. Tuttavia interpreta erroneamente alcune parti del JSON come incoerenti con l'immagine, in particolare il nodo +9 V e il collegamento IC1 pin 3 verso IC2 pin 5, che sono invece compatibili con lo schema. Questo riduce l'affidabilità della priorità causale, pur lasciando valida la maggior parte dei controlli pratici."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic9",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic9\\results_json_img\\ic9_gpt-5.4_20260518_101939.txt",
+      "model_under_test": "gpt-5.4",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 16.392,
+      "timestamp": "2026-05-18 10:28:14",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=11869, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=885, output_tokens_details=OutputTokensDetails(reasoning_tokens=202), total_tokens=12754)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 3
+      },
+      "total_score": 21,
+      "max_score": 21,
+      "normalized_score": 1.0,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "IC2/secondo NE555 non oscilla per problema su rete R3-R4-C3 o pin 2/6/7",
+        "Percorso di uscita interrotto o guasto: IC2 pin 3, C4, speaker, collegamento speaker a GND",
+        "Alimentazione o massa mancanti sui NE555",
+        "Pin RESET dei NE555, soprattutto IC2 pin 4, non alto nella pratica",
+        "Condensatori di temporizzazione guasti, in corto, aperti o di valore errato",
+        "IC2 guasto",
+        "IC1 o collegamento IC1 pin 3 verso IC2 pin 5 altera il controllo del secondo 555"
+      ],
+      "model_primary_cause": "IC2 non sta oscillando per problema nella rete R3-R4-C3 o sui pin 2, 6, 7",
+      "major_errors": [],
+      "hallucinations": [],
+      "missed_important_points": [],
+      "strengths": [
+        "Comprende correttamente la struttura a due NE555, con IC1 come modulatore/lento e IC2 come oscillatore audio.",
+        "Usa correttamente il pinout del NE555: pin 8 VCC, pin 1 GND, pin 4 RESET, pin 3 output, pin 2/6/7 rete astabile, pin 5 control.",
+        "Verifica in modo coerente i collegamenti del JSON e li confronta con l'immagine.",
+        "Identifica correttamente il percorso audio IC2 pin 3 -> C4 -> speaker -> GND.",
+        "Ordina le cause in modo plausibile e diagnostico, mettendo al primo posto l'assenza di oscillazione di IC2.",
+        "Propone controlli pratici appropriati con oscilloscopio, multimetro, verifica continuità speaker, alimentazione, reset e rete RC.",
+        "Evita di inventare difetti non supportati e distingue correttamente tra schema corretto e possibili guasti pratici di montaggio."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida e ben supportata da JSON, immagine e datasheet. Identifica correttamente IC2 come stadio audio critico, il percorso di uscita tramite C4 e speaker, l'importanza di alimentazione, massa e reset, e propone controlli pratici efficaci. La priorità delle cause è coerente con il sintomo di assenza audio e non contiene errori rilevanti o allucinazioni."
+    }
+  }
+]

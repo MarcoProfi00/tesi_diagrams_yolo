@@ -19,7 +19,7 @@ import time
 # gpt-5.4
 MODEL = "gpt-5.4"
 
-PROBLEM = "Il circuito non produce audio sullo speaker. Quali sono le cause più probabili?"
+PROBLEM = "Il circuito si accende, ma la tensione in uscita non e' corretta. Quale potrebbe essere il problema?"
 
 # Lo script si trova in: scripts/GPT/run_one_json_image.py
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -27,7 +27,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 # Root del progetto: salgo da scripts/GPT a cartella principale
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-CIRCUIT_NAME = "ic7"
+CIRCUIT_NAME = "ic15"
 
 CIRCUIT_DIR = (
     PROJECT_ROOT
@@ -39,7 +39,7 @@ CIRCUIT_DIR = (
 
 # File di input
 JSON_PATH = CIRCUIT_DIR / f"{CIRCUIT_NAME}.json"
-DATASHEET_PATH = CIRCUIT_DIR / "datasheet" / "datasheet.txt"
+DATASHEET_DIR = CIRCUIT_DIR / "datasheet"
 PROMPT_PATH = CIRCUIT_DIR / "prompt_json_img.txt"
 IMAGE_PATH = CIRCUIT_DIR / f"{CIRCUIT_NAME}.jpg"
 
@@ -59,16 +59,24 @@ RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 # CONTROLLO FILE
 # =========================
 
-for path in [JSON_PATH, IMAGE_PATH, DATASHEET_PATH, PROMPT_PATH]:
+for path in [JSON_PATH, IMAGE_PATH, DATASHEET_DIR, PROMPT_PATH]:
     if not path.exists():
         raise FileNotFoundError(f"File non trovato: {path}")
+
+DATASHEET_PATHS = sorted(DATASHEET_DIR.glob("*.txt"))
+
+if not DATASHEET_PATHS:
+    raise FileNotFoundError(f"Nessun file datasheet .txt trovato in: {DATASHEET_DIR}")
 
 # =========================
 # LETTURA FILE
 # =========================
 
 circuit_json = JSON_PATH.read_text(encoding="utf-8")
-datasheet = DATASHEET_PATH.read_text(encoding="utf-8")
+datasheet = "\n\n---\n\n".join(
+    path.read_text(encoding="utf-8")
+    for path in DATASHEET_PATHS
+)
 prompt_template = PROMPT_PATH.read_text(encoding="utf-8")
 
 prompt = (
@@ -100,7 +108,9 @@ image_data_url = f"data:{mime_type};base64,{base64_image}"
 print(f"\nEseguo {MODEL} su circuito {CIRCUIT_NAME} con JSON + immagine + datasheet...")
 print(f"JSON: {JSON_PATH}")
 print(f"IMMAGINE: {IMAGE_PATH}")
-print(f"DATASHEET: {DATASHEET_PATH}")
+print("DATASHEET:")
+for path in DATASHEET_PATHS:
+    print(f"- {path}")
 print(f"PROMPT: {PROMPT_PATH}\n")
 
 start_time = time.perf_counter()
@@ -151,7 +161,9 @@ with output_path.open("w", encoding="utf-8") as f:
     f.write(f"INPUT: JSON + immagine + datasheet\n")
     f.write(f"JSON: {JSON_PATH}\n")
     f.write(f"IMMAGINE: {IMAGE_PATH}\n")
-    f.write(f"DATASHEET: {DATASHEET_PATH}\n")
+    f.write("DATASHEET:\n")
+    for path in DATASHEET_PATHS:
+        f.write(f"- {path}\n")
     f.write(f"PROBLEMA: {PROBLEM}\n")
     f.write(f"LATENCY_SECONDS: {latency_seconds:.3f}\n\n")
 

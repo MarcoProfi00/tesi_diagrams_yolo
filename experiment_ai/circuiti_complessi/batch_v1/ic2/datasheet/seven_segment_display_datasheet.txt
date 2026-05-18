@@ -1,0 +1,41 @@
+Componente: Display a 7 segmenti common cathode
+
+Descrizione:
+Un display a 7 segmenti e' un indicatore LED usato per visualizzare cifre numeriche.
+Ogni cifra contiene i segmenti a, b, c, d, e, f, g e, se presente, il punto decimale DP.
+Nel circuito considerato sono presenti due display a 7 segmenti multiplexati e pilotati dal microcontrollore.
+
+Pin logici principali:
+- a: segmento superiore.
+- b: segmento superiore destro.
+- c: segmento inferiore destro.
+- d: segmento inferiore.
+- e: segmento inferiore sinistro.
+- f: segmento superiore sinistro.
+- g: segmento centrale.
+- h / DP: punto decimale, se usato.
+- com: terminale comune della cifra.
+
+Tipo common cathode:
+- Nel display common cathode i catodi dei LED interni sono collegati al terminale comune.
+- Il terminale com deve essere collegato a massa direttamente o tramite un transistor di selezione.
+- Un segmento si accende quando il relativo ingresso a, b, c, d, e, f, g o h riceve un livello alto attraverso una resistenza di limitazione.
+- Se il terminale com non e' collegato a massa, i segmenti della cifra non possono accendersi correttamente.
+
+Resistenze:
+- Ogni segmento LED deve avere una resistenza di limitazione della corrente.
+- Le resistenze possono essere poste tra il microcontrollore e i pin dei segmenti.
+- Senza resistenze di limitazione i LED e le uscite digitali possono essere danneggiati.
+
+Multiplexing:
+- In un display a piu' cifre i pin dei segmenti possono essere condivisi tra le cifre.
+- Ogni cifra viene abilitata separatamente tramite il proprio terminale com.
+- Il microcontrollore seleziona una cifra alla volta e imposta contemporaneamente il codice dei segmenti.
+- La scansione rapida delle cifre permette di visualizzare piu' cifre in modo apparentemente continuo.
+
+Collegamenti attesi nel circuito:
+- I segmenti a, b, c, d, e, f, g e h dei display sono collegati alle uscite del microcontrollore tramite resistenze.
+- I terminali com delle due cifre sono collegati ai transistor di selezione.
+- Gli emettitori dei transistor di selezione sono collegati a GND.
+- Le basi dei transistor sono pilotate dal microcontrollore tramite resistenze.
+- L'ordine dei segmenti deve essere coerente con il programma del microcontrollore.
