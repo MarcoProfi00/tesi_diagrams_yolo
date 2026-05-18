@@ -65,6 +65,8 @@ CLASS_CONF_THRES = {
     "Memristor": 0.08,
     "Meter": 0.18,
     "Mosfet": 0.22,
+    "Push_Button": 0.22,
+    "Resistor": 0.39,
     "Switch": 0.02,
     "Terminal": 0.28,
     "Transformer": 0.22,
@@ -1542,7 +1544,126 @@ def add_missing_structured_components(components, structured_candidates, class_m
                 source_class_name="heuristic",
             )
         )
+    updated = repair_spst_switch_bank(updated, class_meta, class_id_by_name)
     return updated
+
+
+def repair_spst_switch_bank(components, class_meta, class_id_by_name):
+    """Corregge banchi molto regolari di 4 SPST quando YOLO fonde 3 switch in box larghi.
+
+    L'euristica e' volutamente stretta:
+    - 4 resistori verticali piccoli, quasi allineati e quasi equispaziati
+    - 3 detection Switch sopra al banco, con box larghi/fusi
+    In quel caso sostituiamo i 3 box switch locali con 4 box coerenti centrati
+    sulle 4 colonne del banco.
+    """
+    switch_class_id = class_id_by_name.get("Switch")
+    if switch_class_id is None:
+        return components
+
+    switch_meta = class_meta.get(switch_class_id, {})
+    resistors = [
+        comp for comp in components
+        if comp.get("class_name") == "Resistor"
+    ]
+    switches = [
+        comp for comp in components
+        if comp.get("class_name") == "Switch"
+    ]
+    if len(resistors) < 4 or len(switches) < 2:
+        return components
+
+    vertical_resistors = []
+    for comp in resistors:
+        box = comp.get("bbox", [])
+        if len(box) != 4:
+            continue
+        x1, y1, x2, y2 = map(float, box)
+        w = max(x2 - x1, 1.0)
+        h = max(y2 - y1, 1.0)
+        if h >= w * 1.7 and 10.0 <= w <= 30.0 and 22.0 <= h <= 60.0:
+            vertical_resistors.append(comp)
+
+    if len(vertical_resistors) < 4:
+        return components
+
+    sorted_resistors = sorted(vertical_resistors, key=lambda comp: _bbox_center(comp["bbox"])[0])
+
+    for start in range(len(sorted_resistors) - 3):
+        bank = sorted_resistors[start:start + 4]
+        centers = [_bbox_center(comp["bbox"])[0] for comp in bank]
+        gaps = [centers[i + 1] - centers[i] for i in range(3)]
+        if min(gaps) <= 0.0:
+            continue
+
+        mean_gap = sum(gaps) / 3.0
+        if not (18.0 <= mean_gap <= 42.0):
+            continue
+        if any(abs(gap - mean_gap) > max(4.0, mean_gap * 0.18) for gap in gaps):
+            continue
+
+        ys_top = [float(comp["bbox"][1]) for comp in bank]
+        ys_bottom = [float(comp["bbox"][3]) for comp in bank]
+        if max(ys_top) - min(ys_top) > 6.0 or max(ys_bottom) - min(ys_bottom) > 6.0:
+            continue
+
+        bank_x1 = min(float(comp["bbox"][0]) for comp in bank)
+        bank_x2 = max(float(comp["bbox"][2]) for comp in bank)
+        bank_y1 = min(ys_top)
+
+        local_switches = []
+        for comp in switches:
+            box = comp.get("bbox", [])
+            if len(box) != 4:
+                continue
+            sx1, sy1, sx2, sy2 = map(float, box)
+            scx, _ = _bbox_center(box)
+            if sy2 >= bank_y1 - 40.0:
+                continue
+            if scx < bank_x1 - mean_gap or scx > bank_x2 + mean_gap:
+                continue
+            if sx2 - sx1 < 10.0:
+                continue
+            local_switches.append(comp)
+
+        if len(local_switches) != 3:
+            continue
+
+        switch_widths = [float(comp["bbox"][2]) - float(comp["bbox"][0]) for comp in local_switches]
+        if max(switch_widths) < mean_gap * 1.25:
+            continue
+
+        local_switches_sorted = sorted(local_switches, key=lambda comp: _bbox_center(comp["bbox"])[0])
+        switch_y1 = min(float(comp["bbox"][1]) for comp in local_switches_sorted)
+        switch_y2 = max(float(comp["bbox"][3]) for comp in local_switches_sorted)
+        switch_h = max(switch_y2 - switch_y1, 20.0)
+        narrow_w = max(12.0, min(mean_gap * 0.52, switch_h * 0.55))
+
+        bank_set = {id(comp) for comp in local_switches}
+        updated = [comp for comp in components if id(comp) not in bank_set]
+
+        for center_x in centers:
+            bbox = [
+                center_x - narrow_w / 2.0,
+                switch_y1,
+                center_x + narrow_w / 2.0,
+                switch_y2,
+            ]
+            updated.append(
+                _build_component_record(
+                    class_id=switch_class_id,
+                    class_name="Switch",
+                    model_class_name="heuristic_Switch",
+                    conf=0.58,
+                    bbox=bbox,
+                    meta=switch_meta,
+                    source_class_id=None,
+                    source_class_name="heuristic",
+                )
+            )
+        return updated
+
+    return components
 
 
 def suppress_conflicting_components(components, image_binary):
@@ -2013,7 +2134,9 @@ def predict_components_on_image(
             #    continue
             if yaml_class_name == "Switch":
                 if not is_switch_like_bbox(image_gray, box):
-                    if float(conf) < 0.55:
+                    # Manteniamo un fallback per switch atipici ma comunque plausibili,
+                    # come alcuni rotary/push switch che il filtro morfologico classico penalizza.
+                    if float(conf) < 0.20:
                         continue
 
             #if yaml_class_name == "Current_Source" and not is_current_source_like_bbox(image_gray, image_binary, box):
