@@ -66,9 +66,9 @@ CLASS_CONF_THRES = {
     "Meter": 0.18,
     "Mosfet": 0.22,
     "Push_Button": 0.22,
-    "Resistor": 0.39,
+    "Resistor": 0.30,
     "Switch": 0.02,
-    "Terminal": 0.28,
+    "Terminal": 0.25,
     "Transformer": 0.22,
 }
 

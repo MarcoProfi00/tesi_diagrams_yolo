@@ -1616,6 +1616,22 @@ def _detect_seven_segment_display(component: Dict, image_bgr, body_bbox: List[in
     }
 
 
+def _subtype_from_marking_text(marking: str) -> Optional[Dict]:
+    upper = re.sub(r"\s+", "", str(marking or "")).upper()
+    if not re.fullmatch(r"DIS[0-9]+", upper):
+        return None
+
+    return {
+        "component_subtype": "seven_segment_display",
+        "display_type": "seven_segment",
+        "reference_designator_ocr": upper,
+        "debug": {
+            "reason": "marking_matches_display_designator",
+            "marking": upper,
+        },
+    }
+
+
 # =========================================================
 # RACCOLTA CANDIDATI E MODALITA' FAST/DEEP
 # =========================================================
@@ -1926,6 +1942,20 @@ def enrich_ic_marking_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
     component["ic_ocr_mode"] = ocr_mode
     component["ic_ocr_engines_used"] = _ocr_engines_used(region_debug)
 
+    if subtype_info is None:
+        subtype_info = _subtype_from_marking_text(marking)
+    if subtype_info is None:
+        subtype_info = _detect_seven_segment_display(
+            component,
+            image_bgr,
+            body_bbox,
+            region_debug,
+        )
+    if subtype_info:
+        component["component_subtype"] = subtype_info["component_subtype"]
+        component["display_type"] = subtype_info["display_type"]
+        component["reference_designator_ocr"] = subtype_info["reference_designator_ocr"]
+
     ranked_candidates = _candidates_with_consensus(all_candidates, meta)
 
     component["ic_ocr_debug"] = {
@@ -1935,6 +1965,7 @@ def enrich_ic_marking_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
         "selected": best,
         "marking_normalization": marking_normalization,
         "candidate_count": len(all_candidates),
+        "subtype_detection": subtype_info["debug"] if subtype_info else None,
         "candidates": ranked_candidates[:10],
         "regions": region_debug,
     }

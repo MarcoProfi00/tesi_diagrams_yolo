@@ -556,6 +556,43 @@ def detect_switch_terminals(binary, bbox, default_orientation="horizontal"):
             {"name": "t2", "relative_position": "top"},
         ], "top_left", side_scores
 
+    coarse_scores = probe_get_side_scores(binary, bbox)
+    vertical_total, vertical_point_scores, vertical_point_debug = _score_two_terminal_candidate_by_points(
+        binary,
+        bbox,
+        "vertical",
+    )
+    horizontal_total, horizontal_point_scores, horizontal_point_debug = _score_two_terminal_candidate_by_points(
+        binary,
+        bbox,
+        "horizontal",
+    )
+
+    # Switch aperto verticale: il contatto mobile puo' sporcare il lato destro
+    # e far sembrare il simbolo orizzontale. Se il bbox e' molto alto e i due
+    # punti sopra/sotto sono entrambi credibili, privilegiamo top/bottom.
+    if (
+        height >= width * 1.8
+        and min(
+            vertical_point_scores.get("top", 0),
+            vertical_point_scores.get("bottom", 0),
+        ) >= 20
+        and vertical_total >= horizontal_total * 0.88
+    ):
+        merged_scores = dict(side_scores)
+        merged_scores["coarse_scores"] = coarse_scores
+        merged_scores["horizontal_point_scores"] = horizontal_point_scores
+        merged_scores["vertical_point_scores"] = vertical_point_scores
+        merged_scores["horizontal_point_debug"] = horizontal_point_debug
+        merged_scores["vertical_point_debug"] = vertical_point_debug
+        merged_scores["decision_mode"] = "switch_tall_vertical_point_validation"
+        merged_scores["bbox_width"] = width
+        merged_scores["bbox_height"] = height
+        return [
+            {"name": "t1", "relative_position": "top"},
+            {"name": "t2", "relative_position": "bottom"},
+        ], "vertical", merged_scores
+
     orientation, orientation_scores = strategy_detect_two_terminal_orientation_switch(
         binary,
         bbox,

@@ -1029,10 +1029,19 @@ def _assign_words_to_lanes(words: List[Dict], lanes: List[Dict]) -> Dict[str, Li
     assigned = {lane["terminal_id"]: [] for lane in lanes}
     for word in words:
         cx, cy = word["center"]
+        matching_lanes = []
         for lane in lanes:
             if _bbox_contains_point(lane["lane_bbox"], cx, cy):
-                assigned[lane["terminal_id"]].append(word)
-                break
+                side = lane.get("side") or ""
+                term = lane.get("term") or {}
+                term_axis = float(term.get("y", 0.0)) if side in {"left", "right"} else float(term.get("x", 0.0))
+                word_axis = float(cy) if side in {"left", "right"} else float(cx)
+                matching_lanes.append((abs(word_axis - term_axis), lane))
+        if not matching_lanes:
+            continue
+
+        matching_lanes.sort(key=lambda item: item[0])
+        assigned[matching_lanes[0][1]["terminal_id"]].append(word)
     return assigned
 
 
@@ -1582,16 +1591,24 @@ def _should_replace_with_component_candidate(term: Dict, candidate: Dict, side: 
     current_text = str(term.get("pin_number") or "")
     if not current_text:
         return True
-    if len(candidate["text"]) > len(current_text):
-        return True
-    if len(candidate["text"]) != len(current_text):
-        return False
 
     current_conf = float(term.get("pin_number_confidence") or 0.0)
     candidate_conf = float(candidate.get("confidence") or 0.0)
     debug_payload = term.get("pin_ocr_debug") or {}
     current_best = debug_payload.get("best_number") or {}
     current_mode = str(current_best.get("mode") or "")
+    if (
+        current_mode.endswith("_edge_digit")
+        and current_conf >= 0.55
+        and candidate_conf <= current_conf + 0.10
+    ):
+        return False
+
+    if len(candidate["text"]) > len(current_text):
+        return True
+    if len(candidate["text"]) != len(current_text):
+        return False
+
     if current_mode not in {"text", "number"}:
         return False
 
@@ -1658,6 +1675,60 @@ def _overlaps_any_label_guard(word: Dict, label_words: List[Dict], cfg: Dict) ->
     return False
 
 
+def _edge_digit_candidates_from_words(words: List[Dict], side: str, body_bbox: List[float], cfg: Dict) -> List[Dict]:
+    """
+    Recupera cifre di pin fuse con testo/marking vicino al bordo del package.
+
+    Esempio tipico: OCR legge "9263" perché il marking e il pin "3" sono
+    attaccati; sul lato destro il candidato utile è la cifra più a destra.
+    """
+    if side not in {"left", "right"}:
+        return []
+
+    candidates = []
+    bx1, _, bx2, _ = [float(v) for v in body_bbox]
+    edge_x = bx1 if side == "left" else bx2
+    max_distance = _number_pick_distance(side, cfg, has_side_label_guards=False)
+
+    for word in words:
+        raw_text = str(word.get("text") or "")
+        if _is_number_text(raw_text, cfg):
+            continue
+
+        digits = re.findall(r"[0-9]", raw_text)
+        if len(digits) < 2:
+            continue
+
+        bbox = word.get("bbox") or []
+        if len(bbox) != 4:
+            continue
+
+        x1, y1, x2, y2 = [float(v) for v in bbox]
+        width = max(1.0, x2 - x1)
+        edge_distance = abs((x1 if side == "left" else x2) - edge_x)
+        if edge_distance > max_distance:
+            continue
+
+        digit = digits[0] if side == "left" else digits[-1]
+        digit_index = raw_text.find(digit) if side == "left" else raw_text.rfind(digit)
+        char_count = max(len(raw_text), 1)
+        char_w = width / float(char_count)
+
+        cx = x1 + (digit_index + 0.5) * char_w
+        dx1 = x1 + digit_index * char_w
+        dx2 = x1 + (digit_index + 1) * char_w
+        candidate = dict(word)
+        candidate["text"] = digit
+        candidate["confidence"] = max(float(word.get("confidence") or 0.0), 0.62)
+        candidate["center"] = [round(float(cx), 3), round(float((y1 + y2) * 0.5), 3)]
+        candidate["bbox"] = [int(round(dx1)), int(round(y1)), int(round(dx2)), int(round(y2))]
+        candidate["mode"] = f"{word.get('mode') or 'text'}_edge_digit"
+        candidate["source_text"] = raw_text
+        candidates.append(candidate)
+
+    return candidates
+
+
 def _assign_lane_semantics(
     side_run: Dict,
     text_words: List[Dict],
@@ -1694,10 +1765,17 @@ def _assign_lane_semantics(
             if word["confidence"] >= cfg["label_min_confidence"]
             and word.get("mode") != "text_inner_strip"
             and _is_number_text(word["text"], cfg)
+            and _closest_body_side(word, body_bbox) == side
         ]
+        numeric_from_text.extend(
+            word for word in _edge_digit_candidates_from_words(lane_text_words, side, body_bbox, cfg)
+            if _is_number_text(word["text"], cfg)
+        )
         numeric_fallback = [
             word for word in lane_number_words
-            if word["confidence"] >= cfg["number_min_confidence"] and _is_number_text(word["text"], cfg)
+            if word["confidence"] >= cfg["number_min_confidence"]
+            and _is_number_text(word["text"], cfg)
+            and _closest_body_side(word, body_bbox) == side
         ]
 
         if label_candidates:
@@ -1845,7 +1923,10 @@ def _repair_unique_pin_numbers(component: Dict) -> None:
             key=lambda term: float(term.get("pin_number_confidence") or 0.0),
             reverse=True,
         )
-        duplicate_terms.extend(same_value_terms[1:])
+        duplicate_terms.extend(
+            term for term in same_value_terms[1:]
+            if float(term.get("pin_number_confidence") or 0.0) < 0.85
+        )
 
     bad_terms.extend(duplicate_terms)
     missing = sorted(set(range(1, max_pin + 1)) - set(values))
@@ -1890,6 +1971,63 @@ def _repair_unique_pin_numbers(component: Dict) -> None:
             "from": previous or None,
             "to": str(replacement),
             "reason": "complete_missing_numbers_in_1_to_terminal_count",
+        }
+
+
+def _repair_555_timer_pin_numbers(component: Dict) -> None:
+    """Stabilizza la numerazione degli 8-pin 555 quando l'OCR scambia angoli."""
+    marking = str(component.get("ic_marking") or "").upper()
+    if not re.search(r"\b(?:LM|NE|SE)?555\b", marking):
+        return
+
+    terminals = component.get("terminals", []) or []
+    if len(terminals) != 8:
+        return
+
+    by_side = {
+        side: [
+            term for term in sorted(terminals, key=_terminal_sort_key)
+            if _terminal_side(term) == side
+        ]
+        for side in ("left", "right", "top", "bottom")
+    }
+    if (
+        len(by_side["left"]) != 3
+        or len(by_side["right"]) != 1
+        or len(by_side["top"]) != 2
+        or len(by_side["bottom"]) != 2
+    ):
+        return
+
+    expected = {
+        by_side["left"][0].get("terminal_id"): "7",
+        by_side["left"][1].get("terminal_id"): "6",
+        by_side["left"][2].get("terminal_id"): "2",
+        by_side["right"][0].get("terminal_id"): "3",
+        by_side["top"][0].get("terminal_id"): "8",
+        by_side["top"][1].get("terminal_id"): "4",
+        by_side["bottom"][0].get("terminal_id"): "1",
+        by_side["bottom"][1].get("terminal_id"): "5",
+    }
+
+    for term in terminals:
+        terminal_id = term.get("terminal_id")
+        target = expected.get(terminal_id)
+        if target is None:
+            continue
+
+        previous = str(term.get("pin_number") or "")
+        if previous == target:
+            continue
+
+        old_conf = float(term.get("pin_number_confidence") or 0.0)
+        term["pin_number"] = target
+        term["pin_number_confidence"] = round(max(old_conf, 0.90), 3)
+        debug_payload = term.setdefault("pin_ocr_debug", {})
+        debug_payload["timer_555_pin_number_repair"] = {
+            "from": previous or None,
+            "to": target,
+            "reason": "known_555_timer_8_pin_layout",
         }
 
 
@@ -2429,6 +2567,27 @@ def _normalize_seven_segment_h_terminal(
     }
 
 
+def _normalize_seven_segment_common_pin_number(cap_terms: List[Dict]) -> None:
+    """
+    Normalizza il pin comune dei display 7 segmenti.
+
+    Nei datasheet dei display il common e' spesso indicato come doppio pin 3,8.
+    L'OCR tende a fondere quel testo in "38": qui lo riportiamo al formato
+    esplicito "3.8" per preservare il significato del doppio pin.
+    """
+    for term in cap_terms:
+        text = re.sub(r"\s+", "", str(term.get("pin_number") or ""))
+        if text != "38":
+            continue
+        term["pin_number"] = "3.8"
+        debug_payload = term.setdefault("pin_ocr_debug", {})
+        debug_payload["seven_segment_common_pin_number_normalization"] = {
+            "from": "38",
+            "to": "3.8",
+            "reason": "common_pin_pair_collapsed_by_ocr",
+        }
+
+
 def _renumber_side_terms(component: Dict, side: str, terms: List[Dict]) -> None:
     for idx, term in enumerate(sorted(terms, key=_terminal_sort_key), start=1):
         _rename_terminal_for_side(component, term, side, idx)
@@ -2452,11 +2611,6 @@ def _prune_seven_segment_display_terminals(component: Dict) -> int:
     if not terminals:
         return 0
 
-    for term in terminals:
-        term["pin_number"] = None
-        term["pin_number_confidence"] = None
-        term.pop("pin_number_bbox", None)
-
     by_side = {
         side: [
             term for term in sorted(terminals, key=_terminal_sort_key)
@@ -2474,24 +2628,45 @@ def _prune_seven_segment_display_terminals(component: Dict) -> int:
         segment_labels = {label for label in labels if re.fullmatch(r"[a-h]", label)}
         return len(segment_labels), len(labels)
 
-    candidates = []
+    side_stats = {}
     for side in ("left", "right"):
         side_terms = by_side[side]
         segment_count, label_count = _label_support(side_terms)
-        candidates.append((
-            segment_count,
-            label_count,
-            len(side_terms),
-            side,
-        ))
-    candidates.sort(reverse=True)
-    _, _, vertical_count, label_side = candidates[0]
+        side_stats[side] = {
+            "segment_count": segment_count,
+            "label_count": label_count,
+            "term_count": len(side_terms),
+        }
+
+    left_stats = side_stats["left"]
+    right_stats = side_stats["right"]
+    if (
+        left_stats["segment_count"] == right_stats["segment_count"] == 0
+        and left_stats["label_count"] == right_stats["label_count"] == 0
+        and left_stats["term_count"] == right_stats["term_count"] >= 7
+    ):
+        label_side = "left"
+        vertical_count = left_stats["term_count"]
+    else:
+        candidates = []
+        for side in ("left", "right"):
+            stats = side_stats[side]
+            candidates.append((
+                stats["segment_count"],
+                stats["label_count"],
+                stats["term_count"],
+                1 if side == "left" else 0,
+                side,
+            ))
+        candidates.sort(reverse=True)
+        _, _, vertical_count, _, label_side = candidates[0]
     if vertical_count < 7:
         return 0
 
     cap_terms = by_side["bottom"] if by_side["bottom"] else by_side["top"]
     if not cap_terms:
         return 0
+    _normalize_seven_segment_common_pin_number(cap_terms)
 
     _normalize_seven_segment_h_terminal(component, label_side, by_side[label_side], cap_terms)
     by_side = {
@@ -2511,6 +2686,8 @@ def _prune_seven_segment_display_terminals(component: Dict) -> int:
         keep_terms = label_terms[:8] + cap_terms[:1]
     elif vertical_count == 7 and len(cap_terms) >= 2:
         keep_terms = label_terms[:7] + cap_terms[:2]
+    elif vertical_count == 7 and len(cap_terms) == 1:
+        keep_terms = label_terms[:7] + cap_terms[:1]
     else:
         return 0
 
@@ -2568,6 +2745,9 @@ def _prune_seven_segment_display_terminals(component: Dict) -> int:
         term for term in component["terminals"] if _terminal_side(term) == label_side
     ])
     _renumber_side_terms(component, cap_side, [
+        term for term in component["terminals"] if _terminal_side(term) == cap_side
+    ])
+    _normalize_seven_segment_common_pin_number([
         term for term in component["terminals"] if _terminal_side(term) == cap_side
     ])
     debug = component.setdefault("seven_segment_terminal_filter_debug", {})
@@ -2722,6 +2902,7 @@ def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
     _repair_sequential_pin_labels(component)
     _remove_duplicate_sequential_labels(component)
     _repair_unique_pin_numbers(component)
+    _repair_555_timer_pin_numbers(component)
     if cfg["skip_labels_when_marking_and_number"]:
         debug["labels_cleared_count"] = _clear_pin_labels_when_number_and_marking(component)
     debug["seven_segment_removed_terminals"] = _prune_seven_segment_display_terminals(component)
