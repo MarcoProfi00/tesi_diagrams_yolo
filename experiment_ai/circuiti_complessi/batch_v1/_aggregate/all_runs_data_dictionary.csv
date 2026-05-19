@@ -1,0 +1,38 @@
+column,description
+circuit,"Identificativo del circuito valutato, ad esempio ic2, ic3, ic15."
+model,Modello che ha prodotto la diagnosi sotto valutazione.
+input_type,Tipo di input fornito al modello sotto test: solo JSON + datasheet oppure JSON + immagine + datasheet.
+judge_model,Modello usato come judge automatico per valutare la risposta.
+verdict,"Giudizio sintetico del judge. Di solito 'Sì' indica risposta valida, 'Parziale' indica risposta utile ma incompleta o con errori."
+total_score,Punteggio totale assegnato dal judge alla risposta del modello.
+max_score,"Punteggio massimo possibile per quella valutazione, normalmente 21."
+normalized_score,"Score normalizzato tra 0 e 1, calcolato come total_score / max_score."
+top1_correct,Vale 1 se la causa principale indicata dal modello coincide con la causa principale attesa; vale 0 altrimenti.
+top3_contains_correct,Vale 1 se la causa corretta compare almeno tra le prime tre ipotesi del modello; vale 0 altrimenti.
+major_errors_n,Numero di errori gravi individuati dal judge nella risposta.
+hallucinations_n,"Numero di affermazioni non supportate, inventate o non deducibili dai dati forniti."
+missed_points_n,Numero di aspetti importanti che il modello avrebbe dovuto menzionare ma ha omesso.
+strengths_n,Numero di punti di forza individuati dal judge nella risposta.
+circuit_understanding,Sotto-punteggio 0-3: quanto il modello ha capito struttura e funzione del circuito.
+datasheet_use,Sotto-punteggio 0-3: quanto il modello ha usato correttamente le informazioni del datasheet.
+json_image_use,"Sotto-punteggio 0-3: quanto il modello ha usato correttamente JSON e, quando presente, immagine."
+diagnostic_accuracy,Sotto-punteggio 0-3: accuratezza tecnica della diagnosi proposta.
+cause_priority,Sotto-punteggio 0-3: corretto ordine di priorità delle cause probabili.
+practical_checks,Sotto-punteggio 0-3: utilità e concretezza dei controlli pratici suggeriti.
+hallucination_absence,Sotto-punteggio 0-3: assenza di allucinazioni o affermazioni non supportate.
+model_primary_cause,"Causa principale dichiarata dal modello sotto valutazione, secondo il judge."
+short_explanation,Breve spiegazione del judge sul motivo del punteggio assegnato.
+model_latency_seconds,"Tempo di esecuzione della diagnosi del modello sotto test, in secondi."
+model_input_tokens,Token di input consumati dal modello sotto test.
+model_output_tokens,Token di output prodotti dal modello sotto test.
+model_total_tokens,Token totali consumati dal modello sotto test.
+model_reasoning_tokens,"Token di reasoning del modello sotto test, quando disponibili."
+model_cached_tokens,"Token cached del modello sotto test, quando disponibili."
+model_cost_usd,"Costo stimato della singola diagnosi del modello sotto test, in dollari."
+judge_latency_seconds,"Tempo impiegato dal judge per valutare quella run, in secondi."
+judge_input_tokens,Token di input consumati dal judge.
+judge_output_tokens,Token di output prodotti dal judge.
+judge_total_tokens,Token totali consumati dal judge.
+judge_reasoning_tokens,"Token di reasoning del judge, quando disponibili."
+judge_cached_tokens,"Token cached del judge, quando disponibili."
+judge_cost_usd,"Costo stimato della singola valutazione del judge, in dollari."
