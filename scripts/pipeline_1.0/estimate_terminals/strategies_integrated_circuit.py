@@ -19,6 +19,7 @@ Prima versione:
 - terminali variabili sui quattro lati.
 """
 
+import cv2
 import numpy as np
 
 from .config import TERMINAL_OUTWARD_OFFSET
@@ -39,6 +40,10 @@ def _get_pin_cfg(meta: dict) -> dict:
         "min_wire_length_px": int(cfg.get("min_wire_length_px", 14)),
         "merge_gap_px": int(cfg.get("merge_gap_px", 10)),
         "corner_exclusion_ratio": float(cfg.get("corner_exclusion_ratio", 0.04)),
+        "adaptive_upscale_enabled": bool(cfg.get("adaptive_upscale_enabled", True)),
+        "adaptive_upscale_min_body_dim_px": int(cfg.get("adaptive_upscale_min_body_dim_px", 140)),
+        "adaptive_upscale_target_body_dim_px": int(cfg.get("adaptive_upscale_target_body_dim_px", 180)),
+        "adaptive_upscale_max_scale": float(cfg.get("adaptive_upscale_max_scale", 2.5)),
     }
 
 def _get_naming_cfg(meta: dict) -> dict:
@@ -546,6 +551,140 @@ def _anchor_offset_ratio(body_bbox, side, coord):
         return round((float(coord) - y1) / float(max(y2 - y1, 1)), 4)
     return round((float(coord) - x1) / float(max(x2 - x1, 1)), 4)
 
+
+def _scale_pin_cfg(cfg, scale):
+    if abs(float(scale) - 1.0) < 1e-6:
+        return dict(cfg)
+
+    scaled = dict(cfg)
+    for key in (
+        "scan_band_px",
+        "outward_probe_px",
+        "inward_probe_px",
+        "min_contact_run_px",
+        "min_wire_length_px",
+        "merge_gap_px",
+    ):
+        scaled[key] = max(1, int(round(float(cfg[key]) * float(scale))))
+    return scaled
+
+
+def _effective_local_upscale(body_bbox, cfg):
+    if not cfg.get("adaptive_upscale_enabled", True):
+        return 1.0
+
+    x1, y1, x2, y2 = [float(v) for v in body_bbox]
+    body_w = max(1.0, x2 - x1 + 1.0)
+    body_h = max(1.0, y2 - y1 + 1.0)
+    min_dim = min(body_w, body_h)
+    if min_dim >= float(cfg["adaptive_upscale_min_body_dim_px"]):
+        return 1.0
+
+    target_dim = max(float(cfg["adaptive_upscale_target_body_dim_px"]), min_dim)
+    scale = target_dim / max(min_dim, 1.0)
+    return max(1.0, min(float(cfg["adaptive_upscale_max_scale"]), scale))
+
+
+def _build_local_upscaled_binary(binary, body_bbox, cfg):
+    scale = _effective_local_upscale(body_bbox, cfg)
+    if scale <= 1.01:
+        return binary, tuple(int(v) for v in body_bbox), dict(cfg), {
+            "enabled": False,
+            "scale": 1.0,
+        }
+
+    margin = max(
+        int(cfg["scan_band_px"]),
+        int(cfg["outward_probe_px"]),
+        int(cfg["inward_probe_px"]),
+    ) + 6
+    h, w = binary.shape[:2]
+    bx1, by1, bx2, by2 = [int(round(v)) for v in body_bbox]
+    rx1 = max(0, bx1 - margin)
+    ry1 = max(0, by1 - margin)
+    rx2 = min(w - 1, bx2 + margin)
+    ry2 = min(h - 1, by2 + margin)
+
+    roi = binary[ry1:ry2 + 1, rx1:rx2 + 1]
+    if roi.size == 0:
+        return binary, tuple(int(v) for v in body_bbox), dict(cfg), {
+            "enabled": False,
+            "scale": 1.0,
+            "reason": "empty_local_roi",
+        }
+
+    local_binary = cv2.resize(
+        roi,
+        None,
+        fx=scale,
+        fy=scale,
+        interpolation=cv2.INTER_NEAREST,
+    )
+    local_body_bbox = (
+        int(round((bx1 - rx1) * scale)),
+        int(round((by1 - ry1) * scale)),
+        int(round((bx2 - rx1) * scale)),
+        int(round((by2 - ry1) * scale)),
+    )
+    return local_binary, local_body_bbox, _scale_pin_cfg(cfg, scale), {
+        "enabled": True,
+        "scale": round(float(scale), 3),
+        "roi_bbox": [int(rx1), int(ry1), int(rx2), int(ry2)],
+        "local_body_bbox": [int(v) for v in local_body_bbox],
+    }
+
+
+def _descale_value(value, scale, offset=0):
+    return int(round(float(offset) + (float(value) / max(float(scale), 1e-6))))
+
+
+def _descale_run(run, scale, side, roi_bbox):
+    if not isinstance(run, dict):
+        return run
+
+    rx1, ry1, _, _ = [int(v) for v in roi_bbox]
+    mapped = dict(run)
+    if side in {"left", "right"}:
+        if mapped.get("start") is not None:
+            mapped["start"] = _descale_value(mapped["start"], scale, rx1)
+        if mapped.get("end") is not None:
+            mapped["end"] = _descale_value(mapped["end"], scale, rx1)
+        if mapped.get("row") is not None:
+            mapped["row"] = _descale_value(mapped["row"], scale, ry1)
+    else:
+        if mapped.get("start") is not None:
+            mapped["start"] = _descale_value(mapped["start"], scale, ry1)
+        if mapped.get("end") is not None:
+            mapped["end"] = _descale_value(mapped["end"], scale, ry1)
+        if mapped.get("col") is not None:
+            mapped["col"] = _descale_value(mapped["col"], scale, rx1)
+    if mapped.get("outward_len") is not None:
+        mapped["outward_len"] = _descale_value(mapped["outward_len"], scale, 0)
+    if mapped.get("start") is not None and mapped.get("end") is not None:
+        mapped["length"] = max(1, int(mapped["end"] - mapped["start"] + 1))
+    return mapped
+
+
+def _descale_merged_rows(rows, scale, side, roi_bbox):
+    if scale <= 1.01:
+        return rows
+
+    rx1, ry1, _, _ = [int(v) for v in roi_bbox]
+    axis_offset = ry1 if side in {"left", "right"} else rx1
+    mapped_rows = []
+    for row in rows:
+        mapped_rows.append({
+            **row,
+            "coord": _descale_value(row["coord"], scale, axis_offset),
+            "group_start": _descale_value(row["group_start"], scale, axis_offset),
+            "group_end": _descale_value(row["group_end"], scale, axis_offset),
+            "group_len": max(1, _descale_value(row["group_len"], scale, 0)),
+            "best_coord": _descale_value(row["best_coord"], scale, axis_offset),
+            "best_score": int(row["best_score"]),
+            "run": _descale_run(row.get("run"), scale, side, roi_bbox),
+        })
+    return mapped_rows
+
 # =========================================================
 # PUBLIC API
 # =========================================================
@@ -561,20 +700,33 @@ def detect_integrated_circuit_terminals(meta: dict, binary, bbox):
     cfg = _get_pin_cfg(meta)
     naming_cfg = _get_naming_cfg(meta)
 
+    local_binary, local_body_bbox, local_cfg, upscale_debug = _build_local_upscaled_binary(
+        binary,
+        body_bbox,
+        cfg,
+    )
+    local_scale = float(upscale_debug.get("scale") or 1.0)
+
     side_rows = {}
     raw_counts = {}
     terminals_by_side = {}
 
     for side in cfg["sides"]:
         raw_candidates = _candidate_coords_for_side(
-            binary,
-            body_bbox,
+            local_binary,
+            local_body_bbox,
             side,
-            cfg,
+            local_cfg,
         )
         merged = _merge_candidate_coords(
             raw_candidates,
-            max_gap=cfg["merge_gap_px"],
+            max_gap=local_cfg["merge_gap_px"],
+        )
+        merged = _descale_merged_rows(
+            merged,
+            local_scale,
+            side,
+            upscale_debug.get("roi_bbox") or [0, 0, 0, 0],
         )
 
         raw_counts[side] = len(raw_candidates)
@@ -640,6 +792,7 @@ def detect_integrated_circuit_terminals(meta: dict, binary, bbox):
         "bbox": [int(round(v)) for v in bbox],
         "body_bbox": [int(v) for v in body_bbox],
         "body_refinement": body_debug,
+        "adaptive_local_upscale": upscale_debug,
         "pin_detection_cfg": cfg,
         "raw_candidate_counts": raw_counts,
         "pin_count": len(terminals_def),

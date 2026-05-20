@@ -1051,7 +1051,12 @@ def _score_ic_marking_candidate(text: str, confidence: float, region_name: str, 
         debug["reject_reason"] = "watermark_or_website"
         return -999.0, debug
 
-    if _matches_any_pattern(text, reject_patterns) and not _looks_like_ic_family_marking(text):
+    designator_check_text = re.sub(r"^[^A-Z0-9]+", "", text)
+
+    if (
+        _matches_any_pattern(text, reject_patterns)
+        or _matches_any_pattern(designator_check_text, reject_patterns)
+    ) and not _looks_like_ic_family_marking(text):
         debug["reject_reason"] = "component_designator_or_non_ic"
         return -999.0, debug
 
@@ -1355,6 +1360,9 @@ def _looks_like_ic_family_marking(text: str) -> bool:
     """
     if not text:
         return False
+
+    if re.fullmatch(r"(?:74|54)[A-Z]{1,5}[0-9]{2,4}[A-Z]?", text):
+        return True
 
     if not text.startswith(IC_MARKING_PREFIXES):
         return False
@@ -1944,7 +1952,7 @@ def enrich_ic_marking_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
 
     if subtype_info is None:
         subtype_info = _subtype_from_marking_text(marking)
-    if subtype_info is None:
+    if subtype_info is None and not _looks_like_ic_family_marking(marking):
         subtype_info = _detect_seven_segment_display(
             component,
             image_bgr,

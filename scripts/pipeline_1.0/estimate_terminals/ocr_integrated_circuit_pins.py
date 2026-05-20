@@ -43,6 +43,7 @@ from typing import Dict, List, Optional, Tuple
 import cv2
 import numpy as np
 
+from .config import TERMINAL_OUTWARD_OFFSET
 from .ocr_integrated_circuit import get_ic_body_bbox_from_component
 
 
@@ -216,6 +217,10 @@ def _get_pin_ocr_cfg(meta: Dict) -> Dict:
         "top_bottom_inside_px": int(lane_cfg.get("top_bottom_inside_px", 72)),
         "top_bottom_outside_px": int(lane_cfg.get("top_bottom_outside_px", 42)),
         "upscale": float(lane_cfg.get("upscale", 3.0)),
+        "adaptive_upscale_enabled": bool(lane_cfg.get("adaptive_upscale_enabled", True)),
+        "adaptive_upscale_min_body_dim_px": int(lane_cfg.get("adaptive_upscale_min_body_dim_px", 140)),
+        "adaptive_upscale_target_body_dim_px": int(lane_cfg.get("adaptive_upscale_target_body_dim_px", 160)),
+        "adaptive_upscale_max_scale": float(lane_cfg.get("adaptive_upscale_max_scale", 6.0)),
         "line_kernel_ratio": float(lane_cfg.get("line_kernel_ratio", 0.33)),
         "component_fallback_enabled": bool(lane_cfg.get("component_fallback_enabled", True)),
         "max_number_distance_px": float(attach_cfg.get("max_number_distance_px", 42)),
@@ -245,6 +250,29 @@ def _lane_zone_px(side: str, cfg: Dict) -> Tuple[float, float]:
     if side in {"left", "right"}:
         return float(cfg["side_inside_px"]), float(cfg["side_outside_px"])
     return float(cfg["top_bottom_inside_px"]), float(cfg["top_bottom_outside_px"])
+
+
+def _effective_ocr_upscale(cfg: Dict) -> float:
+    base = max(float(cfg.get("upscale", 1.0)), 1.0)
+    if not cfg.get("adaptive_upscale_enabled", True):
+        return base
+
+    body_bbox = cfg.get("body_bbox")
+    if not body_bbox or len(body_bbox) != 4:
+        return base
+
+    try:
+        x1, y1, x2, y2 = [float(v) for v in body_bbox]
+    except Exception:
+        return base
+
+    min_dim = min(max(1.0, x2 - x1 + 1.0), max(1.0, y2 - y1 + 1.0))
+    if min_dim >= float(cfg.get("adaptive_upscale_min_body_dim_px", 140)):
+        return base
+
+    target_dim = max(float(cfg.get("adaptive_upscale_target_body_dim_px", 160)), min_dim)
+    multiplier = target_dim / max(min_dim, 1.0)
+    return max(base, min(base * multiplier, float(cfg.get("adaptive_upscale_max_scale", 6.0))))
 
 
 # =========================================================
@@ -346,7 +374,7 @@ def _prepare_side_band(crop_bgr, cfg: Dict) -> Tuple[np.ndarray, float]:
     """
     gray = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2GRAY)
     gray = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(4, 4)).apply(gray)
-    scale = max(float(cfg["upscale"]), 1.0)
+    scale = _effective_ocr_upscale(cfg)
     if scale != 1.0:
         gray = cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
     _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -1310,6 +1338,37 @@ def _normalize_label_word(word: Dict, cfg: Dict) -> Dict:
     return updated
 
 
+def _inner_strip_numeric_candidates(
+    words: List[Dict],
+    side: str,
+    body_bbox,
+    cfg: Dict,
+) -> List[Dict]:
+    """
+    Estrae candidati numerici dalla strip interna vicina al lato.
+
+    Qui Tesseract spesso legge meglio piccoli pin number aderenti al bordo del
+    package rispetto all'OCR della corsia larga. Sono candidati utili sia per
+    singole cifre sia per numeri a due cifre.
+    """
+    candidates: List[Dict] = []
+    min_conf = max(cfg["label_min_confidence"], 0.35)
+
+    for word in words:
+        if word.get("mode") != "text_inner_strip":
+            continue
+        text = str(word.get("text") or "")
+        if float(word.get("confidence") or 0.0) < min_conf:
+            continue
+        if not _is_number_text(text, cfg):
+            continue
+        if body_bbox is not None and _word_edge_distance(word, side, body_bbox) > 18.0:
+            continue
+        candidates.append(word)
+
+    return candidates
+
+
 # =========================================================
 # OCR SU STRIP INTERNA ED EASYOCR DI SUPPORTO
 # =========================================================
@@ -1361,7 +1420,7 @@ def _build_inner_label_strip_bbox(
 def _prepare_inner_label_strip(crop_bgr, cfg: Dict) -> Tuple[np.ndarray, float]:
     gray = cv2.cvtColor(crop_bgr, cv2.COLOR_BGR2GRAY)
     gray = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(4, 4)).apply(gray)
-    scale = max(float(cfg["upscale"]), 5.0)
+    scale = max(_effective_ocr_upscale(cfg), 5.0)
     if scale != 1.0:
         gray = cv2.resize(gray, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
     _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
@@ -1598,6 +1657,11 @@ def _should_replace_with_component_candidate(term: Dict, candidate: Dict, side: 
     current_best = debug_payload.get("best_number") or {}
     current_mode = str(current_best.get("mode") or "")
     if (
+        current_mode == "text_inner_strip"
+        and current_conf >= max(0.70, candidate_conf - 0.05)
+    ):
+        return False
+    if (
         current_mode.endswith("_edge_digit")
         and current_conf >= 0.55
         and candidate_conf <= current_conf + 0.10
@@ -1763,10 +1827,15 @@ def _assign_lane_semantics(
         numeric_from_text = [
             word for word in lane_text_words
             if word["confidence"] >= cfg["label_min_confidence"]
-            and word.get("mode") != "text_inner_strip"
             and _is_number_text(word["text"], cfg)
             and _closest_body_side(word, body_bbox) == side
         ]
+        numeric_from_text.extend(_inner_strip_numeric_candidates(
+            lane_text_words,
+            side,
+            body_bbox,
+            cfg,
+        ))
         numeric_from_text.extend(
             word for word in _edge_digit_candidates_from_words(lane_text_words, side, body_bbox, cfg)
             if _is_number_text(word["text"], cfg)
@@ -1847,7 +1916,7 @@ def _assign_component_number_fallback(
     has_side_label_guards = bool(label_guard_words)
     component_map = _assign_words_to_lanes(component_words, side_run["lanes"])
     label_guard_map = _assign_words_to_lanes(label_guard_words or [], side_run["lanes"])
-    prefer_edge_first = side in {"top", "bottom"} and len(side_run["lanes"]) <= 2
+    prefer_edge_first = side in {"top", "bottom"}
 
     for lane in side_run["lanes"]:
         term = lane["term"]
@@ -2028,6 +2097,51 @@ def _repair_555_timer_pin_numbers(component: Dict) -> None:
             "from": previous or None,
             "to": target,
             "reason": "known_555_timer_8_pin_layout",
+        }
+
+
+def _repair_three_pin_corner_package_numbers(component: Dict) -> None:
+    """
+    Completa la numerazione di piccoli IC a 3 pin con layout top+right.
+
+    E' un pattern geometrico generale: un pin sopra e due pin sul lato destro.
+    Se l'OCR legge una sequenza coerente 1 -> 2 -> 3 ma ne perde l'ultimo
+    elemento, completiamo il valore mancante.
+    """
+    terminals = component.get("terminals", []) or []
+    if len(terminals) != 3:
+        return
+
+    by_name = {str(term.get("name") or ""): term for term in terminals}
+    expected_order = ["top_1", "right_1", "right_2"]
+    if any(name not in by_name for name in expected_order):
+        return
+
+    missing_terms = []
+    for idx, name in enumerate(expected_order, start=1):
+        term = by_name[name]
+        text = str(term.get("pin_number") or "").strip()
+        if not text:
+            missing_terms.append((idx, term))
+            continue
+        if not re.fullmatch(r"[1-3]", text):
+            return
+        if int(text) != idx:
+            return
+
+    if not missing_terms:
+        return
+
+    for idx, term in missing_terms:
+        previous = str(term.get("pin_number") or "")
+        old_conf = float(term.get("pin_number_confidence") or 0.0)
+        term["pin_number"] = str(idx)
+        term["pin_number_confidence"] = round(max(old_conf, 0.60), 3)
+        debug_payload = term.setdefault("pin_ocr_debug", {})
+        debug_payload["three_pin_corner_package_repair"] = {
+            "from": previous or None,
+            "to": str(idx),
+            "reason": "top_then_right_pair_sequence",
         }
 
 
@@ -2531,6 +2645,507 @@ def _rename_terminal_for_side(component: Dict, term: Dict, side: str, index: int
         term["display_terminal_id"] = f"{instance_id}:{name}"
 
 
+def _sort_ic_terminals_in_place(component: Dict) -> None:
+    side_rank = {"left": 0, "right": 1, "top": 2, "bottom": 3}
+
+    def _key(term: Dict):
+        side = _terminal_side(term) or ""
+        x = float(term.get("x", 0.0))
+        y = float(term.get("y", 0.0))
+        axis = y if side in {"left", "right"} else x
+        return (side_rank.get(side, 99), axis, x, y, str(term.get("name") or ""))
+
+    terminals = component.get("terminals")
+    if isinstance(terminals, list):
+        terminals.sort(key=_key)
+
+
+def _side_terms(component: Dict, side: str) -> List[Dict]:
+    return [
+        term for term in sorted(component.get("terminals", []) or [], key=_terminal_sort_key)
+        if _terminal_side(term) == side
+    ]
+
+
+def _ocr_single_char_variants(
+    image_bgr,
+    bbox: List[int],
+    allowlist: str,
+    *,
+    scales: Tuple[int, ...] = (6, 8, 10),
+    pads: Tuple[int, ...] = (6,),
+) -> List[Dict]:
+    try:
+        import pytesseract
+    except Exception:
+        return []
+
+    results = []
+    img_h, img_w = image_bgr.shape[:2]
+    for pad in pads:
+        x1 = max(0, int(bbox[0]) - int(pad))
+        y1 = max(0, int(bbox[1]) - int(pad))
+        x2 = min(img_w - 1, int(bbox[2]) + int(pad))
+        y2 = min(img_h - 1, int(bbox[3]) + int(pad))
+        crop = _crop(image_bgr, [x1, y1, x2, y2])
+        if crop is None:
+            continue
+
+        gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(4, 4)).apply(gray)
+        for variant_name, base in (("clahe", clahe),):
+            for scale in scales:
+                scaled = cv2.resize(base, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC)
+                _, otsu = cv2.threshold(scaled, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                for invert in (False, True):
+                    image = cv2.bitwise_not(otsu) if invert else otsu
+                    text = pytesseract.image_to_string(
+                        image,
+                        config=f"--psm 10 -c tessedit_char_whitelist={allowlist}",
+                    ).strip()
+                    if not text:
+                        continue
+                    results.append({
+                        "text": text,
+                        "pad": int(pad),
+                        "scale": int(scale),
+                        "variant": variant_name,
+                        "threshold": "otsu",
+                        "invert": bool(invert),
+                    })
+    return results
+
+
+def _rescue_small_ic_side_numbers(component: Dict, image_bgr, body_bbox: List[float], cfg: Dict) -> None:
+    if not _small_ic_terminal_recovery_enabled(body_bbox, cfg):
+        return
+
+    for side in ("left", "right", "top", "bottom"):
+        terms = _side_terms(component, side)
+        if len(terms) < 2:
+            continue
+
+        seen = {}
+        duplicates = set()
+        for term in terms:
+            text = str(term.get("pin_number") or "").strip()
+            if not re.fullmatch(r"[0-9]{1,2}", text):
+                continue
+            if text in seen:
+                duplicates.add(text)
+            seen[text] = seen.get(text, 0) + 1
+
+        for term in terms:
+            current = str(term.get("pin_number") or "").strip()
+            conf = float(term.get("pin_number_confidence") or 0.0)
+            if not re.fullmatch(r"[0-9]{1,2}", current):
+                continue
+            if conf >= 0.70 and current not in duplicates:
+                continue
+
+            lane_bbox = ((term.get("pin_ocr_debug") or {}).get("lane_bbox"))
+            if not lane_bbox:
+                continue
+
+            variants = _ocr_single_char_variants(
+                image_bgr,
+                lane_bbox,
+                allowlist="123456789",
+            )
+            votes = {}
+            for candidate in variants:
+                text = str(candidate.get("text") or "").strip()
+                if not re.fullmatch(r"[1-9]", text):
+                    continue
+                weight = 1.0
+                if candidate["pad"] >= 6:
+                    weight += 0.35
+                if candidate["threshold"] == "otsu":
+                    weight += 0.20
+                if not candidate["invert"]:
+                    weight += 0.10
+                votes[text] = votes.get(text, 0.0) + weight
+
+            if not votes:
+                continue
+
+            best_text, best_vote = max(votes.items(), key=lambda item: item[1])
+            if best_vote < 2.2:
+                continue
+            if best_text == current and conf >= 0.60:
+                continue
+
+            term["pin_number"] = best_text
+            term["pin_number_confidence"] = round(max(conf, min(0.82, 0.45 + (best_vote * 0.08))), 3)
+            debug_payload = term.setdefault("pin_ocr_debug", {})
+            debug_payload["small_ic_digit_rescue"] = {
+                "from": current or None,
+                "to": best_text,
+                "vote_score": round(float(best_vote), 3),
+                "reason": "expanded_lane_single_char_ocr",
+            }
+
+
+def _normalize_single_char_label_vote(text: str) -> Optional[str]:
+    compact = re.sub(r"[^A-Za-z]", "", str(text or "")).lower()
+    if not compact:
+        return None
+    aliases = {
+        "q": "g",
+    }
+    for ch in compact:
+        ch = aliases.get(ch, ch)
+        if ch in {"a", "b", "c", "d", "e", "f", "g"}:
+            return ch
+    return None
+
+
+def _rescue_small_ic_outer_char_labels(component: Dict, image_bgr, body_bbox: List[float], cfg: Dict) -> None:
+    if not _small_ic_terminal_recovery_enabled(body_bbox, cfg):
+        return
+
+    bx1, by1, bx2, by2 = [int(round(v)) for v in body_bbox]
+    img_h, img_w = image_bgr.shape[:2]
+    outer_bands = []
+    band_w = 20
+    outer_bands.append(("left", [max(0, bx1 - band_w), by1, min(img_w - 1, bx1 + 4), by2]))
+    outer_bands.append(("right", [max(0, bx2 - 4), by1, min(img_w - 1, bx2 + band_w), by2]))
+
+    for side, band_bbox in outer_bands:
+        terms = _side_terms(component, side)
+        if len(terms) != 7:
+            continue
+
+        components = _extract_digit_components(image_bgr, band_bbox)
+        if not components:
+            continue
+
+        label_candidates = []
+        for comp in components:
+            variants = _ocr_single_char_variants(
+                image_bgr,
+                comp["bbox"],
+                allowlist="abcdefgABCDEFG",
+                scales=(8, 10),
+                pads=(1, 2),
+            )
+            votes = {}
+            for variant in variants:
+                normalized = _normalize_single_char_label_vote(variant.get("text") or "")
+                if not normalized:
+                    continue
+                votes[normalized] = votes.get(normalized, 0.0) + 1.0
+            if not votes:
+                continue
+            label, vote = max(votes.items(), key=lambda item: item[1])
+            if vote < 1.0:
+                continue
+            cy = float(comp["center"][1])
+            label_candidates.append({
+                "label": label,
+                "vote": vote,
+                "center_y": cy,
+                "bbox": comp["bbox"],
+            })
+
+        if len(label_candidates) < 3:
+            continue
+
+        for candidate in label_candidates:
+            best_term = min(terms, key=lambda term: abs(float(term.get("y", 0.0)) - candidate["center_y"]))
+            axis_distance = abs(float(best_term.get("y", 0.0)) - candidate["center_y"])
+            if axis_distance > 16.0:
+                continue
+            existing = str(best_term.get("pin_label_text") or "").strip().lower()
+            existing_conf = float(best_term.get("pin_label_confidence") or 0.0)
+            if existing in {"a", "b", "c", "d", "e", "f", "g"} and existing_conf >= 0.65:
+                continue
+            best_term["pin_label_text"] = candidate["label"]
+            best_term["pin_label_confidence"] = round(max(existing_conf, min(0.75, 0.45 + (candidate["vote"] * 0.10))), 3)
+            debug_payload = best_term.setdefault("pin_ocr_debug", {})
+            debug_payload["small_ic_outer_char_label_rescue"] = {
+                "label": candidate["label"],
+                "vote_score": round(float(candidate["vote"]), 3),
+                "bbox": candidate["bbox"],
+                "reason": "outer_band_single_char_ocr",
+            }
+
+
+def _pin_debug_words(component: Dict) -> List[str]:
+    texts = []
+    for term in component.get("terminals", []) or []:
+        debug_payload = term.get("pin_ocr_debug") or {}
+        for bucket in ("text_words", "label_guard_words", "number_words"):
+            for word in debug_payload.get(bucket) or []:
+                text = str(word.get("text") or "").strip()
+                if text:
+                    texts.append(text.lower())
+    return texts
+
+
+def _normalize_seven_segment_decoder_output_labels(component: Dict) -> None:
+    if component.get("component_subtype") == "seven_segment_display":
+        return
+
+    for side in ("left", "right"):
+        terms = _side_terms(component, side)
+        if len(terms) != 7:
+            continue
+
+        expected = ["a", "b", "c", "d", "e", "f", "g"]
+        support = []
+        for idx, term in enumerate(terms):
+            label = str(term.get("pin_label_text") or "").strip().lower()
+            if label not in expected:
+                continue
+            expected_index = expected.index(label)
+            support.append((idx, expected_index, term))
+
+        if len(support) < 3:
+            continue
+
+        for term, label in zip(terms, expected):
+            _clear_terminal_pin_number(term)
+            term["pin_label_text"] = label
+            old_conf = float(term.get("pin_label_confidence") or 0.0)
+            term["pin_label_confidence"] = round(max(old_conf, 0.60), 3)
+            debug_payload = term.setdefault("pin_ocr_debug", {})
+            debug_payload["seven_segment_decoder_output_normalization"] = {
+                "label": label,
+                "reason": "supported_a_to_g_side_sequence",
+                "side": side,
+                "support_count": len(support),
+            }
+
+
+def _make_ic_terminal_point(body_bbox: List[float], side: str, coord: float) -> Tuple[float, float]:
+    bx1, by1, bx2, by2 = [float(v) for v in body_bbox]
+    if side == "left":
+        return round(bx1 - TERMINAL_OUTWARD_OFFSET, 2), round(float(coord), 2)
+    if side == "right":
+        return round(bx2 + TERMINAL_OUTWARD_OFFSET, 2), round(float(coord), 2)
+    if side == "top":
+        return round(float(coord), 2), round(by1 - TERMINAL_OUTWARD_OFFSET, 2)
+    return round(float(coord), 2), round(by2 + TERMINAL_OUTWARD_OFFSET, 2)
+
+
+def _ic_anchor_offset_ratio(body_bbox: List[float], side: str, coord: float) -> float:
+    bx1, by1, bx2, by2 = [float(v) for v in body_bbox]
+    if side in {"left", "right"}:
+        return round((float(coord) - by1) / max(by2 - by1, 1.0), 4)
+    return round((float(coord) - bx1) / max(bx2 - bx1, 1.0), 4)
+
+
+def _side_axis_from_word(word: Dict, side: str) -> float:
+    center = word.get("center")
+    if center is None:
+        bbox = word.get("bbox") or [0, 0, 0, 0]
+        center = [(float(bbox[0]) + float(bbox[2])) * 0.5, (float(bbox[1]) + float(bbox[3])) * 0.5]
+    return float(center[1] if side in {"left", "right"} else center[0])
+
+
+def _cluster_side_candidate_words(words: List[Dict], side: str, gap_px: float) -> List[Dict]:
+    if not words:
+        return []
+
+    words = sorted(words, key=lambda item: _side_axis_from_word(item, side))
+    clusters: List[List[Dict]] = [[words[0]]]
+    for word in words[1:]:
+        current = clusters[-1]
+        last_axis = _side_axis_from_word(current[-1], side)
+        axis = _side_axis_from_word(word, side)
+        if abs(axis - last_axis) <= float(gap_px):
+            current.append(word)
+        else:
+            clusters.append([word])
+
+    merged = []
+    for cluster in clusters:
+        weights = [max(0.35, float(word.get("confidence") or 0.0)) for word in cluster]
+        coords = [_side_axis_from_word(word, side) for word in cluster]
+        weighted_coord = sum(coord * weight for coord, weight in zip(coords, weights)) / max(sum(weights), 1e-6)
+        best = max(cluster, key=lambda item: (float(item.get("confidence") or 0.0), -_word_edge_distance(item, side, [0, 0, 0, 0]) if False else 0.0))
+        merged.append({
+            "coord": round(float(weighted_coord), 2),
+            "words": cluster,
+            "best_word": best,
+            "confidence": round(max(float(word.get("confidence") or 0.0) for word in cluster), 3),
+        })
+    return merged
+
+
+def _median_spacing(values: List[float]) -> Optional[float]:
+    if len(values) < 2:
+        return None
+    diffs = [
+        float(values[idx + 1]) - float(values[idx])
+        for idx in range(len(values) - 1)
+        if float(values[idx + 1]) - float(values[idx]) > 0.0
+    ]
+    if not diffs:
+        return None
+    return float(np.median(np.asarray(diffs, dtype=np.float32)))
+
+
+def _small_ic_terminal_recovery_enabled(body_bbox: List[float], cfg: Dict) -> bool:
+    bx1, by1, bx2, by2 = [float(v) for v in body_bbox]
+    min_dim = min(max(1.0, bx2 - bx1 + 1.0), max(1.0, by2 - by1 + 1.0))
+    return min_dim <= float(cfg.get("adaptive_upscale_min_body_dim_px", 140)) + 35.0
+
+
+def _append_recovered_terminal(component: Dict, side: str, coord: float, body_bbox: List[float], source_cluster: Dict) -> None:
+    instance_id = str(component.get("instance_id") or "")
+    point = _make_ic_terminal_point(body_bbox, side, coord)
+    anchor_ratio = _ic_anchor_offset_ratio(body_bbox, side, coord)
+    term = {
+        "terminal_id": f"{instance_id}:{side}_tmp",
+        "instance_id": instance_id,
+        "component_class_id": component.get("class_id"),
+        "component_class_name": component.get("class_name"),
+        "name": f"{side}_tmp",
+        "display_name": f"{side}_tmp",
+        "display_terminal_id": f"{instance_id}:{side}_tmp",
+        "relative_position": side,
+        "estimated_orientation": component.get("estimated_orientation"),
+        "estimated_connection_side": None,
+        "terminal_point_mode": "bbox_side_anchor_ratio",
+        "terminal_point_debug": {
+            "point_mode": "ocr_assisted_small_ic_terminal_recovery",
+            "body_bbox": [round(float(v), 2) for v in body_bbox],
+            "side": side,
+            "coord": round(float(coord), 2),
+            "anchor_offset_ratio": anchor_ratio,
+            "recovery_source_word": {
+                "text": source_cluster.get("best_word", {}).get("text"),
+                "confidence": source_cluster.get("confidence"),
+                "bbox": source_cluster.get("best_word", {}).get("bbox"),
+            },
+        },
+        "x": point[0],
+        "y": point[1],
+        "pin_number": None,
+        "pin_label_text": None,
+        "pin_number_confidence": None,
+        "pin_label_confidence": None,
+    }
+    component.setdefault("terminals", []).append(term)
+
+
+def _recover_missing_small_ic_terminals_from_component_words(
+    component: Dict,
+    image_bgr,
+    body_bbox: List[float],
+    side_runs: Dict[str, Dict],
+    cfg: Dict,
+) -> List[Dict]:
+    """
+    Recupera terminali mancanti su IC piccoli usando component OCR words vicine al bordo.
+
+    La regola resta prudente:
+    - si attiva solo su package piccoli;
+    - usa solo numeri OCR vicini al lato corretto;
+    - aggiunge terminali solo quando le posizioni OCR mostrano un candidato
+      coerente ma non coperto dalle corsie geometriche esistenti.
+    """
+    if component.get("component_subtype") == "seven_segment_display":
+        return []
+
+    if not _small_ic_terminal_recovery_enabled(body_bbox, cfg):
+        return []
+
+    recoveries: List[Dict] = []
+    for side, side_run in side_runs.items():
+        lanes = side_run.get("lanes") or []
+        if len(lanes) < 2:
+            continue
+
+        component_words = _component_number_words(image_bgr, side_run, cfg)
+        numeric_words = []
+        for word in component_words:
+            text = str(word.get("text") or "").strip()
+            confidence = float(word.get("confidence") or 0.0)
+            if confidence < 0.60 or not _is_number_text(text, cfg):
+                continue
+            if _closest_body_side(word, body_bbox) != side:
+                continue
+            max_edge_distance = 18.0 if side in {"left", "right"} else 16.0
+            if _word_edge_distance(word, side, body_bbox) > max_edge_distance:
+                continue
+            numeric_words.append(word)
+
+        if len(numeric_words) <= len(lanes):
+            continue
+
+        cluster_gap = 8.0 if side in {"left", "right"} else 10.0
+        clusters = _cluster_side_candidate_words(numeric_words, side, gap_px=cluster_gap)
+        if len(clusters) <= len(lanes):
+            continue
+
+        lane_coords = sorted(
+            float(lane["term"]["y"] if side in {"left", "right"} else lane["term"]["x"])
+            for lane in lanes
+        )
+        cluster_coords = sorted(float(cluster["coord"]) for cluster in clusters)
+        lane_spacing = _median_spacing(lane_coords)
+        cluster_spacing = _median_spacing(cluster_coords)
+        base_spacing = cluster_spacing or lane_spacing or 18.0
+        match_tol = max(12.0, min(base_spacing * 0.72, 20.0))
+
+        unmatched = []
+        for cluster in clusters:
+            coord = float(cluster["coord"])
+            if any(abs(coord - lane_coord) <= match_tol for lane_coord in lane_coords):
+                continue
+            unmatched.append(cluster)
+
+        if len(unmatched) == 0 or len(unmatched) > 2:
+            continue
+
+        existing_count = len(lane_coords)
+        recovered_here = []
+        for cluster in sorted(unmatched, key=lambda item: float(item["coord"])):
+            coord = float(cluster["coord"])
+            nearest = min(abs(coord - lane_coord) for lane_coord in lane_coords)
+            before_first = coord < lane_coords[0] - max(match_tol, base_spacing * 0.85)
+            after_last = coord > lane_coords[-1] + max(match_tol, base_spacing * 0.85)
+            inside_large_gap = False
+            for left_coord, right_coord in zip(lane_coords[:-1], lane_coords[1:]):
+                if left_coord < coord < right_coord and (right_coord - left_coord) >= max(base_spacing * 1.75, 28.0):
+                    inside_large_gap = True
+                    break
+            if nearest < match_tol and not before_first and not after_last and not inside_large_gap:
+                continue
+
+            _append_recovered_terminal(component, side, coord, body_bbox, cluster)
+            lane_coords.append(coord)
+            lane_coords.sort()
+            recovered_here.append({
+                "side": side,
+                "coord": round(coord, 2),
+                "source_word": cluster.get("best_word", {}).get("text"),
+                "confidence": cluster.get("confidence"),
+            })
+
+            if len(component.get("terminals", []) or []) > existing_count + 2 + sum(len((sr.get("lanes") or [])) for sr in side_runs.values()):
+                break
+
+        if recovered_here:
+            recoveries.extend(recovered_here)
+
+    if not recoveries:
+        return []
+
+    for side in ("left", "right", "top", "bottom"):
+        side_terms = [
+            term for term in sorted(component.get("terminals", []) or [], key=_terminal_sort_key)
+            if _terminal_side(term) == side
+        ]
+        for idx, term in enumerate(side_terms, start=1):
+            _rename_terminal_for_side(component, term, side, idx)
+
+    return recoveries
+
+
 def _normalize_seven_segment_h_terminal(
     component: Dict,
     label_side: str,
@@ -2588,6 +3203,62 @@ def _normalize_seven_segment_common_pin_number(cap_terms: List[Dict]) -> None:
         }
 
 
+def _clear_terminal_pin_number(term: Dict) -> None:
+    term["pin_number"] = None
+    term["pin_number_confidence"] = None
+    term.pop("pin_number_bbox", None)
+
+
+def _normalize_seven_segment_top_common_labels(
+    component: Dict,
+    label_side: str,
+    cap_side: str,
+) -> None:
+    """
+    Normalizza i display 7 segmenti del tipo 7 pin laterali + 1 pin sopra.
+
+    In questi simboli i terminali laterali rappresentano i segmenti a-g e il
+    terminale superiore e' il common senza label/pin number esportato.
+    """
+    if cap_side != "top":
+        return
+
+    by_side = {
+        side: [
+            term for term in sorted(component.get("terminals", []) or [], key=_terminal_sort_key)
+            if _terminal_side(term) == side
+        ]
+        for side in ("left", "right", "top", "bottom")
+    }
+    label_terms = by_side.get(label_side) or []
+    cap_terms = by_side.get(cap_side) or []
+    if len(label_terms) != 7 or len(cap_terms) != 1:
+        return
+
+    expected_labels = ["a", "b", "c", "d", "e", "f", "g"]
+    for term, label in zip(label_terms, expected_labels):
+        _clear_terminal_pin_number(term)
+        term["pin_label_text"] = label
+        old_conf = float(term.get("pin_label_confidence") or 0.0)
+        term["pin_label_confidence"] = round(max(old_conf, 0.60), 3)
+        debug_payload = term.setdefault("pin_ocr_debug", {})
+        debug_payload["seven_segment_top_common_label_normalization"] = {
+            "label": label,
+            "reason": "seven_lateral_segments_plus_top_common",
+        }
+
+    cap_term = cap_terms[0]
+    _clear_terminal_pin_number(cap_term)
+    cap_term["pin_label_text"] = None
+    cap_term["pin_label_confidence"] = None
+    cap_term.pop("pin_label_bbox", None)
+    debug_payload = cap_term.setdefault("pin_ocr_debug", {})
+    debug_payload["seven_segment_top_common_label_normalization"] = {
+        "label": None,
+        "reason": "top_common_terminal_without_exported_label",
+    }
+
+
 def _renumber_side_terms(component: Dict, side: str, terms: List[Dict]) -> None:
     for idx, term in enumerate(sorted(terms, key=_terminal_sort_key), start=1):
         _rename_terminal_for_side(component, term, side, idx)
@@ -2640,10 +3311,18 @@ def _prune_seven_segment_display_terminals(component: Dict) -> int:
 
     left_stats = side_stats["left"]
     right_stats = side_stats["right"]
+    weak_equal_evidence = (
+        left_stats["term_count"] == right_stats["term_count"] >= 7
+        and max(left_stats["segment_count"], right_stats["segment_count"]) <= 1
+        and max(left_stats["label_count"], right_stats["label_count"]) <= 1
+    )
     if (
-        left_stats["segment_count"] == right_stats["segment_count"] == 0
-        and left_stats["label_count"] == right_stats["label_count"] == 0
-        and left_stats["term_count"] == right_stats["term_count"] >= 7
+        (
+            left_stats["segment_count"] == right_stats["segment_count"] == 0
+            and left_stats["label_count"] == right_stats["label_count"] == 0
+            and left_stats["term_count"] == right_stats["term_count"] >= 7
+        )
+        or weak_equal_evidence
     ):
         label_side = "left"
         vertical_count = left_stats["term_count"]
@@ -2703,6 +3382,8 @@ def _prune_seven_segment_display_terminals(component: Dict) -> int:
     if removed <= 0:
         _renumber_side_terms(component, label_side, by_side[label_side])
         _renumber_side_terms(component, cap_side, by_side[cap_side])
+        _normalize_seven_segment_common_pin_number(by_side[cap_side])
+        _normalize_seven_segment_top_common_labels(component, label_side, cap_side)
         return 0
 
     kept_labels = {
@@ -2750,6 +3431,7 @@ def _prune_seven_segment_display_terminals(component: Dict) -> int:
     _normalize_seven_segment_common_pin_number([
         term for term in component["terminals"] if _terminal_side(term) == cap_side
     ])
+    _normalize_seven_segment_top_common_labels(component, label_side, cap_side)
     debug = component.setdefault("seven_segment_terminal_filter_debug", {})
     debug.update({
         "removed_count": removed,
@@ -2839,6 +3521,17 @@ def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
         component["ic_pin_ocr_debug"] = debug
         return component
 
+    recovered_terminals = _recover_missing_small_ic_terminals_from_component_words(
+        component,
+        image_bgr,
+        body_bbox,
+        side_runs,
+        cfg,
+    )
+    if recovered_terminals:
+        side_runs = _build_side_lanes(component, body_bbox, image_bgr.shape, cfg)
+        debug["ocr_assisted_recovered_terminals"] = recovered_terminals
+
     if _has_ic_marking(component):
         body_label_words = []
         body_label_info = {
@@ -2902,10 +3595,15 @@ def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
     _repair_sequential_pin_labels(component)
     _remove_duplicate_sequential_labels(component)
     _repair_unique_pin_numbers(component)
+    _rescue_small_ic_side_numbers(component, image_bgr, body_bbox, cfg)
+    _rescue_small_ic_outer_char_labels(component, image_bgr, body_bbox, cfg)
     _repair_555_timer_pin_numbers(component)
+    _repair_three_pin_corner_package_numbers(component)
+    _normalize_seven_segment_decoder_output_labels(component)
     if cfg["skip_labels_when_marking_and_number"]:
         debug["labels_cleared_count"] = _clear_pin_labels_when_number_and_marking(component)
     debug["seven_segment_removed_terminals"] = _prune_seven_segment_display_terminals(component)
+    _sort_ic_terminals_in_place(component)
 
     assigned_count = sum(
         1
