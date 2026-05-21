@@ -52,6 +52,109 @@ def _segment_terminal_by_label(component: dict) -> dict[str, str]:
     return by_label
 
 
+def _component_by_instance(components: list[dict]) -> dict[str, dict]:
+    mapping = {}
+    for component in components:
+        instance_id = component.get("instance_id")
+        if instance_id is None:
+            continue
+        mapping[str(instance_id)] = component
+    return mapping
+
+
+def _is_display_segment_terminal(term: dict, component_by_instance: dict[str, dict]) -> bool:
+    instance_id = term.get("instance_id")
+    if instance_id is None:
+        return False
+    component = component_by_instance.get(str(instance_id))
+    if not component or not _is_seven_segment_display(component):
+        return False
+    label = str(term.get("pin_label_text") or "").strip().lower()
+    return label in SEGMENT_LABELS
+
+
+def split_seven_segment_segment_label_groups(
+    label_to_terminal_ids: dict,
+    terminals: list[dict],
+    components: list[dict],
+):
+    term_by_id = {
+        str(term.get("terminal_id")): term
+        for term in terminals
+        if term.get("terminal_id")
+    }
+    component_by_instance = _component_by_instance(components)
+    rewritten_groups = []
+
+    for terminal_ids in label_to_terminal_ids.values():
+        display_terms = []
+        for terminal_id in terminal_ids:
+            term = term_by_id.get(str(terminal_id))
+            if term is None:
+                continue
+            if _is_display_segment_terminal(term, component_by_instance):
+                display_terms.append(term)
+
+        display_labels = {
+            str(term.get("pin_label_text") or "").strip().lower()
+            for term in display_terms
+        }
+        if len(display_terms) < 2 or len(display_labels) < 2:
+            rewritten_groups.append(list(terminal_ids))
+            continue
+
+        split_groups = {}
+        for term in display_terms:
+            label = str(term.get("pin_label_text") or "").strip().lower()
+            split_groups.setdefault(label, []).append(str(term["terminal_id"]))
+
+        anchor_by_label = {
+            label: sum(float(term["y"]) for term in display_terms if str(term.get("pin_label_text") or "").strip().lower() == label)
+            / max(
+                1,
+                sum(
+                    1
+                    for term in display_terms
+                    if str(term.get("pin_label_text") or "").strip().lower() == label
+                ),
+            )
+            for label in split_groups
+        }
+
+        for terminal_id in terminal_ids:
+            terminal_id = str(terminal_id)
+            if any(terminal_id in members for members in split_groups.values()):
+                continue
+
+            term = term_by_id.get(terminal_id)
+            if term is None:
+                continue
+
+            try:
+                y_value = float(term["y"])
+            except (KeyError, TypeError, ValueError):
+                continue
+
+            label = min(
+                anchor_by_label,
+                key=lambda current: abs(y_value - anchor_by_label[current]),
+            )
+            split_groups[label].append(terminal_id)
+
+        rewritten_groups.extend(list(split_groups.values()))
+
+    relabeled = {}
+    next_label = 1
+    for group in rewritten_groups:
+        unique_ids = sorted(set(group))
+        if not unique_ids:
+            continue
+        relabeled[next_label] = unique_ids
+        next_label += 1
+
+    return relabeled
+
+
 def build_seven_segment_shared_segment_edges(components: list[dict]):
     displays = [comp for comp in components if _is_seven_segment_display(comp)]
     edges = []

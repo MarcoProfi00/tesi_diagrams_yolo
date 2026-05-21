@@ -158,6 +158,60 @@ def infer_supply_arrow_connection_for_terminal(
 
     return None
 
+
+def infer_supply_rail_connection_for_group(
+    terms: list[dict],
+    label_box: list[int],
+    image_width: int | None,
+    image_height: int | None,
+):
+    if len(terms) < 3:
+        return None
+
+    x1, y1, x2, y2 = map(float, label_box)
+    width = max(0.0, x2 - x1)
+    height = max(0.0, y2 - y1)
+    if width < 120.0:
+        return None
+    if image_width is not None and width < image_width * 0.18:
+        return None
+
+    relative_positions = {
+        str(term.get("relative_position") or "").strip().lower()
+        for term in terms
+    }
+
+    top_border_limit = image_height * SUPPLY_ARROW_TOP_BORDER_RATIO if image_height else None
+    bottom_border_limit = image_height * SUPPLY_ARROW_BOTTOM_BORDER_RATIO if image_height else None
+
+    if relative_positions <= {"top"}:
+        if top_border_limit is not None and y1 > top_border_limit:
+            return None
+        return {
+            "type": "supply_rail",
+            "label": "VDD",
+            "direction": "up",
+            "polarity": "positive_supply",
+            "confidence": 0.84,
+            "evidence_type": "group_geometry_heuristic",
+            "reason": "top_border_horizontal_supply_rail_group",
+        }
+
+    if relative_positions <= {"bottom"}:
+        if bottom_border_limit is not None and y2 < bottom_border_limit:
+            return None
+        return {
+            "type": "supply_rail",
+            "label": "VSS",
+            "direction": "down",
+            "polarity": "negative_supply",
+            "confidence": 0.84,
+            "evidence_type": "group_geometry_heuristic",
+            "reason": "bottom_border_horizontal_supply_rail_group",
+        }
+
+    return None
+
 # Costruisce gli archi terminali VDD e VSS
 def build_supply_graph_links(
     terminals: list[dict],
@@ -169,17 +223,19 @@ def build_supply_graph_links(
 ):
     terminal_by_id = {term["terminal_id"]: term for term in terminals}
     supply_links = {}
+    image_width = labels.shape[1] if labels is not None else None
 
     for terminal_ids in label_to_terminal_ids.values():
         unique_terminal_ids = sorted(set(terminal_ids))
-        if len(unique_terminal_ids) != 1:
+        known_terms = [
+            terminal_by_id[terminal_id]
+            for terminal_id in unique_terminal_ids
+            if terminal_id in terminal_by_id
+        ]
+        if not known_terms:
             continue
 
         terminal_id = unique_terminal_ids[0]
-        term = terminal_by_id.get(terminal_id)
-        if term is None:
-            continue
-
         matched_label = terminal_match_debug.get(terminal_id, {}).get("matched_label")
         if matched_label is None:
             continue
@@ -188,12 +244,22 @@ def build_supply_graph_links(
         if bbox is None:
             continue
 
-        connection = infer_supply_arrow_connection_for_terminal(term, bbox, image_height)
+        connection = None
+        if len(unique_terminal_ids) == 1:
+            connection = infer_supply_arrow_connection_for_terminal(known_terms[0], bbox, image_height)
+        if connection is None:
+            connection = infer_supply_rail_connection_for_group(
+                known_terms,
+                bbox,
+                image_width,
+                image_height,
+            )
         if connection is None:
             continue
 
-        simple_terminal_id = original_to_simple.get(terminal_id, terminal_id)
-        supply_links.setdefault(simple_terminal_id, set()).add(connection["label"])
+        for member_terminal_id in unique_terminal_ids:
+            simple_terminal_id = original_to_simple.get(member_terminal_id, member_terminal_id)
+            supply_links.setdefault(simple_terminal_id, set()).add(connection["label"])
 
     return {
         terminal_id: sorted(labels)

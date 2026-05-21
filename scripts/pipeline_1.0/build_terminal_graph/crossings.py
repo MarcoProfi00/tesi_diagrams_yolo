@@ -352,24 +352,36 @@ def has_four_way_split_support(
     rami reali attorno al crossing. Cosi' evitiamo di spezzare nodi pieni o
     T-junction che il detector grezzo puo' scambiare per incroci.
     """
-    cut_skeleton = skeleton_binary.copy()
-    h, w = cut_skeleton.shape[:2]
-    x1, y1, x2, y2 = clamp_window(
-        int(x) - int(cut_half_width),
-        int(y) - int(cut_half_height),
-        int(x) + int(cut_half_width) + 1,
-        int(y) + int(cut_half_height) + 1,
+    h, w = skeleton_binary.shape[:2]
+    roi_margin = int(probe_distance) + max(int(cut_half_width), int(cut_half_height)) + 12
+    roi_x1, roi_y1, roi_x2, roi_y2 = clamp_window(
+        int(x) - roi_margin,
+        int(y) - roi_margin,
+        int(x) + roi_margin + 1,
+        int(y) + roi_margin + 1,
         w,
         h,
     )
-    cut_skeleton[y1:y2, x1:x2] = 0
+    cut_skeleton = skeleton_binary[roi_y1:roi_y2, roi_x1:roi_x2].copy()
+    local_x = int(x) - int(roi_x1)
+    local_y = int(y) - int(roi_y1)
+
+    cut_x1, cut_y1, cut_x2, cut_y2 = clamp_window(
+        local_x - int(cut_half_width),
+        local_y - int(cut_half_height),
+        local_x + int(cut_half_width) + 1,
+        local_y + int(cut_half_height) + 1,
+        cut_skeleton.shape[1],
+        cut_skeleton.shape[0],
+    )
+    cut_skeleton[cut_y1:cut_y2, cut_x1:cut_x2] = 0
 
     _, split_labels, _, _ = cv2.connectedComponentsWithStats(cut_skeleton, connectivity=8)
     branch_labels = [
-        nearest_split_label(split_labels, int(x), int(y) - int(probe_distance)),
-        nearest_split_label(split_labels, int(x), int(y) + int(probe_distance)),
-        nearest_split_label(split_labels, int(x) - int(probe_distance), int(y)),
-        nearest_split_label(split_labels, int(x) + int(probe_distance), int(y)),
+        nearest_split_label(split_labels, local_x, local_y - int(probe_distance)),
+        nearest_split_label(split_labels, local_x, local_y + int(probe_distance)),
+        nearest_split_label(split_labels, local_x - int(probe_distance), local_y),
+        nearest_split_label(split_labels, local_x + int(probe_distance), local_y),
     ]
     if any(label is None for label in branch_labels):
         return False
@@ -555,8 +567,13 @@ def split_bridge_labels(
             continue
 
         creates_singleton = any(len(set(group)) < 2 for group in related_groups)
+        allow_singleton = allow_singleton_split_for_label(
+            original_label,
+            related_groups,
+            split_points,
+        )
 
-        if creates_singleton:
+        if creates_singleton and not allow_singleton:
             final_groups.append(list(terminal_ids))
         else:
             final_groups.extend(related_groups)
@@ -631,6 +648,24 @@ def split_ambiguous_micro_bridge_groups(
     return groups
 
 
+def allow_singleton_split_for_label(original_label: int, related_groups: list[list[str]], split_points: list[dict]):
+    if not has_allowed_bridge_group_sizes({
+        idx: list(group)
+        for idx, group in enumerate(related_groups)
+    }):
+        return False
+
+    return any(
+        int(point.get("label", -1)) == int(original_label)
+        and point.get("split_kind") == "bridge_hump"
+        or (
+            int(point.get("label", -1)) == int(original_label)
+            and point.get("bridge_style") == "micro_gap"
+        )
+        for point in split_points
+    )
+
+
 def split_group_by_micro_bridge_geometry(
     terminal_ids: list[str],
     terminal_by_id: dict,
@@ -692,22 +727,26 @@ def filter_micro_bridge_candidates(
                 filtered.append(bridge)
             continue
 
-        if int(bridge.get("max_side_gap", 0)) >= 2:
+        if int(bridge.get("max_side_gap", 0)) >= 1:
             micro_by_label.setdefault(label, []).append(bridge)
 
     for label, label_bridges in micro_by_label.items():
-        ys = [int(item["y"]) for item in label_bridges]
-        if len(label_bridges) < 2 or max(ys) - min(ys) < MICRO_BRIDGE_COLUMN_MIN_Y_SPAN:
+        clusters = build_vertical_micro_bridge_clusters(label_bridges)
+        if not clusters:
             continue
 
-        if micro_bridge_cluster_creates_valid_split(
+        cluster_points = []
+        for cluster in clusters:
+            cluster_points.extend(cluster)
+
+        if micro_bridge_points_create_valid_split(
             int(label),
-            label_bridges,
+            cluster_points,
             label_to_terminal_ids,
             terminals,
             skeleton_binary,
         ):
-            filtered.extend(label_bridges)
+            filtered.extend(cluster_points)
 
     return filtered
 
@@ -727,19 +766,67 @@ def build_vertical_micro_bridge_clusters(bridges: list[dict]):
 
     valid_clusters = []
     for cluster in clusters:
+        cluster = trim_micro_bridge_cluster_end_outliers(cluster)
         if len(cluster) < 2:
             continue
         ys = [int(item["y"]) for item in cluster]
-        if max(ys) - min(ys) < MICRO_BRIDGE_COLUMN_MIN_Y_SPAN:
+        if max(ys) - min(ys) < MICRO_BRIDGE_COLUMN_MIN_Y_SPAN and len(cluster) < 3:
             continue
         valid_clusters.append(cluster)
 
     return valid_clusters
 
 
-def micro_bridge_cluster_creates_valid_split(
+def has_allowed_bridge_group_sizes(groups: dict):
+    sizes = sorted(len(set(group)) for group in groups.values())
+    if len(sizes) < 2:
+        return False
+    if all(size >= 2 for size in sizes):
+        return True
+
+    singleton_count = sum(1 for size in sizes if size == 1)
+    return singleton_count == 1 and all(size >= 2 for size in sizes if size != 1)
+
+
+def trim_micro_bridge_cluster_end_outliers(cluster: list[dict]):
+    trimmed = list(cluster)
+    min_gap = max(20, BRIDGE_PROBE_DISTANCE * 2)
+
+    while len(trimmed) >= 4:
+        rows = {}
+        for point in trimmed:
+            rows.setdefault(int(point["y"]), []).append(point)
+        unique_ys = sorted(rows)
+        if len(unique_ys) < 2:
+            break
+
+        changed = False
+        top_gap = unique_ys[1] - unique_ys[0]
+        if top_gap >= min_gap and len(rows[unique_ys[0]]) == 1:
+            trimmed = [point for point in trimmed if int(point["y"]) != unique_ys[0]]
+            changed = True
+
+        rows = {}
+        for point in trimmed:
+            rows.setdefault(int(point["y"]), []).append(point)
+        unique_ys = sorted(rows)
+        if len(unique_ys) < 2:
+            break
+
+        bottom_gap = unique_ys[-1] - unique_ys[-2]
+        if bottom_gap >= min_gap and len(rows[unique_ys[-1]]) == 1:
+            trimmed = [point for point in trimmed if int(point["y"]) != unique_ys[-1]]
+            changed = True
+
+        if not changed:
+            break
+
+    return trimmed
+
+
+def micro_bridge_points_create_valid_split(
     label: int,
-    cluster: list[dict],
+    points: list[dict],
     label_to_terminal_ids: dict,
     terminals: list[dict],
     skeleton_binary: np.ndarray,
@@ -751,7 +838,7 @@ def micro_bridge_cluster_creates_valid_split(
     terminal_by_id = {term["terminal_id"]: term for term in terminals}
     cut_skeleton = skeleton_binary.copy()
     h, w = cut_skeleton.shape[:2]
-    for point in cluster:
+    for point in points:
         x = int(point["x"])
         y = int(point["y"])
         x1, y1, x2, y2 = clamp_window(
@@ -783,7 +870,7 @@ def micro_bridge_cluster_creates_valid_split(
         if root_a != root_b:
             parent[max(root_a, root_b)] = min(root_a, root_b)
 
-    for point in cluster:
+    for point in points:
         x = int(point["x"])
         y = int(point["y"])
         top_label = nearest_split_label(split_labels, x, y - BRIDGE_PROBE_DISTANCE)
@@ -812,7 +899,7 @@ def micro_bridge_cluster_creates_valid_split(
             return False
         groups.setdefault(find(split_label), []).append(terminal_id)
 
-    return len(groups) >= 2 and all(len(set(group)) >= 2 for group in groups.values())
+    return has_allowed_bridge_group_sizes(groups)
 
 
 def label_contains_class(

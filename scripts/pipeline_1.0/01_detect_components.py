@@ -1948,6 +1948,32 @@ def is_terminal_detection_valid(image_binary, bbox) -> bool:
     )
 
 
+def is_border_supply_terminal_candidate(image_binary, bbox, image_shape) -> bool:
+    x1, y1, x2, y2 = _clamp_bbox_to_image(bbox, image_shape)
+    h, w = image_shape[:2]
+    border_margin = 28
+
+    touches_border = (
+        y1 <= border_margin
+        or y2 >= h - 1 - border_margin
+        or x1 <= border_margin
+        or x2 >= w - 1 - border_margin
+    )
+    if not touches_border:
+        return False
+
+    if not is_terminal_detection_valid(image_binary, bbox):
+        return False
+
+    width = max(1, x2 - x1 + 1)
+    height = max(1, y2 - y1 + 1)
+    area = width * height
+    if area > 1600:
+        return False
+
+    return True
+
+
 def load_yaml(path: Path):
     """Legge un file YAML e ne restituisce il contenuto gia convertito in strutture Python."""
     with open(path, "r", encoding="utf-8") as f:
@@ -2123,7 +2149,12 @@ def predict_components_on_image(
             required_conf = get_required_confidence(yaml_class_name)
 
             if float(conf) < required_conf:
-                continue
+                if not (
+                    yaml_class_name == "Terminal"
+                    and float(conf) >= 0.05
+                    and is_border_supply_terminal_candidate(image_binary, box, image_bgr.shape)
+                ):
+                    continue
 
             # La classe Terminal e particolarmente rumorosa: oltre alla confidence
             # richiediamo anche un minimo di struttura grafica coerente.

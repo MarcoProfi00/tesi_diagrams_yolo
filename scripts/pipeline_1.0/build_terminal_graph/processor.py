@@ -14,7 +14,10 @@ from .heuristics_connector import build_connector_aligned_gnd_edges, fix_stacked
 from .heuristics_inductor import merge_near_horizontal_stub_labels
 from .heuristics_mosfet import merge_mosfet_gate_aligned_labels, merge_mosfet_gate_rail_groups
 from .heuristics_opamp import merge_opamp_aux_external_terminal_labels
-from .heuristics_seven_segment import build_seven_segment_shared_segment_edges
+from .heuristics_seven_segment import (
+    build_seven_segment_shared_segment_edges,
+    split_seven_segment_segment_label_groups,
+)
 from .heuristics_supply import build_supply_graph_links, merge_battery_gate_rail_groups
 from .ids import build_simple_id_map, build_simple_list, build_simple_terminal_graph
 from .io_utils import load_binary_image
@@ -118,6 +121,11 @@ def build_terminal_graph_for_image(data: dict):
         label_to_terminal_ids,
         terminals,
         terminal_match_debug,
+    )
+    label_to_terminal_ids = split_seven_segment_segment_label_groups(
+        label_to_terminal_ids,
+        terminals,
+        components,
     )
 
     # Grafo finale interno e sua vista canonica leggibile.

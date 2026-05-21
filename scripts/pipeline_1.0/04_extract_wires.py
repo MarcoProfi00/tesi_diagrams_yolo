@@ -25,7 +25,7 @@ from skimage.morphology import skeletonize
 # PATHS / INPUT-OUTPUT
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline1.0/batch_v10_ic")
+PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline1.0/batch_v11_ic")
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "03_estimate_terminals"
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "04_extract_wires"
@@ -108,6 +108,7 @@ ENABLE_FRAGMENTED_WIRE_BRIDGE = True
 FRAGMENTED_WIRE_BRIDGE_KERNEL_LENGTH = 15
 FRAGMENTED_WIRE_BRIDGE_KERNEL_THICKNESS = 3
 FRAGMENTED_WIRE_BRIDGE_ITERATIONS = 1
+FRAGMENTED_WIRE_BRIDGE_DETECT_LENGTH = 7
 
 # =========================================================
 # SMALL COMPONENT FILTER
@@ -202,6 +203,30 @@ def terminal_keep_params(term):
     }
 
 
+def adapt_terminal_keep_for_component(term, params, components_by_instance):
+    instance_id = term.get("instance_id")
+    if instance_id is None:
+        return params
+
+    component = components_by_instance.get(str(instance_id))
+    if not component:
+        return params
+
+    if component.get("component_subtype") != "seven_segment_display":
+        return params
+
+    side = str(term.get("relative_position") or "").lower()
+    if side not in {"left", "right"}:
+        return params
+
+    adapted = dict(params)
+    adapted["radius"] = min(int(adapted["radius"]), 3)
+    adapted["thickness"] = min(int(adapted["thickness"]), 2)
+    adapted["inward_len"] = min(int(adapted["inward_len"]), 0)
+    adapted["outward_len"] = min(int(adapted["outward_len"]), 12)
+    return adapted
+
+
 # Terminal keep segment.
 def terminal_keep_segment(term):
     x = float(term["x"])
@@ -232,12 +257,22 @@ def terminal_keep_segment(term):
 
 
 # Carve terminal keep zones.
-def carve_terminal_keep_zones(mask, terminals):
+def carve_terminal_keep_zones(mask, terminals, components):
     h, w = mask.shape[:2]
     keep_debug = np.zeros_like(mask)
+    components_by_instance = {}
+    for comp in components:
+        instance_id = comp.get("instance_id")
+        if instance_id is None:
+            continue
+        components_by_instance[str(instance_id)] = comp
 
     for term in terminals:
-        params = terminal_keep_params(term)
+        params = adapt_terminal_keep_for_component(
+            term,
+            terminal_keep_params(term),
+            components_by_instance,
+        )
 
         x = int(round(term["x"]))
         y = int(round(term["y"]))
@@ -259,7 +294,7 @@ def carve_terminal_keep_zones(mask, terminals):
 # Build component mask.
 def build_component_mask(image_shape, components, terminals):
     mask = build_base_component_mask(image_shape, components)
-    mask, keep_debug = carve_terminal_keep_zones(mask, terminals)
+    mask, keep_debug = carve_terminal_keep_zones(mask, terminals, components)
     return mask, keep_debug
 
 # debug outputs
@@ -321,6 +356,7 @@ def bridge_fragmented_wires(binary_img):
             "kernel_length": None,
             "kernel_thickness": None,
             "iterations": None,
+            "detect_length": None,
         }
 
     h_kernel = cv2.getStructuringElement(
@@ -337,18 +373,33 @@ def bridge_fragmented_wires(binary_img):
             FRAGMENTED_WIRE_BRIDGE_KERNEL_LENGTH,
         ),
     )
+    h_detect_kernel = cv2.getStructuringElement(
+        cv2.MORPH_RECT,
+        (FRAGMENTED_WIRE_BRIDGE_DETECT_LENGTH, 1),
+    )
+    v_detect_kernel = cv2.getStructuringElement(
+        cv2.MORPH_RECT,
+        (1, FRAGMENTED_WIRE_BRIDGE_DETECT_LENGTH),
+    )
 
-    bridged = cv2.morphologyEx(
+    vertical_seed = cv2.morphologyEx(binary_img, cv2.MORPH_OPEN, v_detect_kernel)
+
+    horizontal_bridged = cv2.morphologyEx(
         binary_img,
         cv2.MORPH_CLOSE,
         h_kernel,
         iterations=FRAGMENTED_WIRE_BRIDGE_ITERATIONS,
     )
-    bridged = cv2.morphologyEx(
-        bridged,
+    vertical_bridged = cv2.morphologyEx(
+        vertical_seed,
         cv2.MORPH_CLOSE,
         v_kernel,
         iterations=FRAGMENTED_WIRE_BRIDGE_ITERATIONS,
+    )
+
+    bridged = cv2.bitwise_or(
+        binary_img,
+        cv2.bitwise_or(horizontal_bridged, vertical_bridged),
     )
 
     return bridged, {
@@ -356,7 +407,8 @@ def bridge_fragmented_wires(binary_img):
         "kernel_length": FRAGMENTED_WIRE_BRIDGE_KERNEL_LENGTH,
         "kernel_thickness": FRAGMENTED_WIRE_BRIDGE_KERNEL_THICKNESS,
         "iterations": FRAGMENTED_WIRE_BRIDGE_ITERATIONS,
-        "notes": "Closing anisotropo orizzontale+verticale per ricucire tratti tratteggiati o frammentati.",
+        "detect_length": FRAGMENTED_WIRE_BRIDGE_DETECT_LENGTH,
+        "notes": "Bridge orientato: ricuce segmenti orizzontali e verticali dai rispettivi seed, evitando che fasci paralleli collassino in blocchi pieni.",
     }
 
 
