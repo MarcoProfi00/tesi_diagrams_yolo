@@ -18,7 +18,7 @@ from .ids import get_preferred_terminal_public_name, normalize_class_name
 # spezza quel filo in due tronconi, fondiamo solo coppie di gate MOSFET
 # quasi allineate, con componenti vicini e spezzoni di skeleton vicini.
 
-# Dice se un terminale è un gate (G) del mosfet
+# Dice se un terminale è un gate (G) del MOSFET.
 def is_mosfet_gate_terminal(term: dict) -> bool:
     class_name = normalize_class_name(term.get("component_class_name"))
     terminal_name = str(get_preferred_terminal_public_name(term) or "").strip().upper()
@@ -29,7 +29,8 @@ def is_mosfet_terminal(term: dict) -> bool:
     class_name = normalize_class_name(term.get("component_class_name"))
     return "mosfet" in class_name
 
-# Unisce lable spezzate che rappresentano la stessa rete di gate (G) di mosfet perchè il filo passa spesso vicino ai simboli e si spezza
+# Unisce label spezzate che rappresentano la stessa rete di gate (G) del MOSFET:
+# il filo passa spesso vicino ai simboli e può spezzarsi.
 def merge_mosfet_gate_aligned_labels(
     label_to_terminal_ids: dict,
     terminals: list[dict],
@@ -119,7 +120,7 @@ def merge_mosfet_gate_aligned_labels(
         for label, terminal_ids in merged.items()
     }
 
-# unisce gruppi composti solo da temrinali di mosfet, se rappresentano la stessa rail di gate
+# Unisce gruppi composti solo da terminali MOSFET, se rappresentano la stessa rail di gate.
 def merge_mosfet_gate_rail_groups(
     label_to_terminal_ids: dict,
     terminals: list[dict],

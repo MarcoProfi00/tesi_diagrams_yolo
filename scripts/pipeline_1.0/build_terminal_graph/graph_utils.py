@@ -1,3 +1,5 @@
+"""Utility per trasformare gruppi di label in archi espliciti tra terminali."""
+
 # =========================================================
 # COSTRUZIONE DEL GRAFO FINALE TRA TERMINALI
 # =========================================================

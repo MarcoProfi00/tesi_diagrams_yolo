@@ -37,7 +37,7 @@ def _get_oriented_terminals(meta: dict, orientation: str):
     return terminals_def
 
 
-# Stabilisce come sono localizzati i punti temrinali, indipendentemente dal numero
+# Stabilisce come sono localizzati i punti terminali, indipendentemente dal numero
 def resolve_terminal_point_mode(meta: dict):
     #controlla se c'è un terminal_point_mode esplicito
     explicit_mode = meta.get("terminal_point_mode")
@@ -149,7 +149,7 @@ def _resolve_two_terminal_orientation(strategy: str, class_name: str, image_bina
 
 
 # =========================================================
-# STRATEGY DISPATCHER
+# DISPATCHER DELLE STRATEGIE
 # =========================================================
 # Restituisce la definizione astratta dei terminali e l'orientazione tramite metadata
 def get_terminals_definition(meta: dict, bbox, image_binary=None):

@@ -18,13 +18,13 @@ from .strategies_three_terminal import (
 from .semantic_two_terminal import resolve_two_terminal_semantics
 
 # =========================================================
-# COMPONENT PROCESSING
+# PROCESSAMENTO COMPONENTI
 # =========================================================
 # Stima i terminali di un singolo componente partendo da:
 # dizionario del componente
 # metadati della classe
-# img binaria del diagramma
-# Return: lista terminali, orientazione stimata, lato connesso
+# immagine binaria del diagramma
+# Ritorna: lista terminali, orientazione stimata, lato connesso e stato.
 def estimate_terminals_for_component(component: dict, class_meta: dict, image_binary):
     class_id = component["class_id"]
     meta = class_meta.get(class_id, {})

@@ -12,7 +12,7 @@ DEFAULT_FALLBACK_SIDE = {
 }
 
 
-# Group consecutive indices.
+# Raggruppa indici consecutivi.
 def _group_consecutive_indices(indices: list[int]) -> list[list[int]]:
     if not indices:
         return []
@@ -25,7 +25,7 @@ def _group_consecutive_indices(indices: list[int]) -> list[list[int]]:
     return groups
 
 
-# Handle bounding box dims.
+# Calcola dimensioni e coordinate clampate della bbox.
 def _bbox_dims(bbox, binary):
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     width = max(1, x2 - x1 + 1)
@@ -33,19 +33,7 @@ def _bbox_dims(bbox, binary):
     return x1, y1, x2, y2, width, height
 
 
-# Count nonzero.
-def _count_nonzero(binary, x1, y1, x2, y2) -> int:
-    h, w = binary.shape[:2]
-    x1 = max(0, min(w, int(round(x1))))
-    y1 = max(0, min(h, int(round(y1))))
-    x2 = max(0, min(w, int(round(x2))))
-    y2 = max(0, min(h, int(round(y2))))
-    if x2 <= x1 or y2 <= y1:
-        return 0
-    return int(cv2.countNonZero(binary[y1:y2, x1:x2]))
-
-
-# Handle projection side scores.
+# Calcola gli score laterali tramite proiezione.
 def _projection_side_scores(
     binary,
     bbox,
@@ -101,7 +89,7 @@ def _projection_side_scores(
     }
 
 
-# Handle projection edge group scores.
+# Calcola gli score dei gruppi sui bordi della proiezione.
 def _projection_edge_group_scores(
     binary,
     bbox,
@@ -152,7 +140,7 @@ def _projection_edge_group_scores(
     kept = [idx for idx, value in enumerate(projection.tolist()) if value >= keep_threshold]
     groups = _group_consecutive_indices(kept)
 
-    # Handle edge group score.
+    # Valuta lo score del gruppo sul bordo.
     def edge_group_score(group: list[int], side: str) -> float:
         group_max = max(int(projection[idx]) for idx in group)
         group_len = len(group)
@@ -180,7 +168,7 @@ def _projection_edge_group_scores(
     }
 
 
-# Handle diode bar scores.
+# Calcola gli score della barra del diodo.
 def _diode_bar_scores(score_map: dict, orientation: str) -> dict:
     projection = score_map.get("projection_values") or []
     groups = score_map.get("kept_groups") or []
@@ -191,11 +179,11 @@ def _diode_bar_scores(score_map: dict, orientation: str) -> dict:
     else:
         keys = ("top", "bottom")
 
-    # Group center.
+    # Centro del gruppo.
     def group_center(group: list[int]) -> float:
         return (float(group[0]) + float(group[-1])) / 2.0
 
-    # Handle bar score.
+    # Valuta lo score della barra.
     def bar_score(group: list[int]) -> float:
         if not group:
             return 0.0
@@ -240,7 +228,7 @@ def _diode_bar_scores(score_map: dict, orientation: str) -> dict:
     return adjusted
 
 
-# Handle plus marker scores by side.
+# Calcola gli score del marker più per lato.
 def _plus_marker_scores_by_side(binary, bbox, orientation: str):
     def plus_like_patch_score(cx: int, cy: int, half_w: int, half_h: int) -> float:
         xa = max(0, cx - half_w)
@@ -325,7 +313,7 @@ def _plus_marker_scores_by_side(binary, bbox, orientation: str):
     }
 
 
-# Handle inner half mass scores.
+# Calcola la massa nelle metà interne.
 def _inner_half_mass_scores(binary, bbox, orientation: str):
     x1, y1, x2, y2, width, height = _bbox_dims(bbox, binary)
     inset_x = max(2, int(round(width * 0.22)))
@@ -406,7 +394,7 @@ def _choose_side(
     return chosen, other, round(float(confidence), 4), evidence_type
 
 
-# Handle set term semantic fields.
+# Imposta i campi semantici del terminale.
 def _set_term_semantic_fields(term: dict, semantic_name: str, semantic_slot: str, confidence: float, resolution_mode: str, evidence_type: str, debug: dict):
     term["semantic_terminal_name"] = semantic_name
     term["semantic_terminal_id"] = f"{term['instance_id']}:{semantic_name}"

@@ -23,7 +23,7 @@ CONNECTOR_EDGE_KEEP_RATIO = 0.45
 CONNECTOR_EDGE_MAX_GAP = 3
 
 
-# Group close indices.
+# Raggruppa indici vicini.
 def _group_close_indices(indices, max_gap=1):
     if not indices:
         return []
@@ -37,7 +37,7 @@ def _group_close_indices(indices, max_gap=1):
     return groups
 
 
-# Handle projection groups.
+# Calcola i gruppi della proiezione.
 def _projection_groups(values):
     if not values:
         return [], 0
@@ -48,7 +48,7 @@ def _projection_groups(values):
     return _group_close_indices(kept, max_gap=CONNECTOR_MAX_GAP), threshold
 
 
-# Handle merge close centers.
+# Fonde centri vicini.
 def _merge_close_centers(centers, min_separation):
     if not centers:
         return []
@@ -124,7 +124,7 @@ def _detect_connector_hole_centers(binary, bbox, orientation):
     return _merge_close_centers(sorted(centers), min_separation=min_gap)
 
 
-# Handle side probe halfspan.
+# Calcola l'halfspan dei probe laterali.
 def _side_probe_halfspan(width, height):
     min_dim = max(1, min(width, height))
     halfspan = int(round(min_dim * 0.12))
@@ -133,7 +133,7 @@ def _side_probe_halfspan(width, height):
     return halfspan
 
 
-# Handle side score vertical.
+# Calcola lo score laterale verticale.
 def _side_score_vertical(binary, bbox, center_y, side, halfspan):
     x1, y1, x2, y2 = bbox
     if side == "left":
@@ -154,7 +154,7 @@ def _side_score_vertical(binary, bbox, center_y, side, halfspan):
     )
 
 
-# Handle side score horizontal.
+# Calcola lo score laterale orizzontale.
 def _side_score_horizontal(binary, bbox, center_x, side, halfspan):
     x1, y1, x2, y2 = bbox
     if side == "top":
@@ -175,7 +175,7 @@ def _side_score_horizontal(binary, bbox, center_x, side, halfspan):
     )
 
 
-# Build connector body refinement meta.
+# Costruisce i metadati di raffinamento del body connector.
 def _connector_body_refinement_meta(bbox):
     x1, y1, x2, y2 = bbox
     width = max(int(round(x2 - x1 + 1)), 1)
@@ -192,7 +192,7 @@ def _connector_body_refinement_meta(bbox):
     }
 
 
-# Build edge contact cfg.
+# Costruisce la configurazione dei contatti sul bordo.
 def _connector_edge_contact_cfg(body_bbox):
     x1, y1, x2, y2 = body_bbox
     width = max(int(round(x2 - x1 + 1)), 1)
@@ -207,14 +207,14 @@ def _connector_edge_contact_cfg(body_bbox):
     }
 
 
-# Handle connector side order.
+# Calcola l'ordine dei lati del connector.
 def _connector_side_order(orientation):
     if orientation == "horizontal":
         return ("left", "top", "bottom", "right")
     return ("top", "left", "right", "bottom")
 
 
-# Handle external projection groups.
+# Calcola i gruppi della proiezione esterna.
 def _external_projection_groups(values):
     if not values:
         return [], 0
@@ -225,7 +225,7 @@ def _external_projection_groups(values):
     return _group_close_indices(kept, max_gap=CONNECTOR_EDGE_MAX_GAP), threshold
 
 
-# Build side external projection.
+# Costruisce la proiezione esterna di un lato.
 def _build_side_external_projection(binary, body_bbox, side, cfg):
     x1, y1, x2, y2 = body_bbox
     width = max(int(round(x2 - x1 + 1)), 1)
@@ -258,7 +258,7 @@ def _build_side_external_projection(binary, body_bbox, side, cfg):
     ], x1 + corner_skip_x
 
 
-# Handle build connector edge contacts.
+# Costruisce i contatti di bordo del connector.
 def _build_connector_edge_contacts(binary, bbox, orientation):
     body_meta = _connector_body_refinement_meta(bbox)
     body_bbox, body_debug = refine_ic_body_bbox(binary, bbox, body_meta)
@@ -347,7 +347,7 @@ def _build_connector_edge_contacts(binary, bbox, orientation):
     }
 
 
-# Handle projection selected scores.
+# Calcola gli score selezionati dalla proiezione.
 def _projection_selected_scores(debug_rows):
     scores = []
 
@@ -360,7 +360,7 @@ def _projection_selected_scores(debug_rows):
     return scores
 
 
-# Handle should use edge contacts.
+# Decide se usare i contatti di bordo.
 def _should_use_edge_contacts(projection_debug, edge_debug):
     if bool(projection_debug.get("used_hole_detection")):
         return False, "hole_detection_already_reliable"
@@ -396,7 +396,7 @@ def _should_use_edge_contacts(projection_debug, edge_debug):
     return False, "projection_result_kept"
 
 
-# Build vertical connector.
+# Costruisce i terminali di un connector verticale.
 def _build_vertical_connector(binary, bbox):
     x1, y1, x2, y2 = bbox
     width = max(x2 - x1, 1)
@@ -465,7 +465,7 @@ def _build_vertical_connector(binary, bbox):
     }
 
 
-# Build horizontal connector.
+# Costruisce i terminali di un connector orizzontale.
 def _build_horizontal_connector(binary, bbox):
     x1, y1, x2, y2 = bbox
     width = max(x2 - x1, 1)

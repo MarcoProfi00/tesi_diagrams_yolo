@@ -7,7 +7,7 @@ from .geometry import (
 from .probes import score_point_directional_support
 
 
-# Get op-amp orientation defs.
+# Recupera le definizioni dell'op-amp per orientamento.
 def _get_opamp_orientation_defs(meta: dict, orientation: str):
     terminals_def = meta.get("orientations", {}).get(orientation)
     if terminals_def is None:
@@ -15,7 +15,7 @@ def _get_opamp_orientation_defs(meta: dict, orientation: str):
     return terminals_def
 
 
-# Score op-amp terminal.
+# Valuta lo score di un terminale op-amp.
 def _score_opamp_terminal(binary, bbox, orientation: str, term_def: dict):
     point, point_debug = geom_terminal_point_opamp(
         binary,

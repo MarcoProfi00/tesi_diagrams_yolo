@@ -1,3 +1,5 @@
+"""Heuristiche per collegare i terminali ausiliari degli op-amp."""
+
 from .config import OPAMP_AUX_EXTERNAL_MAX_DX, OPAMP_AUX_EXTERNAL_MAX_DY
 from .ids import get_preferred_terminal_public_name, normalize_class_name
 
@@ -11,13 +13,13 @@ from .ids import get_preferred_terminal_public_name, normalize_class_name
 # VCC/VEE. Se un aux e un componente Terminal sono quasi verticalmente
 # allineati, li trattiamo come la stessa connessione elettrica.
 
-# Riconosce aux1 aux2
+# Riconosce aux1 / aux2.
 def is_opamp_aux_terminal(term: dict) -> bool:
     class_name = normalize_class_name(term.get("component_class_name"))
     terminal_name = str(get_preferred_terminal_public_name(term) or "").strip().lower()
     return class_name == "operational_amplifier" and terminal_name.startswith("aux")
 
-# Riconosce i componenti di Terminal 
+# Riconosce i componenti di Terminal.
 def is_external_terminal_component(term: dict) -> bool:
     class_name = normalize_class_name(term.get("component_class_name"))
     return class_name == "terminal"
@@ -86,7 +88,7 @@ def collect_opamp_aux_external_terminal_pairs(
 
     return pairs
 
-# Unisce le lable degli aux con quelle dei temrinali esterni anche quando il filo viene mascherato
+# Unisce le label degli aux con quelle dei terminali esterni anche quando il filo viene mascherato.
 def merge_opamp_aux_external_terminal_labels(
     label_to_terminal_ids: dict,
     terminals: list[dict],

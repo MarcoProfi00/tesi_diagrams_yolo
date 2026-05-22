@@ -13,14 +13,14 @@ from .probes import (
 )
 
 # =========================================================
-# STRATEGY: VARIABLE TERMINAL CLASS ("Terminal")
+# STRATEGIA: CLASSE VARIABILE "Terminal"
 # Filosofia:
 # - default = 1 terminale
 # - 2 terminali solo se l'evidenza è davvero forte
 # - nessun forcing dal bordo immagine
 # =========================================================
 
-# Score terminal one side candidate by points.
+# Valuta un candidato Terminal a un lato tramite punti.
 def _score_terminal_one_side_candidate_by_points(binary, bbox, side):
     point, peak_debug = geom_terminal_point_by_side_peak(binary, bbox, side)
     px, py = point
@@ -38,7 +38,7 @@ def _score_terminal_one_side_candidate_by_points(binary, bbox, side):
     return dir_score, point, peak_debug
 
 
-# Handle combined side scores.
+# Calcola gli score laterali combinati.
 def _combined_side_scores(local_scores, far_scores):
     return {
         side: float(local_scores.get(side, 0)) + 1.2 * float(far_scores.get(side, 0))
@@ -67,14 +67,14 @@ def _terminal_bbox_shape_info(bbox):
     }
 
 
-# Handle range overlap ratio.
+# Calcola il rapporto di overlap tra range.
 def _range_overlap_ratio(a1, a2, b1, b2):
     inter = max(0, min(a2, b2) - max(a1, b1) + 1)
     base = max(1, min(a2 - a1 + 1, b2 - b1 + 1))
     return float(inter) / float(base)
 
 
-# Handle component is side aligned external.
+# Verifica se il componente esterno è allineato al lato.
 def _component_is_side_aligned_external(component_bbox, bbox):
     cx1, cy1, cx2, cy2 = component_bbox
     x1, y1, x2, y2 = bbox
@@ -93,11 +93,11 @@ def _component_is_side_aligned_external(component_bbox, bbox):
     min_long_span = TERMINAL_CLASS_EXTERNAL_MIN_LONG_SPAN
     long_short_ratio = TERMINAL_CLASS_EXTERNAL_LONG_TO_SHORT_RATIO
 
-    # Handle is horizontal stub.
+    # Verifica se è uno stub orizzontale.
     def is_horizontal_stub():
         return comp_w >= max(min_long_span, int(round(long_short_ratio * comp_h)))
 
-    # Handle is vertical stub.
+    # Verifica se è uno stub verticale.
     def is_vertical_stub():
         return comp_h >= max(min_long_span, int(round(long_short_ratio * comp_w)))
 
@@ -208,7 +208,7 @@ def _component_is_polarity_plus_marker(binary, component_bbox):
     return False, debug
 
 
-# Build terminal text suppressed binary image.
+# Costruisce la binary con il testo del Terminal soppresso.
 def _build_terminal_text_suppressed_binary(binary, bbox):
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     w = max(x2 - x1, 1)
@@ -329,7 +329,7 @@ def _apply_terminal_shape_prior(bbox, side_scores):
     return adjusted
 
 
-# Handle best single side.
+# Seleziona il miglior lato singolo.
 def _best_single_side(binary, bbox, local_scores, far_scores):
     combined_raw = _combined_side_scores(local_scores, far_scores)
     combined = _apply_terminal_shape_prior(bbox, combined_raw)
@@ -348,7 +348,7 @@ def _best_single_side(binary, bbox, local_scores, far_scores):
     }
 
 
-# Handle horizontal two side evidence.
+# Valuta l'evidenza orizzontale a due lati.
 def _horizontal_two_side_evidence(local_scores, far_scores):
     left_local = local_scores["left"]
     right_local = local_scores["right"]
@@ -390,7 +390,7 @@ def _horizontal_two_side_evidence(local_scores, far_scores):
     }
 
 
-# Handle vertical two side evidence.
+# Valuta l'evidenza verticale a due lati.
 def _vertical_two_side_evidence(local_scores, far_scores):
     left_local = local_scores["left"]
     right_local = local_scores["right"]
@@ -432,7 +432,7 @@ def _vertical_two_side_evidence(local_scores, far_scores):
     }
 
 
-# Handle relaxed two side evidence.
+# Valuta l'evidenza rilassata a due lati.
 def _relaxed_two_side_evidence(local_scores, far_scores, orientation):
     if orientation == "horizontal":
         pair_sides = ("left", "right")
@@ -478,7 +478,7 @@ def _are_adjacent_sides(side_a: str, side_b: str) -> bool:
     )
 
 
-# Handle adjacent two side evidence for corner-like Terminal symbols.
+# Valuta l'evidenza a due lati adiacenti per Terminal corner-like.
 def _adjacent_two_side_evidence(local_scores, far_scores, shape_info, combined_scores):
     ordered = sorted(combined_scores.items(), key=lambda kv: kv[1], reverse=True)
     if len(ordered) < 3:
@@ -704,7 +704,7 @@ def classify_terminal_cardinality(binary, bbox, default_side="right", text_suppr
     local_scores["decision_mode"] = "terminal_cardinality_default_one"
     return 1, single_eval["best_side"], local_scores
 
-# Handle opposite side.
+# Calcola il lato opposto.
 def _opposite_side(side):
     return {
         "top": "bottom",
@@ -714,7 +714,7 @@ def _opposite_side(side):
     }[side]
 
 
-# Score terminal one side candidate by through support.
+# Valuta un candidato Terminal a un lato tramite supporto passante.
 def _score_terminal_one_side_candidate_by_through_support(binary, bbox, side):
     point, peak_debug = geom_terminal_point_by_side_peak(binary, bbox, side)
     px, py = point

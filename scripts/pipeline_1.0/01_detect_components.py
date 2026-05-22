@@ -1,10 +1,15 @@
-# Per ogni immagine nella cartella di input:
-#   1. carica il modello YOLO
-#   2. legge metadata/class_terminals_v1.yaml
-#   3. seleziona le classi da rilevare
-#   4. esegue la detection
-#   5. salva un JSON per immagine
-#   6. salva un'immagine debug con i bounding box
+"""
+Passo 01: rilevamento componenti.
+
+Per ogni immagine nella cartella di input:
+    1. carica il modello YOLO;
+    2. legge metadata/class_terminals_v1.yaml;
+    3. seleziona le classi da rilevare;
+    4. esegue la detection;
+    5. applica le rifiniture geometriche specifiche per simboli ambigui;
+    6. salva un JSON per immagine;
+    7. salva un'immagine debug con i bounding box.
+"""
 
 from pathlib import Path
 import os
@@ -575,7 +580,7 @@ def is_mosfet_like_bbox(image_gray, box) -> bool:
     )
     return circle_count >= 2
 
-# Handle is switch like bounding box.
+# Riconosce bbox compatibili con simboli switch-like.
 def is_switch_like_bbox(image_gray, box) -> bool:
     x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_gray.shape)
     width = max(x2 - x1, 1)
@@ -609,7 +614,7 @@ def is_switch_like_bbox(image_gray, box) -> bool:
     ]
     return len(large_components) >= 2
 
-# Handle is memristor like bounding box.
+# Riconosce bbox compatibili con simboli memristor-like.
 def is_memristor_like_bbox(image_binary, box) -> bool:
     x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)
     width = max(x2 - x1 + 1, 1)
@@ -2030,7 +2035,7 @@ def get_input_images():
 
 
 # =========================================================
-# DEBUG DRAWING
+# DEBUG VISIVO
 # =========================================================
 def draw_components(image_bgr, components):
     out = image_bgr.copy()

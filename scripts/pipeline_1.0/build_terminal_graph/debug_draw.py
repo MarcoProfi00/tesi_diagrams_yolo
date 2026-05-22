@@ -1,3 +1,5 @@
+"""Disegno delle sovrapposizioni di debug del passo 05."""
+
 import cv2
 
 from .config import (

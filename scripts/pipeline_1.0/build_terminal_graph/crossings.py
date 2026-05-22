@@ -1,4 +1,7 @@
+"""Heuristiche per distinguere incroci, ponticelli e falsi corti nello skeleton."""
+
 from __future__ import annotations
+
 import cv2
 import numpy as np
 
@@ -429,7 +432,7 @@ def has_four_way_split_support(
 # Rileva incroci da spezzare
 # Taglia localmente lo skeleton
 # Ricalcola le connected components
-# Riaggancia i terminali alle nuove lable
+# Riaggancia i terminali alle nuove label.
 # Ricrea i gruppi finali
 # Evita fusioni topologiche sbagliate
 def split_bridge_labels(

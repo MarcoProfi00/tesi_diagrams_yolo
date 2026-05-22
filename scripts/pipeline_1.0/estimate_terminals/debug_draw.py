@@ -2,7 +2,7 @@ import cv2
 
 from .config import *
 # =========================================================
-# DEBUG DRAWING
+# DEBUG VISIVO
 # =========================================================
 # Draw terminals.
 def draw_terminals(image_bgr, components, terminals):

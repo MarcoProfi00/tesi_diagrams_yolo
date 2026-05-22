@@ -1,9 +1,13 @@
-# Per ogni file JSON in "outputs/topology_v1/01_detect_components/":
-#   1. legge i componenti rilevati
-#   2. li raggruppa per class_id
-#   3. assegna le singole istanze
-#   4. salva il nuovo json in "outputs/topology_v1/02_assign_instances/"
-#   5. salva anche una immagine debug con instance_id
+"""
+Passo 02: assegnazione degli identificativi di istanza.
+
+Per ogni JSON prodotto dal passo 01:
+    1. legge i componenti rilevati;
+    2. li raggruppa per class_id;
+    3. assegna un instance_id stabile dentro ogni classe;
+    4. salva il JSON aggiornato nella cartella del passo 02;
+    5. salva anche un'immagine debug con gli instance_id.
+"""
 
 from pathlib import Path
 import os
@@ -43,7 +47,7 @@ def compute_center(bbox):
 
 # Sort components.
 def sort_components(components, sort_order="yx"):
-    # Handle key fn.
+    # Costruisce la chiave di ordinamento per assegnare id stabili.
     def key_fn(comp):
         bbox = comp["bbox"]
         xc, yc = compute_center(bbox)
@@ -133,7 +137,7 @@ def draw_components_with_instances(image_bgr, components):
     return out
 
 
-# Save debug view image.
+# Salva l'immagine debug con gli instance_id.
 def save_debug_image(updated_data: dict, output_image_path: Path):
     image_path = Path(updated_data["image_path"])
     image_bgr = cv2.imread(str(image_path))

@@ -1,8 +1,31 @@
-# Trova il pixel etichettato più vicino al terminale dentro una finestra.
+"""Match tra terminali stimati e connected component dello skeleton dei fili."""
+
 from __future__ import annotations
 
+import numpy as np
+
+from .config import (
+    ANALOG_METER_FALLBACK_RADIUS,
+    ANALOG_METER_MAX_SNAP_DISTANCE,
+    MAX_REASONABLE_SNAP_DISTANCE,
+    OPAMP_AUX_EXTERNAL_MAX_DX,
+    OPAMP_AUX_EXTERNAL_MAX_DY,
+    TERMINAL_DIRECTIONAL_HALFSPAN,
+    TERMINAL_SEARCH_INWARD,
+    TERMINAL_SEARCH_OUTWARD,
+    TERMINAL_SQUARE_FALLBACK_RADIUS,
+)
+from .geometry import get_directional_window, get_square_window
+from .heuristics_opamp import (
+    is_external_terminal_component,
+    is_opamp_aux_terminal,
+    is_terminal_in_aux_direction,
+)
+from .ids import normalize_class_name
+from .skeleton_ops import collect_labels_in_window
+
 # Trova il pixel etichettato vicino al terminale in una finestra
-# Return
+# Ritorna:
 #   label del pixel
 #   snap point
 #   distance
@@ -42,7 +65,7 @@ def find_nearest_labeled_pixel(labels: np.ndarray, term: dict, window):
 # 2. se non trova nulla, prova finestra quadrata
 # 3. se ancora nulla, terminale unmatched
 #
-# Return:
+# Ritorna:
 #   matched_label
 #   match_mode
 #   search_window
@@ -220,24 +243,3 @@ def attach_unmatched_opamp_aux_to_external_terminals(
                 round(float(best["dy"]), 3),
             ],
         }
-import numpy as np
-
-from .config import (
-    ANALOG_METER_FALLBACK_RADIUS,
-    ANALOG_METER_MAX_SNAP_DISTANCE,
-    MAX_REASONABLE_SNAP_DISTANCE,
-    OPAMP_AUX_EXTERNAL_MAX_DX,
-    OPAMP_AUX_EXTERNAL_MAX_DY,
-    TERMINAL_DIRECTIONAL_HALFSPAN,
-    TERMINAL_SEARCH_INWARD,
-    TERMINAL_SEARCH_OUTWARD,
-    TERMINAL_SQUARE_FALLBACK_RADIUS,
-)
-from .geometry import get_directional_window, get_square_window
-from .heuristics_opamp import (
-    is_external_terminal_component,
-    is_opamp_aux_terminal,
-    is_terminal_in_aux_direction,
-)
-from .ids import normalize_class_name
-from .skeleton_ops import collect_labels_in_window

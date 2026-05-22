@@ -1,13 +1,6 @@
-from pathlib import Path
-import os
-import json
-import cv2
-
-from build_terminal_graph.config import SAVE_DEBUG_IMAGES
-from build_terminal_graph.debug_draw import draw_skeleton_overlay, draw_terminal_overlay
-from build_terminal_graph.processor import build_terminal_graph_for_image
-
 """
+Passo 05: costruzione del grafo terminale.
+
 05_build_terminal_graph.py
 
 Scopo:
@@ -41,8 +34,17 @@ Nota sul debug:
     NON vengono scritti nel JSON finale.
 """
 
+from pathlib import Path
+import os
+import json
+import cv2
+
+from build_terminal_graph.config import SAVE_DEBUG_IMAGES
+from build_terminal_graph.debug_draw import draw_skeleton_overlay, draw_terminal_overlay
+from build_terminal_graph.processor import build_terminal_graph_for_image
+
 # =========================================================
-# PATHS / INPUT-OUTPUT
+# PERCORSI / INPUT-OUTPUT
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline1.0/batch_v11_ic")

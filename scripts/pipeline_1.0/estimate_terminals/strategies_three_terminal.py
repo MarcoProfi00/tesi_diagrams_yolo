@@ -16,7 +16,7 @@ from .probes import (
 )
 
 
-# Build three terminal support binary image.
+# Costruisce la binary di supporto per componenti a tre terminali.
 def _build_three_terminal_support_binary(binary, bbox):
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     w = max(x2 - x1, 1)
@@ -77,7 +77,7 @@ def _build_three_terminal_support_binary(binary, bbox):
     }
 
 
-# Get three terminal working binary image.
+# Recupera la binary di lavoro per componenti a tre terminali.
 def get_three_terminal_working_binary(binary, bbox):
     if THREE_TERMINAL_TEXT_SUPPRESS_ENABLE:
         working_binary, _ = _build_three_terminal_support_binary(binary, bbox)
@@ -170,12 +170,12 @@ def snap_bjt_pair_terminal_to_lateral_wire(binary, bbox, orientation, relative_p
     }
 
 
-# Handle candidate mosfet orientations from bounding box.
+# Calcola gli orientamenti candidati MOSFET dalla bbox.
 def candidate_mosfet_orientations_from_bbox(bbox):
     return ("left", "right", "top", "bottom")
 
 
-# Score three terminal orientation by terminal points.
+# Valuta l'orientamento a tre terminali tramite punti terminali.
 def score_three_terminal_orientation_by_terminal_points(binary, bbox, orientation, single_weight):
     candidate_terminals = []
     point_debug = {}
@@ -217,7 +217,7 @@ def score_three_terminal_orientation_by_terminal_points(binary, bbox, orientatio
     return total_score, debug
 
 
-# Score mosfet orientation by terminal points.
+# Valuta l'orientamento MOSFET tramite punti terminali.
 def score_mosfet_orientation_by_terminal_points(binary, bbox, orientation):
     return score_three_terminal_orientation_by_terminal_points(
         binary,
@@ -228,9 +228,9 @@ def score_mosfet_orientation_by_terminal_points(binary, bbox, orientation):
 
 
 # =========================================================
-# STRATEGY: THREE-TERMINAL COMPONENTS
+# STRATEGIA: COMPONENTI A TRE TERMINALI
 # =========================================================
-# Handle is specular pair.
+# Verifica se una coppia è speculare.
 def _is_specular_pair(a, b):
     return {a, b} in ({"left", "right"}, {"top", "bottom"})
 
@@ -246,7 +246,7 @@ def _resolve_specular_tie(side_a, side_b, lateral_scores, single_side_scores):
     # Caso top/bottom: usa gli score del lato singolo già calcolati
     return side_a if single_side_scores[side_a] >= single_side_scores[side_b] else side_b
 
-# Get bjt base side scores.
+# Calcola gli score laterali della base BJT.
 def get_bjt_base_side_scores(binary, bbox):
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     width = max(x2 - x1, 1)
@@ -294,7 +294,7 @@ def _count_three_terminal_semantic_probe(binary, cx, cy, half_w, half_h):
     return img_count_foreground_pixels(binary, xa, ya, xb, yb)
 
 
-# Handle three terminal arrow branch probe.
+# Valuta il probe del ramo freccia per componenti a tre terminali.
 def _three_terminal_arrow_branch_probe(binary, bbox, orientation):
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     width = max(x2 - x1, 1)
@@ -309,11 +309,11 @@ def _three_terminal_arrow_branch_probe(binary, bbox, orientation):
         int(round(height * THREE_TERMINAL_ARROW_PROBE_HALFSPAN_Y_RATIO)),
     )
 
-    # Handle xr.
+    # Gestisce l'intervallo x.
     def xr(ratio):
         return x1 + int(round(ratio * width))
 
-    # Handle yr.
+    # Gestisce l'intervallo y.
     def yr(ratio):
         return y1 + int(round(ratio * height))
 
@@ -365,7 +365,7 @@ def _three_terminal_arrow_branch_probe(binary, bbox, orientation):
     return scores, debug
 
 
-# Handle mosfet arrow branch probe.
+# Valuta il probe del ramo freccia MOSFET.
 def _mosfet_arrow_branch_probe(binary, bbox, orientation):
     outer_scores, outer_debug = _three_terminal_arrow_branch_probe(binary, bbox, orientation)
     if orientation not in {"left", "right"}:
@@ -384,11 +384,11 @@ def _mosfet_arrow_branch_probe(binary, bbox, orientation):
         int(round(height * THREE_TERMINAL_ARROW_PROBE_HALFSPAN_Y_RATIO)),
     )
 
-    # Handle xr.
+    # Gestisce l'intervallo x.
     def xr(ratio):
         return x1 + int(round(ratio * width))
 
-    # Handle yr.
+    # Gestisce l'intervallo y.
     def yr(ratio):
         return y1 + int(round(ratio * height))
 
@@ -430,7 +430,7 @@ def _mosfet_arrow_branch_probe(binary, bbox, orientation):
     }
 
 
-# Handle npn arrow branch probe.
+# Valuta il probe del ramo freccia NPN.
 def _npn_arrow_branch_probe(binary, bbox, orientation):
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     width = max(x2 - x1, 1)
@@ -445,11 +445,11 @@ def _npn_arrow_branch_probe(binary, bbox, orientation):
         int(round(height * 0.10)),
     )
 
-    # Handle xr.
+    # Gestisce l'intervallo x.
     def xr(ratio):
         return x1 + int(round(ratio * width))
 
-    # Handle yr.
+    # Gestisce l'intervallo y.
     def yr(ratio):
         return y1 + int(round(ratio * height))
 
@@ -492,7 +492,7 @@ def _npn_arrow_branch_probe(binary, bbox, orientation):
     return scores, debug
 
 
-# Handle semantic pair confidence.
+# Calcola la confidence della coppia semantica.
 def _semantic_pair_confidence(pair_scores, arrow_branch_position, other_branch_position):
     best_score = float(pair_scores.get(arrow_branch_position, 0.0))
     second_score = float(pair_scores.get(other_branch_position, 0.0))
@@ -745,7 +745,7 @@ def resolve_three_terminal_semantics(binary, bbox, orientation, terminals, meta)
     return terminals
 
 
-# Handle strategy detect three terminal orientation.
+# Rileva l'orientamento per la strategia a tre terminali.
 def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", default_orientation="right"):
     working_binary = binary
     support_binary_debug = {

@@ -1,3 +1,5 @@
+"""Heuristiche per alimentazioni, ground e rail impliciti."""
+
 import numpy as np
 
 from .config import (
@@ -15,7 +17,7 @@ from .geometry import label_bbox
 from .heuristics_mosfet import is_mosfet_gate_terminal
 from .ids import normalize_class_name
 
-# Dice se un terminale appartiene a una battery
+# Dice se un terminale appartiene a una battery.
 def is_battery_terminal(term: dict) -> bool:
     class_name = normalize_class_name(term.get("component_class_name"))
     return class_name == "battery"
@@ -100,7 +102,7 @@ def merge_battery_gate_rail_groups(
 #   altezza minima dello stub
 #   larghezza ridotta
 #   coerenza con relative_position
-#   posizione rispetto ai bordi (alto/basso) dell'img
+#   posizione rispetto ai bordi (alto/basso) dell'immagine
 #   classe sorgente compatibile
 def infer_supply_arrow_connection_for_terminal(
     term: dict,

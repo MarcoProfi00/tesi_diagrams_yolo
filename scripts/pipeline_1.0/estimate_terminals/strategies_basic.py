@@ -2,7 +2,7 @@
 Questo file contiene strategie base per:
 - componenti a un terminale
 - componenti a due terminali
-- componenti speiciali (2 terminali):
+- componenti speciali (2 terminali):
     - capacitor
     - switch
     - LED
@@ -45,7 +45,7 @@ def _group_consecutive_indices(indices):
     return groups
 
 # =========================================================
-# STRATEGY: ONE-TERMINAL COMPONENTS
+# STRATEGIA: COMPONENTI A UN TERMINALE
 # =========================================================
 # Valuta un lato candidato come lato connesso di un componente mono-terminale.
 # Localizza un punto candidato sul lato
@@ -192,7 +192,7 @@ def resolve_one_terminal_orientation(meta: dict, connected_side: str):
     return terminals_def, default_orientation
 
 # =========================================================
-# STRATEGY: TWO-TERMINAL COMPONENTS
+# STRATEGIA: COMPONENTI A DUE TERMINALI
 # =========================================================
 # Decide se l'asse di connessione è orizzontale, verticale o indeterminato
 # Calcola left/right e top/bottom
@@ -431,7 +431,7 @@ def detect_two_terminal_orientation_capacitor(binary, bbox, default_orientation=
         row_proj = np.count_nonzero(inner > 0, axis=1)
         col_proj = np.count_nonzero(inner > 0, axis=0)
 
-        # Handle peak count.
+        # Conta i picchi.
         def peak_count(proj):
             if len(proj) == 0:
                 return 0, 0
@@ -812,7 +812,7 @@ def detect_two_terminal_orientation_round_source(binary, bbox, default_orientati
     combined_scores["decision_mode"] = "round_source_default_fallback"
     return default_orientation, combined_scores
 
-# Score variable resistor candidate by points.
+# Valuta il candidato variable resistor tramite punti.
 def _score_variable_resistor_candidate_by_points(binary, bbox, orientation):
     if orientation == "horizontal":
         sides = ("left", "right")

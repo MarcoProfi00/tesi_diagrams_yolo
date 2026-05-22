@@ -1,3 +1,11 @@
+"""
+Passo 06: rendering del report HTML/PNG del grafo.
+
+Legge i JSON finali prodotti dal passo 05, genera una vista completa e una
+vista compatta del grafo, copia gli artefatti utili nel report e costruisce
+un indice batch navigabile.
+"""
+
 from __future__ import annotations
 
 import argparse

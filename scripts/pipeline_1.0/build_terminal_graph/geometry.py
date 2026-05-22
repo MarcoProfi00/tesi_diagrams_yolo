@@ -1,8 +1,10 @@
+"""Primitive geometriche per cercare label dello skeleton attorno ai terminali."""
+
 import numpy as np
 
 
-# Limita una finestra che si trova ai bordi dell'img
-# Taglia le coordinate in modo che restano sempre dentro w e h
+# Limita una finestra che si trova ai bordi dell'immagine.
+# Taglia le coordinate in modo che restino sempre dentro w e h.
 def clamp_window(x1, y1, x2, y2, w, h):
     return (
         max(0, min(w, int(round(x1)))),
@@ -12,7 +14,8 @@ def clamp_window(x1, y1, x2, y2, w, h):
     )
 
 # Costruisce una finestra direzionale coerente con il lato del terminale.
-# Usa relative_position dello yaml: left, right, top e bottom. Il terminali dovrebbe cercare il filo soprattuto dal suo lato di uscita
+# Usa relative_position dello yaml: left, right, top e bottom.
+# Il terminale cerca il filo soprattutto dal suo lato di uscita.
 def get_directional_window(term: dict, labels_shape, outward=16, inward=4, halfspan=5):
     h, w = labels_shape[:2]
     x = int(round(term["x"]))
@@ -33,16 +36,16 @@ def get_directional_window(term: dict, labels_shape, outward=16, inward=4, halfs
     return clamp_window(x - outward, y - outward, x + outward + 1, y + outward + 1, w, h)
 
 
-# Costruisce una finestra quadrata centrata sul terminale
-# Lo si usa se la ricerca dei terminali non trova nulla
+# Costruisce una finestra quadrata centrata sul terminale.
+# La usiamo se la ricerca direzionale non trova nulla.
 def get_square_window(term: dict, labels_shape, radius=12):
     h, w = labels_shape[:2]
     x = int(round(term["x"]))
     y = int(round(term["y"]))
     return clamp_window(x - radius, y - radius, x + radius + 1, y + radius + 1, w, h)
 
-# Calcola il gap orizzontale tra due bbox
-# Serve per capire se due componenti sono abbastanza vicini da essere probabilmente sullo stesso filo
+# Calcola il gap orizzontale tra due bbox.
+# Serve per capire se due componenti sono probabilmente sullo stesso filo.
 def horizontal_bbox_gap(bbox_a, bbox_b):
     ax1, _, ax2, _ = bbox_a
     bx1, _, bx2, _ = bbox_b
@@ -53,7 +56,7 @@ def horizontal_bbox_gap(bbox_a, bbox_b):
         return float(ax1 - bx2)
     return 0.0
 
-#Calcola il bbox di una lable di skeleton, viene usata nelle heuristics
+# Calcola il bbox di una label di skeleton; viene usata nelle euristiche.
 def label_bbox(labels: np.ndarray, label: int):
     ys, xs = np.where(labels == int(label))
     if len(xs) == 0:

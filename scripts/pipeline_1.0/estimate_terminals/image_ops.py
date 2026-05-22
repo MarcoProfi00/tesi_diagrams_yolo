@@ -1,7 +1,9 @@
+"""Operazioni immagine minime condivise dalla stima terminali."""
+
 import cv2
 
 
-# Handle img count foreground pixels.
+# Conta i pixel foreground in una finestra rettangolare.
 def img_count_foreground_pixels(binary, x1, y1, x2, y2):
     h, w = binary.shape[:2]
     x1 = max(0, min(w, x1))

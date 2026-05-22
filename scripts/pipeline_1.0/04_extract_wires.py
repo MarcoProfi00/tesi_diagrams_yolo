@@ -22,7 +22,7 @@ import numpy as np
 from skimage.morphology import skeletonize
 
 # =========================================================
-# PATHS / INPUT-OUTPUT
+# PERCORSI / INPUT-OUTPUT
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline1.0/batch_v11_ic")
@@ -31,7 +31,7 @@ INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "03_estimate_terminals
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "04_extract_wires"
 
 # =========================================================
-# COMPONENT MASKING
+# MASCHERAMENTO COMPONENTI
 # =========================================================
 MASK_DEBUG_DIR = OUTPUT_DIR / "mask_debug"
 COMPONENT_MASK_DIR = OUTPUT_DIR / "component_mask"
@@ -154,7 +154,7 @@ def component_mask_bbox(comp):
 
 
 # costruzione maschere
-# Build base component mask.
+# Costruisce la maschera base dei componenti.
 def build_base_component_mask(image_shape, components):
     h, w = image_shape[:2]
     mask = np.zeros((h, w), dtype=np.uint8)
@@ -291,14 +291,14 @@ def carve_terminal_keep_zones(mask, terminals, components):
     return mask, keep_debug
 
 
-# Build component mask.
+# Costruisce la maschera finale dei componenti e le zone terminali da preservare.
 def build_component_mask(image_shape, components, terminals):
     mask = build_base_component_mask(image_shape, components)
     mask, keep_debug = carve_terminal_keep_zones(mask, terminals, components)
     return mask, keep_debug
 
-# debug outputs
-# Save mask debug view.
+# Output di debug.
+# Salva la vista debug della maschera.
 def save_mask_debug(image_bgr, mask, out_path: Path):
     overlay = image_bgr.copy()
     red_layer = np.zeros_like(image_bgr)
@@ -313,7 +313,7 @@ def save_mask_debug(image_bgr, mask, out_path: Path):
     cv2.imwrite(str(out_path), overlay)
 
 
-# Save terminal keep debug view.
+# Salva la vista debug delle zone terminali preservate.
 def save_terminal_keep_debug(image_bgr, keep_debug, out_path: Path):
     overlay = image_bgr.copy()
     green_layer = np.zeros_like(image_bgr)

@@ -1,3 +1,5 @@
+"""Orchestrazione del passo 05: match, correzioni euristiche ed export finale."""
+
 from pathlib import Path
 
 import cv2

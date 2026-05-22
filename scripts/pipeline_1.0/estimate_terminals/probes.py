@@ -5,7 +5,7 @@ from .geometry import geom_clamp_bbox_to_image
 # =========================================================
 # PROBE HELPERS - GENERIC
 # =========================================================
-# Probe get side scores.
+# Calcola gli score dei lati con probe locali.
 def probe_get_side_scores(binary, bbox):
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     xc = int(round((x1 + x2) / 2))
@@ -22,7 +22,7 @@ def probe_get_side_scores(binary, bbox):
     }
 
 
-# Probe halfspan.
+# Calcola l'halfspan dei probe.
 def _probe_halfspan(width, height):
     min_dim = max(1, min(width, height))
     halfspan = int(round(min_dim * TERMINAL_PROBE_HALFSPAN_RATIO))
@@ -31,7 +31,7 @@ def _probe_halfspan(width, height):
     return halfspan
 
 
-# Get local terminal probe scores center.
+# Calcola gli score locali centrati dei terminali.
 def get_local_terminal_probe_scores_center(binary, bbox):
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     xc = int(round((x1 + x2) / 2))
@@ -52,7 +52,7 @@ def get_local_terminal_probe_scores_center(binary, bbox):
     }
 
 
-# Get local terminal probe scores multi anchor.
+# Calcola gli score locali usando più ancore.
 def get_local_terminal_probe_scores_multi_anchor(binary, bbox, anchor_ratios=SWITCH_ANCHOR_RATIOS):
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     width = max(x2 - x1, 1)
@@ -92,7 +92,7 @@ def get_local_terminal_probe_scores_multi_anchor(binary, bbox, anchor_ratios=SWI
         "y_anchors": y_anchors,
     }
 
-# Handle LED probe halfspan.
+# Calcola l'halfspan dei probe LED.
 def _led_probe_halfspan(width, height):
     min_dim = max(1, min(width, height))
     halfspan = int(round(min_dim * LED_PROBE_HALFSPAN_RATIO))
@@ -101,7 +101,7 @@ def _led_probe_halfspan(width, height):
     return halfspan
 
 
-# Get LED probe scores.
+# Calcola gli score dei probe LED.
 def get_led_probe_scores(binary, bbox):
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     xc = int(round((x1 + x2) / 2))
@@ -150,7 +150,7 @@ def get_led_probe_scores(binary, bbox):
         "probe_mode": "led_narrow_center_probes",
     }
 
-# Get LED far probe scores.
+# Calcola gli score dei probe LED lontani.
 def get_led_far_probe_scores(binary, bbox):
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     xc = int(round((x1 + x2) / 2))
@@ -196,7 +196,7 @@ def get_led_far_probe_scores(binary, bbox):
         ),
     }
 
-# Handle mosfet single side halfspan.
+# Calcola l'halfspan per il lato singolo del MOSFET.
 def _mosfet_single_side_halfspan(width, height):
     min_dim = max(1, min(width, height))
     halfspan = int(round(min_dim * MOSFET_SINGLE_SIDE_HALFSPAN_RATIO))
@@ -205,7 +205,7 @@ def _mosfet_single_side_halfspan(width, height):
     return halfspan
 
 
-# Get mosfet single side scores.
+# Calcola gli score del lato singolo del MOSFET.
 def get_mosfet_single_side_scores(binary, bbox):
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     xc = int(round((x1 + x2) / 2))
@@ -297,7 +297,7 @@ def get_mosfet_single_side_scores(binary, bbox):
     combined_scores["probe_mode"] = "mosfet_single_side_near_far"
     return combined_scores
 
-# Get mosfet lateral gate scores.
+# Calcola gli score laterali del gate MOSFET.
 def get_mosfet_lateral_gate_scores(binary, bbox):
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     width = max(x2 - x1, 1)
@@ -432,7 +432,7 @@ def _terminal_class_probe_halfspan(width, height):
     return halfspan
 
 
-# Get terminal class probe scores.
+# Calcola gli score probe per la classe Terminal.
 def get_terminal_class_probe_scores(binary, bbox):
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     xc = int(round((x1 + x2) / 2))
@@ -478,7 +478,7 @@ def get_terminal_class_probe_scores(binary, bbox):
     return scores
 
 
-# Get terminal class far probe scores.
+# Calcola gli score probe lontani per la classe Terminal.
 def get_terminal_class_far_probe_scores(binary, bbox):
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     xc = int(round((x1 + x2) / 2))
@@ -521,7 +521,7 @@ def get_terminal_class_far_probe_scores(binary, bbox):
         ),
     }
 
-# Get terminal border preference.
+# Calcola la preferenza del bordo per il terminale.
 def get_terminal_border_preference(binary_shape, bbox, margin=TERMINAL_CLASS_BORDER_MARGIN):
     h, w = binary_shape[:2]
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, (h, w))
@@ -546,7 +546,7 @@ def get_terminal_border_preference(binary_shape, bbox, margin=TERMINAL_CLASS_BOR
     return opposite[nearest_side]
 
 
-# Handle is terminal near border.
+# Verifica se il terminale è vicino al bordo immagine.
 def is_terminal_near_border(binary_shape, bbox):
     h, w = binary_shape[:2]
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, (h, w))
@@ -559,7 +559,7 @@ def is_terminal_near_border(binary_shape, bbox):
         (h - 1 - y2) <= margin
     )
 
-# Score point local support.
+# Valuta il supporto locale di un punto.
 def score_point_local_support(binary, x, y, radius=MOSFET_POINT_SUPPORT_RADIUS):
     xi = int(round(x))
     yi = int(round(y))
@@ -571,7 +571,7 @@ def score_point_local_support(binary, x, y, radius=MOSFET_POINT_SUPPORT_RADIUS):
         yi + radius + 1
     )
 
-# Score point directional support.
+# Valuta il supporto direzionale di un punto.
 def score_point_directional_support(
     binary,
     x,
@@ -632,7 +632,7 @@ def score_point_directional_support(
     return img_count_foreground_pixels(binary, x1, y1, x2, y2)
 
 
-# Score point orthogonal support.
+# Valuta il supporto ortogonale di un punto.
 def score_point_orthogonal_support(binary, x, y, relative_position):
     if relative_position in {"left", "right"}:
         return (
@@ -649,7 +649,7 @@ def score_point_orthogonal_support(binary, x, y, relative_position):
     return 0
 
 
-# Score mosfet candidate terminals.
+# Valuta i terminali candidati del MOSFET.
 def score_mosfet_candidate_terminals(binary, terminals, single_side, single_weight=1.35):
     total = 0.0
     details = []
@@ -688,7 +688,7 @@ def score_mosfet_candidate_terminals(binary, terminals, single_side, single_weig
 
     return total, details
 
-# Get round source probe scores.
+# Calcola gli score probe per sorgenti circolari.
 def get_round_source_probe_scores(binary, bbox):
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     xc = int(round((x1 + x2) / 2))
@@ -735,7 +735,7 @@ def get_round_source_probe_scores(binary, bbox):
     }
 
 
-# Get round source far probe scores.
+# Calcola gli score probe lontani per sorgenti circolari.
 def get_round_source_far_probe_scores(binary, bbox):
     x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     xc = int(round((x1 + x2) / 2))

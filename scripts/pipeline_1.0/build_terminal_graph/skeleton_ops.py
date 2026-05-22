@@ -138,6 +138,8 @@ def load_junction_support_binary(wire_extraction: dict):
             continue
 
     return None
+"""Caricamento e analisi connected-components dello skeleton dei fili."""
+
 from pathlib import Path
 
 import numpy as np

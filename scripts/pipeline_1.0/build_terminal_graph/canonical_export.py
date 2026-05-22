@@ -1,3 +1,5 @@
+"""Export del grafo terminale nel formato canonico letto dai passi successivi."""
+
 from .ids import (
     get_preferred_terminal_public_name,
     make_simple_component_id,

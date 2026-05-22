@@ -5,7 +5,7 @@ from .config import TERMINAL_OUTWARD_OFFSET
 from .geometry import geom_clamp_bbox_to_image
 
 
-# Group close indices.
+# Raggruppa indici vicini.
 def _group_close_indices(indices, max_gap=1):
     if not indices:
         return []
@@ -19,7 +19,7 @@ def _group_close_indices(indices, max_gap=1):
     return groups
 
 
-# Handle select peak coord.
+# Seleziona la coordinata di picco.
 def _select_peak_coord(coords, scores, keep_ratio=0.58, min_score=4):
     if not coords or not scores:
         return None, {
@@ -309,7 +309,7 @@ def _is_valid_meter_post_candidate(candidate):
     )
 
 
-# Handle hough circle support.
+# Valuta il supporto dei cerchi Hough.
 def _hough_circle_support(roi, cx, cy, radius):
     radius = max(5, int(round(radius)))
     band = max(3, int(round(radius * 0.32)))
@@ -451,7 +451,7 @@ def _find_hough_post_circles(binary, box):
     )[:12]
 
 
-# Handle merge meter post candidates.
+# Fonde i candidati post dell'analog meter.
 def _merge_meter_post_candidates(candidates):
     merged = []
 
@@ -495,7 +495,7 @@ def _merge_meter_post_candidates(candidates):
     return merged
 
 
-# Handle eligible edges for point.
+# Trova i bordi compatibili con un punto.
 def _eligible_edges_for_point(cx, cy, box_w, box_h):
     edge_distances = {
         "left": float(cx),
@@ -512,7 +512,7 @@ def _eligible_edges_for_point(cx, cy, box_w, box_h):
     return eligible_edges, edge_distances
 
 
-# Build meter post candidates.
+# Costruisce i candidati post dell'analog meter.
 def _build_meter_post_candidates(binary, search_box, holes):
     x1, y1, x2, y2 = [int(round(v)) for v in search_box]
     box_w = max(int(x2 - x1 + 1), 1)
@@ -593,7 +593,7 @@ def _build_meter_post_candidates(binary, search_box, holes):
 
     return annotated[:10]
 
-# Handle meter edge scan scores.
+# Calcola gli score di scansione bordo dell'analog meter.
 def _meter_edge_scan_scores(binary, box):
     x1, y1, x2, y2 = [float(v) for v in box]
     width = max(float(x2 - x1), 1.0)
@@ -624,7 +624,7 @@ def _meter_edge_scan_scores(binary, box):
     }
 
 
-# Score meter edge pair.
+# Valuta una coppia di bordi dell'analog meter.
 def _score_meter_edge_pair(edge, cand_a, cand_b, scan_pair):
     dx = abs(float(cand_a["cx"]) - float(cand_b["cx"]))
     dy = abs(float(cand_a["cy"]) - float(cand_b["cy"]))
@@ -719,7 +719,7 @@ def _score_meter_edge_pair(edge, cand_a, cand_b, scan_pair):
     }
 
 
-# Handle meter candidate side support.
+# Valuta il supporto laterale del candidato analog meter.
 def _meter_candidate_side_support(binary, box, candidate, side):
     x1, y1, x2, y2 = [int(round(v)) for v in box]
     cx = int(round(float(candidate["cx"])))
@@ -786,7 +786,7 @@ def _annotate_meter_candidate_external_support(binary, search_box, candidate):
 
     return candidate_copy
 
-# Score meter opposite pair.
+# Valuta una coppia opposta dell'analog meter.
 def _score_meter_opposite_pair(binary, box, side_a, cand_a, side_b, cand_b):
     if {side_a, side_b} == {"left", "right"}:
         alignment = abs(float(cand_a["cy"]) - float(cand_b["cy"]))
@@ -856,7 +856,7 @@ def _score_meter_opposite_pair(binary, box, side_a, cand_a, side_b, cand_b):
     }
 
 
-# Handle select meter post pair.
+# Seleziona la coppia di post dell'analog meter.
 def _select_meter_post_pair(binary, search_box, candidates, allow_opposite=False):
     scan_scores = _meter_edge_scan_scores(binary, search_box)
     x1, y1, x2, y2 = [float(v) for v in search_box]
@@ -1407,7 +1407,7 @@ def detect_analog_meter_terminals(meta: dict, binary, bbox):
     }
 
 
-# Handle scan external wire y in range.
+# Cerca un filo esterno su y dentro il range.
 def _scan_external_wire_y_in_range(binary, box, side, y_start, y_end, outward_len=18, inward_len=8, halfspan=5):
     x1, y1, x2, y2 = [int(round(v)) for v in box]
     start = max(y1, min(y2, int(round(y_start))))
@@ -1451,7 +1451,7 @@ def _scan_external_wire_y_in_range(binary, box, side, y_start, y_end, outward_le
         **debug,
     }
 
-# Handle scan external wire x in range.
+# Cerca un filo esterno su x dentro il range.
 def _scan_external_wire_x_in_range(binary, box, side, x_start, x_end, outward_len=18, inward_len=8, halfspan=5):
     x1, y1, x2, y2 = [int(round(v)) for v in box]
     start = max(x1, min(x2, int(round(x_start))))
