@@ -11,6 +11,8 @@ DEFAULT_FALLBACK_SIDE = {
     "vertical": "top",
 }
 
+LED_VERTICAL_TOP_CATHODE_LOW_CONFIDENCE_MAX = 0.45
+
 
 # Raggruppa indici consecutivi.
 def _group_consecutive_indices(indices: list[int]) -> list[list[int]]:
@@ -497,6 +499,39 @@ def _assign_strategy_result(
     )
 
 
+def _adjust_led_vertical_diode_scores(score_map: dict, orientation: str, meta: dict) -> dict:
+    if orientation != "vertical" or meta.get("name") != "LED":
+        return score_map
+
+    marker_side, other_side, confidence, evidence_type = _choose_side(
+        score_map,
+        "top",
+        "bottom",
+        DEFAULT_FALLBACK_SIDE.get("vertical", "top"),
+    )
+
+    if marker_side == "top" and confidence <= LED_VERTICAL_TOP_CATHODE_LOW_CONFIDENCE_MAX:
+        adjusted = dict(score_map)
+        top_score = float(adjusted.get("top", 0.0))
+        bottom_score = float(adjusted.get("bottom", 0.0))
+        adjusted["top"] = round(bottom_score, 4)
+        adjusted["bottom"] = round(top_score + 20.0, 4)
+        adjusted["projection_mode"] = (
+            f"{score_map.get('projection_mode', 'unknown')}_led_vertical_low_confidence_flip"
+        )
+        adjusted["led_vertical_low_confidence_flip"] = {
+            "enabled": True,
+            "original_marker_side": marker_side,
+            "original_other_side": other_side,
+            "original_confidence": confidence,
+            "original_evidence_type": evidence_type,
+            "confidence_threshold": float(LED_VERTICAL_TOP_CATHODE_LOW_CONFIDENCE_MAX),
+        }
+        return adjusted
+
+    return score_map
+
+
 # Resolve two terminal semantics.
 def resolve_two_terminal_semantics(binary, bbox, orientation, terminals, meta):
     semantic_strategy = meta.get("semantic_terminal_strategy")
@@ -513,6 +548,7 @@ def resolve_two_terminal_semantics(binary, bbox, orientation, terminals, meta):
             edge_inset_ratio=0.08,
         )
         score_map = _diode_bar_scores(score_map, orientation)
+        score_map = _adjust_led_vertical_diode_scores(score_map, orientation, meta)
         return _assign_strategy_result(
             terminals,
             orientation,

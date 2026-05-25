@@ -22,7 +22,7 @@ import cv2
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PIPELINE_DATASET = os.environ.get(
     "PIPELINE_DATASET",
-    "pipeline1.0/batch_v11_ic"
+    "pipeline1.0/batchB"
 )
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "01_detect_components"

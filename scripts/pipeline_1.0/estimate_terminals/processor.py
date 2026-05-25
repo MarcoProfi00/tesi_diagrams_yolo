@@ -15,6 +15,7 @@ from .strategies_three_terminal import (
     resolve_three_terminal_semantics,
     snap_bjt_pair_terminal_to_lateral_wire,
 )
+from .strategies_basic import get_one_terminal_working_binary, get_two_terminal_working_binary
 from .semantic_two_terminal import resolve_two_terminal_semantics
 
 # =========================================================
@@ -49,6 +50,14 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
     point_binary = image_binary
     if point_mode == "three_terminal_structured":
         point_binary = get_three_terminal_working_binary(image_binary, bbox)
+    elif meta.get("terminal_strategy") == "one_terminal_by_orientation":
+        point_binary = get_one_terminal_working_binary(image_binary, bbox)
+    elif point_mode == "two_terminal_side_peak":
+        point_binary = get_two_terminal_working_binary(
+            image_binary,
+            bbox,
+            estimated_orientation,
+        )
 
     terminals = []
     for term_def in terminals_def:
@@ -117,7 +126,7 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
             else:
                 # altrimenti usa la classica
                 point, peak_debug = geom_terminal_point_by_side_peak(
-                    image_binary,
+                    point_binary,
                     bbox,
                     rel_pos
                 )

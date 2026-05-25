@@ -793,8 +793,14 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
 
         accept_base_override = base_side_scores[best_base_side] > base_side_scores[other_base_side] * 1.12
         base_override_veto_debug = None
+        best_base_probe_score = float(bjt_base_side_scores[best_base_side])
+        other_base_probe_score = float(bjt_base_side_scores[other_base_side])
+        strong_base_probe = best_base_probe_score >= max(
+            1.0,
+            other_base_probe_score * NPN_BASE_OVERRIDE_STRONG_BASE_RATIO,
+        )
 
-        if accept_base_override and THREE_TERMINAL_POINT_VALIDATION_ENABLE:
+        if accept_base_override and THREE_TERMINAL_POINT_VALIDATION_ENABLE and not strong_base_probe:
             best_point_score, best_point_debug = score_three_terminal_orientation_by_terminal_points(
                 working_binary,
                 bbox,
@@ -838,6 +844,14 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
             debug_scores["second_side_score"] = base_side_scores[other_base_side]
             debug_scores["bjt_base_side_scores"] = bjt_base_side_scores
             debug_scores["bjt_combined_base_side_scores"] = base_side_scores
+            debug_scores["bjt_strong_base_probe"] = {
+                "enabled": bool(strong_base_probe),
+                "best_base_side": best_base_side,
+                "other_base_side": other_base_side,
+                "best_base_probe_score": best_base_probe_score,
+                "other_base_probe_score": other_base_probe_score,
+                "ratio_threshold": float(NPN_BASE_OVERRIDE_STRONG_BASE_RATIO),
+            }
             debug_scores["three_terminal_support_binary_debug"] = support_binary_debug
             return best_base_side, debug_scores
 

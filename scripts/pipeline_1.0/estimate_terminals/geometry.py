@@ -1230,6 +1230,14 @@ def _geom_opamp_aux_terminal_v1(binary, bbox, orientation, relative_position):
         base_y,
     )
 
+    use_outer_stem_contact = (
+        not bool(y_refine_debug.get("refined", False))
+        and float(y_refine_debug.get("refined_diag_support", 0) or 0) <= 0.0
+        and str(y_refine_debug.get("refine_mode", "")) == "best_global_fallback"
+    )
+    if use_outer_stem_contact:
+        refined_y = float(best["run_start"])
+
     point = (float(refined_x), float(refined_y))
 
     return point, {
@@ -1249,6 +1257,7 @@ def _geom_opamp_aux_terminal_v1(binary, bbox, orientation, relative_position):
         **mask_debug,
         **x_refine_debug,
         **y_refine_debug,
+        "used_outer_stem_contact": bool(use_outer_stem_contact),
     }
 
 # =========================================================

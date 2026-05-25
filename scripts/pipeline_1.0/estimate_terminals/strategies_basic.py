@@ -10,6 +10,7 @@ Questo file contiene strategie base per:
     - variable resistor
 """
 import numpy as np
+import cv2
 from .config import *
 from .geometry import (
     geom_clamp_bbox_to_image,
@@ -47,6 +48,200 @@ def _group_consecutive_indices(indices):
 # =========================================================
 # STRATEGIA: COMPONENTI A UN TERMINALE
 # =========================================================
+def _build_one_terminal_support_binary(binary, bbox):
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    w = max(x2 - x1, 1)
+    h = max(y2 - y1, 1)
+
+    margin = max(
+        ONE_TERMINAL_TEXT_SUPPRESS_MARGIN_MIN,
+        int(round(ONE_TERMINAL_TEXT_SUPPRESS_MARGIN_RATIO * max(w, h))),
+    )
+
+    rx1 = max(0, x1 - margin)
+    ry1 = max(0, y1 - margin)
+    rx2 = min(binary.shape[1] - 1, x2 + margin)
+    ry2 = min(binary.shape[0] - 1, y2 + margin)
+
+    roi = binary[ry1:ry2 + 1, rx1:rx2 + 1]
+    roi_fg = (roi > 0).astype(np.uint8)
+    num_labels, labels, _, _ = cv2.connectedComponentsWithStats(roi_fg, connectivity=8)
+
+    seed_pad = ONE_TERMINAL_TEXT_SUPPRESS_SEED_PAD
+    seed_w = max(
+        ONE_TERMINAL_TEXT_SUPPRESS_SEED_MIN_SIZE,
+        int(round(w * (1.0 - 2.0 * ONE_TERMINAL_TEXT_SUPPRESS_SEED_INSET_RATIO))),
+    )
+    seed_h = max(
+        ONE_TERMINAL_TEXT_SUPPRESS_SEED_MIN_SIZE,
+        int(round(h * (1.0 - 2.0 * ONE_TERMINAL_TEXT_SUPPRESS_SEED_INSET_RATIO))),
+    )
+
+    bbox_x1_in_roi = x1 - rx1
+    bbox_y1_in_roi = y1 - ry1
+    sx1 = max(0, bbox_x1_in_roi + int(round((w - seed_w) / 2.0)) - seed_pad)
+    sy1 = max(0, bbox_y1_in_roi + int(round((h - seed_h) / 2.0)) - seed_pad)
+    sx2 = min(roi.shape[1] - 1, sx1 + seed_w - 1 + 2 * seed_pad)
+    sy2 = min(roi.shape[0] - 1, sy1 + seed_h - 1 + 2 * seed_pad)
+
+    seed_labels = np.unique(labels[sy1:sy2 + 1, sx1:sx2 + 1])
+
+    cleaned_roi = np.zeros_like(roi, dtype=np.uint8)
+    for lab in seed_labels:
+        if lab == 0:
+            continue
+        cleaned_roi[labels == lab] = 255
+
+    cleaned = binary.copy()
+    cleaned[ry1:ry2 + 1, rx1:rx2 + 1] = cleaned_roi
+    return cleaned
+
+
+def _range_overlap_ratio(a1, a2, b1, b2):
+    inter = max(0, min(a2, b2) - max(a1, b1) + 1)
+    base = max(1, min(a2 - a1 + 1, b2 - b1 + 1))
+    return float(inter) / float(base)
+
+
+def _component_is_axis_aligned_external(component_bbox, bbox, orientation):
+    cx1, cy1, cx2, cy2 = component_bbox
+    x1, y1, x2, y2 = bbox
+    width = max(x2 - x1, 1)
+    height = max(y2 - y1, 1)
+    comp_w = max(cx2 - cx1 + 1, 1)
+    comp_h = max(cy2 - cy1 + 1, 1)
+
+    central_x1 = x1 + int(round(0.20 * width))
+    central_x2 = x2 - int(round(0.20 * width))
+    central_y1 = y1 + int(round(0.20 * height))
+    central_y2 = y2 - int(round(0.20 * height))
+
+    gap_limit = TWO_TERMINAL_EXTERNAL_KEEP_GAP
+    overlap_limit = TWO_TERMINAL_EXTERNAL_KEEP_OVERLAP_RATIO
+    min_long_span = TWO_TERMINAL_EXTERNAL_MIN_LONG_SPAN
+    long_short_ratio = TWO_TERMINAL_EXTERNAL_LONG_TO_SHORT_RATIO
+
+    def is_horizontal_stub():
+        return comp_w >= max(min_long_span, int(round(long_short_ratio * comp_h)))
+
+    def is_vertical_stub():
+        return comp_h >= max(min_long_span, int(round(long_short_ratio * comp_w)))
+
+    if orientation == "vertical":
+        if (
+            cy2 <= y1 - 1
+            and (y1 - cy2) <= gap_limit
+            and _range_overlap_ratio(cx1, cx2, central_x1, central_x2) >= overlap_limit
+            and is_vertical_stub()
+        ):
+            return True
+        if (
+            cy1 >= y2 + 1
+            and (cy1 - y2) <= gap_limit
+            and _range_overlap_ratio(cx1, cx2, central_x1, central_x2) >= overlap_limit
+            and is_vertical_stub()
+        ):
+            return True
+        return False
+
+    if (
+        cx2 <= x1 - 1
+        and (x1 - cx2) <= gap_limit
+        and _range_overlap_ratio(cy1, cy2, central_y1, central_y2) >= overlap_limit
+        and is_horizontal_stub()
+    ):
+        return True
+    if (
+        cx1 >= x2 + 1
+        and (cx1 - x2) <= gap_limit
+        and _range_overlap_ratio(cy1, cy2, central_y1, central_y2) >= overlap_limit
+        and is_horizontal_stub()
+    ):
+        return True
+    return False
+
+
+def _build_two_terminal_support_binary(binary, bbox, orientation):
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    w = max(x2 - x1, 1)
+    h = max(y2 - y1, 1)
+
+    margin = max(
+        TWO_TERMINAL_TEXT_SUPPRESS_MARGIN_MIN,
+        int(round(TWO_TERMINAL_TEXT_SUPPRESS_MARGIN_RATIO * max(w, h))),
+    )
+
+    rx1 = max(0, x1 - margin)
+    ry1 = max(0, y1 - margin)
+    rx2 = min(binary.shape[1] - 1, x2 + margin)
+    ry2 = min(binary.shape[0] - 1, y2 + margin)
+
+    roi = binary[ry1:ry2 + 1, rx1:rx2 + 1]
+    roi_fg = (roi > 0).astype(np.uint8)
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(roi_fg, connectivity=8)
+
+    seed_pad = TWO_TERMINAL_TEXT_SUPPRESS_SEED_PAD
+    seed_w = max(
+        TWO_TERMINAL_TEXT_SUPPRESS_SEED_MIN_SIZE,
+        int(round(w * (1.0 - 2.0 * TWO_TERMINAL_TEXT_SUPPRESS_SEED_INSET_RATIO))),
+    )
+    seed_h = max(
+        TWO_TERMINAL_TEXT_SUPPRESS_SEED_MIN_SIZE,
+        int(round(h * (1.0 - 2.0 * TWO_TERMINAL_TEXT_SUPPRESS_SEED_INSET_RATIO))),
+    )
+
+    bbox_x1_in_roi = x1 - rx1
+    bbox_y1_in_roi = y1 - ry1
+    sx1 = max(0, bbox_x1_in_roi + int(round((w - seed_w) / 2.0)) - seed_pad)
+    sy1 = max(0, bbox_y1_in_roi + int(round((h - seed_h) / 2.0)) - seed_pad)
+    sx2 = min(roi.shape[1] - 1, sx1 + seed_w - 1 + 2 * seed_pad)
+    sy2 = min(roi.shape[0] - 1, sy1 + seed_h - 1 + 2 * seed_pad)
+
+    seed_labels = np.unique(labels[sy1:sy2 + 1, sx1:sx2 + 1])
+
+    cleaned_roi = np.zeros_like(roi, dtype=np.uint8)
+    for lab in seed_labels:
+        if lab == 0:
+            continue
+        cleaned_roi[labels == lab] = 255
+
+    for lab in range(1, num_labels):
+        if lab in seed_labels:
+            continue
+
+        left = int(stats[lab, cv2.CC_STAT_LEFT])
+        top = int(stats[lab, cv2.CC_STAT_TOP])
+        comp_w = int(stats[lab, cv2.CC_STAT_WIDTH])
+        comp_h = int(stats[lab, cv2.CC_STAT_HEIGHT])
+        comp_bbox = (
+            rx1 + left,
+            ry1 + top,
+            rx1 + left + comp_w - 1,
+            ry1 + top + comp_h - 1,
+        )
+
+        if not _component_is_axis_aligned_external(comp_bbox, (x1, y1, x2, y2), orientation):
+            continue
+
+        cleaned_roi[labels == lab] = 255
+
+    cleaned = binary.copy()
+    cleaned[ry1:ry2 + 1, rx1:rx2 + 1] = cleaned_roi
+    return cleaned
+
+
+def get_one_terminal_working_binary(binary, bbox):
+    if ONE_TERMINAL_TEXT_SUPPRESS_ENABLE:
+        return _build_one_terminal_support_binary(binary, bbox)
+    return binary
+
+
+def get_two_terminal_working_binary(binary, bbox, orientation):
+    if TWO_TERMINAL_TEXT_SUPPRESS_ENABLE and orientation in {"horizontal", "vertical"}:
+        return _build_two_terminal_support_binary(binary, bbox, orientation)
+    return binary
+
+
 # Valuta un lato candidato come lato connesso di un componente mono-terminale.
 # Localizza un punto candidato sul lato
 # Valuta il supporto direzionale attorno al punto
@@ -73,6 +268,8 @@ def _score_one_terminal_candidate_side(binary, bbox, side):
 
 # Determina quale lato del bbox è realmente connesso per un simbolo a un solo terminale
 def strategy_detect_connected_side(binary, bbox):
+    working_binary = get_one_terminal_working_binary(binary, bbox)
+
     # -------------------------------------------------
     # 1) Validazione diretta sui 4 lati candidati
     # -------------------------------------------------
@@ -85,7 +282,7 @@ def strategy_detect_connected_side(binary, bbox):
 
     for side in ("top", "bottom", "left", "right"):
         score, point, peak_debug = _score_one_terminal_candidate_side(
-            binary, bbox, side
+            working_binary, bbox, side
         )
         point_scores[side] = score
         point_debug[side] = {
@@ -134,28 +331,28 @@ def strategy_detect_connected_side(binary, bbox):
 
     side_scores = {
         "top": img_count_foreground_pixels(
-            binary,
+            working_binary,
             xc - half_band_x,
             y1 - SIDE_SAMPLE_THICKNESS,
             xc + half_band_x + 1,
             y1
         ),
         "bottom": img_count_foreground_pixels(
-            binary,
+            working_binary,
             xc - half_band_x,
             y2 + 1,
             xc + half_band_x + 1,
             y2 + 1 + SIDE_SAMPLE_THICKNESS
         ),
         "left": img_count_foreground_pixels(
-            binary,
+            working_binary,
             x1 - SIDE_SAMPLE_THICKNESS,
             yc - half_band_y,
             x1,
             yc + half_band_y + 1
         ),
         "right": img_count_foreground_pixels(
-            binary,
+            working_binary,
             x2 + 1,
             yc - half_band_y,
             x2 + 1 + SIDE_SAMPLE_THICKNESS,

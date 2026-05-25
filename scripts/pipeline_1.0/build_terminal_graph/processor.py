@@ -13,6 +13,7 @@ from .grouping import (
     split_polarized_capacitor_self_short_groups,
 )
 from .heuristics_connector import build_connector_aligned_gnd_edges, fix_stacked_connector_gnd_crossing_edges
+from .heuristics_bjt import merge_bjt_base_aligned_labels
 from .heuristics_inductor import merge_near_horizontal_stub_labels
 from .heuristics_mosfet import merge_mosfet_gate_aligned_labels, merge_mosfet_gate_rail_groups
 from .heuristics_opamp import merge_opamp_aux_external_terminal_labels
@@ -91,6 +92,13 @@ def build_terminal_graph_for_image(data: dict):
         label_to_terminal_ids,
         terminals,
         terminal_match_debug,
+    )
+    label_to_terminal_ids = merge_bjt_base_aligned_labels(
+        label_to_terminal_ids,
+        terminals,
+        components,
+        terminal_match_debug,
+        labels,
     )
     label_to_terminal_ids = merge_near_horizontal_stub_labels(
         label_to_terminal_ids,

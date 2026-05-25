@@ -95,6 +95,30 @@ TERMINAL_CLASS_EXTERNAL_LONG_TO_SHORT_RATIO = 1.5
 TERMINAL_CLASS_POLARITY_MARKER_PROBE = 12
 TERMINAL_CLASS_POLARITY_MARKER_MIN_CROSS_PIXELS = 2
 
+# Pulizia locale del binary per simboli a un terminale:
+# manteniamo il componente connesso al seed centrale del simbolo e
+# scartiamo testo vicino ma scollegato.
+ONE_TERMINAL_TEXT_SUPPRESS_ENABLE = True
+ONE_TERMINAL_TEXT_SUPPRESS_MARGIN_RATIO = 0.45
+ONE_TERMINAL_TEXT_SUPPRESS_MARGIN_MIN = 8
+ONE_TERMINAL_TEXT_SUPPRESS_SEED_INSET_RATIO = 0.22
+ONE_TERMINAL_TEXT_SUPPRESS_SEED_MIN_SIZE = 8
+ONE_TERMINAL_TEXT_SUPPRESS_SEED_PAD = 2
+
+# Pulizia locale del binary per simboli a due terminali:
+# manteniamo il componente connesso al core del simbolo e, se serve,
+# piccoli stub esterni coerenti con l'asse stimato.
+TWO_TERMINAL_TEXT_SUPPRESS_ENABLE = True
+TWO_TERMINAL_TEXT_SUPPRESS_MARGIN_RATIO = 0.45
+TWO_TERMINAL_TEXT_SUPPRESS_MARGIN_MIN = 8
+TWO_TERMINAL_TEXT_SUPPRESS_SEED_INSET_RATIO = 0.18
+TWO_TERMINAL_TEXT_SUPPRESS_SEED_MIN_SIZE = 10
+TWO_TERMINAL_TEXT_SUPPRESS_SEED_PAD = 2
+TWO_TERMINAL_EXTERNAL_KEEP_GAP = 18
+TWO_TERMINAL_EXTERNAL_KEEP_OVERLAP_RATIO = 0.25
+TWO_TERMINAL_EXTERNAL_MIN_LONG_SPAN = 6
+TWO_TERMINAL_EXTERNAL_LONG_TO_SHORT_RATIO = 1.5
+
 # Bias geometrico per la classe Terminal
 # Molto più conservativo: i terminali piccoli / quasi quadrati
 # non devono essere spinti artificialmente verso top/bottom o left/right.
@@ -239,6 +263,11 @@ NPN_ARROW_BRANCH_BOTTOM_RATIO = 0.70
 # ramo verticale collector/emitter vicino al bordo del bbox.
 NPN_BASE_OVERRIDE_POINT_VETO_MARGIN = 1.08
 
+# Se il probe dedicato della base BJT e' molto piu' forte su un lato,
+# manteniamo quel lato anche quando la validazione geometrica e' disturbata
+# da fili esterni o loop vicini al bbox.
+NPN_BASE_OVERRIDE_STRONG_BASE_RATIO = 2.0
+
 # =========================================================
 # ROUND SOURCES / METERS - STIMA ORIENTAZIONE
 # =========================================================
@@ -360,7 +389,7 @@ OPAMP_MANDATORY_BORDER_WEIGHT = 0.35
 # del bbox nella banda centrale dell'opamp.
 OPAMP_AUX_ENABLE_V1 = True
 
-OPAMP_AUX_SCAN_X_START_RATIO = 0.38
+OPAMP_AUX_SCAN_X_START_RATIO = 0.32
 OPAMP_AUX_SCAN_X_END_RATIO = 0.72
 
 OPAMP_AUX_RUN_HALFSPAN = 1

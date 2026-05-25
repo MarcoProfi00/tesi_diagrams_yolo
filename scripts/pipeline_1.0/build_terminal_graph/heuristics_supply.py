@@ -12,6 +12,7 @@ from .config import (
     SUPPLY_ARROW_TOP_BORDER_RATIO,
     SUPPLY_ARROW_X_TOL,
     SUPPLY_ARROW_Y_GAP,
+    SUPPLY_RAIL_GROUP_INFERENCE_ENABLE,
 )
 from .geometry import label_bbox
 from .heuristics_mosfet import is_mosfet_gate_terminal
@@ -167,6 +168,9 @@ def infer_supply_rail_connection_for_group(
     image_width: int | None,
     image_height: int | None,
 ):
+    if not SUPPLY_RAIL_GROUP_INFERENCE_ENABLE:
+        return None
+
     if len(terms) < 3:
         return None
 
