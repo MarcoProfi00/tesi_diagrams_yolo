@@ -5,7 +5,7 @@ from pathlib import Path
 import cv2
 
 from .canonical_export import build_canonical_components, build_terminal_metadata
-from .crossings import split_bridge_labels
+from .crossings import is_blue_wire_style, split_bridge_labels
 from .graph_utils import build_terminal_graph
 from .grouping import (
     build_label_to_terminal_ids,
@@ -16,6 +16,7 @@ from .heuristics_connector import build_connector_aligned_gnd_edges, fix_stacked
 from .heuristics_bjt import merge_bjt_base_aligned_labels
 from .heuristics_inductor import merge_near_horizontal_stub_labels
 from .heuristics_mosfet import merge_mosfet_gate_aligned_labels, merge_mosfet_gate_rail_groups
+from .heuristics_oblique import merge_short_oblique_branch_labels
 from .heuristics_opamp import merge_opamp_aux_external_terminal_labels
 from .heuristics_seven_segment import (
     build_seven_segment_shared_segment_edges,
@@ -28,8 +29,9 @@ from .matching import (
     attach_unmatched_analog_meter_terminals,
     attach_unmatched_opamp_aux_to_external_terminals,
     match_terminal_to_skeleton_label,
+    remap_monoterminal_outward_stub_matches,
 )
-from .skeleton_ops import erase_component_bodies_from_skeleton
+from .skeleton_ops import erase_component_bodies_from_skeleton, load_junction_support_binary
 
 
 # =========================================================
@@ -55,13 +57,18 @@ from .skeleton_ops import erase_component_bodies_from_skeleton
 def build_terminal_graph_for_image(data: dict):
     terminals = data.get("terminals", [])
     components = data.get("components", [])
-    wire_extraction = data.get("wire_extraction", {})
+    wire_extraction = dict(data.get("wire_extraction", {}))
+    wire_extraction["image_path"] = data.get("image_path")
     skeleton_path = wire_extraction.get("skeleton_path")
 
     if not skeleton_path:
         raise ValueError("skeleton_path mancante nel JSON del passo 04.")
 
     skeleton = load_binary_image(Path(skeleton_path))
+    filtered_binary = None
+    filtered_path = wire_extraction.get("filtered_path")
+    if filtered_path:
+        filtered_binary = load_binary_image(Path(filtered_path))
     skeleton_for_graph = erase_component_bodies_from_skeleton(skeleton, components)
 
     # Connected components dello skeleton.
@@ -76,6 +83,7 @@ def build_terminal_graph_for_image(data: dict):
 
     attach_unmatched_analog_meter_terminals(components, terminal_match_debug, labels)
     attach_unmatched_opamp_aux_to_external_terminals(terminals, terminal_match_debug)
+    remap_monoterminal_outward_stub_matches(terminals, terminal_match_debug, labels)
 
     original_to_simple = build_simple_id_map(terminals)
 
@@ -106,6 +114,14 @@ def build_terminal_graph_for_image(data: dict):
         terminal_match_debug,
         labels,
     )
+    if is_blue_wire_style(wire_extraction, load_junction_support_binary(wire_extraction)):
+        label_to_terminal_ids = merge_short_oblique_branch_labels(
+            label_to_terminal_ids,
+            terminals,
+            terminal_match_debug,
+            labels,
+            filtered_binary,
+        )
     label_to_terminal_ids = split_bridge_labels(
         label_to_terminal_ids,
         terminals,

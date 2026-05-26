@@ -10,6 +10,12 @@ from .config import (
     MAX_REASONABLE_SNAP_DISTANCE,
     OPAMP_AUX_EXTERNAL_MAX_DX,
     OPAMP_AUX_EXTERNAL_MAX_DY,
+    OUTWARD_STUB_REMAP_MAX_GAP,
+    OUTWARD_STUB_REMAP_MAX_LABEL_WIDTH,
+    OUTWARD_STUB_REMAP_MIN_GAP,
+    OUTWARD_STUB_REMAP_SOURCE_CLASSES,
+    OUTWARD_STUB_REMAP_SOURCE_SIDES,
+    OUTWARD_STUB_REMAP_X_TOL,
     TERMINAL_DIRECTIONAL_HALFSPAN,
     TERMINAL_SEARCH_INWARD,
     TERMINAL_SEARCH_OUTWARD,
@@ -243,3 +249,154 @@ def attach_unmatched_opamp_aux_to_external_terminals(
                 round(float(best["dy"]), 3),
             ],
         }
+
+
+def remap_monoterminal_outward_stub_matches(
+    terminals: list[dict],
+    terminal_match_debug: dict,
+    labels: np.ndarray,
+):
+    label_to_terminal_ids = {}
+    for terminal_id, match in terminal_match_debug.items():
+        matched_label = match.get("matched_label")
+        if matched_label is None:
+            continue
+        label_to_terminal_ids.setdefault(int(matched_label), []).append(terminal_id)
+
+    for term in terminals:
+        class_name = normalize_class_name(term.get("component_class_name"))
+        if class_name not in OUTWARD_STUB_REMAP_SOURCE_CLASSES:
+            continue
+
+        side = str(term.get("relative_position") or "").strip().lower()
+        if side not in OUTWARD_STUB_REMAP_SOURCE_SIDES:
+            continue
+
+        terminal_id = term.get("terminal_id")
+        if terminal_id is None:
+            continue
+
+        current_match = terminal_match_debug.get(terminal_id, {})
+        current_label = current_match.get("matched_label")
+        if current_label is None:
+            continue
+
+        best = _find_outward_stub_target_label(
+            labels,
+            term,
+            int(current_label),
+            label_to_terminal_ids,
+            terminal_id,
+        )
+        if best is None:
+            continue
+
+        terminal_match_debug[terminal_id] = {
+            "terminal_id": terminal_id,
+            "candidate_labels": sorted(set(current_match.get("candidate_labels", [])) | {int(best["label"])}),
+            "matched_label": int(best["label"]),
+            "match_mode": "outward_stub_remap",
+            "search_window": best["search_window"],
+            "snap_point": best["snap_point"],
+            "snap_distance": round(float(best["snap_distance"]), 3),
+            "is_suspicious": False,
+            "previous_matched_label": int(current_label),
+            "previous_snap_point": current_match.get("snap_point"),
+            "virtual_match": True,
+            "virtual_match_reason": "monoterminal_outward_stub_remap",
+        }
+
+
+def _find_outward_stub_target_label(
+    labels: np.ndarray,
+    term: dict,
+    current_label: int,
+    label_to_terminal_ids: dict,
+    terminal_id: str,
+):
+    tx = int(round(float(term["x"])))
+    ty = int(round(float(term["y"])))
+    side = str(term.get("relative_position") or "").strip().lower()
+    h, w = labels.shape[:2]
+
+    x1 = max(0, tx - int(OUTWARD_STUB_REMAP_X_TOL))
+    x2 = min(w, tx + int(OUTWARD_STUB_REMAP_X_TOL) + 1)
+    if side == "bottom":
+        y1 = max(0, ty + int(OUTWARD_STUB_REMAP_MIN_GAP))
+        y2 = min(h, ty + int(OUTWARD_STUB_REMAP_MAX_GAP) + 1)
+    else:
+        y1 = max(0, ty - int(OUTWARD_STUB_REMAP_MAX_GAP))
+        y2 = min(h, ty - int(OUTWARD_STUB_REMAP_MIN_GAP) + 1)
+
+    if y2 <= y1 or x2 <= x1:
+        return None
+
+    roi = labels[y1:y2, x1:x2]
+    candidate_labels = [
+        int(value)
+        for value in np.unique(roi)
+        if int(value) > 0 and int(value) != int(current_label)
+    ]
+    if not candidate_labels:
+        return None
+
+    best = None
+    for candidate_label in candidate_labels:
+        coords = np.column_stack(np.where(labels == int(candidate_label)))
+        if len(coords) == 0:
+            continue
+
+        ys = coords[:, 0]
+        xs = coords[:, 1]
+        min_x = int(xs.min())
+        max_x = int(xs.max())
+        min_y = int(ys.min())
+        max_y = int(ys.max())
+        width = max_x - min_x + 1
+
+        if width > int(OUTWARD_STUB_REMAP_MAX_LABEL_WIDTH):
+            continue
+        if tx < min_x - int(OUTWARD_STUB_REMAP_X_TOL) or tx > max_x + int(OUTWARD_STUB_REMAP_X_TOL):
+            continue
+
+        if side == "bottom":
+            gap = float(min_y - ty)
+            candidate_mask = ys == ys.min()
+        else:
+            gap = float(ty - max_y)
+            candidate_mask = ys == ys.max()
+        if gap < float(OUTWARD_STUB_REMAP_MIN_GAP) or gap > float(OUTWARD_STUB_REMAP_MAX_GAP):
+            continue
+
+        edge_points = coords[candidate_mask]
+        if len(edge_points) == 0:
+            edge_points = coords
+        dxs = np.abs(edge_points[:, 1] - tx)
+        best_idx = int(np.argmin(dxs))
+        py = int(edge_points[best_idx, 0])
+        px = int(edge_points[best_idx, 1])
+        snap_distance = float(np.hypot(px - tx, py - ty))
+
+        other_terminal_ids = [
+            other_id
+            for other_id in label_to_terminal_ids.get(int(candidate_label), [])
+            if other_id != terminal_id
+        ]
+        carries_other_terminal = 1 if other_terminal_ids else 0
+
+        score = (
+            carries_other_terminal,
+            -abs(px - tx),
+            -gap,
+            -snap_distance,
+        )
+        if best is None or score > best["score"]:
+            best = {
+                "score": score,
+                "label": int(candidate_label),
+                "snap_point": [int(px), int(py)],
+                "snap_distance": snap_distance,
+                "search_window": [int(x1), int(y1), int(x2), int(y2)],
+            }
+
+    return best

@@ -47,6 +47,7 @@ SKELETON_DIR = OUTPUT_DIR / "skeleton"
 MASK_SHRINK_FACTOR = 1.0
 CLASS_MASK_PADDING = {
     "Analog_Meter": 8,
+    "Antenna": 10,
     "Connector": 6,
     "Switch": 4,
     "Transformer": 4,
@@ -72,6 +73,15 @@ CLASS_TERMINAL_KEEP_OVERRIDES = {
         "thickness": 6,
         "inward_len": 4,
         "outward_len": 14,
+    },
+    # L'antenna e' monoterminale ma il simbolo puo' contenere frecce o
+    # tratti decorativi che, se preservati troppo, vengono letti come fili.
+    # Lasciamo aperto solo un piccolo corridoio attorno al vero pin.
+    "Antenna": {
+        "radius": 4,
+        "thickness": 5,
+        "inward_len": 0,
+        "outward_len": 24,
     },
     "Connector": {
         "radius": 3,

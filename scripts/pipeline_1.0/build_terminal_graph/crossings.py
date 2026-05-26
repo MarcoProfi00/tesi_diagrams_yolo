@@ -8,13 +8,34 @@ import numpy as np
 from .config import (
     BRIDGE_CUT_HALF_HEIGHT,
     BRIDGE_CUT_HALF_WIDTH,
+    BRIDGE_FILLED_NODE_AREA_MIN,
+    BRIDGE_FILLED_NODE_CENTER_AREA_MIN,
+    BRIDGE_FILLED_NODE_CENTER_RADIUS,
+    BRIDGE_FILLED_NODE_RADIUS,
+    BRIDGE_FILLED_NODE_STRONG_AREA_MIN,
+    BRIDGE_BLUE_STYLE_MIN_BLUE_DELTA,
+    BRIDGE_BLUE_STYLE_MIN_MEDIAN_BGR_DELTA,
+    BRIDGE_BLUE_STYLE_MIN_PIXEL_FRACTION,
+    BRIDGE_BLUE_STYLE_MIN_SATURATION,
+    BRIDGE_BLUE_STYLE_THICK_HUMP_ONLY,
     BRIDGE_HUMP_X_MAX,
     BRIDGE_HUMP_X_MIN,
     BRIDGE_HUMP_Y_MAX,
     BRIDGE_HUMP_Y_MIN,
+    BRIDGE_HUMP_COLLAPSE_RADIUS,
+    BRIDGE_HUMP_MIN_ANCHOR_QUALITY,
     BRIDGE_MIN_PIXELS_PER_DIRECTION,
     BRIDGE_MIN_RUN,
     BRIDGE_PROBE_DISTANCE,
+    BRIDGE_THICK_HUMP_ENABLE,
+    BRIDGE_THICK_HUMP_FOOT_Y_MAX,
+    BRIDGE_THICK_HUMP_MIN_SIDE_PIXELS,
+    BRIDGE_THICK_HUMP_MIN_FOOT_PIXELS,
+    BRIDGE_THICK_HUMP_MIN_SKELETON_Y_SPAN,
+    BRIDGE_THICK_HUMP_MIN_VERTICAL_PIXELS,
+    BRIDGE_THICK_HUMP_VERTICAL_SEARCH_RADIUS,
+    BRIDGE_THICK_HUMP_X_MAX,
+    BRIDGE_THICK_HUMP_Y_MAX,
     MICRO_BRIDGE_MAX_SIDE_GAP,
     MICRO_BRIDGE_COLUMN_MIN_Y_SPAN,
     MICRO_BRIDGE_COLUMN_X_TOL,
@@ -24,6 +45,7 @@ from .config import (
     MICRO_BRIDGE_TERMINAL_HORIZONTAL_BAND,
     MICRO_BRIDGE_VERTICAL_BAND_DEPTH,
     MICRO_BRIDGE_VERTICAL_BAND_RADIUS,
+    PLAIN_CROSSING_SPLIT_ENABLE,
     PLAIN_CROSSING_SELF_SHORT_EXCLUDED_CLASSES,
     PLAIN_CROSSING_CUT_HALF_HEIGHT,
     PLAIN_CROSSING_CUT_HALF_WIDTH,
@@ -89,12 +111,504 @@ def bridge_direction_support(binary: np.ndarray, x: int, y: int):
     return left, right, up, down
 
 
+def count_pixels_in_window(binary: np.ndarray, x1: int, y1: int, x2: int, y2: int):
+    h, w = binary.shape[:2]
+    x1, y1, x2, y2 = clamp_window(x1, y1, x2, y2, w, h)
+    if x2 <= x1 or y2 <= y1:
+        return 0
+    return int(np.count_nonzero(binary[y1:y2, x1:x2] > 0))
+
+
+def count_pixels_fast(
+    binary: np.ndarray,
+    integral: np.ndarray | None,
+    x1: int,
+    y1: int,
+    x2: int,
+    y2: int,
+):
+    if integral is None:
+        return count_pixels_in_window(binary, x1, y1, x2, y2)
+
+    h, w = binary.shape[:2]
+    x1, y1, x2, y2 = clamp_window(x1, y1, x2, y2, w, h)
+    if x2 <= x1 or y2 <= y1:
+        return 0
+
+    return int(
+        integral[y2, x2]
+        - integral[y1, x2]
+        - integral[y2, x1]
+        + integral[y1, x1]
+    )
+
+
+def has_filled_bridge_node(
+    support_binary: np.ndarray | None,
+    x: int,
+    y: int,
+    support_integral: np.ndarray | None = None,
+):
+    if support_binary is None:
+        return False
+
+    radius = int(BRIDGE_FILLED_NODE_RADIUS)
+    center_radius = int(BRIDGE_FILLED_NODE_CENTER_RADIUS)
+    local_area = count_pixels_fast(
+        support_binary,
+        support_integral,
+        int(x) - radius,
+        int(y) - radius,
+        int(x) + radius + 1,
+        int(y) + radius + 1,
+    )
+    center_area = count_pixels_fast(
+        support_binary,
+        support_integral,
+        int(x) - center_radius,
+        int(y) - center_radius,
+        int(x) + center_radius + 1,
+        int(y) + center_radius + 1,
+    )
+    if local_area >= BRIDGE_FILLED_NODE_STRONG_AREA_MIN:
+        return True
+
+    return (
+        local_area >= BRIDGE_FILLED_NODE_AREA_MIN
+        and center_area >= BRIDGE_FILLED_NODE_CENTER_AREA_MIN
+    )
+
+
+def thick_bridge_hump_score(
+    support_binary: np.ndarray | None,
+    support_integral: np.ndarray | None,
+    x: int,
+    y: int,
+):
+    """
+    Valida una gobba sulla maschera spessa: deve esserci in modo esplicito
+    materiale grafico sia a sinistra sia a destra del candidato, sopra o sotto
+    il punto. Questo evita di inventare ponti da semplici incroci perpendicolari.
+    """
+    if support_binary is None:
+        return None
+
+    best = None
+
+    for direction in (-1, 1):
+        y_start = int(y) + direction * BRIDGE_HUMP_Y_MIN
+        y_end = int(y) + direction * BRIDGE_THICK_HUMP_Y_MAX
+        y1 = min(y_start, y_end)
+        y2 = max(y_start, y_end) + 1
+
+        left_pixels = count_pixels_fast(
+            support_binary,
+            support_integral,
+            int(x) - BRIDGE_THICK_HUMP_X_MAX,
+            y1,
+            int(x) - BRIDGE_HUMP_X_MIN + 1,
+            y2,
+        )
+        right_pixels = count_pixels_fast(
+            support_binary,
+            support_integral,
+            int(x) + BRIDGE_HUMP_X_MIN,
+            y1,
+            int(x) + BRIDGE_THICK_HUMP_X_MAX + 1,
+            y2,
+        )
+        if min(left_pixels, right_pixels) < BRIDGE_THICK_HUMP_MIN_SIDE_PIXELS:
+            continue
+
+        foot_y_start = int(y) + direction * BRIDGE_HUMP_Y_MIN
+        foot_y_end = int(y) + direction * BRIDGE_THICK_HUMP_FOOT_Y_MAX
+        foot_y1 = min(foot_y_start, foot_y_end)
+        foot_y2 = max(foot_y_start, foot_y_end) + 1
+        left_foot_pixels = count_pixels_fast(
+            support_binary,
+            support_integral,
+            int(x) - BRIDGE_THICK_HUMP_X_MAX,
+            foot_y1,
+            int(x) - BRIDGE_HUMP_X_MIN + 1,
+            foot_y2,
+        )
+        right_foot_pixels = count_pixels_fast(
+            support_binary,
+            support_integral,
+            int(x) + BRIDGE_HUMP_X_MIN,
+            foot_y1,
+            int(x) + BRIDGE_THICK_HUMP_X_MAX + 1,
+            foot_y2,
+        )
+        if min(left_foot_pixels, right_foot_pixels) < BRIDGE_THICK_HUMP_MIN_FOOT_PIXELS:
+            continue
+
+        score = min(left_pixels, right_pixels) + max(left_pixels, right_pixels) * 0.1
+        candidate = {
+            "hump_direction": int(direction),
+            "hump_score": float(score),
+            "left_pixels": int(left_pixels),
+            "right_pixels": int(right_pixels),
+            "left_foot_pixels": int(left_foot_pixels),
+            "right_foot_pixels": int(right_foot_pixels),
+        }
+        if best is None or candidate["hump_score"] > best["hump_score"]:
+            best = candidate
+
+    return best
+
+
+def nearby_vertical_bridge_support(binary: np.ndarray, x: int, y: int):
+    radius = int(BRIDGE_THICK_HUMP_VERTICAL_SEARCH_RADIUS)
+    h, w = binary.shape[:2]
+    best = 0
+
+    for yy in range(max(0, int(y) - radius), min(h, int(y) + radius + 1)):
+        for xx in range(max(0, int(x) - radius), min(w, int(x) + radius + 1)):
+            if binary[yy, xx] == 0:
+                continue
+            up = count_run(binary, xx, yy, 0, -1, BRIDGE_MIN_RUN)
+            down = count_run(binary, xx, yy, 0, 1, BRIDGE_MIN_RUN)
+            best = max(best, up, down, up + down)
+
+    return best
+
+
+def hump_side_skeleton_y_span(skeleton_binary: np.ndarray, x: int, y: int, direction: int):
+    y_start = int(y) + int(direction) * BRIDGE_HUMP_Y_MIN
+    y_end = int(y) + int(direction) * BRIDGE_THICK_HUMP_Y_MAX
+    y1 = min(y_start, y_end)
+    y2 = max(y_start, y_end) + 1
+    h, w = skeleton_binary.shape[:2]
+
+    left_x1 = max(0, int(x) - BRIDGE_THICK_HUMP_X_MAX)
+    left_x2 = max(0, int(x) - BRIDGE_HUMP_X_MIN + 1)
+    right_x1 = min(w, int(x) + BRIDGE_HUMP_X_MIN)
+    right_x2 = min(w, int(x) + BRIDGE_THICK_HUMP_X_MAX + 1)
+
+    def side_span(x1: int, x2: int):
+        if x2 <= x1:
+            return 0
+        side_ys = []
+        for yy in range(max(0, y1), min(h, y2)):
+            if np.any(skeleton_binary[yy, x1:x2] > 0):
+                side_ys.append(yy)
+        if not side_ys:
+            return 0
+        return int(max(side_ys) - min(side_ys))
+
+    return min(side_span(left_x1, left_x2), side_span(right_x1, right_x2))
+
+
+def detect_thick_hump_bridge(
+    skeleton_binary: np.ndarray,
+    support_binary: np.ndarray | None,
+    support_integral: np.ndarray | None,
+    labels: np.ndarray,
+    x: int,
+    y: int,
+):
+    if not BRIDGE_THICK_HUMP_ENABLE or support_binary is None:
+        return None
+
+    if has_filled_junction_dot(support_binary, x, y) or has_filled_bridge_node(
+        support_binary,
+        x,
+        y,
+        support_integral,
+    ):
+        return None
+
+    shape = thick_bridge_hump_score(support_binary, support_integral, x, y)
+    if shape is None:
+        return None
+    if (
+        hump_side_skeleton_y_span(skeleton_binary, x, y, int(shape["hump_direction"]))
+        < BRIDGE_THICK_HUMP_MIN_SKELETON_Y_SPAN
+    ):
+        return None
+
+    vertical_support = nearby_vertical_bridge_support(skeleton_binary, x, y)
+    if vertical_support < BRIDGE_THICK_HUMP_MIN_VERTICAL_PIXELS:
+        return None
+
+    source_label = nearest_split_label(
+        labels,
+        x,
+        y,
+        radius=max(5, BRIDGE_THICK_HUMP_VERTICAL_SEARCH_RADIUS),
+    )
+    if source_label is None:
+        return None
+
+    return {
+        "x": int(x),
+        "y": int(y),
+        "label": int(source_label),
+        "bridge_style": "hump",
+        "bridge_detector": "thick_hump",
+        "hump_direction": int(shape["hump_direction"]),
+        "hump_score": float(shape["hump_score"]) + float(vertical_support),
+        "vertical_support": int(vertical_support),
+    }
+
+
+def is_blue_wire_style(wire_extraction: dict | None, support_binary: np.ndarray | None):
+    if not BRIDGE_BLUE_STYLE_THICK_HUMP_ONLY:
+        return True
+    if support_binary is None:
+        return False
+
+    image_path = (wire_extraction or {}).get("image_path")
+    if not image_path:
+        return False
+
+    image = cv2.imread(str(image_path))
+    if image is None:
+        return False
+
+    mask = support_binary > 0
+    if not np.any(mask):
+        return False
+
+    pixels = image[mask]
+    blue_delta = pixels[:, 0].astype(np.int16) - pixels[:, 2].astype(np.int16)
+    saturation = pixels.max(axis=1).astype(np.int16) - pixels.min(axis=1).astype(np.int16)
+    blue_like = (
+        (blue_delta >= BRIDGE_BLUE_STYLE_MIN_BLUE_DELTA)
+        & (saturation >= BRIDGE_BLUE_STYLE_MIN_SATURATION)
+    )
+    return (
+        float(np.mean(blue_like)) >= BRIDGE_BLUE_STYLE_MIN_PIXEL_FRACTION
+        and float(np.median(blue_delta)) >= BRIDGE_BLUE_STYLE_MIN_MEDIAN_BGR_DELTA
+    )
+
+
+def local_split_branch_labels(
+    skeleton_binary: np.ndarray,
+    x: int,
+    y: int,
+    cut_half_width: int,
+    cut_half_height: int,
+    probe_distance: int,
+):
+    h, w = skeleton_binary.shape[:2]
+    roi_margin = int(probe_distance) + max(int(cut_half_width), int(cut_half_height)) + 12
+    roi_x1, roi_y1, roi_x2, roi_y2 = clamp_window(
+        int(x) - roi_margin,
+        int(y) - roi_margin,
+        int(x) + roi_margin + 1,
+        int(y) + roi_margin + 1,
+        w,
+        h,
+    )
+    cut_skeleton = skeleton_binary[roi_y1:roi_y2, roi_x1:roi_x2].copy()
+    local_x = int(x) - int(roi_x1)
+    local_y = int(y) - int(roi_y1)
+
+    cut_x1, cut_y1, cut_x2, cut_y2 = clamp_window(
+        local_x - int(cut_half_width),
+        local_y - int(cut_half_height),
+        local_x + int(cut_half_width) + 1,
+        local_y + int(cut_half_height) + 1,
+        cut_skeleton.shape[1],
+        cut_skeleton.shape[0],
+    )
+    cut_skeleton[cut_y1:cut_y2, cut_x1:cut_x2] = 0
+
+    _, split_labels, _, _ = cv2.connectedComponentsWithStats(cut_skeleton, connectivity=8)
+    return [
+        nearest_split_label(split_labels, local_x, local_y - int(probe_distance)),
+        nearest_split_label(split_labels, local_x, local_y + int(probe_distance)),
+        nearest_split_label(split_labels, local_x - int(probe_distance), local_y),
+        nearest_split_label(split_labels, local_x + int(probe_distance), local_y),
+    ]
+
+
+def bridge_split_branch_quality(skeleton_binary: np.ndarray, candidate: dict):
+    branch_labels = local_split_branch_labels(
+        skeleton_binary,
+        int(candidate["x"]),
+        int(candidate["y"]),
+        BRIDGE_CUT_HALF_WIDTH,
+        BRIDGE_CUT_HALF_HEIGHT,
+        BRIDGE_PROBE_DISTANCE,
+    )
+    if any(label is None for label in branch_labels):
+        return 0
+    return len({int(label) for label in branch_labels})
+
+
+def choose_hump_candidate(cluster: list[dict], skeleton_binary: np.ndarray | None):
+    if skeleton_binary is None:
+        return max(cluster, key=lambda item: float(item.get("hump_score", 0.0)))
+
+    best = max(
+        cluster,
+        key=lambda item: (
+            bridge_split_branch_quality(skeleton_binary, item),
+            float(item.get("hump_score", 0.0)),
+        ),
+    )
+    return refine_hump_split_anchor(best, skeleton_binary)
+
+
+def refine_hump_split_anchor(candidate: dict, skeleton_binary: np.ndarray):
+    radius = int(BRIDGE_THICK_HUMP_VERTICAL_SEARCH_RADIUS)
+    cx = int(candidate["x"])
+    cy = int(candidate["y"])
+    best = dict(candidate)
+    best_quality = bridge_split_branch_quality(skeleton_binary, best)
+    best_distance = 0
+
+    for yy in range(cy - radius, cy + radius + 1):
+        for xx in range(cx - radius, cx + radius + 1):
+            if yy < 0 or yy >= skeleton_binary.shape[0] or xx < 0 or xx >= skeleton_binary.shape[1]:
+                continue
+            probe = {**candidate, "x": int(xx), "y": int(yy)}
+            quality = bridge_split_branch_quality(skeleton_binary, probe)
+            distance = abs(int(xx) - cx) + abs(int(yy) - cy)
+            if quality > best_quality or (quality == best_quality and distance < best_distance):
+                best = probe
+                best_quality = quality
+                best_distance = distance
+
+    if int(best["x"]) != cx or int(best["y"]) != cy:
+        best["anchor_refined"] = True
+        best["detected_x"] = cx
+        best["detected_y"] = cy
+        best["anchor_quality"] = int(best_quality)
+
+    return best
+
+
+def collapse_bridge_candidates(candidates: list[dict], skeleton_binary: np.ndarray | None = None):
+    collapsed = []
+
+    def style_radius(candidate: dict):
+        if candidate.get("bridge_style") == "micro_gap":
+            return 4
+        return BRIDGE_HUMP_COLLAPSE_RADIUS
+
+    hump_clusters = []
+    micro_candidates = []
+    for candidate in candidates:
+        if candidate.get("bridge_style") == "micro_gap":
+            micro_candidates.append(candidate)
+            continue
+
+        placed = False
+        for cluster in hump_clusters:
+            avg_x = sum(int(item["x"]) for item in cluster) / float(len(cluster))
+            avg_y = sum(int(item["y"]) for item in cluster) / float(len(cluster))
+            if (
+                abs(int(candidate["x"]) - avg_x) <= BRIDGE_HUMP_COLLAPSE_RADIUS
+                and abs(int(candidate["y"]) - avg_y) <= BRIDGE_HUMP_COLLAPSE_RADIUS
+            ):
+                cluster.append(candidate)
+                placed = True
+                break
+        if not placed:
+            hump_clusters.append([candidate])
+
+    for cluster in hump_clusters:
+        collapsed.append(choose_hump_candidate(cluster, skeleton_binary))
+
+    for cand in sorted(micro_candidates, key=lambda item: (int(item["y"]), int(item["x"]))):
+        radius = style_radius(cand)
+        if any(
+            abs(int(cand["x"]) - int(prev["x"])) <= max(radius, style_radius(prev))
+            and abs(int(cand["y"]) - int(prev["y"])) <= max(radius, style_radius(prev))
+            for prev in collapsed
+        ):
+            continue
+        collapsed.append(cand)
+
+    return sorted(collapsed, key=lambda item: (int(item["y"]), int(item["x"])))
+
+
 # Rileva ponte sullo skeleton
 # Cerca punti con:
 #   continuita nelle 4 dir
 #   hump
 #   label valida
 def detect_wire_bridges(
+    skeleton_binary: np.ndarray,
+    labels: np.ndarray,
+    junction_binary: np.ndarray | None = None,
+    enable_thick_hump_detection: bool = True,
+    enable_skeleton_hump_detection: bool = True,
+):
+    if not enable_thick_hump_detection and enable_skeleton_hump_detection:
+        return detect_legacy_wire_bridges(skeleton_binary, labels, junction_binary)
+
+    binary = np.where(skeleton_binary > 0, 1, 0).astype(np.uint8)
+    support_binary = np.where(junction_binary > 0, 1, 0).astype(np.uint8) if junction_binary is not None else None
+    support_integral = cv2.integral(support_binary, sdepth=cv2.CV_32S) if support_binary is not None else None
+    h, w = binary.shape[:2]
+    candidates = []
+
+    ys, xs = np.where(binary > 0)
+    for y, x in zip(ys, xs):
+        y = int(y)
+        x = int(x)
+        if y < BRIDGE_HUMP_Y_MAX + 1 or y >= h - BRIDGE_PROBE_DISTANCE:
+            continue
+        if x < BRIDGE_PROBE_DISTANCE or x >= w - BRIDGE_PROBE_DISTANCE:
+            continue
+
+        if enable_thick_hump_detection:
+            thick_candidate = detect_thick_hump_bridge(binary, support_binary, support_integral, labels, x, y)
+            if thick_candidate is not None:
+                candidates.append(thick_candidate)
+                continue
+
+        if not enable_skeleton_hump_detection:
+            continue
+        if not has_bridge_hump(binary, x, y):
+            continue
+        if support_binary is not None and (
+            has_filled_junction_dot(support_binary, x, y)
+            or has_filled_bridge_node(support_binary, x, y, support_integral)
+        ):
+            continue
+
+        left, right, up, down = bridge_direction_support(binary, x, y)
+        # Nei ponti a gobba il filo che "salta" e' continuo a sinistra e
+        # destra, mentre lo stelo verticale puo' essere forte solo da un
+        # lato del candidato dopo skeleton/closing. Non richiediamo quindi
+        # quattro direzioni piene come per un normale crossing.
+        if min(left, right) < BRIDGE_MIN_PIXELS_PER_DIRECTION:
+            continue
+        if max(up, down) < BRIDGE_MIN_PIXELS_PER_DIRECTION:
+            continue
+
+        source_label = nearest_split_label(labels, x, y, radius=5)
+        if source_label is None:
+            continue
+
+        candidates.append({
+            "x": int(x),
+            "y": int(y),
+            "label": int(source_label),
+            "bridge_style": "hump",
+            "bridge_detector": "skeleton_hump",
+            "hump_score": float(min(left, right) + max(up, down)),
+        })
+
+    candidates.extend(detect_micro_wire_bridges(binary, labels, junction_binary))
+
+    # Collassiamo piu' pixel dello stesso ponte in un solo candidato.
+    collapsed = collapse_bridge_candidates(candidates, binary)
+    return [
+        candidate
+        for candidate in collapsed
+        if candidate.get("bridge_style") == "micro_gap"
+        or bridge_split_branch_quality(binary, candidate) >= BRIDGE_HUMP_MIN_ANCHOR_QUALITY
+    ]
+
+
+def detect_legacy_wire_bridges(
     skeleton_binary: np.ndarray,
     labels: np.ndarray,
     junction_binary: np.ndarray | None = None,
@@ -112,10 +626,6 @@ def detect_wire_bridges(
                 continue
 
             left, right, up, down = bridge_direction_support(binary, x, y)
-            # Nei ponti a gobba il filo che "salta" e' continuo a sinistra e
-            # destra, mentre lo stelo verticale puo' essere forte solo da un
-            # lato del candidato dopo skeleton/closing. Non richiediamo quindi
-            # quattro direzioni piene come per un normale crossing.
             if min(left, right) < BRIDGE_MIN_PIXELS_PER_DIRECTION:
                 continue
             if max(up, down) < BRIDGE_MIN_PIXELS_PER_DIRECTION:
@@ -134,7 +644,6 @@ def detect_wire_bridges(
 
     candidates.extend(detect_micro_wire_bridges(binary, labels, junction_binary))
 
-    # Collassiamo piu' pixel dello stesso ponte in un solo candidato.
     collapsed = []
     for cand in candidates:
         if any(abs(cand["x"] - prev["x"]) <= 4 and abs(cand["y"] - prev["y"]) <= 4 for prev in collapsed):
@@ -277,9 +786,9 @@ def has_filled_junction_dot(junction_binary: np.ndarray | None, x: int, y: int):
 
 
 # Rileva incroci ortogonali senza pallino di giunzione.
-# Convenzione grafica: un incrocio con pallino e' un nodo reale, mentre una
-# croce sottile senza pallino rappresenta due fili che si attraversano senza
-# connessione. Lo skeleton da solo li fonderebbe in una stessa label.
+# Nota: questa euristica resta disponibile dietro flag, ma la convenzione
+# principale della pipeline e' conservativa: un incrocio plain e' un nodo,
+# mentre solo una gobba esplicita indica non-connessione.
 def detect_plain_wire_crossings(
     skeleton_binary: np.ndarray,
     labels: np.ndarray,
@@ -391,37 +900,14 @@ def has_four_way_split_support(
     rami reali attorno al crossing. Cosi' evitiamo di spezzare nodi pieni o
     T-junction che il detector grezzo puo' scambiare per incroci.
     """
-    h, w = skeleton_binary.shape[:2]
-    roi_margin = int(probe_distance) + max(int(cut_half_width), int(cut_half_height)) + 12
-    roi_x1, roi_y1, roi_x2, roi_y2 = clamp_window(
-        int(x) - roi_margin,
-        int(y) - roi_margin,
-        int(x) + roi_margin + 1,
-        int(y) + roi_margin + 1,
-        w,
-        h,
+    branch_labels = local_split_branch_labels(
+        skeleton_binary,
+        x,
+        y,
+        cut_half_width,
+        cut_half_height,
+        probe_distance,
     )
-    cut_skeleton = skeleton_binary[roi_y1:roi_y2, roi_x1:roi_x2].copy()
-    local_x = int(x) - int(roi_x1)
-    local_y = int(y) - int(roi_y1)
-
-    cut_x1, cut_y1, cut_x2, cut_y2 = clamp_window(
-        local_x - int(cut_half_width),
-        local_y - int(cut_half_height),
-        local_x + int(cut_half_width) + 1,
-        local_y + int(cut_half_height) + 1,
-        cut_skeleton.shape[1],
-        cut_skeleton.shape[0],
-    )
-    cut_skeleton[cut_y1:cut_y2, cut_x1:cut_x2] = 0
-
-    _, split_labels, _, _ = cv2.connectedComponentsWithStats(cut_skeleton, connectivity=8)
-    branch_labels = [
-        nearest_split_label(split_labels, local_x, local_y - int(probe_distance)),
-        nearest_split_label(split_labels, local_x, local_y + int(probe_distance)),
-        nearest_split_label(split_labels, local_x - int(probe_distance), local_y),
-        nearest_split_label(split_labels, local_x + int(probe_distance), local_y),
-    ]
     if any(label is None for label in branch_labels):
         return False
 
@@ -444,8 +930,15 @@ def split_bridge_labels(
     wire_extraction: dict | None = None,
 ):
     junction_binary = load_junction_support_binary(wire_extraction or {})
+    enable_thick_hump_detection = is_blue_wire_style(wire_extraction or {}, junction_binary)
     raw_bridges = filter_micro_bridge_candidates(
-        detect_wire_bridges(skeleton_binary, labels, junction_binary),
+        detect_wire_bridges(
+            skeleton_binary,
+            labels,
+            junction_binary,
+            enable_thick_hump_detection=enable_thick_hump_detection,
+            enable_skeleton_hump_detection=True,
+        ),
         label_to_terminal_ids,
         terminals,
         terminal_match_debug,
@@ -458,23 +951,25 @@ def split_bridge_labels(
         terminal_match_debug,
     )
 
-    # I ponticelli a gobba sono un segnale grafico esplicito di "non giunzione".
-    # Se una label contiene gia' un ponte, lasciamo che sia quel detector a
-    # guidare lo split ed evitiamo tagli plain aggiuntivi sulla stessa label.
-    plain_crossings = [
-        crossing
-        for crossing in detect_plain_wire_crossings(skeleton_binary, labels, junction_binary)
-        if int(crossing["label"]) in self_short_labels
-        and int(crossing["label"]) not in bridge_labels
-        and has_four_way_split_support(
-            skeleton_binary,
-            int(crossing["x"]),
-            int(crossing["y"]),
-            PLAIN_CROSSING_CUT_HALF_WIDTH,
-            PLAIN_CROSSING_CUT_HALF_HEIGHT,
-            PLAIN_CROSSING_PROBE_DISTANCE,
-        )
-    ]
+    # Nello stile blu/circuitstoday-like un incrocio semplice e' un nodo:
+    # separiamo solo una gobba esplicita. Sugli altri stili manteniamo il
+    # comportamento storico per non muovere immagini gia' validate.
+    plain_crossings = []
+    if PLAIN_CROSSING_SPLIT_ENABLE and not enable_thick_hump_detection:
+        plain_crossings = [
+            crossing
+            for crossing in detect_plain_wire_crossings(skeleton_binary, labels, junction_binary)
+            if int(crossing["label"]) in self_short_labels
+            and int(crossing["label"]) not in bridge_labels
+            and has_four_way_split_support(
+                skeleton_binary,
+                int(crossing["x"]),
+                int(crossing["y"]),
+                PLAIN_CROSSING_CUT_HALF_WIDTH,
+                PLAIN_CROSSING_CUT_HALF_HEIGHT,
+                PLAIN_CROSSING_PROBE_DISTANCE,
+            )
+        ]
 
     split_points = []
     for bridge in bridges:
