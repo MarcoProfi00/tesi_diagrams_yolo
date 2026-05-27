@@ -17,6 +17,13 @@ from .config import (
 from .geometry import label_bbox
 from .ids import normalize_class_name
 
+
+FACING_VERTICAL_LABEL_MAX_TERMINALS = 2
+FACING_VERTICAL_LABEL_MAX_GAP = 44.0
+FACING_VERTICAL_LABEL_MAX_OVERLAP = 24.0
+FACING_VERTICAL_LABEL_X_TOL = 12.0
+FACING_VERTICAL_LABEL_MIN_SUPPORT = 0.45
+
 # Unisce piccoli stub orizzontali vicini a una label principale per diodi e led
 def merge_near_horizontal_stub_labels(
     label_to_terminal_ids: dict,
@@ -268,6 +275,85 @@ def merge_near_vertical_stub_labels(
 
         union(source_label, int(best["target_label"]))
 
+    vertical_terminal_labels = []
+    for source_label, terminal_ids in label_to_terminal_ids.items():
+        source_label = int(source_label)
+        unique_ids = sorted(set(terminal_ids))
+        if len(unique_ids) == 0 or len(unique_ids) > FACING_VERTICAL_LABEL_MAX_TERMINALS:
+            continue
+
+        terms = [terminal_by_id.get(terminal_id) for terminal_id in unique_ids]
+        if any(term is None for term in terms):
+            continue
+
+        relative_positions = {
+            str(term.get("relative_position") or "").strip().lower()
+            for term in terms
+        }
+        if not relative_positions or not relative_positions <= {"top", "bottom"}:
+            continue
+
+        source_box = boxes.get(source_label)
+        if source_box is None:
+            continue
+
+        center_x = float(sum(float(term.get("x", 0.0)) for term in terms)) / float(len(terms))
+        vertical_terminal_labels.append({
+            "label": source_label,
+            "terminal_ids": unique_ids,
+            "terms": terms,
+            "box": source_box,
+            "center_x": center_x,
+        })
+
+    for idx, source_info in enumerate(vertical_terminal_labels):
+        source_label = int(source_info["label"])
+        sx1, sy1, sx2, sy2 = source_info["box"]
+
+        for target_info in vertical_terminal_labels[idx + 1:]:
+            target_label = int(target_info["label"])
+            if find(source_label) == find(target_label):
+                continue
+
+            tx1, ty1, tx2, ty2 = target_info["box"]
+            center_dx = abs(float(source_info["center_x"]) - float(target_info["center_x"]))
+            if center_dx > float(FACING_VERTICAL_LABEL_X_TOL):
+                continue
+
+            x_box_gap = max(0.0, max(float(sx1), float(tx1)) - min(float(sx2), float(tx2)))
+            if x_box_gap > float(FACING_VERTICAL_LABEL_X_TOL):
+                continue
+
+            down_gap = float(ty1) - float(sy2)
+            up_gap = float(sy1) - float(ty2)
+            if down_gap >= -float(FACING_VERTICAL_LABEL_MAX_OVERLAP):
+                side = "down"
+                gap = down_gap
+            elif up_gap >= -float(FACING_VERTICAL_LABEL_MAX_OVERLAP):
+                side = "up"
+                gap = up_gap
+            else:
+                continue
+
+            if gap > float(FACING_VERTICAL_LABEL_MAX_GAP):
+                continue
+
+            nearest = _find_vertical_edge_pair(labels, source_label, target_label, side)
+            if nearest is None:
+                continue
+
+            support_ratio = 0.0
+            if filtered_binary is not None:
+                support_ratio = _line_support_ratio(
+                    filtered_binary,
+                    nearest["source_point"],
+                    nearest["target_point"],
+                )
+            if support_ratio < float(FACING_VERTICAL_LABEL_MIN_SUPPORT):
+                continue
+
+            union(source_label, target_label)
+
     merged = {}
     for label, terminal_ids in label_to_terminal_ids.items():
         root = find(int(label))
@@ -335,3 +421,42 @@ def _line_support_ratio(
         if 0 <= yy < binary.shape[0] and 0 <= xx < binary.shape[1] and binary[yy, xx] > 0:
             hits += 1
     return float(hits) / float(max(steps, 1))
+
+
+def _find_vertical_edge_pair(
+    labels: np.ndarray,
+    source_label: int,
+    target_label: int,
+    side: str,
+):
+    source_ys, source_xs = np.where(labels == int(source_label))
+    target_ys, target_xs = np.where(labels == int(target_label))
+    if len(source_xs) == 0 or len(target_xs) == 0:
+        return None
+
+    if side == "down":
+        source_edge_mask = source_ys == source_ys.max()
+        target_edge_mask = target_ys == target_ys.min()
+    else:
+        source_edge_mask = source_ys == source_ys.min()
+        target_edge_mask = target_ys == target_ys.max()
+
+    source_edge = np.column_stack((source_xs[source_edge_mask], source_ys[source_edge_mask]))
+    target_edge = np.column_stack((target_xs[target_edge_mask], target_ys[target_edge_mask]))
+    if len(source_edge) == 0 or len(target_edge) == 0:
+        return None
+
+    best = None
+    for sx, sy in source_edge:
+        x_deltas = np.abs(target_edge[:, 0] - sx)
+        best_idx = int(np.argmin(x_deltas))
+        tx, ty = target_edge[best_idx]
+        distance = float(np.hypot(float(tx - sx), float(ty - sy)))
+        if best is None or distance < best["distance"]:
+            best = {
+                "distance": distance,
+                "source_point": [int(sx), int(sy)],
+                "target_point": [int(tx), int(ty)],
+            }
+
+    return best

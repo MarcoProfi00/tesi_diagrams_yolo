@@ -1621,6 +1621,112 @@ def _estimate_seven_segment_shape_evidence(image_bgr, body_bbox: List[int]) -> D
     }
 
 
+def _strong_seven_segment_shape_only_evidence(
+    component: Dict,
+    body_bbox: List[int],
+    shape_evidence: Dict,
+) -> bool:
+    """
+    Accetta alcuni display 7 segmenti anche senza OCR delle label a-g.
+
+    La regola resta prudente: richiede una forma molto slanciata e una
+    struttura interna chiaramente compatibile con segmenti spessi.
+    """
+    if not shape_evidence.get("has_segment_shape", False):
+        return False
+
+    try:
+        x1, y1, x2, y2 = [float(v) for v in body_bbox]
+    except Exception:
+        return False
+
+    width = max(1.0, x2 - x1)
+    height = max(1.0, y2 - y1)
+    aspect_hw = height / width
+    dark_ratio = float(shape_evidence.get("dark_ratio") or 0.0)
+    largest_area_ratio = float(shape_evidence.get("largest_area_ratio") or 0.0)
+    large_component_count = int(shape_evidence.get("large_component_count") or 0)
+    elongated_component_count = int(shape_evidence.get("elongated_component_count") or 0)
+
+    return (
+        aspect_hw >= 2.5
+        and dark_ratio >= 0.08
+        and largest_area_ratio >= 0.025
+        and large_component_count >= 4
+        and elongated_component_count >= 2
+    )
+
+
+def _display_frame_bbox_from_component_bbox(component: Dict, image_shape) -> Optional[List[int]]:
+    """
+    Per i display 7 segmenti il body spesso coincide molto di piu' con il bbox
+    del componente che con il body_bbox raffinato per gli IC classici.
+    """
+    bbox = component.get("bbox")
+    if not bbox or len(bbox) != 4:
+        return None
+
+    try:
+        x1, y1, x2, y2 = [float(v) for v in bbox]
+    except Exception:
+        return None
+
+    width = max(1.0, x2 - x1)
+    height = max(1.0, y2 - y1)
+    left_inset = max(8.0, width * 0.12)
+    right_inset = max(6.0, width * 0.05)
+    vertical_inset = max(10.0, height * 0.04)
+    frame_bbox = [
+        x1 + left_inset,
+        y1 + vertical_inset,
+        x2 - right_inset,
+        y2 - vertical_inset,
+    ]
+    return _clamp_bbox(frame_bbox, image_shape)
+
+
+def _maybe_upgrade_seven_segment_body_bbox(
+    component: Dict,
+    body_bbox: List[int],
+    image_shape,
+) -> Tuple[List[int], Optional[Dict]]:
+    """
+    Se il body_bbox raffinato e' troppo stretto per un display, torna a un
+    frame piu' esterno derivato dal bbox del componente.
+    """
+    frame_bbox = _display_frame_bbox_from_component_bbox(component, image_shape)
+    if frame_bbox is None:
+        return body_bbox, None
+
+    try:
+        bw = max(1.0, float(body_bbox[2]) - float(body_bbox[0]))
+        bh = max(1.0, float(body_bbox[3]) - float(body_bbox[1]))
+        fw = max(1.0, float(frame_bbox[2]) - float(frame_bbox[0]))
+        fh = max(1.0, float(frame_bbox[3]) - float(frame_bbox[1]))
+    except Exception:
+        return body_bbox, None
+
+    width_ratio = bw / fw
+    height_ratio = bh / fh
+    if width_ratio >= 0.65 and height_ratio >= 0.75:
+        return body_bbox, {
+            "used_component_frame_bbox": False,
+            "reason": "existing_body_bbox_already_large_enough",
+            "width_ratio_vs_frame": round(float(width_ratio), 3),
+            "height_ratio_vs_frame": round(float(height_ratio), 3),
+            "frame_bbox": frame_bbox,
+        }
+
+    return frame_bbox, {
+        "used_component_frame_bbox": True,
+        "reason": "body_bbox_too_narrow_for_seven_segment_display",
+        "width_ratio_vs_frame": round(float(width_ratio), 3),
+        "height_ratio_vs_frame": round(float(height_ratio), 3),
+        "previous_body_bbox": [int(v) for v in body_bbox],
+        "frame_bbox": frame_bbox,
+    }
+
+
 def _detect_seven_segment_display(component: Dict, image_bgr, body_bbox: List[int], region_debug: List[Dict]) -> Optional[Dict]:
     """
     Classifica un Integrated_Circuit senza part number come display a 7 segmenti.
@@ -1650,8 +1756,13 @@ def _detect_seven_segment_display(component: Dict, image_bgr, body_bbox: List[in
     label_score = len(segment_labels) + (2 if com_labels else 0)
     has_label_evidence = label_score >= 4
     has_mixed_evidence = label_score >= 3 and shape_evidence.get("has_segment_shape", False)
+    has_strong_shape_only_evidence = _strong_seven_segment_shape_only_evidence(
+        component,
+        body_bbox,
+        shape_evidence,
+    )
 
-    if not has_label_evidence and not has_mixed_evidence:
+    if not has_label_evidence and not has_mixed_evidence and not has_strong_shape_only_evidence:
         return None
 
     reference_designator = None
@@ -1670,6 +1781,7 @@ def _detect_seven_segment_display(component: Dict, image_bgr, body_bbox: List[in
             "segment_labels_detected": sorted(segment_labels),
             "has_com_label": bool(com_labels),
             "label_score": label_score,
+            "accepted_via_shape_only": bool(has_strong_shape_only_evidence and not has_label_evidence and not has_mixed_evidence),
             "reference_designator_candidates": reference_designators[:5],
             "shape_evidence": shape_evidence,
         },
@@ -1974,14 +2086,21 @@ def enrich_ic_marking_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
             component["component_subtype"] = subtype_info["component_subtype"]
             component["display_type"] = subtype_info["display_type"]
             component["reference_designator_ocr"] = subtype_info["reference_designator_ocr"]
+            upgraded_body_bbox, body_upgrade_debug = _maybe_upgrade_seven_segment_body_bbox(
+                component,
+                body_bbox,
+                image_bgr.shape,
+            )
+            component["body_bbox"] = upgraded_body_bbox
 
         component["ic_ocr_debug"] = {
             "enabled": True,
             "ocr_mode": ocr_mode,
-            "body_bbox": body_bbox,
+            "body_bbox": component.get("body_bbox") or body_bbox,
             "selected": None,
             "candidate_count": 0,
             "subtype_detection": subtype_info["debug"] if subtype_info else None,
+            "seven_segment_body_bbox_adjustment": body_upgrade_debug if subtype_info else None,
             "regions": region_debug,
         }
         return component
@@ -2015,6 +2134,14 @@ def enrich_ic_marking_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
         component["component_subtype"] = subtype_info["component_subtype"]
         component["display_type"] = subtype_info["display_type"]
         component["reference_designator_ocr"] = subtype_info["reference_designator_ocr"]
+        upgraded_body_bbox, body_upgrade_debug = _maybe_upgrade_seven_segment_body_bbox(
+            component,
+            body_bbox,
+            image_bgr.shape,
+        )
+        component["body_bbox"] = upgraded_body_bbox
+    else:
+        body_upgrade_debug = None
 
     ranked_candidates = _candidates_with_consensus(all_candidates, meta)
 
@@ -2026,6 +2153,7 @@ def enrich_ic_marking_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
         "marking_normalization": marking_normalization,
         "candidate_count": len(all_candidates),
         "subtype_detection": subtype_info["debug"] if subtype_info else None,
+        "seven_segment_body_bbox_adjustment": body_upgrade_debug,
         "candidates": ranked_candidates[:10],
         "regions": region_debug,
     }

@@ -47,7 +47,12 @@ from build_terminal_graph.processor import build_terminal_graph_for_image
 # PERCORSI / INPUT-OUTPUT
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline1.0/batchB")
+PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline1.0/batchC/batchC1")
+PIPELINE_IMAGE_IDS = [
+    image_id.strip()
+    for image_id in os.environ.get("PIPELINE_IMAGE_IDS", "").split(",")
+    if image_id.strip()
+]
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "04_extract_wires"
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "05_build_terminal_graph"
@@ -71,12 +76,19 @@ def main() -> None:
         DEBUG_SKELETON_OVERLAY_DIR.mkdir(parents=True, exist_ok=True)
 
     json_files = sorted(INPUT_DIR.glob("*.json"))
+    if PIPELINE_IMAGE_IDS:
+        wanted = set(PIPELINE_IMAGE_IDS)
+        json_files = [json_path for json_path in json_files if json_path.stem in wanted]
     if not json_files:
         raise FileNotFoundError(f"Nessun file JSON trovato in: {INPUT_DIR}")
 
     print(f"Input directory : {INPUT_DIR}")
     print(f"Output directory: {OUTPUT_DIR}")
-    print(f"File trovati    : {len(json_files)}\n")
+    print(f"File trovati    : {len(json_files)}")
+    if PIPELINE_IMAGE_IDS:
+        print(f"\nFiltro immagini : {PIPELINE_IMAGE_IDS}\n")
+    else:
+        print()
 
     for i, json_path in enumerate(json_files, start=1):
         with open(json_path, "r", encoding="utf-8") as f:

@@ -74,7 +74,7 @@ def resolve_terminal_point_mode(meta: dict):
         return "two_terminal_side_peak"
     
 
-    if class_name in {"LED", "Diode"}:
+    if class_name in {"LED", "Diode", "Push_Button"}:
         return "two_terminal_side_peak"
 
     return "bbox_side_center"
@@ -89,7 +89,7 @@ def _resolve_two_terminal_orientation(strategy: str, class_name: str, image_bina
             default_orientation=default_orientation,
         )
 
-    if strategy == "two_terminal_switch" or class_name == "Switch":
+    if strategy == "two_terminal_switch" or class_name in {"Switch", "Push_Button"}:
         return strategy_detect_two_terminal_orientation_switch(
             image_binary,
             bbox,
@@ -223,7 +223,7 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
             if terminals_def is not None:
                 return terminals_def, orientation, None, side_scores
 
-        if class_name == "Switch":
+        if class_name in {"Switch", "Push_Button"}:
             terminals_def, orientation, side_scores = detect_switch_terminals(
                 image_binary,
                 bbox,

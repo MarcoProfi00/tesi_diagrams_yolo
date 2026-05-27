@@ -453,7 +453,10 @@ def detect_two_terminal_orientation_resistor(binary, bbox, default_orientation="
     height = max(y2 - y1, 1)
     ratio_hw = height / width
     ratio_wh = width / height
-    elongated_ratio = 1.12
+    # I resistori piccoli vicino ad altri simboli o testo possono avere bbox
+    # leggermente piu' alti/largi del simbolo reale. In quei casi il bbox da
+    # solo e' troppo aggressivo: usiamolo solo quando l'allungamento e' netto.
+    elongated_ratio = 1.22
 
     if ratio_hw >= elongated_ratio:
         return "vertical", {
@@ -839,6 +842,11 @@ def _score_two_terminal_candidate_by_points(binary, bbox, orientation):
 
 # Stimare l’orientazione di un LED con una strategia dedicata.
 def detect_two_terminal_orientation_led(binary, bbox, default_orientation="vertical"):
+    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    width = max(x2 - x1, 1e-6)
+    height = max(y2 - y1, 1e-6)
+    ratio_wh = width / height
+    ratio_hw = height / width
 
     # -------------------------------------------------
     # 1) Validazione diretta tramite terminali candidati
@@ -852,9 +860,35 @@ def detect_two_terminal_orientation_led(binary, bbox, default_orientation="verti
 
     LED_POINT_VALIDATION_MARGIN = 1.15
     LED_POINT_MIN_SIDE_SCORE = 2
+    LED_TALL_BBOX_RATIO_MIN = 1.28
+    LED_TALL_BBOX_VERTICAL_MIN_SIDE_SCORE = 12
+    LED_TALL_BBOX_VERTICAL_TOTAL_RATIO = 0.65
+    LED_TALL_BBOX_HORIZONTAL_OVERRIDE_RATIO = 1.75
+
+    horizontal_pair = min(horizontal_side_scores["left"], horizontal_side_scores["right"])
+    vertical_pair = min(vertical_side_scores["top"], vertical_side_scores["bottom"])
 
     if (
-        min(horizontal_side_scores["left"], horizontal_side_scores["right"]) >= LED_POINT_MIN_SIDE_SCORE
+        ratio_hw >= LED_TALL_BBOX_RATIO_MIN
+        and vertical_pair >= LED_TALL_BBOX_VERTICAL_MIN_SIDE_SCORE
+        and vertical_total >= horizontal_total * LED_TALL_BBOX_VERTICAL_TOTAL_RATIO
+        and horizontal_total < vertical_total * LED_TALL_BBOX_HORIZONTAL_OVERRIDE_RATIO
+    ):
+        return "vertical", {
+            "decision_mode": "led_tall_bbox_vertical_bias",
+            "horizontal_total": horizontal_total,
+            "vertical_total": vertical_total,
+            "horizontal_side_scores": horizontal_side_scores,
+            "vertical_side_scores": vertical_side_scores,
+            "horizontal_point_debug": horizontal_point_debug,
+            "vertical_point_debug": vertical_point_debug,
+            "bbox_width": round(width, 2),
+            "bbox_height": round(height, 2),
+            "bbox_ratio_hw": round(ratio_hw, 4),
+        }
+
+    if (
+        horizontal_pair >= LED_POINT_MIN_SIDE_SCORE
         and horizontal_total > vertical_total * LED_POINT_VALIDATION_MARGIN
     ):
         return "horizontal", {
@@ -868,7 +902,7 @@ def detect_two_terminal_orientation_led(binary, bbox, default_orientation="verti
         }
 
     if (
-        min(vertical_side_scores["top"], vertical_side_scores["bottom"]) >= LED_POINT_MIN_SIDE_SCORE
+        vertical_pair >= LED_POINT_MIN_SIDE_SCORE
         and vertical_total > horizontal_total * LED_POINT_VALIDATION_MARGIN
     ):
         return "vertical", {
@@ -925,26 +959,20 @@ def detect_two_terminal_orientation_led(binary, bbox, default_orientation="verti
     # -------------------------------------------------
     # 3) Fallback bbox invertito specifico LED
     # -------------------------------------------------
-    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
-    width = max(x2 - x1, 1e-6)
-    height = max(y2 - y1, 1e-6)
-
-    ratio_wh = width / height
-    ratio_hw = height / width
     LED_BBOX_RATIO_MARGIN = 1.08
 
     combined_scores["bbox_width"] = round(width, 2)
     combined_scores["bbox_height"] = round(height, 2)
 
     if ratio_wh >= LED_BBOX_RATIO_MARGIN:
-        combined_scores["decision_mode"] = "led_reversed_bbox_vertical"
+        combined_scores["decision_mode"] = "led_bbox_horizontal"
         combined_scores["bbox_ratio_wh"] = round(ratio_wh, 4)
-        return "vertical", combined_scores
+        return "horizontal", combined_scores
 
     if ratio_hw >= LED_BBOX_RATIO_MARGIN:
-        combined_scores["decision_mode"] = "led_reversed_bbox_horizontal"
+        combined_scores["decision_mode"] = "led_bbox_vertical"
         combined_scores["bbox_ratio_hw"] = round(ratio_hw, 4)
-        return "horizontal", combined_scores
+        return "vertical", combined_scores
 
     # -------------------------------------------------
     # 4) Ultimo fallback

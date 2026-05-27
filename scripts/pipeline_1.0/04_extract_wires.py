@@ -25,7 +25,12 @@ from skimage.morphology import skeletonize
 # PERCORSI / INPUT-OUTPUT
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline1.0/batchB")
+PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline1.0/batchC/batchC1")
+PIPELINE_IMAGE_IDS = [
+    image_id.strip()
+    for image_id in os.environ.get("PIPELINE_IMAGE_IDS", "").split(",")
+    if image_id.strip()
+]
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "03_estimate_terminals"
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "04_extract_wires"
@@ -61,6 +66,12 @@ TERMINAL_KEEP_RADIUS = 10
 TERMINAL_KEEP_LINE_THICKNESS = 7
 TERMINAL_KEEP_INWARD_LEN = 14
 TERMINAL_KEEP_OUTWARD_LEN = 12
+FACING_KEEP_MAX_AXIS_GAP = 52
+FACING_KEEP_MAX_LATERAL_DELTA = 14
+FACING_KEEP_MAX_BBOX_GAP = 28
+FACING_KEEP_MAX_BBOX_OVERLAP = 36
+FACING_KEEP_MIN_PROJECTION_OVERLAP_RATIO = 0.45
+FACING_KEEP_MIN_THICKNESS = 4
 OPAMP_AUX_KEEP_RADIUS = 5
 OPAMP_AUX_KEEP_LINE_THICKNESS = 5
 OPAMP_AUX_KEEP_INWARD_LEN = 0
@@ -276,6 +287,97 @@ def terminal_keep_segment(term):
     return p1, p2
 
 
+def _bbox_projection_overlap_ratio(a0, a1, b0, b1):
+    inter = max(0.0, min(float(a1), float(b1)) - max(float(a0), float(b0)))
+    len_a = max(1.0, float(a1) - float(a0))
+    len_b = max(1.0, float(b1) - float(b0))
+    return inter / max(1.0, min(len_a, len_b))
+
+
+def _component_bbox_by_instance(components):
+    mapping = {}
+    for comp in components:
+        instance_id = comp.get("instance_id")
+        if instance_id is None:
+            continue
+        mapping[str(instance_id)] = component_mask_bbox(comp)
+    return mapping
+
+
+def _facing_terminal_keep_pairs(terminals, components):
+    component_boxes = _component_bbox_by_instance(components)
+    pairs = []
+
+    for idx, term_a in enumerate(terminals):
+        side_a = str(term_a.get("relative_position") or "").lower()
+        inst_a = str(term_a.get("instance_id") or "")
+        bbox_a = component_boxes.get(inst_a)
+        if bbox_a is None:
+            continue
+
+        for term_b in terminals[idx + 1:]:
+            side_b = str(term_b.get("relative_position") or "").lower()
+            inst_b = str(term_b.get("instance_id") or "")
+            if not inst_b or inst_a == inst_b:
+                continue
+            bbox_b = component_boxes.get(inst_b)
+            if bbox_b is None:
+                continue
+
+            x_a = float(term_a["x"])
+            y_a = float(term_a["y"])
+            x_b = float(term_b["x"])
+            y_b = float(term_b["y"])
+
+            if {side_a, side_b} == {"top", "bottom"}:
+                lateral_delta = abs(x_a - x_b)
+                axis_gap = abs(y_a - y_b)
+                bbox_gap = min(
+                    abs(float(bbox_a[1]) - float(bbox_b[3])),
+                    abs(float(bbox_b[1]) - float(bbox_a[3])),
+                )
+                bbox_overlap = max(
+                    0.0,
+                    min(float(bbox_a[3]), float(bbox_b[3])) - max(float(bbox_a[1]), float(bbox_b[1])),
+                )
+                projection_overlap = _bbox_projection_overlap_ratio(
+                    float(bbox_a[0]), float(bbox_a[2]),
+                    float(bbox_b[0]), float(bbox_b[2]),
+                )
+            elif {side_a, side_b} == {"left", "right"}:
+                lateral_delta = abs(y_a - y_b)
+                axis_gap = abs(x_a - x_b)
+                bbox_gap = min(
+                    abs(float(bbox_a[0]) - float(bbox_b[2])),
+                    abs(float(bbox_b[0]) - float(bbox_a[2])),
+                )
+                bbox_overlap = max(
+                    0.0,
+                    min(float(bbox_a[2]), float(bbox_b[2])) - max(float(bbox_a[0]), float(bbox_b[0])),
+                )
+                projection_overlap = _bbox_projection_overlap_ratio(
+                    float(bbox_a[1]), float(bbox_a[3]),
+                    float(bbox_b[1]), float(bbox_b[3]),
+                )
+            else:
+                continue
+
+            if lateral_delta > FACING_KEEP_MAX_LATERAL_DELTA:
+                continue
+            if axis_gap > FACING_KEEP_MAX_AXIS_GAP:
+                continue
+            if projection_overlap < FACING_KEEP_MIN_PROJECTION_OVERLAP_RATIO:
+                continue
+            if bbox_gap > FACING_KEEP_MAX_BBOX_GAP and bbox_overlap <= 0.0:
+                continue
+            if bbox_overlap > FACING_KEEP_MAX_BBOX_OVERLAP:
+                continue
+
+            pairs.append((term_a, term_b))
+
+    return pairs
+
+
 # Carve terminal keep zones.
 def carve_terminal_keep_zones(mask, terminals, components):
     h, w = mask.shape[:2]
@@ -307,6 +409,28 @@ def carve_terminal_keep_zones(mask, terminals, components):
 
         cv2.line(mask, p1, p2, 0, thickness=params["thickness"])
         cv2.line(keep_debug, p1, p2, 255, thickness=params["thickness"])
+
+    for term_a, term_b in _facing_terminal_keep_pairs(terminals, components):
+        x1, y1 = clamp_point(term_a["x"], term_a["y"], w, h)
+        x2, y2 = clamp_point(term_b["x"], term_b["y"], w, h)
+
+        params_a = adapt_terminal_keep_for_component(
+            term_a,
+            terminal_keep_params(term_a),
+            components_by_instance,
+        )
+        params_b = adapt_terminal_keep_for_component(
+            term_b,
+            terminal_keep_params(term_b),
+            components_by_instance,
+        )
+        thickness = max(
+            FACING_KEEP_MIN_THICKNESS,
+            min(int(params_a["thickness"]), int(params_b["thickness"])),
+        )
+
+        cv2.line(mask, (x1, y1), (x2, y2), 0, thickness=thickness)
+        cv2.line(keep_debug, (x1, y1), (x2, y2), 255, thickness=thickness)
 
     return mask, keep_debug
 
@@ -492,6 +616,11 @@ def extract_wires_from_image(image_bgr, components, terminals):
         "terminal_keep_line_thickness": TERMINAL_KEEP_LINE_THICKNESS,
         "terminal_keep_inward_len": TERMINAL_KEEP_INWARD_LEN,
         "terminal_keep_outward_len": TERMINAL_KEEP_OUTWARD_LEN,
+        "facing_keep_max_axis_gap": FACING_KEEP_MAX_AXIS_GAP,
+        "facing_keep_max_lateral_delta": FACING_KEEP_MAX_LATERAL_DELTA,
+        "facing_keep_max_bbox_gap": FACING_KEEP_MAX_BBOX_GAP,
+        "facing_keep_max_bbox_overlap": FACING_KEEP_MAX_BBOX_OVERLAP,
+        "facing_keep_min_projection_overlap_ratio": FACING_KEEP_MIN_PROJECTION_OVERLAP_RATIO,
         "notes": "Ogni terminale preserva un cerchio locale e una piccola capsula direzionata lungo il lato stimato, per tollerare terminali non perfettamente sul cavo.",
     }
 
@@ -527,13 +656,20 @@ def main() -> None:
     SKELETON_DIR.mkdir(parents=True, exist_ok=True)
 
     json_files = sorted(INPUT_DIR.glob("*.json"))
+    if PIPELINE_IMAGE_IDS:
+        wanted = set(PIPELINE_IMAGE_IDS)
+        json_files = [json_path for json_path in json_files if json_path.stem in wanted]
 
     if not json_files:
         raise FileNotFoundError(f"Nessun file JSON trovato in: {INPUT_DIR}")
 
     print(f"Input directory : {INPUT_DIR}")
     print(f"Output directory: {OUTPUT_DIR}")
-    print(f"File trovati    : {len(json_files)}\n")
+    print(f"File trovati    : {len(json_files)}")
+    if PIPELINE_IMAGE_IDS:
+        print(f"\nFiltro immagini : {PIPELINE_IMAGE_IDS}\n")
+    else:
+        print()
 
     for i, json_path in enumerate(json_files, start=1):
         with open(json_path, "r", encoding="utf-8") as f:

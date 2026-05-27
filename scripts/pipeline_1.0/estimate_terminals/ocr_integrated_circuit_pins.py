@@ -386,7 +386,7 @@ def _prepare_side_band(crop_bgr, cfg: Dict) -> Tuple[np.ndarray, float]:
 # OCR NUMERICO E FALLBACK SU COMPONENTI CONNESSI
 # =========================================================
 
-def _extract_digit_components(image_bgr, band_bbox: List[int]) -> List[Dict]:
+def _extract_digit_components(image_bgr, band_bbox: List[int], cfg: Dict) -> List[Dict]:
     """
     Estrae piccoli componenti connessi candidati a cifre vicino al body.
     """
@@ -397,7 +397,8 @@ def _extract_digit_components(image_bgr, band_bbox: List[int]) -> List[Dict]:
     gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY)
     gray = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(4, 4)).apply(gray)
     _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    inv = 255 - binary
+    cleaned = _remove_long_lines(binary, cfg)
+    inv = 255 - cleaned
     count, labels, stats, centroids = cv2.connectedComponentsWithStats(inv, 8)
 
     x0, y0, _, _ = band_bbox
@@ -896,7 +897,7 @@ def _component_number_words(image_bgr, side_run: Dict, cfg: Dict, target_lanes: 
     Produce parole numeriche candidate a partire dai componenti connessi della
     banda laterale.
     """
-    components = _extract_digit_components(image_bgr, side_run["band_bbox"])
+    components = _extract_digit_components(image_bgr, side_run["band_bbox"], cfg)
     lanes = target_lanes if target_lanes is not None else side_run["lanes"]
     candidates = []
     for candidate in _group_digit_components(components):
@@ -1031,14 +1032,21 @@ def _run_tesseract_words(
 
 def _word_edge_distance(word: Dict, side: str, body_bbox: List[float]) -> float:
     bx1, by1, bx2, by2 = [float(v) for v in body_bbox]
-    cx, cy = word["center"]
+    bbox = word.get("bbox") or []
+    if len(bbox) == 4:
+        wx1, wy1, wx2, wy2 = [float(v) for v in bbox]
+    else:
+        cx, cy = word["center"]
+        wx1 = wx2 = float(cx)
+        wy1 = wy2 = float(cy)
+
     if side == "left":
-        return abs(cx - bx1)
+        return abs(wx2 - bx1)
     if side == "right":
-        return abs(cx - bx2)
+        return abs(wx1 - bx2)
     if side == "top":
-        return abs(cy - by1)
-    return abs(cy - by2)
+        return abs(wy2 - by1)
+    return abs(wy1 - by2)
 
 
 def _closest_body_side(word: Dict, body_bbox: List[float]) -> str:
@@ -1705,6 +1713,37 @@ def _should_replace_with_component_candidate(term: Dict, candidate: Dict, side: 
         and candidate_edge_distance <= 24.0
     )
 
+    current_text_clean = current_text.strip()
+    candidate_text = str(candidate.get("text") or "").strip()
+    edge_attached_component_override = False
+    if (
+        side in {"left", "right"}
+        and current_mode in {"text", "number"}
+        and len(current_text_clean) >= 2
+        and len(candidate_text) == len(current_text_clean)
+        and candidate_conf >= 0.70
+    ):
+        overlap = _bbox_overlap_ratio(current_bbox, candidate["bbox"])
+        current_edge_distance = float(current_best.get("edge_distance") or 999.0)
+        if current_edge_distance >= 999.0:
+            current_edge_distance = _word_edge_distance(
+                {
+                    "bbox": current_bbox,
+                    "center": [
+                        (float(current_bbox[0]) + float(current_bbox[2])) * 0.5,
+                        (float(current_bbox[1]) + float(current_bbox[3])) * 0.5,
+                    ],
+                },
+                side,
+                body_bbox,
+            ) if (body_bbox := debug_payload.get("body_bbox")) else 999.0
+        edge_attached_component_override = (
+            overlap >= 0.90
+            and candidate_axis_distance <= 26.0
+            and candidate_edge_distance <= 16.0
+            and current_edge_distance <= 10.0
+        )
+
     return (
         (
             current_conf < 0.40
@@ -1713,6 +1752,7 @@ def _should_replace_with_component_candidate(term: Dict, candidate: Dict, side: 
             and strong_local_component
         )
         or contained_component
+        or edge_attached_component_override
     )
 
 
@@ -2057,6 +2097,13 @@ def _is_4026_family_marking(marking: str) -> bool:
     return re.search(r"(^|[^0-9])(?:CD)?4026(?:B|BE|BP|UB)?([^0-9]|$)", normalized) is not None
 
 
+def _is_4017_family_marking(marking: str) -> bool:
+    normalized = re.sub(r"\s+", "", str(marking or "").upper())
+    if not normalized:
+        return False
+    return re.search(r"(^|[^0-9])(?:CD)?4017(?:B|BE|BP|UB)?([^0-9]|$)", normalized) is not None
+
+
 def _repair_555_timer_pin_numbers(component: Dict) -> None:
     """Stabilizza la numerazione degli 8-pin 555 quando l'OCR scambia angoli."""
     marking = str(component.get("ic_marking") or "").upper()
@@ -2067,6 +2114,41 @@ def _repair_555_timer_pin_numbers(component: Dict) -> None:
     if len(terminals) != 8:
         return
 
+    def _term_number_evidence(term: Dict) -> List[Tuple[str, float]]:
+        evidences: List[Tuple[str, float]] = []
+
+        def _push(text, conf):
+            text = str(text or "").strip()
+            if not text:
+                return
+            conf = float(conf or 0.0)
+            for idx, (seen_text, seen_conf) in enumerate(evidences):
+                if seen_text == text:
+                    if conf > seen_conf:
+                        evidences[idx] = (text, conf)
+                    return
+            evidences.append((text, conf))
+
+        _push(term.get("pin_number"), term.get("pin_number_confidence"))
+        debug_payload = term.get("pin_ocr_debug") or {}
+        best_number = debug_payload.get("best_number") or {}
+        component_fallback = debug_payload.get("component_number_fallback") or {}
+        _push(best_number.get("text"), best_number.get("confidence"))
+        _push(component_fallback.get("text"), component_fallback.get("confidence"))
+        return evidences
+
+    def _score_expected_mapping(expected_map: Dict[str, str]) -> float:
+        score = 0.0
+        for term in terminals:
+            terminal_id = str(term.get("terminal_id") or "")
+            target = str(expected_map.get(terminal_id) or "")
+            if not target:
+                continue
+            for text, conf in _term_number_evidence(term):
+                if text == target:
+                    score += max(0.20, conf)
+        return score
+
     by_side = {
         side: [
             term for term in sorted(terminals, key=_terminal_sort_key)
@@ -2074,14 +2156,17 @@ def _repair_555_timer_pin_numbers(component: Dict) -> None:
         ]
         for side in ("left", "right", "top", "bottom")
     }
+    body_bbox = component.get("body_bbox") or [0.0, 0.0, 0.0, 0.0]
+    body_width = max(1.0, float(body_bbox[2]) - float(body_bbox[0]))
     expected = None
     if (
         len(by_side["left"]) == 3
         and len(by_side["right"]) == 1
         and len(by_side["top"]) == 2
         and len(by_side["bottom"]) == 2
+        and abs(float(by_side["bottom"][1].get("x") or 0.0) - float(by_side["bottom"][0].get("x") or 0.0)) > max(14.0, body_width * 0.18)
     ):
-        expected = {
+        layout_a = {
             by_side["left"][0].get("terminal_id"): "6",
             by_side["left"][1].get("terminal_id"): "2",
             by_side["left"][2].get("terminal_id"): "7",
@@ -2091,6 +2176,17 @@ def _repair_555_timer_pin_numbers(component: Dict) -> None:
             by_side["bottom"][0].get("terminal_id"): "1",
             by_side["bottom"][1].get("terminal_id"): "5",
         }
+        layout_b = {
+            by_side["left"][0].get("terminal_id"): "7",
+            by_side["left"][1].get("terminal_id"): "6",
+            by_side["left"][2].get("terminal_id"): "2",
+            by_side["right"][0].get("terminal_id"): "3",
+            by_side["top"][0].get("terminal_id"): "4",
+            by_side["top"][1].get("terminal_id"): "8",
+            by_side["bottom"][0].get("terminal_id"): "1",
+            by_side["bottom"][1].get("terminal_id"): "5",
+        }
+        expected = layout_a if _score_expected_mapping(layout_a) >= _score_expected_mapping(layout_b) else layout_b
     elif (
         len(by_side["left"]) == 2
         and len(by_side["right"]) == 2
@@ -2123,6 +2219,59 @@ def _repair_555_timer_pin_numbers(component: Dict) -> None:
             by_side["top"][1].get("terminal_id"): "8",
             by_side["bottom"][0].get("terminal_id"): "1",
         }
+    elif (
+        len(by_side["left"]) == 3
+        and len(by_side["right"]) == 1
+        and len(by_side["top"]) == 2
+        and len(by_side["bottom"]) == 1
+    ):
+        expected = {
+            by_side["left"][0].get("terminal_id"): "2",
+            by_side["left"][1].get("terminal_id"): "6",
+            by_side["left"][2].get("terminal_id"): "7",
+            by_side["right"][0].get("terminal_id"): "3",
+            by_side["top"][0].get("terminal_id"): "8",
+            by_side["top"][1].get("terminal_id"): "4",
+            by_side["bottom"][0].get("terminal_id"): "1",
+        }
+    elif (
+        len(by_side["left"]) == 3
+        and len(by_side["right"]) == 1
+        and len(by_side["top"]) == 2
+        and len(by_side["bottom"]) == 2
+    ):
+        bottom_terms = by_side["bottom"]
+        bottom_gap = abs(float(bottom_terms[1].get("x") or 0.0) - float(bottom_terms[0].get("x") or 0.0))
+        if bottom_gap <= max(14.0, body_width * 0.18):
+            keep_term = min(
+                bottom_terms,
+                key=lambda term: (
+                    abs(float(term.get("x") or 0.0) - ((float(bottom_terms[0].get("x") or 0.0) + float(bottom_terms[1].get("x") or 0.0)) / 2.0)),
+                    -float(term.get("pin_number_confidence") or 0.0),
+                ),
+            )
+            keep_term["x"] = round(
+                (float(bottom_terms[0].get("x") or 0.0) + float(bottom_terms[1].get("x") or 0.0)) / 2.0,
+                2,
+            )
+            component["terminals"] = [term for term in terminals if term is keep_term or term not in bottom_terms]
+            terminals = component.get("terminals", []) or []
+            by_side = {
+                side: [
+                    term for term in sorted(terminals, key=_terminal_sort_key)
+                    if _terminal_side(term) == side
+                ]
+                for side in ("left", "right", "top", "bottom")
+            }
+            expected = {
+                by_side["left"][0].get("terminal_id"): "2",
+                by_side["left"][1].get("terminal_id"): "6",
+                by_side["left"][2].get("terminal_id"): "7",
+                by_side["right"][0].get("terminal_id"): "3",
+                by_side["top"][0].get("terminal_id"): "8",
+                by_side["top"][1].get("terminal_id"): "4",
+                by_side["bottom"][0].get("terminal_id"): "1",
+            }
     if not expected:
         return
 
@@ -2145,6 +2294,16 @@ def _repair_555_timer_pin_numbers(component: Dict) -> None:
             "to": target,
             "reason": "known_555_timer_8_pin_layout",
         }
+
+    final_by_side = {
+        side: [
+            term for term in sorted(component.get("terminals", []) or [], key=_terminal_sort_key)
+            if _terminal_side(term) == side
+        ]
+        for side in ("left", "right", "top", "bottom")
+    }
+    for side, terms in final_by_side.items():
+        _renumber_side_terms(component, side, terms)
 
 
 def _repair_4026_pin_numbers(component: Dict) -> None:
@@ -2205,6 +2364,125 @@ def _repair_4026_pin_numbers(component: Dict) -> None:
             "to": target,
             "reason": "known_cd4026_pin_layout",
         }
+
+
+def _repair_4017_pin_numbers(component: Dict) -> None:
+    """Stabilizza la numerazione del CD4017 per layout parziali con subset di pin esposti."""
+    marking = str(component.get("ic_marking") or "").upper()
+    if not _is_4017_family_marking(marking):
+        return
+
+    terminals = component.get("terminals", []) or []
+    by_side = {
+        side: [
+            term for term in sorted(terminals, key=_terminal_sort_key)
+            if _terminal_side(term) == side
+        ]
+        for side in ("left", "right", "top", "bottom")
+    }
+    body_bbox = component.get("body_bbox") or [0.0, 0.0, 0.0, 0.0]
+
+    if (
+        len(by_side["left"]) == 1
+        and len(by_side["right"]) == 3
+        and len(by_side["top"]) == 1
+        and len(by_side["bottom"]) in {2, 3}
+    ):
+        right_coords = [float(term.get("y") or 0.0) for term in by_side["right"]]
+        spacings = [
+            right_coords[idx + 1] - right_coords[idx]
+            for idx in range(len(right_coords) - 1)
+            if right_coords[idx + 1] > right_coords[idx]
+        ]
+        step = float(np.median(np.asarray(spacings, dtype=np.float32))) if spacings else 54.0
+        if step >= 28.0:
+            left_start = float(by_side["left"][0].get("y") or 0.0)
+            for offset in (step, step * 2.0):
+                _append_recovered_terminal(
+                    component,
+                    "left",
+                    left_start + offset,
+                    body_bbox,
+                    {"best_word": {"text": "family_repair"}, "confidence": 0.0},
+                )
+            right_last = float(by_side["right"][-1].get("y") or 0.0)
+            _append_recovered_terminal(
+                component,
+                "right",
+                right_last + step,
+                body_bbox,
+                {"best_word": {"text": "family_repair"}, "confidence": 0.0},
+            )
+            terminals = component.get("terminals", []) or []
+            by_side = {
+                side: [
+                    term for term in sorted(terminals, key=_terminal_sort_key)
+                    if _terminal_side(term) == side
+                ]
+                for side in ("left", "right", "top", "bottom")
+            }
+
+    if len(by_side["bottom"]) == 3:
+        extra_candidates = [
+            term for term in by_side["bottom"]
+            if not str(term.get("pin_number") or "").strip()
+            and not str(term.get("pin_label_text") or "").strip()
+        ]
+        if len(extra_candidates) == 1:
+            extra = extra_candidates[0]
+            component["terminals"] = [term for term in terminals if term is not extra]
+            terminals = component.get("terminals", []) or []
+            by_side = {
+                side: [
+                    term for term in sorted(terminals, key=_terminal_sort_key)
+                    if _terminal_side(term) == side
+                ]
+                for side in ("left", "right", "top", "bottom")
+            }
+
+    if (
+        len(by_side["left"]) != 3
+        or len(by_side["right"]) != 4
+        or len(by_side["top"]) != 1
+        or len(by_side["bottom"]) != 2
+    ):
+        return
+
+    ordered_assignments = [
+        (by_side["left"][0], "14"),
+        (by_side["left"][1], "10"),
+        (by_side["left"][2], "15"),
+        (by_side["right"][0], "3"),
+        (by_side["right"][1], "2"),
+        (by_side["right"][2], "4"),
+        (by_side["right"][3], "7"),
+        (by_side["top"][0], "16"),
+        (by_side["bottom"][0], "8"),
+        (by_side["bottom"][1], "13"),
+    ]
+
+    for term, target in ordered_assignments:
+        previous = str(term.get("pin_number") or "")
+        if previous != target:
+            old_conf = float(term.get("pin_number_confidence") or 0.0)
+            term["pin_number"] = target
+            term["pin_number_confidence"] = round(max(old_conf, 0.90), 3)
+            debug_payload = term.setdefault("pin_ocr_debug", {})
+            debug_payload["cd4017_pin_number_repair"] = {
+                "from": previous or None,
+                "to": target,
+                "reason": "known_cd4017_partial_pin_layout",
+            }
+
+    final_by_side = {
+        side: [
+            term for term in sorted(component.get("terminals", []) or [], key=_terminal_sort_key)
+            if _terminal_side(term) == side
+        ]
+        for side in ("left", "right", "top", "bottom")
+    }
+    for side, terms in final_by_side.items():
+        _renumber_side_terms(component, side, terms)
 
 
 def _repair_three_pin_corner_package_numbers(component: Dict) -> None:
@@ -2295,14 +2573,25 @@ def _single_digit_fallback_strong_hint(term: Dict, cfg: Dict) -> bool:
 
 def _lanes_needing_component_fallback(side_run: Dict, component_terminal_count: int, cfg: Dict) -> List[Dict]:
     lanes = []
+    side = side_run.get("side") or ""
     for lane in side_run["lanes"]:
         term = lane["term"]
         number = str(term.get("pin_number") or "")
         confidence = float(term.get("pin_number_confidence") or 0.0)
+        debug_payload = term.get("pin_ocr_debug") or {}
+        best_number = debug_payload.get("best_number") or {}
+        current_mode = str(best_number.get("mode") or "")
+        current_edge_distance = float(best_number.get("edge_distance") or 999.0)
         if not number:
             lanes.append(lane)
         elif len(number) >= 2:
             if confidence <= 0.62:
+                lanes.append(lane)
+            elif (
+                side in {"left", "right"}
+                and current_mode in {"text", "number"}
+                and current_edge_distance <= 10.0
+            ):
                 lanes.append(lane)
         elif confidence <= 0.40:
             lanes.append(lane)
@@ -2865,6 +3154,334 @@ def _append_recovered_terminal(component: Dict, side: str, coord: float, body_bb
     component.setdefault("terminals", []).append(term)
 
 
+def _foreground_runs_1d(values: np.ndarray) -> List[Tuple[int, int]]:
+    idxs = np.flatnonzero(values > 0)
+    if idxs.size == 0:
+        return []
+
+    runs: List[Tuple[int, int]] = []
+    start = prev = int(idxs[0])
+    for idx in idxs[1:]:
+        idx = int(idx)
+        if idx > prev + 1:
+            runs.append((start, prev))
+            start = idx
+        prev = idx
+    runs.append((start, prev))
+    return runs
+
+
+def _line_runs_row(binary: np.ndarray, y: float, x_start: float, x_end: float) -> List[Dict]:
+    h, w = binary.shape[:2]
+    yy = int(round(y))
+    if yy < 0 or yy >= h:
+        return []
+
+    xa = max(0, min(w - 1, int(round(min(x_start, x_end)))))
+    xb = max(0, min(w - 1, int(round(max(x_start, x_end)))))
+    if xb < xa:
+        return []
+
+    row = (binary[yy, xa:xb + 1] > 0).astype(np.uint8)
+    return [
+        {
+            "start": xa + start,
+            "end": xa + end,
+            "length": end - start + 1,
+        }
+        for start, end in _foreground_runs_1d(row)
+    ]
+
+
+def _line_runs_col(binary: np.ndarray, x: float, y_start: float, y_end: float) -> List[Dict]:
+    h, w = binary.shape[:2]
+    xx = int(round(x))
+    if xx < 0 or xx >= w:
+        return []
+
+    ya = max(0, min(h - 1, int(round(min(y_start, y_end)))))
+    yb = max(0, min(h - 1, int(round(max(y_start, y_end)))))
+    if yb < ya:
+        return []
+
+    col = (binary[ya:yb + 1, xx] > 0).astype(np.uint8)
+    return [
+        {
+            "start": ya + start,
+            "end": ya + end,
+            "length": end - start + 1,
+        }
+        for start, end in _foreground_runs_1d(col)
+    ]
+
+
+def _merge_contact_coords(candidates: List[Dict], max_gap: int) -> List[Dict]:
+    if not candidates:
+        return []
+
+    coords = sorted(set(int(candidate["coord"]) for candidate in candidates))
+    groups = []
+    for coord in coords:
+        if not groups or coord > groups[-1][-1] + int(max_gap):
+            groups.append([coord])
+        else:
+            groups[-1].append(coord)
+
+    score_by_coord = {
+        int(candidate["coord"]): float(candidate.get("score") or 0.0)
+        for candidate in candidates
+    }
+    merged = []
+    for group in groups:
+        weighted_num = sum(float(coord) * max(score_by_coord.get(coord, 0.0), 1.0) for coord in group)
+        weighted_den = sum(max(score_by_coord.get(coord, 0.0), 1.0) for coord in group)
+        merged.append({
+            "coord": round(weighted_num / max(weighted_den, 1.0), 2),
+            "group_start": int(group[0]),
+            "group_end": int(group[-1]),
+        })
+    return merged
+
+
+def _scan_seven_segment_contacts(binary: np.ndarray, body_bbox: List[float], side: str) -> List[Dict]:
+    x1, y1, x2, y2 = [float(v) for v in body_bbox]
+    width = max(1.0, x2 - x1)
+    height = max(1.0, y2 - y1)
+    corner_skip_y = max(2, int(round(height * 0.04)))
+    corner_skip_x = max(2, int(round(width * 0.04)))
+    outward = 34
+    inward = 6
+    min_run = 4
+    min_wire = 10
+    halfspan = 2
+    candidates: List[Dict] = []
+
+    if side in {"left", "right"}:
+        edge_x = x1 if side == "left" else x2
+        xs = edge_x - outward if side == "left" else edge_x - inward
+        xe = edge_x + inward if side == "left" else edge_x + outward
+        for y in range(int(round(y1)) + corner_skip_y, int(round(y2)) - corner_skip_y + 1):
+            best_score = 0.0
+            for yy in range(y - halfspan, y + halfspan + 1):
+                for run in _line_runs_row(binary, yy, xs, xe):
+                    if side == "left":
+                        touches_edge = run["start"] <= edge_x + inward and run["end"] >= edge_x - 1
+                        outward_len = max(0.0, edge_x - float(run["start"]) + 1.0)
+                    else:
+                        touches_edge = run["start"] <= edge_x + 1 and run["end"] >= edge_x - inward
+                        outward_len = max(0.0, float(run["end"]) - edge_x + 1.0)
+                    if not touches_edge or float(run["length"]) < min_run or outward_len < min_wire:
+                        continue
+                    best_score = max(best_score, float(run["length"]) + 2.0 * outward_len)
+            if best_score > 0.0:
+                candidates.append({"coord": float(y), "score": best_score})
+    else:
+        edge_y = y1 if side == "top" else y2
+        ys = edge_y - outward if side == "top" else edge_y - inward
+        ye = edge_y + inward if side == "top" else edge_y + outward
+        for x in range(int(round(x1)) + corner_skip_x, int(round(x2)) - corner_skip_x + 1):
+            best_score = 0.0
+            for xx in range(x - halfspan, x + halfspan + 1):
+                for run in _line_runs_col(binary, xx, ys, ye):
+                    if side == "top":
+                        touches_edge = run["start"] <= edge_y + inward and run["end"] >= edge_y - 1
+                        outward_len = max(0.0, edge_y - float(run["start"]) + 1.0)
+                    else:
+                        touches_edge = run["start"] <= edge_y + 1 and run["end"] >= edge_y - inward
+                        outward_len = max(0.0, float(run["end"]) - edge_y + 1.0)
+                    if not touches_edge or float(run["length"]) < min_run or outward_len < min_wire:
+                        continue
+                    best_score = max(best_score, float(run["length"]) + 2.0 * outward_len)
+            if best_score > 0.0:
+                candidates.append({"coord": float(x), "score": best_score})
+
+    return _merge_contact_coords(candidates, max_gap=8)
+
+
+def _seven_segment_display_scan_bbox(component: Dict, body_bbox: List[float], image_shape) -> Tuple[List[int], Dict]:
+    bbox = component.get("bbox")
+    if not bbox or len(bbox) != 4:
+        return _clamp_bbox(body_bbox, image_shape), {
+            "used_component_bbox_frame": False,
+            "reason": "missing_component_bbox",
+        }
+
+    comp_bbox = _clamp_bbox(bbox, image_shape)
+    current_bbox = _clamp_bbox(body_bbox, image_shape)
+    comp_w = max(1.0, float(comp_bbox[2]) - float(comp_bbox[0]))
+    comp_h = max(1.0, float(comp_bbox[3]) - float(comp_bbox[1]))
+    body_w = max(1.0, float(current_bbox[2]) - float(current_bbox[0]))
+    body_h = max(1.0, float(current_bbox[3]) - float(current_bbox[1]))
+    width_ratio = body_w / comp_w
+    height_ratio = body_h / comp_h
+    if width_ratio >= 0.65 and height_ratio >= 0.75:
+        return current_bbox, {
+            "used_component_bbox_frame": False,
+            "reason": "body_bbox_already_wide_enough",
+            "width_ratio_vs_component": round(float(width_ratio), 3),
+            "height_ratio_vs_component": round(float(height_ratio), 3),
+        }
+
+    left_inset = max(8.0, comp_w * 0.12)
+    right_inset = max(6.0, comp_w * 0.05)
+    vertical_inset = max(10.0, comp_h * 0.04)
+    frame_bbox = _clamp_bbox(
+        [
+            float(comp_bbox[0]) + left_inset,
+            float(comp_bbox[1]) + vertical_inset,
+            float(comp_bbox[2]) - right_inset,
+            float(comp_bbox[3]) - vertical_inset,
+        ],
+        image_shape,
+    )
+    return frame_bbox, {
+        "used_component_bbox_frame": True,
+        "reason": "body_bbox_too_narrow_for_display_edge_scan",
+        "width_ratio_vs_component": round(float(width_ratio), 3),
+        "height_ratio_vs_component": round(float(height_ratio), 3),
+        "previous_body_bbox": current_bbox,
+        "frame_bbox": frame_bbox,
+    }
+
+
+def _replace_terminals_with_side_coords(component: Dict, side: str, coords: List[Dict], common_side: str, common_coord: Dict, body_bbox: List[int]) -> None:
+    terminals: List[Dict] = []
+    ordered_coords = sorted(coords, key=lambda item: float(item["coord"]))
+    for idx, coord_info in enumerate(ordered_coords, start=1):
+        coord = float(coord_info["coord"])
+        if side == "left":
+            x = float(body_bbox[0]) - TERMINAL_OUTWARD_OFFSET
+            y = coord
+        else:
+            x = float(body_bbox[2]) + TERMINAL_OUTWARD_OFFSET
+            y = coord
+        terminals.append({
+            "terminal_id": f"{component.get('instance_id')}:{side}_{idx}",
+            "instance_id": component.get("instance_id"),
+            "component_class_name": component.get("class_name"),
+            "name": f"{side}_{idx}",
+            "display_name": f"{side}_{idx}",
+            "display_terminal_id": f"{component.get('instance_id')}:{side}_{idx}",
+            "relative_position": side,
+            "x": round(x, 2),
+            "y": round(y, 2),
+            "pin_number": None,
+            "pin_label_text": None,
+            "pin_number_confidence": None,
+            "pin_label_confidence": None,
+        })
+
+    common_axis = float(common_coord["coord"])
+    if common_side == "bottom":
+        common_x = common_axis
+        common_y = float(body_bbox[3]) + TERMINAL_OUTWARD_OFFSET
+    else:
+        common_x = common_axis
+        common_y = float(body_bbox[1]) - TERMINAL_OUTWARD_OFFSET
+    terminals.append({
+        "terminal_id": f"{component.get('instance_id')}:{common_side}_1",
+        "instance_id": component.get("instance_id"),
+        "component_class_name": component.get("class_name"),
+        "name": f"{common_side}_1",
+        "display_name": f"{common_side}_1",
+        "display_terminal_id": f"{component.get('instance_id')}:{common_side}_1",
+        "relative_position": common_side,
+        "x": round(common_x, 2),
+        "y": round(common_y, 2),
+        "pin_number": None,
+        "pin_label_text": None,
+        "pin_number_confidence": None,
+        "pin_label_confidence": None,
+    })
+    component["terminals"] = terminals
+
+
+def _recover_seven_segment_display_terminals(
+    component: Dict,
+    image_bgr,
+    body_bbox: List[float],
+) -> Dict:
+    if component.get("component_subtype") != "seven_segment_display":
+        return {"recovered": False, "reason": "not_seven_segment_display"}
+
+    existing = component.get("terminals") or []
+    by_side = {
+        side: [
+            term for term in existing
+            if _terminal_side(term) == side
+        ]
+        for side in ("left", "right", "top", "bottom")
+    }
+    if (len(by_side["left"]) == 7 or len(by_side["right"]) == 7) and (len(by_side["bottom"]) == 1 or len(by_side["top"]) == 1):
+        return {"recovered": False, "reason": "already_has_canonical_terminal_layout"}
+
+    scan_bbox, scan_debug = _seven_segment_display_scan_bbox(component, body_bbox, image_bgr.shape)
+    gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
+    _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+
+    left_contacts = _scan_seven_segment_contacts(binary, scan_bbox, "left")
+    right_contacts = _scan_seven_segment_contacts(binary, scan_bbox, "right")
+    bottom_contacts = _scan_seven_segment_contacts(binary, scan_bbox, "bottom")
+    top_contacts = _scan_seven_segment_contacts(binary, scan_bbox, "top")
+
+    side_choice = "left" if len(left_contacts) >= len(right_contacts) else "right"
+    label_contacts = left_contacts if side_choice == "left" else right_contacts
+    opposite_contacts = right_contacts if side_choice == "left" else left_contacts
+    common_side = "bottom" if len(bottom_contacts) >= len(top_contacts) else "top"
+    common_contacts = bottom_contacts if common_side == "bottom" else top_contacts
+
+    if len(label_contacts) != 7 or len(common_contacts) != 1:
+        return {
+            "recovered": False,
+            "reason": "edge_scan_not_canonical",
+            "scan_bbox": scan_bbox,
+            "scan_bbox_debug": scan_debug,
+            "counts": {
+                "left": len(left_contacts),
+                "right": len(right_contacts),
+                "top": len(top_contacts),
+                "bottom": len(bottom_contacts),
+            },
+        }
+
+    if len(opposite_contacts) > 1:
+        return {
+            "recovered": False,
+            "reason": "too_many_opposite_side_contacts",
+            "scan_bbox": scan_bbox,
+            "scan_bbox_debug": scan_debug,
+            "counts": {
+                "left": len(left_contacts),
+                "right": len(right_contacts),
+                "top": len(top_contacts),
+                "bottom": len(bottom_contacts),
+            },
+        }
+
+    component["body_bbox"] = scan_bbox
+    _replace_terminals_with_side_coords(
+        component,
+        side_choice,
+        label_contacts,
+        common_side,
+        common_contacts[0],
+        scan_bbox,
+    )
+    return {
+        "recovered": True,
+        "scan_bbox": scan_bbox,
+        "scan_bbox_debug": scan_debug,
+        "counts": {
+            "left": len(left_contacts),
+            "right": len(right_contacts),
+            "top": len(top_contacts),
+            "bottom": len(bottom_contacts),
+        },
+        "label_side": side_choice,
+        "common_side": common_side,
+    }
+
+
 def _recover_missing_small_ic_terminals_from_component_words(
     component: Dict,
     image_bgr,
@@ -2890,7 +3507,7 @@ def _recover_missing_small_ic_terminals_from_component_words(
     recoveries: List[Dict] = []
     for side, side_run in side_runs.items():
         lanes = side_run.get("lanes") or []
-        if len(lanes) < 2:
+        if len(lanes) < 1:
             continue
 
         component_words = _component_number_words(image_bgr, side_run, cfg)
@@ -2906,6 +3523,11 @@ def _recover_missing_small_ic_terminals_from_component_words(
             if _word_edge_distance(word, side, body_bbox) > max_edge_distance:
                 continue
             numeric_words.append(word)
+
+        if len(lanes) == 1:
+            min_words = 3 if side in {"left", "right"} else 2
+            if len(numeric_words) < min_words:
+                continue
 
         if len(numeric_words) <= len(lanes):
             continue
@@ -3400,6 +4022,19 @@ def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
 
     component["body_bbox"] = body_bbox
     cfg["body_bbox"] = body_bbox
+    seven_segment_recovery = _recover_seven_segment_display_terminals(
+        component,
+        image_bgr,
+        body_bbox,
+    )
+    if seven_segment_recovery.get("recovered"):
+        body_bbox = get_ic_body_bbox_from_component(component, image_bgr.shape)
+        component["body_bbox"] = body_bbox
+        cfg["body_bbox"] = body_bbox
+        debug["seven_segment_geometry_recovery"] = seven_segment_recovery
+    elif component.get("component_subtype") == "seven_segment_display":
+        debug["seven_segment_geometry_recovery"] = seven_segment_recovery
+
     side_runs = _build_side_lanes(component, body_bbox, image_bgr.shape, cfg)
     if not side_runs:
         debug["skipped"] = True
@@ -3483,6 +4118,7 @@ def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
     _repair_unique_pin_numbers(component)
     _repair_555_timer_pin_numbers(component)
     _repair_4026_pin_numbers(component)
+    _repair_4017_pin_numbers(component)
     _repair_three_pin_corner_package_numbers(component)
     if cfg["skip_labels_when_marking_and_number"]:
         debug["labels_cleared_count"] = _clear_pin_labels_when_number_and_marking(component)

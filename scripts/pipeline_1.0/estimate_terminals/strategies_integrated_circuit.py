@@ -194,7 +194,14 @@ def _select_body_edge_centers(centers, min_span, max_outer_gap_px=None):
     }
 
 
-def _find_edge_pair_from_projection(values, min_span, min_density_ratio=0.35, keep_ratio=0.55, max_outer_gap_px=None):
+def _find_edge_pair_from_projection(
+    values,
+    min_span,
+    min_density_ratio=0.35,
+    keep_ratio=0.55,
+    max_outer_gap_px=None,
+    min_edge_separation_px=None,
+):
     if not values:
         return None, None, {
             "reason": "empty_projection",
@@ -234,7 +241,12 @@ def _find_edge_pair_from_projection(values, min_span, min_density_ratio=0.35, ke
         max_outer_gap_px=max_outer_gap_px,
     )
 
-    if right - left < max(20, int(round(min_span * 0.25))):
+    if min_edge_separation_px is None:
+        min_edge_separation_px = max(20, int(round(min_span * 0.25)))
+    else:
+        min_edge_separation_px = max(20, int(round(float(min_edge_separation_px))))
+
+    if right - left < min_edge_separation_px:
         return None, None, {
             "reason": "edge_pair_too_close",
             "max_score": round(float(max_score), 3),
@@ -242,6 +254,7 @@ def _find_edge_pair_from_projection(values, min_span, min_density_ratio=0.35, ke
             "candidate_count": len(candidates),
             "group_count": len(groups),
             "centers": centers,
+            "min_edge_separation_px": int(min_edge_separation_px),
             "selection_debug": selection_debug,
         }
 
@@ -299,6 +312,7 @@ def refine_ic_body_bbox(binary, bbox, meta):
         min_density_ratio=0.30,
         keep_ratio=0.55,
         max_outer_gap_px=max_outer_gap_px,
+        min_edge_separation_px=max(min_body_w, int(round(w * 0.25))),
     )
 
     top_rel, bottom_rel, y_debug = _find_edge_pair_from_projection(
@@ -307,6 +321,7 @@ def refine_ic_body_bbox(binary, bbox, meta):
         min_density_ratio=0.30,
         keep_ratio=0.55,
         max_outer_gap_px=max_outer_gap_px,
+        min_edge_separation_px=max(min_body_h, int(round(h * 0.25))),
     )
 
     if left_rel is None or right_rel is None or top_rel is None or bottom_rel is None:
@@ -530,6 +545,90 @@ def _merge_candidate_coords(candidates, max_gap):
 
     return merged
 
+
+def _run_interval_overlap_ratio(run_a, run_b):
+    if not isinstance(run_a, dict) or not isinstance(run_b, dict):
+        return 0.0
+
+    a0 = int(run_a.get("start", 0))
+    a1 = int(run_a.get("end", -1))
+    b0 = int(run_b.get("start", 0))
+    b1 = int(run_b.get("end", -1))
+    if a1 < a0 or b1 < b0:
+        return 0.0
+
+    inter = max(0, min(a1, b1) - max(a0, b0) + 1)
+    if inter <= 0:
+        return 0.0
+
+    len_a = max(1, a1 - a0 + 1)
+    len_b = max(1, b1 - b0 + 1)
+    return float(inter) / float(min(len_a, len_b))
+
+
+def _merge_fragmented_candidate_groups(groups, max_gap):
+    if len(groups) < 2:
+        return groups
+
+    merged_groups = []
+    idx = 0
+    merge_gap_limit = max(int(max_gap) + 3, 6)
+
+    while idx < len(groups):
+        current = dict(groups[idx])
+        next_idx = idx + 1
+
+        while next_idx < len(groups):
+            nxt = groups[next_idx]
+            group_gap = int(nxt["group_start"]) - int(current["group_end"])
+            if group_gap > merge_gap_limit:
+                break
+
+            current_score = float(current.get("best_score") or 0.0)
+            next_score = float(nxt.get("best_score") or 0.0)
+            strong_score = max(current_score, next_score, 1.0)
+            weak_score = min(current_score, next_score)
+            score_ratio = weak_score / strong_score
+
+            current_run = current.get("run") or {}
+            next_run = nxt.get("run") or {}
+            overlap_ratio = _run_interval_overlap_ratio(current_run, next_run)
+            current_len = float(current_run.get("length") or 0.0)
+            next_len = float(next_run.get("length") or 0.0)
+            strong_len = max(current_len, next_len, 1.0)
+            weak_len = min(current_len, next_len)
+            length_ratio = weak_len / strong_len
+
+            should_merge = (
+                overlap_ratio >= 0.85
+                and score_ratio <= 0.55
+                and length_ratio <= 0.65
+            )
+            if not should_merge:
+                break
+
+            combined_num = (
+                float(current["coord"]) * max(current_score, 1.0)
+                + float(nxt["coord"]) * max(next_score, 1.0)
+            )
+            combined_den = max(current_score, 1.0) + max(next_score, 1.0)
+            best_group = current if current_score >= next_score else nxt
+            current = {
+                "coord": int(round(combined_num / max(combined_den, 1.0))),
+                "group_start": int(min(current["group_start"], nxt["group_start"])),
+                "group_end": int(max(current["group_end"], nxt["group_end"])),
+                "group_len": int(max(current["group_end"], nxt["group_end"]) - min(current["group_start"], nxt["group_start"]) + 1),
+                "best_coord": int(best_group["best_coord"]),
+                "best_score": int(best_group["best_score"]),
+                "run": best_group.get("run"),
+            }
+            next_idx += 1
+
+        merged_groups.append(current)
+        idx = next_idx
+
+    return merged_groups
+
 def _make_terminal_point(body_bbox, side, coord):
     x1, y1, x2, y2 = body_bbox
 
@@ -720,6 +819,10 @@ def detect_integrated_circuit_terminals(meta: dict, binary, bbox):
         )
         merged = _merge_candidate_coords(
             raw_candidates,
+            max_gap=local_cfg["merge_gap_px"],
+        )
+        merged = _merge_fragmented_candidate_groups(
+            merged,
             max_gap=local_cfg["merge_gap_px"],
         )
         merged = _descale_merged_rows(
