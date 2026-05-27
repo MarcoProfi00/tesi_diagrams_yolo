@@ -1100,6 +1100,7 @@ def split_bridge_labels(
             handled_original_labels.add(original_label)
             continue
 
+        related_groups = merge_opamp_aux_singleton_groups(related_groups, terminal_by_id)
         creates_singleton = any(len(set(group)) < 2 for group in related_groups)
         allow_singleton = allow_singleton_split_for_label(
             original_label,
@@ -1141,6 +1142,55 @@ def split_bridge_labels(
         next_label += 1
 
     return relabeled
+
+
+def has_opamp_aux_singleton_group(related_groups: list[list[str]], terminal_by_id: dict):
+    for group in related_groups:
+        unique_ids = sorted(set(group))
+        if len(unique_ids) != 1:
+            continue
+        term = terminal_by_id.get(unique_ids[0])
+        if term is None:
+            continue
+        class_name = normalize_class_name(term.get("component_class_name"))
+        term_name = str(term.get("name") or "").strip().lower()
+        if class_name == "operational_amplifier" and term_name.startswith("aux"):
+            return True
+    return False
+
+
+def merge_opamp_aux_singleton_groups(related_groups: list[list[str]], terminal_by_id: dict):
+    groups = [list(group) for group in related_groups]
+    if len(groups) < 2:
+        return groups
+
+    aux_singletons = []
+    non_singletons = []
+    for idx, group in enumerate(groups):
+        unique_ids = sorted(set(group))
+        if len(unique_ids) == 1:
+            term = terminal_by_id.get(unique_ids[0])
+            class_name = normalize_class_name((term or {}).get("component_class_name"))
+            term_name = str((term or {}).get("name") or "").strip().lower()
+            if class_name == "operational_amplifier" and term_name.startswith("aux"):
+                aux_singletons.append(idx)
+                continue
+        non_singletons.append(idx)
+
+    if not aux_singletons or not non_singletons:
+        return groups
+
+    target_idx = max(non_singletons, key=lambda idx: len(set(groups[idx])))
+    merged_target = list(groups[target_idx])
+    for idx in aux_singletons:
+        merged_target.extend(groups[idx])
+    groups[target_idx] = merged_target
+
+    return [
+        group
+        for idx, group in enumerate(groups)
+        if idx not in aux_singletons
+    ]
 
 
 def split_ambiguous_micro_bridge_groups(

@@ -565,7 +565,10 @@ def resolve_two_terminal_semantics(binary, bbox, orientation, terminals, meta):
             center_band_ratio=0.50,
             edge_inset_ratio=0.10,
         )
-        uncertainty_threshold = 0.06 if orientation == "vertical" else 0.02
+        # Nei polarizzati la piastra curva puo' produrre piu' massa del marker
+        # rettilineo, quindi i near-tie vanno trattati come casi incerti e
+        # risolti con il fallback convenzionale dell'orientazione.
+        uncertainty_threshold = 0.10 if orientation == "vertical" else 0.06
         return _assign_strategy_result(
             terminals,
             orientation,

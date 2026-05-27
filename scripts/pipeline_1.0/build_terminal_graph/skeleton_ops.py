@@ -19,7 +19,7 @@ def should_erase_component_body_from_skeleton(component: dict):
     class_name = normalize_class_name(component.get("class_name"))
     terminals = component.get("terminals", [])
 
-    if class_name in {"connector", "integrated_circuit", "npn_transistor", "pnp_transistor"}:
+    if class_name in {"connector", "integrated_circuit", "npn_transistor", "pnp_transistor", "operational_amplifier"}:
         return True
 
     if class_name in COMPONENT_BODY_ERASE_EXCLUDED_CLASSES:

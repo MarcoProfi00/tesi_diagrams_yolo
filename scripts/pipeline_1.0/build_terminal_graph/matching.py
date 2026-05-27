@@ -10,6 +10,9 @@ from .config import (
     MAX_REASONABLE_SNAP_DISTANCE,
     OPAMP_AUX_EXTERNAL_MAX_DX,
     OPAMP_AUX_EXTERNAL_MAX_DY,
+    OPAMP_AUX_LABEL_REMAP_MAX_GAP,
+    OPAMP_AUX_LABEL_REMAP_MIN_GAP,
+    OPAMP_AUX_LABEL_REMAP_X_TOL,
     OUTWARD_STUB_REMAP_MAX_GAP,
     OUTWARD_STUB_REMAP_MAX_LABEL_WIDTH,
     OUTWARD_STUB_REMAP_MIN_GAP,
@@ -248,6 +251,106 @@ def attach_unmatched_opamp_aux_to_external_terminals(
                 round(float(best["dx"]), 3),
                 round(float(best["dy"]), 3),
             ],
+        }
+
+
+def remap_opamp_aux_to_aligned_label(
+    terminals: list[dict],
+    terminal_match_debug: dict,
+    labels: np.ndarray,
+):
+    h, w = labels.shape[:2]
+
+    for aux_term in terminals:
+        aux_id = aux_term["terminal_id"]
+        current_match = terminal_match_debug.get(aux_id, {})
+        if current_match.get("matched_label") is not None:
+            continue
+        if not is_opamp_aux_terminal(aux_term):
+            continue
+
+        side = str(aux_term.get("relative_position") or "").strip().lower()
+        if side not in {"top", "bottom"}:
+            continue
+
+        tx = int(round(float(aux_term["x"])))
+        ty = int(round(float(aux_term["y"])))
+        x1 = max(0, tx - int(OPAMP_AUX_LABEL_REMAP_X_TOL))
+        x2 = min(w, tx + int(OPAMP_AUX_LABEL_REMAP_X_TOL) + 1)
+        y1 = max(0, ty - int(OPAMP_AUX_LABEL_REMAP_MAX_GAP))
+        y2 = min(h, ty + int(OPAMP_AUX_LABEL_REMAP_MAX_GAP) + 1)
+        if x2 <= x1 or y2 <= y1:
+            continue
+
+        roi = labels[y1:y2, x1:x2]
+        candidate_labels = [int(v) for v in np.unique(roi) if int(v) > 0]
+        if not candidate_labels:
+            continue
+
+        best = None
+        for candidate_label in candidate_labels:
+            ys, xs = np.where(labels == int(candidate_label))
+            if len(xs) == 0:
+                continue
+
+            min_x = int(xs.min())
+            max_x = int(xs.max())
+            min_y = int(ys.min())
+            max_y = int(ys.max())
+            if tx < min_x - int(OPAMP_AUX_LABEL_REMAP_X_TOL) or tx > max_x + int(OPAMP_AUX_LABEL_REMAP_X_TOL):
+                continue
+
+            if side == "top":
+                edge_mask = ys <= ty - int(OPAMP_AUX_LABEL_REMAP_MIN_GAP)
+                direction_ok = np.any(edge_mask)
+            else:
+                edge_mask = ys >= ty + int(OPAMP_AUX_LABEL_REMAP_MIN_GAP)
+                direction_ok = np.any(edge_mask)
+            if not direction_ok:
+                continue
+
+            edge_points = np.column_stack((xs[edge_mask], ys[edge_mask]))
+            if len(edge_points) == 0:
+                edge_points = np.column_stack((xs, ys))
+            d2 = (edge_points[:, 0] - tx) ** 2 + (edge_points[:, 1] - ty) ** 2
+            best_idx = int(np.argmin(d2))
+            px = int(edge_points[best_idx, 0])
+            py = int(edge_points[best_idx, 1])
+            gap = float(abs(py - ty))
+            if gap < float(OPAMP_AUX_LABEL_REMAP_MIN_GAP) or gap > float(OPAMP_AUX_LABEL_REMAP_MAX_GAP):
+                continue
+            snap_distance = float(np.hypot(px - tx, py - ty))
+
+            score = (
+                -abs(px - tx),
+                -gap,
+                -snap_distance,
+                float(max_y - min_y + 1),
+                float(max_x - min_x + 1),
+            )
+            if best is None or score > best["score"]:
+                best = {
+                    "score": score,
+                    "label": int(candidate_label),
+                    "snap_point": [int(px), int(py)],
+                    "snap_distance": snap_distance,
+                    "search_window": [int(x1), int(y1), int(x2), int(y2)],
+                }
+
+        if best is None:
+            continue
+
+        terminal_match_debug[aux_id] = {
+            "terminal_id": aux_id,
+            "candidate_labels": [int(best["label"])],
+            "matched_label": int(best["label"]),
+            "match_mode": "opamp_aux_aligned_label_remap",
+            "search_window": best["search_window"],
+            "snap_point": best["snap_point"],
+            "snap_distance": round(float(best["snap_distance"]), 3),
+            "is_suspicious": False,
+            "virtual_match": True,
+            "virtual_match_reason": "unmatched_opamp_aux_aligned_to_nearby_label",
         }
 
 

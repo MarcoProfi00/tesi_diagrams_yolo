@@ -49,6 +49,7 @@ CLASS_MASK_PADDING = {
     "Analog_Meter": 8,
     "Antenna": 10,
     "Connector": 6,
+    "Polarized_Capacitor": 8,
     "Switch": 4,
     "Transformer": 4,
 }
@@ -106,6 +107,15 @@ CLASS_TERMINAL_KEEP_OVERRIDES = {
         "thickness": 5,
         "inward_len": 2,
         "outward_len": 16,
+    },
+    # Nei polarizzati il body e i marker grafici (+ / piastra curva) possono
+    # riaprire il simbolo come fosse un filo continuo. Manteniamo solo stub
+    # corti vicino ai terminali.
+    "Polarized_Capacitor": {
+        "radius": 5,
+        "thickness": 4,
+        "inward_len": 0,
+        "outward_len": 9,
     },
 }
 
