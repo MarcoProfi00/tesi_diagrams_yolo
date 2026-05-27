@@ -46,7 +46,7 @@ from estimate_terminals.ocr_integrated_circuit_pins import (
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PIPELINE_DATASET = os.environ.get(
     "PIPELINE_DATASET",
-    "pipeline1.0/batchB"
+    "pipeline1.0/batchC/batchC1"
 )
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "02_assign_instances"
@@ -71,6 +71,11 @@ def _env_flag(name: str, default: bool = False) -> bool:
 
 
 IC_OCR_TIMING_ENABLED = _env_flag("IC_OCR_TIMING", default=False)
+PIPELINE_IMAGE_IDS = {
+    part.strip()
+    for part in str(os.environ.get("PIPELINE_IMAGE_IDS", "")).split(",")
+    if part.strip()
+}
 
 
 def _elapsed_ms(start_time: float) -> float:
@@ -368,10 +373,24 @@ def main() -> None:
     if not json_files:
         raise FileNotFoundError(f"Nessun file JSON trovato in: {INPUT_DIR}")
 
+    if PIPELINE_IMAGE_IDS:
+        json_files = [
+            path
+            for path in json_files
+            if path.stem in PIPELINE_IMAGE_IDS
+        ]
+        if not json_files:
+            requested = ", ".join(sorted(PIPELINE_IMAGE_IDS))
+            raise FileNotFoundError(
+                f"Nessun file JSON trovato in {INPUT_DIR} per PIPELINE_IMAGE_IDS={requested}"
+            )
+
     print(f"Input directory : {INPUT_DIR}")
     print(f"Output directory: {OUTPUT_DIR}")
     print(f"Class yaml      : {CLASS_TERMINALS_PATH}")
     print(f"File trovati    : {len(json_files)}\n")
+    if PIPELINE_IMAGE_IDS:
+        print(f"Filtro immagini : {sorted(PIPELINE_IMAGE_IDS)}\n")
 
     batch_timing = {
         "ic_count": 0,

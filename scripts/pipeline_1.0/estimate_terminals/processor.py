@@ -18,6 +18,32 @@ from .strategies_three_terminal import (
 from .strategies_basic import get_one_terminal_working_binary, get_two_terminal_working_binary
 from .semantic_two_terminal import resolve_two_terminal_semantics
 
+
+def _get_led_side_peak_scan_window(bbox, estimated_orientation, relative_position):
+    x1, y1, x2, y2 = bbox
+    width = max(float(x2) - float(x1), 1.0)
+    height = max(float(y2) - float(y1), 1.0)
+
+    if estimated_orientation == "vertical" and relative_position in {"top", "bottom"}:
+        half_window = max(10.0, width * LED_SIDE_PEAK_AXIS_SCAN_RATIO / 2.0)
+        center_x = (float(x1) + float(x2)) / 2.0
+        return (
+            center_x - half_window,
+            center_x + half_window,
+            center_x,
+        )
+
+    if estimated_orientation == "horizontal" and relative_position in {"left", "right"}:
+        half_window = max(10.0, height * LED_SIDE_PEAK_AXIS_SCAN_RATIO / 2.0)
+        center_y = (float(y1) + float(y2)) / 2.0
+        return (
+            center_y - half_window,
+            center_y + half_window,
+            center_y,
+        )
+
+    return None
+
 # =========================================================
 # PROCESSAMENTO COMPONENTI
 # =========================================================
@@ -123,6 +149,32 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
                 x, y = geom_terminal_point_from_bbox(bbox, rel_pos)
                 point_debug["point_mode"] = "one_terminal_axis_center"
                 point_debug["anchor_offset_ratio"] = 0.5
+            elif component.get("class_name") == "LED":
+                scan_window = _get_led_side_peak_scan_window(
+                    bbox,
+                    estimated_orientation,
+                    rel_pos,
+                )
+                if scan_window is not None:
+                    scan_start, scan_end, center_coord = scan_window
+                    point, peak_debug = geom_terminal_point_by_side_peak(
+                        point_binary,
+                        bbox,
+                        rel_pos,
+                        scan_start=scan_start,
+                        scan_end=scan_end,
+                        center_coord=center_coord,
+                    )
+                    peak_debug["scan_window_mode"] = "led_center_axis_window"
+                    peak_debug["scan_window_ratio"] = float(LED_SIDE_PEAK_AXIS_SCAN_RATIO)
+                else:
+                    point, peak_debug = geom_terminal_point_by_side_peak(
+                        point_binary,
+                        bbox,
+                        rel_pos
+                    )
+                x, y = point
+                point_debug.update(peak_debug)
             else:
                 # altrimenti usa la classica
                 point, peak_debug = geom_terminal_point_by_side_peak(

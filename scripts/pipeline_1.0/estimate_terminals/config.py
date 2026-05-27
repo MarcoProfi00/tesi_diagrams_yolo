@@ -57,6 +57,9 @@ LED_FAR_WEIGHT = 1.0
 
 LED_FAR_MIN_SIDE_SCORE = 2
 LED_NEAR_FAR_AXIS_MARGIN = 1.10
+# Finestra centrale per i point peak del LED:
+# evita che bbox larghi catturino rail o testo laterale al posto del vero pin.
+LED_SIDE_PEAK_AXIS_SCAN_RATIO = 0.46
 
 # Decisione 1-vs-2 terminali
 TERMINAL_CLASS_TWO_SIDE_MIN = 5

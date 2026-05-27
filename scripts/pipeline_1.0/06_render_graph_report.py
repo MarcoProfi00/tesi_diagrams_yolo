@@ -27,7 +27,7 @@ from matplotlib.patches import Circle
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_PIPELINE_DATASET = os.environ.get(
     "PIPELINE_DATASET",
-    "pipeline1.0/batchA",
+    "pipeline1.0/batchB",
 )
 
 DEFAULT_INPUT_DIR = PROJECT_ROOT / "outputs" / DEFAULT_PIPELINE_DATASET / "05_build_terminal_graph"

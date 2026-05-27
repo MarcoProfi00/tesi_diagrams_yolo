@@ -614,6 +614,112 @@ def is_switch_like_bbox(image_gray, box) -> bool:
     ]
     return len(large_components) >= 2
 
+
+def is_push_button_like_bbox(image_binary, box) -> bool:
+    """Riconosce push button compatti come lama/attuatore + due contatti separati."""
+    x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)
+    width = max(x2 - x1 + 1, 1)
+    height = max(y2 - y1 + 1, 1)
+
+    if max(width, height) < 55 or min(width, height) < 18:
+        return False
+
+    roi = image_binary[y1:y2 + 1, x1:x2 + 1]
+    if roi.size == 0:
+        return False
+
+    num_labels, _, stats, centroids = cv2.connectedComponentsWithStats(roi, connectivity=8)
+    min_component_area = max(70, int(round(width * height * 0.035)))
+
+    components = []
+    for idx in range(1, num_labels):
+        area = int(stats[idx, cv2.CC_STAT_AREA])
+        if area < min_component_area:
+            continue
+        comp_w = int(stats[idx, cv2.CC_STAT_WIDTH])
+        comp_h = int(stats[idx, cv2.CC_STAT_HEIGHT])
+        components.append(
+            {
+                "area": area,
+                "x": int(stats[idx, cv2.CC_STAT_LEFT]),
+                "y": int(stats[idx, cv2.CC_STAT_TOP]),
+                "w": comp_w,
+                "h": comp_h,
+                "cx": float(centroids[idx][0]),
+                "cy": float(centroids[idx][1]),
+                "aspect": max(comp_w, comp_h) / float(max(min(comp_w, comp_h), 1)),
+            }
+        )
+
+    if len(components) < 3 or len(components) > 4:
+        return False
+
+    vertical_candidates = [
+        comp
+        for comp in components
+        if comp["h"] >= max(34, int(round(height * 0.48)))
+        and comp["h"] / float(max(comp["w"], 1)) >= 2.2
+    ]
+    horizontal_candidates = [
+        comp
+        for comp in components
+        if comp["w"] >= max(34, int(round(width * 0.48)))
+        and comp["w"] / float(max(comp["h"], 1)) >= 2.2
+    ]
+
+    def _compact_contacts_ok(actuator, contacts, orientation):
+        compact = [
+            comp
+            for comp in contacts
+            if comp["aspect"] <= 2.6
+            and comp["area"] >= max(55, int(round(width * height * 0.025)))
+        ]
+        if len(compact) != 2:
+            return False
+
+        if orientation == "vertical":
+            same_side_right = all(comp["cx"] >= actuator["cx"] + width * 0.12 for comp in compact)
+            same_side_left = all(comp["cx"] <= actuator["cx"] - width * 0.12 for comp in compact)
+            if not (same_side_right or same_side_left):
+                return False
+            if abs(compact[0]["cx"] - compact[1]["cx"]) > max(12, int(round(width * 0.20))):
+                return False
+            top = min(compact, key=lambda item: item["cy"])
+            bottom = max(compact, key=lambda item: item["cy"])
+            if bottom["cy"] - top["cy"] < max(20, height * 0.28):
+                return False
+            return (
+                top["cy"] <= actuator["cy"] - height * 0.12
+                and bottom["cy"] >= actuator["cy"] + height * 0.12
+            )
+
+        same_side_bottom = all(comp["cy"] >= actuator["cy"] + height * 0.12 for comp in compact)
+        same_side_top = all(comp["cy"] <= actuator["cy"] - height * 0.12 for comp in compact)
+        if not (same_side_bottom or same_side_top):
+            return False
+        if abs(compact[0]["cy"] - compact[1]["cy"]) > max(12, int(round(height * 0.20))):
+            return False
+        left = min(compact, key=lambda item: item["cx"])
+        right = max(compact, key=lambda item: item["cx"])
+        if right["cx"] - left["cx"] < max(20, width * 0.28):
+            return False
+        return (
+            left["cx"] <= actuator["cx"] - width * 0.12
+            and right["cx"] >= actuator["cx"] + width * 0.12
+        )
+
+    for actuator in vertical_candidates:
+        contacts = [comp for comp in components if comp is not actuator]
+        if _compact_contacts_ok(actuator, contacts, "vertical"):
+            return True
+
+    for actuator in horizontal_candidates:
+        contacts = [comp for comp in components if comp is not actuator]
+        if _compact_contacts_ok(actuator, contacts, "horizontal"):
+            return True
+
+    return False
+
 # Riconosce bbox compatibili con simboli memristor-like.
 def is_memristor_like_bbox(image_binary, box) -> bool:
     x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)
@@ -1475,6 +1581,8 @@ def remap_special_component(image_gray, image_binary, box, predicted_class_name:
         return "Battery"
     if predicted_class_name == "Battery" and plate_symbol == "Capacitor":
         return "Capacitor"
+    if predicted_class_name == "Switch" and is_push_button_like_bbox(image_binary, box):
+        return "Push_Button"
 
     #if predicted_class_name == "Diode" and is_led_like_diode_box(image_binary, box):
     #    return "LED"
@@ -2169,11 +2277,19 @@ def predict_components_on_image(
             #if yaml_class_name == "Switch" and not is_switch_like_bbox(image_gray, box):
             #    continue
             if yaml_class_name == "Switch":
-                if not is_switch_like_bbox(image_gray, box):
+                switch_shape_ok = is_switch_like_bbox(image_gray, box)
+                push_button_shape_ok = is_push_button_like_bbox(image_binary, box)
+                if not switch_shape_ok and not push_button_shape_ok:
                     # Manteniamo un fallback per switch atipici ma comunque plausibili,
                     # come alcuni rotary/push switch che il filtro morfologico classico penalizza.
                     if float(conf) < 0.20:
                         continue
+
+            if yaml_class_name == "Battery":
+                # I marker di alimentazione sul bordo possono sembrare piccole battery
+                # al detector, ma senza una vera struttura a piastre non li teniamo.
+                if classify_plate_symbol(image_binary, box) != "Battery":
+                    continue
 
             #if yaml_class_name == "Current_Source" and not is_current_source_like_bbox(image_gray, image_binary, box):
             #    continue

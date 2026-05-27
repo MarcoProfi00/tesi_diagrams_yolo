@@ -931,6 +931,21 @@ def _normalize_text(text: str) -> str:
     # diventare LM3177T. Collassiamo il doppio 7 solo davanti a un suffisso.
     text = re.sub(r"(?<=7)7(?=[A-Z]$)", "", text)
 
+    # Errore OCR frequente sui 555: la cifra centrale viene letta come "S".
+    # Lo correggiamo solo nel pattern strettissimo 5S5 per non alterare altri codici.
+    text = re.sub(r"(?<=5)S(?=5)", "5", text)
+
+    # Altri errori OCR frequenti della famiglia 555:
+    # - NE5S5 -> NE555
+    # - LME55 -> LM555
+    # Li correggiamo solo per i prefissi tipici LM/NE/SE e per token di 5 caratteri.
+    m_555_family = re.match(r"^(LM|NE|SE)([5SE])([5SE])([5SE])$", text)
+    if m_555_family:
+        prefix = m_555_family.group(1)
+        tail = "".join("5" if ch in {"5", "S", "E"} else ch for ch in m_555_family.groups()[1:])
+        if tail == "555":
+            text = prefix + tail
+
     return text
 
 
@@ -1069,8 +1084,9 @@ def _score_ic_marking_candidate(text: str, confidence: float, region_name: str, 
     digit_count = sum(ch.isdigit() for ch in text)
     digit_runs = re.findall(r"[0-9]+", text)
     longest_digit_run = max((len(run) for run in digit_runs), default=0)
+    numeric_only_family = _looks_like_numeric_ic_marking(text)
 
-    if not has_alpha:
+    if not has_alpha and not numeric_only_family:
         debug["reject_reason"] = "no_alpha"
         return -999.0, debug
 
@@ -1089,16 +1105,24 @@ def _score_ic_marking_candidate(text: str, confidence: float, region_name: str, 
 
     score = float(confidence)
 
-    # Bonus perché contiene lettere e numeri.
-    score += 0.35
+    # Bonus perché contiene lettere e numeri oppure appartiene a una famiglia
+    # numerica plausibile come 555/4026.
+    if has_alpha:
+        score += 0.35
+    elif numeric_only_family:
+        score += 0.75
 
     # Bonus per lunghezza realistica.
     if 4 <= len(text) <= 16:
         score += 0.20
+    elif numeric_only_family and len(text) == 3:
+        score += 0.12
 
     # Bonus per prefissi frequenti nei tuoi esempi.
     if text.startswith(IC_MARKING_PREFIXES):
         score += 0.25
+    elif numeric_only_family:
+        score += 0.12
 
     # I codici IC reali spesso hanno una parte numerica forte:
     # ADC0804, AT89S51, TDA1553, NE555, LM317T. Questo aiuta a preferire
@@ -1114,6 +1138,9 @@ def _score_ic_marking_candidate(text: str, confidence: float, region_name: str, 
 
     if _looks_like_structured_alternative_marking(text):
         score += 0.55
+
+    if numeric_only_family:
+        score += 0.18
 
     # Peso della regione.
     # expanded_bbox è utile ma pericolosa, quindi nessun bonus.
@@ -1380,6 +1407,31 @@ def _looks_like_ic_family_marking(text: str) -> bool:
         return digit_count >= 3 and longest_digit_run >= 3
 
     return digit_count >= 2
+
+
+def _looks_like_numeric_ic_marking(text: str) -> bool:
+    """
+    True per famiglie IC comuni indicate solo da cifre.
+
+    Manteniamo la regola conservativa e limitata a pattern molto frequenti:
+    - timer 555/556/558;
+    - opamp 741;
+    - CMOS serie 4000 come 4017, 4026, 4093;
+    - TTL/CMOS serie 74xx quando il marking appare solo numerico.
+    """
+    if not text or not text.isdigit():
+        return False
+
+    if text in {"555", "556", "558", "741"}:
+        return True
+
+    if re.fullmatch(r"4[0-9]{3}", text):
+        return True
+
+    if re.fullmatch(r"74[0-9]{2,3}", text):
+        return True
+
+    return False
 
 
 def _looks_like_structured_alternative_marking(text: str) -> bool:

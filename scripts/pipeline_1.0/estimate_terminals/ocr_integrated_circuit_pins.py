@@ -2043,10 +2043,24 @@ def _repair_unique_pin_numbers(component: Dict) -> None:
         }
 
 
+def _is_555_family_marking(marking: str) -> bool:
+    normalized = re.sub(r"\s+", "", str(marking or "").upper())
+    if not normalized:
+        return False
+    return re.search(r"(^|[^0-9])(?:LM|NE|SE)?555([^0-9]|$)", normalized) is not None
+
+
+def _is_4026_family_marking(marking: str) -> bool:
+    normalized = re.sub(r"\s+", "", str(marking or "").upper())
+    if not normalized:
+        return False
+    return re.search(r"(^|[^0-9])(?:CD)?4026(?:B|BE|BP|UB)?([^0-9]|$)", normalized) is not None
+
+
 def _repair_555_timer_pin_numbers(component: Dict) -> None:
     """Stabilizza la numerazione degli 8-pin 555 quando l'OCR scambia angoli."""
     marking = str(component.get("ic_marking") or "").upper()
-    if not re.search(r"\b(?:LM|NE|SE)?555\b", marking):
+    if not _is_555_family_marking(marking):
         return
 
     terminals = component.get("terminals", []) or []
@@ -2060,24 +2074,57 @@ def _repair_555_timer_pin_numbers(component: Dict) -> None:
         ]
         for side in ("left", "right", "top", "bottom")
     }
+    expected = None
     if (
-        len(by_side["left"]) != 3
-        or len(by_side["right"]) != 1
-        or len(by_side["top"]) != 2
-        or len(by_side["bottom"]) != 2
+        len(by_side["left"]) == 3
+        and len(by_side["right"]) == 1
+        and len(by_side["top"]) == 2
+        and len(by_side["bottom"]) == 2
     ):
+        expected = {
+            by_side["left"][0].get("terminal_id"): "6",
+            by_side["left"][1].get("terminal_id"): "2",
+            by_side["left"][2].get("terminal_id"): "7",
+            by_side["right"][0].get("terminal_id"): "3",
+            by_side["top"][0].get("terminal_id"): "8",
+            by_side["top"][1].get("terminal_id"): "4",
+            by_side["bottom"][0].get("terminal_id"): "1",
+            by_side["bottom"][1].get("terminal_id"): "5",
+        }
+    elif (
+        len(by_side["left"]) == 2
+        and len(by_side["right"]) == 2
+        and len(by_side["top"]) == 2
+        and len(by_side["bottom"]) == 2
+    ):
+        expected = {
+            by_side["left"][0].get("terminal_id"): "7",
+            by_side["left"][1].get("terminal_id"): "6",
+            by_side["right"][0].get("terminal_id"): "3",
+            by_side["right"][1].get("terminal_id"): "5",
+            by_side["top"][0].get("terminal_id"): "4",
+            by_side["top"][1].get("terminal_id"): "8",
+            by_side["bottom"][0].get("terminal_id"): "2",
+            by_side["bottom"][1].get("terminal_id"): "1",
+        }
+    elif (
+        len(by_side["left"]) == 3
+        and len(by_side["right"]) == 2
+        and len(by_side["top"]) == 2
+        and len(by_side["bottom"]) == 1
+    ):
+        expected = {
+            by_side["left"][0].get("terminal_id"): "7",
+            by_side["left"][1].get("terminal_id"): "6",
+            by_side["left"][2].get("terminal_id"): "2",
+            by_side["right"][0].get("terminal_id"): "3",
+            by_side["right"][1].get("terminal_id"): "5",
+            by_side["top"][0].get("terminal_id"): "4",
+            by_side["top"][1].get("terminal_id"): "8",
+            by_side["bottom"][0].get("terminal_id"): "1",
+        }
+    if not expected:
         return
-
-    expected = {
-        by_side["left"][0].get("terminal_id"): "7",
-        by_side["left"][1].get("terminal_id"): "6",
-        by_side["left"][2].get("terminal_id"): "2",
-        by_side["right"][0].get("terminal_id"): "3",
-        by_side["top"][0].get("terminal_id"): "8",
-        by_side["top"][1].get("terminal_id"): "4",
-        by_side["bottom"][0].get("terminal_id"): "1",
-        by_side["bottom"][1].get("terminal_id"): "5",
-    }
 
     for term in terminals:
         terminal_id = term.get("terminal_id")
@@ -2097,6 +2144,66 @@ def _repair_555_timer_pin_numbers(component: Dict) -> None:
             "from": previous or None,
             "to": target,
             "reason": "known_555_timer_8_pin_layout",
+        }
+
+
+def _repair_4026_pin_numbers(component: Dict) -> None:
+    """Stabilizza la numerazione del CD4026 quando l'OCR perde un pin o confonde 8/55."""
+    marking = str(component.get("ic_marking") or "").upper()
+    if not _is_4026_family_marking(marking):
+        return
+
+    terminals = component.get("terminals", []) or []
+    by_side = {
+        side: [
+            term for term in sorted(terminals, key=_terminal_sort_key)
+            if _terminal_side(term) == side
+        ]
+        for side in ("left", "right", "top", "bottom")
+    }
+    if (
+        len(by_side["left"]) != 4
+        or len(by_side["right"]) != 7
+        or len(by_side["top"]) != 1
+        or len(by_side["bottom"]) != 4
+    ):
+        return
+
+    expected = {
+        by_side["left"][0].get("terminal_id"): "3",
+        by_side["left"][1].get("terminal_id"): "15",
+        by_side["left"][2].get("terminal_id"): "2",
+        by_side["left"][3].get("terminal_id"): "1",
+        by_side["right"][0].get("terminal_id"): "10",
+        by_side["right"][1].get("terminal_id"): "12",
+        by_side["right"][2].get("terminal_id"): "13",
+        by_side["right"][3].get("terminal_id"): "9",
+        by_side["right"][4].get("terminal_id"): "11",
+        by_side["right"][5].get("terminal_id"): "6",
+        by_side["right"][6].get("terminal_id"): "7",
+        by_side["top"][0].get("terminal_id"): "16",
+        by_side["bottom"][0].get("terminal_id"): "8",
+        by_side["bottom"][1].get("terminal_id"): "14",
+        by_side["bottom"][2].get("terminal_id"): "4",
+        by_side["bottom"][3].get("terminal_id"): "5",
+    }
+
+    for term in terminals:
+        terminal_id = term.get("terminal_id")
+        target = expected.get(terminal_id)
+        if target is None:
+            continue
+        previous = str(term.get("pin_number") or "")
+        if previous == target:
+            continue
+        old_conf = float(term.get("pin_number_confidence") or 0.0)
+        term["pin_number"] = target
+        term["pin_number_confidence"] = round(max(old_conf, 0.90), 3)
+        debug_payload = term.setdefault("pin_ocr_debug", {})
+        debug_payload["cd4026_pin_number_repair"] = {
+            "from": previous or None,
+            "to": target,
+            "reason": "known_cd4026_pin_layout",
         }
 
 
@@ -2986,6 +3093,56 @@ def _normalize_seven_segment_top_common_labels(
     }
 
 
+def _normalize_seven_segment_bottom_common_labels(
+    component: Dict,
+    label_side: str,
+    cap_side: str,
+) -> None:
+    """
+    Normalizza i display 7 segmenti del tipo 7 pin laterali + 1 pin sotto.
+
+    In questi simboli i terminali laterali rappresentano i segmenti a-g e il
+    terminale inferiore e' il common spesso marcato come CC.
+    """
+    if cap_side != "bottom":
+        return
+
+    by_side = {
+        side: [
+            term for term in sorted(component.get("terminals", []) or [], key=_terminal_sort_key)
+            if _terminal_side(term) == side
+        ]
+        for side in ("left", "right", "top", "bottom")
+    }
+    label_terms = by_side.get(label_side) or []
+    cap_terms = by_side.get(cap_side) or []
+    if len(label_terms) != 7 or len(cap_terms) != 1:
+        return
+
+    expected_labels = ["a", "b", "c", "d", "e", "f", "g"]
+    for term, label in zip(label_terms, expected_labels):
+        _clear_terminal_pin_number(term)
+        term["pin_label_text"] = label
+        old_conf = float(term.get("pin_label_confidence") or 0.0)
+        term["pin_label_confidence"] = round(max(old_conf, 0.60), 3)
+        debug_payload = term.setdefault("pin_ocr_debug", {})
+        debug_payload["seven_segment_bottom_common_label_normalization"] = {
+            "label": label,
+            "reason": "seven_lateral_segments_plus_bottom_common",
+        }
+
+    cap_term = cap_terms[0]
+    _clear_terminal_pin_number(cap_term)
+    cap_term["pin_label_text"] = "cc"
+    cap_term["pin_label_confidence"] = round(max(float(cap_term.get("pin_label_confidence") or 0.0), 0.60), 3)
+    cap_term.pop("pin_label_bbox", None)
+    debug_payload = cap_term.setdefault("pin_ocr_debug", {})
+    debug_payload["seven_segment_bottom_common_label_normalization"] = {
+        "label": "cc",
+        "reason": "bottom_common_terminal_labeled_cc",
+    }
+
+
 def _renumber_side_terms(component: Dict, side: str, terms: List[Dict]) -> None:
     for idx, term in enumerate(sorted(terms, key=_terminal_sort_key), start=1):
         _rename_terminal_for_side(component, term, side, idx)
@@ -3111,6 +3268,7 @@ def _prune_seven_segment_display_terminals(component: Dict) -> int:
         _renumber_side_terms(component, cap_side, by_side[cap_side])
         _normalize_seven_segment_common_pin_number(by_side[cap_side])
         _normalize_seven_segment_top_common_labels(component, label_side, cap_side)
+        _normalize_seven_segment_bottom_common_labels(component, label_side, cap_side)
         return 0
 
     kept_labels = {
@@ -3159,6 +3317,7 @@ def _prune_seven_segment_display_terminals(component: Dict) -> int:
         term for term in component["terminals"] if _terminal_side(term) == cap_side
     ])
     _normalize_seven_segment_top_common_labels(component, label_side, cap_side)
+    _normalize_seven_segment_bottom_common_labels(component, label_side, cap_side)
     debug = component.setdefault("seven_segment_terminal_filter_debug", {})
     debug.update({
         "removed_count": removed,
@@ -3323,6 +3482,7 @@ def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
     _remove_duplicate_sequential_labels(component)
     _repair_unique_pin_numbers(component)
     _repair_555_timer_pin_numbers(component)
+    _repair_4026_pin_numbers(component)
     _repair_three_pin_corner_package_numbers(component)
     if cfg["skip_labels_when_marking_and_number"]:
         debug["labels_cleared_count"] = _clear_pin_labels_when_number_and_marking(component)
