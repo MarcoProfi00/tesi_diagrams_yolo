@@ -1403,21 +1403,15 @@ def filter_micro_bridge_candidates(
             row_clusters = build_horizontal_micro_bridge_clusters(label_bridges)
             promoted = []
             for cluster in row_clusters:
-                split_ok = micro_bridge_points_create_valid_split(
+                if not micro_bridge_points_create_valid_split(
                     int(label),
-                    cluster,
-                    label_to_terminal_ids,
-                    terminals,
-                    skeleton_binary,
-                )
-                if not split_ok and not offset_bridge_cluster_has_terminal_support(
                     cluster,
                     label_to_terminal_ids,
                     terminals,
                     skeleton_binary,
                 ):
                     continue
-                promoted_candidate = promote_offset_bridge_cluster(cluster, skeleton_binary)
+                promoted_candidate = promote_offset_bridge_cluster(cluster)
                 if promoted_candidate is not None:
                     promoted.append(promoted_candidate)
             if promoted:
@@ -1508,63 +1502,26 @@ def build_horizontal_micro_bridge_clusters(bridges: list[dict]):
     return valid_groups
 
 
-def promote_offset_bridge_cluster(cluster: list[dict], skeleton_binary: np.ndarray):
+def promote_offset_bridge_cluster(cluster: list[dict]):
     if not cluster:
         return None
 
     xs = sorted(int(point["x"]) for point in cluster)
     ys = sorted(int(point["y"]) for point in cluster)
-    y = ys[len(ys) // 2]
-    x_candidates = sorted(set(xs))
-    best_x = x_candidates[len(x_candidates) // 2]
-    best_score = -1
-    center_x = 0.5 * (min(xs) + max(xs))
-    for cand_x in x_candidates:
-        score = nearby_vertical_bridge_support(skeleton_binary, int(cand_x), int(y))
-        if score > best_score:
-            best_score = score
-            best_x = int(cand_x)
-            continue
-        if score == best_score and abs(float(cand_x) - center_x) < abs(float(best_x) - center_x):
-            best_x = int(cand_x)
+    mid_idx = len(xs) // 2
+    x = xs[mid_idx]
+    y = ys[mid_idx]
     return {
-        "x": int(best_x),
+        "x": int(x),
         "y": int(y),
         "label": int(cluster[0]["label"]),
         "bridge_style": "offset_gap",
         "bridge_detector": "micro_offset",
         "hump_score": float(len(cluster)),
         "cluster_width": int(max(xs) - min(xs)),
-        "cut_half_width": int(max(BRIDGE_CUT_HALF_WIDTH, ((max(xs) - min(xs)) // 2) + 4)),
-        "cut_half_height": int(max(BRIDGE_CUT_HALF_HEIGHT, 10)),
+        "cut_half_width": int(max(BRIDGE_CUT_HALF_WIDTH, ((max(xs) - min(xs)) // 2) + 2)),
+        "cut_half_height": int(BRIDGE_CUT_HALF_HEIGHT),
     }
-
-
-def offset_bridge_cluster_has_terminal_support(
-    cluster: list[dict],
-    label_to_terminal_ids: dict,
-    terminals: list[dict],
-    skeleton_binary: np.ndarray,
-):
-    if not cluster:
-        return False
-    xs = [int(point["x"]) for point in cluster]
-    ys = [int(point["y"]) for point in cluster]
-    x_candidates = sorted(set(xs))
-    py = float(sorted(ys)[len(ys) // 2])
-    best_x = x_candidates[len(x_candidates) // 2]
-    best_vertical_support = -1
-    for cand_x in x_candidates:
-        support = nearby_vertical_bridge_support(skeleton_binary, int(cand_x), int(py))
-        if support > best_vertical_support:
-            best_vertical_support = int(support)
-            best_x = int(cand_x)
-
-    return (
-        len(cluster) >= OFFSET_BRIDGE_ROW_MIN_POINTS
-        and (max(xs) - min(xs)) >= OFFSET_BRIDGE_ROW_MIN_X_SPAN
-        and best_vertical_support >= int(BRIDGE_THICK_HUMP_STRONG_MIN_VERTICAL_PIXELS)
-    )
 
 
 def has_allowed_bridge_group_sizes(groups: dict):

@@ -200,23 +200,6 @@ def erase_component_bodies_from_skeleton(
             continue
 
         cleaned[ey1:ey2, ex1:ex2] = 0
-        if class_name == "integrated_circuit" and pad < 0:
-            bx1, by1, bx2, by2 = clamp_window(
-                x1,
-                y1,
-                x2,
-                y2,
-                w,
-                h,
-            )
-            if ex1 < bx1:
-                cleaned[ey1:ey2, ex1:bx1] = skeleton_binary[ey1:ey2, ex1:bx1]
-            if bx2 < ex2:
-                cleaned[ey1:ey2, bx2:ex2] = skeleton_binary[ey1:ey2, bx2:ex2]
-            if ey1 < by1:
-                cleaned[ey1:by1, ex1:ex2] = skeleton_binary[ey1:by1, ex1:ex2]
-            if by2 < ey2:
-                cleaned[by2:ey2, ex1:ex2] = skeleton_binary[by2:ey2, ex1:ex2]
         if class_name == "connector":
             cut_connector_pin_separators(cleaned, component)
 
