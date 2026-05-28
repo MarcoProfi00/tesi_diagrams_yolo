@@ -1061,6 +1061,34 @@ def _closest_body_side(word: Dict, body_bbox: List[float]) -> str:
     return min(distances, key=distances.get)
 
 
+def _word_matches_numeric_side(word: Dict, side: str, body_bbox: List[float], cfg: Dict) -> bool:
+    """
+    Decide se una parola numerica vicina al bordo puo' essere associata a un lato.
+
+    Per i numeri vicino agli angoli usiamo una regola piu' elastica del solo
+    "closest side", altrimenti pin come 15/11 possono finire esclusi dal lato
+    giusto solo per pochi pixel.
+    """
+    if side not in {"left", "right", "top", "bottom"}:
+        return False
+
+    bx1, by1, bx2, by2 = [float(v) for v in body_bbox]
+    cx, cy = word["center"]
+    distances = {
+        "left": abs(cx - bx1),
+        "right": abs(cx - bx2),
+        "top": abs(cy - by1),
+        "bottom": abs(cy - by2),
+    }
+    closest = min(distances, key=distances.get)
+    if closest == side:
+        return True
+
+    mode = str(word.get("mode") or "")
+    tolerance = 10.0 if mode == "easyocr_body_label" else 6.0
+    return float(distances[side]) <= float(distances[closest]) + tolerance
+
+
 def _assign_words_to_lanes(words: List[Dict], lanes: List[Dict]) -> Dict[str, List[Dict]]:
     assigned = {lane["terminal_id"]: [] for lane in lanes}
     for word in words:
@@ -1121,6 +1149,43 @@ def _normalize_pin_label_text(text: str) -> str:
         return f"P1.{upper[-1]}"
     if re.fullmatch(r"P[OQ0]\.?[0-7]", upper):
         return f"P0.{upper[-1]}"
+    # OCR alias prudente per label di porta tipo P0.x / P1.x / P3.x.
+    # Lo attiviamo solo quando la stringa intera assomiglia gia' a una port label.
+    port_like = re.fullmatch(r"P([0-3OQIL])(?:[._/-]?)([0-7OQILSZGEBT])", upper)
+    if port_like:
+        port_map = {
+            "0": "0",
+            "1": "1",
+            "3": "3",
+            "O": "0",
+            "Q": "0",
+            "I": "1",
+            "L": "1",
+        }
+        digit_map = {
+            "0": "0",
+            "1": "1",
+            "2": "2",
+            "3": "3",
+            "4": "4",
+            "5": "5",
+            "6": "6",
+            "7": "7",
+            "O": "0",
+            "Q": "0",
+            "I": "1",
+            "L": "1",
+            "S": "5",
+            "Z": "2",
+            "G": "6",
+            "E": "6",
+            "B": "6",
+            "T": "7",
+        }
+        port_idx = port_map.get(port_like.group(1))
+        digit_idx = digit_map.get(port_like.group(2))
+        if port_idx is not None and digit_idx is not None:
+            return f"P{port_idx}.{digit_idx}"
     return compact
 
 
@@ -1261,11 +1326,24 @@ def _label_pick_distance(side: str, cfg: Dict) -> float:
 def _number_pick_distance(side: str, cfg: Dict, has_side_label_guards: bool = False) -> float:
     max_distance = float(cfg["max_number_distance_px"])
     if side in {"left", "right"}:
-        return min(max_distance, 22.0 if has_side_label_guards else 32.0)
+        distance = min(max_distance, 22.0 if has_side_label_guards else 32.0)
+        body_bbox = cfg.get("body_bbox")
+        if body_bbox:
+            body_w = max(1.0, float(body_bbox[2]) - float(body_bbox[0]))
+            # Nei package larghi i numeri dei pin possono stare piu' dentro il body.
+            # Allarghiamo con prudenza la distanza accettata sul solo asse laterale.
+            distance = max(distance, min(max_distance, 18.0 + body_w * 0.08))
+        return distance
     return max_distance
 
 
-def _pick_best_word(words: List[Dict], side: str, body_bbox: List[float], max_distance_px: float) -> Optional[Dict]:
+def _pick_best_word(
+    words: List[Dict],
+    side: str,
+    body_bbox: List[float],
+    max_distance_px: float,
+    term_axis: Optional[float] = None,
+) -> Optional[Dict]:
     """
     Sceglie il miglior candidato numerico privilegiando vicinanza al bordo,
     confidenza e lunghezza.
@@ -1276,16 +1354,34 @@ def _pick_best_word(words: List[Dict], side: str, body_bbox: List[float], max_di
     ranked = []
     for word in words:
         edge_distance = _word_edge_distance(word, side, body_bbox)
-        if edge_distance > max_distance_px:
+        mode = str(word.get("mode") or "")
+        effective_max_distance = float(max_distance_px)
+        if mode == "easyocr_body_label":
+            effective_max_distance += 12.0
+        elif mode in {"text", "number"} and side in {"left", "right"}:
+            effective_max_distance += 6.0
+        if edge_distance > effective_max_distance:
             continue
-        ranked.append((edge_distance, -float(word["confidence"]), -len(word["text"]), word))
+        cx, cy = word["center"]
+        word_axis = cy if side in {"left", "right"} else cx
+        axis_distance = abs(float(word_axis) - float(term_axis)) if term_axis is not None else 0.0
+        if mode == "easyocr_body_label":
+            source_priority = 0
+        elif mode in {"text", "number"}:
+            source_priority = 1
+        elif mode == "text_inner_strip":
+            source_priority = 2
+        else:
+            source_priority = 3
+        ranked.append((axis_distance, source_priority, edge_distance, -float(word["confidence"]), -len(word["text"]), word))
 
     if not ranked:
         return None
 
-    ranked.sort(key=lambda item: item[:3])
-    chosen = dict(ranked[0][3])
-    chosen["edge_distance"] = round(float(ranked[0][0]), 3)
+    ranked.sort(key=lambda item: item[:5])
+    chosen = dict(ranked[0][5])
+    chosen["axis_distance"] = round(float(ranked[0][0]), 3)
+    chosen["edge_distance"] = round(float(ranked[0][2]), 3)
     return chosen
 
 
@@ -1664,17 +1760,33 @@ def _should_replace_with_component_candidate(term: Dict, candidate: Dict, side: 
     debug_payload = term.get("pin_ocr_debug") or {}
     current_best = debug_payload.get("best_number") or {}
     current_mode = str(current_best.get("mode") or "")
-    if (
-        current_mode == "text_inner_strip"
-        and current_conf >= max(0.70, candidate_conf - 0.05)
-    ):
-        return False
-    if (
-        current_mode.endswith("_edge_digit")
-        and current_conf >= 0.55
-        and candidate_conf <= current_conf + 0.10
-    ):
-        return False
+    current_bbox = current_best.get("bbox") or term.get("pin_number_bbox") or [0, 0, 0, 0]
+    if current_mode == "text_inner_strip":
+        if candidate_conf >= current_conf + 0.12:
+            return True
+        if candidate_conf >= 0.70 and current_conf < 0.70:
+            return True
+        if (
+            len(str(candidate.get("text") or "")) == len(current_text)
+            and _bbox_overlap_ratio(current_bbox, candidate["bbox"]) >= 0.85
+            and candidate_conf >= 0.70
+        ):
+            return True
+        if current_conf >= max(0.70, candidate_conf - 0.05):
+            return False
+    if current_mode.endswith("_edge_digit"):
+        if candidate_conf >= current_conf + 0.10:
+            return True
+        if candidate_conf >= 0.70 and current_conf < 0.70:
+            return True
+        if (
+            len(str(current_best.get("source_text") or "")) >= 3
+            and candidate_conf >= 0.70
+            and len(str(candidate.get("text") or "")) == 1
+        ):
+            return True
+        if current_conf >= 0.55 and candidate_conf <= current_conf + 0.10:
+            return False
 
     if len(candidate["text"]) > len(current_text):
         return True
@@ -1684,8 +1796,7 @@ def _should_replace_with_component_candidate(term: Dict, candidate: Dict, side: 
     if current_mode not in {"text", "number"}:
         return False
 
-    current_bbox = current_best.get("bbox") or term.get("pin_number_bbox")
-    if not current_bbox:
+    if not current_bbox or current_bbox == [0, 0, 0, 0]:
         return False
 
     current_w, current_h = _bbox_size(current_bbox)
@@ -1868,7 +1979,7 @@ def _assign_lane_semantics(
             word for word in lane_text_words
             if word["confidence"] >= cfg["label_min_confidence"]
             and _is_number_text(word["text"], cfg)
-            and _closest_body_side(word, body_bbox) == side
+            and _word_matches_numeric_side(word, side, body_bbox, cfg)
         ]
         numeric_from_text.extend(_inner_strip_numeric_candidates(
             lane_text_words,
@@ -1884,7 +1995,7 @@ def _assign_lane_semantics(
             word for word in lane_number_words
             if word["confidence"] >= cfg["number_min_confidence"]
             and _is_number_text(word["text"], cfg)
-            and _closest_body_side(word, body_bbox) == side
+            and _word_matches_numeric_side(word, side, body_bbox, cfg)
         ]
 
         if label_candidates:
@@ -1906,6 +2017,7 @@ def _assign_lane_semantics(
             side=side,
             body_bbox=body_bbox,
             max_distance_px=_number_pick_distance(side, cfg, has_side_label_guards),
+            term_axis=(float(term.get("y", 0.0)) if side in {"left", "right"} else float(term.get("x", 0.0))),
         )
         if best_number is None:
             best_number = _pick_best_word(
@@ -1913,6 +2025,7 @@ def _assign_lane_semantics(
                 side=side,
                 body_bbox=body_bbox,
                 max_distance_px=_number_pick_distance(side, cfg, has_side_label_guards),
+                term_axis=(float(term.get("y", 0.0)) if side in {"left", "right"} else float(term.get("x", 0.0))),
             )
 
         debug_payload = {
@@ -1964,7 +2077,7 @@ def _assign_component_number_fallback(
         candidates = [
             word for word in component_map.get(lane["terminal_id"], [])
             if _is_number_text(word["text"], cfg)
-            and (side not in {"left", "right"} or _closest_body_side(word, body_bbox) == side)
+            and _word_matches_numeric_side(word, side, body_bbox, cfg)
             and not _overlaps_any_label_guard(word, lane_label_guards, cfg)
         ]
         best = _pick_best_lane_word(
@@ -2589,10 +2702,32 @@ def _lanes_needing_component_fallback(side_run: Dict, component_terminal_count: 
                 lanes.append(lane)
             elif (
                 side in {"left", "right"}
-                and current_mode in {"text", "number"}
-                and current_edge_distance <= 10.0
+                and (
+                    (current_mode in {"text", "number"} and current_edge_distance <= 10.0)
+                    or current_mode == "text_inner_strip"
+                    or current_mode.endswith("_edge_digit")
+                )
             ):
                 lanes.append(lane)
+        elif (
+            side in {"left", "right"}
+            and component_terminal_count > 9
+            and (current_mode in {"text_inner_strip", "text_edge_digit"} or current_mode.endswith("_edge_digit"))
+            and confidence <= 0.72
+        ):
+            lanes.append(lane)
+        elif (
+            side in {"left", "right"}
+            and current_mode.endswith("_edge_digit")
+            and len(str(best_number.get("source_text") or "")) >= 3
+        ):
+            lanes.append(lane)
+        elif (
+            side in {"left", "right"}
+            and current_mode == "text_inner_strip"
+            and len(str(best_number.get("text") or "")) >= 2
+        ):
+            lanes.append(lane)
         elif confidence <= 0.40:
             lanes.append(lane)
         elif _single_digit_fallback_strong_hint(term, cfg):
@@ -2919,7 +3054,9 @@ def _repair_sequential_pin_labels(component: Dict) -> None:
                 direction = -1
                 parameter = best_desc[0]
                 support = best_desc[1]
-            if support < 2:
+            prefix_upper = str(prefix or "").upper()
+            is_port_sequence = re.fullmatch(r"P[0-3]\.?", prefix_upper) is not None
+            if support < (2 if is_port_sequence else 2):
                 continue
 
             positions = [pos for pos, _, _ in entries]
@@ -2929,10 +3066,13 @@ def _repair_sequential_pin_labels(component: Dict) -> None:
             end_pos = max_pos
             if direction == 1:
                 start_pos = max(1, -parameter)
+            if support >= 3 and is_port_sequence:
+                start_pos = 1
+                end_pos = len(side_terms)
             for pos in range(start_pos, end_pos + 1):
                 term = side_terms[pos - 1]
                 expected_index = (pos + parameter) if direction == 1 else (parameter - pos)
-                if expected_index < 0 or expected_index > 99:
+                if expected_index < 0 or expected_index > (7 if is_port_sequence else 99):
                     continue
                 desired = _format_sequential_pin_label(prefix, expected_index)
                 current = str(term.get("pin_label_text") or "").strip().upper()
@@ -2947,6 +3087,10 @@ def _repair_sequential_pin_labels(component: Dict) -> None:
                 if current and current_prefix == prefix and current_conf >= 0.75:
                     continue
                 term["pin_label_text"] = desired
+                if is_port_sequence:
+                    term["pin_number"] = None
+                    term["pin_number_confidence"] = None
+                    term.pop("pin_number_bbox", None)
 
 
 def _remove_duplicate_sequential_labels(component: Dict) -> None:
@@ -2998,6 +3142,35 @@ def _has_ic_marking(component: Dict) -> bool:
     return bool(str(component.get("ic_marking") or "").strip())
 
 
+def _should_run_body_label_ocr(component: Dict, cfg: Dict) -> bool:
+    """
+    Decide quando usare EasyOCR dentro il body dell'IC.
+
+    Anche se il marking esiste, per package grandi le label dei pin stampate nel
+    body restano informazione reale dell'immagine e aiutano molto l'OCR dei pin.
+    """
+    if not cfg.get("label_enabled", True):
+        return False
+    if not cfg.get("easyocr_label_enabled", True):
+        return False
+    if not _has_ic_marking(component):
+        return True
+
+    terminals = component.get("terminals", []) or []
+    if len(terminals) >= 10:
+        return True
+
+    side_counts: Dict[str, int] = {}
+    for term in terminals:
+        side = _terminal_side(term)
+        if side is None:
+            continue
+        side_counts[side] = side_counts.get(side, 0) + 1
+    if len(terminals) >= 6 and len(side_counts) >= 3:
+        return True
+    return max(side_counts.values(), default=0) >= 5
+
+
 def _clear_pin_labels_when_number_and_marking(component: Dict) -> int:
     """
     Policy datasheet-first: se l'IC ha marking e il terminale ha pin_number,
@@ -3011,6 +3184,20 @@ def _clear_pin_labels_when_number_and_marking(component: Dict) -> int:
         if term.get("pin_number") in (None, ""):
             continue
         if term.get("pin_label_text") in (None, ""):
+            continue
+
+        parsed = _split_sequential_pin_label(term.get("pin_label_text") or "")
+        prefix = str(parsed[0] if parsed is not None else "").upper()
+        # Per label di porta tipo P0.x / P1.x / P3.x preferiamo tenere la label
+        # reale dell'immagine e scartare il numero OCR spurio sullo stesso pin.
+        if re.fullmatch(r"P[0-3]\.", prefix):
+            term["pin_number"] = None
+            term["pin_number_confidence"] = None
+            term.pop("pin_number_bbox", None)
+            debug_payload = term.get("pin_ocr_debug")
+            if isinstance(debug_payload, dict):
+                debug_payload["number_cleared_reason"] = "port_label_preferred_over_pin_number"
+                debug_payload.pop("best_number", None)
             continue
 
         term["pin_label_text"] = None
@@ -3251,6 +3438,7 @@ def _scan_seven_segment_contacts(binary: np.ndarray, body_bbox: List[float], sid
     corner_skip_x = max(2, int(round(width * 0.04)))
     outward = 34
     inward = 6
+    edge_gap = 8
     min_run = 4
     min_wire = 10
     halfspan = 2
@@ -3265,10 +3453,10 @@ def _scan_seven_segment_contacts(binary: np.ndarray, body_bbox: List[float], sid
             for yy in range(y - halfspan, y + halfspan + 1):
                 for run in _line_runs_row(binary, yy, xs, xe):
                     if side == "left":
-                        touches_edge = run["start"] <= edge_x + inward and run["end"] >= edge_x - 1
+                        touches_edge = run["start"] <= edge_x + inward and run["end"] >= edge_x - edge_gap
                         outward_len = max(0.0, edge_x - float(run["start"]) + 1.0)
                     else:
-                        touches_edge = run["start"] <= edge_x + 1 and run["end"] >= edge_x - inward
+                        touches_edge = run["start"] <= edge_x + edge_gap and run["end"] >= edge_x - inward
                         outward_len = max(0.0, float(run["end"]) - edge_x + 1.0)
                     if not touches_edge or float(run["length"]) < min_run or outward_len < min_wire:
                         continue
@@ -3284,10 +3472,10 @@ def _scan_seven_segment_contacts(binary: np.ndarray, body_bbox: List[float], sid
             for xx in range(x - halfspan, x + halfspan + 1):
                 for run in _line_runs_col(binary, xx, ys, ye):
                     if side == "top":
-                        touches_edge = run["start"] <= edge_y + inward and run["end"] >= edge_y - 1
+                        touches_edge = run["start"] <= edge_y + inward and run["end"] >= edge_y - edge_gap
                         outward_len = max(0.0, edge_y - float(run["start"]) + 1.0)
                     else:
-                        touches_edge = run["start"] <= edge_y + 1 and run["end"] >= edge_y - inward
+                        touches_edge = run["start"] <= edge_y + edge_gap and run["end"] >= edge_y - inward
                         outward_len = max(0.0, float(run["end"]) - edge_y + 1.0)
                     if not touches_edge or float(run["length"]) < min_run or outward_len < min_wire:
                         continue
@@ -3412,7 +3600,7 @@ def _recover_seven_segment_display_terminals(
         ]
         for side in ("left", "right", "top", "bottom")
     }
-    if (len(by_side["left"]) == 7 or len(by_side["right"]) == 7) and (len(by_side["bottom"]) == 1 or len(by_side["top"]) == 1):
+    if (len(by_side["left"]) in {7, 8} or len(by_side["right"]) in {7, 8}) and (len(by_side["bottom"]) == 1 or len(by_side["top"]) == 1):
         return {"recovered": False, "reason": "already_has_canonical_terminal_layout"}
 
     scan_bbox, scan_debug = _seven_segment_display_scan_bbox(component, body_bbox, image_bgr.shape)
@@ -3426,28 +3614,13 @@ def _recover_seven_segment_display_terminals(
 
     side_choice = "left" if len(left_contacts) >= len(right_contacts) else "right"
     label_contacts = left_contacts if side_choice == "left" else right_contacts
-    opposite_contacts = right_contacts if side_choice == "left" else left_contacts
     common_side = "bottom" if len(bottom_contacts) >= len(top_contacts) else "top"
     common_contacts = bottom_contacts if common_side == "bottom" else top_contacts
 
-    if len(label_contacts) != 7 or len(common_contacts) != 1:
+    if len(label_contacts) not in {7, 8} or len(common_contacts) != 1:
         return {
             "recovered": False,
             "reason": "edge_scan_not_canonical",
-            "scan_bbox": scan_bbox,
-            "scan_bbox_debug": scan_debug,
-            "counts": {
-                "left": len(left_contacts),
-                "right": len(right_contacts),
-                "top": len(top_contacts),
-                "bottom": len(bottom_contacts),
-            },
-        }
-
-    if len(opposite_contacts) > 1:
-        return {
-            "recovered": False,
-            "reason": "too_many_opposite_side_contacts",
             "scan_bbox": scan_bbox,
             "scan_bbox_debug": scan_debug,
             "counts": {
@@ -3688,10 +3861,12 @@ def _normalize_seven_segment_top_common_labels(
     }
     label_terms = by_side.get(label_side) or []
     cap_terms = by_side.get(cap_side) or []
-    if len(label_terms) != 7 or len(cap_terms) != 1:
+    if len(cap_terms) != 1 or len(label_terms) not in {7, 8}:
         return
 
     expected_labels = ["a", "b", "c", "d", "e", "f", "g"]
+    if len(label_terms) >= 8:
+        expected_labels.append("h")
     for term, label in zip(label_terms, expected_labels):
         _clear_terminal_pin_number(term)
         term["pin_label_text"] = label
@@ -3738,10 +3913,12 @@ def _normalize_seven_segment_bottom_common_labels(
     }
     label_terms = by_side.get(label_side) or []
     cap_terms = by_side.get(cap_side) or []
-    if len(label_terms) != 7 or len(cap_terms) != 1:
+    if len(cap_terms) != 1 or len(label_terms) not in {7, 8}:
         return
 
     expected_labels = ["a", "b", "c", "d", "e", "f", "g"]
+    if len(label_terms) >= 8:
+        expected_labels.append("h")
     for term, label in zip(label_terms, expected_labels):
         _clear_terminal_pin_number(term)
         term["pin_label_text"] = label
@@ -4053,14 +4230,17 @@ def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
         side_runs = _build_side_lanes(component, body_bbox, image_bgr.shape, cfg)
         debug["ocr_assisted_recovered_terminals"] = recovered_terminals
 
-    if _has_ic_marking(component):
+    if _should_run_body_label_ocr(component, cfg):
+        body_label_words, body_label_info = _run_easyocr_body_label_words(image_bgr, body_bbox, cfg)
+    else:
+        skip_reason = "label_ocr_disabled"
+        if _has_ic_marking(component):
+            skip_reason = "ic_marking_present_small_package"
         body_label_words = []
         body_label_info = {
             "ok": True,
-            "skipped": "ic_marking_present_datasheet_preferred",
+            "skipped": skip_reason,
         }
-    else:
-        body_label_words, body_label_info = _run_easyocr_body_label_words(image_bgr, body_bbox, cfg)
     debug["body_label_ocr"] = body_label_info
     if cfg["store_debug"]:
         debug["body_label_words"] = body_label_words

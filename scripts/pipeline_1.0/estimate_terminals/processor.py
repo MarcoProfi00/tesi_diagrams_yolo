@@ -212,12 +212,15 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
             and estimated_orientation == "vertical"
             and rel_pos == "bottom"
         ):
-            x1, _, _, y2 = bbox
-            x = round(float(x1) - TERMINAL_OUTWARD_OFFSET, 2)
-            y = round(float(y2), 2)
-            rel_pos = "left"
-            point_debug["point_mode"] = "motor_vertical_lower_side_contact"
-            point_debug["anchor_offset_ratio"] = 1.0
+            motor_point, motor_debug = geom_terminal_point_by_side_peak(
+                point_binary,
+                bbox,
+                "bottom",
+            )
+            x, y = motor_point
+            rel_pos = "bottom"
+            point_debug.update(motor_debug)
+            point_debug["point_mode"] = "motor_vertical_lower_bottom_contact"
 
         #arricchimento semantico
         terminals.append({

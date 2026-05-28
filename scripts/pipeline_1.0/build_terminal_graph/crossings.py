@@ -31,6 +31,10 @@ from .config import (
     BRIDGE_THICK_HUMP_FOOT_Y_MAX,
     BRIDGE_THICK_HUMP_MIN_SIDE_PIXELS,
     BRIDGE_THICK_HUMP_MIN_FOOT_PIXELS,
+    BRIDGE_THICK_HUMP_RELAXED_MIN_SKELETON_Y_SPAN,
+    BRIDGE_THICK_HUMP_STRONG_MIN_FOOT_PIXELS,
+    BRIDGE_THICK_HUMP_STRONG_MIN_VERTICAL_PIXELS,
+    BRIDGE_THICK_HUMP_STRONG_SCORE_MIN,
     BRIDGE_THICK_HUMP_MIN_SKELETON_Y_SPAN,
     BRIDGE_THICK_HUMP_MIN_VERTICAL_PIXELS,
     BRIDGE_THICK_HUMP_VERTICAL_SEARCH_RADIUS,
@@ -45,6 +49,10 @@ from .config import (
     MICRO_BRIDGE_TERMINAL_HORIZONTAL_BAND,
     MICRO_BRIDGE_VERTICAL_BAND_DEPTH,
     MICRO_BRIDGE_VERTICAL_BAND_RADIUS,
+    OFFSET_BRIDGE_ROW_MAX_X_GAP,
+    OFFSET_BRIDGE_ROW_MIN_POINTS,
+    OFFSET_BRIDGE_ROW_MIN_X_SPAN,
+    OFFSET_BRIDGE_ROW_Y_TOL,
     PLAIN_CROSSING_SPLIT_ENABLE,
     PLAIN_CROSSING_SELF_SHORT_EXCLUDED_CLASSES,
     PLAIN_CROSSING_CUT_HALF_HEIGHT,
@@ -322,15 +330,29 @@ def detect_thick_hump_bridge(
     shape = thick_bridge_hump_score(support_binary, support_integral, x, y)
     if shape is None:
         return None
-    if (
-        hump_side_skeleton_y_span(skeleton_binary, x, y, int(shape["hump_direction"]))
-        < BRIDGE_THICK_HUMP_MIN_SKELETON_Y_SPAN
-    ):
-        return None
 
     vertical_support = nearby_vertical_bridge_support(skeleton_binary, x, y)
     if vertical_support < BRIDGE_THICK_HUMP_MIN_VERTICAL_PIXELS:
         return None
+
+    skeleton_y_span = hump_side_skeleton_y_span(
+        skeleton_binary,
+        x,
+        y,
+        int(shape["hump_direction"]),
+    )
+    if skeleton_y_span < BRIDGE_THICK_HUMP_MIN_SKELETON_Y_SPAN:
+        strong_low_hump = (
+            skeleton_y_span >= BRIDGE_THICK_HUMP_RELAXED_MIN_SKELETON_Y_SPAN
+            and float(shape["hump_score"]) >= float(BRIDGE_THICK_HUMP_STRONG_SCORE_MIN)
+            and min(
+                int(shape.get("left_foot_pixels", 0)),
+                int(shape.get("right_foot_pixels", 0)),
+            ) >= int(BRIDGE_THICK_HUMP_STRONG_MIN_FOOT_PIXELS)
+            and int(vertical_support) >= int(BRIDGE_THICK_HUMP_STRONG_MIN_VERTICAL_PIXELS)
+        )
+        if not strong_low_hump:
+            return None
 
     source_label = nearest_split_label(
         labels,
@@ -943,6 +965,7 @@ def split_bridge_labels(
         terminals,
         terminal_match_debug,
         skeleton_binary,
+        allow_blue_diode_micro=enable_thick_hump_detection,
     )
     bridges = raw_bridges
     bridge_labels = {int(bridge["label"]) for bridge in raw_bridges}
@@ -976,8 +999,8 @@ def split_bridge_labels(
         split_points.append({
             **bridge,
             "split_kind": "bridge_hump",
-            "cut_half_width": BRIDGE_CUT_HALF_WIDTH,
-            "cut_half_height": BRIDGE_CUT_HALF_HEIGHT,
+            "cut_half_width": int(bridge.get("cut_half_width", BRIDGE_CUT_HALF_WIDTH)),
+            "cut_half_height": int(bridge.get("cut_half_height", BRIDGE_CUT_HALF_HEIGHT)),
             "probe_distance": BRIDGE_PROBE_DISTANCE,
         })
 
@@ -1106,6 +1129,7 @@ def split_bridge_labels(
             original_label,
             related_groups,
             split_points,
+            terminal_by_id,
         )
 
         if creates_singleton and not allow_singleton:
@@ -1202,7 +1226,7 @@ def split_ambiguous_micro_bridge_groups(
     micro_points = [
         point
         for point in split_points
-        if point.get("bridge_style") == "micro_gap"
+        if point.get("bridge_style") in {"micro_gap", "offset_gap"}
     ]
     if not micro_points:
         return terminal_groups
@@ -1232,22 +1256,79 @@ def split_ambiguous_micro_bridge_groups(
     return groups
 
 
-def allow_singleton_split_for_label(original_label: int, related_groups: list[list[str]], split_points: list[dict]):
+def allow_singleton_split_for_label(
+    original_label: int,
+    related_groups: list[list[str]],
+    split_points: list[dict],
+    terminal_by_id: dict | None = None,
+):
     if not has_allowed_bridge_group_sizes({
         idx: list(group)
         for idx, group in enumerate(related_groups)
     }):
         return False
 
-    return any(
-        int(point.get("label", -1)) == int(original_label)
-        and point.get("split_kind") == "bridge_hump"
-        or (
-            int(point.get("label", -1)) == int(original_label)
-            and point.get("bridge_style") == "micro_gap"
-        )
+    label_points = [
+        point
         for point in split_points
-    )
+        if int(point.get("label", -1)) == int(original_label)
+    ]
+    if not label_points:
+        return False
+
+    hump_points = [
+        point
+        for point in label_points
+        if point.get("split_kind") == "bridge_hump"
+    ]
+    if not hump_points:
+        return False
+
+    singleton_groups = [
+        list(group)
+        for group in related_groups
+        if len(set(group)) == 1
+    ]
+    if not singleton_groups:
+        return True
+    if terminal_by_id is None:
+        return False
+
+    micro_points = [
+        point
+        for point in label_points
+        if point.get("bridge_style") == "micro_gap"
+    ]
+    max_hump_distance = float(BRIDGE_PROBE_DISTANCE) * 2.0
+
+    for group in singleton_groups:
+        terminal_id = str(group[0])
+        term = terminal_by_id.get(terminal_id)
+        if term is None:
+            return False
+
+        try:
+            tx = float(term["x"])
+            ty = float(term["y"])
+        except (KeyError, TypeError, ValueError):
+            return False
+
+        nearest_hump = min(
+            float(np.hypot(tx - float(point["x"]), ty - float(point["y"])))
+            for point in hump_points
+        )
+        if nearest_hump > max_hump_distance:
+            return False
+
+        if micro_points:
+            nearest_micro = min(
+                float(np.hypot(tx - float(point["x"]), ty - float(point["y"])))
+                for point in micro_points
+            )
+            if nearest_micro <= nearest_hump + 4.0:
+                return False
+
+    return True
 
 
 def split_group_by_micro_bridge_geometry(
@@ -1296,6 +1377,7 @@ def filter_micro_bridge_candidates(
     terminals: list[dict],
     terminal_match_debug: dict,
     skeleton_binary: np.ndarray,
+    allow_blue_diode_micro: bool = False,
 ):
     filtered = []
     micro_by_label = {}
@@ -1309,12 +1391,39 @@ def filter_micro_bridge_candidates(
         if label_contains_class(label, terminals, terminal_match_debug, {"diode"}):
             if int(bridge.get("max_side_gap", 0)) >= 3:
                 filtered.append(bridge)
+            elif allow_blue_diode_micro and int(bridge.get("max_side_gap", 0)) >= 1:
+                micro_by_label.setdefault(label, []).append(bridge)
             continue
 
         if int(bridge.get("max_side_gap", 0)) >= 1:
             micro_by_label.setdefault(label, []).append(bridge)
 
     for label, label_bridges in micro_by_label.items():
+        if allow_blue_diode_micro:
+            row_clusters = build_horizontal_micro_bridge_clusters(label_bridges)
+            promoted = []
+            for cluster in row_clusters:
+                split_ok = micro_bridge_points_create_valid_split(
+                    int(label),
+                    cluster,
+                    label_to_terminal_ids,
+                    terminals,
+                    skeleton_binary,
+                )
+                if not split_ok and not offset_bridge_cluster_has_terminal_support(
+                    cluster,
+                    label_to_terminal_ids,
+                    terminals,
+                    skeleton_binary,
+                ):
+                    continue
+                promoted_candidate = promote_offset_bridge_cluster(cluster, skeleton_binary)
+                if promoted_candidate is not None:
+                    promoted.append(promoted_candidate)
+            if promoted:
+                filtered.extend(promoted)
+                continue
+
         clusters = build_vertical_micro_bridge_clusters(label_bridges)
         if not clusters:
             continue
@@ -1359,6 +1468,103 @@ def build_vertical_micro_bridge_clusters(bridges: list[dict]):
         valid_clusters.append(cluster)
 
     return valid_clusters
+
+
+def build_horizontal_micro_bridge_clusters(bridges: list[dict]):
+    if not bridges:
+        return []
+
+    sorted_points = sorted(bridges, key=lambda item: (int(item["y"]), int(item["x"])))
+    row_groups: list[list[dict]] = []
+    current: list[dict] = []
+
+    for bridge in sorted_points:
+        if not current:
+            current = [bridge]
+            continue
+
+        prev = current[-1]
+        same_row = abs(int(bridge["y"]) - int(prev["y"])) <= OFFSET_BRIDGE_ROW_Y_TOL
+        close_x = int(bridge["x"]) - int(prev["x"]) <= OFFSET_BRIDGE_ROW_MAX_X_GAP
+        if same_row and close_x:
+            current.append(bridge)
+            continue
+
+        row_groups.append(current)
+        current = [bridge]
+
+    if current:
+        row_groups.append(current)
+
+    valid_groups = []
+    for group in row_groups:
+        if len(group) < OFFSET_BRIDGE_ROW_MIN_POINTS:
+            continue
+        xs = [int(item["x"]) for item in group]
+        if max(xs) - min(xs) < OFFSET_BRIDGE_ROW_MIN_X_SPAN:
+            continue
+        valid_groups.append(group)
+
+    return valid_groups
+
+
+def promote_offset_bridge_cluster(cluster: list[dict], skeleton_binary: np.ndarray):
+    if not cluster:
+        return None
+
+    xs = sorted(int(point["x"]) for point in cluster)
+    ys = sorted(int(point["y"]) for point in cluster)
+    y = ys[len(ys) // 2]
+    x_candidates = sorted(set(xs))
+    best_x = x_candidates[len(x_candidates) // 2]
+    best_score = -1
+    center_x = 0.5 * (min(xs) + max(xs))
+    for cand_x in x_candidates:
+        score = nearby_vertical_bridge_support(skeleton_binary, int(cand_x), int(y))
+        if score > best_score:
+            best_score = score
+            best_x = int(cand_x)
+            continue
+        if score == best_score and abs(float(cand_x) - center_x) < abs(float(best_x) - center_x):
+            best_x = int(cand_x)
+    return {
+        "x": int(best_x),
+        "y": int(y),
+        "label": int(cluster[0]["label"]),
+        "bridge_style": "offset_gap",
+        "bridge_detector": "micro_offset",
+        "hump_score": float(len(cluster)),
+        "cluster_width": int(max(xs) - min(xs)),
+        "cut_half_width": int(max(BRIDGE_CUT_HALF_WIDTH, ((max(xs) - min(xs)) // 2) + 4)),
+        "cut_half_height": int(max(BRIDGE_CUT_HALF_HEIGHT, 10)),
+    }
+
+
+def offset_bridge_cluster_has_terminal_support(
+    cluster: list[dict],
+    label_to_terminal_ids: dict,
+    terminals: list[dict],
+    skeleton_binary: np.ndarray,
+):
+    if not cluster:
+        return False
+    xs = [int(point["x"]) for point in cluster]
+    ys = [int(point["y"]) for point in cluster]
+    x_candidates = sorted(set(xs))
+    py = float(sorted(ys)[len(ys) // 2])
+    best_x = x_candidates[len(x_candidates) // 2]
+    best_vertical_support = -1
+    for cand_x in x_candidates:
+        support = nearby_vertical_bridge_support(skeleton_binary, int(cand_x), int(py))
+        if support > best_vertical_support:
+            best_vertical_support = int(support)
+            best_x = int(cand_x)
+
+    return (
+        len(cluster) >= OFFSET_BRIDGE_ROW_MIN_POINTS
+        and (max(xs) - min(xs)) >= OFFSET_BRIDGE_ROW_MIN_X_SPAN
+        and best_vertical_support >= int(BRIDGE_THICK_HUMP_STRONG_MIN_VERTICAL_PIXELS)
+    )
 
 
 def has_allowed_bridge_group_sizes(groups: dict):

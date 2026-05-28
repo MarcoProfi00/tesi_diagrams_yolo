@@ -32,9 +32,9 @@ from estimate_terminals.probes import (
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PIPELINE_DATASET = os.environ.get(
     "PIPELINE_DATASET",
-    "pipeline1.0/batchB"
+    "pipeline1.0/batchC/batchC3"
 )
-PIPELINE_INPUT_BATCH = os.environ.get("PIPELINE_INPUT_BATCH", "batchB")
+PIPELINE_INPUT_BATCH = os.environ.get("PIPELINE_INPUT_BATCH", "batchC/batchC3")
 
 # === MODELLO ===
 MODEL_PATH = (
@@ -1836,6 +1836,13 @@ def suppress_conflicting_components(components, image_binary):
 
             if pair == {"LED", "Diode"}:
                 drop_idx = i if class_a == "Diode" else j
+                suppressed.add(drop_idx)
+                continue
+
+            if pair == {"Fuse", "Switch"}:
+                # Il simbolo del fuse puo' essere occasionalmente duplicato come Switch
+                # sullo stesso box; in quel caso teniamo il fuse e scartiamo il doppione.
+                drop_idx = i if class_a == "Switch" else j
                 suppressed.add(drop_idx)
                 continue
 

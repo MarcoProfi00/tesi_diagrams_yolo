@@ -565,6 +565,28 @@ def resolve_two_terminal_semantics(binary, bbox, orientation, terminals, meta):
             center_band_ratio=0.50,
             edge_inset_ratio=0.10,
         )
+        if orientation == "horizontal":
+            plus_score_map = _plus_marker_scores_by_side(binary, bbox, orientation)
+            plus_marker_side, _, plus_confidence, plus_evidence = _choose_side(
+                plus_score_map,
+                "left",
+                "right",
+                DEFAULT_FALLBACK_SIDE.get(orientation, "left"),
+            )
+            plus_best = max(
+                float(plus_score_map.get("left", 0.0)),
+                float(plus_score_map.get("right", 0.0)),
+            )
+            if plus_evidence == "symbol_heuristic" and plus_confidence >= 0.30 and plus_best >= 20.0:
+                score_map = {
+                    **score_map,
+                    "left": round(float(plus_score_map.get("left", 0.0)), 4),
+                    "right": round(float(plus_score_map.get("right", 0.0)), 4),
+                    "projection_mode": "polarized_capacitor_plus_marker_override",
+                    "selected_plus_marker_side": plus_marker_side,
+                    "plus_confidence": plus_confidence,
+                    "plus_score_mode": plus_score_map.get("score_mode"),
+                }
         # Nei polarizzati la piastra curva puo' produrre piu' massa del marker
         # rettilineo, quindi i near-tie vanno trattati come casi incerti e
         # risolti con il fallback convenzionale dell'orientazione.

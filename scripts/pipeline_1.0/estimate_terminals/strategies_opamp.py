@@ -193,29 +193,46 @@ def snap_opamp_top_aux_to_nearby_terminal(components: list[dict], binary):
 
         band_x1 = x1 + OPAMP_AUX_CENTER_START_RATIO * width
         band_x2 = x1 + OPAMP_AUX_CENTER_END_RATIO * width
-        top_region_y2 = y1 + OPAMP_AUX_NEARBY_TERMINAL_TOP_REGION_RATIO * height
-
-        nearby_terminals = [
-            candidate
-            for candidate in terminal_candidates
-            if band_x1 <= candidate["x"] <= band_x2
-            and y1 <= candidate["y"] <= top_region_y2
-        ]
-
-        if not nearby_terminals:
-            continue
-
-        best_terminal = min(
-            nearby_terminals,
-            key=lambda candidate: (
-                abs(candidate["x"] - center_x),
-                abs(candidate["y"] - y1),
-            ),
-        )
-
         for terminal in component.get("terminals", []):
-            if terminal.get("name") != "aux1" or terminal.get("relative_position") != "top":
+            terminal_name = str(terminal.get("name") or "")
+            relative_position = str(terminal.get("relative_position") or "")
+            if terminal_name not in {"aux1", "aux2"} or relative_position not in {"top", "bottom"}:
                 continue
+
+            if relative_position == "top":
+                nearby_terminals = [
+                    candidate
+                    for candidate in terminal_candidates
+                    if band_x1 <= candidate["x"] <= band_x2
+                    and y1 <= candidate["y"] <= (y1 + OPAMP_AUX_NEARBY_TERMINAL_TOP_REGION_RATIO * height)
+                ]
+                if not nearby_terminals:
+                    continue
+                best_terminal = min(
+                    nearby_terminals,
+                    key=lambda candidate: (
+                        abs(candidate["x"] - center_x),
+                        abs(candidate["y"] - y1),
+                    ),
+                )
+            else:
+                bottom_region_y1 = y2
+                bottom_region_y2 = y2 + OPAMP_AUX_NEARBY_TERMINAL_BOTTOM_REGION_RATIO * height
+                nearby_terminals = [
+                    candidate
+                    for candidate in terminal_candidates
+                    if band_x1 <= candidate["x"] <= band_x2
+                    and bottom_region_y1 <= candidate["y"] <= bottom_region_y2
+                ]
+                if not nearby_terminals:
+                    continue
+                best_terminal = min(
+                    nearby_terminals,
+                    key=lambda candidate: (
+                        abs(candidate["x"] - center_x),
+                        abs(candidate["y"] - y2),
+                    ),
+                )
 
             old_x = float(terminal.get("x", 0.0))
             old_y = float(terminal.get("y", 0.0))
@@ -230,7 +247,10 @@ def snap_opamp_top_aux_to_nearby_terminal(components: list[dict], binary):
             refine_debug = {}
             snap_mode = "nearby_variable_terminal_axis_to_diagonal"
 
-            if out_terminal is not None:
+            if relative_position == "bottom":
+                new_y = float(best_terminal["y"])
+                snap_mode = "nearby_variable_terminal_direct_point"
+            elif out_terminal is not None:
                 out_x = float(out_terminal.get("x", 0.0))
                 out_y = float(out_terminal.get("y", 0.0))
                 dx = out_x - old_x
@@ -262,7 +282,7 @@ def snap_opamp_top_aux_to_nearby_terminal(components: list[dict], binary):
                     refine_binary,
                     (x1, y1, x2, y2),
                     component.get("estimated_orientation"),
-                    terminal.get("relative_position"),
+                    relative_position,
                     new_x,
                     base_y,
                 )
@@ -286,7 +306,11 @@ def snap_opamp_top_aux_to_nearby_terminal(components: list[dict], binary):
                     round(float(band_x1), 2),
                     round(float(band_x2), 2),
                 ],
-                "snap_top_region_y2": round(float(top_region_y2), 2),
+                "snap_region": (
+                    [round(float(y1), 2), round(float(y1 + OPAMP_AUX_NEARBY_TERMINAL_TOP_REGION_RATIO * height), 2)]
+                    if relative_position == "top"
+                    else [round(float(y2), 2), round(float(y2 + OPAMP_AUX_NEARBY_TERMINAL_BOTTOM_REGION_RATIO * height), 2)]
+                ),
                 "snap_refined_diag_support": refine_debug.get("refined_diag_support"),
                 "snap_refine_mode": refine_debug.get("refine_mode"),
                 **refine_debug,
