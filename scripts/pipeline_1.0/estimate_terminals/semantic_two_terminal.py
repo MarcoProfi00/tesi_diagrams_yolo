@@ -12,6 +12,7 @@ DEFAULT_FALLBACK_SIDE = {
 }
 
 LED_VERTICAL_TOP_CATHODE_LOW_CONFIDENCE_MAX = 0.45
+POLARIZED_CAPACITOR_PLATE_SHAPE_MIN_CONFIDENCE = 0.08
 
 
 # Raggruppa indici consecutivi.
@@ -315,6 +316,98 @@ def _plus_marker_scores_by_side(binary, bbox, orientation: str):
     }
 
 
+def _polarized_capacitor_plate_shape_scores(binary, bbox, orientation: str):
+    x1, y1, x2, y2, width, height = _bbox_dims(bbox, binary)
+
+    if orientation == "horizontal":
+        y_margin = max(1, int(round(height * 0.10)))
+        ry1 = min(max(y1, y1 + y_margin), y2)
+        ry2 = max(min(y2 + 1, y2 + 1 - y_margin), ry1 + 1)
+        roi = binary[ry1:ry2, x1:x2 + 1]
+        # Orizzontale: dobbiamo confrontare sinistra/destra, quindi proiettiamo sulle colonne.
+        axis = 0
+        keys = ("left", "right")
+    else:
+        x_margin = max(1, int(round(width * 0.10)))
+        rx1 = min(max(x1, x1 + x_margin), x2)
+        rx2 = max(min(x2 + 1, x2 + 1 - x_margin), rx1 + 1)
+        roi = binary[y1:y2 + 1, rx1:rx2]
+        # Verticale: dobbiamo confrontare top/bottom, quindi proiettiamo sulle righe.
+        axis = 1
+        keys = ("top", "bottom")
+
+    if roi.size == 0:
+        return {
+            keys[0]: 0.0,
+            keys[1]: 0.0,
+            "projection_mode": "polarized_capacitor_plate_shape_empty",
+        }
+
+    projection = np.count_nonzero(roi > 0, axis=axis).astype(np.float32)
+    if projection.size == 0:
+        return {
+            keys[0]: 0.0,
+            keys[1]: 0.0,
+            "projection_mode": "polarized_capacitor_plate_shape_empty",
+        }
+
+    mid = max(1, projection.size // 2)
+
+    def side_score(values: np.ndarray):
+        if values.size == 0:
+            return 0.0, {
+                "max_projection": 0.0,
+                "occupied_span": 0,
+                "occupied_columns": 0,
+                "mass": 0.0,
+                "concentration": 0.0,
+            }
+
+        max_projection = float(values.max())
+        if max_projection <= 0.0:
+            return 0.0, {
+                "max_projection": 0.0,
+                "occupied_span": 0,
+                "occupied_columns": 0,
+                "mass": 0.0,
+                "concentration": 0.0,
+            }
+
+        keep_threshold = max(1.0, max_projection * 0.55)
+        occupied = np.where(values >= keep_threshold)[0]
+        occupied_count = int(len(occupied))
+        occupied_span = int(occupied[-1] - occupied[0] + 1) if occupied_count > 0 else 0
+        mass = float(values.sum())
+        concentration = max_projection / max(mass, 1.0)
+
+        # La piastra dritta tende a concentrare molto in poche colonne/righe.
+        score = (
+            1.20 * max_projection
+            + 26.0 * concentration
+            - 1.40 * float(occupied_span)
+            - 0.90 * float(occupied_count)
+        )
+        return round(float(score), 4), {
+            "max_projection": round(max_projection, 4),
+            "occupied_span": occupied_span,
+            "occupied_columns": occupied_count,
+            "mass": round(mass, 4),
+            "concentration": round(float(concentration), 4),
+        }
+
+    first_score, first_debug = side_score(projection[:mid])
+    second_score, second_debug = side_score(projection[mid:])
+
+    return {
+        keys[0]: first_score,
+        keys[1]: second_score,
+        "projection_mode": "polarized_capacitor_plate_shape",
+        "projection_values": projection.astype(float).round(4).tolist(),
+        f"{keys[0]}_debug": first_debug,
+        f"{keys[1]}_debug": second_debug,
+    }
+
+
 # Calcola la massa nelle metà interne.
 def _inner_half_mass_scores(binary, bbox, orientation: str):
     x1, y1, x2, y2, width, height = _bbox_dims(bbox, binary)
@@ -565,6 +658,28 @@ def resolve_two_terminal_semantics(binary, bbox, orientation, terminals, meta):
             center_band_ratio=0.50,
             edge_inset_ratio=0.10,
         )
+        plate_shape_score_map = _polarized_capacitor_plate_shape_scores(
+            binary,
+            bbox,
+            orientation,
+        )
+        plate_marker_side, _, plate_confidence, plate_evidence = _choose_side(
+            plate_shape_score_map,
+            "left" if orientation == "horizontal" else "top",
+            "right" if orientation == "horizontal" else "bottom",
+            DEFAULT_FALLBACK_SIDE.get(orientation, "left" if orientation == "horizontal" else "top"),
+        )
+        if (
+            plate_evidence == "symbol_heuristic"
+            and plate_confidence >= float(POLARIZED_CAPACITOR_PLATE_SHAPE_MIN_CONFIDENCE)
+        ):
+            score_map = {
+                **score_map,
+                **plate_shape_score_map,
+                "projection_mode": "polarized_capacitor_plate_shape_override",
+                "selected_plate_shape_side": plate_marker_side,
+                "plate_shape_confidence": plate_confidence,
+            }
         if orientation == "horizontal":
             plus_score_map = _plus_marker_scores_by_side(binary, bbox, orientation)
             plus_marker_side, _, plus_confidence, plus_evidence = _choose_side(

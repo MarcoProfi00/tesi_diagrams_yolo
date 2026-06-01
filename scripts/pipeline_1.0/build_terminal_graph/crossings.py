@@ -27,6 +27,7 @@ from .config import (
     BRIDGE_MIN_PIXELS_PER_DIRECTION,
     BRIDGE_MIN_RUN,
     BRIDGE_PROBE_DISTANCE,
+    BRIDGE_SINGLETON_MIN_HUMP_DISTANCE,
     BRIDGE_THICK_HUMP_ENABLE,
     BRIDGE_THICK_HUMP_FOOT_Y_MAX,
     BRIDGE_THICK_HUMP_MIN_SIDE_PIXELS,
@@ -1283,6 +1284,12 @@ def allow_singleton_split_for_label(
     ]
     if not hump_points:
         return False
+    # Uno split che crea singleton e' gia' una situazione delicata.
+    # Se sullo stesso label compaiono piu' candidati hump, il detector non sta
+    # fornendo un ancoraggio univoco: trattiamo il caso come ambiguo e
+    # preferiamo mantenere il nodo originale invece di spezzarlo.
+    if len(hump_points) != 1:
+        return False
 
     singleton_groups = [
         list(group)
@@ -1317,6 +1324,11 @@ def allow_singleton_split_for_label(
             float(np.hypot(tx - float(point["x"]), ty - float(point["y"])))
             for point in hump_points
         )
+        # Se il candidato hump cade quasi sul terminale singleton, e' piu'
+        # probabile che stia leggendo il capolinea del ramo come un ponte.
+        # In quel caso preferiamo non spezzare il net.
+        if nearest_hump < float(BRIDGE_SINGLETON_MIN_HUMP_DISTANCE):
+            return False
         if nearest_hump > max_hump_distance:
             return False
 
