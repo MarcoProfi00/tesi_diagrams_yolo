@@ -232,7 +232,12 @@ def _diode_bar_scores(score_map: dict, orientation: str) -> dict:
 
 
 # Calcola gli score del marker più per lato.
-def _plus_marker_scores_by_side(binary, bbox, orientation: str):
+def _plus_marker_scores_by_side(
+    binary,
+    bbox,
+    orientation: str,
+    prefer_top_on_vertical_near_tie: bool = True,
+):
     def plus_like_patch_score(cx: int, cy: int, half_w: int, half_h: int) -> float:
         xa = max(0, cx - half_w)
         xb = min(binary.shape[1], cx + half_w + 1)
@@ -302,7 +307,7 @@ def _plus_marker_scores_by_side(binary, bbox, orientation: str):
     # Nei Voltage_Source verticali del tuo dataset il '+' è quasi sempre sopra.
     # Se i due score sono quasi pari, preferiamo top.
     near_tie_margin = max(4.0, 0.10 * max(top_score, bottom_score, 1.0))
-    if abs(top_score - bottom_score) <= near_tie_margin:
+    if prefer_top_on_vertical_near_tie and abs(top_score - bottom_score) <= near_tie_margin:
         top_score += 4.0
 
     return {
@@ -312,7 +317,71 @@ def _plus_marker_scores_by_side(binary, bbox, orientation: str):
         "patch_half_h": patch_half_h,
         "top_cy": int(top_cy),
         "bottom_cy": int(bottom_cy),
-        "score_mode": "plus_marker_voltage_source_vertical_tight",
+        "score_mode": (
+            "plus_marker_vertical_prefer_top_tight"
+            if prefer_top_on_vertical_near_tie
+            else "plus_marker_vertical_generic_tight"
+        ),
+    }
+
+
+def _polarized_capacitor_vertical_plus_scores(binary, bbox):
+    x1, y1, x2, y2, width, height = _bbox_dims(bbox, binary)
+
+    def plus_like_patch_score(cx: int, cy: int, half_w: int, half_h: int) -> float:
+        xa = max(0, cx - half_w)
+        xb = min(binary.shape[1], cx + half_w + 1)
+        ya = max(0, cy - half_h)
+        yb = min(binary.shape[0], cy + half_h + 1)
+        roi = binary[ya:yb, xa:xb]
+        if roi.size == 0:
+            return 0.0
+
+        row_proj = np.count_nonzero(roi > 0, axis=1)
+        col_proj = np.count_nonzero(roi > 0, axis=0)
+        row_max = float(row_proj.max()) if row_proj.size else 0.0
+        col_max = float(col_proj.max()) if col_proj.size else 0.0
+        balance = min(row_max, col_max) / max(max(row_max, col_max), 1.0)
+        cx_local = roi.shape[1] // 2
+        band_x1 = max(0, cx_local - 1)
+        band_x2 = min(roi.shape[1], cx_local + 2)
+        center_col_support = float(np.count_nonzero(roi[:, band_x1:band_x2] > 0))
+        return (
+            0.90 * row_max
+            + 1.55 * col_max
+            + 1.80 * balance * min(row_max, col_max)
+            + 0.06 * center_col_support
+        )
+
+    patch_half_w = max(3, int(round(width * 0.14)))
+    patch_half_h = max(3, int(round(height * 0.10)))
+    left_cx = int(round(x1 + width * 0.12))
+    right_cx = int(round(x2 - width * 0.12))
+    top_cy = int(round(y1 + height * 0.22))
+    bottom_cy = int(round(y1 + height * 0.78))
+
+    top_left = plus_like_patch_score(left_cx, top_cy, patch_half_w, patch_half_h)
+    top_right = plus_like_patch_score(right_cx, top_cy, patch_half_w, patch_half_h)
+    bottom_left = plus_like_patch_score(left_cx, bottom_cy, patch_half_w, patch_half_h)
+    bottom_right = plus_like_patch_score(right_cx, bottom_cy, patch_half_w, patch_half_h)
+
+    top_score = max(top_left, top_right)
+    bottom_score = max(bottom_left, bottom_right)
+
+    return {
+        "top": round(float(top_score), 4),
+        "bottom": round(float(bottom_score), 4),
+        "patch_half_w": patch_half_w,
+        "patch_half_h": patch_half_h,
+        "top_cy": int(top_cy),
+        "bottom_cy": int(bottom_cy),
+        "left_cx": int(left_cx),
+        "right_cx": int(right_cx),
+        "top_left_score": round(float(top_left), 4),
+        "top_right_score": round(float(top_right), 4),
+        "bottom_left_score": round(float(bottom_left), 4),
+        "bottom_right_score": round(float(bottom_right), 4),
+        "score_mode": "polarized_capacitor_plus_marker_vertical_lateral",
     }
 
 
@@ -680,28 +749,37 @@ def resolve_two_terminal_semantics(binary, bbox, orientation, terminals, meta):
                 "selected_plate_shape_side": plate_marker_side,
                 "plate_shape_confidence": plate_confidence,
             }
-        if orientation == "horizontal":
-            plus_score_map = _plus_marker_scores_by_side(binary, bbox, orientation)
-            plus_marker_side, _, plus_confidence, plus_evidence = _choose_side(
-                plus_score_map,
-                "left",
-                "right",
-                DEFAULT_FALLBACK_SIDE.get(orientation, "left"),
+        primary_key = "left" if orientation == "horizontal" else "top"
+        secondary_key = "right" if orientation == "horizontal" else "bottom"
+        if orientation == "vertical":
+            plus_score_map = _polarized_capacitor_vertical_plus_scores(binary, bbox)
+        else:
+            plus_score_map = _plus_marker_scores_by_side(
+                binary,
+                bbox,
+                orientation,
+                prefer_top_on_vertical_near_tie=False,
             )
-            plus_best = max(
-                float(plus_score_map.get("left", 0.0)),
-                float(plus_score_map.get("right", 0.0)),
-            )
-            if plus_evidence == "symbol_heuristic" and plus_confidence >= 0.30 and plus_best >= 20.0:
-                score_map = {
-                    **score_map,
-                    "left": round(float(plus_score_map.get("left", 0.0)), 4),
-                    "right": round(float(plus_score_map.get("right", 0.0)), 4),
-                    "projection_mode": "polarized_capacitor_plus_marker_override",
-                    "selected_plus_marker_side": plus_marker_side,
-                    "plus_confidence": plus_confidence,
-                    "plus_score_mode": plus_score_map.get("score_mode"),
-                }
+        plus_marker_side, _, plus_confidence, plus_evidence = _choose_side(
+            plus_score_map,
+            primary_key,
+            secondary_key,
+            DEFAULT_FALLBACK_SIDE.get(orientation, primary_key),
+        )
+        plus_best = max(
+            float(plus_score_map.get(primary_key, 0.0)),
+            float(plus_score_map.get(secondary_key, 0.0)),
+        )
+        if plus_evidence == "symbol_heuristic" and plus_confidence >= 0.30 and plus_best >= 20.0:
+            score_map = {
+                **score_map,
+                primary_key: round(float(plus_score_map.get(primary_key, 0.0)), 4),
+                secondary_key: round(float(plus_score_map.get(secondary_key, 0.0)), 4),
+                "projection_mode": "polarized_capacitor_plus_marker_override",
+                "selected_plus_marker_side": plus_marker_side,
+                "plus_confidence": plus_confidence,
+                "plus_score_mode": plus_score_map.get("score_mode"),
+            }
         # Nei polarizzati la piastra curva puo' produrre piu' massa del marker
         # rettilineo, quindi i near-tie vanno trattati come casi incerti e
         # risolti con il fallback convenzionale dell'orientazione.

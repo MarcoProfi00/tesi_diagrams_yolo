@@ -27,6 +27,7 @@ from .ids import build_simple_id_map, build_simple_list, build_simple_terminal_g
 from .io_utils import load_binary_image
 from .matching import (
     attach_unmatched_analog_meter_terminals,
+    attach_unmatched_lateral_terminal_labels,
     attach_unmatched_opamp_aux_to_external_terminals,
     match_terminal_to_skeleton_label,
     remap_opamp_aux_to_aligned_label,
@@ -84,6 +85,7 @@ def build_terminal_graph_for_image(data: dict):
 
     attach_unmatched_analog_meter_terminals(components, terminal_match_debug, labels)
     attach_unmatched_opamp_aux_to_external_terminals(terminals, terminal_match_debug)
+    attach_unmatched_lateral_terminal_labels(terminals, terminal_match_debug, labels)
     remap_opamp_aux_to_aligned_label(terminals, terminal_match_debug, labels)
     remap_monoterminal_outward_stub_matches(terminals, terminal_match_debug, labels)
 

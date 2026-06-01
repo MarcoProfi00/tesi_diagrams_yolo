@@ -1083,10 +1083,15 @@ def split_bridge_labels(
             if term is None:
                 continue
 
+            anchor_x, anchor_y = get_terminal_split_anchor(
+                term,
+                terminal_match_debug,
+            )
+
             split_label = nearest_split_label(
                 split_labels,
-                int(round(term["x"])),
-                int(round(term["y"])),
+                anchor_x,
+                anchor_y,
                 radius=max(
                     TERMINAL_SQUARE_FALLBACK_RADIUS,
                     BRIDGE_PROBE_DISTANCE,
@@ -1281,9 +1286,15 @@ def allow_singleton_split_for_label(
         point
         for point in label_points
         if point.get("split_kind") == "bridge_hump"
+        and point.get("bridge_style") == "hump"
+    ]
+    micro_points = [
+        point
+        for point in label_points
+        if point.get("bridge_style") in {"micro_gap", "offset_gap"}
     ]
     if not hump_points:
-        return False
+        return bool(micro_points)
     # Uno split che crea singleton e' gia' una situazione delicata.
     # Se sullo stesso label compaiono piu' candidati hump, il detector non sta
     # fornendo un ancoraggio univoco: trattiamo il caso come ambiguo e
@@ -1301,11 +1312,6 @@ def allow_singleton_split_for_label(
     if terminal_by_id is None:
         return False
 
-    micro_points = [
-        point
-        for point in label_points
-        if point.get("bridge_style") == "micro_gap"
-    ]
     max_hump_distance = float(BRIDGE_PROBE_DISTANCE) * 2.0
 
     for group in singleton_groups:
@@ -1426,6 +1432,26 @@ def filter_micro_bridge_candidates(
                 promoted_candidate = promote_offset_bridge_cluster(cluster)
                 if promoted_candidate is not None:
                     promoted.append(promoted_candidate)
+            if not promoted:
+                for cluster_group in build_aligned_horizontal_micro_bridge_cluster_groups(row_clusters):
+                    cluster_points = [
+                        point
+                        for cluster in cluster_group
+                        for point in cluster
+                    ]
+                    if not micro_bridge_points_create_valid_split(
+                        int(label),
+                        cluster_points,
+                        label_to_terminal_ids,
+                        terminals,
+                        skeleton_binary,
+                        terminal_match_debug=terminal_match_debug,
+                    ):
+                        continue
+                    for cluster in cluster_group:
+                        promoted_candidate = promote_offset_bridge_cluster(cluster)
+                        if promoted_candidate is not None:
+                            promoted.append(promoted_candidate)
             if promoted:
                 filtered.extend(promoted)
                 continue
@@ -1438,14 +1464,16 @@ def filter_micro_bridge_candidates(
         for cluster in clusters:
             cluster_points.extend(cluster)
 
-        if micro_bridge_points_create_valid_split(
+        selected_points = select_micro_bridge_points_for_valid_split(
             int(label),
             cluster_points,
             label_to_terminal_ids,
             terminals,
             skeleton_binary,
-        ):
-            filtered.extend(cluster_points)
+            terminal_match_debug=terminal_match_debug,
+        )
+        if selected_points:
+            filtered.extend(selected_points)
 
     return filtered
 
@@ -1476,7 +1504,11 @@ def build_vertical_micro_bridge_clusters(bridges: list[dict]):
     return valid_clusters
 
 
-def build_horizontal_micro_bridge_clusters(bridges: list[dict]):
+def build_horizontal_micro_bridge_clusters(
+    bridges: list[dict],
+    min_points: int = OFFSET_BRIDGE_ROW_MIN_POINTS,
+    min_x_span: int = OFFSET_BRIDGE_ROW_MIN_X_SPAN,
+):
     if not bridges:
         return []
 
@@ -1504,14 +1536,40 @@ def build_horizontal_micro_bridge_clusters(bridges: list[dict]):
 
     valid_groups = []
     for group in row_groups:
-        if len(group) < OFFSET_BRIDGE_ROW_MIN_POINTS:
+        if len(group) < int(min_points):
             continue
         xs = [int(item["x"]) for item in group]
-        if max(xs) - min(xs) < OFFSET_BRIDGE_ROW_MIN_X_SPAN:
+        if max(xs) - min(xs) < int(min_x_span):
             continue
         valid_groups.append(group)
 
     return valid_groups
+
+
+def build_aligned_horizontal_micro_bridge_cluster_groups(row_clusters: list[list[dict]]):
+    cluster_groups = []
+
+    def cluster_y(cluster: list[dict]):
+        return sum(int(point["y"]) for point in cluster) / float(len(cluster))
+
+    for cluster in sorted(row_clusters, key=lambda item: (cluster_y(item), int(item[0]["x"]))):
+        avg_y = cluster_y(cluster)
+        placed = False
+        for group in cluster_groups:
+            group_points = [point for group_cluster in group for point in group_cluster]
+            group_y = sum(int(point["y"]) for point in group_points) / float(len(group_points))
+            if abs(avg_y - group_y) <= OFFSET_BRIDGE_ROW_Y_TOL:
+                group.append(cluster)
+                placed = True
+                break
+        if not placed:
+            cluster_groups.append([cluster])
+
+    return [
+        group
+        for group in cluster_groups
+        if len(group) >= 2
+    ]
 
 
 def promote_offset_bridge_cluster(cluster: list[dict]):
@@ -1589,10 +1647,97 @@ def micro_bridge_points_create_valid_split(
     label_to_terminal_ids: dict,
     terminals: list[dict],
     skeleton_binary: np.ndarray,
+    terminal_match_debug: dict | None = None,
+):
+    groups = build_micro_bridge_split_groups(
+        label,
+        points,
+        label_to_terminal_ids,
+        terminals,
+        skeleton_binary,
+        terminal_match_debug=terminal_match_debug,
+    )
+    if groups is None:
+        return False
+
+    return has_allowed_bridge_group_sizes(groups)
+
+
+def select_micro_bridge_points_for_valid_split(
+    label: int,
+    points: list[dict],
+    label_to_terminal_ids: dict,
+    terminals: list[dict],
+    skeleton_binary: np.ndarray,
+    terminal_match_debug: dict | None = None,
+):
+    groups = build_micro_bridge_split_groups(
+        label,
+        points,
+        label_to_terminal_ids,
+        terminals,
+        skeleton_binary,
+        terminal_match_debug=terminal_match_debug,
+    )
+    if groups is None or not has_allowed_bridge_group_sizes(groups):
+        return []
+
+    if all(len(set(group)) >= 2 for group in groups.values()):
+        return points
+
+    best_points = []
+    best_score = None
+    row_segments = build_horizontal_micro_bridge_clusters(points, min_points=2, min_x_span=1)
+    for segment in row_segments:
+        segment_keys = {
+            (int(point["x"]), int(point["y"]))
+            for point in segment
+        }
+        remaining = [
+            point
+            for point in points
+            if (int(point["x"]), int(point["y"])) not in segment_keys
+        ]
+        if not remaining:
+            continue
+
+        remaining_groups = build_micro_bridge_split_groups(
+            label,
+            remaining,
+            label_to_terminal_ids,
+            terminals,
+            skeleton_binary,
+            terminal_match_debug=terminal_match_debug,
+        )
+        if remaining_groups is None or not has_allowed_bridge_group_sizes(remaining_groups):
+            continue
+        if any(len(set(group)) < 2 for group in remaining_groups.values()):
+            continue
+
+        group_sizes = sorted(len(set(group)) for group in remaining_groups.values())
+        score = (
+            len(group_sizes),
+            -max(group_sizes),
+            -sum(size * size for size in group_sizes),
+        )
+        if best_score is None or score > best_score:
+            best_points = remaining
+            best_score = score
+
+    return best_points or points
+
+
+def build_micro_bridge_split_groups(
+    label: int,
+    points: list[dict],
+    label_to_terminal_ids: dict,
+    terminals: list[dict],
+    skeleton_binary: np.ndarray,
+    terminal_match_debug: dict | None = None,
 ):
     terminal_ids = label_to_terminal_ids.get(int(label), [])
     if len(set(terminal_ids)) < 4:
-        return False
+        return None
 
     terminal_by_id = {term["terminal_id"]: term for term in terminals}
     cut_skeleton = skeleton_binary.copy()
@@ -1644,10 +1789,14 @@ def micro_bridge_points_create_valid_split(
         term = terminal_by_id.get(terminal_id)
         if term is None:
             continue
+        anchor_x, anchor_y = get_terminal_split_anchor(
+            term,
+            terminal_match_debug,
+        )
         split_label = nearest_split_label(
             split_labels,
-            int(round(term["x"])),
-            int(round(term["y"])),
+            anchor_x,
+            anchor_y,
             radius=max(
                 TERMINAL_SQUARE_FALLBACK_RADIUS,
                 BRIDGE_PROBE_DISTANCE,
@@ -1655,10 +1804,29 @@ def micro_bridge_points_create_valid_split(
             ),
         )
         if split_label is None:
-            return False
+            return None
         groups.setdefault(find(split_label), []).append(terminal_id)
 
-    return has_allowed_bridge_group_sizes(groups)
+    return groups
+
+
+def get_terminal_split_anchor(
+    term: dict,
+    terminal_match_debug: dict | None = None,
+):
+    if terminal_match_debug is not None:
+        match = terminal_match_debug.get(term.get("terminal_id"), {})
+        snap_point = match.get("snap_point")
+        if (
+            isinstance(snap_point, (list, tuple))
+            and len(snap_point) == 2
+        ):
+            try:
+                return int(round(float(snap_point[0]))), int(round(float(snap_point[1])))
+            except (TypeError, ValueError):
+                pass
+
+    return int(round(float(term["x"]))), int(round(float(term["y"])))
 
 
 def label_contains_class(

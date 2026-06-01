@@ -7,6 +7,9 @@ import numpy as np
 from .config import (
     ANALOG_METER_FALLBACK_RADIUS,
     ANALOG_METER_MAX_SNAP_DISTANCE,
+    LATERAL_TERMINAL_REMAP_MAX_GAP,
+    LATERAL_TERMINAL_REMAP_MIN_GAP,
+    LATERAL_TERMINAL_REMAP_Y_TOL,
     MAX_REASONABLE_SNAP_DISTANCE,
     OPAMP_AUX_EXTERNAL_MAX_DX,
     OPAMP_AUX_EXTERNAL_MAX_DY,
@@ -251,6 +254,106 @@ def attach_unmatched_opamp_aux_to_external_terminals(
                 round(float(best["dx"]), 3),
                 round(float(best["dy"]), 3),
             ],
+        }
+
+
+def attach_unmatched_lateral_terminal_labels(
+    terminals: list[dict],
+    terminal_match_debug: dict,
+    labels: np.ndarray,
+):
+    label_to_terminal_ids = {}
+    for terminal_id, match in terminal_match_debug.items():
+        matched_label = match.get("matched_label")
+        if matched_label is None:
+            continue
+        label_to_terminal_ids.setdefault(int(matched_label), []).append(str(terminal_id))
+
+    h, w = labels.shape[:2]
+    for term in terminals:
+        terminal_id = term.get("terminal_id")
+        if terminal_id is None:
+            continue
+
+        current_match = terminal_match_debug.get(terminal_id, {})
+        if current_match.get("matched_label") is not None:
+            continue
+
+        side = str(term.get("relative_position") or "").strip().lower()
+        if side not in {"top", "bottom"}:
+            continue
+
+        tx = int(round(float(term["x"])))
+        ty = int(round(float(term["y"])))
+        x1 = max(0, tx - int(LATERAL_TERMINAL_REMAP_MAX_GAP))
+        x2 = min(w, tx + int(LATERAL_TERMINAL_REMAP_MAX_GAP) + 1)
+        y1 = max(0, ty - int(LATERAL_TERMINAL_REMAP_Y_TOL))
+        y2 = min(h, ty + int(LATERAL_TERMINAL_REMAP_Y_TOL) + 1)
+        if x2 <= x1 or y2 <= y1:
+            continue
+
+        roi = labels[y1:y2, x1:x2]
+        candidate_labels = [int(value) for value in np.unique(roi) if int(value) > 0]
+        if not candidate_labels:
+            continue
+
+        best = None
+        for candidate_label in candidate_labels:
+            ys, xs = np.where(labels == int(candidate_label))
+            if len(xs) == 0:
+                continue
+
+            band_mask = np.abs(ys - ty) <= int(LATERAL_TERMINAL_REMAP_Y_TOL)
+            if not np.any(band_mask):
+                continue
+
+            band_xs = xs[band_mask]
+            band_ys = ys[band_mask]
+            lateral_deltas = np.abs(band_xs - tx)
+            valid_mask = lateral_deltas >= int(LATERAL_TERMINAL_REMAP_MIN_GAP)
+            if not np.any(valid_mask):
+                continue
+
+            cand_xs = band_xs[valid_mask]
+            cand_ys = band_ys[valid_mask]
+            cand_deltas = lateral_deltas[valid_mask]
+            best_idx = int(np.argmin(cand_deltas))
+            px = int(cand_xs[best_idx])
+            py = int(cand_ys[best_idx])
+            lateral_gap = float(cand_deltas[best_idx])
+            vertical_gap = float(abs(py - ty))
+            snap_distance = float(np.hypot(px - tx, py - ty))
+            carries_other_terminal = 1 if label_to_terminal_ids.get(int(candidate_label)) else 0
+
+            score = (
+                carries_other_terminal,
+                -vertical_gap,
+                -lateral_gap,
+                -snap_distance,
+            )
+            if best is None or score > best["score"]:
+                best = {
+                    "score": score,
+                    "label": int(candidate_label),
+                    "snap_point": [int(px), int(py)],
+                    "snap_distance": snap_distance,
+                    "search_window": [int(x1), int(y1), int(x2), int(y2)],
+                }
+
+        if best is None:
+            continue
+
+        terminal_match_debug[terminal_id] = {
+            "terminal_id": terminal_id,
+            "candidate_labels": [int(best["label"])],
+            "matched_label": int(best["label"]),
+            "match_mode": "lateral_terminal_remap",
+            "search_window": best["search_window"],
+            "snap_point": best["snap_point"],
+            "snap_distance": round(float(best["snap_distance"]), 3),
+            "is_suspicious": False,
+            "virtual_match": True,
+            "virtual_match_reason": "unmatched_terminal_lateral_label_remap",
         }
 
 

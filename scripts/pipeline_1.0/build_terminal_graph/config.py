@@ -9,6 +9,9 @@ TERMINAL_DIRECTIONAL_HALFSPAN = 5
 # Fallback semplice: se la finestra direzionale non trova nulla,
 # cerchiamo in un piccolo quadrato attorno al terminale.
 TERMINAL_SQUARE_FALLBACK_RADIUS = 12
+LATERAL_TERMINAL_REMAP_MIN_GAP = 10
+LATERAL_TERMINAL_REMAP_MAX_GAP = 80
+LATERAL_TERMINAL_REMAP_Y_TOL = 14
 
 # Se il pixel etichettato trovato è troppo lontano dal terminale,
 # lo marchiamo come sospetto nel debug.
