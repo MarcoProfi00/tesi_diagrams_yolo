@@ -1,0 +1,89 @@
+{
+  "metadata": {
+    "circuit_id": "a08",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a08.png",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a08.json",
+    "image_file": "a08.png",
+    "json_file": "a08.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-01 20:14:18",
+    "judge_latency_seconds": 20.13,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=3954, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=1060, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=5014)",
+  "judge_result": {
+    "circuit_id": "a08",
+    "batch": "A",
+    "image_file": "a08.png",
+    "json_file": "a08.json",
+    "image_graph_fidelity_score": 70,
+    "decision": "NEEDS_PATCH",
+    "usable_as_graph_base": false,
+    "scores": {
+      "components": 24,
+      "terminals_pins": 16,
+      "graph_connections": 22,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 3,
+      "minor": 1
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "missing_graph_connection",
+        "description": "Il terminale sinistro della sorgente di segnale è collegato visivamente a un filo che prosegue verso sinistra, ma nel JSON è lasciato non connesso.",
+        "image_evidence": "Dalla parte sinistra del simbolo SIG parte un filo orizzontale verso il margine sinistro dell'immagine.",
+        "json_evidence": "\"signal_source23.1_t1\": [] ed è anche elencato in warnings.unconnected_terminals."
+      },
+      {
+        "type": "missing_graph_connection",
+        "description": "Il primario del trasformatore appare collegato alla linea orizzontale proveniente dalla sorgente di segnale sul lato sinistro e al ritorno inferiore del circuito, ma due terminali del trasformatore sono lasciati non connessi nel JSON.",
+        "image_evidence": "Il simbolo T5 mostra avvolgimento sinistro con terminale inferiore connesso alla linea SIG e terminale superiore collegato al ramo superiore/ritorno del primario; il circuito del primario non appare rappresentato da terminali isolati.",
+        "json_evidence": "\"transformer28.1_t1\": [] e \"transformer28.1_t2\": [], entrambi elencati in warnings.unconnected_terminals."
+      },
+      {
+        "type": "wrong_graph_connection",
+        "description": "Il JSON collega la sorgente di segnale direttamente al terminale t3 del trasformatore, ma nell'immagine la sorgente è sul lato sinistro del trasformatore, mentre il secondario destro va verso il meter e il ramo con resistore/GND.",
+        "image_evidence": "La linea proveniente da SIG arriva al lato sinistro/inferiore del trasformatore; il lato destro del trasformatore è connesso al circuito del misuratore.",
+        "json_evidence": "\"signal_source23.1_t2\": [\"transformer28.1_t3\"] mentre t3 è dichiarato come terminale sinistro nel componente ma la numerazione/associazione dei quattro terminali non è coerente con i collegamenti visibili."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "terminal_position_ambiguity",
+        "description": "Le posizioni relative dei quattro terminali del trasformatore nel JSON sono poco distinguibili: due terminali sono marcati left e due right senza indicazione alto/basso, rendendo ambigua la verifica dei collegamenti visibili."
+      }
+    ],
+    "missing_from_json": [
+      "Collegamento del terminale sinistro della sorgente di segnale al filo visibile verso sinistra",
+      "Collegamenti dei due terminali del primario/superiore del trasformatore che nell'immagine non risultano isolati"
+    ],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "La sorgente SIG deve collegarsi al lato sinistro del trasformatore coerente con la linea orizzontale visibile.",
+        "found_in_json": "signal_source23.1_t2 collegato a transformer28.1_t3, con altri due terminali del trasformatore non connessi.",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "Il terminale del meter sul nodo destro/basso è collegato al nodo comune con resistore e GND; l'altro terminale del meter è collegato al lato destro del trasformatore.",
+        "found_in_json": "Questo è sostanzialmente rappresentato da analog_meter0.1_t1-transformer28.1_t4 e analog_meter0.1_t2-resistor22.1_t2-gnd9.2_t1, ma l'associazione precisa dei terminali del trasformatore resta ambigua.",
+        "severity": "minor"
+      }
+    ],
+    "uncertain_points": [
+      "Non è completamente verificabile dall'immagine quale dei terminali numerati t1-t4 del trasformatore corrisponda a ciascun estremo fisico alto/basso dei due avvolgimenti.",
+      "Il filo che esce a sinistra della sorgente SIG termina al margine dell'immagine; non è chiaro se rappresenti un terminale esterno aperto o una connessione fuori campo."
+    ],
+    "short_explanation": "Il JSON riconosce quasi tutti i componenti principali visibili: sorgente SIG, trasformatore, meter, resistore e due GND. La parte secondaria con meter, resistore e massa è in gran parte coerente. Tuttavia lascia non connessi terminali visibilmente appartenenti al circuito sul lato sorgente/trasformatore e presenta un collegamento sorgente-trasformatore non chiaramente coerente con la topologia mostrata. Il grafo richiede correzioni topologiche prima di essere usato come base affidabile."
+  },
+  "raw_model_output": "{\"circuit_id\":\"a08\",\"batch\":\"A\",\"image_file\":\"a08.png\",\"json_file\":\"a08.json\",\"image_graph_fidelity_score\":70,\"decision\":\"NEEDS_PATCH\",\"usable_as_graph_base\":false,\"scores\":{\"components\":24,\"terminals_pins\":16,\"graph_connections\":22,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":3,\"minor\":1},\"critical_errors\":[],\"major_errors\":[{\"type\":\"missing_graph_connection\",\"description\":\"Il terminale sinistro della sorgente di segnale è collegato visivamente a un filo che prosegue verso sinistra, ma nel JSON è lasciato non connesso.\",\"image_evidence\":\"Dalla parte sinistra del simbolo SIG parte un filo orizzontale verso il margine sinistro dell'immagine.\",\"json_evidence\":\"\\\"signal_source23.1_t1\\\": [] ed è anche elencato in warnings.unconnected_terminals.\"},{\"type\":\"missing_graph_connection\",\"description\":\"Il primario del trasformatore appare collegato alla linea orizzontale proveniente dalla sorgente di segnale sul lato sinistro e al ritorno inferiore del circuito, ma due terminali del trasformatore sono lasciati non connessi nel JSON.\",\"image_evidence\":\"Il simbolo T5 mostra avvolgimento sinistro con terminale inferiore connesso alla linea SIG e terminale superiore collegato al ramo superiore/ritorno del primario; il circuito del primario non appare rappresentato da terminali isolati.\",\"json_evidence\":\"\\\"transformer28.1_t1\\\": [] e \\\"transformer28.1_t2\\\": [], entrambi elencati in warnings.unconnected_terminals.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il JSON collega la sorgente di segnale direttamente al terminale t3 del trasformatore, ma nell'immagine la sorgente è sul lato sinistro del trasformatore, mentre il secondario destro va verso il meter e il ramo con resistore/GND.\",\"image_evidence\":\"La linea proveniente da SIG arriva al lato sinistro/inferiore del trasformatore; il lato destro del trasformatore è connesso al circuito del misuratore.\",\"json_evidence\":\"\\\"signal_source23.1_t2\\\": [\\\"transformer28.1_t3\\\"] mentre t3 è dichiarato come terminale sinistro nel componente ma la numerazione/associazione dei quattro terminali non è coerente con i collegamenti visibili.\"}],\"minor_errors\":[{\"type\":\"terminal_position_ambiguity\",\"description\":\"Le posizioni relative dei quattro terminali del trasformatore nel JSON sono poco distinguibili: due terminali sono marcati left e due right senza indicazione alto/basso, rendendo ambigua la verifica dei collegamenti visibili.\"}],\"missing_from_json\":[\"Collegamento del terminale sinistro della sorgente di segnale al filo visibile verso sinistra\",\"Collegamenti dei due terminali del primario/superiore del trasformatore che nell'immagine non risultano isolati\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"La sorgente SIG deve collegarsi al lato sinistro del trasformatore coerente con la linea orizzontale visibile.\",\"found_in_json\":\"signal_source23.1_t2 collegato a transformer28.1_t3, con altri due terminali del trasformatore non connessi.\",\"severity\":\"major\"},{\"expected_from_image\":\"Il terminale del meter sul nodo destro/basso è collegato al nodo comune con resistore e GND; l'altro terminale del meter è collegato al lato destro del trasformatore.\",\"found_in_json\":\"Questo è sostanzialmente rappresentato da analog_meter0.1_t1-transformer28.1_t4 e analog_meter0.1_t2-resistor22.1_t2-gnd9.2_t1, ma l'associazione precisa dei terminali del trasformatore resta ambigua.\",\"severity\":\"minor\"}],\"uncertain_points\":[\"Non è completamente verificabile dall'immagine quale dei terminali numerati t1-t4 del trasformatore corrisponda a ciascun estremo fisico alto/basso dei due avvolgimenti.\",\"Il filo che esce a sinistra della sorgente SIG termina al margine dell'immagine; non è chiaro se rappresenti un terminale esterno aperto o una connessione fuori campo.\"],\"short_explanation\":\"Il JSON riconosce quasi tutti i componenti principali visibili: sorgente SIG, trasformatore, meter, resistore e due GND. La parte secondaria con meter, resistore e massa è in gran parte coerente. Tuttavia lascia non connessi terminali visibilmente appartenenti al circuito sul lato sorgente/trasformatore e presenta un collegamento sorgente-trasformatore non chiaramente coerente con la topologia mostrata. Il grafo richiede correzioni topologiche prima di essere usato come base affidabile.\"}"
+}

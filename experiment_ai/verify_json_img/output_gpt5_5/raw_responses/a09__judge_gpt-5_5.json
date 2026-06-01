@@ -1,0 +1,70 @@
+{
+  "metadata": {
+    "circuit_id": "a09",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a09.png",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a09.json",
+    "image_file": "a09.png",
+    "json_file": "a09.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-01 20:14:30",
+    "judge_latency_seconds": 11.57,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=5490, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=556, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=6046)",
+  "judge_result": {
+    "circuit_id": "a09",
+    "batch": "A",
+    "image_file": "a09.png",
+    "json_file": "a09.json",
+    "image_graph_fidelity_score": 91,
+    "decision": "PASS",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 25,
+      "terminals_pins": 18,
+      "graph_connections": 40,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 3
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "connector_terminal_position",
+        "description": "Le posizioni relative dei pin del connettore non sono tutte coerenti: nell'immagine i cinque pin di J1 sono sul lato destro del simbolo, mentre nel JSON pin1 e pin5 sono indicati come left."
+      },
+      {
+        "type": "unconnected_gnd_component",
+        "description": "Il JSON include un simbolo GND separato non collegato, corrispondente probabilmente al riferimento sotto la lampada; la sua associazione al terminale della lampada è assente nel grafo."
+      },
+      {
+        "type": "lamp_terminal_unconnected_warning",
+        "description": "Il JSON segnala lamp13.1_t2 come non connesso, ma nell'immagine il terminale inferiore della lampada è collegato a un simbolo GND."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "Il terminale inferiore della lampada è collegato al simbolo GND posto sotto la lampada.",
+        "found_in_json": "lamp13.1_t2 è non connesso e gnd9.5_t1 è non connesso.",
+        "severity": "minor"
+      }
+    ],
+    "uncertain_points": [
+      "La polarità esatta del LED non è marcata con etichette testuali nell'immagine; il simbolo suggerisce orientamento, ma la verifica anodo/catodo resta limitata alla lettura grafica.",
+      "L'associazione esatta fra i simboli GND separati del disegno e gli identificativi gnd9.x del JSON non è sempre direttamente verificabile, anche se la topologia complessiva è quasi interamente coerente."
+    ],
+    "short_explanation": "Il JSON rappresenta correttamente quasi tutti i componenti principali e le connessioni visibili: batteria, fusibile, connettore a 5 pin, condensatore, interruttore aperto, resistore, LED, lampada e GND. La principale discrepanza topologica è il terminale inferiore della lampada lasciato non connesso invece che collegato al GND visibile. Sono presenti anche piccole incoerenze sulle posizioni relative di alcuni pin del connettore."
+  },
+  "raw_model_output": "{\"circuit_id\":\"a09\",\"batch\":\"A\",\"image_file\":\"a09.png\",\"json_file\":\"a09.json\",\"image_graph_fidelity_score\":91,\"decision\":\"PASS\",\"usable_as_graph_base\":true,\"scores\":{\"components\":25,\"terminals_pins\":18,\"graph_connections\":40,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":3},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"connector_terminal_position\",\"description\":\"Le posizioni relative dei pin del connettore non sono tutte coerenti: nell'immagine i cinque pin di J1 sono sul lato destro del simbolo, mentre nel JSON pin1 e pin5 sono indicati come left.\"},{\"type\":\"unconnected_gnd_component\",\"description\":\"Il JSON include un simbolo GND separato non collegato, corrispondente probabilmente al riferimento sotto la lampada; la sua associazione al terminale della lampada è assente nel grafo.\"},{\"type\":\"lamp_terminal_unconnected_warning\",\"description\":\"Il JSON segnala lamp13.1_t2 come non connesso, ma nell'immagine il terminale inferiore della lampada è collegato a un simbolo GND.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Il terminale inferiore della lampada è collegato al simbolo GND posto sotto la lampada.\",\"found_in_json\":\"lamp13.1_t2 è non connesso e gnd9.5_t1 è non connesso.\",\"severity\":\"minor\"}],\"uncertain_points\":[\"La polarità esatta del LED non è marcata con etichette testuali nell'immagine; il simbolo suggerisce orientamento, ma la verifica anodo/catodo resta limitata alla lettura grafica.\",\"L'associazione esatta fra i simboli GND separati del disegno e gli identificativi gnd9.x del JSON non è sempre direttamente verificabile, anche se la topologia complessiva è quasi interamente coerente.\"],\"short_explanation\":\"Il JSON rappresenta correttamente quasi tutti i componenti principali e le connessioni visibili: batteria, fusibile, connettore a 5 pin, condensatore, interruttore aperto, resistore, LED, lampada e GND. La principale discrepanza topologica è il terminale inferiore della lampada lasciato non connesso invece che collegato al GND visibile. Sono presenti anche piccole incoerenze sulle posizioni relative di alcuni pin del connettore.\"}"
+}

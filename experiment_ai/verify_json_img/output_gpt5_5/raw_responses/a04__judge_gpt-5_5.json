@@ -1,0 +1,69 @@
+{
+  "metadata": {
+    "circuit_id": "a04",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a04.png",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a04.json",
+    "image_file": "a04.png",
+    "json_file": "a04.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-01 20:13:06",
+    "judge_latency_seconds": 12.114,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=4746, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=591, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=5337)",
+  "judge_result": {
+    "circuit_id": "a04",
+    "batch": "A",
+    "image_file": "a04.png",
+    "json_file": "a04.json",
+    "image_graph_fidelity_score": 88,
+    "decision": "MINOR_ISSUES",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 24,
+      "terminals_pins": 17,
+      "graph_connections": 39,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 3
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "connector_terminal_positions",
+        "description": "Le posizioni relative dei pin del connettore non sono completamente coerenti: nell'immagine tutti i quattro pin di J15 sono disposti sul lato sinistro del corpo del connettore, mentre nel JSON pin1 e pin2 sono indicati con relative_position 'right'."
+      },
+      {
+        "type": "switch_state_representation",
+        "description": "Lo switch è disegnato aperto e il JSON riporta state 'open', ma il campo graph collega comunque i due terminali dello switch alle rispettive reti; questo è accettabile come connettività dei morsetti, ma lo stato aperto richiede cautela nell'interpretazione elettrica."
+      },
+      {
+        "type": "visible_label_missing",
+        "description": "Alcune label topologiche/testuali visibili utili all'identificazione, come J15, TEST e VMON, non sono riportate nel JSON."
+      }
+    ],
+    "missing_from_json": [
+      "Label visibile J15 del connettore",
+      "Label visibile TEST associata allo switch",
+      "Label visibile VMON associata allo strumento analogico"
+    ],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "La corrispondenza esatta tra pin fisici del connettore e terminal_id pin1-pin4 nel JSON è coerente con le numerazioni visibili, ma le relative_position non descrivono fedelmente il lato grafico dei pin.",
+      "La polarità del condensatore non è indicata visivamente e non è valutabile.",
+      "Il terminale sinistro dello strumento analogico appare non collegato nell'immagine e non è presente in graph; il JSON usa due terminali, collegando quello destro a GND e quello sinistro alla resistenza, coerente con la topologia visibile ma senza polarità verificabile."
+    ],
+    "short_explanation": "Il JSON rappresenta correttamente i componenti principali e quasi tutti i collegamenti visibili: switch verso GND e pin 3, pin 4 a GND, pin 2 al condensatore verso GND, pin 1 alla resistenza e allo strumento, con l'altro terminale dello strumento a GND. Non risultano collegamenti topologici errati gravi. Restano problemi minori su posizioni dei pin del connettore e omissione di label testuali visibili."
+  },
+  "raw_model_output": "{\"circuit_id\":\"a04\",\"batch\":\"A\",\"image_file\":\"a04.png\",\"json_file\":\"a04.json\",\"image_graph_fidelity_score\":88,\"decision\":\"MINOR_ISSUES\",\"usable_as_graph_base\":true,\"scores\":{\"components\":24,\"terminals_pins\":17,\"graph_connections\":39,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":3},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"connector_terminal_positions\",\"description\":\"Le posizioni relative dei pin del connettore non sono completamente coerenti: nell'immagine tutti i quattro pin di J15 sono disposti sul lato sinistro del corpo del connettore, mentre nel JSON pin1 e pin2 sono indicati con relative_position 'right'.\"},{\"type\":\"switch_state_representation\",\"description\":\"Lo switch è disegnato aperto e il JSON riporta state 'open', ma il campo graph collega comunque i due terminali dello switch alle rispettive reti; questo è accettabile come connettività dei morsetti, ma lo stato aperto richiede cautela nell'interpretazione elettrica.\"},{\"type\":\"visible_label_missing\",\"description\":\"Alcune label topologiche/testuali visibili utili all'identificazione, come J15, TEST e VMON, non sono riportate nel JSON.\"}],\"missing_from_json\":[\"Label visibile J15 del connettore\",\"Label visibile TEST associata allo switch\",\"Label visibile VMON associata allo strumento analogico\"],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"La corrispondenza esatta tra pin fisici del connettore e terminal_id pin1-pin4 nel JSON è coerente con le numerazioni visibili, ma le relative_position non descrivono fedelmente il lato grafico dei pin.\",\"La polarità del condensatore non è indicata visivamente e non è valutabile.\",\"Il terminale sinistro dello strumento analogico appare non collegato nell'immagine e non è presente in graph; il JSON usa due terminali, collegando quello destro a GND e quello sinistro alla resistenza, coerente con la topologia visibile ma senza polarità verificabile.\"],\"short_explanation\":\"Il JSON rappresenta correttamente i componenti principali e quasi tutti i collegamenti visibili: switch verso GND e pin 3, pin 4 a GND, pin 2 al condensatore verso GND, pin 1 alla resistenza e allo strumento, con l'altro terminale dello strumento a GND. Non risultano collegamenti topologici errati gravi. Restano problemi minori su posizioni dei pin del connettore e omissione di label testuali visibili.\"}"
+}

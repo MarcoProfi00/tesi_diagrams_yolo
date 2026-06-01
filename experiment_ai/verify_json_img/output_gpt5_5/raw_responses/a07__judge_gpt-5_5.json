@@ -1,0 +1,91 @@
+{
+  "metadata": {
+    "circuit_id": "a07",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a07.png",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a07.json",
+    "image_file": "a07.png",
+    "json_file": "a07.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-01 20:13:58",
+    "judge_latency_seconds": 17.325,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=4367, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=947, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=5314)",
+  "judge_result": {
+    "circuit_id": "a07",
+    "batch": "A",
+    "image_file": "a07.png",
+    "json_file": "a07.json",
+    "image_graph_fidelity_score": 78,
+    "decision": "NEEDS_PATCH",
+    "usable_as_graph_base": false,
+    "scores": {
+      "components": 23,
+      "terminals_pins": 16,
+      "graph_connections": 31,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 3,
+      "minor": 1
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "missing_connection",
+        "description": "Il terminale sinistro della sorgente AC è visibilmente collegato al terminale sinistro superiore del trasformatore, ma nel JSON entrambi risultano non collegati.",
+        "image_evidence": "Il filo orizzontale passa dalla sinistra attraverso la sorgente AC e arriva al lato sinistro dell'avvolgimento superiore del trasformatore.",
+        "json_evidence": "signal_source23.1_t1: [] e transformer28.1_t1: []"
+      },
+      {
+        "type": "wrong_or_missing_transformer_connection",
+        "description": "Il JSON collega la sorgente AC al terminale sinistro inferiore del trasformatore, mentre l'immagine mostra il collegamento della sorgente al terminale sinistro superiore; il terminale inferiore sinistro del trasformatore non è chiaramente collegato alla sorgente.",
+        "image_evidence": "Il conduttore superiore entra nel lato sinistro dell'avvolgimento superiore del trasformatore; non è visibile un collegamento della sorgente al terminale inferiore sinistro.",
+        "json_evidence": "signal_source23.1_t2 è collegato a transformer28.1_t3"
+      },
+      {
+        "type": "missing_connection",
+        "description": "Il terminale destro superiore del trasformatore è visibilmente collegato al resistore in serie, ma nel JSON il resistore è collegato al terminale destro inferiore del trasformatore e transformer28.1_t2 risulta non collegato.",
+        "image_evidence": "Dal lato destro superiore del trasformatore parte il filo verso il resistore sul ramo superiore.",
+        "json_evidence": "resistor22.1_t1 è collegato a transformer28.1_t4; transformer28.1_t2: []"
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "component_class_or_label_semantics",
+        "description": "La sorgente è classificata genericamente come Signal_Source; l'immagine mostra specificamente una sorgente AC. La rappresentazione è comunque parzialmente coerente come sorgente."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "signal_source23.1_t1 collegato a transformer28.1_t1",
+        "found_in_json": "signal_source23.1_t1: [] e transformer28.1_t1: []",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "signal_source23.1_t2 non dovrebbe essere il collegamento al terminale inferiore sinistro del trasformatore se i terminali sono assegnati come nel JSON",
+        "found_in_json": "signal_source23.1_t2 collegato a transformer28.1_t3",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "resistor22.1_t1 collegato al terminale destro superiore del trasformatore",
+        "found_in_json": "resistor22.1_t1 collegato a transformer28.1_t4; transformer28.1_t2 non collegato",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "L'assegnazione esatta dei quattro terminali del trasformatore ai nomi t1, t2, t3, t4 non è visibile nell'immagine; la valutazione dei collegamenti del trasformatore dipende dalle relative_position dichiarate nel JSON, che distinguono solo left/right e non upper/lower.",
+      "Il ramo inferiore/superiore dell'avvolgimento del trasformatore e la corrispondenza precisa dei terminali interni non sono completamente deducibili dal solo simbolo."
+    ],
+    "short_explanation": "Il JSON include quasi tutti i componenti visibili: sorgente, trasformatore, resistore, condensatore, lampada/load e due GND. La parte a destra con resistore, condensatore, lampada e masse è in larga parte coerente. Tuttavia i collegamenti del trasformatore e della sorgente AC sono rappresentati male o lasciati aperti: terminali che nell'immagine sono collegati risultano non connessi e altri sono collegati al terminale errato del trasformatore. Per questi errori topologici correggibili il grafo richiede patch."
+  },
+  "raw_model_output": "{\"circuit_id\":\"a07\",\"batch\":\"A\",\"image_file\":\"a07.png\",\"json_file\":\"a07.json\",\"image_graph_fidelity_score\":78,\"decision\":\"NEEDS_PATCH\",\"usable_as_graph_base\":false,\"scores\":{\"components\":23,\"terminals_pins\":16,\"graph_connections\":31,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":3,\"minor\":1},\"critical_errors\":[],\"major_errors\":[{\"type\":\"missing_connection\",\"description\":\"Il terminale sinistro della sorgente AC è visibilmente collegato al terminale sinistro superiore del trasformatore, ma nel JSON entrambi risultano non collegati.\",\"image_evidence\":\"Il filo orizzontale passa dalla sinistra attraverso la sorgente AC e arriva al lato sinistro dell'avvolgimento superiore del trasformatore.\",\"json_evidence\":\"signal_source23.1_t1: [] e transformer28.1_t1: []\"},{\"type\":\"wrong_or_missing_transformer_connection\",\"description\":\"Il JSON collega la sorgente AC al terminale sinistro inferiore del trasformatore, mentre l'immagine mostra il collegamento della sorgente al terminale sinistro superiore; il terminale inferiore sinistro del trasformatore non è chiaramente collegato alla sorgente.\",\"image_evidence\":\"Il conduttore superiore entra nel lato sinistro dell'avvolgimento superiore del trasformatore; non è visibile un collegamento della sorgente al terminale inferiore sinistro.\",\"json_evidence\":\"signal_source23.1_t2 è collegato a transformer28.1_t3\"},{\"type\":\"missing_connection\",\"description\":\"Il terminale destro superiore del trasformatore è visibilmente collegato al resistore in serie, ma nel JSON il resistore è collegato al terminale destro inferiore del trasformatore e transformer28.1_t2 risulta non collegato.\",\"image_evidence\":\"Dal lato destro superiore del trasformatore parte il filo verso il resistore sul ramo superiore.\",\"json_evidence\":\"resistor22.1_t1 è collegato a transformer28.1_t4; transformer28.1_t2: []\"}],\"minor_errors\":[{\"type\":\"component_class_or_label_semantics\",\"description\":\"La sorgente è classificata genericamente come Signal_Source; l'immagine mostra specificamente una sorgente AC. La rappresentazione è comunque parzialmente coerente come sorgente.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"signal_source23.1_t1 collegato a transformer28.1_t1\",\"found_in_json\":\"signal_source23.1_t1: [] e transformer28.1_t1: []\",\"severity\":\"major\"},{\"expected_from_image\":\"signal_source23.1_t2 non dovrebbe essere il collegamento al terminale inferiore sinistro del trasformatore se i terminali sono assegnati come nel JSON\",\"found_in_json\":\"signal_source23.1_t2 collegato a transformer28.1_t3\",\"severity\":\"major\"},{\"expected_from_image\":\"resistor22.1_t1 collegato al terminale destro superiore del trasformatore\",\"found_in_json\":\"resistor22.1_t1 collegato a transformer28.1_t4; transformer28.1_t2 non collegato\",\"severity\":\"major\"}],\"uncertain_points\":[\"L'assegnazione esatta dei quattro terminali del trasformatore ai nomi t1, t2, t3, t4 non è visibile nell'immagine; la valutazione dei collegamenti del trasformatore dipende dalle relative_position dichiarate nel JSON, che distinguono solo left/right e non upper/lower.\",\"Il ramo inferiore/superiore dell'avvolgimento del trasformatore e la corrispondenza precisa dei terminali interni non sono completamente deducibili dal solo simbolo.\"],\"short_explanation\":\"Il JSON include quasi tutti i componenti visibili: sorgente, trasformatore, resistore, condensatore, lampada/load e due GND. La parte a destra con resistore, condensatore, lampada e masse è in larga parte coerente. Tuttavia i collegamenti del trasformatore e della sorgente AC sono rappresentati male o lasciati aperti: terminali che nell'immagine sono collegati risultano non connessi e altri sono collegati al terminale errato del trasformatore. Per questi errori topologici correggibili il grafo richiede patch.\"}"
+}

@@ -1,0 +1,108 @@
+{
+  "metadata": {
+    "circuit_id": "a05",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a05.png",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a05.json",
+    "image_file": "a05.png",
+    "json_file": "a05.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-01 20:13:28",
+    "judge_latency_seconds": 22.033,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=5162, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=1285, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=6447)",
+  "judge_result": {
+    "circuit_id": "a05",
+    "batch": "A",
+    "image_file": "a05.png",
+    "json_file": "a05.json",
+    "image_graph_fidelity_score": 78,
+    "decision": "NEEDS_PATCH",
+    "usable_as_graph_base": false,
+    "scores": {
+      "components": 23,
+      "terminals_pins": 16,
+      "graph_connections": 31,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 3,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "missing_connection",
+        "description": "Il primario del trasformatore visibile a sinistra è collegato ai pin 1 e 2 del connettore, ma nel JSON i terminali transformer28.1_t1 e transformer28.1_t2 risultano non connessi.",
+        "image_evidence": "I fili dai pin 1 e 2 di J7 vanno rispettivamente ai due terminali della bobina sinistra di T1.",
+        "json_evidence": "graph contiene connector5.1_pin1 collegato a transformer28.1_t3 e connector5.1_pin2 collegato a resistor22.1_t1; transformer28.1_t1 e transformer28.1_t2 sono liste vuote e segnalati in warnings.unconnected_terminals."
+      },
+      {
+        "type": "wrong_connection",
+        "description": "Il pin 2 del connettore è collegato al trasformatore nell'immagine, non direttamente al resistore.",
+        "image_evidence": "Dal pin 2 di J7 il filo orizzontale raggiunge il terminale inferiore della bobina sinistra di T1; il resistore parte più a destra sulla stessa linea solo dopo il nodo verso il trasformatore/secondario visibile.",
+        "json_evidence": "graph dichiara connector5.1_pin2 collegato solo a resistor22.1_t1."
+      },
+      {
+        "type": "wrong_connection",
+        "description": "Il terminale superiore del lato destro del trasformatore è collegato alla linea del pin 1 e al terminale sinistro dello strumento, non al pin 1 tramite il terminale t3 come unico collegamento separato dal meter.",
+        "image_evidence": "La linea superiore da J7 pin 1 passa attraverso/verso il trasformatore e prosegue al terminale sinistro del misuratore VAC.",
+        "json_evidence": "graph separa connector5.1_pin1-transformer28.1_t3 e analog_meter0.1_t1-transformer28.1_t4, senza includere un nodo comune fra pin 1, trasformatore e meter."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "component_class_or_semantics",
+        "description": "Il componente diode7.1 è visivamente un LED, ma è classificato genericamente come Diode; la topologia a due terminali resta comunque utilizzabile."
+      },
+      {
+        "type": "missing_visible_label",
+        "description": "Le label topologiche/testuali RESET, VAC e PWR visibili nell'immagine non sono rappresentate nel JSON."
+      }
+    ],
+    "missing_from_json": [
+      "Collegamenti corretti dei quattro terminali del trasformatore alle due linee visibili del circuito",
+      "Label visibili RESET, VAC, PWR"
+    ],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "connector5.1_pin1, terminale superiore della bobina sinistra del trasformatore, terminale superiore/destro del trasformatore e analog_meter0.1_t1 stanno sulla linea superiore visibile",
+        "found_in_json": "connector5.1_pin1 è collegato solo a transformer28.1_t3; analog_meter0.1_t1 è collegato solo a transformer28.1_t4; transformer28.1_t1 e transformer28.1_t2 sono non connessi",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "connector5.1_pin2 è sulla linea verso il terminale inferiore della bobina sinistra del trasformatore e prosegue verso il resistore",
+        "found_in_json": "connector5.1_pin2 è collegato solo a resistor22.1_t1, senza collegamento al trasformatore",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "resistor22.1_t2, analog_meter0.1_t2, GND centrale e anodo del LED condividono il nodo verticale a destra",
+        "found_in_json": "resistor22.1_t2, analog_meter0.1_t2, gnd9.3_t1 e diode7.1_anode sono collegati insieme",
+        "severity": "minor"
+      },
+      {
+        "expected_from_image": "catodo/lato destro del LED collegato al GND destro",
+        "found_in_json": "diode7.1_cathode collegato a gnd9.4_t1",
+        "severity": "minor"
+      },
+      {
+        "expected_from_image": "switch RESET aperto fra GND sinistro e pin 3 di J7; pin 4 di J7 a GND inferiore",
+        "found_in_json": "switch25.1_t1-gnd9.1_t1, switch25.1_t2-connector5.1_pin3, connector5.1_pin4-gnd9.2_t1",
+        "severity": "minor"
+      }
+    ],
+    "uncertain_points": [
+      "La corrispondenza esatta tra i terminal_id t1-t4 del trasformatore e le posizioni fisiche delle quattro estremità non è completamente verificabile dal JSON, perché i terminali sono nominati genericamente e le relative_position sono ambigue per due terminali a sinistra e due a destra.",
+      "La polarità anodo/catodo del LED è visibile solo dal simbolo; la classificazione come Diode con anode a sinistra e cathode a destra sembra coerente, ma il JSON non distingue esplicitamente LED."
+    ],
+    "short_explanation": "Il JSON include quasi tutti i componenti principali e rappresenta correttamente reset, pin 4 a GND, nodo del resistore/meter/LED/GND e GND destro del LED. Tuttavia i collegamenti del trasformatore sono significativamente errati: due terminali risultano non connessi e i pin 1 e 2 del connettore non sono collegati alla bobina come visibile. Per questo il grafo richiede correzioni topologiche."
+  },
+  "raw_model_output": "{\"circuit_id\":\"a05\",\"batch\":\"A\",\"image_file\":\"a05.png\",\"json_file\":\"a05.json\",\"image_graph_fidelity_score\":78,\"decision\":\"NEEDS_PATCH\",\"usable_as_graph_base\":false,\"scores\":{\"components\":23,\"terminals_pins\":16,\"graph_connections\":31,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":3,\"minor\":2},\"critical_errors\":[],\"major_errors\":[{\"type\":\"missing_connection\",\"description\":\"Il primario del trasformatore visibile a sinistra è collegato ai pin 1 e 2 del connettore, ma nel JSON i terminali transformer28.1_t1 e transformer28.1_t2 risultano non connessi.\",\"image_evidence\":\"I fili dai pin 1 e 2 di J7 vanno rispettivamente ai due terminali della bobina sinistra di T1.\",\"json_evidence\":\"graph contiene connector5.1_pin1 collegato a transformer28.1_t3 e connector5.1_pin2 collegato a resistor22.1_t1; transformer28.1_t1 e transformer28.1_t2 sono liste vuote e segnalati in warnings.unconnected_terminals.\"},{\"type\":\"wrong_connection\",\"description\":\"Il pin 2 del connettore è collegato al trasformatore nell'immagine, non direttamente al resistore.\",\"image_evidence\":\"Dal pin 2 di J7 il filo orizzontale raggiunge il terminale inferiore della bobina sinistra di T1; il resistore parte più a destra sulla stessa linea solo dopo il nodo verso il trasformatore/secondario visibile.\",\"json_evidence\":\"graph dichiara connector5.1_pin2 collegato solo a resistor22.1_t1.\"},{\"type\":\"wrong_connection\",\"description\":\"Il terminale superiore del lato destro del trasformatore è collegato alla linea del pin 1 e al terminale sinistro dello strumento, non al pin 1 tramite il terminale t3 come unico collegamento separato dal meter.\",\"image_evidence\":\"La linea superiore da J7 pin 1 passa attraverso/verso il trasformatore e prosegue al terminale sinistro del misuratore VAC.\",\"json_evidence\":\"graph separa connector5.1_pin1-transformer28.1_t3 e analog_meter0.1_t1-transformer28.1_t4, senza includere un nodo comune fra pin 1, trasformatore e meter.\"}],\"minor_errors\":[{\"type\":\"component_class_or_semantics\",\"description\":\"Il componente diode7.1 è visivamente un LED, ma è classificato genericamente come Diode; la topologia a due terminali resta comunque utilizzabile.\"},{\"type\":\"missing_visible_label\",\"description\":\"Le label topologiche/testuali RESET, VAC e PWR visibili nell'immagine non sono rappresentate nel JSON.\"}],\"missing_from_json\":[\"Collegamenti corretti dei quattro terminali del trasformatore alle due linee visibili del circuito\",\"Label visibili RESET, VAC, PWR\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"connector5.1_pin1, terminale superiore della bobina sinistra del trasformatore, terminale superiore/destro del trasformatore e analog_meter0.1_t1 stanno sulla linea superiore visibile\",\"found_in_json\":\"connector5.1_pin1 è collegato solo a transformer28.1_t3; analog_meter0.1_t1 è collegato solo a transformer28.1_t4; transformer28.1_t1 e transformer28.1_t2 sono non connessi\",\"severity\":\"major\"},{\"expected_from_image\":\"connector5.1_pin2 è sulla linea verso il terminale inferiore della bobina sinistra del trasformatore e prosegue verso il resistore\",\"found_in_json\":\"connector5.1_pin2 è collegato solo a resistor22.1_t1, senza collegamento al trasformatore\",\"severity\":\"major\"},{\"expected_from_image\":\"resistor22.1_t2, analog_meter0.1_t2, GND centrale e anodo del LED condividono il nodo verticale a destra\",\"found_in_json\":\"resistor22.1_t2, analog_meter0.1_t2, gnd9.3_t1 e diode7.1_anode sono collegati insieme\",\"severity\":\"minor\"},{\"expected_from_image\":\"catodo/lato destro del LED collegato al GND destro\",\"found_in_json\":\"diode7.1_cathode collegato a gnd9.4_t1\",\"severity\":\"minor\"},{\"expected_from_image\":\"switch RESET aperto fra GND sinistro e pin 3 di J7; pin 4 di J7 a GND inferiore\",\"found_in_json\":\"switch25.1_t1-gnd9.1_t1, switch25.1_t2-connector5.1_pin3, connector5.1_pin4-gnd9.2_t1\",\"severity\":\"minor\"}],\"uncertain_points\":[\"La corrispondenza esatta tra i terminal_id t1-t4 del trasformatore e le posizioni fisiche delle quattro estremità non è completamente verificabile dal JSON, perché i terminali sono nominati genericamente e le relative_position sono ambigue per due terminali a sinistra e due a destra.\",\"La polarità anodo/catodo del LED è visibile solo dal simbolo; la classificazione come Diode con anode a sinistra e cathode a destra sembra coerente, ma il JSON non distingue esplicitamente LED.\"],\"short_explanation\":\"Il JSON include quasi tutti i componenti principali e rappresenta correttamente reset, pin 4 a GND, nodo del resistore/meter/LED/GND e GND destro del LED. Tuttavia i collegamenti del trasformatore sono significativamente errati: due terminali risultano non connessi e i pin 1 e 2 del connettore non sono collegati alla bobina come visibile. Per questo il grafo richiede correzioni topologiche.\"}"
+}

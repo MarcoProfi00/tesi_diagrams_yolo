@@ -1,0 +1,90 @@
+{
+  "metadata": {
+    "circuit_id": "a03",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a03.png",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a03.json",
+    "image_file": "a03.png",
+    "json_file": "a03.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-01 20:12:53",
+    "judge_latency_seconds": 22.24,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=4668, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=1107, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=5775)",
+  "judge_result": {
+    "circuit_id": "a03",
+    "batch": "A",
+    "image_file": "a03.png",
+    "json_file": "a03.json",
+    "image_graph_fidelity_score": 75,
+    "decision": "NEEDS_PATCH",
+    "usable_as_graph_base": false,
+    "scores": {
+      "components": 19,
+      "terminals_pins": 15,
+      "graph_connections": 33,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 3,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "component_class_or_orientation",
+        "description": "Il componente verticale a sinistra dell'immagine appare come simbolo di sorgente/alimentazione con terminale inferiore collegato a VIN/J5 pin 1 e terminale superiore non collegato visibilmente; nel JSON è modellato come Battery con polarità negative in alto e positive in basso e con il terminale superiore collegato a una label VDD. La classe sorgente è plausibile, ma polarità/label non sono verificabili e il terminale superiore sembra non collegato nell'immagine.",
+        "image_evidence": "In alto a sinistra si vede un simbolo di sorgente con piastra e asta verticale; il filo VIN parte dal nodo inferiore del simbolo verso J5 pin 1. Non è visibile una label VDD collegata al terminale superiore.",
+        "json_evidence": "battery2.1 ha terminali negative top e positive bottom; graph contiene \"VDD\": [\"battery2.1_negative\"] e \"battery2.1_negative\": [\"VDD\"]."
+      },
+      {
+        "type": "graph_connection_extra",
+        "description": "Il JSON dichiara un collegamento tra il terminale superiore della batteria/sorgente e una label VDD non visibile nell'immagine. Questo introduce un nodo topologico non riscontrabile visivamente.",
+        "image_evidence": "La label visibile vicino al filo verso il connettore è VIN; non si vede una label VDD associata al terminale alto della sorgente.",
+        "json_evidence": "Nel graph è presente il nodo \"VDD\" collegato a \"battery2.1_negative\"."
+      },
+      {
+        "type": "missing_visible_label",
+        "description": "La label topologica VIN visibile accanto al collegamento tra sorgente e J5 pin 1 non è rappresentata nel JSON, mentre il JSON usa VDD su un altro terminale.",
+        "image_evidence": "La scritta VIN è chiaramente visibile a sinistra del connettore, sul filo che entra nel pin 1.",
+        "json_evidence": "Il graph collega \"battery2.1_positive\" a \"connector5.1_pin1\" senza nodo/label VIN; è invece presente \"VDD\" collegato a \"battery2.1_negative\"."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "terminal_position",
+        "description": "I terminali del voltmetro sono indicati entrambi con relative_position bottom; nell'immagine i due morsetti sono nella parte bassa del misuratore, ma il collegamento sinistro arriva lateralmente al morsetto sinistro e quello destro scende a massa. La posizione è solo parzialmente descrittiva."
+      },
+      {
+        "type": "connector_terminal_positions",
+        "description": "Le relative_position dei pin del connettore J5 non riflettono bene la disposizione visiva dei quattro pin, tutti lungo il lato sinistro/interno del connettore; tuttavia i numeri pin e i collegamenti principali sono coerenti."
+      }
+    ],
+    "missing_from_json": [
+      "Label VIN sul nodo tra sorgente e connector5.1_pin1"
+    ],
+    "extra_in_json": [
+      "Nodo/label VDD collegato a battery2.1_negative"
+    ],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "Terminale inferiore della sorgente/alimentazione collegato al nodo VIN e a J5 pin 1; nessun collegamento visibile del terminale superiore a una label VDD.",
+        "found_in_json": "battery2.1_positive collegato a connector5.1_pin1, ma battery2.1_negative collegato a VDD.",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "La polarità esatta del simbolo di sorgente/batteria a sinistra non è chiaramente deducibile dall'immagine senza interpretazione del simbolo; quindi la denominazione positive/negative nel JSON non è valutata come errore critico.",
+      "Non è completamente chiaro se il terminale superiore della sorgente sia intenzionalmente un terminale esterno non mostrato o una connessione non etichettata; nell'immagine non compare però una label VDD.",
+      "La corrispondenza dei due terminali del voltmetro con t1/t2 non può essere verificata nominalmente, ma i collegamenti sinistro a resistore e destro a GND risultano coerenti."
+    ],
+    "short_explanation": "Il JSON rappresenta correttamente i componenti principali: connettore J5 a 4 pin, condensatore verso massa dal pin 3, pin 4 a massa, pin 2 tramite resistore al voltmetro, e voltmetro a massa. Le connessioni principali sono quindi in gran parte corrette. Restano però problemi topologici/semantici sulla sorgente a sinistra: la label visibile è VIN sul nodo del pin 1, mentre il JSON introduce VDD sul terminale superiore della batteria/sorgente, non visibile, e non rappresenta VIN."
+  },
+  "raw_model_output": "{\"circuit_id\":\"a03\",\"batch\":\"A\",\"image_file\":\"a03.png\",\"json_file\":\"a03.json\",\"image_graph_fidelity_score\":75,\"decision\":\"NEEDS_PATCH\",\"usable_as_graph_base\":false,\"scores\":{\"components\":19,\"terminals_pins\":15,\"graph_connections\":33,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":3,\"minor\":2},\"critical_errors\":[],\"major_errors\":[{\"type\":\"component_class_or_orientation\",\"description\":\"Il componente verticale a sinistra dell'immagine appare come simbolo di sorgente/alimentazione con terminale inferiore collegato a VIN/J5 pin 1 e terminale superiore non collegato visibilmente; nel JSON è modellato come Battery con polarità negative in alto e positive in basso e con il terminale superiore collegato a una label VDD. La classe sorgente è plausibile, ma polarità/label non sono verificabili e il terminale superiore sembra non collegato nell'immagine.\",\"image_evidence\":\"In alto a sinistra si vede un simbolo di sorgente con piastra e asta verticale; il filo VIN parte dal nodo inferiore del simbolo verso J5 pin 1. Non è visibile una label VDD collegata al terminale superiore.\",\"json_evidence\":\"battery2.1 ha terminali negative top e positive bottom; graph contiene \\\"VDD\\\": [\\\"battery2.1_negative\\\"] e \\\"battery2.1_negative\\\": [\\\"VDD\\\"].\"},{\"type\":\"graph_connection_extra\",\"description\":\"Il JSON dichiara un collegamento tra il terminale superiore della batteria/sorgente e una label VDD non visibile nell'immagine. Questo introduce un nodo topologico non riscontrabile visivamente.\",\"image_evidence\":\"La label visibile vicino al filo verso il connettore è VIN; non si vede una label VDD associata al terminale alto della sorgente.\",\"json_evidence\":\"Nel graph è presente il nodo \\\"VDD\\\" collegato a \\\"battery2.1_negative\\\".\"},{\"type\":\"missing_visible_label\",\"description\":\"La label topologica VIN visibile accanto al collegamento tra sorgente e J5 pin 1 non è rappresentata nel JSON, mentre il JSON usa VDD su un altro terminale.\",\"image_evidence\":\"La scritta VIN è chiaramente visibile a sinistra del connettore, sul filo che entra nel pin 1.\",\"json_evidence\":\"Il graph collega \\\"battery2.1_positive\\\" a \\\"connector5.1_pin1\\\" senza nodo/label VIN; è invece presente \\\"VDD\\\" collegato a \\\"battery2.1_negative\\\".\"}],\"minor_errors\":[{\"type\":\"terminal_position\",\"description\":\"I terminali del voltmetro sono indicati entrambi con relative_position bottom; nell'immagine i due morsetti sono nella parte bassa del misuratore, ma il collegamento sinistro arriva lateralmente al morsetto sinistro e quello destro scende a massa. La posizione è solo parzialmente descrittiva.\"},{\"type\":\"connector_terminal_positions\",\"description\":\"Le relative_position dei pin del connettore J5 non riflettono bene la disposizione visiva dei quattro pin, tutti lungo il lato sinistro/interno del connettore; tuttavia i numeri pin e i collegamenti principali sono coerenti.\"}],\"missing_from_json\":[\"Label VIN sul nodo tra sorgente e connector5.1_pin1\"],\"extra_in_json\":[\"Nodo/label VDD collegato a battery2.1_negative\"],\"wrong_graph_connections\":[{\"expected_from_image\":\"Terminale inferiore della sorgente/alimentazione collegato al nodo VIN e a J5 pin 1; nessun collegamento visibile del terminale superiore a una label VDD.\",\"found_in_json\":\"battery2.1_positive collegato a connector5.1_pin1, ma battery2.1_negative collegato a VDD.\",\"severity\":\"major\"}],\"uncertain_points\":[\"La polarità esatta del simbolo di sorgente/batteria a sinistra non è chiaramente deducibile dall'immagine senza interpretazione del simbolo; quindi la denominazione positive/negative nel JSON non è valutata come errore critico.\",\"Non è completamente chiaro se il terminale superiore della sorgente sia intenzionalmente un terminale esterno non mostrato o una connessione non etichettata; nell'immagine non compare però una label VDD.\",\"La corrispondenza dei due terminali del voltmetro con t1/t2 non può essere verificata nominalmente, ma i collegamenti sinistro a resistore e destro a GND risultano coerenti.\"],\"short_explanation\":\"Il JSON rappresenta correttamente i componenti principali: connettore J5 a 4 pin, condensatore verso massa dal pin 3, pin 4 a massa, pin 2 tramite resistore al voltmetro, e voltmetro a massa. Le connessioni principali sono quindi in gran parte corrette. Restano però problemi topologici/semantici sulla sorgente a sinistra: la label visibile è VIN sul nodo del pin 1, mentre il JSON introduce VDD sul terminale superiore della batteria/sorgente, non visibile, e non rappresenta VIN.\"}"
+}
