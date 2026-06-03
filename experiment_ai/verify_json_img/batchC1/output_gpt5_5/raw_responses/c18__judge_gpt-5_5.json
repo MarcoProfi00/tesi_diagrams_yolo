@@ -1,0 +1,119 @@
+{
+  "metadata": {
+    "circuit_id": "c18",
+    "batch": "C1",
+    "batch_dir": "batchC1",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\images\\c18.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\json\\c18.json",
+    "image_file": "c18.jpg",
+    "json_file": "c18.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-03 18:12:12",
+    "judge_latency_seconds": 31.136,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=8690, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=1917, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=10607)",
+  "judge_result": {
+    "circuit_id": "c18",
+    "batch": "C1",
+    "image_file": "c18.jpg",
+    "json_file": "c18.json",
+    "image_graph_fidelity_score": 71,
+    "decision": "MEDIUM",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 22,
+      "terminals_pins": 14,
+      "graph_connections": 29,
+      "visible_semantics": 6
+    },
+    "error_counts": {
+      "critical": 1,
+      "major": 4,
+      "minor": 2
+    },
+    "critical_errors": [
+      {
+        "type": "wrong_net_merge",
+        "description": "Il JSON unisce sulla stessa rete l'uscita dell'operazionale inferiore destro, il nodo di feedback con R9/C3 e il terminale Low out con il bus di ingresso Audio IN tramite resistor22.1_t1 e resistor22.3_t1. Nell'immagine il bus Audio IN è collegato ai lati sinistri di R1, R3, R4 e R5, mentre Low out è un nodo separato all'uscita di IC2b, collegato al feedback R9/C3 ma non al bus di ingresso.",
+        "image_evidence": "Il filo verticale sinistro Audio IN alimenta R1, R3, R4, R5; il nodo Low out è a destra dell'IC2b e torna in basso a sinistra con un filo separato che si collega al lato sinistro di R1, non direttamente al nodo di uscita Low out? Visivamente il ramo di feedback R9/C3 è sul nodo di uscita IC2b e sull'ingresso invertente IC2b, mentre i resistori di ingresso sono sul bus Audio IN.",
+        "json_evidence": "operational_amplifier19.4_out è connesso a polarized_capacitor20.3_negative, resistor22.1_t1, resistor22.3_t1, resistor22.9_t2 e terminal26.5_t1; resistor22.1_t1 e resistor22.3_t1 risultano quindi sulla stessa rete dell'uscita Low out."
+      }
+    ],
+    "major_errors": [
+      {
+        "type": "missing_connection",
+        "description": "Il collegamento di feedback dell'operazionale IC1a tramite R2 verso l'ingresso invertente non è rappresentato correttamente: il lato destro di R2 dovrebbe andare all'uscita di IC1a/High out, e il lato sinistro al nodo dell'ingresso invertente insieme a R3/R1, ma nel JSON R2 è collegato tra Audio IN/R4 e un terminale aux dell'opamp IC1b.",
+        "image_evidence": "R2 è sopra IC1a, tra il nodo sopra l'ingresso invertente di IC1a e il nodo di uscita pin 7/High out.",
+        "json_evidence": "resistor22.2_t1 è connesso a resistor22.4_t1 e terminal26.1_t1; resistor22.2_t2 è connesso a operational_amplifier19.2_aux1 e operational_amplifier19.2_in1."
+      },
+      {
+        "type": "wrong_connection",
+        "description": "Il JSON collega il lato destro di R1 a R5, mentre nell'immagine R1 è collegato tra il bus Audio IN e il nodo invertente/feedback di IC1a, non al resistore associato all'uscita di IC1a verso IC2a.",
+        "image_evidence": "R1 è in alto a sinistra e il suo lato destro si unisce al nodo verticale che scende all'ingresso invertente di IC1a; non è in serie con R5/R6.",
+        "json_evidence": "resistor22.1_t2 è connesso solo a resistor22.5_t1."
+      },
+      {
+        "type": "wrong_connection",
+        "description": "La rete di ingresso invertente di IC1a è incompleta o errata: nell'immagine l'ingresso invertente è collegato al lato destro di R3 e al nodo R1/R2; nel JSON l'ingresso dell'opamp è collegato solo a resistor22.3_t2, mentre resistor22.3_t1 è erroneamente sulla rete Low out.",
+        "image_evidence": "Il pin invertente di IC1a è sul nodo comune con R3 e con il ramo verticale proveniente da R1/R2.",
+        "json_evidence": "operational_amplifier19.1_in1 è connesso solo a resistor22.3_t2; resistor22.3_t1 è connesso alla rete operational_amplifier19.4_out/terminal26.5_t1."
+      },
+      {
+        "type": "missing_or_wrong_supply_terminal",
+        "description": "Alimentazioni ausiliarie degli operazionali rappresentate in modo parziale e non coerente: il JSON ha terminali per aux di IC1a e IC2b, ma manca una connessione esplicita per l'altro terminale di alimentazione visibile di ciascun doppio opamp e non distingue chiaramente i nodi di alimentazione superiori/inferiori visibili.",
+        "image_evidence": "Nell'immagine sono visibili pin di alimentazione indicati sui quattro simboli: IC1a ha pin 8 in alto, IC1b pin 4 in basso, IC2a pin 8 in alto, IC2b pin 4 in basso.",
+        "json_evidence": "operational_amplifier19.1 ha solo aux2 collegato a terminal26.2; operational_amplifier19.2 ha aux1 connesso alla rete di ingresso/feedback; operational_amplifier19.3 ha aux1 connesso alla rete di ingresso; operational_amplifier19.4 ha aux2 collegato a terminal26.4."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "component_class_or_polarity_uncertain",
+        "description": "I condensatori C1, C2 e C3 sono rappresentati come Polarized_Capacitor, ma nell'immagine la polarità non è chiaramente verificabile dai simboli; la classe polarizzata può essere eccessivamente specifica."
+      },
+      {
+        "type": "terminal_label_semantics_missing",
+        "description": "I terminali esterni non riportano nel JSON le etichette topologiche visibili Audio IN, High out e Low out; i nodi sono comunque presenti come terminali generici."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "R2 tra nodo invertente di IC1a/R1/R3 e uscita IC1a/High out",
+        "found_in_json": "resistor22.2 è tra terminal26.1/resistor22.4_t1 e operational_amplifier19.2_aux1/in1",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "R1 tra bus Audio IN e nodo invertente di IC1a/R2/R3",
+        "found_in_json": "resistor22.1_t1 è nella rete di Low out e resistor22.1_t2 è collegato a resistor22.5_t1",
+        "severity": "critical"
+      },
+      {
+        "expected_from_image": "R3 tra bus Audio IN e ingresso invertente IC1a",
+        "found_in_json": "resistor22.3_t1 è sulla rete Low out, resistor22.3_t2 va a operational_amplifier19.1_in1",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "Low out separato dal bus Audio IN, salvo il percorso attraverso R1 visibile sul lato sinistro del circuito",
+        "found_in_json": "operational_amplifier19.4_out, terminal26.5_t1, resistor22.1_t1 e resistor22.3_t1 sono sulla stessa rete",
+        "severity": "critical"
+      },
+      {
+        "expected_from_image": "Pin/alimentazioni ausiliarie degli opamp collegati ai rispettivi terminali di alimentazione visibili, non ai nodi di segnale",
+        "found_in_json": "operational_amplifier19.2_aux1 è connesso a operational_amplifier19.2_in1/resistor22.2_t2; operational_amplifier19.3_aux1 è connesso a in1/C2/R6/R7",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "La corrispondenza esatta tra gli instance_id dei resistori nel JSON e i nomi R1-R9 dell'immagine è dedotta dalla posizione/topologia e non è esplicitata nel JSON.",
+      "Le polarità dei condensatori non sono chiaramente leggibili come polarizzate nell'immagine; non è possibile verificare con certezza positive/negative nel JSON.",
+      "I nomi funzionali degli ingressi degli operazionali nel JSON sono in1/in2 e non indicano direttamente + o -; la verifica è basata solo sulla posizione relativa e sui fili visibili."
+    ],
+    "short_explanation": "Il JSON riconosce quasi tutti i componenti principali e gran parte della struttura a quattro operazionali, con GND e terminali di uscita/ingresso presenti. Tuttavia contiene errori topologici rilevanti nella zona sinistra e nel feedback/ingresso di IC1a, inclusa una fusione errata tra il nodo Low out e parti del bus di ingresso, oltre a connessioni ausiliarie degli opamp incoerenti con i terminali di alimentazione visibili. La struttura resta parzialmente recuperabile, ma la fedeltà topologica è solo media."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c18\",\"batch\":\"C1\",\"image_file\":\"c18.jpg\",\"json_file\":\"c18.json\",\"image_graph_fidelity_score\":71,\"decision\":\"MEDIUM\",\"usable_as_graph_base\":true,\"scores\":{\"components\":22,\"terminals_pins\":14,\"graph_connections\":29,\"visible_semantics\":6},\"error_counts\":{\"critical\":1,\"major\":4,\"minor\":2},\"critical_errors\":[{\"type\":\"wrong_net_merge\",\"description\":\"Il JSON unisce sulla stessa rete l'uscita dell'operazionale inferiore destro, il nodo di feedback con R9/C3 e il terminale Low out con il bus di ingresso Audio IN tramite resistor22.1_t1 e resistor22.3_t1. Nell'immagine il bus Audio IN è collegato ai lati sinistri di R1, R3, R4 e R5, mentre Low out è un nodo separato all'uscita di IC2b, collegato al feedback R9/C3 ma non al bus di ingresso.\",\"image_evidence\":\"Il filo verticale sinistro Audio IN alimenta R1, R3, R4, R5; il nodo Low out è a destra dell'IC2b e torna in basso a sinistra con un filo separato che si collega al lato sinistro di R1, non direttamente al nodo di uscita Low out? Visivamente il ramo di feedback R9/C3 è sul nodo di uscita IC2b e sull'ingresso invertente IC2b, mentre i resistori di ingresso sono sul bus Audio IN.\",\"json_evidence\":\"operational_amplifier19.4_out è connesso a polarized_capacitor20.3_negative, resistor22.1_t1, resistor22.3_t1, resistor22.9_t2 e terminal26.5_t1; resistor22.1_t1 e resistor22.3_t1 risultano quindi sulla stessa rete dell'uscita Low out.\"}],\"major_errors\":[{\"type\":\"missing_connection\",\"description\":\"Il collegamento di feedback dell'operazionale IC1a tramite R2 verso l'ingresso invertente non è rappresentato correttamente: il lato destro di R2 dovrebbe andare all'uscita di IC1a/High out, e il lato sinistro al nodo dell'ingresso invertente insieme a R3/R1, ma nel JSON R2 è collegato tra Audio IN/R4 e un terminale aux dell'opamp IC1b.\",\"image_evidence\":\"R2 è sopra IC1a, tra il nodo sopra l'ingresso invertente di IC1a e il nodo di uscita pin 7/High out.\",\"json_evidence\":\"resistor22.2_t1 è connesso a resistor22.4_t1 e terminal26.1_t1; resistor22.2_t2 è connesso a operational_amplifier19.2_aux1 e operational_amplifier19.2_in1.\"},{\"type\":\"wrong_connection\",\"description\":\"Il JSON collega il lato destro di R1 a R5, mentre nell'immagine R1 è collegato tra il bus Audio IN e il nodo invertente/feedback di IC1a, non al resistore associato all'uscita di IC1a verso IC2a.\",\"image_evidence\":\"R1 è in alto a sinistra e il suo lato destro si unisce al nodo verticale che scende all'ingresso invertente di IC1a; non è in serie con R5/R6.\",\"json_evidence\":\"resistor22.1_t2 è connesso solo a resistor22.5_t1.\"},{\"type\":\"wrong_connection\",\"description\":\"La rete di ingresso invertente di IC1a è incompleta o errata: nell'immagine l'ingresso invertente è collegato al lato destro di R3 e al nodo R1/R2; nel JSON l'ingresso dell'opamp è collegato solo a resistor22.3_t2, mentre resistor22.3_t1 è erroneamente sulla rete Low out.\",\"image_evidence\":\"Il pin invertente di IC1a è sul nodo comune con R3 e con il ramo verticale proveniente da R1/R2.\",\"json_evidence\":\"operational_amplifier19.1_in1 è connesso solo a resistor22.3_t2; resistor22.3_t1 è connesso alla rete operational_amplifier19.4_out/terminal26.5_t1.\"},{\"type\":\"missing_or_wrong_supply_terminal\",\"description\":\"Alimentazioni ausiliarie degli operazionali rappresentate in modo parziale e non coerente: il JSON ha terminali per aux di IC1a e IC2b, ma manca una connessione esplicita per l'altro terminale di alimentazione visibile di ciascun doppio opamp e non distingue chiaramente i nodi di alimentazione superiori/inferiori visibili.\",\"image_evidence\":\"Nell'immagine sono visibili pin di alimentazione indicati sui quattro simboli: IC1a ha pin 8 in alto, IC1b pin 4 in basso, IC2a pin 8 in alto, IC2b pin 4 in basso.\",\"json_evidence\":\"operational_amplifier19.1 ha solo aux2 collegato a terminal26.2; operational_amplifier19.2 ha aux1 connesso alla rete di ingresso/feedback; operational_amplifier19.3 ha aux1 connesso alla rete di ingresso; operational_amplifier19.4 ha aux2 collegato a terminal26.4.\"}],\"minor_errors\":[{\"type\":\"component_class_or_polarity_uncertain\",\"description\":\"I condensatori C1, C2 e C3 sono rappresentati come Polarized_Capacitor, ma nell'immagine la polarità non è chiaramente verificabile dai simboli; la classe polarizzata può essere eccessivamente specifica.\"},{\"type\":\"terminal_label_semantics_missing\",\"description\":\"I terminali esterni non riportano nel JSON le etichette topologiche visibili Audio IN, High out e Low out; i nodi sono comunque presenti come terminali generici.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"R2 tra nodo invertente di IC1a/R1/R3 e uscita IC1a/High out\",\"found_in_json\":\"resistor22.2 è tra terminal26.1/resistor22.4_t1 e operational_amplifier19.2_aux1/in1\",\"severity\":\"major\"},{\"expected_from_image\":\"R1 tra bus Audio IN e nodo invertente di IC1a/R2/R3\",\"found_in_json\":\"resistor22.1_t1 è nella rete di Low out e resistor22.1_t2 è collegato a resistor22.5_t1\",\"severity\":\"critical\"},{\"expected_from_image\":\"R3 tra bus Audio IN e ingresso invertente IC1a\",\"found_in_json\":\"resistor22.3_t1 è sulla rete Low out, resistor22.3_t2 va a operational_amplifier19.1_in1\",\"severity\":\"major\"},{\"expected_from_image\":\"Low out separato dal bus Audio IN, salvo il percorso attraverso R1 visibile sul lato sinistro del circuito\",\"found_in_json\":\"operational_amplifier19.4_out, terminal26.5_t1, resistor22.1_t1 e resistor22.3_t1 sono sulla stessa rete\",\"severity\":\"critical\"},{\"expected_from_image\":\"Pin/alimentazioni ausiliarie degli opamp collegati ai rispettivi terminali di alimentazione visibili, non ai nodi di segnale\",\"found_in_json\":\"operational_amplifier19.2_aux1 è connesso a operational_amplifier19.2_in1/resistor22.2_t2; operational_amplifier19.3_aux1 è connesso a in1/C2/R6/R7\",\"severity\":\"major\"}],\"uncertain_points\":[\"La corrispondenza esatta tra gli instance_id dei resistori nel JSON e i nomi R1-R9 dell'immagine è dedotta dalla posizione/topologia e non è esplicitata nel JSON.\",\"Le polarità dei condensatori non sono chiaramente leggibili come polarizzate nell'immagine; non è possibile verificare con certezza positive/negative nel JSON.\",\"I nomi funzionali degli ingressi degli operazionali nel JSON sono in1/in2 e non indicano direttamente + o -; la verifica è basata solo sulla posizione relativa e sui fili visibili.\"],\"short_explanation\":\"Il JSON riconosce quasi tutti i componenti principali e gran parte della struttura a quattro operazionali, con GND e terminali di uscita/ingresso presenti. Tuttavia contiene errori topologici rilevanti nella zona sinistra e nel feedback/ingresso di IC1a, inclusa una fusione errata tra il nodo Low out e parti del bus di ingresso, oltre a connessioni ausiliarie degli opamp incoerenti con i terminali di alimentazione visibili. La struttura resta parzialmente recuperabile, ma la fedeltà topologica è solo media.\"}"
+}

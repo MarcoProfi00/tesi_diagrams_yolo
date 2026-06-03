@@ -1,0 +1,65 @@
+{
+  "metadata": {
+    "circuit_id": "c01",
+    "batch": "C1",
+    "batch_dir": "batchC1",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\images\\c01.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\json\\c01.json",
+    "image_file": "c01.jpg",
+    "json_file": "c01.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-03 18:08:01",
+    "judge_latency_seconds": 11.797,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=7221, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=610, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=7831)",
+  "judge_result": {
+    "circuit_id": "c01",
+    "batch": "C1",
+    "image_file": "c01.jpg",
+    "json_file": "c01.json",
+    "image_graph_fidelity_score": 91,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 23,
+      "terminals_pins": 18,
+      "graph_connections": 42,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 3
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "component_semantics",
+        "description": "Il terminale di alimentazione superiore è rappresentato genericamente come Terminal, mentre nell'immagine è visibile un simbolo/label di alimentazione positiva; topologicamente però il nodo è collegato correttamente."
+      },
+      {
+        "type": "component_polarity",
+        "description": "La polarità/orientamento del LED nel JSON è indicata come anodo in alto e catodo in basso; dall'immagine il LED è ruotato/orientato graficamente in modo non perfettamente coincidente con questa descrizione terminale, anche se la connessione serie verso il resistore e verso il nodo inferiore è corretta."
+      },
+      {
+        "type": "terminal_position",
+        "description": "Alcune relative_position dei terminali dei condensatori e del LED sono semplificate come top/bottom e non sempre riflettono esattamente l'orientamento grafico visibile, senza alterare in modo significativo la topologia."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "La polarità precisa del LED non è completamente verificabile solo dal simbolo rasterizzato; il JSON dichiara anodo e catodo ma l'immagine non consente una verifica inequivoca dei nomi terminale senza interpretazione del simbolo.",
+      "Il simbolo di alimentazione positivo è trattato come terminale generico nel JSON; la label testuale è visibile nell'immagine ma la sua semantica topologica non è codificata esplicitamente nel componente.",
+      "I condensatori sono rappresentati tutti come Capacitor non polarizzati; dall'immagine non è necessario dedurre polarità certa."
+    ],
+    "short_explanation": "Il JSON riproduce molto bene i componenti principali visibili: IC 555, tre resistori, tre condensatori, LED, GND e terminale di alimentazione. I pin numerati dell'IC e le principali reti sono coerenti: alimentazione superiore ai pin 4 e 8, rete tra R1/R2 e pin 7, rete tra R2/C1 e pin 6/pin 2, uscita pin 3 verso R3 e LED, pin 5 verso C2, e nodo inferiore comune a GND, pin 1, condensatori e LED. Le discrepanze sono limitate a semantica/posizionamento terminali e alla rappresentazione generica del terminale di alimentazione."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c01\",\"batch\":\"C1\",\"image_file\":\"c01.jpg\",\"json_file\":\"c01.json\",\"image_graph_fidelity_score\":91,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":23,\"terminals_pins\":18,\"graph_connections\":42,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":3},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"component_semantics\",\"description\":\"Il terminale di alimentazione superiore è rappresentato genericamente come Terminal, mentre nell'immagine è visibile un simbolo/label di alimentazione positiva; topologicamente però il nodo è collegato correttamente.\"},{\"type\":\"component_polarity\",\"description\":\"La polarità/orientamento del LED nel JSON è indicata come anodo in alto e catodo in basso; dall'immagine il LED è ruotato/orientato graficamente in modo non perfettamente coincidente con questa descrizione terminale, anche se la connessione serie verso il resistore e verso il nodo inferiore è corretta.\"},{\"type\":\"terminal_position\",\"description\":\"Alcune relative_position dei terminali dei condensatori e del LED sono semplificate come top/bottom e non sempre riflettono esattamente l'orientamento grafico visibile, senza alterare in modo significativo la topologia.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"La polarità precisa del LED non è completamente verificabile solo dal simbolo rasterizzato; il JSON dichiara anodo e catodo ma l'immagine non consente una verifica inequivoca dei nomi terminale senza interpretazione del simbolo.\",\"Il simbolo di alimentazione positivo è trattato come terminale generico nel JSON; la label testuale è visibile nell'immagine ma la sua semantica topologica non è codificata esplicitamente nel componente.\",\"I condensatori sono rappresentati tutti come Capacitor non polarizzati; dall'immagine non è necessario dedurre polarità certa.\"],\"short_explanation\":\"Il JSON riproduce molto bene i componenti principali visibili: IC 555, tre resistori, tre condensatori, LED, GND e terminale di alimentazione. I pin numerati dell'IC e le principali reti sono coerenti: alimentazione superiore ai pin 4 e 8, rete tra R1/R2 e pin 7, rete tra R2/C1 e pin 6/pin 2, uscita pin 3 verso R3 e LED, pin 5 verso C2, e nodo inferiore comune a GND, pin 1, condensatori e LED. Le discrepanze sono limitate a semantica/posizionamento terminali e alla rappresentazione generica del terminale di alimentazione.\"}"
+}

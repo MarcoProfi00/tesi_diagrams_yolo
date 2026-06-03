@@ -1,0 +1,130 @@
+{
+  "metadata": {
+    "circuit_id": "b06",
+    "batch": "B",
+    "batch_dir": "batchB",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\images\\b06.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\json\\b06.json",
+    "image_file": "b06.jpg",
+    "json_file": "b06.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-03 18:05:39",
+    "judge_latency_seconds": 29.31,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=8412, input_tokens_details=InputTokensDetails(cached_tokens=7936), output_tokens=1709, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=10121)",
+  "judge_result": {
+    "circuit_id": "b06",
+    "batch": "B",
+    "image_file": "b06.jpg",
+    "json_file": "b06.json",
+    "image_graph_fidelity_score": 70,
+    "decision": "MEDIUM",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 18,
+      "terminals_pins": 14,
+      "graph_connections": 31,
+      "visible_semantics": 7
+    },
+    "error_counts": {
+      "critical": 1,
+      "major": 5,
+      "minor": 3
+    },
+    "critical_errors": [
+      {
+        "type": "missing_main_component",
+        "description": "Il componente di uscita Z1 visibile nell'immagine, collegato al condensatore di uscita e alla linea inferiore, manca completamente nel JSON; al suo posto il percorso di uscita risulta interrotto o rappresentato con un collegamento errato verso un breaker.",
+        "image_evidence": "A destra dell'operazionale è visibile Z1 collegato in serie dopo C5 verso la linea inferiore comune.",
+        "json_evidence": "Non esiste alcun componente speaker/buzzer/Z1; è presente invece breaker3.1 collegato tra polarized_capacitor20.5_negative e la net di massa/alimentazione negativa."
+      }
+    ],
+    "major_errors": [
+      {
+        "type": "component_class_error",
+        "description": "Diversi condensatori non polarizzati visibili sono classificati nel JSON come condensatori polarizzati, introducendo terminali positive/negative non verificabili e semanticamente errati per C1, C2, C3 e C4.",
+        "image_evidence": "C1, C2, C3 e C4 sono disegnati come condensatori non polarizzati o variabile per C1, senza segni di polarità.",
+        "json_evidence": "polarized_capacitor20.1, 20.2, 20.3 e 20.4 sono tutti class_name Polarized_Capacitor con terminali positive/negative."
+      },
+      {
+        "type": "component_class_error",
+        "description": "Il componente R3 visibile è un resistore variabile/potenziometro con cursore collegato all'ingresso dell'IC, ma il JSON lo rappresenta come semplice resistore a due terminali.",
+        "image_evidence": "R3 è disegnato con simbolo di variabile/potenziometro: estremi tra nodo da C4 e massa, cursore verso il pin 3 dell'IC.",
+        "json_evidence": "resistor22.3 ha solo due terminali t1 e t2 ed è collegato solo tra polarized_capacitor20.4_negative e la net di massa."
+      },
+      {
+        "type": "wrong_graph_connection",
+        "description": "Il nodo del pin 3 dell'IC dovrebbe essere collegato al cursore di R3, ma nel JSON operational_amplifier19.1_in1 risulta non connesso.",
+        "image_evidence": "Il pin 3 dell'IC1 è collegato con un filo al cursore di R3.",
+        "json_evidence": "\"operational_amplifier19.1_in1\": [] e warnings.unconnected_terminals contiene operational_amplifier19.1_in1."
+      },
+      {
+        "type": "wrong_graph_connection",
+        "description": "Il pin 2 dell'IC è collegato direttamente alla linea inferiore comune, ma il JSON collega operational_amplifier19.1_in2 alla grande net di massa includendo anche molti terminali; questa parte è corretta come massa, ma l'assenza del collegamento del pin 3 rende la zona ingressi dell'IC topologicamente incompleta.",
+        "image_evidence": "Il pin 2 scende alla linea inferiore; il pin 3 va invece al cursore R3.",
+        "json_evidence": "operational_amplifier19.1_in2 è nella net comune, mentre operational_amplifier19.1_in1 è vuoto."
+      },
+      {
+        "type": "wrong_graph_connection",
+        "description": "Il ramo di uscita dell'IC verso C5 e Z1 non è rappresentato correttamente: il JSON collega l'uscita solo a polarized_capacitor20.5_positive e l'altro lato di C5 a breaker3.1_t1, componente non corrispondente a Z1.",
+        "image_evidence": "Il pin 5 dell'IC1 va al lato positivo di C5; l'altro lato di C5 va a Z1, che poi torna alla linea inferiore.",
+        "json_evidence": "operational_amplifier19.1_out -> polarized_capacitor20.5_positive; polarized_capacitor20.5_negative -> breaker3.1_t1; breaker3.1_t2 è sulla net inferiore."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "component_class_error",
+        "description": "C1 appare come condensatore variabile/trimmer, mentre nel JSON è trattato come condensatore polarizzato ordinario."
+      },
+      {
+        "type": "terminal_polarity_uncertain_or_wrong",
+        "description": "La polarità positive/negative assegnata a vari condensatori non polarizzati non è supportata dal simbolo visibile."
+      },
+      {
+        "type": "switch_state_uncertain",
+        "description": "Il JSON dichiara lo switch S1 come closed, ma nell'immagine lo stato elettrico del contatto non è chiaramente verificabile come chiuso."
+      }
+    ],
+    "missing_from_json": [
+      "Z1 componente di uscita/speaker visibile a destra",
+      "terminale cursore di R3 variabile/potenziometro"
+    ],
+    "extra_in_json": [
+      "breaker3.1 come componente distinto non corrispondente chiaramente a Z1",
+      "polarità positive/negative su condensatori non polarizzati"
+    ],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "R3 deve avere un terminale superiore collegato al nodo dopo C4, un terminale inferiore alla linea comune e un cursore collegato al pin 3 dell'IC.",
+        "found_in_json": "resistor22.3 ha solo t1 collegato a polarized_capacitor20.4_negative e t2 alla net comune; operational_amplifier19.1_in1 è non connesso.",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "Il nodo di uscita IC pin 5 passa attraverso C5 a Z1 e poi alla linea inferiore comune.",
+        "found_in_json": "C5 è rappresentato come polarized_capacitor20.5 tra operational_amplifier19.1_out e breaker3.1_t1; breaker3.1_t2 è sulla net comune, ma Z1 manca.",
+        "severity": "critical"
+      },
+      {
+        "expected_from_image": "Il nodo antenna/L1/C1/D1 lato sinistro è comune, con L1 e C1 verso la linea inferiore.",
+        "found_in_json": "antenna, inductor, C1 e diodo sono sostanzialmente sulla stessa net superiore e la loro parte inferiore è sulla net comune; corrispondenza accettabile salvo classe/polarità di C1.",
+        "severity": "minor"
+      },
+      {
+        "expected_from_image": "Il nodo dopo D1 collega C2 verso massa e C3 verso la base/transistor.",
+        "found_in_json": "diode7.1_cathode è collegato a polarized_capacitor20.2_positive e polarized_capacitor20.3_positive; struttura topologica coerente salvo classificazione dei condensatori.",
+        "severity": "minor"
+      }
+    ],
+    "uncertain_points": [
+      "Il JSON usa un Operational_Amplifier per IC1; dall'immagine è un blocco triangolare IC con pin numerati, quindi la forma topologica a ingressi/uscita/alimentazioni è verificabile, ma la classe funzionale esatta non viene valutata tramite conoscenza esterna.",
+      "L'identificazione dei terminali B/C/E del transistor è plausibile dalla forma del simbolo, ma piccoli dettagli del disegno non consentono una verifica assoluta di ogni terminale.",
+      "Lo stato chiuso di S1 dichiarato nel JSON non è confermabile con certezza dall'immagine statica."
+    ],
+    "short_explanation": "Il JSON riconosce buona parte dei componenti principali e molte net della sezione antenna, transistor, alimentazione e IC sono recuperabili. Tuttavia manca Z1, R3 è modellato come resistore a due terminali invece che variabile con cursore, il pin 3 dell'IC risulta scollegato, e vari condensatori non polarizzati sono classificati come polarizzati. La topologia è quindi solo parzialmente fedele ma ancora utilizzabile come base di correzione."
+  },
+  "raw_model_output": "{\"circuit_id\":\"b06\",\"batch\":\"B\",\"image_file\":\"b06.jpg\",\"json_file\":\"b06.json\",\"image_graph_fidelity_score\":70,\"decision\":\"MEDIUM\",\"usable_as_graph_base\":true,\"scores\":{\"components\":18,\"terminals_pins\":14,\"graph_connections\":31,\"visible_semantics\":7},\"error_counts\":{\"critical\":1,\"major\":5,\"minor\":3},\"critical_errors\":[{\"type\":\"missing_main_component\",\"description\":\"Il componente di uscita Z1 visibile nell'immagine, collegato al condensatore di uscita e alla linea inferiore, manca completamente nel JSON; al suo posto il percorso di uscita risulta interrotto o rappresentato con un collegamento errato verso un breaker.\",\"image_evidence\":\"A destra dell'operazionale è visibile Z1 collegato in serie dopo C5 verso la linea inferiore comune.\",\"json_evidence\":\"Non esiste alcun componente speaker/buzzer/Z1; è presente invece breaker3.1 collegato tra polarized_capacitor20.5_negative e la net di massa/alimentazione negativa.\"}],\"major_errors\":[{\"type\":\"component_class_error\",\"description\":\"Diversi condensatori non polarizzati visibili sono classificati nel JSON come condensatori polarizzati, introducendo terminali positive/negative non verificabili e semanticamente errati per C1, C2, C3 e C4.\",\"image_evidence\":\"C1, C2, C3 e C4 sono disegnati come condensatori non polarizzati o variabile per C1, senza segni di polarità.\",\"json_evidence\":\"polarized_capacitor20.1, 20.2, 20.3 e 20.4 sono tutti class_name Polarized_Capacitor con terminali positive/negative.\"},{\"type\":\"component_class_error\",\"description\":\"Il componente R3 visibile è un resistore variabile/potenziometro con cursore collegato all'ingresso dell'IC, ma il JSON lo rappresenta come semplice resistore a due terminali.\",\"image_evidence\":\"R3 è disegnato con simbolo di variabile/potenziometro: estremi tra nodo da C4 e massa, cursore verso il pin 3 dell'IC.\",\"json_evidence\":\"resistor22.3 ha solo due terminali t1 e t2 ed è collegato solo tra polarized_capacitor20.4_negative e la net di massa.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il nodo del pin 3 dell'IC dovrebbe essere collegato al cursore di R3, ma nel JSON operational_amplifier19.1_in1 risulta non connesso.\",\"image_evidence\":\"Il pin 3 dell'IC1 è collegato con un filo al cursore di R3.\",\"json_evidence\":\"\\\"operational_amplifier19.1_in1\\\": [] e warnings.unconnected_terminals contiene operational_amplifier19.1_in1.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il pin 2 dell'IC è collegato direttamente alla linea inferiore comune, ma il JSON collega operational_amplifier19.1_in2 alla grande net di massa includendo anche molti terminali; questa parte è corretta come massa, ma l'assenza del collegamento del pin 3 rende la zona ingressi dell'IC topologicamente incompleta.\",\"image_evidence\":\"Il pin 2 scende alla linea inferiore; il pin 3 va invece al cursore R3.\",\"json_evidence\":\"operational_amplifier19.1_in2 è nella net comune, mentre operational_amplifier19.1_in1 è vuoto.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il ramo di uscita dell'IC verso C5 e Z1 non è rappresentato correttamente: il JSON collega l'uscita solo a polarized_capacitor20.5_positive e l'altro lato di C5 a breaker3.1_t1, componente non corrispondente a Z1.\",\"image_evidence\":\"Il pin 5 dell'IC1 va al lato positivo di C5; l'altro lato di C5 va a Z1, che poi torna alla linea inferiore.\",\"json_evidence\":\"operational_amplifier19.1_out -> polarized_capacitor20.5_positive; polarized_capacitor20.5_negative -> breaker3.1_t1; breaker3.1_t2 è sulla net inferiore.\"}],\"minor_errors\":[{\"type\":\"component_class_error\",\"description\":\"C1 appare come condensatore variabile/trimmer, mentre nel JSON è trattato come condensatore polarizzato ordinario.\"},{\"type\":\"terminal_polarity_uncertain_or_wrong\",\"description\":\"La polarità positive/negative assegnata a vari condensatori non polarizzati non è supportata dal simbolo visibile.\"},{\"type\":\"switch_state_uncertain\",\"description\":\"Il JSON dichiara lo switch S1 come closed, ma nell'immagine lo stato elettrico del contatto non è chiaramente verificabile come chiuso.\"}],\"missing_from_json\":[\"Z1 componente di uscita/speaker visibile a destra\",\"terminale cursore di R3 variabile/potenziometro\"],\"extra_in_json\":[\"breaker3.1 come componente distinto non corrispondente chiaramente a Z1\",\"polarità positive/negative su condensatori non polarizzati\"],\"wrong_graph_connections\":[{\"expected_from_image\":\"R3 deve avere un terminale superiore collegato al nodo dopo C4, un terminale inferiore alla linea comune e un cursore collegato al pin 3 dell'IC.\",\"found_in_json\":\"resistor22.3 ha solo t1 collegato a polarized_capacitor20.4_negative e t2 alla net comune; operational_amplifier19.1_in1 è non connesso.\",\"severity\":\"major\"},{\"expected_from_image\":\"Il nodo di uscita IC pin 5 passa attraverso C5 a Z1 e poi alla linea inferiore comune.\",\"found_in_json\":\"C5 è rappresentato come polarized_capacitor20.5 tra operational_amplifier19.1_out e breaker3.1_t1; breaker3.1_t2 è sulla net comune, ma Z1 manca.\",\"severity\":\"critical\"},{\"expected_from_image\":\"Il nodo antenna/L1/C1/D1 lato sinistro è comune, con L1 e C1 verso la linea inferiore.\",\"found_in_json\":\"antenna, inductor, C1 e diodo sono sostanzialmente sulla stessa net superiore e la loro parte inferiore è sulla net comune; corrispondenza accettabile salvo classe/polarità di C1.\",\"severity\":\"minor\"},{\"expected_from_image\":\"Il nodo dopo D1 collega C2 verso massa e C3 verso la base/transistor.\",\"found_in_json\":\"diode7.1_cathode è collegato a polarized_capacitor20.2_positive e polarized_capacitor20.3_positive; struttura topologica coerente salvo classificazione dei condensatori.\",\"severity\":\"minor\"}],\"uncertain_points\":[\"Il JSON usa un Operational_Amplifier per IC1; dall'immagine è un blocco triangolare IC con pin numerati, quindi la forma topologica a ingressi/uscita/alimentazioni è verificabile, ma la classe funzionale esatta non viene valutata tramite conoscenza esterna.\",\"L'identificazione dei terminali B/C/E del transistor è plausibile dalla forma del simbolo, ma piccoli dettagli del disegno non consentono una verifica assoluta di ogni terminale.\",\"Lo stato chiuso di S1 dichiarato nel JSON non è confermabile con certezza dall'immagine statica.\"],\"short_explanation\":\"Il JSON riconosce buona parte dei componenti principali e molte net della sezione antenna, transistor, alimentazione e IC sono recuperabili. Tuttavia manca Z1, R3 è modellato come resistore a due terminali invece che variabile con cursore, il pin 3 dell'IC risulta scollegato, e vari condensatori non polarizzati sono classificati come polarizzati. La topologia è quindi solo parzialmente fedele ma ancora utilizzabile come base di correzione.\"}"
+}

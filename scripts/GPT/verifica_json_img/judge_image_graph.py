@@ -33,23 +33,35 @@ from openai import OpenAI
 #     batchC2/images/...
 #     batchC2/json/...
 #
-# Output:
-#   verify_json_img/output_gpt5_5/
+# Output predefinito:
+#   Se si analizza un solo batch:
+#     verify_json_img/batchA/output_gpt5_5/
+#     verify_json_img/batchB/output_gpt5_5/
+#     verify_json_img/batchC1/output_gpt5_5/
+#     verify_json_img/batchC2/output_gpt5_5/
+#
+#   Se si analizzano piu batch insieme senza --out-dir:
+#     verify_json_img/output_gpt5_5/
+#
+#   Contenuto:
 #     judge_results.jsonl
 #     judge_results.csv
 #     judge_report.md
 #     raw_responses/*.json
 #     plots/*.png
-#
-# Nota metodologica:
-#   Questo script NON trasforma il campo "graph" in net, netlist o altri formati.
-#   Il Graph JSON originale viene inviato al modello così com'è, come testo JSON.
 # ============================================================
 
 DEFAULT_MODEL = "gpt-5.5"
 DEFAULT_OUTPUT_DIR_NAME = "output_gpt5_5"
 IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp"]
 VALID_BATCH_LABELS = {"A", "B", "C1", "C2", "unknown"}
+DECISION_LEVELS = ["VERY_HIGH", "HIGH", "MEDIUM", "LOW"]
+LEGACY_DECISION_MAP = {
+    "PASS": "VERY_HIGH",
+    "MINOR_ISSUES": "HIGH",
+    "NEEDS_PATCH": "MEDIUM",
+    "FAIL": "LOW",
+}
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 # Se lo script si trova in experiment_ai/scripts/GPT/verifica_json_img,
@@ -70,7 +82,7 @@ JUDGE_RESULT_SCHEMA: Dict[str, Any] = {
         "image_file": {"type": "string"},
         "json_file": {"type": "string"},
         "image_graph_fidelity_score": {"type": "integer", "minimum": 0, "maximum": 100},
-        "decision": {"type": "string", "enum": ["PASS", "MINOR_ISSUES", "NEEDS_PATCH", "FAIL"]},
+        "decision": {"type": "string", "enum": DECISION_LEVELS},
         "usable_as_graph_base": {"type": "boolean"},
         "scores": {
             "type": "object",
@@ -209,6 +221,15 @@ def safe_json_parse(text: str) -> Any:
         cleaned = re.sub(r"^```(?:json)?", "", cleaned).strip()
         cleaned = re.sub(r"```$", "", cleaned).strip()
     return json.loads(cleaned)
+
+
+def normalize_decision_label(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if text in DECISION_LEVELS or text == "PARSE_ERROR":
+        return text
+    return LEGACY_DECISION_MAP.get(text, text)
 
 
 def infer_batch_label(batch_dir_name: str) -> str:
@@ -411,7 +432,9 @@ def flatten_for_csv(record: Dict[str, Any]) -> Dict[str, Any]:
         "image_file": jr.get("image_file", meta.get("image_file", "")),
         "json_file": jr.get("json_file", meta.get("json_file", "")),
         "score": jr.get("image_graph_fidelity_score", ""),
-        "decision": jr.get("decision", "PARSE_ERROR" if not meta.get("parsed_ok", True) else ""),
+        "decision": normalize_decision_label(
+            jr.get("decision", "PARSE_ERROR" if not meta.get("parsed_ok", True) else "")
+        ),
         "usable_as_graph_base": jr.get("usable_as_graph_base", ""),
         "components_score": scores.get("components", ""),
         "terminals_pins_score": scores.get("terminals_pins", ""),
@@ -462,7 +485,7 @@ def save_markdown_report(path: Path, records: List[Dict[str, Any]]) -> None:
     if rows:
         lines.append("## Tabella sintetica")
         lines.append("")
-        lines.append("| Circuito | Batch | Score | Decisione | Critici | Maggiori | Minori | Usabile come graph base |")
+        lines.append("| Circuito | Batch | Score | Fedeltà | Critici | Maggiori | Minori | Usabile come graph base |")
         lines.append("|---|---:|---:|---|---:|---:|---:|---|")
         for row in rows:
             lines.append(
@@ -487,7 +510,7 @@ def save_markdown_report(path: Path, records: List[Dict[str, Any]]) -> None:
 
         lines.append(f"- Batch: `{jr.get('batch', '')}`")
         lines.append(f"- Score: `{jr.get('image_graph_fidelity_score', '')}`")
-        lines.append(f"- Decisione: `{jr.get('decision', '')}`")
+        lines.append(f"- Fedeltà: `{normalize_decision_label(jr.get('decision', ''))}`")
         lines.append(f"- Usabile come graph base: `{jr.get('usable_as_graph_base', '')}`")
         lines.append(f"- Spiegazione: {jr.get('short_explanation', '')}")
         lines.append("")
@@ -537,70 +560,211 @@ def make_plots(csv_path: Path, plots_dir: Path) -> None:
         "terminals_pins_score",
         "graph_connections_score",
         "visible_semantics_score",
+        "critical_errors_count",
+        "major_errors_count",
+        "minor_errors_count",
     ]
     for col in numeric_cols:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    # 1) Score per circuito
+    palette = {
+        "VERY_HIGH": "#2F8F5B",
+        "HIGH": "#79A83B",
+        "MEDIUM": "#E89A00",
+        "LOW": "#C66A1C",
+        "PARSE_ERROR": "#6C757D",
+    }
+    edge_palette = {
+        "VERY_HIGH": "#236B43",
+        "HIGH": "#567625",
+        "MEDIUM": "#A86D00",
+        "LOW": "#8A4713",
+        "PARSE_ERROR": "#495057",
+    }
+    subscore_palette = {
+        "components_score": "#3A86FF",
+        "terminals_pins_score": "#8338EC",
+        "graph_connections_score": "#FB5607",
+        "visible_semantics_score": "#2A9D8F",
+    }
+    error_palette = {
+        "critical_errors_count": "#9B2226",
+        "major_errors_count": "#D95D39",
+        "minor_errors_count": "#F0A202",
+    }
+
+    def style_axes(ax) -> None:
+        ax.set_facecolor("#FFFDF8")
+        ax.grid(axis="x", color="#E8E2D8", linewidth=0.8, alpha=0.9)
+        ax.set_axisbelow(True)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+        ax.spines["left"].set_color("#B7ADA1")
+        ax.spines["bottom"].set_color("#B7ADA1")
+
+    # 1) Score per circuito con fedeltà
     score_df = df.dropna(subset=["score"]).copy()
     if not score_df.empty:
-        score_df = score_df.sort_values(["batch", "circuit_id"])
+        if "decision" in score_df.columns:
+            score_df["decision"] = score_df["decision"].map(normalize_decision_label)
+        score_df = score_df.sort_values(["score", "batch", "circuit_id"], ascending=[True, True, True])
         labels = score_df["batch"].astype(str) + "/" + score_df["circuit_id"].astype(str)
+        colors = [palette.get(decision, "#6C757D") for decision in score_df.get("decision", [])]
 
-        fig_height = max(5, 0.35 * len(score_df))
-        fig, ax = plt.subplots(figsize=(10, fig_height))
-        ax.barh(labels, score_df["score"])
-        ax.axvline(60, linestyle="--", linewidth=1)
-        ax.axvline(80, linestyle="--", linewidth=1)
-        ax.axvline(90, linestyle="--", linewidth=1)
+        fig_height = max(5.6, 0.52 * len(score_df))
+        fig, ax = plt.subplots(figsize=(11.5, fig_height))
+        fig.patch.set_facecolor("#FFF8F0")
+        ax.axvspan(0, 60, color="#F1DDC5", alpha=0.3, zorder=0)
+        ax.axvspan(60, 80, color="#F4E8BF", alpha=0.26, zorder=0)
+        ax.axvspan(80, 90, color="#DCECD7", alpha=0.24, zorder=0)
+        ax.axvspan(90, 100, color="#CDE4D3", alpha=0.28, zorder=0)
+        bar_edges = [edge_palette.get(decision, "#6C757D") for decision in score_df.get("decision", [])]
+        bars = ax.barh(
+            labels,
+            score_df["score"],
+            color=colors,
+            edgecolor=bar_edges,
+            linewidth=1.2,
+            height=0.78,
+        )
+        for threshold in (60, 80, 90):
+            ax.axvline(threshold, linewidth=0.6, color="#D8C9B8", alpha=0.45, zorder=1)
         ax.set_xlim(0, 100)
         ax.set_xlabel("Image-Graph fidelity score")
         ax.set_ylabel("Circuito")
-        ax.set_title("Score per circuito")
+        ax.set_title("Score per circuito con fedeltà")
+        style_axes(ax)
+        ax.invert_yaxis()
+        for bar, score, decision in zip(bars, score_df["score"], score_df["decision"]):
+            ax.text(
+                min(float(score) + 1.2, 98.5),
+                bar.get_y() + bar.get_height() / 2,
+                f"{int(score)}  {decision}",
+                va="center",
+                ha="left",
+                fontsize=9.5,
+                fontweight="medium",
+                color="#3A332D",
+            )
         fig.tight_layout()
         fig.savefig(plots_dir / "01_score_per_circuito.png", dpi=200)
         plt.close(fig)
 
-    # 2) Media sottopunteggi per batch
+    # 2) Profilo errori per circuito
+    error_cols = ["critical_errors_count", "major_errors_count", "minor_errors_count"]
+    available_error_cols = [c for c in error_cols if c in df.columns]
+    errors_df = df.dropna(subset=available_error_cols, how="all").copy() if available_error_cols else df.iloc[0:0].copy()
+    if available_error_cols and not errors_df.empty:
+        if "decision" in errors_df.columns:
+            errors_df["decision"] = errors_df["decision"].map(normalize_decision_label)
+        errors_df = errors_df.sort_values(
+            available_error_cols + ["score", "batch", "circuit_id"],
+            ascending=[False] * len(available_error_cols) + [True, True, True],
+        )
+        labels = errors_df["batch"].astype(str) + "/" + errors_df["circuit_id"].astype(str)
+
+        fig_height = max(5.6, 0.52 * len(errors_df))
+        fig, ax = plt.subplots(figsize=(11.5, fig_height))
+        fig.patch.set_facecolor("#FFF8F0")
+        left = None
+        for col in error_cols:
+            if col not in errors_df.columns:
+                continue
+            values = errors_df[col].fillna(0)
+            bars = ax.barh(
+                labels,
+                values,
+                left=left,
+                color=error_palette[col],
+                edgecolor="#8A8175",
+                linewidth=0.5,
+                label=col.replace("_count", "").replace("_", " "),
+            )
+            for bar, value in zip(bars, values):
+                if value > 0:
+                    ax.text(
+                        bar.get_x() + bar.get_width() / 2,
+                        bar.get_y() + bar.get_height() / 2,
+                        f"{int(value)}",
+                        ha="center",
+                        va="center",
+                        fontsize=9,
+                        color="#2E2A26",
+                    )
+            left = values if left is None else left + values
+        ax.set_xlabel("Numero errori")
+        ax.set_ylabel("Circuito")
+        ax.set_title("Profilo errori per circuito")
+        style_axes(ax)
+        ax.invert_yaxis()
+        ax.legend(title="Severita", loc="lower right", frameon=False)
+        fig.tight_layout()
+        fig.savefig(plots_dir / "02_media_sottopunteggi_per_batch.png", dpi=200)
+        plt.close(fig)
+
+    # 3) Breakdown sottopunteggi per circuito
     sub_cols = ["components_score", "terminals_pins_score", "graph_connections_score", "visible_semantics_score"]
     available_sub_cols = [c for c in sub_cols if c in df.columns]
-    if available_sub_cols and "batch" in df.columns:
-        mean_df = df.groupby("batch")[available_sub_cols].mean()
-        if not mean_df.empty:
-            fig, ax = plt.subplots(figsize=(9, 5))
-            im = ax.imshow(mean_df.values, aspect="auto")
-            ax.set_xticks(range(len(mean_df.columns)))
-            ax.set_xticklabels([c.replace("_score", "") for c in mean_df.columns], rotation=25, ha="right")
-            ax.set_yticks(range(len(mean_df.index)))
-            ax.set_yticklabels(mean_df.index)
-            ax.set_title("Media sottopunteggi per batch")
-            for i in range(mean_df.shape[0]):
-                for j in range(mean_df.shape[1]):
-                    value = mean_df.values[i, j]
-                    if pd.notna(value):
-                        ax.text(j, i, f"{value:.1f}", ha="center", va="center")
-            fig.colorbar(im, ax=ax, label="Punteggio medio")
-            fig.tight_layout()
-            fig.savefig(plots_dir / "02_media_sottopunteggi_per_batch.png", dpi=200)
-            plt.close(fig)
+    subs_df = df.dropna(subset=available_sub_cols, how="all").copy() if available_sub_cols else df.iloc[0:0].copy()
+    if available_sub_cols and not subs_df.empty:
+        if "decision" in subs_df.columns:
+            subs_df["decision"] = subs_df["decision"].map(normalize_decision_label)
+        subs_df = subs_df.sort_values(["score", "batch", "circuit_id"], ascending=[True, True, True])
+        labels = subs_df["batch"].astype(str) + "/" + subs_df["circuit_id"].astype(str)
 
-    # 3) Distribuzione decisioni per batch
-    if "batch" in df.columns and "decision" in df.columns:
-        order = ["PASS", "MINOR_ISSUES", "NEEDS_PATCH", "FAIL", "PARSE_ERROR"]
-        counts = pd.crosstab(df["batch"], df["decision"])
-        cols = [c for c in order if c in counts.columns] + [c for c in counts.columns if c not in order]
-        counts = counts[cols]
-        if not counts.empty:
-            ax = counts.plot(kind="bar", stacked=True, figsize=(9, 5))
-            ax.set_xlabel("Batch")
-            ax.set_ylabel("Numero circuiti")
-            ax.set_title("Distribuzione decisioni per batch")
-            ax.legend(title="Decisione", bbox_to_anchor=(1.02, 1), loc="upper left")
-            fig = ax.get_figure()
-            fig.tight_layout()
-            fig.savefig(plots_dir / "03_distribuzione_decisioni_per_batch.png", dpi=200)
-            plt.close(fig)
+        fig_height = max(5.8, 0.56 * len(subs_df))
+        fig, ax = plt.subplots(figsize=(12.6, fig_height))
+        fig.patch.set_facecolor("#FFF8F0")
+        left = None
+        max_scores = {
+            "components_score": 25,
+            "terminals_pins_score": 20,
+            "graph_connections_score": 45,
+            "visible_semantics_score": 10,
+        }
+        pretty_names = {
+            "components_score": "components",
+            "terminals_pins_score": "terminals_pins",
+            "graph_connections_score": "graph_connections",
+            "visible_semantics_score": "visible_semantics",
+        }
+        for col in sub_cols:
+            if col not in subs_df.columns:
+                continue
+            values = subs_df[col].fillna(0)
+            bars = ax.barh(
+                labels,
+                values,
+                left=left,
+                color=subscore_palette[col],
+                edgecolor="#8A8175",
+                linewidth=0.5,
+                label=f"{pretty_names[col]} / {max_scores[col]}",
+            )
+            for bar, value in zip(bars, values):
+                if value >= 4:
+                    ax.text(
+                        bar.get_x() + bar.get_width() / 2,
+                        bar.get_y() + bar.get_height() / 2,
+                        f"{int(value)}",
+                        ha="center",
+                        va="center",
+                        fontsize=8.5,
+                        color="#1F1B18",
+                    )
+            left = values if left is None else left + values
+
+        ax.set_xlim(0, 100)
+        ax.set_xlabel("Contributo al punteggio totale")
+        ax.set_ylabel("Circuito")
+        ax.set_title("Breakdown sottopunteggi per circuito")
+        style_axes(ax)
+        ax.invert_yaxis()
+        ax.legend(title="Sottopunteggio", bbox_to_anchor=(1.02, 1), loc="upper left", frameon=False)
+        fig.tight_layout()
+        fig.savefig(plots_dir / "03_distribuzione_decisioni_per_batch.png", dpi=200)
+        plt.close(fig)
 
 
 def load_existing_raw(raw_path: Path) -> Optional[Dict[str, Any]]:
@@ -616,7 +780,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Verifica immagine <-> Graph JSON con un judge multimodale.")
     parser.add_argument("--root", type=Path, default=DEFAULT_VERIFY_ROOT, help="Cartella verify_json_img")
     parser.add_argument("--prompt", type=Path, default=None, help="Path prompt.txt. Default: <root>/prompt.txt")
-    parser.add_argument("--out-dir", type=Path, default=None, help="Cartella output. Default: <root>/output_gpt5_5")
+    parser.add_argument("--out-dir", type=Path, default=None, help="Cartella output. Default: <batch>/output_gpt5_5 se analizzi un solo batch, altrimenti <root>/output_gpt5_5")
     parser.add_argument("--model", default=DEFAULT_MODEL, help="Modello judge")
     parser.add_argument("--batch", default=None, help="Batch da eseguire: A, B, C1, C2 oppure batchA/batchB/...")
     parser.add_argument("--only", default=None, help="Circuiti da eseguire, separati da virgola. Esempio: a01,c16")
@@ -631,9 +795,12 @@ def main() -> int:
 
     root: Path = args.root.resolve()
     prompt_path: Path = args.prompt.resolve() if args.prompt else (root / "prompt.txt")
-    out_dir: Path = args.out_dir.resolve() if args.out_dir else (root / DEFAULT_OUTPUT_DIR_NAME)
-    raw_dir = out_dir / "raw_responses"
-    plots_dir = out_dir / "plots"
+
+    # L'output viene deciso dopo aver scoperto le coppie:
+    # - se stai analizzando un solo batch, finisce dentro quel batch;
+    # - se stai analizzando più batch insieme, finisce nella root verify_json_img;
+    # - se passi --out-dir, viene usato esattamente quel percorso.
+    requested_out_dir: Optional[Path] = args.out_dir.resolve() if args.out_dir else None
 
     # Carica .env da più posizioni utili, senza sovrascrivere variabili già presenti.
     for env_path in [SCRIPT_DIR / ".env", root / ".env", DEFAULT_EXPERIMENT_ROOT / ".env", Path.cwd() / ".env"]:
@@ -660,6 +827,18 @@ def main() -> int:
     if not pairs:
         print("Nessuna coppia immagine/json trovata.")
         return 1
+
+    if requested_out_dir is not None:
+        out_dir = requested_out_dir
+    else:
+        unique_batch_dirs = sorted({pair.batch_dir.resolve() for pair in pairs})
+        if len(unique_batch_dirs) == 1:
+            out_dir = unique_batch_dirs[0] / DEFAULT_OUTPUT_DIR_NAME
+        else:
+            out_dir = root / DEFAULT_OUTPUT_DIR_NAME
+
+    raw_dir = out_dir / "raw_responses"
+    plots_dir = out_dir / "plots"
 
     print(f"Root: {root}")
     print(f"Prompt: {prompt_path}")

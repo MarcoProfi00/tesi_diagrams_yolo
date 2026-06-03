@@ -1,0 +1,100 @@
+{
+  "metadata": {
+    "circuit_id": "c13",
+    "batch": "C2",
+    "batch_dir": "batchC2",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\images\\c13.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\json\\c13.json",
+    "image_file": "c13.jpg",
+    "json_file": "c13.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-03 18:10:36",
+    "judge_latency_seconds": 23.423,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=8813, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=1267, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=10080)",
+  "judge_result": {
+    "circuit_id": "c13",
+    "batch": "C2",
+    "image_file": "c13.jpg",
+    "json_file": "c13.json",
+    "image_graph_fidelity_score": 82,
+    "decision": "HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 23,
+      "terminals_pins": 17,
+      "graph_connections": 34,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 3,
+      "minor": 3
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "component_class_mismatch",
+        "description": "Alcuni condensatori non polarizzati visibili sono rappresentati nel JSON come Polarized_Capacitor.",
+        "image_evidence": "I condensatori C2, C6 e C7 sono disegnati con simbolo non polarizzato, mentre altri condensatori mostrano esplicitamente il segno di polarità.",
+        "json_evidence": "polarized_capacitor20.4, polarized_capacitor20.6 e polarized_capacitor20.7 sono tutti class_name Polarized_Capacitor."
+      },
+      {
+        "type": "wrong_graph_connection",
+        "description": "Il ramo di retroazione dall'uscita attraverso R1 verso il nodo di pin 2 è collegato nel JSON al pin 1 dell'IC, non al pin 2.",
+        "image_evidence": "Nell'immagine R1 collega il nodo di uscita, condiviso con pin 4 e speaker, al nodo sul lato sinistro inferiore dell'IC marcato pin 2.",
+        "json_evidence": "resistor22.5_t1 è collegato a integrated_circuit11.1_left_2 e resistor22.4_t1; resistor22.5_t2 è collegato al nodo di uscita. Tuttavia integrated_circuit11.1_left_2 è pin_number 2, mentre nel JSON il nodo di pin 2 include anche resistor22.4_t1 ma la geometria dei componenti suggerisce identificazione incerta; il collegamento topologico di R1 è comunque ambiguamente associato al nodo errato rispetto alla disposizione visiva."
+      },
+      {
+        "type": "wrong_graph_connection",
+        "description": "Il ramo R2-C1 dovrebbe essere collegato al nodo del pin 2, ma nel JSON è collegato al nodo del pin 1 e al condensatore d'ingresso.",
+        "image_evidence": "Nell'immagine R2 parte dal nodo collegato al pin 2 dell'IC e scende verso C1 e GND; non è connesso al nodo di ingresso del pin 1.",
+        "json_evidence": "resistor22.3_t1 è collegato a integrated_circuit11.1_left_1 e polarized_capacitor20.1_positive; resistor22.3_t2 è collegato a gnd9.2_t1 e resistor22.2_t2."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "label_semantics_missing",
+        "description": "Le label topologiche visibili sui terminali di ingresso e alimentazione non sono riportate nel JSON come nomi o attributi semantici dei terminali."
+      },
+      {
+        "type": "terminal_orientation_mismatch",
+        "description": "I terminali dello speaker nel JSON hanno entrambi relative_position left, mentre nell'immagine sono due connessioni laterali separate verso il simbolo dello speaker."
+      },
+      {
+        "type": "polarity_uncertainty",
+        "description": "La polarità di alcuni condensatori polarizzati nel JSON non è sempre direttamente verificabile o coerente con la simbologia visiva, specialmente nei rami di alimentazione negativa."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "Nodo pin 2 IC collegato a un lato di R1 e al lato superiore di R2; lato inferiore di R2 collegato a C1 verso GND.",
+        "found_in_json": "R2 equivalente resistor22.3 è collegato al nodo di integrated_circuit11.1_left_1 insieme al condensatore d'ingresso; R1 equivalente resistor22.5 è collegato a integrated_circuit11.1_left_2 e al nodo di uscita.",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "C2 e C3 sono in parallelo sul nodo di alimentazione negativa collegato al pin 3 e al fusibile F2; C6 e C5 sono in parallelo sul nodo di alimentazione positiva collegato al pin 5 e al fusibile F1.",
+        "found_in_json": "La topologia dei paralleli di alimentazione è sostanzialmente presente, ma tutti questi condensatori sono rappresentati come polarizzati anche quando il simbolo visibile è non polarizzato.",
+        "severity": "minor"
+      },
+      {
+        "expected_from_image": "Il ramo di uscita comprende pin 4, R6-C7 verso GND e speaker verso GND sullo stesso nodo di uscita.",
+        "found_in_json": "Il nodo di uscita collega integrated_circuit11.1_right_1, resistor22.5_t2, resistor22.6_t1 e speaker24.1_t1; il ramo R6-C7 e speaker-GND sono rappresentati correttamente.",
+        "severity": "minor"
+      }
+    ],
+    "uncertain_points": [
+      "L'associazione esatta tra gli identificativi resistor22.x/polarized_capacitor20.x e le sigle visive R1-R6/C1-C7 non è esplicitata nel JSON e deve essere inferita dalla topologia.",
+      "Il simbolo del condensatore di ingresso mostra una polarità visibile, ma l'orientamento esatto dei terminali nel JSON dipende dall'associazione del componente alla posizione visiva.",
+      "I pin_number dell'IC sono presenti e coerenti con i numeri visibili in immagine, ma non viene valutata alcuna funzione dei pin."
+    ],
+    "short_explanation": "Il JSON contiene quasi tutti i componenti principali e ricostruisce bene le reti di alimentazione, uscita, speaker e gran parte dell'ingresso. Sono presenti discrepanze localizzate ma importanti nell'area del pin 2/rete di retroazione e nel ramo R2-C1, oltre alla classificazione come polarizzati di alcuni condensatori visivamente non polarizzati. Nel complesso il grafo resta una buona base correggibile."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c13\",\"batch\":\"C2\",\"image_file\":\"c13.jpg\",\"json_file\":\"c13.json\",\"image_graph_fidelity_score\":82,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":23,\"terminals_pins\":17,\"graph_connections\":34,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":3,\"minor\":3},\"critical_errors\":[],\"major_errors\":[{\"type\":\"component_class_mismatch\",\"description\":\"Alcuni condensatori non polarizzati visibili sono rappresentati nel JSON come Polarized_Capacitor.\",\"image_evidence\":\"I condensatori C2, C6 e C7 sono disegnati con simbolo non polarizzato, mentre altri condensatori mostrano esplicitamente il segno di polarità.\",\"json_evidence\":\"polarized_capacitor20.4, polarized_capacitor20.6 e polarized_capacitor20.7 sono tutti class_name Polarized_Capacitor.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il ramo di retroazione dall'uscita attraverso R1 verso il nodo di pin 2 è collegato nel JSON al pin 1 dell'IC, non al pin 2.\",\"image_evidence\":\"Nell'immagine R1 collega il nodo di uscita, condiviso con pin 4 e speaker, al nodo sul lato sinistro inferiore dell'IC marcato pin 2.\",\"json_evidence\":\"resistor22.5_t1 è collegato a integrated_circuit11.1_left_2 e resistor22.4_t1; resistor22.5_t2 è collegato al nodo di uscita. Tuttavia integrated_circuit11.1_left_2 è pin_number 2, mentre nel JSON il nodo di pin 2 include anche resistor22.4_t1 ma la geometria dei componenti suggerisce identificazione incerta; il collegamento topologico di R1 è comunque ambiguamente associato al nodo errato rispetto alla disposizione visiva.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il ramo R2-C1 dovrebbe essere collegato al nodo del pin 2, ma nel JSON è collegato al nodo del pin 1 e al condensatore d'ingresso.\",\"image_evidence\":\"Nell'immagine R2 parte dal nodo collegato al pin 2 dell'IC e scende verso C1 e GND; non è connesso al nodo di ingresso del pin 1.\",\"json_evidence\":\"resistor22.3_t1 è collegato a integrated_circuit11.1_left_1 e polarized_capacitor20.1_positive; resistor22.3_t2 è collegato a gnd9.2_t1 e resistor22.2_t2.\"}],\"minor_errors\":[{\"type\":\"label_semantics_missing\",\"description\":\"Le label topologiche visibili sui terminali di ingresso e alimentazione non sono riportate nel JSON come nomi o attributi semantici dei terminali.\"},{\"type\":\"terminal_orientation_mismatch\",\"description\":\"I terminali dello speaker nel JSON hanno entrambi relative_position left, mentre nell'immagine sono due connessioni laterali separate verso il simbolo dello speaker.\"},{\"type\":\"polarity_uncertainty\",\"description\":\"La polarità di alcuni condensatori polarizzati nel JSON non è sempre direttamente verificabile o coerente con la simbologia visiva, specialmente nei rami di alimentazione negativa.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Nodo pin 2 IC collegato a un lato di R1 e al lato superiore di R2; lato inferiore di R2 collegato a C1 verso GND.\",\"found_in_json\":\"R2 equivalente resistor22.3 è collegato al nodo di integrated_circuit11.1_left_1 insieme al condensatore d'ingresso; R1 equivalente resistor22.5 è collegato a integrated_circuit11.1_left_2 e al nodo di uscita.\",\"severity\":\"major\"},{\"expected_from_image\":\"C2 e C3 sono in parallelo sul nodo di alimentazione negativa collegato al pin 3 e al fusibile F2; C6 e C5 sono in parallelo sul nodo di alimentazione positiva collegato al pin 5 e al fusibile F1.\",\"found_in_json\":\"La topologia dei paralleli di alimentazione è sostanzialmente presente, ma tutti questi condensatori sono rappresentati come polarizzati anche quando il simbolo visibile è non polarizzato.\",\"severity\":\"minor\"},{\"expected_from_image\":\"Il ramo di uscita comprende pin 4, R6-C7 verso GND e speaker verso GND sullo stesso nodo di uscita.\",\"found_in_json\":\"Il nodo di uscita collega integrated_circuit11.1_right_1, resistor22.5_t2, resistor22.6_t1 e speaker24.1_t1; il ramo R6-C7 e speaker-GND sono rappresentati correttamente.\",\"severity\":\"minor\"}],\"uncertain_points\":[\"L'associazione esatta tra gli identificativi resistor22.x/polarized_capacitor20.x e le sigle visive R1-R6/C1-C7 non è esplicitata nel JSON e deve essere inferita dalla topologia.\",\"Il simbolo del condensatore di ingresso mostra una polarità visibile, ma l'orientamento esatto dei terminali nel JSON dipende dall'associazione del componente alla posizione visiva.\",\"I pin_number dell'IC sono presenti e coerenti con i numeri visibili in immagine, ma non viene valutata alcuna funzione dei pin.\"],\"short_explanation\":\"Il JSON contiene quasi tutti i componenti principali e ricostruisce bene le reti di alimentazione, uscita, speaker e gran parte dell'ingresso. Sono presenti discrepanze localizzate ma importanti nell'area del pin 2/rete di retroazione e nel ramo R2-C1, oltre alla classificazione come polarizzati di alcuni condensatori visivamente non polarizzati. Nel complesso il grafo resta una buona base correggibile.\"}"
+}

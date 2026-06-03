@@ -25,7 +25,7 @@ from skimage.morphology import skeletonize
 # PERCORSI / INPUT-OUTPUT
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline1.0/batchC/batchC3")
+PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline1.0/batchA")
 PIPELINE_IMAGE_IDS = [
     image_id.strip()
     for image_id in os.environ.get("PIPELINE_IMAGE_IDS", "").split(",")
@@ -140,6 +140,9 @@ FRAGMENTED_WIRE_BRIDGE_KERNEL_LENGTH = 15
 FRAGMENTED_WIRE_BRIDGE_KERNEL_THICKNESS = 3
 FRAGMENTED_WIRE_BRIDGE_ITERATIONS = 1
 FRAGMENTED_WIRE_BRIDGE_DETECT_LENGTH = 7
+IC_VERTICAL_BRIDGE_SUPPRESS_OUTWARD = 80
+IC_VERTICAL_BRIDGE_SUPPRESS_INWARD = 14
+IC_VERTICAL_BRIDGE_SUPPRESS_Y_PAD = 30
 
 # =========================================================
 # SMALL COMPONENT FILTER
@@ -492,8 +495,48 @@ def remove_small_connected_components(binary_img, min_area=40):
     return filtered, kept_components, removed_components
 
 
+def suppress_ic_side_vertical_bridge_pixels(vertical_bridged, base_img, components):
+    cleaned = vertical_bridged.copy()
+    added_by_vertical_bridge = (vertical_bridged > 0) & (base_img == 0)
+    h, w = cleaned.shape[:2]
+
+    for comp in components:
+        if comp.get("class_name") != "Integrated_Circuit":
+            continue
+
+        for side in ("left", "right"):
+            side_terms = [
+                term
+                for term in comp.get("terminals", [])
+                if term.get("relative_position") == side
+            ]
+            if len(side_terms) < 2:
+                continue
+
+            side_terms = sorted(side_terms, key=lambda term: float(term["y"]))
+            x_anchor = int(round(sum(float(term["x"]) for term in side_terms) / len(side_terms)))
+            y_values = [float(term["y"]) for term in side_terms]
+            y1 = max(0, int(round(min(y_values) - IC_VERTICAL_BRIDGE_SUPPRESS_Y_PAD)))
+            y2 = min(h, int(round(max(y_values) + IC_VERTICAL_BRIDGE_SUPPRESS_Y_PAD)))
+
+            if side == "left":
+                x1 = max(0, x_anchor - IC_VERTICAL_BRIDGE_SUPPRESS_OUTWARD)
+                x2 = min(w, x_anchor + IC_VERTICAL_BRIDGE_SUPPRESS_INWARD)
+            else:
+                x1 = max(0, x_anchor - IC_VERTICAL_BRIDGE_SUPPRESS_INWARD)
+                x2 = min(w, x_anchor + IC_VERTICAL_BRIDGE_SUPPRESS_OUTWARD)
+
+            if y2 <= y1:
+                continue
+
+            bridge_mask = added_by_vertical_bridge[y1:y2, x1:x2]
+            cleaned[y1:y2, x1:x2][bridge_mask] = 0
+
+    return cleaned
+
+
 # Bridge fragmented wires.
-def bridge_fragmented_wires(binary_img):
+def bridge_fragmented_wires(binary_img, components=None):
     if not ENABLE_FRAGMENTED_WIRE_BRIDGE:
         return binary_img.copy(), {
             "enabled": False,
@@ -540,6 +583,11 @@ def bridge_fragmented_wires(binary_img):
         v_kernel,
         iterations=FRAGMENTED_WIRE_BRIDGE_ITERATIONS,
     )
+    vertical_bridged = suppress_ic_side_vertical_bridge_pixels(
+        vertical_bridged,
+        binary_img,
+        components or [],
+    )
 
     bridged = cv2.bitwise_or(
         binary_img,
@@ -552,7 +600,10 @@ def bridge_fragmented_wires(binary_img):
         "kernel_thickness": FRAGMENTED_WIRE_BRIDGE_KERNEL_THICKNESS,
         "iterations": FRAGMENTED_WIRE_BRIDGE_ITERATIONS,
         "detect_length": FRAGMENTED_WIRE_BRIDGE_DETECT_LENGTH,
-        "notes": "Bridge orientato: ricuce segmenti orizzontali e verticali dai rispettivi seed, evitando che fasci paralleli collassino in blocchi pieni.",
+        "ic_vertical_bridge_suppress_outward": IC_VERTICAL_BRIDGE_SUPPRESS_OUTWARD,
+        "ic_vertical_bridge_suppress_inward": IC_VERTICAL_BRIDGE_SUPPRESS_INWARD,
+        "ic_vertical_bridge_suppress_y_pad": IC_VERTICAL_BRIDGE_SUPPRESS_Y_PAD,
+        "notes": "Bridge orientato: ricuce segmenti orizzontali e verticali dai rispettivi seed, ma evita ricuciture verticali artificiali nei corridoi laterali degli IC.",
     }
 
 
@@ -587,7 +638,7 @@ def extract_wires_from_image(image_bgr, components, terminals):
     )
 
     # 6. bridge fragmented dashed wires
-    bridged, bridge_info = bridge_fragmented_wires(closed)
+    bridged, bridge_info = bridge_fragmented_wires(closed, components)
 
     # 7. small component filter
     if ENABLE_SMALL_COMPONENT_FILTER:

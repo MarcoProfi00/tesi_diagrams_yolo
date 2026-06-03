@@ -1,0 +1,60 @@
+{
+  "metadata": {
+    "circuit_id": "a01",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a01.png",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a01.json",
+    "image_file": "a01.png",
+    "json_file": "a01.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-03 18:02:55",
+    "judge_latency_seconds": 12.205,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=5113, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=481, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=5594)",
+  "judge_result": {
+    "circuit_id": "a01",
+    "batch": "A",
+    "image_file": "a01.png",
+    "json_file": "a01.json",
+    "image_graph_fidelity_score": 94,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 24,
+      "terminals_pins": 19,
+      "graph_connections": 42,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "component_label_semantics",
+        "description": "Il connettore visibile è etichettato J2 nell'immagine, mentre nel JSON è rappresentato genericamente come Connector senza label visibile associata."
+      },
+      {
+        "type": "terminal_position_inconsistency",
+        "description": "Nel JSON i pin 1 e 2 del connettore hanno relative_position 'right' e i pin 3 e 4 'left', ma nell'immagine i quattro terminali grafici sono sul lato interno destro del corpo del connettore; la numerazione dei pin è comunque corretta e i collegamenti risultano coerenti."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "La polarità anodo/catodo del LED è coerente con il simbolo visibile, ma la verifica dipende dall'interpretazione grafica del simbolo; non emergono comunque collegamenti incompatibili.",
+      "Lo stato 'open' dello switch nel JSON appare coerente con il disegno, ma la distanza del contatto mobile dal terminale destro è una rappresentazione schematica e non un'informazione elettrica misurabile."
+    ],
+    "short_explanation": "Il Graph JSON riproduce molto fedelmente i componenti principali visibili: connettore a 4 pin, switch, tre simboli GND, due resistori, LED e lampada. I collegamenti principali corrispondono all'immagine: pin 1 verso resistore e LED, pin 2 verso resistore e lampada, pin 3 verso switch, pin 4 verso GND, switch verso GND, e ritorno comune di LED e lampada verso GND. Le discrepanze sono minori e riguardano soprattutto label/posizioni descrittive, non la topologia."
+  },
+  "raw_model_output": "{\"circuit_id\":\"a01\",\"batch\":\"A\",\"image_file\":\"a01.png\",\"json_file\":\"a01.json\",\"image_graph_fidelity_score\":94,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":24,\"terminals_pins\":19,\"graph_connections\":42,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":2},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"component_label_semantics\",\"description\":\"Il connettore visibile è etichettato J2 nell'immagine, mentre nel JSON è rappresentato genericamente come Connector senza label visibile associata.\"},{\"type\":\"terminal_position_inconsistency\",\"description\":\"Nel JSON i pin 1 e 2 del connettore hanno relative_position 'right' e i pin 3 e 4 'left', ma nell'immagine i quattro terminali grafici sono sul lato interno destro del corpo del connettore; la numerazione dei pin è comunque corretta e i collegamenti risultano coerenti.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"La polarità anodo/catodo del LED è coerente con il simbolo visibile, ma la verifica dipende dall'interpretazione grafica del simbolo; non emergono comunque collegamenti incompatibili.\",\"Lo stato 'open' dello switch nel JSON appare coerente con il disegno, ma la distanza del contatto mobile dal terminale destro è una rappresentazione schematica e non un'informazione elettrica misurabile.\"],\"short_explanation\":\"Il Graph JSON riproduce molto fedelmente i componenti principali visibili: connettore a 4 pin, switch, tre simboli GND, due resistori, LED e lampada. I collegamenti principali corrispondono all'immagine: pin 1 verso resistore e LED, pin 2 verso resistore e lampada, pin 3 verso switch, pin 4 verso GND, switch verso GND, e ritorno comune di LED e lampada verso GND. Le discrepanze sono minori e riguardano soprattutto label/posizioni descrittive, non la topologia.\"}"
+}

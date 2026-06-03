@@ -22,7 +22,7 @@ from .heuristics_seven_segment import (
     build_seven_segment_shared_segment_edges,
     split_seven_segment_segment_label_groups,
 )
-from .heuristics_supply import build_supply_graph_links, merge_battery_gate_rail_groups
+from .heuristics_supply import merge_battery_gate_rail_groups
 from .ids import build_simple_id_map, build_simple_list, build_simple_terminal_graph
 from .io_utils import load_binary_image
 from .matching import (
@@ -52,7 +52,6 @@ from .skeleton_ops import erase_component_bodies_from_skeleton, load_junction_su
 # fonde rail MOSFET/battery dove serve;
 # rimuove self-short non validi;
 # costruisce il grafo finale;
-# aggiunge VDD / VSS;
 # costruisce warning;
 # costruisce componenti canonici;
 # restituisce tutto il necessario per export e debug.
@@ -180,20 +179,6 @@ def build_terminal_graph_for_image(data: dict):
     for terminal_id in terminal_graph:
         terminal_graph[terminal_id] = sorted(set(terminal_graph[terminal_id]))
     simple_terminal_graph = build_simple_terminal_graph(terminal_graph, original_to_simple)
-    supply_graph_links = build_supply_graph_links(
-        terminals,
-        label_to_terminal_ids,
-        terminal_match_debug,
-        labels,
-        data.get("image_height"),
-        original_to_simple,
-    )
-    for terminal_id, supply_labels in supply_graph_links.items():
-        simple_terminal_graph.setdefault(terminal_id, [])
-        simple_terminal_graph[terminal_id] = sorted(set(simple_terminal_graph[terminal_id]) | set(supply_labels))
-        for supply_label in supply_labels:
-            simple_terminal_graph.setdefault(supply_label, [])
-            simple_terminal_graph[supply_label] = sorted(set(simple_terminal_graph[supply_label]) | {terminal_id})
     simple_terminal_graph = {key: simple_terminal_graph[key] for key in sorted(simple_terminal_graph.keys())}
 
     # Terminali isolati nel grafo finale.

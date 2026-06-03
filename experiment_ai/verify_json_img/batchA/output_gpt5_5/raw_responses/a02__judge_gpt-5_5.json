@@ -1,0 +1,60 @@
+{
+  "metadata": {
+    "circuit_id": "a02",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a02.png",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a02.json",
+    "image_file": "a02.png",
+    "json_file": "a02.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-03 18:03:04",
+    "judge_latency_seconds": 8.744,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=4738, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=417, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=5155)",
+  "judge_result": {
+    "circuit_id": "a02",
+    "batch": "A",
+    "image_file": "a02.png",
+    "json_file": "a02.json",
+    "image_graph_fidelity_score": 93,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 24,
+      "terminals_pins": 19,
+      "graph_connections": 42,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "component_class_semantics",
+        "description": "Il simbolo di alimentazione a sinistra è rappresentato nel JSON come Battery; topologicamente i due terminali sono coerenti, ma la classe non corrisponde perfettamente alla label/simbolo di alimentazione visibile."
+      },
+      {
+        "type": "visible_label_not_represented",
+        "description": "La label topologica visibile associata allo switch non è riportata nel JSON; lo switch e il suo stato aperto sono comunque presenti."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "La polarità del condensatore non è indicata chiaramente nell'immagine e il JSON lo rappresenta come condensatore non polarizzato.",
+      "La corrispondenza esatta tra la numerazione fisica del connettore J3 e i pin JSON è coerente visivamente, ma dipende dall'ordine dei terminali disegnati lungo il simbolo."
+    ],
+    "short_explanation": "Il JSON riproduce molto bene la topologia visibile: alimentazione verso il pin 1 del connettore, resistore tra il nodo superiore/switch e il pin 2, condensatore dal pin 3 a GND, pin 4 a GND, e switch aperto verso GND. I componenti principali e i collegamenti sono sostanzialmente corretti; restano solo lievi discrepanze semantiche sulla classe dell'alimentazione e su una label visibile non codificata."
+  },
+  "raw_model_output": "{\"circuit_id\":\"a02\",\"batch\":\"A\",\"image_file\":\"a02.png\",\"json_file\":\"a02.json\",\"image_graph_fidelity_score\":93,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":24,\"terminals_pins\":19,\"graph_connections\":42,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":2},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"component_class_semantics\",\"description\":\"Il simbolo di alimentazione a sinistra è rappresentato nel JSON come Battery; topologicamente i due terminali sono coerenti, ma la classe non corrisponde perfettamente alla label/simbolo di alimentazione visibile.\"},{\"type\":\"visible_label_not_represented\",\"description\":\"La label topologica visibile associata allo switch non è riportata nel JSON; lo switch e il suo stato aperto sono comunque presenti.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"La polarità del condensatore non è indicata chiaramente nell'immagine e il JSON lo rappresenta come condensatore non polarizzato.\",\"La corrispondenza esatta tra la numerazione fisica del connettore J3 e i pin JSON è coerente visivamente, ma dipende dall'ordine dei terminali disegnati lungo il simbolo.\"],\"short_explanation\":\"Il JSON riproduce molto bene la topologia visibile: alimentazione verso il pin 1 del connettore, resistore tra il nodo superiore/switch e il pin 2, condensatore dal pin 3 a GND, pin 4 a GND, e switch aperto verso GND. I componenti principali e i collegamenti sono sostanzialmente corretti; restano solo lievi discrepanze semantiche sulla classe dell'alimentazione e su una label visibile non codificata.\"}"
+}

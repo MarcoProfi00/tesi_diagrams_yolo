@@ -1,0 +1,98 @@
+{
+  "metadata": {
+    "circuit_id": "b08",
+    "batch": "B",
+    "batch_dir": "batchB",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\images\\b08.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\json\\b08.json",
+    "image_file": "b08.jpg",
+    "json_file": "b08.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-03 18:06:19",
+    "judge_latency_seconds": 19.508,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=5420, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1110, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=6530)",
+  "judge_result": {
+    "circuit_id": "b08",
+    "batch": "B",
+    "image_file": "b08.jpg",
+    "json_file": "b08.json",
+    "image_graph_fidelity_score": 76,
+    "decision": "HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 23,
+      "terminals_pins": 15,
+      "graph_connections": 30,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 3,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "missing_graph_connection",
+        "description": "Il terminale superiore della sorgente di corrente è visibilmente collegato al nodo etichettato VDD, ma nel JSON è lasciato non connesso.",
+        "image_evidence": "La sorgente di corrente ha un filo verticale superiore che sale verso la freccia/label VDD.",
+        "json_evidence": "\"current_source6.1_current_from\": [] e warning unconnected_terminals include \"current_source6.1_current_from\"."
+      },
+      {
+        "type": "missing_component_or_terminal_label",
+        "description": "Il nodo di uscita Rout visibile sul drain superiore del MOSFET destro superiore non è rappresentato nel JSON come terminale/label topologica, e il relativo drain risulta non connesso.",
+        "image_evidence": "A destra, sopra M4, il drain sale a un nodo indicato con freccia e label Rout.",
+        "json_evidence": "\"mosfet16.3_D\": [] e warning unconnected_terminals include \"mosfet16.3_D\"; non esiste componente/terminale per Rout."
+      },
+      {
+        "type": "wrong_or_missing_graph_connection",
+        "description": "Il collegamento tra il nodo inferiore del ramo sinistro superiore e il gate del MOSFET destro inferiore sembra mal rappresentato: nell'immagine il nodo centrale verticale collega il source/drain del MOSFET sinistro superiore con il gate del MOSFET destro inferiore, mentre nel JSON tale net è associata a un collegamento diretto tra source di mosfet16.3 e drain di mosfet16.4 e separata dal gate di mosfet16.2.",
+        "image_evidence": "Il filo centrale verticale scende dal nodo sotto la sorgente di corrente e si collega al filo orizzontale che entra nel gate del transistor destro inferiore; il ramo sinistro superiore si collega allo stesso nodo centrale.",
+        "json_evidence": "\"mosfet16.3_S\": [\"mosfet16.4_D\"], mentre \"mosfet16.2_G\" è collegato alla batteria positiva e a \"mosfet16.3_G\"."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "component_semantics",
+        "description": "Il nodo VDD è rappresentato implicitamente solo tramite la sorgente di corrente, senza un terminale/label dedicato, pur essendo visibile come label topologica."
+      },
+      {
+        "type": "terminal_orientation_or_naming_uncertainty",
+        "description": "L'assegnazione degli identificativi M1-M4 ai quattro MOSFET non è esplicita nel JSON e alcune posizioni dei gate/source/drain risultano difficili da verificare con certezza dall'immagine."
+      }
+    ],
+    "missing_from_json": [
+      "Terminale/label VDD collegato al lato superiore della sorgente di corrente",
+      "Terminale/label Rout collegato al drain del MOSFET destro superiore"
+    ],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "Il terminale superiore della sorgente di corrente deve proseguire al nodo VDD visibile.",
+        "found_in_json": "current_source6.1_current_from è senza connessioni.",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "Il drain superiore del MOSFET destro superiore deve essere collegato al nodo di uscita Rout visibile.",
+        "found_in_json": "mosfet16.3_D è senza connessioni e non esiste un terminale Rout.",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "Il nodo centrale inferiore visibile collega il transistor sinistro superiore/inferiore al gate del MOSFET destro inferiore secondo il filo orizzontale inferiore.",
+        "found_in_json": "mosfet16.3_S è collegato solo a mosfet16.4_D, mentre il gate di mosfet16.2 è su una net diversa con la batteria positiva.",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "La corrispondenza esatta tra mosfet16.1, mosfet16.2, mosfet16.3, mosfet16.4 e le etichette visive M1, M2, M3, M4 non è dichiarata nel JSON e va inferita solo dalla posizione dei terminali.",
+      "Le polarità/tipi specifici dei MOSFET non sono valutabili con certezza oltre alla presenza dei simboli MOSFET e dei terminali principali."
+    ],
+    "short_explanation": "Il JSON riconosce quasi tutti i componenti principali: sorgente di corrente, batteria di bias, quattro MOSFET e tre GND. La struttura generale è in buona parte recuperabile, ma contiene discrepanze topologiche importanti: il nodo VDD della sorgente di corrente e il nodo Rout del MOSFET destro superiore sono lasciati non connessi, e una net centrale tra MOSFET appare assegnata in modo non coerente con i fili visibili. Per questo la fedeltà è buona ma non molto alta."
+  },
+  "raw_model_output": "{\"circuit_id\":\"b08\",\"batch\":\"B\",\"image_file\":\"b08.jpg\",\"json_file\":\"b08.json\",\"image_graph_fidelity_score\":76,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":23,\"terminals_pins\":15,\"graph_connections\":30,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":3,\"minor\":2},\"critical_errors\":[],\"major_errors\":[{\"type\":\"missing_graph_connection\",\"description\":\"Il terminale superiore della sorgente di corrente è visibilmente collegato al nodo etichettato VDD, ma nel JSON è lasciato non connesso.\",\"image_evidence\":\"La sorgente di corrente ha un filo verticale superiore che sale verso la freccia/label VDD.\",\"json_evidence\":\"\\\"current_source6.1_current_from\\\": [] e warning unconnected_terminals include \\\"current_source6.1_current_from\\\".\"},{\"type\":\"missing_component_or_terminal_label\",\"description\":\"Il nodo di uscita Rout visibile sul drain superiore del MOSFET destro superiore non è rappresentato nel JSON come terminale/label topologica, e il relativo drain risulta non connesso.\",\"image_evidence\":\"A destra, sopra M4, il drain sale a un nodo indicato con freccia e label Rout.\",\"json_evidence\":\"\\\"mosfet16.3_D\\\": [] e warning unconnected_terminals include \\\"mosfet16.3_D\\\"; non esiste componente/terminale per Rout.\"},{\"type\":\"wrong_or_missing_graph_connection\",\"description\":\"Il collegamento tra il nodo inferiore del ramo sinistro superiore e il gate del MOSFET destro inferiore sembra mal rappresentato: nell'immagine il nodo centrale verticale collega il source/drain del MOSFET sinistro superiore con il gate del MOSFET destro inferiore, mentre nel JSON tale net è associata a un collegamento diretto tra source di mosfet16.3 e drain di mosfet16.4 e separata dal gate di mosfet16.2.\",\"image_evidence\":\"Il filo centrale verticale scende dal nodo sotto la sorgente di corrente e si collega al filo orizzontale che entra nel gate del transistor destro inferiore; il ramo sinistro superiore si collega allo stesso nodo centrale.\",\"json_evidence\":\"\\\"mosfet16.3_S\\\": [\\\"mosfet16.4_D\\\"], mentre \\\"mosfet16.2_G\\\" è collegato alla batteria positiva e a \\\"mosfet16.3_G\\\".\"}],\"minor_errors\":[{\"type\":\"component_semantics\",\"description\":\"Il nodo VDD è rappresentato implicitamente solo tramite la sorgente di corrente, senza un terminale/label dedicato, pur essendo visibile come label topologica.\"},{\"type\":\"terminal_orientation_or_naming_uncertainty\",\"description\":\"L'assegnazione degli identificativi M1-M4 ai quattro MOSFET non è esplicita nel JSON e alcune posizioni dei gate/source/drain risultano difficili da verificare con certezza dall'immagine.\"}],\"missing_from_json\":[\"Terminale/label VDD collegato al lato superiore della sorgente di corrente\",\"Terminale/label Rout collegato al drain del MOSFET destro superiore\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Il terminale superiore della sorgente di corrente deve proseguire al nodo VDD visibile.\",\"found_in_json\":\"current_source6.1_current_from è senza connessioni.\",\"severity\":\"major\"},{\"expected_from_image\":\"Il drain superiore del MOSFET destro superiore deve essere collegato al nodo di uscita Rout visibile.\",\"found_in_json\":\"mosfet16.3_D è senza connessioni e non esiste un terminale Rout.\",\"severity\":\"major\"},{\"expected_from_image\":\"Il nodo centrale inferiore visibile collega il transistor sinistro superiore/inferiore al gate del MOSFET destro inferiore secondo il filo orizzontale inferiore.\",\"found_in_json\":\"mosfet16.3_S è collegato solo a mosfet16.4_D, mentre il gate di mosfet16.2 è su una net diversa con la batteria positiva.\",\"severity\":\"major\"}],\"uncertain_points\":[\"La corrispondenza esatta tra mosfet16.1, mosfet16.2, mosfet16.3, mosfet16.4 e le etichette visive M1, M2, M3, M4 non è dichiarata nel JSON e va inferita solo dalla posizione dei terminali.\",\"Le polarità/tipi specifici dei MOSFET non sono valutabili con certezza oltre alla presenza dei simboli MOSFET e dei terminali principali.\"],\"short_explanation\":\"Il JSON riconosce quasi tutti i componenti principali: sorgente di corrente, batteria di bias, quattro MOSFET e tre GND. La struttura generale è in buona parte recuperabile, ma contiene discrepanze topologiche importanti: il nodo VDD della sorgente di corrente e il nodo Rout del MOSFET destro superiore sono lasciati non connessi, e una net centrale tra MOSFET appare assegnata in modo non coerente con i fili visibili. Per questo la fedeltà è buona ma non molto alta.\"}"
+}

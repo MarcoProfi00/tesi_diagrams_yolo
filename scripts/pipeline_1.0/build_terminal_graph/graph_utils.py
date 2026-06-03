@@ -1,5 +1,20 @@
 """Utility per trasformare gruppi di label in archi espliciti tra terminali."""
 
+from .config import NON_SHORTING_MULTI_TERMINAL_CLASSES
+from .ids import normalize_class_name
+
+
+def _is_same_non_shorting_component(source: dict, target: dict) -> bool:
+    if str(source.get("instance_id")) != str(target.get("instance_id")):
+        return False
+
+    source_class = normalize_class_name(source.get("component_class_name"))
+    target_class = normalize_class_name(target.get("component_class_name"))
+    if source_class != target_class:
+        return False
+
+    return source_class in NON_SHORTING_MULTI_TERMINAL_CLASSES
+
 # =========================================================
 # COSTRUZIONE DEL GRAFO FINALE TRA TERMINALI
 # =========================================================
@@ -11,6 +26,7 @@
 #       C -> [A, B]
 def build_terminal_graph(terminals, label_to_terminal_ids: dict):
     graph = {term["terminal_id"]: [] for term in terminals}
+    terminal_by_id = {term["terminal_id"]: term for term in terminals}
 
     for _, terminal_ids in label_to_terminal_ids.items():
         unique_ids = sorted(set(terminal_ids))
@@ -18,7 +34,15 @@ def build_terminal_graph(terminals, label_to_terminal_ids: dict):
             continue
 
         for source_id in unique_ids:
-            others = [target_id for target_id in unique_ids if target_id != source_id]
+            source = terminal_by_id.get(source_id)
+            others = []
+            for target_id in unique_ids:
+                if target_id == source_id:
+                    continue
+                target = terminal_by_id.get(target_id)
+                if source is not None and target is not None and _is_same_non_shorting_component(source, target):
+                    continue
+                others.append(target_id)
             graph[source_id].extend(others)
 
     for terminal_id in graph:

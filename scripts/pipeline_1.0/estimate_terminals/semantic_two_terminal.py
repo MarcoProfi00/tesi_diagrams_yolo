@@ -186,6 +186,29 @@ def _diode_bar_scores(score_map: dict, orientation: str) -> dict:
     def group_center(group: list[int]) -> float:
         return (float(group[0]) + float(group[-1])) / 2.0
 
+    # Misura quanta massa interna continua subito dopo il gruppo
+    # andando verso il centro del simbolo. La barra del diodo tende ad
+    # avere il corpo triangolare immediatamente sul lato interno.
+    def inward_support(group: list[int]) -> float:
+        if not group or axis_size <= 0:
+            return 0.0
+        lookahead = max(3, min(12, axis_size // 8))
+        center = group_center(group)
+        axis_mid = float(max(axis_size - 1, 0)) / 2.0
+
+        if center <= axis_mid:
+            start = min(axis_size, group[-1] + 1)
+            end = min(axis_size, start + lookahead)
+            window = projection[start:end]
+        else:
+            end = max(0, group[0])
+            start = max(0, end - lookahead)
+            window = projection[start:end]
+
+        if not window:
+            return 0.0
+        return float(sum(int(v) for v in window)) / float(len(window))
+
     # Valuta lo score della barra.
     def bar_score(group: list[int]) -> float:
         if not group:
@@ -195,7 +218,14 @@ def _diode_bar_scores(score_map: dict, orientation: str) -> dict:
         axis_mid = float(max(axis_size - 1, 0)) / 2.0
         center_distance = abs(group_center(group) - axis_mid)
         edge_distance = min(group[0], max(0, axis_size - 1 - group[-1]))
-        return 1.4 * float(group_max) - 0.8 * float(group_len) - 0.08 * float(center_distance) + 0.05 * float(edge_distance)
+        inward_mass = inward_support(group)
+        return (
+            1.15 * float(group_max)
+            - 0.8 * float(group_len)
+            - 0.08 * float(center_distance)
+            + 0.05 * float(edge_distance)
+            + 0.55 * float(inward_mass)
+        )
 
     best_group = max(groups, key=lambda group: (bar_score(group), group_center(group)), default=[])
     best_center = group_center(best_group) if best_group else 0.0
@@ -228,6 +258,7 @@ def _diode_bar_scores(score_map: dict, orientation: str) -> dict:
     adjusted["selected_body_group"] = body_group
     adjusted["selected_body_center"] = None if body_center is None else round(float(body_center), 4)
     adjusted["selected_bar_side"] = marker_side
+    adjusted["selected_bar_inward_support"] = round(float(inward_support(best_group)), 4) if best_group else 0.0
     return adjusted
 
 
@@ -663,6 +694,11 @@ def _assign_strategy_result(
 
 def _adjust_led_vertical_diode_scores(score_map: dict, orientation: str, meta: dict) -> dict:
     if orientation != "vertical" or meta.get("name") != "LED":
+        return score_map
+
+    # Se la barra e il corpo del diodo sono stati distinti in modo esplicito,
+    # fidiamoci della stima strutturata invece di forzare un flip a bassa confidenza.
+    if score_map.get("selected_bar_group") and score_map.get("selected_body_group"):
         return score_map
 
     marker_side, other_side, confidence, evidence_type = _choose_side(

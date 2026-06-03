@@ -1,0 +1,122 @@
+{
+  "metadata": {
+    "circuit_id": "c05",
+    "batch": "C1",
+    "batch_dir": "batchC1",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\images\\c05.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\json\\c05.json",
+    "image_file": "c05.jpg",
+    "json_file": "c05.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-03 18:09:26",
+    "judge_latency_seconds": 24.256,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=12282, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=1602, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=13884)",
+  "judge_result": {
+    "circuit_id": "c05",
+    "batch": "C1",
+    "image_file": "c05.jpg",
+    "json_file": "c05.json",
+    "image_graph_fidelity_score": 70,
+    "decision": "MEDIUM",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 23,
+      "terminals_pins": 17,
+      "graph_connections": 24,
+      "visible_semantics": 6
+    },
+    "error_counts": {
+      "critical": 1,
+      "major": 4,
+      "minor": 2
+    },
+    "critical_errors": [
+      {
+        "type": "wrong_graph_connection",
+        "description": "L'uscita del 555 è collegata al pin CLK del 4026, ma nel JSON è unita a una rete che include GND e altri pin del 4026, creando un collegamento a massa non visibile e collegando il pin sbagliato del 4026.",
+        "image_evidence": "Il filo dal pin 3 OUT del 555 va al pin 1 CLK del 4026; il pin 15 RST del 4026 va invece a GND, e i pin 2, 8, 14, 4, 5 hanno altre connessioni a massa/linee separate.",
+        "json_evidence": "integrated_circuit11.1_right_1 è connesso a gnd9.2_t1, integrated_circuit11.2_left_2, integrated_circuit11.2_left_3, integrated_circuit11.2_left_4; integrated_circuit11.2_left_4 è pin1, ma nella stessa net sono inclusi GND, pin15 e pin2."
+      }
+    ],
+    "major_errors": [
+      {
+        "type": "missing_visible_label_component",
+        "description": "Le sorgenti/label +Vcc visibili nell'immagine non sono rappresentate come terminali o label nel JSON, e ciò lascia incompleta la topologia di alimentazione.",
+        "image_evidence": "Sono visibili tre label +Vcc: sopra la rete dei pin 4/8 del 555, sopra la resistenza superiore a sinistra, e sopra il pin 16 del 4026.",
+        "json_evidence": "Non esistono componenti o terminali VCC/+Vcc; resistor22.2_t1 è vuoto e integrated_circuit11.2_top_1 è collegato solo a integrated_circuit11.2_left_1."
+      },
+      {
+        "type": "missing_graph_connection",
+        "description": "La resistenza superiore della rete del 555 ha un terminale collegato a +Vcc nell'immagine, ma nel JSON quel terminale risulta non connesso.",
+        "image_evidence": "Il terminale superiore della resistenza sopra il nodo del pin 7 del 555 è collegato al simbolo +Vcc.",
+        "json_evidence": "resistor22.2_t1: [] e warning unconnected_terminals contiene resistor22.2_t1."
+      },
+      {
+        "type": "wrong_graph_connection",
+        "description": "Il pin 16 del 4026 dovrebbe essere collegato alla rete +Vcc e al pin 3 DEI tramite il filo verticale/orizzontale visibile, ma nel JSON è collegato solo al pin 3 senza rappresentare +Vcc.",
+        "image_evidence": "Il pin 16 del 4026 sale a una giunzione con label +Vcc e dalla stessa rete parte un filo verso il pin 3 DEI.",
+        "json_evidence": "integrated_circuit11.2_top_1 è connesso solo a integrated_circuit11.2_left_1; nessun terminale +Vcc è presente."
+      },
+      {
+        "type": "wrong_graph_connection",
+        "description": "Nel JSON il pin 2 del 4026 è unito alla stessa rete del pin 15, del pin 1 e dell'uscita del 555, mentre nell'immagine il pin 2 non è sulla stessa rete dell'uscita del 555 né del pin 15 a GND.",
+        "image_evidence": "Il pin 2 INH del 4026 appare come pin separato sul lato sinistro; il pin 15 è collegato a GND e il pin 1 riceve il filo dal 555.",
+        "json_evidence": "integrated_circuit11.2_left_3 è nella rete con gnd9.2_t1, integrated_circuit11.1_right_1, integrated_circuit11.2_left_2 e integrated_circuit11.2_left_4."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "component_class_semantics",
+        "description": "Il display a sette segmenti è modellato come Integrated_Circuit invece che come display/indicatore dedicato, anche se i terminali principali sono riconoscibili."
+      },
+      {
+        "type": "terminal_orientation",
+        "description": "Alcune posizioni relative dei terminali dei condensatori e IC sono semplificate rispetto al disegno, ma non alterano da sole la maggior parte della topologia locale."
+      }
+    ],
+    "missing_from_json": [
+      "Label/terminale +Vcc della rete pin 4 e pin 8 del 555",
+      "Label/terminale +Vcc sul terminale superiore della resistenza collegata al pin 7 del 555",
+      "Label/terminale +Vcc della rete pin 16 e pin 3 del 4026"
+    ],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "555 pin3 OUT collegato al 4026 pin1 CLK soltanto su quella tratta visibile",
+        "found_in_json": "integrated_circuit11.1_right_1 collegato alla rete con gnd9.2_t1, 4026 pin15, 4026 pin2 e 4026 pin1",
+        "severity": "critical"
+      },
+      {
+        "expected_from_image": "4026 pin15 RST collegato a GND, non alla rete dell'uscita 555",
+        "found_in_json": "integrated_circuit11.2_left_2 nella stessa rete di integrated_circuit11.1_right_1 e integrated_circuit11.2_left_4",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "4026 pin2 INH non visibilmente collegato alla rete OUT 555/CLK né alla massa del pin15",
+        "found_in_json": "integrated_circuit11.2_left_3 nella stessa rete di GND, 555 pin3, 4026 pin15 e 4026 pin1",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "resistenza superiore del 555 collegata a +Vcc",
+        "found_in_json": "resistor22.2_t1 non connesso",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "4026 pin16 e pin3 collegati alla rete +Vcc visibile",
+        "found_in_json": "integrated_circuit11.2_top_1 collegato solo a integrated_circuit11.2_left_1 senza terminale/label +Vcc",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "La corrispondenza esatta tra ciascuna delle sette resistenze e i segmenti a-g del display è in gran parte coerente visivamente, ma l'immagine rende difficile verificare ogni singola etichetta senza ambiguità.",
+      "La polarità del condensatore a sinistra è visibile, ma il JSON non codifica polarità; questo non è conteggiato come errore topologico principale."
+    ],
+    "short_explanation": "Il JSON riconosce quasi tutti i componenti principali e gran parte della catena 555-4026-display con le sette resistenze. Tuttavia contiene un errore topologico grave: la rete dell'uscita del 555 verso il 4026 è fusa con GND e con più pin del 4026 che nell'immagine sono distinti. Inoltre mancano le label +Vcc visibili e un terminale della resistenza superiore risulta non connesso. La base è recuperabile, ma la fedeltà topologica è solo parziale."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c05\",\"batch\":\"C1\",\"image_file\":\"c05.jpg\",\"json_file\":\"c05.json\",\"image_graph_fidelity_score\":70,\"decision\":\"MEDIUM\",\"usable_as_graph_base\":true,\"scores\":{\"components\":23,\"terminals_pins\":17,\"graph_connections\":24,\"visible_semantics\":6},\"error_counts\":{\"critical\":1,\"major\":4,\"minor\":2},\"critical_errors\":[{\"type\":\"wrong_graph_connection\",\"description\":\"L'uscita del 555 è collegata al pin CLK del 4026, ma nel JSON è unita a una rete che include GND e altri pin del 4026, creando un collegamento a massa non visibile e collegando il pin sbagliato del 4026.\",\"image_evidence\":\"Il filo dal pin 3 OUT del 555 va al pin 1 CLK del 4026; il pin 15 RST del 4026 va invece a GND, e i pin 2, 8, 14, 4, 5 hanno altre connessioni a massa/linee separate.\",\"json_evidence\":\"integrated_circuit11.1_right_1 è connesso a gnd9.2_t1, integrated_circuit11.2_left_2, integrated_circuit11.2_left_3, integrated_circuit11.2_left_4; integrated_circuit11.2_left_4 è pin1, ma nella stessa net sono inclusi GND, pin15 e pin2.\"}],\"major_errors\":[{\"type\":\"missing_visible_label_component\",\"description\":\"Le sorgenti/label +Vcc visibili nell'immagine non sono rappresentate come terminali o label nel JSON, e ciò lascia incompleta la topologia di alimentazione.\",\"image_evidence\":\"Sono visibili tre label +Vcc: sopra la rete dei pin 4/8 del 555, sopra la resistenza superiore a sinistra, e sopra il pin 16 del 4026.\",\"json_evidence\":\"Non esistono componenti o terminali VCC/+Vcc; resistor22.2_t1 è vuoto e integrated_circuit11.2_top_1 è collegato solo a integrated_circuit11.2_left_1.\"},{\"type\":\"missing_graph_connection\",\"description\":\"La resistenza superiore della rete del 555 ha un terminale collegato a +Vcc nell'immagine, ma nel JSON quel terminale risulta non connesso.\",\"image_evidence\":\"Il terminale superiore della resistenza sopra il nodo del pin 7 del 555 è collegato al simbolo +Vcc.\",\"json_evidence\":\"resistor22.2_t1: [] e warning unconnected_terminals contiene resistor22.2_t1.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il pin 16 del 4026 dovrebbe essere collegato alla rete +Vcc e al pin 3 DEI tramite il filo verticale/orizzontale visibile, ma nel JSON è collegato solo al pin 3 senza rappresentare +Vcc.\",\"image_evidence\":\"Il pin 16 del 4026 sale a una giunzione con label +Vcc e dalla stessa rete parte un filo verso il pin 3 DEI.\",\"json_evidence\":\"integrated_circuit11.2_top_1 è connesso solo a integrated_circuit11.2_left_1; nessun terminale +Vcc è presente.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Nel JSON il pin 2 del 4026 è unito alla stessa rete del pin 15, del pin 1 e dell'uscita del 555, mentre nell'immagine il pin 2 non è sulla stessa rete dell'uscita del 555 né del pin 15 a GND.\",\"image_evidence\":\"Il pin 2 INH del 4026 appare come pin separato sul lato sinistro; il pin 15 è collegato a GND e il pin 1 riceve il filo dal 555.\",\"json_evidence\":\"integrated_circuit11.2_left_3 è nella rete con gnd9.2_t1, integrated_circuit11.1_right_1, integrated_circuit11.2_left_2 e integrated_circuit11.2_left_4.\"}],\"minor_errors\":[{\"type\":\"component_class_semantics\",\"description\":\"Il display a sette segmenti è modellato come Integrated_Circuit invece che come display/indicatore dedicato, anche se i terminali principali sono riconoscibili.\"},{\"type\":\"terminal_orientation\",\"description\":\"Alcune posizioni relative dei terminali dei condensatori e IC sono semplificate rispetto al disegno, ma non alterano da sole la maggior parte della topologia locale.\"}],\"missing_from_json\":[\"Label/terminale +Vcc della rete pin 4 e pin 8 del 555\",\"Label/terminale +Vcc sul terminale superiore della resistenza collegata al pin 7 del 555\",\"Label/terminale +Vcc della rete pin 16 e pin 3 del 4026\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"555 pin3 OUT collegato al 4026 pin1 CLK soltanto su quella tratta visibile\",\"found_in_json\":\"integrated_circuit11.1_right_1 collegato alla rete con gnd9.2_t1, 4026 pin15, 4026 pin2 e 4026 pin1\",\"severity\":\"critical\"},{\"expected_from_image\":\"4026 pin15 RST collegato a GND, non alla rete dell'uscita 555\",\"found_in_json\":\"integrated_circuit11.2_left_2 nella stessa rete di integrated_circuit11.1_right_1 e integrated_circuit11.2_left_4\",\"severity\":\"major\"},{\"expected_from_image\":\"4026 pin2 INH non visibilmente collegato alla rete OUT 555/CLK né alla massa del pin15\",\"found_in_json\":\"integrated_circuit11.2_left_3 nella stessa rete di GND, 555 pin3, 4026 pin15 e 4026 pin1\",\"severity\":\"major\"},{\"expected_from_image\":\"resistenza superiore del 555 collegata a +Vcc\",\"found_in_json\":\"resistor22.2_t1 non connesso\",\"severity\":\"major\"},{\"expected_from_image\":\"4026 pin16 e pin3 collegati alla rete +Vcc visibile\",\"found_in_json\":\"integrated_circuit11.2_top_1 collegato solo a integrated_circuit11.2_left_1 senza terminale/label +Vcc\",\"severity\":\"major\"}],\"uncertain_points\":[\"La corrispondenza esatta tra ciascuna delle sette resistenze e i segmenti a-g del display è in gran parte coerente visivamente, ma l'immagine rende difficile verificare ogni singola etichetta senza ambiguità.\",\"La polarità del condensatore a sinistra è visibile, ma il JSON non codifica polarità; questo non è conteggiato come errore topologico principale.\"],\"short_explanation\":\"Il JSON riconosce quasi tutti i componenti principali e gran parte della catena 555-4026-display con le sette resistenze. Tuttavia contiene un errore topologico grave: la rete dell'uscita del 555 verso il 4026 è fusa con GND e con più pin del 4026 che nell'immagine sono distinti. Inoltre mancano le label +Vcc visibili e un terminale della resistenza superiore risulta non connesso. La base è recuperabile, ma la fedeltà topologica è solo parziale.\"}"
+}

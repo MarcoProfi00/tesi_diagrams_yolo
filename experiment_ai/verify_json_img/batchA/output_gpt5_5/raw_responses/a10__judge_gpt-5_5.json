@@ -1,0 +1,60 @@
+{
+  "metadata": {
+    "circuit_id": "a10",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a10.png",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a10.json",
+    "image_file": "a10.png",
+    "json_file": "a10.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-03 18:05:24",
+    "judge_latency_seconds": 9.41,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=5022, input_tokens_details=InputTokensDetails(cached_tokens=4352), output_tokens=459, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=5481)",
+  "judge_result": {
+    "circuit_id": "a10",
+    "batch": "A",
+    "image_file": "a10.png",
+    "json_file": "a10.json",
+    "image_graph_fidelity_score": 96,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 25,
+      "terminals_pins": 19,
+      "graph_connections": 43,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "connector_terminal_orientation",
+        "description": "Nel JSON i pin del connettore hanno posizioni relative left/right non pienamente coerenti con il disegno, dove i quattro pin sono contatti sul lato destro del blocco con collegamenti esterni; questo non compromette la topologia."
+      },
+      {
+        "type": "ground_instance_semantics",
+        "description": "Il JSON rappresenta i simboli GND separati come istanze distinte; nell'immagine sono simboli di massa separati graficamente. La scelta è accettabile topologicamente, ma non esplicita un'eventuale equivalenza globale dei simboli GND."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "Lo stato aperto dello switch è visibile e coerente, ma la valutazione dello stato meccanico esatto resta limitata alla simbologia grafica.",
+      "La polarità precisa del LED è indicata nel JSON come anodo in alto e catodo in basso; dall'immagine la connessione superiore arriva dal resistore e quella inferiore va a massa, ma la verifica dei nomi anodo/catodo dipende dall'interpretazione del simbolo."
+    ],
+    "short_explanation": "Il Graph JSON corrisponde molto bene alla topologia visibile: batteria verso switch, switch verso pin 1 del connettore, pin 2 verso resistore e LED a massa, pin 3 verso lampada a massa, pin 4 a massa. I componenti principali sono presenti e i collegamenti del campo graph risultano sostanzialmente fedeli. Restano solo lievi imprecisioni descrittive su orientamenti dei pin e semantica delle masse separate."
+  },
+  "raw_model_output": "{\"circuit_id\":\"a10\",\"batch\":\"A\",\"image_file\":\"a10.png\",\"json_file\":\"a10.json\",\"image_graph_fidelity_score\":96,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":25,\"terminals_pins\":19,\"graph_connections\":43,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":2},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"connector_terminal_orientation\",\"description\":\"Nel JSON i pin del connettore hanno posizioni relative left/right non pienamente coerenti con il disegno, dove i quattro pin sono contatti sul lato destro del blocco con collegamenti esterni; questo non compromette la topologia.\"},{\"type\":\"ground_instance_semantics\",\"description\":\"Il JSON rappresenta i simboli GND separati come istanze distinte; nell'immagine sono simboli di massa separati graficamente. La scelta è accettabile topologicamente, ma non esplicita un'eventuale equivalenza globale dei simboli GND.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"Lo stato aperto dello switch è visibile e coerente, ma la valutazione dello stato meccanico esatto resta limitata alla simbologia grafica.\",\"La polarità precisa del LED è indicata nel JSON come anodo in alto e catodo in basso; dall'immagine la connessione superiore arriva dal resistore e quella inferiore va a massa, ma la verifica dei nomi anodo/catodo dipende dall'interpretazione del simbolo.\"],\"short_explanation\":\"Il Graph JSON corrisponde molto bene alla topologia visibile: batteria verso switch, switch verso pin 1 del connettore, pin 2 verso resistore e LED a massa, pin 3 verso lampada a massa, pin 4 a massa. I componenti principali sono presenti e i collegamenti del campo graph risultano sostanzialmente fedeli. Restano solo lievi imprecisioni descrittive su orientamenti dei pin e semantica delle masse separate.\"}"
+}

@@ -1,0 +1,135 @@
+{
+  "metadata": {
+    "circuit_id": "b05",
+    "batch": "B",
+    "batch_dir": "batchB",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\images\\b05.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\json\\b05.json",
+    "image_file": "b05.jpg",
+    "json_file": "b05.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-03 18:05:09",
+    "judge_latency_seconds": 34.691,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=7944, input_tokens_details=InputTokensDetails(cached_tokens=7424), output_tokens=2006, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=9950)",
+  "judge_result": {
+    "circuit_id": "b05",
+    "batch": "B",
+    "image_file": "b05.jpg",
+    "json_file": "b05.json",
+    "image_graph_fidelity_score": 63,
+    "decision": "MEDIUM",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 18,
+      "terminals_pins": 13,
+      "graph_connections": 25,
+      "visible_semantics": 7
+    },
+    "error_counts": {
+      "critical": 1,
+      "major": 5,
+      "minor": 3
+    },
+    "critical_errors": [
+      {
+        "type": "wrong_component_and_connection",
+        "description": "Il componente di uscita/cuffia a destra è rappresentato come Breaker con due terminali entrambi a sinistra, mentre nell'immagine sono visibili due jack/contatti J1 e J2 collegati al conduttore e alla linea inferiore; questa errata modellazione altera una parte principale della topologia di uscita.",
+        "image_evidence": "A destra si vedono J1 e J2 con contatti verso il simbolo della cuffia/doppio headset; J1 è connesso alla linea superiore del collettore di Q2 e J2 alla linea inferiore comune.",
+        "json_evidence": "components contiene breaker3.1 class_name Breaker; graph collega breaker3.1_t1 a npn_transistor18.2_C e polarized_capacitor20.4_positive, e breaker3.1_t2 alla grande net comune con battery2.1_positive, gnd9.1_t1, ecc."
+      }
+    ],
+    "major_errors": [
+      {
+        "type": "missing_component",
+        "description": "Il condensatore variabile visibile in parallelo all'induttore non è rappresentato come tale nel JSON; è invece assimilato a un condensatore polarizzato della rete d'antenna/induttore.",
+        "image_evidence": "Vicino a L1 è visibile C1 come condensatore variabile collegato tra il nodo superiore della bobina e il nodo inferiore/terra.",
+        "json_evidence": "components non contiene un Variable_Capacitor; contiene polarized_capacitor20.1 collegato tra antenna/diode/inductor_t1 e la net comune."
+      },
+      {
+        "type": "wrong_component_class",
+        "description": "I condensatori C2, C3 e C4 nell'immagine sono condensatori non polarizzati, ma il JSON li classifica come Polarized_Capacitor.",
+        "image_evidence": "C2, C3 e C4 sono disegnati con simboli di condensatore non polarizzato; non sono visibili segni di polarità.",
+        "json_evidence": "components contiene polarized_capacitor20.2, polarized_capacitor20.3 e polarized_capacitor20.4 con terminali positive/negative."
+      },
+      {
+        "type": "wrong_graph_connection",
+        "description": "Il nodo inferiore dell'induttore e del condensatore variabile è collegato a terra nell'immagine, ma nel JSON è fuso con una grande net che include anche la linea di alimentazione positiva e molti ritorni dei resistori/emettitori.",
+        "image_evidence": "La parte bassa di L1/C1 scende al simbolo Ground sul lato sinistro; la linea inferiore di alimentazione verso B1/S1 è distinta in parte dal nodo di massa/ritorno mostrato.",
+        "json_evidence": "inductor10.1_t2 è collegato a battery2.1_positive, breaker3.1_t2, gnd9.1_t1, emettitori, terminali inferiori dei resistori e switch25.1_t2."
+      },
+      {
+        "type": "wrong_graph_connection",
+        "description": "La batteria è orientata e connessa in modo topologicamente sospetto: nel JSON il terminale positivo è sulla grande net comune con GND e ritorni, mentre il negativo è collegato solo allo switch; nell'immagine B1 è in serie con S1 sulla linea inferiore, con i due terminali su nodi distinti.",
+        "image_evidence": "B1 è disegnata sulla linea bassa, tra un nodo di ritorno a sinistra e S1 a destra; S1 prosegue verso il nodo inferiore destro.",
+        "json_evidence": "battery2.1_positive è collegato alla grande net comune con gnd9.1_t1 e molti terminali; battery2.1_negative è collegato solo a switch25.1_t1."
+      },
+      {
+        "type": "wrong_graph_connection",
+        "description": "Il nodo del collettore di Q2 dovrebbe essere comune alla linea superiore, a C4 e al contatto superiore J1, mentre il JSON lo collega a un Breaker invece di modellare chiaramente il jack/uscita.",
+        "image_evidence": "Il collettore di Q2 è collegato alla linea superiore orizzontale che va al conduttore indicato e al punto superiore di C4 e J1.",
+        "json_evidence": "npn_transistor18.2_C è collegato a breaker3.1_t1 e polarized_capacitor20.4_positive."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "component_class_detail",
+        "description": "L'induttore L1 è disegnato accoppiato/adiacente all'antenna e al condensatore variabile; il JSON lo rappresenta come semplice Inductor, perdendo un dettaglio simbolico visibile ma mantenendo il componente principale."
+      },
+      {
+        "type": "terminal_orientation",
+        "description": "Alcune posizioni relative dei terminali non corrispondono bene al disegno, ad esempio la batteria è indicata con terminali sinistra/destra ma la sua relazione topologica nel disegno è lungo la linea inferiore; questo è secondario rispetto agli errori di connessione."
+      },
+      {
+        "type": "semantic_state",
+        "description": "Lo switch S1 è rappresentato come open, coerente visivamente, ma il JSON collega il suo terminale destro alla grande net comune in modo che la semantica dello stato non basta a descrivere correttamente la separazione dei nodi."
+      }
+    ],
+    "missing_from_json": [
+      "Condensatore variabile C1 come classe distinta/non polarizzata variabile",
+      "Uscita doppia headset/jack J1-J2 modellata come connettore o terminali di uscita, non come Breaker"
+    ],
+    "extra_in_json": [
+      "breaker3.1 come Breaker",
+      "polarità positive/negative per condensatori non polarizzati visibili"
+    ],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "Il nodo superiore di L1/C1/antenna va al diodo CR1 e all'accoppiamento verso Q1 tramite C2; il nodo inferiore di L1/C1 va a Ground.",
+        "found_in_json": "inductor10.1_t1 è collegato ad antenna1.1_t1, diode7.1_anode e polarized_capacitor20.1_positive; inductor10.1_t2 è fuso con battery2.1_positive, GND, emettitori e ritorni resistivi.",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "C1 variabile è in parallelo a L1 tra il nodo antenna/diodo e il nodo Ground.",
+        "found_in_json": "polarized_capacitor20.1 è usato tra il nodo antenna/diodo/induttore e la grande net comune con alimentazione/ritorni.",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "Il collettore di Q2, C4 superiore e J1 superiore sono sullo stesso nodo superiore di uscita.",
+        "found_in_json": "npn_transistor18.2_C e polarized_capacitor20.4_positive sono collegati a breaker3.1_t1, componente classificato come Breaker.",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "Il terminale inferiore di C4 e J2 sono sulla linea comune inferiore destra, distinta dalla connessione attraverso S1/B1 secondo il disegno.",
+        "found_in_json": "polarized_capacitor20.4_negative e breaker3.1_t2 sono fusi con battery2.1_positive, GND, induttore inferiore, emettitori e terminali inferiori dei resistori.",
+        "severity": "critical"
+      },
+      {
+        "expected_from_image": "B1 e S1 formano una serie sulla linea inferiore con terminali su nodi distinti.",
+        "found_in_json": "battery2.1_negative è collegato solo a switch25.1_t1, mentre battery2.1_positive e switch25.1_t2 sono inclusi nella grande net comune con GND e molti altri terminali.",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "La polarità dei transistor NPN è indicata nel JSON con B, C, E e corrisponde alle lettere visibili, ma non viene valutata alcuna funzione elettrica oltre alle etichette grafiche.",
+      "La reale natura fisica dei due contatti di uscita a destra può essere interpretata come jack/headset/connettore; l'immagine però non supporta chiaramente la classe Breaker usata nel JSON.",
+      "Alcuni incroci e connessioni nella parte bassa tra emettitori, ritorni resistivi, batteria e switch sono ravvicinati; la valutazione si basa sui punti di giunzione visibili."
+    ],
+    "short_explanation": "Il JSON riconosce molti componenti principali e buona parte della catena antenna-diodo-transistor-resistori-condensatori, ma presenta errori importanti: C1 variabile non è modellato correttamente, diversi condensatori sono classificati come polarizzati, la parte di uscita J1/J2 è sostituita da un Breaker e alcune net inferiori sono fuse in modo topologicamente discutibile con GND, alimentazione e ritorni. La struttura resta parzialmente recuperabile, ma la fedeltà complessiva è solo media."
+  },
+  "raw_model_output": "{\"circuit_id\":\"b05\",\"batch\":\"B\",\"image_file\":\"b05.jpg\",\"json_file\":\"b05.json\",\"image_graph_fidelity_score\":63,\"decision\":\"MEDIUM\",\"usable_as_graph_base\":true,\"scores\":{\"components\":18,\"terminals_pins\":13,\"graph_connections\":25,\"visible_semantics\":7},\"error_counts\":{\"critical\":1,\"major\":5,\"minor\":3},\"critical_errors\":[{\"type\":\"wrong_component_and_connection\",\"description\":\"Il componente di uscita/cuffia a destra è rappresentato come Breaker con due terminali entrambi a sinistra, mentre nell'immagine sono visibili due jack/contatti J1 e J2 collegati al conduttore e alla linea inferiore; questa errata modellazione altera una parte principale della topologia di uscita.\",\"image_evidence\":\"A destra si vedono J1 e J2 con contatti verso il simbolo della cuffia/doppio headset; J1 è connesso alla linea superiore del collettore di Q2 e J2 alla linea inferiore comune.\",\"json_evidence\":\"components contiene breaker3.1 class_name Breaker; graph collega breaker3.1_t1 a npn_transistor18.2_C e polarized_capacitor20.4_positive, e breaker3.1_t2 alla grande net comune con battery2.1_positive, gnd9.1_t1, ecc.\"}],\"major_errors\":[{\"type\":\"missing_component\",\"description\":\"Il condensatore variabile visibile in parallelo all'induttore non è rappresentato come tale nel JSON; è invece assimilato a un condensatore polarizzato della rete d'antenna/induttore.\",\"image_evidence\":\"Vicino a L1 è visibile C1 come condensatore variabile collegato tra il nodo superiore della bobina e il nodo inferiore/terra.\",\"json_evidence\":\"components non contiene un Variable_Capacitor; contiene polarized_capacitor20.1 collegato tra antenna/diode/inductor_t1 e la net comune.\"},{\"type\":\"wrong_component_class\",\"description\":\"I condensatori C2, C3 e C4 nell'immagine sono condensatori non polarizzati, ma il JSON li classifica come Polarized_Capacitor.\",\"image_evidence\":\"C2, C3 e C4 sono disegnati con simboli di condensatore non polarizzato; non sono visibili segni di polarità.\",\"json_evidence\":\"components contiene polarized_capacitor20.2, polarized_capacitor20.3 e polarized_capacitor20.4 con terminali positive/negative.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il nodo inferiore dell'induttore e del condensatore variabile è collegato a terra nell'immagine, ma nel JSON è fuso con una grande net che include anche la linea di alimentazione positiva e molti ritorni dei resistori/emettitori.\",\"image_evidence\":\"La parte bassa di L1/C1 scende al simbolo Ground sul lato sinistro; la linea inferiore di alimentazione verso B1/S1 è distinta in parte dal nodo di massa/ritorno mostrato.\",\"json_evidence\":\"inductor10.1_t2 è collegato a battery2.1_positive, breaker3.1_t2, gnd9.1_t1, emettitori, terminali inferiori dei resistori e switch25.1_t2.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"La batteria è orientata e connessa in modo topologicamente sospetto: nel JSON il terminale positivo è sulla grande net comune con GND e ritorni, mentre il negativo è collegato solo allo switch; nell'immagine B1 è in serie con S1 sulla linea inferiore, con i due terminali su nodi distinti.\",\"image_evidence\":\"B1 è disegnata sulla linea bassa, tra un nodo di ritorno a sinistra e S1 a destra; S1 prosegue verso il nodo inferiore destro.\",\"json_evidence\":\"battery2.1_positive è collegato alla grande net comune con gnd9.1_t1 e molti terminali; battery2.1_negative è collegato solo a switch25.1_t1.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il nodo del collettore di Q2 dovrebbe essere comune alla linea superiore, a C4 e al contatto superiore J1, mentre il JSON lo collega a un Breaker invece di modellare chiaramente il jack/uscita.\",\"image_evidence\":\"Il collettore di Q2 è collegato alla linea superiore orizzontale che va al conduttore indicato e al punto superiore di C4 e J1.\",\"json_evidence\":\"npn_transistor18.2_C è collegato a breaker3.1_t1 e polarized_capacitor20.4_positive.\"}],\"minor_errors\":[{\"type\":\"component_class_detail\",\"description\":\"L'induttore L1 è disegnato accoppiato/adiacente all'antenna e al condensatore variabile; il JSON lo rappresenta come semplice Inductor, perdendo un dettaglio simbolico visibile ma mantenendo il componente principale.\"},{\"type\":\"terminal_orientation\",\"description\":\"Alcune posizioni relative dei terminali non corrispondono bene al disegno, ad esempio la batteria è indicata con terminali sinistra/destra ma la sua relazione topologica nel disegno è lungo la linea inferiore; questo è secondario rispetto agli errori di connessione.\"},{\"type\":\"semantic_state\",\"description\":\"Lo switch S1 è rappresentato come open, coerente visivamente, ma il JSON collega il suo terminale destro alla grande net comune in modo che la semantica dello stato non basta a descrivere correttamente la separazione dei nodi.\"}],\"missing_from_json\":[\"Condensatore variabile C1 come classe distinta/non polarizzata variabile\",\"Uscita doppia headset/jack J1-J2 modellata come connettore o terminali di uscita, non come Breaker\"],\"extra_in_json\":[\"breaker3.1 come Breaker\",\"polarità positive/negative per condensatori non polarizzati visibili\"],\"wrong_graph_connections\":[{\"expected_from_image\":\"Il nodo superiore di L1/C1/antenna va al diodo CR1 e all'accoppiamento verso Q1 tramite C2; il nodo inferiore di L1/C1 va a Ground.\",\"found_in_json\":\"inductor10.1_t1 è collegato ad antenna1.1_t1, diode7.1_anode e polarized_capacitor20.1_positive; inductor10.1_t2 è fuso con battery2.1_positive, GND, emettitori e ritorni resistivi.\",\"severity\":\"major\"},{\"expected_from_image\":\"C1 variabile è in parallelo a L1 tra il nodo antenna/diodo e il nodo Ground.\",\"found_in_json\":\"polarized_capacitor20.1 è usato tra il nodo antenna/diodo/induttore e la grande net comune con alimentazione/ritorni.\",\"severity\":\"major\"},{\"expected_from_image\":\"Il collettore di Q2, C4 superiore e J1 superiore sono sullo stesso nodo superiore di uscita.\",\"found_in_json\":\"npn_transistor18.2_C e polarized_capacitor20.4_positive sono collegati a breaker3.1_t1, componente classificato come Breaker.\",\"severity\":\"major\"},{\"expected_from_image\":\"Il terminale inferiore di C4 e J2 sono sulla linea comune inferiore destra, distinta dalla connessione attraverso S1/B1 secondo il disegno.\",\"found_in_json\":\"polarized_capacitor20.4_negative e breaker3.1_t2 sono fusi con battery2.1_positive, GND, induttore inferiore, emettitori e terminali inferiori dei resistori.\",\"severity\":\"critical\"},{\"expected_from_image\":\"B1 e S1 formano una serie sulla linea inferiore con terminali su nodi distinti.\",\"found_in_json\":\"battery2.1_negative è collegato solo a switch25.1_t1, mentre battery2.1_positive e switch25.1_t2 sono inclusi nella grande net comune con GND e molti altri terminali.\",\"severity\":\"major\"}],\"uncertain_points\":[\"La polarità dei transistor NPN è indicata nel JSON con B, C, E e corrisponde alle lettere visibili, ma non viene valutata alcuna funzione elettrica oltre alle etichette grafiche.\",\"La reale natura fisica dei due contatti di uscita a destra può essere interpretata come jack/headset/connettore; l'immagine però non supporta chiaramente la classe Breaker usata nel JSON.\",\"Alcuni incroci e connessioni nella parte bassa tra emettitori, ritorni resistivi, batteria e switch sono ravvicinati; la valutazione si basa sui punti di giunzione visibili.\"],\"short_explanation\":\"Il JSON riconosce molti componenti principali e buona parte della catena antenna-diodo-transistor-resistori-condensatori, ma presenta errori importanti: C1 variabile non è modellato correttamente, diversi condensatori sono classificati come polarizzati, la parte di uscita J1/J2 è sostituita da un Breaker e alcune net inferiori sono fuse in modo topologicamente discutibile con GND, alimentazione e ritorni. La struttura resta parzialmente recuperabile, ma la fedeltà complessiva è solo media.\"}"
+}

@@ -32,9 +32,9 @@ from estimate_terminals.probes import (
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PIPELINE_DATASET = os.environ.get(
     "PIPELINE_DATASET",
-    "pipeline1.0/batchC/batchC3"
+    "pipeline1.0/batchA"
 )
-PIPELINE_INPUT_BATCH = os.environ.get("PIPELINE_INPUT_BATCH", "batchC/batchC3")
+PIPELINE_INPUT_BATCH = os.environ.get("PIPELINE_INPUT_BATCH", "batchA")
 
 # === MODELLO ===
 MODEL_PATH = (
@@ -909,16 +909,16 @@ def is_led_like_diode_box(image_binary, box) -> bool:
         dx = comp_cx - core_cx
         dy = comp_cy - core_cy
 
-        # le frecce del LED stanno di lato, non quasi sopra il centro
-        if abs(dx) < core_w * 0.35:
-            continue
-
-        # e non devono stare troppo allineate orizzontalmente al centro
-        if abs(dy) < core_h * 0.08:
-            continue
-
         aspect = max(sw, sh) / float(max(1, min(sw, sh)))
-        if aspect < 1.2:
+
+        # Due modalita' valide:
+        # 1) tratti obliqui/laterali ben allungati;
+        # 2) due piccole componenti staccate sopra il diodo, tipiche
+        #    delle frecce LED rasterizzate quasi quadrate.
+        lateral_arrow = abs(dx) >= core_w * 0.35 and abs(dy) >= core_h * 0.08 and aspect >= 1.2
+        upper_led_marker = abs(dx) >= core_w * 0.10 and dy <= -core_h * 0.35 and aspect >= 0.9
+
+        if not (lateral_arrow or upper_led_marker):
             continue
 
         detached_arrow_like += 1
@@ -1584,8 +1584,8 @@ def remap_special_component(image_gray, image_binary, box, predicted_class_name:
     if predicted_class_name == "Switch" and is_push_button_like_bbox(image_binary, box):
         return "Push_Button"
 
-    #if predicted_class_name == "Diode" and is_led_like_diode_box(image_binary, box):
-    #    return "LED"
+    if predicted_class_name == "Diode" and is_led_like_diode_box(image_binary, box):
+        return "LED"
 
     return predicted_class_name
 

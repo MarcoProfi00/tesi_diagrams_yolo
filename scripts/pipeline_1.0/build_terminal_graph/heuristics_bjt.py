@@ -13,6 +13,12 @@ def is_bjt_base_terminal(term: dict) -> bool:
     return "transistor" in class_name and terminal_name == "B"
 
 
+def is_bjt_non_base_terminal(term: dict) -> bool:
+    class_name = normalize_class_name(term.get("component_class_name"))
+    terminal_name = str(get_preferred_terminal_public_name(term) or "").strip().upper()
+    return "transistor" in class_name and terminal_name != "B"
+
+
 # Unisce label spezzate che rappresentano la stessa linea della base (B)
 # transistor, perche' la linea della B puo' essere spezzata dalla maschera.
 def merge_bjt_base_aligned_labels(
@@ -39,7 +45,15 @@ def merge_bjt_base_aligned_labels(
             parent[max(root_a, root_b)] = min(root_a, root_b)
 
     bbox_by_instance = build_component_bbox_by_instance(components)
+    terminal_by_id = {term["terminal_id"]: term for term in terminals}
     base_terms = [term for term in terminals if is_bjt_base_terminal(term)]
+
+    def label_has_non_base_bjt(label):
+        for terminal_id in label_to_terminal_ids.get(int(label), []):
+            term = terminal_by_id.get(terminal_id)
+            if term is not None and is_bjt_non_base_terminal(term):
+                return True
+        return False
 
     for i, term_a in enumerate(base_terms):
         info_a = terminal_match_debug.get(term_a["terminal_id"], {})
@@ -55,6 +69,12 @@ def merge_bjt_base_aligned_labels(
             info_b = terminal_match_debug.get(term_b["terminal_id"], {})
             label_b = info_b.get("matched_label")
             if label_b is None or int(label_a) == int(label_b):
+                continue
+
+            # Non fondere una base con una label che contiene gia' C/E di un
+            # transistor: in quel caso trascineremmo un terminale attivo nel
+            # net della base.
+            if label_has_non_base_bjt(label_a) or label_has_non_base_bjt(label_b):
                 continue
 
             bbox_b = bbox_by_instance.get(str(term_b.get("instance_id")))

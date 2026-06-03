@@ -1,0 +1,88 @@
+{
+  "metadata": {
+    "circuit_id": "c11",
+    "batch": "C2",
+    "batch_dir": "batchC2",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\images\\c11.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\json\\c11.json",
+    "image_file": "c11.jpg",
+    "json_file": "c11.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-03 18:09:57",
+    "judge_latency_seconds": 16.676,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=8647, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=1035, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=9682)",
+  "judge_result": {
+    "circuit_id": "c11",
+    "batch": "C2",
+    "image_file": "c11.jpg",
+    "json_file": "c11.json",
+    "image_graph_fidelity_score": 83,
+    "decision": "HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 22,
+      "terminals_pins": 16,
+      "graph_connections": 37,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 3,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "component_class_error",
+        "description": "I due condensatori di ingresso laterali sono rappresentati come Polarized_Capacitor, ma nell'immagine appaiono come condensatori non polarizzati.",
+        "image_evidence": "C4 e C5 sul lato sinistro non mostrano segno di polarità, a differenza di C3 e C2 che hanno il segno '+'.",
+        "json_evidence": "polarized_capacitor20.2 e polarized_capacitor20.3 sono class_name Polarized_Capacitor con terminali positive/negative."
+      },
+      {
+        "type": "missing_component_or_terminal",
+        "description": "Nel JSON manca il terminale/ingresso esterno visibile a sinistra che collega i due condensatori di ingresso e il nodo comune verso massa.",
+        "image_evidence": "A sinistra sono visibili due simboli circolari/terminali di ingresso collegati rispettivamente a C4 e C5, con il nodo centrale connesso anche a massa e al pin 2 dell'IC.",
+        "json_evidence": "Non sono presenti componenti Terminal per gli ingressi sinistri; i condensatori polarized_capacitor20.2 e polarized_capacitor20.3 sono collegati direttamente tra IC e GND/pin2 senza terminali di ingresso esterni."
+      },
+      {
+        "type": "wrong_graph_connection",
+        "description": "I condensatori di ingresso C4 e C5 sono collegati nel JSON direttamente al nodo GND/pin 2 sul loro lato positivo, mentre nell'immagine il loro lato esterno va ai terminali di ingresso; è il nodo comune tra i due ingressi che va a massa e al pin 2.",
+        "image_evidence": "C4 collega il pin 1 dell'IC al terminale di ingresso superiore; C5 collega il pin 13 dell'IC al terminale di ingresso inferiore. Il nodo centrale tra i due terminali di ingresso è connesso al pin 2 e a GND.",
+        "json_evidence": "polarized_capacitor20.2_positive e polarized_capacitor20.3_positive sono nella stessa net di gnd9.2_t1 e integrated_circuit11.1_left_2."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "component_class_uncertainty",
+        "description": "Un condensatore non polarizzato visibile sulla linea di alimentazione è rappresentato come Polarized_Capacitor."
+      },
+      {
+        "type": "switch_state_uncertainty",
+        "description": "Lo stato open dello switch è coerente graficamente ma la certezza topologica del contatto mobile è limitata dall'immagine stilizzata."
+      }
+    ],
+    "missing_from_json": [
+      "Due terminali/ingressi esterni sul lato sinistro collegati ai condensatori di ingresso e al nodo comune di massa"
+    ],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "C4 tra pin 1 dell'IC e terminale di ingresso superiore; C5 tra pin 13 dell'IC e terminale di ingresso inferiore; nodo comune degli ingressi connesso a pin 2 e GND.",
+        "found_in_json": "polarized_capacitor20.2_positive e polarized_capacitor20.3_positive connessi direttamente a gnd9.2_t1 e integrated_circuit11.1_left_2, senza terminali di ingresso esterni.",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "La polarità di alcuni condensatori non è verificabile o non è mostrata chiaramente per tutti i simboli; dove non visibile non è stata trattata come errore critico.",
+      "La corrispondenza tra speaker24.1/speaker24.2 e K1/K2 è plausibile ma gli identificativi non sono deducibili dal solo JSON oltre ai collegamenti.",
+      "La numerazione dei pin dell'IC appare complessivamente coerente con i numeri visibili, ma non viene valutato alcun significato funzionale dei pin."
+    ],
+    "short_explanation": "Il JSON riconosce quasi tutti i componenti principali e gran parte della topologia dell'IC, alimentazione, masse, switch e speaker. Le connessioni principali a destra e in alto sono in larga parte fedeli. L'errore più rilevante riguarda la sezione di ingresso sinistra: mancano i terminali esterni e i due condensatori di ingresso risultano connessi direttamente al nodo GND/pin 2 invece che ai rispettivi ingressi visibili. Sono presenti anche classificazioni discutibili di condensatori come polarizzati. La struttura resta comunque una buona base correggibile."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c11\",\"batch\":\"C2\",\"image_file\":\"c11.jpg\",\"json_file\":\"c11.json\",\"image_graph_fidelity_score\":83,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":22,\"terminals_pins\":16,\"graph_connections\":37,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":3,\"minor\":2},\"critical_errors\":[],\"major_errors\":[{\"type\":\"component_class_error\",\"description\":\"I due condensatori di ingresso laterali sono rappresentati come Polarized_Capacitor, ma nell'immagine appaiono come condensatori non polarizzati.\",\"image_evidence\":\"C4 e C5 sul lato sinistro non mostrano segno di polarità, a differenza di C3 e C2 che hanno il segno '+'.\",\"json_evidence\":\"polarized_capacitor20.2 e polarized_capacitor20.3 sono class_name Polarized_Capacitor con terminali positive/negative.\"},{\"type\":\"missing_component_or_terminal\",\"description\":\"Nel JSON manca il terminale/ingresso esterno visibile a sinistra che collega i due condensatori di ingresso e il nodo comune verso massa.\",\"image_evidence\":\"A sinistra sono visibili due simboli circolari/terminali di ingresso collegati rispettivamente a C4 e C5, con il nodo centrale connesso anche a massa e al pin 2 dell'IC.\",\"json_evidence\":\"Non sono presenti componenti Terminal per gli ingressi sinistri; i condensatori polarized_capacitor20.2 e polarized_capacitor20.3 sono collegati direttamente tra IC e GND/pin2 senza terminali di ingresso esterni.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"I condensatori di ingresso C4 e C5 sono collegati nel JSON direttamente al nodo GND/pin 2 sul loro lato positivo, mentre nell'immagine il loro lato esterno va ai terminali di ingresso; è il nodo comune tra i due ingressi che va a massa e al pin 2.\",\"image_evidence\":\"C4 collega il pin 1 dell'IC al terminale di ingresso superiore; C5 collega il pin 13 dell'IC al terminale di ingresso inferiore. Il nodo centrale tra i due terminali di ingresso è connesso al pin 2 e a GND.\",\"json_evidence\":\"polarized_capacitor20.2_positive e polarized_capacitor20.3_positive sono nella stessa net di gnd9.2_t1 e integrated_circuit11.1_left_2.\"}],\"minor_errors\":[{\"type\":\"component_class_uncertainty\",\"description\":\"Un condensatore non polarizzato visibile sulla linea di alimentazione è rappresentato come Polarized_Capacitor.\"},{\"type\":\"switch_state_uncertainty\",\"description\":\"Lo stato open dello switch è coerente graficamente ma la certezza topologica del contatto mobile è limitata dall'immagine stilizzata.\"}],\"missing_from_json\":[\"Due terminali/ingressi esterni sul lato sinistro collegati ai condensatori di ingresso e al nodo comune di massa\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"C4 tra pin 1 dell'IC e terminale di ingresso superiore; C5 tra pin 13 dell'IC e terminale di ingresso inferiore; nodo comune degli ingressi connesso a pin 2 e GND.\",\"found_in_json\":\"polarized_capacitor20.2_positive e polarized_capacitor20.3_positive connessi direttamente a gnd9.2_t1 e integrated_circuit11.1_left_2, senza terminali di ingresso esterni.\",\"severity\":\"major\"}],\"uncertain_points\":[\"La polarità di alcuni condensatori non è verificabile o non è mostrata chiaramente per tutti i simboli; dove non visibile non è stata trattata come errore critico.\",\"La corrispondenza tra speaker24.1/speaker24.2 e K1/K2 è plausibile ma gli identificativi non sono deducibili dal solo JSON oltre ai collegamenti.\",\"La numerazione dei pin dell'IC appare complessivamente coerente con i numeri visibili, ma non viene valutato alcun significato funzionale dei pin.\"],\"short_explanation\":\"Il JSON riconosce quasi tutti i componenti principali e gran parte della topologia dell'IC, alimentazione, masse, switch e speaker. Le connessioni principali a destra e in alto sono in larga parte fedeli. L'errore più rilevante riguarda la sezione di ingresso sinistra: mancano i terminali esterni e i due condensatori di ingresso risultano connessi direttamente al nodo GND/pin 2 invece che ai rispettivi ingressi visibili. Sono presenti anche classificazioni discutibili di condensatori come polarizzati. La struttura resta comunque una buona base correggibile.\"}"
+}

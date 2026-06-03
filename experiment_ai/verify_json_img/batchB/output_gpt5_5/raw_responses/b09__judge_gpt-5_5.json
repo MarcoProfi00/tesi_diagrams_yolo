@@ -1,0 +1,79 @@
+{
+  "metadata": {
+    "circuit_id": "b09",
+    "batch": "B",
+    "batch_dir": "batchB",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\images\\b09.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\json\\b09.json",
+    "image_file": "b09.jpg",
+    "json_file": "b09.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-03 18:06:33",
+    "judge_latency_seconds": 14.183,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=5521, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=823, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=6344)",
+  "judge_result": {
+    "circuit_id": "b09",
+    "batch": "B",
+    "image_file": "b09.jpg",
+    "json_file": "b09.json",
+    "image_graph_fidelity_score": 86,
+    "decision": "HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 23,
+      "terminals_pins": 17,
+      "graph_connections": 38,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 2,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "component_class_or_semantics",
+        "description": "Il nodo/label visibile VIN è rappresentato come un generico Terminal collegato al nodo tra le due batterie; la topologia del punto è corretta, ma la semantica visibile VIN non è preservata nel componente.",
+        "image_evidence": "A sinistra è visibile un terminale circolare etichettato VIN collegato al nodo comune fra VTR2 e VTR1.",
+        "json_evidence": "Il JSON contiene terminal26.1_t1 collegato a battery2.1_negative e battery2.2_positive, senza label VIN."
+      },
+      {
+        "type": "component_class_or_semantics",
+        "description": "Il nodo/label visibile VOUT è rappresentato come un generico Terminal collegato al nodo di uscita; la topologia del punto è corretta, ma la semantica visibile VOUT non è preservata nel componente.",
+        "image_evidence": "A destra è visibile un terminale circolare etichettato VOUT collegato alla linea di uscita comune a M1/M2, condensatore e resistore.",
+        "json_evidence": "Il JSON contiene terminal26.2_t1 collegato a mosfet16.1_D, mosfet16.2_D, polarized_capacitor20.1_positive e resistor22.1_t1, senza label VOUT."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "label_omission",
+        "description": "Le etichette topologiche visibili dei generatori VTR1 e VTR2 non sono conservate; sono presenti come due Battery generiche."
+      },
+      {
+        "type": "label_omission",
+        "description": "Le etichette visibili dei MOSFET M1 e M2 non sono conservate negli identificativi; sono rappresentati come mosfet16.1 e mosfet16.2."
+      }
+    ],
+    "missing_from_json": [
+      "Label VIN associata al terminale sinistro",
+      "Label VOUT associata al terminale destro",
+      "Label VTR1/VTR2 associata alle due batterie",
+      "Label M1/M2 associata ai due MOSFET"
+    ],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "La corrispondenza esatta tra mosfet16.1/mosfet16.2 e le etichette visive M1/M2 è deducibile dalla posizione ma non esplicitata nel JSON.",
+      "La polarità del condensatore verso massa è indicata nel JSON come polarized_capacitor positivo sul nodo di uscita e negativo a GND; dall'immagine il simbolo mostra un condensatore verso massa, ma la polarità grafica non è completamente inequivocabile.",
+      "I nomi D/S/G dei terminali dei MOSFET non sono verificabili senza usare conoscenza esterna del simbolo/pinout; è verificabile soprattutto la connettività geometrica dei tre terminali."
+    ],
+    "short_explanation": "Il JSON riproduce bene la struttura principale: due MOSFET in serie tra VDD e VSS, due sorgenti a sinistra che pilotano i gate, nodo intermedio VIN, nodo di uscita comune con condensatore e resistore verso GND e terminale VOUT. Non risultano collegamenti topologici palesemente errati nel campo graph. Le principali carenze riguardano la perdita di alcune label visibili e la rappresentazione generica dei terminali VIN/VOUT; alcuni dettagli di polarità e nomi dei terminali MOSFET non sono pienamente verificabili dall'immagine."
+  },
+  "raw_model_output": "{\"circuit_id\":\"b09\",\"batch\":\"B\",\"image_file\":\"b09.jpg\",\"json_file\":\"b09.json\",\"image_graph_fidelity_score\":86,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":23,\"terminals_pins\":17,\"graph_connections\":38,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":2,\"minor\":2},\"critical_errors\":[],\"major_errors\":[{\"type\":\"component_class_or_semantics\",\"description\":\"Il nodo/label visibile VIN è rappresentato come un generico Terminal collegato al nodo tra le due batterie; la topologia del punto è corretta, ma la semantica visibile VIN non è preservata nel componente.\",\"image_evidence\":\"A sinistra è visibile un terminale circolare etichettato VIN collegato al nodo comune fra VTR2 e VTR1.\",\"json_evidence\":\"Il JSON contiene terminal26.1_t1 collegato a battery2.1_negative e battery2.2_positive, senza label VIN.\"},{\"type\":\"component_class_or_semantics\",\"description\":\"Il nodo/label visibile VOUT è rappresentato come un generico Terminal collegato al nodo di uscita; la topologia del punto è corretta, ma la semantica visibile VOUT non è preservata nel componente.\",\"image_evidence\":\"A destra è visibile un terminale circolare etichettato VOUT collegato alla linea di uscita comune a M1/M2, condensatore e resistore.\",\"json_evidence\":\"Il JSON contiene terminal26.2_t1 collegato a mosfet16.1_D, mosfet16.2_D, polarized_capacitor20.1_positive e resistor22.1_t1, senza label VOUT.\"}],\"minor_errors\":[{\"type\":\"label_omission\",\"description\":\"Le etichette topologiche visibili dei generatori VTR1 e VTR2 non sono conservate; sono presenti come due Battery generiche.\"},{\"type\":\"label_omission\",\"description\":\"Le etichette visibili dei MOSFET M1 e M2 non sono conservate negli identificativi; sono rappresentati come mosfet16.1 e mosfet16.2.\"}],\"missing_from_json\":[\"Label VIN associata al terminale sinistro\",\"Label VOUT associata al terminale destro\",\"Label VTR1/VTR2 associata alle due batterie\",\"Label M1/M2 associata ai due MOSFET\"],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"La corrispondenza esatta tra mosfet16.1/mosfet16.2 e le etichette visive M1/M2 è deducibile dalla posizione ma non esplicitata nel JSON.\",\"La polarità del condensatore verso massa è indicata nel JSON come polarized_capacitor positivo sul nodo di uscita e negativo a GND; dall'immagine il simbolo mostra un condensatore verso massa, ma la polarità grafica non è completamente inequivocabile.\",\"I nomi D/S/G dei terminali dei MOSFET non sono verificabili senza usare conoscenza esterna del simbolo/pinout; è verificabile soprattutto la connettività geometrica dei tre terminali.\"],\"short_explanation\":\"Il JSON riproduce bene la struttura principale: due MOSFET in serie tra VDD e VSS, due sorgenti a sinistra che pilotano i gate, nodo intermedio VIN, nodo di uscita comune con condensatore e resistore verso GND e terminale VOUT. Non risultano collegamenti topologici palesemente errati nel campo graph. Le principali carenze riguardano la perdita di alcune label visibili e la rappresentazione generica dei terminali VIN/VOUT; alcuni dettagli di polarità e nomi dei terminali MOSFET non sono pienamente verificabili dall'immagine.\"}"
+}

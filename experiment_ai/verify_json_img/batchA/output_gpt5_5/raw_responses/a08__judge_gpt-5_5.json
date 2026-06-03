@@ -1,0 +1,105 @@
+{
+  "metadata": {
+    "circuit_id": "a08",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a08.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a08.json",
+    "image_file": "a08.jpg",
+    "json_file": "a08.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-03 18:04:59",
+    "judge_latency_seconds": 19.929,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=5606, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1173, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=6779)",
+  "judge_result": {
+    "circuit_id": "a08",
+    "batch": "A",
+    "image_file": "a08.jpg",
+    "json_file": "a08.json",
+    "image_graph_fidelity_score": 76,
+    "decision": "HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 22,
+      "terminals_pins": 16,
+      "graph_connections": 30,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 3,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "missing_visible_terminal_label_component",
+        "description": "Il JSON non rappresenta i terminali/etichette topologiche visibili 'IN', 'Trigger' e 'LED' come nodi o componenti separati; tali label sono utili per la topologia visibile del circuito.",
+        "image_evidence": "Nell'immagine sono visibili tre callout: IN sul nodo superiore, Trigger sul nodo centrale sinistro, LED sul nodo tra LED e collettore del transistor.",
+        "json_evidence": "Nei componenti JSON non compaiono terminali o label dedicati a IN, Trigger o LED; è presente solo signal_source23.1 come sorgente."
+      },
+      {
+        "type": "wrong_or_incomplete_graph_connection",
+        "description": "Il nodo inferiore della sorgente è collegato solo al proprio simbolo GND separato, mentre nell'immagine il riferimento di massa della sorgente dovrebbe corrispondere alla stessa massa inferiore del resto del circuito.",
+        "image_evidence": "Il terminale inferiore della sorgente V2 termina su un simbolo GND; il circuito mostra anche un simbolo GND sul nodo inferiore comune di C1 e R6, indicando la stessa massa topologica.",
+        "json_evidence": "signal_source23.1_t2 è collegato solo a gnd9.1_t1, mentre gnd9.1_t1 non è connesso a gnd9.2_t1 o alla rete di capacitor4.1_t2/resistor22.2_t2."
+      },
+      {
+        "type": "wrong_or_incomplete_graph_connection",
+        "description": "La rete centrale che include il nodo Trigger, il terminale inferiore di R1, il terminale superiore di C1 e l'ingresso della resistenza verso la base del transistor è rappresentata in modo parziale: manca il terminale/label Trigger e la connessione è affidata solo ai componenti discreti.",
+        "image_evidence": "Il nodo centrale collega visibilmente R1, C1, il callout Trigger e la resistenza orizzontale verso la base del transistor.",
+        "json_evidence": "capacitor4.1_t1 è collegato a resistor22.1_t2 e resistor22.4_t1, ma non esiste alcun terminale Trigger nel JSON."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "component_label_semantics",
+        "description": "La sorgente visibile è descritta genericamente come Signal_Source; la classe è accettabile ma non conserva alcuni dettagli simbolici visibili della sorgente."
+      },
+      {
+        "type": "terminal_orientation_uncertainty",
+        "description": "Alcune posizioni relative dei terminali nei componenti discreti sono semplificate rispetto al disegno, pur senza alterare necessariamente la connessione principale."
+      }
+    ],
+    "missing_from_json": [
+      "Label/topological terminal IN",
+      "Label/topological terminal Trigger",
+      "Label/topological terminal LED",
+      "Connessione esplicita tra i due simboli GND come stessa massa topologica"
+    ],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "Il GND della sorgente e il GND inferiore del circuito rappresentano la stessa massa topologica visibile tramite simboli GND.",
+        "found_in_json": "gnd9.1_t1 è connesso solo a signal_source23.1_t2; gnd9.2_t1 è connesso solo a capacitor4.1_t2 e resistor22.2_t2.",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "Il nodo superiore include sorgente, terminale alto di R1, terminale alto di R7 e terminale alto del LED, con label IN visibile.",
+        "found_in_json": "signal_source23.1_t1 è collegato a led12.1_anode, resistor22.1_t1 e resistor22.3_t1, ma la label IN non è rappresentata.",
+        "severity": "minor"
+      },
+      {
+        "expected_from_image": "Il nodo tra LED e transistor ha una label LED visibile.",
+        "found_in_json": "led12.1_cathode è collegato solo a npn_transistor18.1_C senza terminale/label LED.",
+        "severity": "minor"
+      },
+      {
+        "expected_from_image": "Il nodo centrale Trigger collega R1, C1 e la resistenza verso la base, con label Trigger visibile.",
+        "found_in_json": "capacitor4.1_t1 è collegato a resistor22.1_t2 e resistor22.4_t1, senza terminale/label Trigger.",
+        "severity": "minor"
+      }
+    ],
+    "uncertain_points": [
+      "La polarità esatta del condensatore non è chiaramente verificabile come informazione topologica dal JSON e dall'immagine.",
+      "La distinzione funzionale dei pin del transistor è stata valutata solo in base alla disposizione grafica visibile, senza usare pinout esterni."
+    ],
+    "short_explanation": "Il JSON riconosce quasi tutti i componenti principali e gran parte delle connessioni tra sorgente, resistori, condensatore, LED e transistor. La topologia principale è in larga misura recuperabile. Le discrepanze principali riguardano l'assenza delle label topologiche visibili IN, Trigger e LED e soprattutto la separazione dei due simboli GND, che nell'immagine rappresentano la massa comune. Per questo la fedeltà è buona ma non perfetta."
+  },
+  "raw_model_output": "{\"circuit_id\":\"a08\",\"batch\":\"A\",\"image_file\":\"a08.jpg\",\"json_file\":\"a08.json\",\"image_graph_fidelity_score\":76,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":22,\"terminals_pins\":16,\"graph_connections\":30,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":3,\"minor\":2},\"critical_errors\":[],\"major_errors\":[{\"type\":\"missing_visible_terminal_label_component\",\"description\":\"Il JSON non rappresenta i terminali/etichette topologiche visibili 'IN', 'Trigger' e 'LED' come nodi o componenti separati; tali label sono utili per la topologia visibile del circuito.\",\"image_evidence\":\"Nell'immagine sono visibili tre callout: IN sul nodo superiore, Trigger sul nodo centrale sinistro, LED sul nodo tra LED e collettore del transistor.\",\"json_evidence\":\"Nei componenti JSON non compaiono terminali o label dedicati a IN, Trigger o LED; è presente solo signal_source23.1 come sorgente.\"},{\"type\":\"wrong_or_incomplete_graph_connection\",\"description\":\"Il nodo inferiore della sorgente è collegato solo al proprio simbolo GND separato, mentre nell'immagine il riferimento di massa della sorgente dovrebbe corrispondere alla stessa massa inferiore del resto del circuito.\",\"image_evidence\":\"Il terminale inferiore della sorgente V2 termina su un simbolo GND; il circuito mostra anche un simbolo GND sul nodo inferiore comune di C1 e R6, indicando la stessa massa topologica.\",\"json_evidence\":\"signal_source23.1_t2 è collegato solo a gnd9.1_t1, mentre gnd9.1_t1 non è connesso a gnd9.2_t1 o alla rete di capacitor4.1_t2/resistor22.2_t2.\"},{\"type\":\"wrong_or_incomplete_graph_connection\",\"description\":\"La rete centrale che include il nodo Trigger, il terminale inferiore di R1, il terminale superiore di C1 e l'ingresso della resistenza verso la base del transistor è rappresentata in modo parziale: manca il terminale/label Trigger e la connessione è affidata solo ai componenti discreti.\",\"image_evidence\":\"Il nodo centrale collega visibilmente R1, C1, il callout Trigger e la resistenza orizzontale verso la base del transistor.\",\"json_evidence\":\"capacitor4.1_t1 è collegato a resistor22.1_t2 e resistor22.4_t1, ma non esiste alcun terminale Trigger nel JSON.\"}],\"minor_errors\":[{\"type\":\"component_label_semantics\",\"description\":\"La sorgente visibile è descritta genericamente come Signal_Source; la classe è accettabile ma non conserva alcuni dettagli simbolici visibili della sorgente.\"},{\"type\":\"terminal_orientation_uncertainty\",\"description\":\"Alcune posizioni relative dei terminali nei componenti discreti sono semplificate rispetto al disegno, pur senza alterare necessariamente la connessione principale.\"}],\"missing_from_json\":[\"Label/topological terminal IN\",\"Label/topological terminal Trigger\",\"Label/topological terminal LED\",\"Connessione esplicita tra i due simboli GND come stessa massa topologica\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Il GND della sorgente e il GND inferiore del circuito rappresentano la stessa massa topologica visibile tramite simboli GND.\",\"found_in_json\":\"gnd9.1_t1 è connesso solo a signal_source23.1_t2; gnd9.2_t1 è connesso solo a capacitor4.1_t2 e resistor22.2_t2.\",\"severity\":\"major\"},{\"expected_from_image\":\"Il nodo superiore include sorgente, terminale alto di R1, terminale alto di R7 e terminale alto del LED, con label IN visibile.\",\"found_in_json\":\"signal_source23.1_t1 è collegato a led12.1_anode, resistor22.1_t1 e resistor22.3_t1, ma la label IN non è rappresentata.\",\"severity\":\"minor\"},{\"expected_from_image\":\"Il nodo tra LED e transistor ha una label LED visibile.\",\"found_in_json\":\"led12.1_cathode è collegato solo a npn_transistor18.1_C senza terminale/label LED.\",\"severity\":\"minor\"},{\"expected_from_image\":\"Il nodo centrale Trigger collega R1, C1 e la resistenza verso la base, con label Trigger visibile.\",\"found_in_json\":\"capacitor4.1_t1 è collegato a resistor22.1_t2 e resistor22.4_t1, senza terminale/label Trigger.\",\"severity\":\"minor\"}],\"uncertain_points\":[\"La polarità esatta del condensatore non è chiaramente verificabile come informazione topologica dal JSON e dall'immagine.\",\"La distinzione funzionale dei pin del transistor è stata valutata solo in base alla disposizione grafica visibile, senza usare pinout esterni.\"],\"short_explanation\":\"Il JSON riconosce quasi tutti i componenti principali e gran parte delle connessioni tra sorgente, resistori, condensatore, LED e transistor. La topologia principale è in larga misura recuperabile. Le discrepanze principali riguardano l'assenza delle label topologiche visibili IN, Trigger e LED e soprattutto la separazione dei due simboli GND, che nell'immagine rappresentano la massa comune. Per questo la fedeltà è buona ma non perfetta.\"}"
+}

@@ -1,0 +1,125 @@
+{
+  "metadata": {
+    "circuit_id": "b01",
+    "batch": "B",
+    "batch_dir": "batchB",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\images\\b01.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\json\\b01.json",
+    "image_file": "b01.jpg",
+    "json_file": "b01.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-03 18:03:22",
+    "judge_latency_seconds": 36.542,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=6183, input_tokens_details=InputTokensDetails(cached_tokens=5376), output_tokens=1873, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=8056)",
+  "judge_result": {
+    "circuit_id": "b01",
+    "batch": "B",
+    "image_file": "b01.jpg",
+    "json_file": "b01.json",
+    "image_graph_fidelity_score": 64,
+    "decision": "MEDIUM",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 20,
+      "terminals_pins": 13,
+      "graph_connections": 25,
+      "visible_semantics": 6
+    },
+    "error_counts": {
+      "critical": 1,
+      "major": 4,
+      "minor": 2
+    },
+    "critical_errors": [
+      {
+        "type": "wrong_net_merge",
+        "description": "Il JSON unisce in un'unica rete GND, il terminale negativo di uscita, l'alimentazione inferiore dell'operazionale e diversi terminali di entrambi i transistor; nell'immagine la rete di massa include il nodo inferiore comune, ma non include i collettori/nodi superiori dei transistor né il nodo intermedio di Q2/R3.",
+        "image_evidence": "La linea inferiore con simbolo GND collega gli emettitori inferiori dei transistor e il terminale negativo di uscita; il nodo tra Q2 e R3 è più in alto e distinto, e il collettore/nodo di Q1 è connesso a R1, non direttamente a massa.",
+        "json_evidence": "Nel graph, gnd9.1_t1 è connesso a npn_transistor18.1_B, npn_transistor18.1_C, npn_transistor18.2_B, npn_transistor18.2_C, operational_amplifier19.1_aux2 e terminal26.2_t1."
+      }
+    ],
+    "major_errors": [
+      {
+        "type": "missing_component",
+        "description": "Il JSON non rappresenta il ramo/simbolo di alimentazione VDD visibile sull'operazionale come terminale o sorgente dedicata, mentre introduce una sola sorgente associata a VOS.",
+        "image_evidence": "Sopra l'operazionale è visibile una freccia di alimentazione etichettata VDD collegata al simbolo dell'operazionale.",
+        "json_evidence": "Non c'è un componente o terminale VDD; operational_amplifier19.1_aux1 è presente ma non connesso e non semanticamente identificato."
+      },
+      {
+        "type": "wrong_component_class_or_mapping",
+        "description": "Il componente voltage_source31.1 corrisponde probabilmente alla sorgente VOS, ma nel JSON è collegato tra un ingresso dell'operazionale e la rete superiore dei resistori, mentre nell'immagine VOS è in serie tra il nodo sotto R2 e l'ingresso invertente dell'operazionale.",
+        "image_evidence": "Il cerchio VOS è disegnato tra il nodo inferiore di R2 e il terminale '-' dell'operazionale.",
+        "json_evidence": "voltage_source31.1_negative è connesso solo a operational_amplifier19.1_in1; voltage_source31.1_positive è connesso a resistor22.2_t2 e resistor22.3_t1."
+      },
+      {
+        "type": "wrong_graph_connection",
+        "description": "Il nodo di uscita dell'operazionale e terminale positivo VREF è connesso alla barra superiore che alimenta le estremità superiori di R2 e R3; nel JSON l'uscita è connessa a resistor22.1_t1 e resistor22.2_t1, ma la rete superiore risulta spezzata o parzialmente assegnata in modo errato rispetto ai resistori dell'immagine.",
+        "image_evidence": "La linea dall'uscita dell'operazionale torna alla barra superiore, comune ai terminali superiori di R2 e R3.",
+        "json_evidence": "operational_amplifier19.1_out è connesso a resistor22.1_t1, resistor22.2_t1 e terminal26.1_t1; resistor22.3_t1 non è in questa rete ma è connesso a voltage_source31.1_positive e resistor22.2_t2."
+      },
+      {
+        "type": "wrong_graph_connection",
+        "description": "La rete del nodo comune tra R1 superiore, R2 inferiore, R3/Q2 e ingresso non invertente dell'operazionale è rappresentata solo parzialmente: il JSON connette npn_transistor18.1_E, resistor22.1_t2 e operational_amplifier19.1_in2, ma non include correttamente il ramo verso R2 e il collettore/nodo di Q2 visibile.",
+        "image_evidence": "Il nodo centrale orizzontale collega il terminale superiore di R1, il terminale inferiore di R2, il ramo proveniente da R3/Q2 e l'ingresso '+' dell'operazionale.",
+        "json_evidence": "npn_transistor18.1_E è connesso a operational_amplifier19.1_in2 e resistor22.1_t2; i terminali di resistor22.2 e npn_transistor18.2 associati al nodo centrale non compaiono in questa rete."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "terminal_orientation",
+        "description": "I terminali B/E/C dei transistor nel JSON hanno posizioni relative poco coerenti con il disegno: l'emettitore dei transistor è visivamente verso il basso/massa, non verso l'alto."
+      },
+      {
+        "type": "semantic_warning",
+        "description": "Il JSON segnala operational_amplifier19.1_aux1 come terminale non connesso; nell'immagine è visibile una connessione superiore di alimentazione all'operazionale."
+      }
+    ],
+    "missing_from_json": [
+      "Connessione/terminale semanticamente riconoscibile VDD dell'operazionale",
+      "Collegamento corretto del nodo centrale comune a R1, R2, ramo Q2/R3 e ingresso non invertente",
+      "Collegamento corretto di VOS tra nodo sotto R2 e ingresso invertente",
+      "Collegamento corretto del collettore/nodo di Q1 al terminale inferiore di R1"
+    ],
+    "extra_in_json": [
+      "Connessioni dirette tra GND e npn_transistor18.1_B",
+      "Connessioni dirette tra GND e npn_transistor18.1_C",
+      "Connessioni dirette tra GND e npn_transistor18.2_B",
+      "Connessioni dirette tra GND e npn_transistor18.2_C",
+      "Connessione della sorgente voltage_source31.1_positive alla rete resistor22.2_t2/resistor22.3_t1 se intesa come VOS"
+    ],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "GND collegato al nodo inferiore comune degli emettitori dei transistor, al terminale inferiore dell'operazionale e al terminale negativo di uscita.",
+        "found_in_json": "GND connesso anche a basi/collettori di entrambi i transistor e ad altri nodi non a massa.",
+        "severity": "critical"
+      },
+      {
+        "expected_from_image": "VOS tra nodo inferiore di R2 e ingresso '-' dell'operazionale.",
+        "found_in_json": "voltage_source31.1_negative connesso a operational_amplifier19.1_in1 e voltage_source31.1_positive connesso alla rete resistor22.2_t2/resistor22.3_t1.",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "Uscita operazionale/terminale positivo VREF connessa alla barra superiore comune ai terminali superiori di R2 e R3.",
+        "found_in_json": "operational_amplifier19.1_out connesso a resistor22.1_t1, resistor22.2_t1 e terminal26.1_t1, mentre resistor22.3 non è sulla stessa rete superiore.",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "Nodo centrale comune a terminale superiore di R1, terminale inferiore di R2, ramo Q2/R3 e ingresso '+' dell'operazionale.",
+        "found_in_json": "La rete operational_amplifier19.1_in2/resistor22.1_t2/npn_transistor18.1_E manca dei terminali di R2 e Q2/R3 pertinenti.",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "La corrispondenza esatta tra resistor22.1, resistor22.2, resistor22.3 e i resistori R1, R2, R3 è deducibile solo dalla topologia del JSON, non da etichette di istanza.",
+      "Il verso esatto e quindi la denominazione B/C/E dei due transistor è parzialmente difficile da verificare solo dall'immagine stilizzata, anche se alcuni terminali risultano chiaramente incompatibili con la rete di massa nel JSON.",
+      "La distinzione tra ingressi in1/in2 dell'operazionale e i simboli '+'/'-' è presumibile dalla posizione ma non esplicitata con label funzionali nel JSON."
+    ],
+    "short_explanation": "Il JSON contiene molti componenti principali visibili, ma presenta una fusione errata della rete di massa con terminali dei transistor e diverse connessioni importanti assegnate a nodi sbagliati. La struttura resta in parte recuperabile, ma la fedeltà topologica è solo parziale."
+  },
+  "raw_model_output": "{\"circuit_id\":\"b01\",\"batch\":\"B\",\"image_file\":\"b01.jpg\",\"json_file\":\"b01.json\",\"image_graph_fidelity_score\":64,\"decision\":\"MEDIUM\",\"usable_as_graph_base\":true,\"scores\":{\"components\":20,\"terminals_pins\":13,\"graph_connections\":25,\"visible_semantics\":6},\"error_counts\":{\"critical\":1,\"major\":4,\"minor\":2},\"critical_errors\":[{\"type\":\"wrong_net_merge\",\"description\":\"Il JSON unisce in un'unica rete GND, il terminale negativo di uscita, l'alimentazione inferiore dell'operazionale e diversi terminali di entrambi i transistor; nell'immagine la rete di massa include il nodo inferiore comune, ma non include i collettori/nodi superiori dei transistor né il nodo intermedio di Q2/R3.\",\"image_evidence\":\"La linea inferiore con simbolo GND collega gli emettitori inferiori dei transistor e il terminale negativo di uscita; il nodo tra Q2 e R3 è più in alto e distinto, e il collettore/nodo di Q1 è connesso a R1, non direttamente a massa.\",\"json_evidence\":\"Nel graph, gnd9.1_t1 è connesso a npn_transistor18.1_B, npn_transistor18.1_C, npn_transistor18.2_B, npn_transistor18.2_C, operational_amplifier19.1_aux2 e terminal26.2_t1.\"}],\"major_errors\":[{\"type\":\"missing_component\",\"description\":\"Il JSON non rappresenta il ramo/simbolo di alimentazione VDD visibile sull'operazionale come terminale o sorgente dedicata, mentre introduce una sola sorgente associata a VOS.\",\"image_evidence\":\"Sopra l'operazionale è visibile una freccia di alimentazione etichettata VDD collegata al simbolo dell'operazionale.\",\"json_evidence\":\"Non c'è un componente o terminale VDD; operational_amplifier19.1_aux1 è presente ma non connesso e non semanticamente identificato.\"},{\"type\":\"wrong_component_class_or_mapping\",\"description\":\"Il componente voltage_source31.1 corrisponde probabilmente alla sorgente VOS, ma nel JSON è collegato tra un ingresso dell'operazionale e la rete superiore dei resistori, mentre nell'immagine VOS è in serie tra il nodo sotto R2 e l'ingresso invertente dell'operazionale.\",\"image_evidence\":\"Il cerchio VOS è disegnato tra il nodo inferiore di R2 e il terminale '-' dell'operazionale.\",\"json_evidence\":\"voltage_source31.1_negative è connesso solo a operational_amplifier19.1_in1; voltage_source31.1_positive è connesso a resistor22.2_t2 e resistor22.3_t1.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il nodo di uscita dell'operazionale e terminale positivo VREF è connesso alla barra superiore che alimenta le estremità superiori di R2 e R3; nel JSON l'uscita è connessa a resistor22.1_t1 e resistor22.2_t1, ma la rete superiore risulta spezzata o parzialmente assegnata in modo errato rispetto ai resistori dell'immagine.\",\"image_evidence\":\"La linea dall'uscita dell'operazionale torna alla barra superiore, comune ai terminali superiori di R2 e R3.\",\"json_evidence\":\"operational_amplifier19.1_out è connesso a resistor22.1_t1, resistor22.2_t1 e terminal26.1_t1; resistor22.3_t1 non è in questa rete ma è connesso a voltage_source31.1_positive e resistor22.2_t2.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"La rete del nodo comune tra R1 superiore, R2 inferiore, R3/Q2 e ingresso non invertente dell'operazionale è rappresentata solo parzialmente: il JSON connette npn_transistor18.1_E, resistor22.1_t2 e operational_amplifier19.1_in2, ma non include correttamente il ramo verso R2 e il collettore/nodo di Q2 visibile.\",\"image_evidence\":\"Il nodo centrale orizzontale collega il terminale superiore di R1, il terminale inferiore di R2, il ramo proveniente da R3/Q2 e l'ingresso '+' dell'operazionale.\",\"json_evidence\":\"npn_transistor18.1_E è connesso a operational_amplifier19.1_in2 e resistor22.1_t2; i terminali di resistor22.2 e npn_transistor18.2 associati al nodo centrale non compaiono in questa rete.\"}],\"minor_errors\":[{\"type\":\"terminal_orientation\",\"description\":\"I terminali B/E/C dei transistor nel JSON hanno posizioni relative poco coerenti con il disegno: l'emettitore dei transistor è visivamente verso il basso/massa, non verso l'alto.\"},{\"type\":\"semantic_warning\",\"description\":\"Il JSON segnala operational_amplifier19.1_aux1 come terminale non connesso; nell'immagine è visibile una connessione superiore di alimentazione all'operazionale.\"}],\"missing_from_json\":[\"Connessione/terminale semanticamente riconoscibile VDD dell'operazionale\",\"Collegamento corretto del nodo centrale comune a R1, R2, ramo Q2/R3 e ingresso non invertente\",\"Collegamento corretto di VOS tra nodo sotto R2 e ingresso invertente\",\"Collegamento corretto del collettore/nodo di Q1 al terminale inferiore di R1\"],\"extra_in_json\":[\"Connessioni dirette tra GND e npn_transistor18.1_B\",\"Connessioni dirette tra GND e npn_transistor18.1_C\",\"Connessioni dirette tra GND e npn_transistor18.2_B\",\"Connessioni dirette tra GND e npn_transistor18.2_C\",\"Connessione della sorgente voltage_source31.1_positive alla rete resistor22.2_t2/resistor22.3_t1 se intesa come VOS\"],\"wrong_graph_connections\":[{\"expected_from_image\":\"GND collegato al nodo inferiore comune degli emettitori dei transistor, al terminale inferiore dell'operazionale e al terminale negativo di uscita.\",\"found_in_json\":\"GND connesso anche a basi/collettori di entrambi i transistor e ad altri nodi non a massa.\",\"severity\":\"critical\"},{\"expected_from_image\":\"VOS tra nodo inferiore di R2 e ingresso '-' dell'operazionale.\",\"found_in_json\":\"voltage_source31.1_negative connesso a operational_amplifier19.1_in1 e voltage_source31.1_positive connesso alla rete resistor22.2_t2/resistor22.3_t1.\",\"severity\":\"major\"},{\"expected_from_image\":\"Uscita operazionale/terminale positivo VREF connessa alla barra superiore comune ai terminali superiori di R2 e R3.\",\"found_in_json\":\"operational_amplifier19.1_out connesso a resistor22.1_t1, resistor22.2_t1 e terminal26.1_t1, mentre resistor22.3 non è sulla stessa rete superiore.\",\"severity\":\"major\"},{\"expected_from_image\":\"Nodo centrale comune a terminale superiore di R1, terminale inferiore di R2, ramo Q2/R3 e ingresso '+' dell'operazionale.\",\"found_in_json\":\"La rete operational_amplifier19.1_in2/resistor22.1_t2/npn_transistor18.1_E manca dei terminali di R2 e Q2/R3 pertinenti.\",\"severity\":\"major\"}],\"uncertain_points\":[\"La corrispondenza esatta tra resistor22.1, resistor22.2, resistor22.3 e i resistori R1, R2, R3 è deducibile solo dalla topologia del JSON, non da etichette di istanza.\",\"Il verso esatto e quindi la denominazione B/C/E dei due transistor è parzialmente difficile da verificare solo dall'immagine stilizzata, anche se alcuni terminali risultano chiaramente incompatibili con la rete di massa nel JSON.\",\"La distinzione tra ingressi in1/in2 dell'operazionale e i simboli '+'/'-' è presumibile dalla posizione ma non esplicitata con label funzionali nel JSON.\"],\"short_explanation\":\"Il JSON contiene molti componenti principali visibili, ma presenta una fusione errata della rete di massa con terminali dei transistor e diverse connessioni importanti assegnate a nodi sbagliati. La struttura resta in parte recuperabile, ma la fedeltà topologica è solo parziale.\"}"
+}

@@ -1,0 +1,82 @@
+{
+  "metadata": {
+    "circuit_id": "c16",
+    "batch": "C2",
+    "batch_dir": "batchC2",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\images\\c16.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\json\\c16.json",
+    "image_file": "c16.jpg",
+    "json_file": "c16.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-03 18:11:31",
+    "judge_latency_seconds": 17.479,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=6330, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=965, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=7295)",
+  "judge_result": {
+    "circuit_id": "c16",
+    "batch": "C2",
+    "image_file": "c16.jpg",
+    "json_file": "c16.json",
+    "image_graph_fidelity_score": 87,
+    "decision": "HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 25,
+      "terminals_pins": 17,
+      "graph_connections": 37,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 2,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "wrong_graph_connection",
+        "description": "Il nodo del pin 3 dell'IC è unito nel JSON al nodo del terminale superiore del motore, al positivo di C2 e al terminale superiore di R1. Nell'immagine il pin 3 è collegato alla linea di alimentazione superiore, mentre il terminale superiore del motore, il positivo di C2 e il lato superiore di R1 sono anch'essi sulla stessa linea superiore: questa unione è sostanzialmente corretta; tuttavia nel JSON lo stesso nodo include anche il positivo di C1, coerente, ma la struttura non esplicita la label Vs visibile.",
+        "image_evidence": "La linea superiore comune collega pin 3 dell'IC, positivo di C1, lato superiore di R1, terminale superiore del motore e positivo di C2, con label Vs.",
+        "json_evidence": "integrated_circuit11.1_left_1 è connesso a motor17.1_t1, polarized_capacitor20.1_positive, polarized_capacitor20.2_positive, resistor22.1_t1."
+      },
+      {
+        "type": "wrong_graph_connection",
+        "description": "Il cursore/lato regolabile di R3 visibile nell'immagine è collegato al nodo inferiore comune, ma il JSON modella R3 come semplice resistore a due terminali e non rappresenta il terzo terminale/wiper visibile del potenziometro.",
+        "image_evidence": "R3 è disegnato con una freccia laterale collegata al nodo inferiore, indicando un terminale regolabile aggiuntivo collegato alla stessa linea del pin 4 e del lato inferiore del motore.",
+        "json_evidence": "resistor22.3 ha solo i terminali resistor22.3_t1 e resistor22.3_t2; resistor22.3_t2 è collegato a integrated_circuit11.1_right_1, motor17.1_t2 e polarized_capacitor20.2_negative."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "component_class_detail",
+        "description": "R3 è riconosciuto come resistore semplice invece che come componente regolabile/potenziometro, pur mantenendo i nodi principali della catena resistiva."
+      },
+      {
+        "type": "visible_label_missing",
+        "description": "La label topologica Vs visibile sulla linea superiore non è rappresentata come terminale o label nel JSON."
+      }
+    ],
+    "missing_from_json": [
+      "label Vs sulla linea superiore",
+      "terminale regolabile/wiper visibile di R3"
+    ],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "R3 dovrebbe avere un terminale regolabile/wiper collegato al nodo inferiore comune del pin 4, terminale inferiore di R3, terminale inferiore del motore e terminale negativo di C2.",
+        "found_in_json": "resistor22.3 è rappresentato con soli due terminali; resistor22.3_t2 è collegato al nodo inferiore comune, senza terminale wiper separato.",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "La polarità dei condensatori è visibile e sembra coerente con la denominazione positiva/negativa nel JSON, ma la verifica dipende dall'associazione spaziale esatta dei terminali estratti.",
+      "I pin_number dell'IC presenti nel JSON corrispondono ai numeri visibili sul simbolo, ma la posizione relativa top_1/top_2 rispetto ai pin 6 e 8 è solo una codifica interna non completamente verificabile oltre alla connessione ai nodi visibili."
+    ],
+    "short_explanation": "Il JSON contiene tutti i componenti principali visibili e ricostruisce correttamente la maggior parte dei nodi: alimentazione superiore, nodo pin 6/R1-R2/C1, nodo pin 8/R2-R3 e nodo inferiore pin 4/motore/C2/R3. L'errore principale è che R3, disegnato come regolabile con wiper collegato al nodo inferiore, è modellato come resistore a due terminali. Manca inoltre la label Vs. Nel complesso il grafo è una buona base topologica con discrepanze localizzate."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c16\",\"batch\":\"C2\",\"image_file\":\"c16.jpg\",\"json_file\":\"c16.json\",\"image_graph_fidelity_score\":87,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":25,\"terminals_pins\":17,\"graph_connections\":37,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":2,\"minor\":2},\"critical_errors\":[],\"major_errors\":[{\"type\":\"wrong_graph_connection\",\"description\":\"Il nodo del pin 3 dell'IC è unito nel JSON al nodo del terminale superiore del motore, al positivo di C2 e al terminale superiore di R1. Nell'immagine il pin 3 è collegato alla linea di alimentazione superiore, mentre il terminale superiore del motore, il positivo di C2 e il lato superiore di R1 sono anch'essi sulla stessa linea superiore: questa unione è sostanzialmente corretta; tuttavia nel JSON lo stesso nodo include anche il positivo di C1, coerente, ma la struttura non esplicita la label Vs visibile.\",\"image_evidence\":\"La linea superiore comune collega pin 3 dell'IC, positivo di C1, lato superiore di R1, terminale superiore del motore e positivo di C2, con label Vs.\",\"json_evidence\":\"integrated_circuit11.1_left_1 è connesso a motor17.1_t1, polarized_capacitor20.1_positive, polarized_capacitor20.2_positive, resistor22.1_t1.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il cursore/lato regolabile di R3 visibile nell'immagine è collegato al nodo inferiore comune, ma il JSON modella R3 come semplice resistore a due terminali e non rappresenta il terzo terminale/wiper visibile del potenziometro.\",\"image_evidence\":\"R3 è disegnato con una freccia laterale collegata al nodo inferiore, indicando un terminale regolabile aggiuntivo collegato alla stessa linea del pin 4 e del lato inferiore del motore.\",\"json_evidence\":\"resistor22.3 ha solo i terminali resistor22.3_t1 e resistor22.3_t2; resistor22.3_t2 è collegato a integrated_circuit11.1_right_1, motor17.1_t2 e polarized_capacitor20.2_negative.\"}],\"minor_errors\":[{\"type\":\"component_class_detail\",\"description\":\"R3 è riconosciuto come resistore semplice invece che come componente regolabile/potenziometro, pur mantenendo i nodi principali della catena resistiva.\"},{\"type\":\"visible_label_missing\",\"description\":\"La label topologica Vs visibile sulla linea superiore non è rappresentata come terminale o label nel JSON.\"}],\"missing_from_json\":[\"label Vs sulla linea superiore\",\"terminale regolabile/wiper visibile di R3\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"R3 dovrebbe avere un terminale regolabile/wiper collegato al nodo inferiore comune del pin 4, terminale inferiore di R3, terminale inferiore del motore e terminale negativo di C2.\",\"found_in_json\":\"resistor22.3 è rappresentato con soli due terminali; resistor22.3_t2 è collegato al nodo inferiore comune, senza terminale wiper separato.\",\"severity\":\"major\"}],\"uncertain_points\":[\"La polarità dei condensatori è visibile e sembra coerente con la denominazione positiva/negativa nel JSON, ma la verifica dipende dall'associazione spaziale esatta dei terminali estratti.\",\"I pin_number dell'IC presenti nel JSON corrispondono ai numeri visibili sul simbolo, ma la posizione relativa top_1/top_2 rispetto ai pin 6 e 8 è solo una codifica interna non completamente verificabile oltre alla connessione ai nodi visibili.\"],\"short_explanation\":\"Il JSON contiene tutti i componenti principali visibili e ricostruisce correttamente la maggior parte dei nodi: alimentazione superiore, nodo pin 6/R1-R2/C1, nodo pin 8/R2-R3 e nodo inferiore pin 4/motore/C2/R3. L'errore principale è che R3, disegnato come regolabile con wiper collegato al nodo inferiore, è modellato come resistore a due terminali. Manca inoltre la label Vs. Nel complesso il grafo è una buona base topologica con discrepanze localizzate.\"}"
+}

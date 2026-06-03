@@ -1,0 +1,64 @@
+{
+  "metadata": {
+    "circuit_id": "a05",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a05.png",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a05.json",
+    "image_file": "a05.png",
+    "json_file": "a05.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-03 18:04:03",
+    "judge_latency_seconds": 11.484,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=5060, input_tokens_details=InputTokensDetails(cached_tokens=4352), output_tokens=538, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=5598)",
+  "judge_result": {
+    "circuit_id": "a05",
+    "batch": "A",
+    "image_file": "a05.png",
+    "json_file": "a05.json",
+    "image_graph_fidelity_score": 94,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 24,
+      "terminals_pins": 18,
+      "graph_connections": 43,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 3
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "connector_pin_orientation",
+        "description": "Nel JSON i pin 3 e 4 del connettore sono indicati con relative_position 'left', mentre nell'immagine i terminali del connettore J15 sono disegnati sul lato sinistro ma il collegamento elettrico prosegue verso sinistra; la distinzione di posizione/orientamento è comunque poco rilevante per la topologia."
+      },
+      {
+        "type": "connector_pin_orientation",
+        "description": "Nel JSON i pin 1 e 2 del connettore sono indicati con relative_position 'right', mentre nell'immagine i relativi contatti sono sul lato sinistro del simbolo J15 e i fili escono verso destra; è una discrepanza descrittiva dei terminali, non un errore di connessione."
+      },
+      {
+        "type": "label_semantics_partial",
+        "description": "La label visibile del connettore e quella del misuratore non sono riportate come proprietà semantiche nel JSON, pur essendo le classi dei componenti riconosciute correttamente."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "Lo stato aperto dello switch è coerente con il disegno, ma la separazione grafica dei contatti non permette di valutare aspetti meccanici oltre alla connessione aperta visibile.",
+      "La corrispondenza esatta tra i nomi pin1-pin4 del connettore nel JSON e la numerazione disegnata è sostanzialmente coerente, ma le relative_position non rappresentano perfettamente la geometria del simbolo."
+    ],
+    "short_explanation": "Il Graph JSON rappresenta molto fedelmente la topologia visibile: sono presenti connettore a 4 pin, switch verso GND, condensatore verso GND, resistore verso misuratore analogico e ritorno a GND. I collegamenti nel campo graph corrispondono ai fili principali dell'immagine. Le discrepanze sono limitate a dettagli descrittivi di orientamento dei pin e a label visibili non riportate."
+  },
+  "raw_model_output": "{\"circuit_id\":\"a05\",\"batch\":\"A\",\"image_file\":\"a05.png\",\"json_file\":\"a05.json\",\"image_graph_fidelity_score\":94,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":24,\"terminals_pins\":18,\"graph_connections\":43,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":3},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"connector_pin_orientation\",\"description\":\"Nel JSON i pin 3 e 4 del connettore sono indicati con relative_position 'left', mentre nell'immagine i terminali del connettore J15 sono disegnati sul lato sinistro ma il collegamento elettrico prosegue verso sinistra; la distinzione di posizione/orientamento è comunque poco rilevante per la topologia.\"},{\"type\":\"connector_pin_orientation\",\"description\":\"Nel JSON i pin 1 e 2 del connettore sono indicati con relative_position 'right', mentre nell'immagine i relativi contatti sono sul lato sinistro del simbolo J15 e i fili escono verso destra; è una discrepanza descrittiva dei terminali, non un errore di connessione.\"},{\"type\":\"label_semantics_partial\",\"description\":\"La label visibile del connettore e quella del misuratore non sono riportate come proprietà semantiche nel JSON, pur essendo le classi dei componenti riconosciute correttamente.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"Lo stato aperto dello switch è coerente con il disegno, ma la separazione grafica dei contatti non permette di valutare aspetti meccanici oltre alla connessione aperta visibile.\",\"La corrispondenza esatta tra i nomi pin1-pin4 del connettore nel JSON e la numerazione disegnata è sostanzialmente coerente, ma le relative_position non rappresentano perfettamente la geometria del simbolo.\"],\"short_explanation\":\"Il Graph JSON rappresenta molto fedelmente la topologia visibile: sono presenti connettore a 4 pin, switch verso GND, condensatore verso GND, resistore verso misuratore analogico e ritorno a GND. I collegamenti nel campo graph corrispondono ai fili principali dell'immagine. Le discrepanze sono limitate a dettagli descrittivi di orientamento dei pin e a label visibili non riportate.\"}"
+}

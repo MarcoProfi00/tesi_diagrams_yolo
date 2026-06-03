@@ -1,0 +1,95 @@
+{
+  "metadata": {
+    "circuit_id": "c12",
+    "batch": "C2",
+    "batch_dir": "batchC2",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\images\\c12.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\json\\c12.json",
+    "image_file": "c12.jpg",
+    "json_file": "c12.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-03 18:10:13",
+    "judge_latency_seconds": 15.076,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=7866, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=873, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=8739)",
+  "judge_result": {
+    "circuit_id": "c12",
+    "batch": "C2",
+    "image_file": "c12.jpg",
+    "json_file": "c12.json",
+    "image_graph_fidelity_score": 86,
+    "decision": "HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 22,
+      "terminals_pins": 17,
+      "graph_connections": 39,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 2,
+      "minor": 3
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "component_class_mismatch",
+        "description": "Il componente C3 visibile nell'immagine è rappresentato graficamente come condensatore non polarizzato, mentre nel JSON è classificato come Polarized_Capacitor.",
+        "image_evidence": "C3 è disegnato con simbolo di condensatore non polarizzato tra la linea di alimentazione superiore e la linea inferiore comune.",
+        "json_evidence": "Il JSON contiene polarized_capacitor20.3 con terminali positive e negative."
+      },
+      {
+        "type": "switch_state_mismatch",
+        "description": "Lo switch S1 nell'immagine appare aperto, mentre il JSON lo dichiara chiuso.",
+        "image_evidence": "S1 è disegnato con contatto mobile non connesso al contatto superiore; il collegamento tra pin 11 e la linea superiore passa attraverso uno switch aperto.",
+        "json_evidence": "switch25.1 ha \"state\": \"closed\" e nel graph collega switch25.1_t1 alla rete superiore e switch25.1_t2 a integrated_circuit11.1_right_1."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "component_class_uncertainty",
+        "description": "Il condensatore C1 nell'immagine è disegnato come condensatore non chiaramente polarizzato, mentre nel JSON è classificato come Polarized_Capacitor."
+      },
+      {
+        "type": "terminal_orientation_mismatch",
+        "description": "I due terminali dello speaker sono entrambi indicati con relative_position left nel JSON; visivamente sono due morsetti separati verticalmente sul lato sinistro dello speaker, ma la distinzione top/bottom non è rappresentata."
+      },
+      {
+        "type": "label_semantics_missing",
+        "description": "La label visibile Audio IN non è rappresentata esplicitamente nel JSON; sono presenti solo due Terminal generici."
+      }
+    ],
+    "missing_from_json": [
+      "Etichetta topologica Audio IN come tale",
+      "Rappresentazione non polarizzata di C3"
+    ],
+    "extra_in_json": [
+      "Polarità assegnata a C3",
+      "Stato closed assegnato allo switch S1"
+    ],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "S1 visivamente aperto: pin 11 dell'IC collegato al contatto inferiore dello switch, ma non alla rete superiore finché lo switch è aperto.",
+        "found_in_json": "switch25.1_t1 è sulla rete superiore e switch25.1_t2 è collegato a integrated_circuit11.1_right_1; inoltre lo switch è dichiarato closed.",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "C3 è un condensatore non polarizzato tra rete superiore e rete inferiore comune.",
+        "found_in_json": "polarized_capacitor20.3_positive sulla rete superiore e polarized_capacitor20.3_negative sulla rete inferiore comune.",
+        "severity": "minor"
+      }
+    ],
+    "uncertain_points": [
+      "La polarità di C1 non è chiaramente verificabile dall'immagine.",
+      "La polarità di C2 è visibile solo parzialmente ma sembra coerente con il terminale superiore positivo nel JSON.",
+      "La corrispondenza esatta tra i terminali generici terminal26.1/terminal26.2 e i due punti Audio IN è interpretabile ma non etichettata nel JSON."
+    ],
+    "short_explanation": "Il JSON riconosce quasi tutti i componenti principali e la maggior parte delle connessioni topologiche: IC, ingresso, masse, speaker, condensatori di alimentazione e rete superiore/inferiore sono in gran parte coerenti con l'immagine. Le discrepanze principali sono lo switch S1 dichiarato chiuso nonostante sia disegnato aperto e C3 classificato come polarizzato. Sono presenti anche piccole imprecisioni semantiche e di terminali, ma la struttura del grafo resta una buona base correggibile."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c12\",\"batch\":\"C2\",\"image_file\":\"c12.jpg\",\"json_file\":\"c12.json\",\"image_graph_fidelity_score\":86,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":22,\"terminals_pins\":17,\"graph_connections\":39,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":2,\"minor\":3},\"critical_errors\":[],\"major_errors\":[{\"type\":\"component_class_mismatch\",\"description\":\"Il componente C3 visibile nell'immagine è rappresentato graficamente come condensatore non polarizzato, mentre nel JSON è classificato come Polarized_Capacitor.\",\"image_evidence\":\"C3 è disegnato con simbolo di condensatore non polarizzato tra la linea di alimentazione superiore e la linea inferiore comune.\",\"json_evidence\":\"Il JSON contiene polarized_capacitor20.3 con terminali positive e negative.\"},{\"type\":\"switch_state_mismatch\",\"description\":\"Lo switch S1 nell'immagine appare aperto, mentre il JSON lo dichiara chiuso.\",\"image_evidence\":\"S1 è disegnato con contatto mobile non connesso al contatto superiore; il collegamento tra pin 11 e la linea superiore passa attraverso uno switch aperto.\",\"json_evidence\":\"switch25.1 ha \\\"state\\\": \\\"closed\\\" e nel graph collega switch25.1_t1 alla rete superiore e switch25.1_t2 a integrated_circuit11.1_right_1.\"}],\"minor_errors\":[{\"type\":\"component_class_uncertainty\",\"description\":\"Il condensatore C1 nell'immagine è disegnato come condensatore non chiaramente polarizzato, mentre nel JSON è classificato come Polarized_Capacitor.\"},{\"type\":\"terminal_orientation_mismatch\",\"description\":\"I due terminali dello speaker sono entrambi indicati con relative_position left nel JSON; visivamente sono due morsetti separati verticalmente sul lato sinistro dello speaker, ma la distinzione top/bottom non è rappresentata.\"},{\"type\":\"label_semantics_missing\",\"description\":\"La label visibile Audio IN non è rappresentata esplicitamente nel JSON; sono presenti solo due Terminal generici.\"}],\"missing_from_json\":[\"Etichetta topologica Audio IN come tale\",\"Rappresentazione non polarizzata di C3\"],\"extra_in_json\":[\"Polarità assegnata a C3\",\"Stato closed assegnato allo switch S1\"],\"wrong_graph_connections\":[{\"expected_from_image\":\"S1 visivamente aperto: pin 11 dell'IC collegato al contatto inferiore dello switch, ma non alla rete superiore finché lo switch è aperto.\",\"found_in_json\":\"switch25.1_t1 è sulla rete superiore e switch25.1_t2 è collegato a integrated_circuit11.1_right_1; inoltre lo switch è dichiarato closed.\",\"severity\":\"major\"},{\"expected_from_image\":\"C3 è un condensatore non polarizzato tra rete superiore e rete inferiore comune.\",\"found_in_json\":\"polarized_capacitor20.3_positive sulla rete superiore e polarized_capacitor20.3_negative sulla rete inferiore comune.\",\"severity\":\"minor\"}],\"uncertain_points\":[\"La polarità di C1 non è chiaramente verificabile dall'immagine.\",\"La polarità di C2 è visibile solo parzialmente ma sembra coerente con il terminale superiore positivo nel JSON.\",\"La corrispondenza esatta tra i terminali generici terminal26.1/terminal26.2 e i due punti Audio IN è interpretabile ma non etichettata nel JSON.\"],\"short_explanation\":\"Il JSON riconosce quasi tutti i componenti principali e la maggior parte delle connessioni topologiche: IC, ingresso, masse, speaker, condensatori di alimentazione e rete superiore/inferiore sono in gran parte coerenti con l'immagine. Le discrepanze principali sono lo switch S1 dichiarato chiuso nonostante sia disegnato aperto e C3 classificato come polarizzato. Sono presenti anche piccole imprecisioni semantiche e di terminali, ma la struttura del grafo resta una buona base correggibile.\"}"
+}

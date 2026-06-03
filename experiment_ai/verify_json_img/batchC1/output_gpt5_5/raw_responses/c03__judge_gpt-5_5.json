@@ -1,0 +1,103 @@
+{
+  "metadata": {
+    "circuit_id": "c03",
+    "batch": "C1",
+    "batch_dir": "batchC1",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\images\\c03.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\json\\c03.json",
+    "image_file": "c03.jpg",
+    "json_file": "c03.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-03 18:08:47",
+    "judge_latency_seconds": 20.404,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=9547, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=1305, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=10852)",
+  "judge_result": {
+    "circuit_id": "c03",
+    "batch": "C1",
+    "image_file": "c03.jpg",
+    "json_file": "c03.json",
+    "image_graph_fidelity_score": 86,
+    "decision": "HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 24,
+      "terminals_pins": 18,
+      "graph_connections": 36,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 3,
+      "minor": 3
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "missing_graph_connection",
+        "description": "Il nodo di alimentazione superiore visibile collega il terminale di alimentazione, i pin superiori dell'IC e il terminale superiore di un resistore; nel JSON tale nodo non include il terminale di alimentazione e sembra collegare solo i due pin superiori dell'IC con il resistore.",
+        "image_evidence": "La linea orizzontale superiore con il terminale '+12V DC' è continua verso i pin 8 e 4 dell'IC e verso il resistore verticale a sinistra dell'IC.",
+        "json_evidence": "terminal26.3_t1 è collegato solo a resistor22.5_t1; integrated_circuit11.1_top_1 e integrated_circuit11.1_top_2 sono collegati solo tra loro e a resistor22.4_t1."
+      },
+      {
+        "type": "wrong_graph_connection",
+        "description": "Il JSON collega il terminale di alimentazione superiore a un resistore diverso da quello visivamente connesso al bus superiore dell'alimentazione.",
+        "image_evidence": "Il terminale superiore di alimentazione è sul bus superiore che alimenta i pin 8 e 4 dell'IC e il resistore verticale sopra il nodo dei pin 6/2; non è il nodo del resistore collegato al pin 7.",
+        "json_evidence": "terminal26.3_t1 è collegato a resistor22.5_t1, mentre resistor22.4_t1 è collegato ai pin top_1/top_2 dell'IC."
+      },
+      {
+        "type": "wrong_graph_connection",
+        "description": "Il nodo del pin 7 dell'IC è collegato nel JSON a un condensatore verso massa e a un resistore con terminale superiore isolato, mentre nell'immagine il pin 7 è collegato al nodo tra un resistore proveniente dall'alimentazione superiore e un condensatore verso massa.",
+        "image_evidence": "Il pin 7 dell'IC è collegato alla giunzione con il resistore verticale R5 sopra e il condensatore C4 sotto verso la linea di massa.",
+        "json_evidence": "integrated_circuit11.1_left_3 è collegato a polarized_capacitor20.3_positive e resistor22.5_t2; resistor22.5_t1 è collegato solo a terminal26.3_t1, non al bus dei pin superiori/alimentazione."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "component_class_or_polarity_unclear",
+        "description": "I condensatori non polarizzati disegnati con simbolo a piastre curve sono rappresentati nel JSON come Polarized_Capacitor; la topologia a due terminali resta comunque utilizzabile."
+      },
+      {
+        "type": "terminal_label_missing",
+        "description": "I terminali esterni visibili per ingresso, alimentazione e uscita sono presenti come Terminal, ma il JSON non conserva le etichette topologiche visibili dell'immagine."
+      },
+      {
+        "type": "polarity_or_orientation_uncertain",
+        "description": "Alcune polarità dei condensatori dichiarate nel JSON non sono chiaramente verificabili dall'immagine o non sono semantica topologica affidabile per i condensatori non polarizzati."
+      }
+    ],
+    "missing_from_json": [
+      "Connessione del terminale di alimentazione superiore al bus dei pin superiori dell'IC e al resistore superiore collegato al nodo dei pin 6/2.",
+      "Etichette topologiche visibili dei terminali esterni, come ingresso, alimentazione e uscita."
+    ],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "terminale di alimentazione superiore, pin superiori IC 8/4 e terminale superiore del resistore verso il nodo dei pin 6/2 sulla stessa net",
+        "found_in_json": "terminal26.3_t1 collegato solo a resistor22.5_t1; pin top_1/top_2 collegati a resistor22.4_t1 senza terminal26.3_t1",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "pin 7 dell'IC collegato alla giunzione tra resistore superiore proveniente dall'alimentazione e condensatore verso massa",
+        "found_in_json": "integrated_circuit11.1_left_3 collegato a polarized_capacitor20.3_positive e resistor22.5_t2, con resistor22.5_t1 collegato solo a terminal26.3_t1",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "terminale di uscita collegato al nodo dopo il resistore di uscita e al terminale superiore del condensatore di uscita, con ritorno inferiore a massa",
+        "found_in_json": "terminal26.4_t1 collegato a resistor22.6_t2 e polarized_capacitor20.5_positive; questo risulta coerente topologicamente",
+        "severity": "minor"
+      }
+    ],
+    "uncertain_points": [
+      "L'associazione esatta tra gli ID numerici dei resistori/condensatori del JSON e i riferimenti grafici dell'immagine non è esplicitata e va dedotta dalla posizione topologica.",
+      "La polarità effettiva di vari condensatori non è sempre verificabile visivamente come informazione topologica.",
+      "Il pin numbering dell'IC nel JSON appare coerente con i numeri visibili, ma non viene valutato alcun mapping funzionale dei pin."
+    ],
+    "short_explanation": "Il JSON riconosce quasi tutti i componenti principali e gran parte della topologia: ingresso con condensatore, diodo, rete resistiva, transistor, IC, massa comune e uscita sono rappresentati. Le discrepanze principali riguardano il bus di alimentazione superiore e la rete del pin 7, dove il terminale di alimentazione e alcuni resistori risultano collegati in modo non fedele all'immagine. Nel complesso il grafo è una buona base, ma richiede correzioni localizzate sui nodi di alimentazione e temporizzazione."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c03\",\"batch\":\"C1\",\"image_file\":\"c03.jpg\",\"json_file\":\"c03.json\",\"image_graph_fidelity_score\":86,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":24,\"terminals_pins\":18,\"graph_connections\":36,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":3,\"minor\":3},\"critical_errors\":[],\"major_errors\":[{\"type\":\"missing_graph_connection\",\"description\":\"Il nodo di alimentazione superiore visibile collega il terminale di alimentazione, i pin superiori dell'IC e il terminale superiore di un resistore; nel JSON tale nodo non include il terminale di alimentazione e sembra collegare solo i due pin superiori dell'IC con il resistore.\",\"image_evidence\":\"La linea orizzontale superiore con il terminale '+12V DC' è continua verso i pin 8 e 4 dell'IC e verso il resistore verticale a sinistra dell'IC.\",\"json_evidence\":\"terminal26.3_t1 è collegato solo a resistor22.5_t1; integrated_circuit11.1_top_1 e integrated_circuit11.1_top_2 sono collegati solo tra loro e a resistor22.4_t1.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il JSON collega il terminale di alimentazione superiore a un resistore diverso da quello visivamente connesso al bus superiore dell'alimentazione.\",\"image_evidence\":\"Il terminale superiore di alimentazione è sul bus superiore che alimenta i pin 8 e 4 dell'IC e il resistore verticale sopra il nodo dei pin 6/2; non è il nodo del resistore collegato al pin 7.\",\"json_evidence\":\"terminal26.3_t1 è collegato a resistor22.5_t1, mentre resistor22.4_t1 è collegato ai pin top_1/top_2 dell'IC.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il nodo del pin 7 dell'IC è collegato nel JSON a un condensatore verso massa e a un resistore con terminale superiore isolato, mentre nell'immagine il pin 7 è collegato al nodo tra un resistore proveniente dall'alimentazione superiore e un condensatore verso massa.\",\"image_evidence\":\"Il pin 7 dell'IC è collegato alla giunzione con il resistore verticale R5 sopra e il condensatore C4 sotto verso la linea di massa.\",\"json_evidence\":\"integrated_circuit11.1_left_3 è collegato a polarized_capacitor20.3_positive e resistor22.5_t2; resistor22.5_t1 è collegato solo a terminal26.3_t1, non al bus dei pin superiori/alimentazione.\"}],\"minor_errors\":[{\"type\":\"component_class_or_polarity_unclear\",\"description\":\"I condensatori non polarizzati disegnati con simbolo a piastre curve sono rappresentati nel JSON come Polarized_Capacitor; la topologia a due terminali resta comunque utilizzabile.\"},{\"type\":\"terminal_label_missing\",\"description\":\"I terminali esterni visibili per ingresso, alimentazione e uscita sono presenti come Terminal, ma il JSON non conserva le etichette topologiche visibili dell'immagine.\"},{\"type\":\"polarity_or_orientation_uncertain\",\"description\":\"Alcune polarità dei condensatori dichiarate nel JSON non sono chiaramente verificabili dall'immagine o non sono semantica topologica affidabile per i condensatori non polarizzati.\"}],\"missing_from_json\":[\"Connessione del terminale di alimentazione superiore al bus dei pin superiori dell'IC e al resistore superiore collegato al nodo dei pin 6/2.\",\"Etichette topologiche visibili dei terminali esterni, come ingresso, alimentazione e uscita.\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"terminale di alimentazione superiore, pin superiori IC 8/4 e terminale superiore del resistore verso il nodo dei pin 6/2 sulla stessa net\",\"found_in_json\":\"terminal26.3_t1 collegato solo a resistor22.5_t1; pin top_1/top_2 collegati a resistor22.4_t1 senza terminal26.3_t1\",\"severity\":\"major\"},{\"expected_from_image\":\"pin 7 dell'IC collegato alla giunzione tra resistore superiore proveniente dall'alimentazione e condensatore verso massa\",\"found_in_json\":\"integrated_circuit11.1_left_3 collegato a polarized_capacitor20.3_positive e resistor22.5_t2, con resistor22.5_t1 collegato solo a terminal26.3_t1\",\"severity\":\"major\"},{\"expected_from_image\":\"terminale di uscita collegato al nodo dopo il resistore di uscita e al terminale superiore del condensatore di uscita, con ritorno inferiore a massa\",\"found_in_json\":\"terminal26.4_t1 collegato a resistor22.6_t2 e polarized_capacitor20.5_positive; questo risulta coerente topologicamente\",\"severity\":\"minor\"}],\"uncertain_points\":[\"L'associazione esatta tra gli ID numerici dei resistori/condensatori del JSON e i riferimenti grafici dell'immagine non è esplicitata e va dedotta dalla posizione topologica.\",\"La polarità effettiva di vari condensatori non è sempre verificabile visivamente come informazione topologica.\",\"Il pin numbering dell'IC nel JSON appare coerente con i numeri visibili, ma non viene valutato alcun mapping funzionale dei pin.\"],\"short_explanation\":\"Il JSON riconosce quasi tutti i componenti principali e gran parte della topologia: ingresso con condensatore, diodo, rete resistiva, transistor, IC, massa comune e uscita sono rappresentati. Le discrepanze principali riguardano il bus di alimentazione superiore e la rete del pin 7, dove il terminale di alimentazione e alcuni resistori risultano collegati in modo non fedele all'immagine. Nel complesso il grafo è una buona base, ma richiede correzioni localizzate sui nodi di alimentazione e temporizzazione.\"}"
+}

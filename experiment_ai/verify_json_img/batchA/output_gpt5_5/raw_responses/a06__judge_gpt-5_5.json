@@ -1,0 +1,71 @@
+{
+  "metadata": {
+    "circuit_id": "a06",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a06.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a06.json",
+    "image_file": "a06.jpg",
+    "json_file": "a06.json",
+    "judge_model": "gpt-5.5",
+    "timestamp": "2026-06-03 18:04:15",
+    "judge_latency_seconds": 11.549,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=6601, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=605, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=7206)",
+  "judge_result": {
+    "circuit_id": "a06",
+    "batch": "A",
+    "image_file": "a06.jpg",
+    "json_file": "a06.json",
+    "image_graph_fidelity_score": 89,
+    "decision": "HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 23,
+      "terminals_pins": 18,
+      "graph_connections": 40,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 1,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "component_semantics",
+        "description": "Il nodo di alimentazione superiore etichettato Vcc è rappresentato come un generico Terminal; topologicamente il collegamento ai due resistori è corretto, ma la semantica visibile del terminale di alimentazione non è preservata.",
+        "image_evidence": "In alto è visibile un terminale aperto etichettato Vcc collegato al nodo comune dei due resistori superiori.",
+        "json_evidence": "terminal26.1_t1 è collegato a resistor22.2_t1 e resistor22.4_t1, ma il componente è class_name Terminal e non conserva l'etichetta Vcc."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "terminal_semantics",
+        "description": "Il terminale inferiore dell'emettitore, visivamente etichettato come nodo di riferimento/alimentazione inferiore, è rappresentato come Terminal generico."
+      },
+      {
+        "type": "terminal_semantics",
+        "description": "Il terminale di uscita a destra è rappresentato come Terminal generico senza conservare la semantica visibile di uscita."
+      }
+    ],
+    "missing_from_json": [
+      "Etichetta topologica Vcc sul terminale superiore",
+      "Etichetta topologica di uscita sul terminale destro",
+      "Etichetta topologica del terminale inferiore sotto la resistenza di emettitore"
+    ],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "L'immagine mostra più simboli di massa separati; il JSON li rappresenta come componenti GND separati senza indicare esplicitamente se siano lo stesso nodo globale, ma nel campo graph non risultano cortocircuitati tra loro.",
+      "La polarità dei condensatori non è codificata nel JSON; nell'immagine alcune polarità non sono marcate graficamente in modo univoco dal solo simbolo."
+    ],
+    "short_explanation": "Il Graph JSON riproduce molto bene la struttura principale: sorgente con massa, resistenza e condensatore di ingresso verso la base, partitore di bias, transistor NPN, rete di collettore, rete di emettitore con condensatore verso massa, condensatore di uscita e carico verso massa. I collegamenti del campo graph sono sostanzialmente coerenti con i fili visibili. Le principali carenze riguardano la semantica dei terminali etichettati, rappresentati come terminali generici, più che errori topologici."
+  },
+  "raw_model_output": "{\"circuit_id\":\"a06\",\"batch\":\"A\",\"image_file\":\"a06.jpg\",\"json_file\":\"a06.json\",\"image_graph_fidelity_score\":89,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":23,\"terminals_pins\":18,\"graph_connections\":40,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":1,\"minor\":2},\"critical_errors\":[],\"major_errors\":[{\"type\":\"component_semantics\",\"description\":\"Il nodo di alimentazione superiore etichettato Vcc è rappresentato come un generico Terminal; topologicamente il collegamento ai due resistori è corretto, ma la semantica visibile del terminale di alimentazione non è preservata.\",\"image_evidence\":\"In alto è visibile un terminale aperto etichettato Vcc collegato al nodo comune dei due resistori superiori.\",\"json_evidence\":\"terminal26.1_t1 è collegato a resistor22.2_t1 e resistor22.4_t1, ma il componente è class_name Terminal e non conserva l'etichetta Vcc.\"}],\"minor_errors\":[{\"type\":\"terminal_semantics\",\"description\":\"Il terminale inferiore dell'emettitore, visivamente etichettato come nodo di riferimento/alimentazione inferiore, è rappresentato come Terminal generico.\"},{\"type\":\"terminal_semantics\",\"description\":\"Il terminale di uscita a destra è rappresentato come Terminal generico senza conservare la semantica visibile di uscita.\"}],\"missing_from_json\":[\"Etichetta topologica Vcc sul terminale superiore\",\"Etichetta topologica di uscita sul terminale destro\",\"Etichetta topologica del terminale inferiore sotto la resistenza di emettitore\"],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"L'immagine mostra più simboli di massa separati; il JSON li rappresenta come componenti GND separati senza indicare esplicitamente se siano lo stesso nodo globale, ma nel campo graph non risultano cortocircuitati tra loro.\",\"La polarità dei condensatori non è codificata nel JSON; nell'immagine alcune polarità non sono marcate graficamente in modo univoco dal solo simbolo.\"],\"short_explanation\":\"Il Graph JSON riproduce molto bene la struttura principale: sorgente con massa, resistenza e condensatore di ingresso verso la base, partitore di bias, transistor NPN, rete di collettore, rete di emettitore con condensatore verso massa, condensatore di uscita e carico verso massa. I collegamenti del campo graph sono sostanzialmente coerenti con i fili visibili. Le principali carenze riguardano la semantica dei terminali etichettati, rappresentati come terminali generici, più che errori topologici.\"}"
+}
