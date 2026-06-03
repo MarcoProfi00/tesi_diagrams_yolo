@@ -25,7 +25,7 @@ from skimage.morphology import skeletonize
 # PERCORSI / INPUT-OUTPUT
 # =========================================================
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline1.0/batchA")
+PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline1.0/batchC/batchC1")
 PIPELINE_IMAGE_IDS = [
     image_id.strip()
     for image_id in os.environ.get("PIPELINE_IMAGE_IDS", "").split(",")

@@ -9,7 +9,9 @@ from .crossings import is_blue_wire_style, split_bridge_labels
 from .graph_utils import build_terminal_graph
 from .grouping import (
     build_label_to_terminal_ids,
+    merge_split_grounded_ic_side_branches,
     remove_non_shorting_component_self_matches,
+    split_same_side_ic_fanout_groups,
     split_polarized_capacitor_self_short_groups,
 )
 from .heuristics_connector import build_connector_aligned_gnd_edges, fix_stacked_connector_gnd_crossing_edges
@@ -138,6 +140,15 @@ def build_terminal_graph_for_image(data: dict):
         skeleton_for_graph,
         labels,
         wire_extraction,
+    )
+    label_to_terminal_ids = merge_split_grounded_ic_side_branches(
+        label_to_terminal_ids,
+        terminals,
+        terminal_match_debug,
+    )
+    label_to_terminal_ids = split_same_side_ic_fanout_groups(
+        label_to_terminal_ids,
+        terminals,
     )
     label_to_terminal_ids = split_polarized_capacitor_self_short_groups(
         label_to_terminal_ids,

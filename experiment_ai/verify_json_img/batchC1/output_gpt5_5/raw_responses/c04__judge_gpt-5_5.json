@@ -8,14 +8,14 @@
     "image_file": "c04.jpg",
     "json_file": "c04.json",
     "judge_model": "gpt-5.5",
-    "timestamp": "2026-06-03 18:09:02",
-    "judge_latency_seconds": 15.17,
+    "timestamp": "2026-06-03 23:36:32",
+    "judge_latency_seconds": 15.946,
     "input_json_valid": true,
     "input_json_error": null,
     "parsed_ok": true,
     "parse_error": null
   },
-  "judge_usage": "ResponseUsage(input_tokens=9973, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=960, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=10933)",
+  "judge_usage": "ResponseUsage(input_tokens=9973, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1027, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=11000)",
   "judge_result": {
     "circuit_id": "c04",
     "batch": "C1",
@@ -25,61 +25,67 @@
     "decision": "HIGH",
     "usable_as_graph_base": true,
     "scores": {
-      "components": 23,
-      "terminals_pins": 18,
+      "components": 24,
+      "terminals_pins": 17,
       "graph_connections": 39,
       "visible_semantics": 8
     },
     "error_counts": {
       "critical": 0,
       "major": 2,
-      "minor": 2
+      "minor": 3
     },
     "critical_errors": [],
     "major_errors": [
       {
-        "type": "component_class_error",
-        "description": "Il componente C2 è rappresentato nel JSON come Polarized_Capacitor, mentre nell'immagine il simbolo non mostra una polarità esplicita; la classe corretta visivamente sarebbe un condensatore non polarizzato o comunque la polarità non è verificabile.",
-        "image_evidence": "Il condensatore collegato al pin 5 del primo NE555 e alla linea inferiore è disegnato senza marcatura di polarità visibile.",
-        "json_evidence": "polarized_capacitor20.2 ha class_name Polarized_Capacitor e terminali positive/negative."
+        "type": "missing_component_connection",
+        "description": "Il condensatore collegato al pin 5 del secondo IC è visibile nell'immagine ma non è rappresentato come componente separato nel JSON; al suo posto il pin 5 del secondo IC è collegato direttamente a un resistore.",
+        "image_evidence": "Nel secondo NE555 il pin 5 scende verso il nodo inferiore tramite un condensatore a destra del simbolo IC.",
+        "json_evidence": "integrated_circuit11.2_bottom_2 è collegato solo a resistor22.3_t2; non esiste un condensatore dedicato tra integrated_circuit11.2_bottom_2 e il nodo di massa."
       },
       {
-        "type": "component_class_error",
-        "description": "Il componente C3 è rappresentato nel JSON come Polarized_Capacitor, mentre nell'immagine il simbolo non mostra una polarità esplicita; la classe corretta visivamente sarebbe un condensatore non polarizzato o comunque la polarità non è verificabile.",
-        "image_evidence": "Il condensatore collegato ai pin 6/2 del secondo NE555 e alla linea inferiore è disegnato senza marcatura di polarità visibile.",
-        "json_evidence": "polarized_capacitor20.3 ha class_name Polarized_Capacitor e terminali positive/negative."
+        "type": "wrong_graph_connection",
+        "description": "Il resistore di collegamento tra uscita del primo IC e pin 5 del secondo IC è rappresentato in modo incompleto/errato: nell'immagine collega il pin 3 del primo IC al nodo inferiore che poi raggiunge il pin 5 del secondo IC attraverso il ramo visibile, mentre nel JSON il resistore22.3 è spezzato come collegamento diretto tra pin 3 del primo IC e pin 5 del secondo IC senza includere correttamente il nodo inferiore condiviso.",
+        "image_evidence": "R5 parte dal pin 3 del primo NE555 e scende fino alla linea inferiore; il pin 5 del secondo NE555 è collegato alla linea inferiore attraverso il condensatore visibile.",
+        "json_evidence": "resistor22.3_t1 è connesso a integrated_circuit11.1_right_1 e resistor22.3_t2 è connesso a integrated_circuit11.2_bottom_2."
       }
     ],
     "minor_errors": [
       {
-        "type": "polarity_uncertain_or_overasserted",
-        "description": "La polarità del condensatore in uscita verso lo speaker è dichiarata nel JSON, ma dall'immagine la polarità del terminale collegato al diffusore non è completamente verificabile come terminale negativo solo dalla topologia."
+        "type": "component_class_or_polarity_uncertainty",
+        "description": "Alcuni condensatori sono classificati come Polarized_Capacitor anche dove il simbolo non mostra chiaramente polarità o è un condensatore non polarizzato nell'immagine."
       },
       {
-        "type": "semantic_label_missing",
-        "description": "Il terminale di alimentazione superiore è rappresentato come Terminal generico senza riportare la label topologica visibile associata alla linea di alimentazione."
+        "type": "speaker_terminal_position",
+        "description": "Entrambi i terminali dello speaker sono indicati con relative_position left; la topologia è comunque sostanzialmente corretta."
+      },
+      {
+        "type": "ic_identity_ambiguity",
+        "description": "I due integrati sono entrambi etichettati come IC1 nel disegno, mentre nel JSON sono distinti come integrated_circuit11.1 e integrated_circuit11.2; la distinzione topologica è corretta ma la semantica visibile è ambigua."
       }
     ],
-    "missing_from_json": [],
+    "missing_from_json": [
+      "Condensatore visibile tra pin 5 del secondo NE555 e nodo inferiore/massa"
+    ],
     "extra_in_json": [],
     "wrong_graph_connections": [
       {
-        "expected_from_image": "La rete tra uscita del primo IC, resistore verticale centrale e pin 5 del secondo IC appare collegata: pin 3 del primo NE555 -> R5 -> pin 5 del secondo NE555.",
-        "found_in_json": "integrated_circuit11.1_right_1 è collegato a resistor22.3_t1 e resistor22.3_t2 è collegato a integrated_circuit11.2_bottom_2; questa corrispondenza è topologicamente coerente se resistor22.3 è R5, ma l'identificazione del resistore non segue la posizione/ordine visivo dei componenti.",
-        "severity": "minor"
+        "expected_from_image": "Il pin 5 del secondo NE555 dovrebbe collegarsi a un condensatore verso il nodo inferiore/massa visibile.",
+        "found_in_json": "integrated_circuit11.2_bottom_2 è collegato a resistor22.3_t2 e non a un condensatore dedicato.",
+        "severity": "major"
       },
       {
-        "expected_from_image": "Il condensatore C2 dal pin 5 del primo IC scende alla linea GND inferiore.",
-        "found_in_json": "integrated_circuit11.1_bottom_2 è collegato a polarized_capacitor20.2_positive, e polarized_capacitor20.2_negative è nella rete GND; connessione topologica corretta, ma il tipo/polarità del condensatore non è visivamente supportato.",
-        "severity": "minor"
+        "expected_from_image": "Il resistore dall'uscita del primo NE555 scende al nodo inferiore condiviso, non direttamente al pin 5 del secondo NE555 come unico collegamento.",
+        "found_in_json": "resistor22.3_t2 è collegato direttamente a integrated_circuit11.2_bottom_2.",
+        "severity": "major"
       }
     ],
     "uncertain_points": [
-      "La corrispondenza esatta tra gli identificativi automatici resistor22.3, resistor22.4 e resistor22.5 e le sigle visive dei resistori non è direttamente garantita dai nomi, anche se le connessioni principali risultano compatibili.",
-      "La polarità dettagliata dei condensatori dichiarati come polarizzati nel JSON non è sempre verificabile dall'immagine, eccetto dove è visibile un segno di polarità.",
-      "La label della linea di alimentazione superiore è visibile nell'immagine, ma nel JSON è trattata come terminale generico; la topologia della rete resta comunque rappresentata."
+      "La polarità del diodo nel JSON sembra plausibile rispetto al simbolo, ma l'orientamento anodo/catodo non è completamente verificabile senza ambiguità dall'immagine raster.",
+      "Le etichette funzionali dei pin degli IC non sono valutate; sono considerati solo i numeri di pin visibili.",
+      "La classificazione polarizzata/non polarizzata di alcuni condensatori è parzialmente ambigua nella resa grafica."
     ],
-    "short_explanation": "Il JSON riproduce bene la struttura principale: due NE555, rete superiore comune, rete di massa, diodo, resistori, condensatori, uscita accoppiata allo speaker e collegamenti principali sono sostanzialmente coerenti con l'immagine. Le discrepanze principali riguardano la classificazione/polarità di alcuni condensatori non polarizzati visivamente e una semantica meno esplicita della label di alimentazione. Non emergono collegamenti gravemente incompatibili."
+    "short_explanation": "Il JSON riconosce quasi tutti i componenti principali e gran parte delle reti visibili: due NE555, resistori, diodo, condensatori principali, alimentazione, massa e speaker. La topologia generale è buona, inclusi i nodi di alimentazione, massa, reti dei pin 6/2 e collegamento allo speaker. La discrepanza più rilevante riguarda il ramo del pin 5 del secondo IC e il collegamento del resistore proveniente dal pin 3 del primo IC, dove manca un condensatore visibile e la rete risulta rappresentata in modo errato. Rimane comunque una base grafica utilizzabile per correzioni."
   },
-  "raw_model_output": "{\"circuit_id\":\"c04\",\"batch\":\"C1\",\"image_file\":\"c04.jpg\",\"json_file\":\"c04.json\",\"image_graph_fidelity_score\":88,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":23,\"terminals_pins\":18,\"graph_connections\":39,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":2,\"minor\":2},\"critical_errors\":[],\"major_errors\":[{\"type\":\"component_class_error\",\"description\":\"Il componente C2 è rappresentato nel JSON come Polarized_Capacitor, mentre nell'immagine il simbolo non mostra una polarità esplicita; la classe corretta visivamente sarebbe un condensatore non polarizzato o comunque la polarità non è verificabile.\",\"image_evidence\":\"Il condensatore collegato al pin 5 del primo NE555 e alla linea inferiore è disegnato senza marcatura di polarità visibile.\",\"json_evidence\":\"polarized_capacitor20.2 ha class_name Polarized_Capacitor e terminali positive/negative.\"},{\"type\":\"component_class_error\",\"description\":\"Il componente C3 è rappresentato nel JSON come Polarized_Capacitor, mentre nell'immagine il simbolo non mostra una polarità esplicita; la classe corretta visivamente sarebbe un condensatore non polarizzato o comunque la polarità non è verificabile.\",\"image_evidence\":\"Il condensatore collegato ai pin 6/2 del secondo NE555 e alla linea inferiore è disegnato senza marcatura di polarità visibile.\",\"json_evidence\":\"polarized_capacitor20.3 ha class_name Polarized_Capacitor e terminali positive/negative.\"}],\"minor_errors\":[{\"type\":\"polarity_uncertain_or_overasserted\",\"description\":\"La polarità del condensatore in uscita verso lo speaker è dichiarata nel JSON, ma dall'immagine la polarità del terminale collegato al diffusore non è completamente verificabile come terminale negativo solo dalla topologia.\"},{\"type\":\"semantic_label_missing\",\"description\":\"Il terminale di alimentazione superiore è rappresentato come Terminal generico senza riportare la label topologica visibile associata alla linea di alimentazione.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"La rete tra uscita del primo IC, resistore verticale centrale e pin 5 del secondo IC appare collegata: pin 3 del primo NE555 -> R5 -> pin 5 del secondo NE555.\",\"found_in_json\":\"integrated_circuit11.1_right_1 è collegato a resistor22.3_t1 e resistor22.3_t2 è collegato a integrated_circuit11.2_bottom_2; questa corrispondenza è topologicamente coerente se resistor22.3 è R5, ma l'identificazione del resistore non segue la posizione/ordine visivo dei componenti.\",\"severity\":\"minor\"},{\"expected_from_image\":\"Il condensatore C2 dal pin 5 del primo IC scende alla linea GND inferiore.\",\"found_in_json\":\"integrated_circuit11.1_bottom_2 è collegato a polarized_capacitor20.2_positive, e polarized_capacitor20.2_negative è nella rete GND; connessione topologica corretta, ma il tipo/polarità del condensatore non è visivamente supportato.\",\"severity\":\"minor\"}],\"uncertain_points\":[\"La corrispondenza esatta tra gli identificativi automatici resistor22.3, resistor22.4 e resistor22.5 e le sigle visive dei resistori non è direttamente garantita dai nomi, anche se le connessioni principali risultano compatibili.\",\"La polarità dettagliata dei condensatori dichiarati come polarizzati nel JSON non è sempre verificabile dall'immagine, eccetto dove è visibile un segno di polarità.\",\"La label della linea di alimentazione superiore è visibile nell'immagine, ma nel JSON è trattata come terminale generico; la topologia della rete resta comunque rappresentata.\"],\"short_explanation\":\"Il JSON riproduce bene la struttura principale: due NE555, rete superiore comune, rete di massa, diodo, resistori, condensatori, uscita accoppiata allo speaker e collegamenti principali sono sostanzialmente coerenti con l'immagine. Le discrepanze principali riguardano la classificazione/polarità di alcuni condensatori non polarizzati visivamente e una semantica meno esplicita della label di alimentazione. Non emergono collegamenti gravemente incompatibili.\"}"
+  "raw_model_output": "{\"circuit_id\":\"c04\",\"batch\":\"C1\",\"image_file\":\"c04.jpg\",\"json_file\":\"c04.json\",\"image_graph_fidelity_score\":88,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":24,\"terminals_pins\":17,\"graph_connections\":39,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":2,\"minor\":3},\"critical_errors\":[],\"major_errors\":[{\"type\":\"missing_component_connection\",\"description\":\"Il condensatore collegato al pin 5 del secondo IC è visibile nell'immagine ma non è rappresentato come componente separato nel JSON; al suo posto il pin 5 del secondo IC è collegato direttamente a un resistore.\",\"image_evidence\":\"Nel secondo NE555 il pin 5 scende verso il nodo inferiore tramite un condensatore a destra del simbolo IC.\",\"json_evidence\":\"integrated_circuit11.2_bottom_2 è collegato solo a resistor22.3_t2; non esiste un condensatore dedicato tra integrated_circuit11.2_bottom_2 e il nodo di massa.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il resistore di collegamento tra uscita del primo IC e pin 5 del secondo IC è rappresentato in modo incompleto/errato: nell'immagine collega il pin 3 del primo IC al nodo inferiore che poi raggiunge il pin 5 del secondo IC attraverso il ramo visibile, mentre nel JSON il resistore22.3 è spezzato come collegamento diretto tra pin 3 del primo IC e pin 5 del secondo IC senza includere correttamente il nodo inferiore condiviso.\",\"image_evidence\":\"R5 parte dal pin 3 del primo NE555 e scende fino alla linea inferiore; il pin 5 del secondo NE555 è collegato alla linea inferiore attraverso il condensatore visibile.\",\"json_evidence\":\"resistor22.3_t1 è connesso a integrated_circuit11.1_right_1 e resistor22.3_t2 è connesso a integrated_circuit11.2_bottom_2.\"}],\"minor_errors\":[{\"type\":\"component_class_or_polarity_uncertainty\",\"description\":\"Alcuni condensatori sono classificati come Polarized_Capacitor anche dove il simbolo non mostra chiaramente polarità o è un condensatore non polarizzato nell'immagine.\"},{\"type\":\"speaker_terminal_position\",\"description\":\"Entrambi i terminali dello speaker sono indicati con relative_position left; la topologia è comunque sostanzialmente corretta.\"},{\"type\":\"ic_identity_ambiguity\",\"description\":\"I due integrati sono entrambi etichettati come IC1 nel disegno, mentre nel JSON sono distinti come integrated_circuit11.1 e integrated_circuit11.2; la distinzione topologica è corretta ma la semantica visibile è ambigua.\"}],\"missing_from_json\":[\"Condensatore visibile tra pin 5 del secondo NE555 e nodo inferiore/massa\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Il pin 5 del secondo NE555 dovrebbe collegarsi a un condensatore verso il nodo inferiore/massa visibile.\",\"found_in_json\":\"integrated_circuit11.2_bottom_2 è collegato a resistor22.3_t2 e non a un condensatore dedicato.\",\"severity\":\"major\"},{\"expected_from_image\":\"Il resistore dall'uscita del primo NE555 scende al nodo inferiore condiviso, non direttamente al pin 5 del secondo NE555 come unico collegamento.\",\"found_in_json\":\"resistor22.3_t2 è collegato direttamente a integrated_circuit11.2_bottom_2.\",\"severity\":\"major\"}],\"uncertain_points\":[\"La polarità del diodo nel JSON sembra plausibile rispetto al simbolo, ma l'orientamento anodo/catodo non è completamente verificabile senza ambiguità dall'immagine raster.\",\"Le etichette funzionali dei pin degli IC non sono valutate; sono considerati solo i numeri di pin visibili.\",\"La classificazione polarizzata/non polarizzata di alcuni condensatori è parzialmente ambigua nella resa grafica.\"],\"short_explanation\":\"Il JSON riconosce quasi tutti i componenti principali e gran parte delle reti visibili: due NE555, resistori, diodo, condensatori principali, alimentazione, massa e speaker. La topologia generale è buona, inclusi i nodi di alimentazione, massa, reti dei pin 6/2 e collegamento allo speaker. La discrepanza più rilevante riguarda il ramo del pin 5 del secondo IC e il collegamento del resistore proveniente dal pin 3 del primo IC, dove manca un condensatore visibile e la rete risulta rappresentata in modo errato. Rimane comunque una base grafica utilizzabile per correzioni.\"}"
 }

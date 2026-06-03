@@ -10,6 +10,7 @@ from .geometry import (
     geom_terminal_point_by_side_peak,
     geom_terminal_point_opamp,
 )
+from .image_ops import img_count_foreground_pixels
 from .strategies_three_terminal import (
     get_three_terminal_working_binary,
     resolve_three_terminal_semantics,
@@ -43,6 +44,79 @@ def _get_led_side_peak_scan_window(bbox, estimated_orientation, relative_positio
         )
 
     return None
+
+
+def _select_led_vertical_lead_x(binary, bbox):
+    x1, y1, x2, y2 = [int(round(float(v))) for v in bbox]
+    if x2 <= x1 or y2 <= y1:
+        return None, {"point_mode": "led_vertical_lead_column", "reason": "invalid_bbox"}
+
+    scores = []
+    for x in range(x1, x2 + 1):
+        top_score = img_count_foreground_pixels(binary, x - 2, y1 - 30, x + 3, y1 + 35)
+        bottom_score = img_count_foreground_pixels(binary, x - 2, y2 - 35, x + 3, y2 + 30)
+        full_score = img_count_foreground_pixels(binary, x - 2, y1 - 30, x + 3, y2 + 30)
+        score = min(top_score, bottom_score) * 4.0 + top_score + bottom_score + full_score * 0.1
+        scores.append((x, score, top_score, bottom_score, full_score))
+
+    if not scores:
+        return None, {"point_mode": "led_vertical_lead_column", "reason": "empty_scan"}
+
+    max_score = max(score for _, score, _, _, _ in scores)
+    center_x = (float(x1) + float(x2)) / 2.0
+    keep_threshold = max_score * 0.90
+    kept = [entry for entry in scores if entry[1] >= keep_threshold]
+
+    groups = []
+    current = []
+    previous_x = None
+    for entry in kept:
+        x = entry[0]
+        if previous_x is None or x <= previous_x + 1:
+            current.append(entry)
+        else:
+            if current:
+                groups.append(current)
+            current = [entry]
+        previous_x = x
+    if current:
+        groups.append(current)
+
+    def group_key(group):
+        best_group_score = max(entry[1] for entry in group)
+        group_center = sum(entry[0] for entry in group) / float(len(group))
+        return (best_group_score, -abs(group_center - center_x), len(group))
+
+    best_group = max(groups, key=group_key) if groups else kept
+    best_x = int(round(sum(entry[0] for entry in best_group) / float(len(best_group))))
+    best_entry = max(best_group, key=lambda entry: entry[1])
+
+    if min(best_entry[2], best_entry[3]) < 20:
+        return None, {
+            "point_mode": "led_vertical_lead_column",
+            "reason": "weak_top_bottom_support",
+            "best_x": best_x,
+            "max_score": round(float(max_score), 3),
+            "best_top_score": int(best_entry[2]),
+            "best_bottom_score": int(best_entry[3]),
+        }
+
+    return float(best_x), {
+        "point_mode": "led_vertical_lead_column",
+        "scan_start": int(x1),
+        "scan_end": int(x2),
+        "selected_x": int(best_x),
+        "center_x": round(float(center_x), 2),
+        "max_score": round(float(max_score), 3),
+        "keep_threshold": round(float(keep_threshold), 3),
+        "selected_run_start": int(best_group[0][0]),
+        "selected_run_end": int(best_group[-1][0]),
+        "selected_run_length": int(len(best_group)),
+        "best_top_score": int(best_entry[2]),
+        "best_bottom_score": int(best_entry[3]),
+        "best_full_score": int(best_entry[4]),
+        "anchor_offset_ratio": round((float(best_x) - float(x1)) / max(float(x2 - x1), 1.0), 4),
+    }
 
 # =========================================================
 # PROCESSAMENTO COMPONENTI
@@ -150,30 +224,40 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
                 point_debug["point_mode"] = "one_terminal_axis_center"
                 point_debug["anchor_offset_ratio"] = 0.5
             elif component.get("class_name") == "LED":
-                scan_window = _get_led_side_peak_scan_window(
-                    bbox,
-                    estimated_orientation,
-                    rel_pos,
-                )
-                if scan_window is not None:
-                    scan_start, scan_end, center_coord = scan_window
-                    point, peak_debug = geom_terminal_point_by_side_peak(
-                        point_binary,
-                        bbox,
-                        rel_pos,
-                        scan_start=scan_start,
-                        scan_end=scan_end,
-                        center_coord=center_coord,
-                    )
-                    peak_debug["scan_window_mode"] = "led_center_axis_window"
-                    peak_debug["scan_window_ratio"] = float(LED_SIDE_PEAK_AXIS_SCAN_RATIO)
+                if estimated_orientation == "vertical" and rel_pos in {"top", "bottom"}:
+                    lead_x, peak_debug = _select_led_vertical_lead_x(image_binary, bbox)
+                    if lead_x is None:
+                        x, y = geom_terminal_point_from_bbox(bbox, rel_pos)
+                        peak_debug["fallback_point_mode"] = "led_vertical_axis_center"
+                        peak_debug["anchor_offset_ratio"] = 0.5
+                    else:
+                        _, y = geom_terminal_point_from_bbox(bbox, rel_pos)
+                        x = round(float(lead_x), 2)
                 else:
-                    point, peak_debug = geom_terminal_point_by_side_peak(
-                        point_binary,
+                    scan_window = _get_led_side_peak_scan_window(
                         bbox,
-                        rel_pos
+                        estimated_orientation,
+                        rel_pos,
                     )
-                x, y = point
+                    if scan_window is not None:
+                        scan_start, scan_end, center_coord = scan_window
+                        point, peak_debug = geom_terminal_point_by_side_peak(
+                            point_binary,
+                            bbox,
+                            rel_pos,
+                            scan_start=scan_start,
+                            scan_end=scan_end,
+                            center_coord=center_coord,
+                        )
+                        peak_debug["scan_window_mode"] = "led_center_axis_window"
+                        peak_debug["scan_window_ratio"] = float(LED_SIDE_PEAK_AXIS_SCAN_RATIO)
+                    else:
+                        point, peak_debug = geom_terminal_point_by_side_peak(
+                            point_binary,
+                            bbox,
+                            rel_pos
+                        )
+                    x, y = point
                 point_debug.update(peak_debug)
             else:
                 # altrimenti usa la classica

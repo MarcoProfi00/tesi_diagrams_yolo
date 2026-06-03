@@ -8,83 +8,87 @@
     "image_file": "c17.jpg",
     "json_file": "c17.json",
     "judge_model": "gpt-5.5",
-    "timestamp": "2026-06-03 18:11:41",
-    "judge_latency_seconds": 17.561,
+    "timestamp": "2026-06-03 23:38:30",
+    "judge_latency_seconds": 19.095,
     "input_json_valid": true,
     "input_json_error": null,
     "parsed_ok": true,
     "parse_error": null
   },
-  "judge_usage": "ResponseUsage(input_tokens=6739, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=1099, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=7838)",
+  "judge_usage": "ResponseUsage(input_tokens=6739, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1244, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=7983)",
   "judge_result": {
     "circuit_id": "c17",
     "batch": "C1",
     "image_file": "c17.jpg",
     "json_file": "c17.json",
-    "image_graph_fidelity_score": 88,
+    "image_graph_fidelity_score": 86,
     "decision": "HIGH",
     "usable_as_graph_base": true,
     "scores": {
-      "components": 25,
-      "terminals_pins": 18,
+      "components": 24,
+      "terminals_pins": 17,
       "graph_connections": 37,
       "visible_semantics": 8
     },
     "error_counts": {
       "critical": 0,
       "major": 2,
-      "minor": 2
+      "minor": 3
     },
     "critical_errors": [],
     "major_errors": [
       {
-        "type": "wrong_graph_connection",
-        "description": "Il nodo tra R1 e R2 è collegato nell'immagine al lato sinistro di C3, mentre nel JSON il terminale corrispondente del condensatore 20.3 è collegato al pin ADJ e a R1, cioè al nodo superiore tra ADJ e R1.",
-        "image_evidence": "C3 è disegnato tra il nodo intermedio R1/R2 e la barra verticale di uscita a destra; il nodo ADJ/R1 superiore è invece collegato a C2.",
-        "json_evidence": "integrated_circuit11.1_bottom_1 è connesso a polarized_capacitor20.3_negative e resistor22.3_t1; resistor22.1_t1 è invece connesso a polarized_capacitor20.2_negative e resistor22.3_t2."
+        "type": "wrong_component_terminal_polarity",
+        "description": "Le polarità dei condensatori C2, C3 e C4 risultano invertite rispetto all'immagine: nell'immagine il terminale positivo è sul lato destro collegato al bus OUT/lampada, mentre il terminale sinistro è collegato alla catena ADJ/R1/R2/R3. Il JSON assegna il lato sinistro come negative e il lato destro come positive, ma poi collega i terminali negativi a nodi della catena resistiva: la topologia dei nodi è coerente, ma la polarità dichiarata è sospetta/invertita per questi condensatori.",
+        "image_evidence": "C2, C3 e C4 mostrano il segno '+' sul lato destro, verso il bus verticale di uscita.",
+        "json_evidence": "polarized_capacitor20.2/20.3/20.4 hanno terminali negative a sinistra e positive a destra; i collegamenti usano i negative verso resistori/ADJ e positive verso OUT/lamp13.1_t1."
       },
       {
-        "type": "wrong_graph_connection",
-        "description": "Il nodo tra R2 e R3 è collegato nell'immagine al lato sinistro di C4, mentre nel JSON il terminale corrispondente del condensatore 20.4 è collegato al nodo tra due resistori diverso, associato a R1/R2.",
-        "image_evidence": "C4 è disegnato tra il nodo intermedio R2/R3 e la barra verticale di uscita a destra.",
-        "json_evidence": "polarized_capacitor20.4_negative è connesso a resistor22.1_t2 e resistor22.2_t1, mentre il nodo inferiore con GND è su resistor22.2_t2 e il nodo ADJ è su resistor22.3_t1."
+        "type": "switch_state_mismatch",
+        "description": "Il JSON dichiara lo switch S1 come 'closed', ma nell'immagine il simbolo del deviatore/interruttore appare aperto, con contatto mobile non chiaramente chiuso sul terminale destro. Il collegamento topologico tra terminale di ingresso e nodo IN è però rappresentato tramite i due terminali dello switch, quindi l'errore riguarda soprattutto lo stato visibile dichiarato.",
+        "image_evidence": "S1 è disegnato con leva inclinata e gap visibile tra i contatti, non come contatto chiuso continuo.",
+        "json_evidence": "switch25.1 contiene \"state\": \"closed\"."
       }
     ],
     "minor_errors": [
       {
-        "type": "switch_state_uncertain",
-        "description": "Il JSON indica lo switch come chiuso, ma dall'immagine il simbolo del contatto di S1 non permette di confermare con certezza uno stato elettrico chiuso."
+        "type": "component_naming_or_class_detail",
+        "description": "La lampada è rappresentata come class_name Lamp con due terminali, coerente nella sostanza; eventuali dettagli grafici interni del simbolo non sono modellati."
       },
       {
-        "type": "terminal_polarity_or_orientation",
-        "description": "Le polarità dei condensatori C2, C3 e C4 risultano coerenti come lato positivo verso la barra di uscita, ma l'assegnazione dei singoli componenti JSON ai nomi visivi C2/C3/C4 è parzialmente confusa dai collegamenti dei nodi intermedi."
+        "type": "ic_pin_metadata_not_visually_numbered",
+        "description": "L'IC è correttamente riconosciuto come LM317T con terminali IN, OUT e ADJ; non sono presenti numeri di pin visibili nell'immagine, quindi la verifica si limita alle posizioni/etichette mostrate."
+      },
+      {
+        "type": "terminal_abstraction",
+        "description": "I due terminali di alimentazione sono modellati come Terminal generici; l'immagine mostra una sorgente/ingresso DC con due punti di connessione, quindi l'astrazione è accettabile ma non cattura la label testuale di polarità/alimentazione."
       }
     ],
     "missing_from_json": [],
     "extra_in_json": [],
     "wrong_graph_connections": [
       {
-        "expected_from_image": "Nodo ADJ/parte superiore di R1 collegato al lato sinistro di C2; lato destro di C2 collegato alla barra OUT/lampada.",
-        "found_in_json": "integrated_circuit11.1_bottom_1 collegato a polarized_capacitor20.3_negative; polarized_capacitor20.3_positive collegato alla barra OUT.",
-        "severity": "major"
-      },
-      {
-        "expected_from_image": "Nodo tra R1 e R2 collegato al lato sinistro di C3; lato destro di C3 collegato alla barra OUT/lampada.",
-        "found_in_json": "resistor22.1_t1 collegato a polarized_capacitor20.2_negative; polarized_capacitor20.2_positive collegato alla barra OUT.",
+        "expected_from_image": "Il nodo tra ADJ, terminale sinistro di C2 e lato superiore di R1 deve essere comune.",
+        "found_in_json": "integrated_circuit11.1_bottom_1 è collegato a polarized_capacitor20.3_negative e resistor22.3_t1; questo sembra corrispondere al nodo ADJ-C2-R1 ma l'identificazione numerica dei componenti C/R è ruotata o non mappata ai designatori visivi.",
         "severity": "minor"
       },
       {
-        "expected_from_image": "Nodo tra R2 e R3 collegato al lato sinistro di C4; lato destro di C4 collegato alla barra OUT/lampada.",
-        "found_in_json": "polarized_capacitor20.4_negative collegato a resistor22.1_t2 e resistor22.2_t1, cioè al nodo associato a un livello resistivo diverso.",
-        "severity": "major"
+        "expected_from_image": "Il nodo intermedio tra R1 e R2 deve collegarsi al terminale sinistro di C3.",
+        "found_in_json": "polarized_capacitor20.2_negative è collegato a resistor22.1_t1 e resistor22.3_t2; topologicamente rappresenta un nodo intermedio, ma i riferimenti componente non sono allineabili con certezza ai designatori dell'immagine.",
+        "severity": "minor"
+      },
+      {
+        "expected_from_image": "Il nodo intermedio tra R2 e R3 deve collegarsi al terminale sinistro di C4.",
+        "found_in_json": "polarized_capacitor20.4_negative è collegato a resistor22.1_t2 e resistor22.2_t1; topologicamente rappresenta un nodo intermedio, ma i riferimenti componente non sono allineabili con certezza ai designatori dell'immagine.",
+        "severity": "minor"
       }
     ],
     "uncertain_points": [
-      "La corrispondenza esatta tra resistor22.1, resistor22.2, resistor22.3 e le etichette visive R1, R2, R3 non è esplicitata nel JSON e si deduce solo dai collegamenti verticali.",
-      "La corrispondenza esatta tra polarized_capacitor20.2, 20.3, 20.4 e le etichette visive C2, C3, C4 non è esplicitata nel JSON.",
-      "I terminali generici +12V DC sono rappresentati nel JSON come due terminali separati, ma le etichette testuali di alimentazione non sono modellate semanticamente."
+      "L'associazione esatta tra resistor22.1/22.2/22.3 e i designatori visivi R1/R2/R3 non è verificabile dal solo JSON, anche se la catena resistiva a tre elementi è presente.",
+      "L'associazione esatta tra polarized_capacitor20.2/20.3/20.4 e C2/C3/C4 non è esplicitata; i collegamenti indicano tre condensatori verso il bus di uscita, coerenti nella struttura generale.",
+      "La polarità di C1 è visibile con '+' in alto nell'immagine e il JSON la rappresenta come positive top/negative bottom; questa parte appare coerente."
     ],
-    "short_explanation": "Il JSON riconosce correttamente quasi tutti i componenti principali e conserva la struttura generale: ingresso con switch e C1, IC a tre terminali, catena di tre resistori verso GND, tre condensatori verso la barra OUT, lampada e ritorno a GND. Tuttavia ci sono discrepanze importanti nei collegamenti dei condensatori laterali ai nodi della catena resistiva, con almeno due nodi intermedi assegnati in modo non fedele all'immagine. La rappresentazione resta comunque una buona base correggibile."
+    "short_explanation": "Il JSON riconosce quasi tutti i componenti principali e conserva la struttura topologica essenziale: ingresso tramite switch verso IN, C1 verso massa, LM317 con OUT su bus comune, lampada verso massa, tre rami condensatore verso la catena resistiva e GND comune. Le principali discrepanze riguardano lo stato dello switch dichiarato chiuso mentre il simbolo appare aperto e la polarità dichiarata/interpretata dei condensatori laterali C2-C4, oltre a qualche incertezza di mappatura dei designatori. Nel complesso è una base topologica buona e correggibile."
   },
-  "raw_model_output": "{\"circuit_id\":\"c17\",\"batch\":\"C1\",\"image_file\":\"c17.jpg\",\"json_file\":\"c17.json\",\"image_graph_fidelity_score\":88,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":25,\"terminals_pins\":18,\"graph_connections\":37,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":2,\"minor\":2},\"critical_errors\":[],\"major_errors\":[{\"type\":\"wrong_graph_connection\",\"description\":\"Il nodo tra R1 e R2 è collegato nell'immagine al lato sinistro di C3, mentre nel JSON il terminale corrispondente del condensatore 20.3 è collegato al pin ADJ e a R1, cioè al nodo superiore tra ADJ e R1.\",\"image_evidence\":\"C3 è disegnato tra il nodo intermedio R1/R2 e la barra verticale di uscita a destra; il nodo ADJ/R1 superiore è invece collegato a C2.\",\"json_evidence\":\"integrated_circuit11.1_bottom_1 è connesso a polarized_capacitor20.3_negative e resistor22.3_t1; resistor22.1_t1 è invece connesso a polarized_capacitor20.2_negative e resistor22.3_t2.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il nodo tra R2 e R3 è collegato nell'immagine al lato sinistro di C4, mentre nel JSON il terminale corrispondente del condensatore 20.4 è collegato al nodo tra due resistori diverso, associato a R1/R2.\",\"image_evidence\":\"C4 è disegnato tra il nodo intermedio R2/R3 e la barra verticale di uscita a destra.\",\"json_evidence\":\"polarized_capacitor20.4_negative è connesso a resistor22.1_t2 e resistor22.2_t1, mentre il nodo inferiore con GND è su resistor22.2_t2 e il nodo ADJ è su resistor22.3_t1.\"}],\"minor_errors\":[{\"type\":\"switch_state_uncertain\",\"description\":\"Il JSON indica lo switch come chiuso, ma dall'immagine il simbolo del contatto di S1 non permette di confermare con certezza uno stato elettrico chiuso.\"},{\"type\":\"terminal_polarity_or_orientation\",\"description\":\"Le polarità dei condensatori C2, C3 e C4 risultano coerenti come lato positivo verso la barra di uscita, ma l'assegnazione dei singoli componenti JSON ai nomi visivi C2/C3/C4 è parzialmente confusa dai collegamenti dei nodi intermedi.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Nodo ADJ/parte superiore di R1 collegato al lato sinistro di C2; lato destro di C2 collegato alla barra OUT/lampada.\",\"found_in_json\":\"integrated_circuit11.1_bottom_1 collegato a polarized_capacitor20.3_negative; polarized_capacitor20.3_positive collegato alla barra OUT.\",\"severity\":\"major\"},{\"expected_from_image\":\"Nodo tra R1 e R2 collegato al lato sinistro di C3; lato destro di C3 collegato alla barra OUT/lampada.\",\"found_in_json\":\"resistor22.1_t1 collegato a polarized_capacitor20.2_negative; polarized_capacitor20.2_positive collegato alla barra OUT.\",\"severity\":\"minor\"},{\"expected_from_image\":\"Nodo tra R2 e R3 collegato al lato sinistro di C4; lato destro di C4 collegato alla barra OUT/lampada.\",\"found_in_json\":\"polarized_capacitor20.4_negative collegato a resistor22.1_t2 e resistor22.2_t1, cioè al nodo associato a un livello resistivo diverso.\",\"severity\":\"major\"}],\"uncertain_points\":[\"La corrispondenza esatta tra resistor22.1, resistor22.2, resistor22.3 e le etichette visive R1, R2, R3 non è esplicitata nel JSON e si deduce solo dai collegamenti verticali.\",\"La corrispondenza esatta tra polarized_capacitor20.2, 20.3, 20.4 e le etichette visive C2, C3, C4 non è esplicitata nel JSON.\",\"I terminali generici +12V DC sono rappresentati nel JSON come due terminali separati, ma le etichette testuali di alimentazione non sono modellate semanticamente.\"],\"short_explanation\":\"Il JSON riconosce correttamente quasi tutti i componenti principali e conserva la struttura generale: ingresso con switch e C1, IC a tre terminali, catena di tre resistori verso GND, tre condensatori verso la barra OUT, lampada e ritorno a GND. Tuttavia ci sono discrepanze importanti nei collegamenti dei condensatori laterali ai nodi della catena resistiva, con almeno due nodi intermedi assegnati in modo non fedele all'immagine. La rappresentazione resta comunque una buona base correggibile.\"}"
+  "raw_model_output": "{\"circuit_id\":\"c17\",\"batch\":\"C1\",\"image_file\":\"c17.jpg\",\"json_file\":\"c17.json\",\"image_graph_fidelity_score\":86,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":24,\"terminals_pins\":17,\"graph_connections\":37,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":2,\"minor\":3},\"critical_errors\":[],\"major_errors\":[{\"type\":\"wrong_component_terminal_polarity\",\"description\":\"Le polarità dei condensatori C2, C3 e C4 risultano invertite rispetto all'immagine: nell'immagine il terminale positivo è sul lato destro collegato al bus OUT/lampada, mentre il terminale sinistro è collegato alla catena ADJ/R1/R2/R3. Il JSON assegna il lato sinistro come negative e il lato destro come positive, ma poi collega i terminali negativi a nodi della catena resistiva: la topologia dei nodi è coerente, ma la polarità dichiarata è sospetta/invertita per questi condensatori.\",\"image_evidence\":\"C2, C3 e C4 mostrano il segno '+' sul lato destro, verso il bus verticale di uscita.\",\"json_evidence\":\"polarized_capacitor20.2/20.3/20.4 hanno terminali negative a sinistra e positive a destra; i collegamenti usano i negative verso resistori/ADJ e positive verso OUT/lamp13.1_t1.\"},{\"type\":\"switch_state_mismatch\",\"description\":\"Il JSON dichiara lo switch S1 come 'closed', ma nell'immagine il simbolo del deviatore/interruttore appare aperto, con contatto mobile non chiaramente chiuso sul terminale destro. Il collegamento topologico tra terminale di ingresso e nodo IN è però rappresentato tramite i due terminali dello switch, quindi l'errore riguarda soprattutto lo stato visibile dichiarato.\",\"image_evidence\":\"S1 è disegnato con leva inclinata e gap visibile tra i contatti, non come contatto chiuso continuo.\",\"json_evidence\":\"switch25.1 contiene \\\"state\\\": \\\"closed\\\".\"}],\"minor_errors\":[{\"type\":\"component_naming_or_class_detail\",\"description\":\"La lampada è rappresentata come class_name Lamp con due terminali, coerente nella sostanza; eventuali dettagli grafici interni del simbolo non sono modellati.\"},{\"type\":\"ic_pin_metadata_not_visually_numbered\",\"description\":\"L'IC è correttamente riconosciuto come LM317T con terminali IN, OUT e ADJ; non sono presenti numeri di pin visibili nell'immagine, quindi la verifica si limita alle posizioni/etichette mostrate.\"},{\"type\":\"terminal_abstraction\",\"description\":\"I due terminali di alimentazione sono modellati come Terminal generici; l'immagine mostra una sorgente/ingresso DC con due punti di connessione, quindi l'astrazione è accettabile ma non cattura la label testuale di polarità/alimentazione.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Il nodo tra ADJ, terminale sinistro di C2 e lato superiore di R1 deve essere comune.\",\"found_in_json\":\"integrated_circuit11.1_bottom_1 è collegato a polarized_capacitor20.3_negative e resistor22.3_t1; questo sembra corrispondere al nodo ADJ-C2-R1 ma l'identificazione numerica dei componenti C/R è ruotata o non mappata ai designatori visivi.\",\"severity\":\"minor\"},{\"expected_from_image\":\"Il nodo intermedio tra R1 e R2 deve collegarsi al terminale sinistro di C3.\",\"found_in_json\":\"polarized_capacitor20.2_negative è collegato a resistor22.1_t1 e resistor22.3_t2; topologicamente rappresenta un nodo intermedio, ma i riferimenti componente non sono allineabili con certezza ai designatori dell'immagine.\",\"severity\":\"minor\"},{\"expected_from_image\":\"Il nodo intermedio tra R2 e R3 deve collegarsi al terminale sinistro di C4.\",\"found_in_json\":\"polarized_capacitor20.4_negative è collegato a resistor22.1_t2 e resistor22.2_t1; topologicamente rappresenta un nodo intermedio, ma i riferimenti componente non sono allineabili con certezza ai designatori dell'immagine.\",\"severity\":\"minor\"}],\"uncertain_points\":[\"L'associazione esatta tra resistor22.1/22.2/22.3 e i designatori visivi R1/R2/R3 non è verificabile dal solo JSON, anche se la catena resistiva a tre elementi è presente.\",\"L'associazione esatta tra polarized_capacitor20.2/20.3/20.4 e C2/C3/C4 non è esplicitata; i collegamenti indicano tre condensatori verso il bus di uscita, coerenti nella struttura generale.\",\"La polarità di C1 è visibile con '+' in alto nell'immagine e il JSON la rappresenta come positive top/negative bottom; questa parte appare coerente.\"],\"short_explanation\":\"Il JSON riconosce quasi tutti i componenti principali e conserva la struttura topologica essenziale: ingresso tramite switch verso IN, C1 verso massa, LM317 con OUT su bus comune, lampada verso massa, tre rami condensatore verso la catena resistiva e GND comune. Le principali discrepanze riguardano lo stato dello switch dichiarato chiuso mentre il simbolo appare aperto e la polarità dichiarata/interpretata dei condensatori laterali C2-C4, oltre a qualche incertezza di mappatura dei designatori. Nel complesso è una base topologica buona e correggibile.\"}"
 }

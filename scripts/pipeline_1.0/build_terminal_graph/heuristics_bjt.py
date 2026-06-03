@@ -55,6 +55,16 @@ def merge_bjt_base_aligned_labels(
                 return True
         return False
 
+    def label_has_non_bjt_terminal(label):
+        for terminal_id in label_to_terminal_ids.get(int(label), []):
+            term = terminal_by_id.get(terminal_id)
+            if term is None:
+                continue
+            class_name = normalize_class_name(term.get("component_class_name"))
+            if "transistor" not in class_name:
+                return True
+        return False
+
     for i, term_a in enumerate(base_terms):
         info_a = terminal_match_debug.get(term_a["terminal_id"], {})
         label_a = info_a.get("matched_label")
@@ -75,6 +85,11 @@ def merge_bjt_base_aligned_labels(
             # transistor: in quel caso trascineremmo un terminale attivo nel
             # net della base.
             if label_has_non_base_bjt(label_a) or label_has_non_base_bjt(label_b):
+                continue
+
+            # Se entrambe le label hanno gia' un terminale esterno, sono reti
+            # di base complete e distinte: non vanno fuse solo per allineamento.
+            if label_has_non_bjt_terminal(label_a) and label_has_non_bjt_terminal(label_b):
                 continue
 
             bbox_b = bbox_by_instance.get(str(term_b.get("instance_id")))

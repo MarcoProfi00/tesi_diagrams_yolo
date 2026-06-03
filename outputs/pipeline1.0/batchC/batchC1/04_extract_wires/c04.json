@@ -391,7 +391,7 @@
           "y": 236.0,
           "pin_number": "4",
           "pin_label_text": null,
-          "pin_number_confidence": 0.74
+          "pin_number_confidence": 0.9
         },
         {
           "terminal_id": "11.1:top_2",
@@ -419,7 +419,7 @@
           "y": 653.0,
           "pin_number": "1",
           "pin_label_text": null,
-          "pin_number_confidence": 0.5
+          "pin_number_confidence": 0.9
         },
         {
           "terminal_id": "11.1:bottom_2",
@@ -1134,7 +1134,7 @@
       "y": 236.0,
       "pin_number": "4",
       "pin_label_text": null,
-      "pin_number_confidence": 0.74
+      "pin_number_confidence": 0.9
     },
     {
       "terminal_id": "11.1:top_2",
@@ -1162,7 +1162,7 @@
       "y": 653.0,
       "pin_number": "1",
       "pin_label_text": null,
-      "pin_number_confidence": 0.5
+      "pin_number_confidence": 0.9
     },
     {
       "terminal_id": "11.1:bottom_2",
@@ -1487,6 +1487,11 @@
       "terminal_keep_line_thickness": 7,
       "terminal_keep_inward_len": 14,
       "terminal_keep_outward_len": 12,
+      "facing_keep_max_axis_gap": 52,
+      "facing_keep_max_lateral_delta": 14,
+      "facing_keep_max_bbox_gap": 28,
+      "facing_keep_max_bbox_overlap": 36,
+      "facing_keep_min_projection_overlap_ratio": 0.45,
       "notes": "Ogni terminale preserva un cerchio locale e una piccola capsula direzionata lungo il lato stimato, per tollerare terminali non perfettamente sul cavo."
     },
     "closing_kernel_size": 3,
@@ -1497,12 +1502,15 @@
       "kernel_thickness": 3,
       "iterations": 1,
       "detect_length": 7,
-      "notes": "Bridge orientato: ricuce segmenti orizzontali e verticali dai rispettivi seed, evitando che fasci paralleli collassino in blocchi pieni."
+      "ic_vertical_bridge_suppress_outward": 80,
+      "ic_vertical_bridge_suppress_inward": 14,
+      "ic_vertical_bridge_suppress_y_pad": 30,
+      "notes": "Bridge orientato: ricuce segmenti orizzontali e verticali dai rispettivi seed, ma evita ricuciture verticali artificiali nei corridoi laterali degli IC."
     },
     "small_component_filter": {
       "enabled": true,
       "min_component_area": 40,
-      "kept_components": 29,
+      "kept_components": 30,
       "removed_components": 4
     },
     "mask_debug_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline1.0\\batchC\\batchC1\\04_extract_wires\\mask_debug\\c04_mask_debug.jpg",

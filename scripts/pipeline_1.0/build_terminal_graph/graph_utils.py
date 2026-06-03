@@ -13,7 +13,29 @@ def _is_same_non_shorting_component(source: dict, target: dict) -> bool:
     if source_class != target_class:
         return False
 
+    if source_class == "integrated_circuit" and _is_valid_same_ic_external_edge(source, target):
+        return False
+
     return source_class in NON_SHORTING_MULTI_TERMINAL_CLASSES
+
+
+def _is_valid_same_ic_external_edge(source: dict, target: dict) -> bool:
+    source_side = str(source.get("relative_position"))
+    target_side = str(target.get("relative_position"))
+    sides = {source_side, target_side}
+    dx = float(source.get("x", 0.0)) - float(target.get("x", 0.0))
+    dy = float(source.get("y", 0.0)) - float(target.get("y", 0.0))
+    distance = (dx * dx + dy * dy) ** 0.5
+
+    if len(sides) == 1:
+        return distance <= 100.0
+
+    if len(sides) != 2:
+        return False
+    if not sides.intersection({"top", "bottom"}) or not sides.intersection({"left", "right"}):
+        return False
+
+    return distance <= 230.0
 
 # =========================================================
 # COSTRUZIONE DEL GRAFO FINALE TRA TERMINALI

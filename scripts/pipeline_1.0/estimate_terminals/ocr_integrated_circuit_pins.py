@@ -2348,6 +2348,22 @@ def _repair_555_timer_pin_numbers(component: Dict) -> None:
             by_side["bottom"][0].get("terminal_id"): "1",
         }
     elif (
+        len(by_side["left"]) == 1
+        and len(by_side["right"]) == 3
+        and len(by_side["top"]) == 2
+        and len(by_side["bottom"]) == 2
+    ):
+        expected = {
+            by_side["left"][0].get("terminal_id"): "2",
+            by_side["right"][0].get("terminal_id"): "3",
+            by_side["right"][1].get("terminal_id"): "7",
+            by_side["right"][2].get("terminal_id"): "6",
+            by_side["top"][0].get("terminal_id"): "4",
+            by_side["top"][1].get("terminal_id"): "8",
+            by_side["bottom"][0].get("terminal_id"): "5",
+            by_side["bottom"][1].get("terminal_id"): "1",
+        }
+    elif (
         len(by_side["left"]) == 3
         and len(by_side["right"]) == 1
         and len(by_side["top"]) == 2

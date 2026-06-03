@@ -58,6 +58,10 @@ def remove_non_shorting_component_self_matches(
             cleaned[int(label)] = unique_ids
             continue
 
+        if _is_valid_same_ic_external_branch(unique_ids, terms, label, terminal_match_debug, terminal_by_id):
+            cleaned[int(label)] = unique_ids
+            continue
+
         for terminal_id in unique_ids:
             terminal_match_debug[terminal_id] = {
                 "terminal_id": terminal_id,
@@ -71,6 +75,36 @@ def remove_non_shorting_component_self_matches(
             }
 
     return cleaned
+
+
+def _is_valid_same_ic_external_branch(
+    terminal_ids: list[str],
+    terms: list[dict],
+    label: int,
+    terminal_match_debug: dict,
+    terminal_by_id: dict,
+):
+    if len(terms) != 2:
+        return False
+    if {
+        normalize_class_name(term.get("component_class_name"))
+        for term in terms
+    } != {"integrated_circuit"}:
+        return False
+
+    sides = {str(term.get("relative_position")) for term in terms}
+    if len(sides) == 1:
+        return _min_terminal_distance(terms[:1], terms[1:]) <= 100.0
+
+    if len(sides) != 2:
+        return False
+    if not sides.intersection({"top", "bottom"}) or not sides.intersection({"left", "right"}):
+        return False
+
+    if _min_terminal_distance(terms[:1], terms[1:]) > 230.0:
+        return False
+
+    return True
 
 
 def split_polarized_capacitor_self_short_groups(
@@ -152,6 +186,193 @@ def _split_group_on_polarized_capacitor_axis(
 
 # Costruisce una mappa instance_id -> bbox
 # è usato in molte euristiche che confrontano distanze tra componenti
+def merge_split_grounded_ic_side_branches(
+    label_to_terminal_ids: dict,
+    terminals: list[dict],
+    terminal_match_debug: dict,
+):
+    terminal_by_id = {term["terminal_id"]: term for term in terminals}
+    groups = [sorted(set(ids)) for ids in label_to_terminal_ids.values()]
+    merged = [False] * len(groups)
+    output_groups = []
+
+    for idx, terminal_ids in enumerate(groups):
+        if merged[idx]:
+            continue
+
+        current = set(terminal_ids)
+        current_original_labels = _original_matched_labels(current, terminal_match_debug)
+
+        changed = True
+        while changed:
+            changed = False
+            for other_idx, other_ids in enumerate(groups):
+                if other_idx == idx or merged[other_idx]:
+                    continue
+
+                other = set(other_ids)
+                other_original_labels = _original_matched_labels(other, terminal_match_debug)
+                if not current_original_labels.intersection(other_original_labels):
+                    continue
+
+                if _should_merge_grounded_ic_side_branch(current, other, terminal_by_id):
+                    current.update(other)
+                    current_original_labels.update(other_original_labels)
+                    merged[other_idx] = True
+                    changed = True
+                elif _should_merge_grounded_ic_side_branch(other, current, terminal_by_id):
+                    current.update(other)
+                    current_original_labels.update(other_original_labels)
+                    merged[other_idx] = True
+                    changed = True
+
+        merged[idx] = True
+        output_groups.append(sorted(current))
+
+    return {
+        index: terminal_ids
+        for index, terminal_ids in enumerate(output_groups, start=1)
+    }
+
+
+def _original_matched_labels(terminal_ids: set[str], terminal_match_debug: dict):
+    labels = set()
+    for terminal_id in terminal_ids:
+        label = terminal_match_debug.get(terminal_id, {}).get("matched_label")
+        if label is not None:
+            labels.add(int(label))
+    return labels
+
+
+def _should_merge_grounded_ic_side_branch(
+    switch_branch_ids: set[str],
+    grounded_ic_ids: set[str],
+    terminal_by_id: dict,
+):
+    switch_branch_terms = [terminal_by_id.get(terminal_id) for terminal_id in switch_branch_ids]
+    grounded_terms = [terminal_by_id.get(terminal_id) for terminal_id in grounded_ic_ids]
+    if any(term is None for term in switch_branch_terms + grounded_terms):
+        return False
+
+    switch_classes = {
+        normalize_class_name(term.get("component_class_name"))
+        for term in switch_branch_terms
+    }
+    has_switch_or_button = bool(switch_classes.intersection({"push_button", "switch"}))
+    has_series_resistor = "resistor" in switch_classes
+    if not (has_switch_or_button and has_series_resistor):
+        return False
+
+    grounded_classes = {
+        normalize_class_name(term.get("component_class_name"))
+        for term in grounded_terms
+    }
+    if not grounded_classes.intersection({"gnd", "ground"}):
+        return False
+
+    ic_terms = [
+        term
+        for term in grounded_terms
+        if normalize_class_name(term.get("component_class_name")) == "integrated_circuit"
+    ]
+    if len(ic_terms) < 2:
+        return False
+
+    ic_instances = {str(term.get("instance_id")) for term in ic_terms}
+    ic_sides = {str(term.get("relative_position")) for term in ic_terms}
+    if len(ic_instances) != 1 or len(ic_sides) != 1:
+        return False
+
+    return _min_terminal_distance(switch_branch_terms, grounded_terms) <= 130.0
+
+
+def _min_terminal_distance(first_terms: list[dict], second_terms: list[dict]):
+    best = None
+    for term_a in first_terms:
+        ax = float(term_a.get("x", 0.0))
+        ay = float(term_a.get("y", 0.0))
+        for term_b in second_terms:
+            bx = float(term_b.get("x", 0.0))
+            by = float(term_b.get("y", 0.0))
+            dist = ((ax - bx) ** 2 + (ay - by) ** 2) ** 0.5
+            if best is None or dist < best:
+                best = dist
+    return float(best or 0.0)
+
+
+def split_same_side_ic_fanout_groups(
+    label_to_terminal_ids: dict,
+    terminals: list[dict],
+):
+    terminal_by_id = {term["terminal_id"]: term for term in terminals}
+    output_groups = []
+
+    for terminal_ids in label_to_terminal_ids.values():
+        unique_ids = sorted(set(terminal_ids))
+        split_groups = _split_same_side_ic_fanout_group(unique_ids, terminal_by_id)
+        output_groups.extend(split_groups)
+
+    return {
+        index: terminal_ids
+        for index, terminal_ids in enumerate(output_groups, start=1)
+    }
+
+
+def _split_same_side_ic_fanout_group(
+    terminal_ids: list[str],
+    terminal_by_id: dict,
+):
+    terms = [terminal_by_id.get(terminal_id) for terminal_id in terminal_ids]
+    terms = [term for term in terms if term is not None]
+    if len(terms) != len(terminal_ids):
+        return [terminal_ids]
+
+    ic_terms = [
+        term
+        for term in terms
+        if normalize_class_name(term.get("component_class_name")) == "integrated_circuit"
+    ]
+    external_terms = [
+        term
+        for term in terms
+        if normalize_class_name(term.get("component_class_name")) != "integrated_circuit"
+    ]
+    if len(ic_terms) < 2 or len(ic_terms) != len(external_terms):
+        return [terminal_ids]
+
+    ic_instances = {str(term.get("instance_id")) for term in ic_terms}
+    ic_sides = {str(term.get("relative_position")) for term in ic_terms}
+    external_classes = {
+        normalize_class_name(term.get("component_class_name"))
+        for term in external_terms
+    }
+    if len(ic_instances) != 1 or len(ic_sides) != 1 or len(external_classes) != 1:
+        return [terminal_ids]
+    if external_classes.intersection({"gnd", "ground", "terminal"}):
+        return [terminal_ids]
+
+    side = next(iter(ic_sides))
+    if side not in {"left", "right", "top", "bottom"}:
+        return [terminal_ids]
+
+    sorted_ic_terms = sorted(ic_terms, key=lambda term: float(term.get("y", 0.0)))
+    if side == "right":
+        sorted_external_terms = sorted(external_terms, key=lambda term: float(term.get("x", 0.0)))
+    elif side == "left":
+        sorted_external_terms = sorted(external_terms, key=lambda term: -float(term.get("x", 0.0)))
+    elif side == "bottom":
+        sorted_ic_terms = sorted(ic_terms, key=lambda term: float(term.get("x", 0.0)))
+        sorted_external_terms = sorted(external_terms, key=lambda term: float(term.get("y", 0.0)))
+    else:
+        sorted_ic_terms = sorted(ic_terms, key=lambda term: float(term.get("x", 0.0)))
+        sorted_external_terms = sorted(external_terms, key=lambda term: -float(term.get("y", 0.0)))
+
+    return [
+        [ic_term["terminal_id"], external_term["terminal_id"]]
+        for ic_term, external_term in zip(sorted_ic_terms, sorted_external_terms)
+    ]
+
+
 def build_component_bbox_by_instance(components: list[dict]):
     bbox_by_instance = {}
     for comp in components:

@@ -730,12 +730,38 @@ def _adjust_led_vertical_diode_scores(score_map: dict, orientation: str, meta: d
     return score_map
 
 
+def _assign_led_vertical_terminal_convention(terminals: list[dict], meta: dict) -> list[dict]:
+    semantic_roles = meta.get("semantic_roles", {})
+    debug = {
+        "orientation": "vertical",
+        "selected_marker_side": "bottom",
+        "selected_other_side": "top",
+        "confidence": 0.75,
+        "evidence_type": "layout_convention",
+        "convention": "vertical_led_top_anode_bottom_cathode",
+    }
+    return _assign_pair_roles(
+        terminals,
+        marker_side="bottom",
+        other_side="top",
+        marker_name=semantic_roles.get("marker_side"),
+        other_name=semantic_roles.get("other_side"),
+        confidence=0.75,
+        resolution_mode="led_vertical_terminal_convention",
+        evidence_type="layout_convention",
+        debug=debug,
+    )
+
+
 # Resolve two terminal semantics.
 def resolve_two_terminal_semantics(binary, bbox, orientation, terminals, meta):
     semantic_strategy = meta.get("semantic_terminal_strategy")
 
     if semantic_strategy is None or len(terminals) < 2 or orientation not in {"horizontal", "vertical"}:
         return terminals
+
+    if semantic_strategy == "diode_cathode_from_bar" and meta.get("name") == "LED" and orientation == "vertical":
+        return _assign_led_vertical_terminal_convention(terminals, meta)
 
     if semantic_strategy == "diode_cathode_from_bar":
         score_map = _projection_edge_group_scores(
