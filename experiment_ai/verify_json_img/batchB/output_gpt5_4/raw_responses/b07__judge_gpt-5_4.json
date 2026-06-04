@@ -1,0 +1,75 @@
+{
+  "metadata": {
+    "circuit_id": "b07",
+    "batch": "B",
+    "batch_dir": "batchB",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\images\\b07.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\json\\b07.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "b07.jpg",
+    "json_file": "b07.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:39:45",
+    "judge_latency_seconds": 13.693,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=11833, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=784, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=12617)",
+  "judge_result": {
+    "circuit_id": "b07",
+    "batch": "B",
+    "image_file": "b07.jpg",
+    "json_file": "b07.json",
+    "image_graph_fidelity_score": 92,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 22,
+      "graph_connections": 52,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 1,
+      "minor": 1
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "terminal_role_swap_on_lower_mosfet",
+        "description": "Sul MOSFET inferiore M2 il JSON collega sia D sia S allo stesso nodo di massa, mentre dall'immagine il terminale superiore di M2 è collegato al nodo di uscita e il terminale inferiore/laterale va al nodo basso/massa. Topologicamente il nodo corretto è presente, ma l'identità drain/source del MOSFET inferiore risulta incoerente con il simbolo visibile.",
+        "image_evidence": "Nell'immagine M2 ha il gate sul ramo verticale che sale al nodo di uscita; uno dei due terminali di canale è sul nodo basso con GND, l'altro è sul ramo verso il basso/centro del simbolo. Non si vede un corto esplicito tra i due terminali di canale come entità distinte del simbolo.",
+        "json_evidence": "Nel graph gnd9.1_t1 è collegato sia a mosfet16.2_D sia a mosfet16.2_S, e voltage_source31.1_negative / terminal26.3_t1 sono anch'essi sullo stesso nodo con entrambi mosfet16.2_D e mosfet16.2_S."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "semantic_polarity_label_not_explicit",
+        "description": "Le label + e - di VIN/Vout e 5V aiutano a leggere i nodi, ma il JSON le rappresenta tramite Terminal/Voltage_Source senza esplicitare testo OCR; non altera la topologia principale."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "Per M2, il gate è sul nodo di uscita comune a M1 e Vout+, mentre solo il terminale inferiore del dispositivo va al nodo basso/GND; i due terminali di canale non andrebbero entrambi dichiarati direttamente sul nodo GND come terminali distinti.",
+        "found_in_json": "mosfet16.2_D e mosfet16.2_S sono entrambi nello stesso net group di gnd9.1_t1 / voltage_source31.1_negative / terminal26.3_t1.",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "Il mapping tra S e D dei MOSFET nel simbolo MOS stilizzato non è completamente robusto senza affidarsi a convenzioni di simbolo; l'errore certo riguarda soprattutto l'assegnazione dei terminali specifici, non l'esistenza dei nodi principali.",
+      "Il graph è espresso come adiacenze terminale-terminale complete sullo stesso nodo invece che come net esplicite; questa ridondanza non è penalizzata perché coerente con i nodi visibili."
+    ],
+    "short_explanation": "Il graph riproduce correttamente la struttura principale visibile: VIN al gate di M1, 5V all’altro terminale di M1, nodo centrale condiviso tra M1, gate di M2 e Vout+, e nodo basso condiviso tra VIN-, GND e Vout-. L’unica imprecisione rilevante è sul MOSFET inferiore, dove il JSON mette sia D sia S sul nodo di massa, rendendo scorretta l’identità dei terminali pur mantenendo quasi intatta la topologia globale."
+  },
+  "raw_model_output": "{\"circuit_id\":\"b07\",\"batch\":\"B\",\"image_file\":\"b07.jpg\",\"json_file\":\"b07.json\",\"image_graph_fidelity_score\":92,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":22,\"graph_connections\":52,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":1,\"minor\":1},\"critical_errors\":[],\"major_errors\":[{\"type\":\"terminal_role_swap_on_lower_mosfet\",\"description\":\"Sul MOSFET inferiore M2 il JSON collega sia D sia S allo stesso nodo di massa, mentre dall'immagine il terminale superiore di M2 è collegato al nodo di uscita e il terminale inferiore/laterale va al nodo basso/massa. Topologicamente il nodo corretto è presente, ma l'identità drain/source del MOSFET inferiore risulta incoerente con il simbolo visibile.\",\"image_evidence\":\"Nell'immagine M2 ha il gate sul ramo verticale che sale al nodo di uscita; uno dei due terminali di canale è sul nodo basso con GND, l'altro è sul ramo verso il basso/centro del simbolo. Non si vede un corto esplicito tra i due terminali di canale come entità distinte del simbolo.\",\"json_evidence\":\"Nel graph gnd9.1_t1 è collegato sia a mosfet16.2_D sia a mosfet16.2_S, e voltage_source31.1_negative / terminal26.3_t1 sono anch'essi sullo stesso nodo con entrambi mosfet16.2_D e mosfet16.2_S.\"}],\"minor_errors\":[{\"type\":\"semantic_polarity_label_not_explicit\",\"description\":\"Le label + e - di VIN/Vout e 5V aiutano a leggere i nodi, ma il JSON le rappresenta tramite Terminal/Voltage_Source senza esplicitare testo OCR; non altera la topologia principale.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Per M2, il gate è sul nodo di uscita comune a M1 e Vout+, mentre solo il terminale inferiore del dispositivo va al nodo basso/GND; i due terminali di canale non andrebbero entrambi dichiarati direttamente sul nodo GND come terminali distinti.\",\"found_in_json\":\"mosfet16.2_D e mosfet16.2_S sono entrambi nello stesso net group di gnd9.1_t1 / voltage_source31.1_negative / terminal26.3_t1.\",\"severity\":\"major\"}],\"uncertain_points\":[\"Il mapping tra S e D dei MOSFET nel simbolo MOS stilizzato non è completamente robusto senza affidarsi a convenzioni di simbolo; l'errore certo riguarda soprattutto l'assegnazione dei terminali specifici, non l'esistenza dei nodi principali.\",\"Il graph è espresso come adiacenze terminale-terminale complete sullo stesso nodo invece che come net esplicite; questa ridondanza non è penalizzata perché coerente con i nodi visibili.\"],\"short_explanation\":\"Il graph riproduce correttamente la struttura principale visibile: VIN al gate di M1, 5V all’altro terminale di M1, nodo centrale condiviso tra M1, gate di M2 e Vout+, e nodo basso condiviso tra VIN-, GND e Vout-. L’unica imprecisione rilevante è sul MOSFET inferiore, dove il JSON mette sia D sia S sul nodo di massa, rendendo scorretta l’identità dei terminali pur mantenendo quasi intatta la topologia globale.\"}"
+}

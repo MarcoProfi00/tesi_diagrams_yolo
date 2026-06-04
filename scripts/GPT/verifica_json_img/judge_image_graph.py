@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import base64
 import csv
+import hashlib
 import json
 import mimetypes
 import os
@@ -22,7 +23,7 @@ from openai import OpenAI
 # Judge Image <-> Graph JSON
 #
 # Input:
-#   verify_json_img/
+#   experiment_ai/verify_json_img/
 #     prompt.txt
 #     batchA/images/a01.png
 #     batchA/json/a01.json
@@ -35,13 +36,13 @@ from openai import OpenAI
 #
 # Output predefinito:
 #   Se si analizza un solo batch:
-#     verify_json_img/batchA/output_gpt5_5/
-#     verify_json_img/batchB/output_gpt5_5/
-#     verify_json_img/batchC1/output_gpt5_5/
-#     verify_json_img/batchC2/output_gpt5_5/
+#     experiment_ai/verify_json_img/batchA/output_gpt5_4/
+#     experiment_ai/verify_json_img/batchB/output_gpt5_4/
+#     experiment_ai/verify_json_img/batchC1/output_gpt5_4/
+#     experiment_ai/verify_json_img/batchC2/output_gpt5_4/
 #
 #   Se si analizzano piu batch insieme senza --out-dir:
-#     verify_json_img/output_gpt5_5/
+#     experiment_ai/verify_json_img/output_gpt5_4/
 #
 #   Contenuto:
 #     judge_results.jsonl
@@ -51,26 +52,21 @@ from openai import OpenAI
 #     plots/*.png
 # ============================================================
 
-DEFAULT_MODEL = "gpt-5.5"
-DEFAULT_OUTPUT_DIR_NAME = "output_gpt5_5"
+DEFAULT_MODEL = "gpt-5.4"
+DEFAULT_OUTPUT_DIR_NAME = "output_gpt5_4"
 IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp"]
 VALID_BATCH_LABELS = {"A", "B", "C1", "C2", "unknown"}
 DECISION_LEVELS = ["VERY_HIGH", "HIGH", "MEDIUM", "LOW"]
-LEGACY_DECISION_MAP = {
-    "PASS": "VERY_HIGH",
-    "MINOR_ISSUES": "HIGH",
-    "NEEDS_PATCH": "MEDIUM",
-    "FAIL": "LOW",
-}
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-# Se lo script si trova in experiment_ai/scripts/GPT/verifica_json_img,
-# parents[3] punta a experiment_ai. Se la struttura è diversa, usare --root.
+# Se lo script si trova in scripts/GPT/verifica_json_img,
+# parents[3] punta alla root del progetto. Se la struttura e diversa, usare --root.
 try:
-    DEFAULT_EXPERIMENT_ROOT = Path(__file__).resolve().parents[3]
+    PROJECT_ROOT = Path(__file__).resolve().parents[3]
 except IndexError:
-    DEFAULT_EXPERIMENT_ROOT = Path.cwd()
-DEFAULT_VERIFY_ROOT = DEFAULT_EXPERIMENT_ROOT / "verify_json_img"
+    PROJECT_ROOT = Path.cwd()
+DEFAULT_VERIFY_ROOT = PROJECT_ROOT / "experiment_ai" / "verify_json_img"
+DEFAULT_CLASSES_YAML = PROJECT_ROOT / "metadata" / "class_terminals_v1.yaml"
 
 
 JUDGE_RESULT_SCHEMA: Dict[str, Any] = {
@@ -88,9 +84,9 @@ JUDGE_RESULT_SCHEMA: Dict[str, Any] = {
             "type": "object",
             "additionalProperties": False,
             "properties": {
-                "components": {"type": "integer", "minimum": 0, "maximum": 25},
-                "terminals_pins": {"type": "integer", "minimum": 0, "maximum": 20},
-                "graph_connections": {"type": "integer", "minimum": 0, "maximum": 45},
+                "components": {"type": "integer", "minimum": 0, "maximum": 10},
+                "terminals_pins": {"type": "integer", "minimum": 0, "maximum": 25},
+                "graph_connections": {"type": "integer", "minimum": 0, "maximum": 55},
                 "visible_semantics": {"type": "integer", "minimum": 0, "maximum": 10},
             },
             "required": ["components", "terminals_pins", "graph_connections", "visible_semantics"],
@@ -198,6 +194,10 @@ def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def text_sha256(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
 def write_json(path: Path, data: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as f:
@@ -229,7 +229,7 @@ def normalize_decision_label(value: Any) -> str:
         return ""
     if text in DECISION_LEVELS or text == "PARSE_ERROR":
         return text
-    return LEGACY_DECISION_MAP.get(text, text)
+    return text
 
 
 def infer_batch_label(batch_dir_name: str) -> str:
@@ -307,7 +307,13 @@ def discover_pairs(root: Path, batch_filter: Optional[str], only_ids: Optional[s
     return pairs
 
 
-def build_user_text(prompt_template: str, pair: CircuitPair, graph_json_text: str) -> str:
+def build_user_text(
+    prompt_template: str,
+    pair: CircuitPair,
+    graph_json_text: str,
+    classes_yaml_text: str,
+    classes_yaml_path: Path,
+) -> str:
     return f"""{prompt_template.strip()}
 
 ---
@@ -320,7 +326,14 @@ METADATI DA USARE NELL'OUTPUT
 IMPORTANTE:
 - Usa esattamente questi metadati nei campi circuit_id, batch, image_file e json_file.
 - Valuta il Graph JSON originale riportato sotto.
+- Usa il vocabolario YAML riportato sotto come riferimento della pipeline.
 - Non trasformare il campo graph in altri formati.
+
+VOCABOLARIO YAML DELLA PIPELINE
+File: {classes_yaml_path.name}
+```yaml
+{classes_yaml_text}
+```
 
 GRAPH JSON ORIGINALE:
 ```json
@@ -333,6 +346,11 @@ def call_judge(
     client: OpenAI,
     model: str,
     prompt_template: str,
+    prompt_path: Path,
+    prompt_sha256: str,
+    classes_yaml_text: str,
+    classes_yaml_path: Path,
+    classes_yaml_sha256: str,
     pair: CircuitPair,
     image_detail: str,
     max_output_tokens: int,
@@ -341,7 +359,7 @@ def call_judge(
     graph_json_text = read_text(pair.json_path)
 
     # Controllo solo tecnico: il file deve essere JSON valido.
-    # Il contenuto non viene modificato né trasformato.
+    # Il contenuto non viene modificato ne trasformato.
     try:
         json.loads(graph_json_text)
         input_json_valid = True
@@ -350,7 +368,13 @@ def call_judge(
         input_json_valid = False
         input_json_error = str(exc)
 
-    user_text = build_user_text(prompt_template, pair, graph_json_text)
+    user_text = build_user_text(
+        prompt_template=prompt_template,
+        pair=pair,
+        graph_json_text=graph_json_text,
+        classes_yaml_text=classes_yaml_text,
+        classes_yaml_path=classes_yaml_path,
+    )
     image_data_url = encode_image_data_url(pair.image_path)
 
     request_kwargs: Dict[str, Any] = {
@@ -403,8 +427,14 @@ def call_judge(
             "batch_dir": pair.batch_dir.name,
             "image_path": str(pair.image_path),
             "json_path": str(pair.json_path),
+            "prompt_path": str(prompt_path),
+            "classes_yaml_path": str(classes_yaml_path),
             "image_file": pair.image_path.name,
             "json_file": pair.json_path.name,
+            "prompt_file": prompt_path.name,
+            "classes_yaml_file": classes_yaml_path.name,
+            "prompt_sha256": prompt_sha256,
+            "classes_yaml_sha256": classes_yaml_sha256,
             "judge_model": model,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "judge_latency_seconds": round(latency, 3),
@@ -449,6 +479,10 @@ def flatten_for_csv(record: Dict[str, Any]) -> Dict[str, Any]:
         "judge_latency_seconds": meta.get("judge_latency_seconds", ""),
         "input_json_valid": meta.get("input_json_valid", ""),
         "parsed_ok": meta.get("parsed_ok", ""),
+        "prompt_file": meta.get("prompt_file", ""),
+        "prompt_sha256": meta.get("prompt_sha256", ""),
+        "classes_yaml_file": meta.get("classes_yaml_file", ""),
+        "classes_yaml_sha256": meta.get("classes_yaml_sha256", ""),
         "short_explanation": jr.get("short_explanation", "") if isinstance(jr, dict) else "",
     }
 
@@ -477,15 +511,24 @@ def save_markdown_report(path: Path, records: List[Dict[str, Any]]) -> None:
     rows = [flatten_for_csv(r) for r in records]
 
     lines: List[str] = []
-    lines.append("# Report verifica immagine ↔ Graph JSON")
+    lines.append("# Report verifica immagine - Graph JSON")
     lines.append("")
     lines.append(f"Generato: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     lines.append("")
 
     if rows:
+        first_meta = records[0].get("metadata", {})
+        lines.append("## Metodo")
+        lines.append("")
+        lines.append(f"- Modello: `{first_meta.get('judge_model', '')}`")
+        lines.append(f"- Prompt: `{first_meta.get('prompt_file', '')}`")
+        lines.append(f"- Prompt SHA256: `{str(first_meta.get('prompt_sha256', ''))[:12]}`")
+        lines.append(f"- YAML: `{first_meta.get('classes_yaml_file', '')}`")
+        lines.append(f"- YAML SHA256: `{str(first_meta.get('classes_yaml_sha256', ''))[:12]}`")
+        lines.append("")
         lines.append("## Tabella sintetica")
         lines.append("")
-        lines.append("| Circuito | Batch | Score | Fedeltà | Critici | Maggiori | Minori | Usabile come graph base |")
+        lines.append("| Circuito | Batch | Score | Fedelta | Critici | Maggiori | Minori | Usabile come graph base |")
         lines.append("|---|---:|---:|---|---:|---:|---:|---|")
         for row in rows:
             lines.append(
@@ -510,7 +553,7 @@ def save_markdown_report(path: Path, records: List[Dict[str, Any]]) -> None:
 
         lines.append(f"- Batch: `{jr.get('batch', '')}`")
         lines.append(f"- Score: `{jr.get('image_graph_fidelity_score', '')}`")
-        lines.append(f"- Fedeltà: `{normalize_decision_label(jr.get('decision', ''))}`")
+        lines.append(f"- Fedelta: `{normalize_decision_label(jr.get('decision', ''))}`")
         lines.append(f"- Usabile come graph base: `{jr.get('usable_as_graph_base', '')}`")
         lines.append(f"- Spiegazione: {jr.get('short_explanation', '')}")
         lines.append("")
@@ -603,7 +646,7 @@ def make_plots(csv_path: Path, plots_dir: Path) -> None:
         ax.spines["left"].set_color("#B7ADA1")
         ax.spines["bottom"].set_color("#B7ADA1")
 
-    # 1) Score per circuito con fedeltà
+    # 1) Score per circuito con fedelta
     score_df = df.dropna(subset=["score"]).copy()
     if not score_df.empty:
         if "decision" in score_df.columns:
@@ -633,7 +676,7 @@ def make_plots(csv_path: Path, plots_dir: Path) -> None:
         ax.set_xlim(0, 100)
         ax.set_xlabel("Image-Graph fidelity score")
         ax.set_ylabel("Circuito")
-        ax.set_title("Score per circuito con fedeltà")
+        ax.set_title("Score per circuito con fedelta")
         style_axes(ax)
         ax.invert_yaxis()
         for bar, score, decision in zip(bars, score_df["score"], score_df["decision"]):
@@ -718,9 +761,9 @@ def make_plots(csv_path: Path, plots_dir: Path) -> None:
         fig.patch.set_facecolor("#FFF8F0")
         left = None
         max_scores = {
-            "components_score": 25,
-            "terminals_pins_score": 20,
-            "graph_connections_score": 45,
+            "components_score": 10,
+            "terminals_pins_score": 25,
+            "graph_connections_score": 55,
             "visible_semantics_score": 10,
         }
         pretty_names = {
@@ -780,30 +823,47 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Verifica immagine <-> Graph JSON con un judge multimodale.")
     parser.add_argument("--root", type=Path, default=DEFAULT_VERIFY_ROOT, help="Cartella verify_json_img")
     parser.add_argument("--prompt", type=Path, default=None, help="Path prompt.txt. Default: <root>/prompt.txt")
-    parser.add_argument("--out-dir", type=Path, default=None, help="Cartella output. Default: <batch>/output_gpt5_5 se analizzi un solo batch, altrimenti <root>/output_gpt5_5")
+    parser.add_argument(
+        "--classes-yaml",
+        type=Path,
+        default=DEFAULT_CLASSES_YAML,
+        help="Path del vocabolario YAML classi/terminali. Default: metadata/class_terminals_v1.yaml",
+    )
+    parser.add_argument("--out-dir", type=Path, default=None, help="Cartella output. Default: <batch>/output_gpt5_4 se analizzi un solo batch, altrimenti <root>/output_gpt5_4")
     parser.add_argument("--model", default=DEFAULT_MODEL, help="Modello judge")
     parser.add_argument("--batch", default=None, help="Batch da eseguire: A, B, C1, C2 oppure batchA/batchB/...")
     parser.add_argument("--only", default=None, help="Circuiti da eseguire, separati da virgola. Esempio: a01,c16")
     parser.add_argument("--limit", type=int, default=None, help="Limita il numero di circuiti")
-    parser.add_argument("--resume", action="store_true", help="Riusa raw_responses già presenti")
+    parser.add_argument("--resume", action="store_true", help="Riusa raw_responses gia presenti")
     parser.add_argument("--dry-run", action="store_true", help="Mostra le coppie trovate senza chiamare l'API")
     parser.add_argument("--no-plots", action="store_true", help="Non generare grafici")
     parser.add_argument("--detail", choices=["low", "high", "auto"], default="high", help="Dettaglio immagine inviato al modello")
-    parser.add_argument("--max-output-tokens", type=int, default=3500)
+    parser.add_argument(
+        "--max-output-tokens",
+        type=int,
+        default=None,
+        help="Default: 3500 con reasoning none/low, 7000 con medium/high/xhigh",
+    )
     parser.add_argument("--reasoning-effort", choices=["none", "low", "medium", "high", "xhigh"], default="low")
     args = parser.parse_args()
 
     root: Path = args.root.resolve()
     prompt_path: Path = args.prompt.resolve() if args.prompt else (root / "prompt.txt")
+    classes_yaml_path: Path = args.classes_yaml.resolve()
+    max_output_tokens = (
+        args.max_output_tokens
+        if args.max_output_tokens is not None
+        else (3500 if args.reasoning_effort in {"none", "low"} else 7000)
+    )
 
     # L'output viene deciso dopo aver scoperto le coppie:
     # - se stai analizzando un solo batch, finisce dentro quel batch;
-    # - se stai analizzando più batch insieme, finisce nella root verify_json_img;
+    # - se stai analizzando piu batch insieme, finisce nella root verify_json_img;
     # - se passi --out-dir, viene usato esattamente quel percorso.
     requested_out_dir: Optional[Path] = args.out_dir.resolve() if args.out_dir else None
 
-    # Carica .env da più posizioni utili, senza sovrascrivere variabili già presenti.
-    for env_path in [SCRIPT_DIR / ".env", root / ".env", DEFAULT_EXPERIMENT_ROOT / ".env", Path.cwd() / ".env"]:
+    # Carica .env da piu posizioni utili, senza sovrascrivere variabili gia presenti.
+    for env_path in [SCRIPT_DIR / ".env", root / ".env", PROJECT_ROOT / ".env", Path.cwd() / ".env"]:
         if env_path.exists():
             load_dotenv(env_path, override=False)
 
@@ -815,8 +875,13 @@ def main() -> int:
 
     if not prompt_path.exists():
         raise FileNotFoundError(f"prompt.txt non trovato: {prompt_path}")
+    if not classes_yaml_path.exists():
+        raise FileNotFoundError(f"class_terminals_v1.yaml non trovato: {classes_yaml_path}")
 
     prompt_template = read_text(prompt_path)
+    classes_yaml_text = read_text(classes_yaml_path)
+    prompt_sha256 = text_sha256(prompt_template)
+    classes_yaml_sha256 = text_sha256(classes_yaml_text)
     batch_filter = normalize_batch_arg(args.batch)
     only_ids = {x.strip().lower() for x in args.only.split(",") if x.strip()} if args.only else None
 
@@ -842,8 +907,10 @@ def main() -> int:
 
     print(f"Root: {root}")
     print(f"Prompt: {prompt_path}")
+    print(f"YAML: {classes_yaml_path}")
     print(f"Output: {out_dir}")
     print(f"Modello: {args.model}")
+    print(f"Max output tokens: {max_output_tokens}")
     print(f"Coppie trovate: {len(pairs)}")
     for pair in pairs:
         print(f"- [{pair.batch_label}] {pair.circuit_id}: {pair.image_path.name} + {pair.json_path.name}")
@@ -863,9 +930,11 @@ def main() -> int:
         if args.resume:
             existing = load_existing_raw(raw_path)
             if existing is not None:
-                print(f"\n[{idx}/{len(pairs)}] {pair.circuit_id}: uso risultato esistente")
-                all_records.append(existing)
-                continue
+                if existing.get("metadata", {}).get("parsed_ok", True):
+                    print(f"\n[{idx}/{len(pairs)}] {pair.circuit_id}: uso risultato esistente")
+                    all_records.append(existing)
+                    continue
+                print(f"\n[{idx}/{len(pairs)}] {pair.circuit_id}: risultato esistente non valido, rigenero")
 
         print(f"\n[{idx}/{len(pairs)}] Judge su {pair.circuit_id} ({pair.batch_label})")
         try:
@@ -873,9 +942,14 @@ def main() -> int:
                 client=client,
                 model=args.model,
                 prompt_template=prompt_template,
+                prompt_path=prompt_path,
+                prompt_sha256=prompt_sha256,
+                classes_yaml_text=classes_yaml_text,
+                classes_yaml_path=classes_yaml_path,
+                classes_yaml_sha256=classes_yaml_sha256,
                 pair=pair,
                 image_detail=args.detail,
-                max_output_tokens=args.max_output_tokens,
+                max_output_tokens=max_output_tokens,
                 reasoning_effort=args.reasoning_effort,
             )
         except Exception as exc:
@@ -886,8 +960,14 @@ def main() -> int:
                     "batch": pair.batch_label,
                     "image_path": str(pair.image_path),
                     "json_path": str(pair.json_path),
+                    "prompt_path": str(prompt_path),
+                    "classes_yaml_path": str(classes_yaml_path),
                     "image_file": pair.image_path.name,
                     "json_file": pair.json_path.name,
+                    "prompt_file": prompt_path.name,
+                    "classes_yaml_file": classes_yaml_path.name,
+                    "prompt_sha256": prompt_sha256,
+                    "classes_yaml_sha256": classes_yaml_sha256,
                     "judge_model": args.model,
                     "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     "parsed_ok": False,
@@ -907,7 +987,7 @@ def main() -> int:
 
         row = flatten_for_csv(record)
         print(
-            f"[{pair.circuit_id}] score={row.get('score')} decision={row.get('decision')} "
+            f"[{pair.circuit_id}] score={row.get('score')} fedelta={row.get('decision')} "
             f"usable={row.get('usable_as_graph_base')} "
             f"critical={row.get('critical_errors_count')} major={row.get('major_errors_count')} minor={row.get('minor_errors_count')}"
         )

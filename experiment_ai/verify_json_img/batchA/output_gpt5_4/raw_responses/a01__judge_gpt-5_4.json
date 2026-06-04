@@ -1,0 +1,62 @@
+{
+  "metadata": {
+    "circuit_id": "a01",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a01.png",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a01.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "a01.png",
+    "json_file": "a01.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "d43b698894dbc528bd8e1f7d52a835fdd99cc52aa5cb338f2193dbbb46c00acd",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 15:37:16",
+    "judge_latency_seconds": 14.252,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=11378, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=670, output_tokens_details=OutputTokensDetails(reasoning_tokens=265), total_tokens=12048)",
+  "judge_result": {
+    "circuit_id": "a01",
+    "batch": "A",
+    "image_file": "a01.png",
+    "json_file": "a01.json",
+    "image_graph_fidelity_score": 98,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 24,
+      "graph_connections": 55,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 1
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "label_omission_non_topological",
+        "description": "Le label testuali visibili come EN, +5 V DC, D1 e Lamp 5V non sono rappresentate come elementi nel graph, ma non alterano la topologia terminale-terminale e quindi non costituiscono errore topologico."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "La distinzione tra i due resistori (220R in alto e 1k al centro) non e esplicitata dai valori nel JSON, ma i loro collegamenti ai nodi visibili risultano coerenti con l'immagine.",
+      "I tre simboli GND sono trattati come elementi separati nel JSON; questo e coerente con i fili visibili e non introduce errori topologici nel graph."
+    ],
+    "short_explanation": "Il campo graph e coerente con l'immagine: pin1 del connettore va al resistore superiore e poi all'anodo del LED, pin2 va al resistore centrale e poi alla lampada, pin3 va allo switch aperto verso GND sinistro, pin4 va al GND inferiore. LED e lampada condividono correttamente il nodo di ritorno a destra connesso al GND destro. Nessun collegamento inventato, mancante o fuso in modo errato e stato dello switch compatibile con l'immagine."
+  },
+  "raw_model_output": "{\"circuit_id\":\"a01\",\"batch\":\"A\",\"image_file\":\"a01.png\",\"json_file\":\"a01.json\",\"image_graph_fidelity_score\":98,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":24,\"graph_connections\":55,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":1},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"label_omission_non_topological\",\"description\":\"Le label testuali visibili come EN, +5 V DC, D1 e Lamp 5V non sono rappresentate come elementi nel graph, ma non alterano la topologia terminale-terminale e quindi non costituiscono errore topologico.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"La distinzione tra i due resistori (220R in alto e 1k al centro) non e esplicitata dai valori nel JSON, ma i loro collegamenti ai nodi visibili risultano coerenti con l'immagine.\",\"I tre simboli GND sono trattati come elementi separati nel JSON; questo e coerente con i fili visibili e non introduce errori topologici nel graph.\"],\"short_explanation\":\"Il campo graph e coerente con l'immagine: pin1 del connettore va al resistore superiore e poi all'anodo del LED, pin2 va al resistore centrale e poi alla lampada, pin3 va allo switch aperto verso GND sinistro, pin4 va al GND inferiore. LED e lampada condividono correttamente il nodo di ritorno a destra connesso al GND destro. Nessun collegamento inventato, mancante o fuso in modo errato e stato dello switch compatibile con l'immagine.\"}"
+}

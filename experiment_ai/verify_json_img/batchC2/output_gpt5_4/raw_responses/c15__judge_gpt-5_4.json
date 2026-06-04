@@ -1,0 +1,77 @@
+{
+  "metadata": {
+    "circuit_id": "c15",
+    "batch": "C2",
+    "batch_dir": "batchC2",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\images\\c15.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\json\\c15.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "c15.jpg",
+    "json_file": "c15.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:35:35",
+    "judge_latency_seconds": 12.099,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=14705, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=634, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=15339)",
+  "judge_result": {
+    "circuit_id": "c15",
+    "batch": "C2",
+    "image_file": "c15.jpg",
+    "json_file": "c15.json",
+    "image_graph_fidelity_score": 94,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 22,
+      "graph_connections": 53,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 1,
+      "minor": 1
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "missing_connection",
+        "description": "Il pin superiore sinistro dell'IC etichettato 10 (nodo C) e visibilmente connesso a un terminale esterno, ma nel graph integrated_circuit11.1_top_1 risulta non connesso e manca il relativo Terminal.",
+        "image_evidence": "Nell'immagine il pin 10 dell'L298 esce verso l'alto e termina su un nodo esterno etichettato C.",
+        "json_evidence": "integrated_circuit11.1_top_1 ha lista vuota nel graph; non esiste un Terminal collegato a questo pin."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "component_class_semantics",
+        "description": "C1 e C2 sono condensatori non polarizzati nell'immagine, ma nel JSON sono rappresentati come Polarized_Capacitor. La topologia dei due terminali resta comunque corretta."
+      }
+    ],
+    "missing_from_json": [
+      "Connessione tra integrated_circuit11.1_top_1 e un terminale esterno visibile (nodo C / pin 10)."
+    ],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "integrated_circuit11.1_top_1 collegato a un terminale esterno visibile (nodo C, pin 10)",
+        "found_in_json": "integrated_circuit11.1_top_1 non connesso",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "Il mapping dei terminali IC top_2/top_3/top_4 verso i pin visibili 13/14/12 dipende dall'estrazione automatica dei contatti sul bordo superiore, ma le connessioni principali ai due nodi motore e ai diodi risultano complessivamente coerenti.",
+      "I diodi sono modellati con anodo/catodo e orientamento verticale; la corrispondenza catodo in alto verso +Vcc e anodo in basso verso GND/nodo motore appare coerente con il simbolo, senza contraddizioni certe."
+    ],
+    "short_explanation": "Il graph JSON rappresenta molto bene la topologia visibile: +Vcc al pin 4 con C1, pin 9 con C2 e terminale +5V, pin 15 e un altro pin inferiore a GND, e i due nodi motore con i quattro diodi di ricircolo sono coerenti. L'unico errore topologico rilevante e l'assenza della connessione del pin 10 dell'IC al terminale esterno etichettato C."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c15\",\"batch\":\"C2\",\"image_file\":\"c15.jpg\",\"json_file\":\"c15.json\",\"image_graph_fidelity_score\":94,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":22,\"graph_connections\":53,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":1,\"minor\":1},\"critical_errors\":[],\"major_errors\":[{\"type\":\"missing_connection\",\"description\":\"Il pin superiore sinistro dell'IC etichettato 10 (nodo C) e visibilmente connesso a un terminale esterno, ma nel graph integrated_circuit11.1_top_1 risulta non connesso e manca il relativo Terminal.\",\"image_evidence\":\"Nell'immagine il pin 10 dell'L298 esce verso l'alto e termina su un nodo esterno etichettato C.\",\"json_evidence\":\"integrated_circuit11.1_top_1 ha lista vuota nel graph; non esiste un Terminal collegato a questo pin.\"}],\"minor_errors\":[{\"type\":\"component_class_semantics\",\"description\":\"C1 e C2 sono condensatori non polarizzati nell'immagine, ma nel JSON sono rappresentati come Polarized_Capacitor. La topologia dei due terminali resta comunque corretta.\"}],\"missing_from_json\":[\"Connessione tra integrated_circuit11.1_top_1 e un terminale esterno visibile (nodo C / pin 10).\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"integrated_circuit11.1_top_1 collegato a un terminale esterno visibile (nodo C, pin 10)\",\"found_in_json\":\"integrated_circuit11.1_top_1 non connesso\",\"severity\":\"major\"}],\"uncertain_points\":[\"Il mapping dei terminali IC top_2/top_3/top_4 verso i pin visibili 13/14/12 dipende dall'estrazione automatica dei contatti sul bordo superiore, ma le connessioni principali ai due nodi motore e ai diodi risultano complessivamente coerenti.\",\"I diodi sono modellati con anodo/catodo e orientamento verticale; la corrispondenza catodo in alto verso +Vcc e anodo in basso verso GND/nodo motore appare coerente con il simbolo, senza contraddizioni certe.\"],\"short_explanation\":\"Il graph JSON rappresenta molto bene la topologia visibile: +Vcc al pin 4 con C1, pin 9 con C2 e terminale +5V, pin 15 e un altro pin inferiore a GND, e i due nodi motore con i quattro diodi di ricircolo sono coerenti. L'unico errore topologico rilevante e l'assenza della connessione del pin 10 dell'IC al terminale esterno etichettato C.\"}"
+}

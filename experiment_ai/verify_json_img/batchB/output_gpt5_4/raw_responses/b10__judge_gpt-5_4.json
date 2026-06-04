@@ -1,0 +1,67 @@
+{
+  "metadata": {
+    "circuit_id": "b10",
+    "batch": "B",
+    "batch_dir": "batchB",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\images\\b10.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\json\\b10.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "b10.jpg",
+    "json_file": "b10.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:40:23",
+    "judge_latency_seconds": 9.952,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=14483, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=480, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=14963)",
+  "judge_result": {
+    "circuit_id": "b10",
+    "batch": "B",
+    "image_file": "b10.jpg",
+    "json_file": "b10.json",
+    "image_graph_fidelity_score": 94,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 22,
+      "graph_connections": 54,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "component_class_semantics",
+        "description": "I due generatori laterali IA e IB nell'immagine appaiono come sorgenti di corrente indipendenti; nel JSON sono modellati come Current_Source con terminali semanticamente current_from/current_to. La topologia dei collegamenti resta coerente."
+      },
+      {
+        "type": "polarity_semantics",
+        "description": "La sorgente VOS mostra polarita visibile +/-, mentre nel JSON e rappresentata come Voltage_Source con positive/negative. La corrispondenza topologica e coerente, ma la verifica della polarita assoluta sinistra/destra non e essenziale per il graph."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "Il mapping tra i componenti equivalenti dello stesso tipo richiede associazione topologica: i tre condensatori orizzontali/verticali e le tre sorgenti sono stati interpretati tramite i nodi A, B, C e massa, non tramite instance_id.",
+      "La polarita dettagliata dei condensatori polarizzati nel JSON non e direttamente inferibile dall'immagine per tutti i simboli; non incide sui nodi collegati.",
+      "Lo stato open dello switch nel JSON e coerente con il simbolo aperto visibile, ma qui e stato valutato solo come connettivita terminale-terminale."
+    ],
+    "short_explanation": "Il campo graph rispecchia molto bene la topologia visibile: nodo A/sinistra, nodo B/destra, nodo centrale C, ramo verso massa e i rami superiori e centrali risultano correttamente separati e connessi. Non emergono net fuse, net split o collegamenti inventati certi; le sole riserve sono semantiche/minori e non alterano la struttura del grafo."
+  },
+  "raw_model_output": "{\"circuit_id\":\"b10\",\"batch\":\"B\",\"image_file\":\"b10.jpg\",\"json_file\":\"b10.json\",\"image_graph_fidelity_score\":94,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":22,\"graph_connections\":54,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":2},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"component_class_semantics\",\"description\":\"I due generatori laterali IA e IB nell'immagine appaiono come sorgenti di corrente indipendenti; nel JSON sono modellati come Current_Source con terminali semanticamente current_from/current_to. La topologia dei collegamenti resta coerente.\"},{\"type\":\"polarity_semantics\",\"description\":\"La sorgente VOS mostra polarita visibile +/-, mentre nel JSON e rappresentata come Voltage_Source con positive/negative. La corrispondenza topologica e coerente, ma la verifica della polarita assoluta sinistra/destra non e essenziale per il graph.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"Il mapping tra i componenti equivalenti dello stesso tipo richiede associazione topologica: i tre condensatori orizzontali/verticali e le tre sorgenti sono stati interpretati tramite i nodi A, B, C e massa, non tramite instance_id.\",\"La polarita dettagliata dei condensatori polarizzati nel JSON non e direttamente inferibile dall'immagine per tutti i simboli; non incide sui nodi collegati.\",\"Lo stato open dello switch nel JSON e coerente con il simbolo aperto visibile, ma qui e stato valutato solo come connettivita terminale-terminale.\"],\"short_explanation\":\"Il campo graph rispecchia molto bene la topologia visibile: nodo A/sinistra, nodo B/destra, nodo centrale C, ramo verso massa e i rami superiori e centrali risultano correttamente separati e connessi. Non emergono net fuse, net split o collegamenti inventati certi; le sole riserve sono semantiche/minori e non alterano la struttura del grafo.\"}"
+}

@@ -1,0 +1,66 @@
+{
+  "metadata": {
+    "circuit_id": "c16",
+    "batch": "C2",
+    "batch_dir": "batchC2",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\images\\c16.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\json\\c16.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "c16.jpg",
+    "json_file": "c16.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:35:45",
+    "judge_latency_seconds": 9.469,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=13134, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=502, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=13636)",
+  "judge_result": {
+    "circuit_id": "c16",
+    "batch": "C2",
+    "image_file": "c16.jpg",
+    "json_file": "c16.json",
+    "image_graph_fidelity_score": 97,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 24,
+      "graph_connections": 54,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "terminal_naming_imprecision",
+        "description": "I terminali IC sono nominati come left/right/top/bottom invece che direttamente con i numeri pin visibili, ma il mapping pin3/pin4/pin5/pin6/pin8 risulta coerente con l'immagine e non altera la topologia."
+      },
+      {
+        "type": "potentiometer_modeled_as_resistor",
+        "description": "R3 e rappresentato come resistore a due terminali; nell'immagine e un potenziometro/rheostat con cursore collegato a un estremo. Topologicamente il graph conserva il collegamento visibile tra i due nodi principali, quindi l'impatto e minore."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "Il simbolo di R3 mostra un cursore collegato al nodo inferiore; nel graph questo e implicitamente assorbito come resistore a due terminali. Non cambia i nodi esterni visibili ma la semantica del componente e semplificata.",
+      "I simboli di alimentazione/supply non sono modellati come componenti separati nel graph; la verifica topologica e stata fatta solo sui collegamenti terminale-terminale presenti nel JSON."
+    ],
+    "short_explanation": "Il campo graph riproduce fedelmente i nodi visibili principali: pin3 e il rail Vs, pin5 va a GND, pin6 e pin8 sono sui nodi intermedi della rete R1-R2-R3/C1, pin4 e sul nodo di uscita comune a motore, C2 e fondo di R3. Anche motore, C1 e C2 risultano collegati ai terminali corretti. Non emergono collegamenti inventati, mancanti o fuse/split di net; restano solo lievi imprecisioni di naming/semantica del componente variabile R3."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c16\",\"batch\":\"C2\",\"image_file\":\"c16.jpg\",\"json_file\":\"c16.json\",\"image_graph_fidelity_score\":97,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":24,\"graph_connections\":54,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":2},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"terminal_naming_imprecision\",\"description\":\"I terminali IC sono nominati come left/right/top/bottom invece che direttamente con i numeri pin visibili, ma il mapping pin3/pin4/pin5/pin6/pin8 risulta coerente con l'immagine e non altera la topologia.\"},{\"type\":\"potentiometer_modeled_as_resistor\",\"description\":\"R3 e rappresentato come resistore a due terminali; nell'immagine e un potenziometro/rheostat con cursore collegato a un estremo. Topologicamente il graph conserva il collegamento visibile tra i due nodi principali, quindi l'impatto e minore.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"Il simbolo di R3 mostra un cursore collegato al nodo inferiore; nel graph questo e implicitamente assorbito come resistore a due terminali. Non cambia i nodi esterni visibili ma la semantica del componente e semplificata.\",\"I simboli di alimentazione/supply non sono modellati come componenti separati nel graph; la verifica topologica e stata fatta solo sui collegamenti terminale-terminale presenti nel JSON.\"],\"short_explanation\":\"Il campo graph riproduce fedelmente i nodi visibili principali: pin3 e il rail Vs, pin5 va a GND, pin6 e pin8 sono sui nodi intermedi della rete R1-R2-R3/C1, pin4 e sul nodo di uscita comune a motore, C2 e fondo di R3. Anche motore, C1 e C2 risultano collegati ai terminali corretti. Non emergono collegamenti inventati, mancanti o fuse/split di net; restano solo lievi imprecisioni di naming/semantica del componente variabile R3.\"}"
+}

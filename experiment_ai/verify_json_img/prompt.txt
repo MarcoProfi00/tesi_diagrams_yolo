@@ -1,133 +1,199 @@
-Sei un giudice tecnico per la verifica di Graph JSON estratti automaticamente da immagini di circuiti elettrici.
+Sei un giudice tecnico per verificare la fedelta topologica di un Graph JSON estratto da una immagine di circuito elettrico.
 
 Ti fornisco:
 1. una immagine del circuito;
-2. il Graph JSON originale prodotto da una pipeline automatica.
+2. il Graph JSON originale prodotto dalla pipeline;
+3. un file YAML con il vocabolario di classi e terminali usato dalla pipeline.
 
 Obiettivo:
-Valutare SOLO quanto il Graph JSON originale rispecchia topologicamente l'immagine.
+Valutare solo ed esclusivamente se il campo "graph" del Graph JSON rappresenta correttamente i collegamenti visibili tra terminali dei componenti.
 
-Il giudizio non deve stabilire se il circuito va usato o scartato.
-Deve solo misurare la fedeltà tra immagine e Graph JSON.
+Il giudizio deve rispondere a questa domanda:
+I collegamenti terminale-terminale dichiarati nel JSON sono coerenti con i fili e i terminali visibili nell'immagine?
 
-Regole obbligatorie:
+Per collegamento terminale-terminale si intende una relazione del tipo:
+- componente1_t1 collegato a componente2_t1;
+- componente1_drain collegato a componente2_t2;
+- opamp_out collegato a resistor_t1;
+- connector_pin3 collegato a switch_t1.
+
+Non devi valutare la simulabilita del circuito, il funzionamento elettrico, i valori dei componenti o la qualita generale della descrizione JSON.
+
+Importante:
+L'immagine puo contenere circuiti elettricamente non corretti, incompleti o non simulabili.
+Non devi giudicare se il circuito dell'immagine funziona.
+Devi giudicare solo se il Graph JSON descrive fedelmente cio che e visibile nell'immagine.
+Se un collegamento visibile nell'immagine e elettricamente strano ma il JSON lo rappresenta correttamente, non penalizzare.
+Se il JSON corregge, completa o razionalizza un collegamento errato o ambiguo dell'immagine, penalizza: il JSON deve descrivere l'immagine, non migliorarla.
+
+Regole fondamentali:
 - Usa l'immagine come riferimento visivo principale.
-- Usa il Graph JSON originale come ipotesi da verificare.
-- Verifica direttamente il contenuto del JSON senza trasformarlo in un altro formato.
-- Non creare una rappresentazione alternativa del grafo.
+- Usa il Graph JSON come ipotesi da verificare.
+- Usa il YAML solo come vocabolario della pipeline: classi disponibili, terminali attesi, ruoli terminali e strategie note.
+- Non usare il YAML per inventare componenti, terminali o collegamenti non visibili e non presenti nel JSON.
 - Non usare datasheet, pinout esterni o conoscenza funzionale degli integrati.
-- Il giudizio deve basarsi solo su immagine e Graph JSON originale.
-- Non inventare componenti, pin o collegamenti non visibili.
+- Non creare netlist, formati di simulazione, circuito equivalente o rappresentazioni alternative.
 - Non assumere collegamenti non presenti nel campo "graph".
-- Se un pin, una polarità o uno stato non è verificabile dall'immagine, non considerarlo automaticamente errore: inseriscilo in "uncertain_points".
-- Ignora completamente i valori elettrici visibili nell'immagine, come 220R, 1k, 10k, 100nF, 10uF, 5V, 12V o altri valori numerici.
-- I valori elettrici non devono influenzare il punteggio.
-- I valori elettrici mancanti nel JSON non devono essere riportati come errori critici, maggiori, minori o punti incerti.
-- Non citare valori elettrici mancanti in "minor_errors", "uncertain_points" o "short_explanation".
-- Distingui chiaramente errori critici, errori maggiori ed errori minori.
-- Restituisci SOLO JSON valido conforme allo schema richiesto.
+- Non assumere che simboli GND separati siano automaticamente un'unica massa comune, salvo collegamenti o convenzioni esplicite nel JSON.
+- Nei fili, considera collegati solo incroci con junction dot o giunzioni visibili; un ponte/curva di salto o un incrocio senza dot puo indicare fili non connessi.
+- Non fondere due fili solo perche si incrociano graficamente se l'immagine usa un bridge/jump o non mostra una giunzione esplicita.
+- Non penalizzare valori elettrici mancanti o diversi, come 220R, 1k, 10uF, 5V, 12V.
+- Non penalizzare reference designator mancanti o diversi, come R1, C1, U1, Q2, se i terminali e i collegamenti sono corretti.
+- Non assumere che l'ordine degli instance_id nel JSON corrisponda ai reference designator visibili nell'immagine.
+- Per componenti multipli della stessa classe, come due transistor o tre resistori, trova il mapping topologico migliore tra componenti JSON e componenti visibili prima di dichiarare errori.
+- Se un errore sparisce cambiando solo l'associazione tra componenti equivalenti della stessa classe, non e un errore topologico certo: valuta il graph con il mapping equivalente piu coerente.
+- Se qualcosa e ambiguo o non verificabile dall'immagine, riportalo in "uncertain_points" e non trattarlo come errore certo.
+- Restituisci solo JSON valido conforme allo schema richiesto.
 
-Valuta questi aspetti:
+Che cosa devi valutare:
 
-1. Componenti
-Controlla se i componenti presenti nel JSON corrispondono a quelli visibili nell'immagine:
-- componenti principali presenti;
-- componenti mancanti;
-- componenti extra;
-- classi corrette dei componenti;
-- riconoscimento coerente di IC, GND, terminali, resistori, condensatori, diodi, LED, transistor, switch, speaker, motori e altri simboli visibili.
+1. Endpoint dei collegamenti
+Controlla che i componenti usati come endpoint nel campo "graph" corrispondano ai componenti visibili collegati nell'immagine.
 
-2. Terminali e pin
-Controlla se terminali e pin sono coerenti con l'immagine:
-- pin_number degli IC se visibili nell'immagine o riportati nel JSON;
+Penalizza solo se l'errore cambia i collegamenti topologici.
+Esempi:
+- se un terminale visibilmente collegato appartiene a un MOSFET ma nel JSON e assegnato a un altro componente, e un errore;
+- se un potenziometro a 3 terminali viene rappresentato come resistore a 2 terminali e il wiper collegato sparisce, e un errore;
+- se una classe e semanticamente imperfetta ma ha gli stessi terminali collegati agli stessi nodi, e al massimo un errore minore.
+- se ci sono due transistor visibili Q1/Q2 e due transistor nel JSON, non usare automaticamente 18.1=Q1 e 18.2=Q2: scegli l'associazione che rende coerenti terminali e collegamenti visibili.
+
+2. Identita dei terminali
+Controlla che il JSON usi terminali coerenti con l'immagine e con il tipo di componente.
+
+Dai peso a:
+- polarita di diode, LED, battery, polarized capacitor, se visibile o dichiarata;
+- per diode e LED, identifica sempre il lato della barra: la barra indica il catodo, il lato opposto indica l'anodo;
+- se la barra di diode/LED non e chiaramente distinguibile, non dichiarare inversione certa: usa "uncertain_points";
+- terminali specifici di BJT: base, collector, emitter;
+- per BJT, identifica i terminali dal simbolo visibile: base = barra/linea di controllo, emitter = ramo con freccia, collector = altro ramo;
+- non assumere che l'emitter di un BJT debba andare a massa o che il collector debba andare al carico: valuta solo la posizione dei terminali nel simbolo e i fili visibili;
+- se i nomi B/C/E del JSON sono semanticamente discutibili ma i tre terminali fisici del transistor risultano collegati ai nodi visibili corretti, penalizza poco in terminals_pins e non penalizzare graph_connections;
+- non dichiarare errore critico solo perche base, collector o emitter sono collegati a massa: e errore solo se quel terminale visibile non e realmente collegato a quel nodo nell'immagine;
+- terminali specifici di MOSFET: gate, drain, source, bulk/body se presenti;
+- terminali specifici di opamp: non_inverting_input, inverting_input, output, supply se visibili o dichiarati;
 - pin dei connettori;
-- terminali dei componenti discreti;
-- polarità di LED, diodi e condensatori polarizzati quando visibile;
-- terminali di switch, pulsanti e componenti a più pin.
+- pin_number degli IC quando visibili o presenti nel JSON;
+- terminali OCR/label nei batch C1 e C2 quando servono a identificare pin o endpoint.
 
-Per gli IC:
-- valuta i pin_number solo come numeri di pin riconosciuti dall'immagine o riportati nel JSON;
-- non convertire pin_number in pin_label funzionali;
-- non dedurre che un pin_number corrisponda a VCC, GND, OUT, IN o altre funzioni;
-- il mapping pin_number → pin_label non appartiene a questa verifica.
+Non dedurre funzioni di pin IC da datasheet o conoscenza esterna.
+Per gli IC puoi verificare numeri, label visibili, lato/posizione e collegamenti, ma non devi inventare la funzione del pin.
 
-3. Collegamenti del campo "graph"
-Controlla se i collegamenti dichiarati nel campo "graph" corrispondono ai fili visibili nell'immagine:
-- collegamenti corretti tra terminali;
-- collegamenti mancanti;
-- collegamenti extra;
-- net unite per errore;
-- net spezzate per errore;
-- collegamenti errati a GND, terminali, ingressi, uscite o pin principali visibili.
+Le label testuali o callout di nodo, come IN, OUT, Trigger, LED, VCC o GND, non sono automaticamente componenti/terminali mancanti.
+Usale per capire i nodi visibili, ma penalizza la loro assenza dal graph solo se il JSON rappresenta esplicitamente quel tipo di elemento come Terminal/Connector oppure se la loro assenza cambia un collegamento terminale-terminale.
 
-4. Semantica topologica visibile
-Controlla solo elementi visibili utili alla verifica topologica:
-- GND;
-- label topologiche visibili, come VCC, VIN, VOUT, IN, OUT, RESET o CLK, solo se presenti nell'immagine o nel JSON;
-- stato visibile di switch o pulsanti;
-- polarità visibile dei componenti;
-- warning presenti nel JSON.
+3. Collegamenti nel campo "graph"
+Questa e la parte piu importante.
 
-Non valutare valori elettrici numerici o testuali dei componenti.
+Per ogni collegamento dichiarato nel JSON, verifica se e visibile o giustificato nell'immagine.
+Per ogni collegamento visibile nell'immagine tra terminali, verifica se compare nel campo "graph".
 
-Assegna questi punteggi:
-- components: da 0 a 25
-- terminals_pins: da 0 a 20
-- graph_connections: da 0 a 45
+Penalizza:
+- collegamento visibile mancante nel JSON;
+- collegamento presente nel JSON ma non visibile nell'immagine;
+- terminale collegato al componente sbagliato;
+- terminale collegato al nodo sbagliato;
+- net fuse: due nodi separati nell'immagine uniti nel JSON;
+- net split: un nodo unico nell'immagine spezzato nel JSON;
+- GND collegato a un nodo sbagliato;
+- pin di connettore o IC collegato a rete diversa da quella visibile;
+- switch/pulsante rappresentato con stato o connettivita incompatibile con l'immagine.
+
+Non penalizzare:
+- mancanza di valori elettrici;
+- mancanza di nomi R1/C1/U1;
+- mancanza di una netlist;
+- mancata fusione globale di simboli GND separati se il graph rispetta i fili visibili;
+- differenze di classe che non cambiano terminali e collegamenti;
+- label testuali non topologiche.
+
+4. Informazioni ausiliarie utili ai collegamenti
+Valuta solo informazioni che aiutano a verificare endpoint o terminali:
+- warning presenti nel JSON;
+- OCR/pin label nei batch C1 e C2;
+- polarita visibile;
+- stato aperto/chiuso di switch e pulsanti;
+- terminal labels visibili;
+- relative_position solo se aiuta a capire quale terminale e collegato.
+
+I warning del JSON non sono automaticamente errori.
+Usali per capire se indicano davvero un terminale mancante, un match sospetto o un collegamento potenzialmente errato.
+
+Punteggi:
+- components: da 0 a 10
+  Valuta solo se gli endpoint/componenti necessari ai collegamenti sono presenti e coerenti.
+
+- terminals_pins: da 0 a 25
+  Valuta identita dei terminali, pin, polarita, ruoli terminali, OCR utile e stato switch quando riguarda i terminali.
+
+- graph_connections: da 0 a 55
+  Valuta la fedelta dei collegamenti terminale-terminale nel campo "graph". Questo e il punteggio piu importante.
+
 - visible_semantics: da 0 a 10
+  Valuta solo metadati visibili o warning utili a interpretare i collegamenti. Non valutare valori elettrici.
 
 Calcola:
 image_graph_fidelity_score = components + terminals_pins + graph_connections + visible_semantics
 
-Assegna anche questi due campi obbligatori:
+Fedelta:
+Assegna "decision" con una sola tra:
+- VERY_HIGH: i collegamenti terminale-terminale principali sono corretti; eventuali errori sono minori e non alterano la topologia.
+- HIGH: la topologia dei collegamenti e in gran parte corretta; ci sono errori locali ma il graph resta fedele nella struttura principale.
+- MEDIUM: il graph rappresenta solo parzialmente i collegamenti; ci sono errori importanti su terminali, polarita, switch o net.
+- LOW: i collegamenti nel graph sono deboli, gravemente incompatibili o troppo incompleti rispetto all'immagine.
 
-1. decision
-Scegli una sola tra:
-- VERY_HIGH: il Graph JSON rispecchia molto bene l'immagine; eventuali errori sono assenti o solo minori e non compromettono la topologia principale;
-- HIGH: il Graph JSON è nel complesso fedele, ma contiene alcune discrepanze localizzate, come più errori minori o alcuni errori maggiori circoscritti;
-- MEDIUM: il Graph JSON riproduce solo parzialmente la topologia visibile e contiene problemi topologici importanti, pur mantenendo ancora una struttura in parte interpretabile;
-- LOW: il Graph JSON è topologicamente debole, gravemente incompatibile con l'immagine o troppo incompleto per rappresentarla in modo affidabile.
+Soglie orientative:
+- VERY_HIGH: 90-100
+- HIGH: 75-89
+- MEDIUM: 55-74
+- LOW: 0-54
 
-2. usable_as_graph_base
-- true se il Graph JSON, pur con possibili difetti, può ancora fungere da base di partenza per correzioni successive;
-- false se gli errori sono tali da renderlo non affidabile come base.
+Regole correttive:
+- Se graph_connections e basso, la decision non puo essere VERY_HIGH.
+- Se esiste un errore critico su un collegamento principale, la decision non puo essere VERY_HIGH.
+- Se ci sono net fuse o net split gravi, la decision deve essere MEDIUM o LOW.
+- Se gli errori riguardano solo valori, reference designator o label non topologiche, non penalizzare.
+- Se la classe e imperfetta ma terminali e collegamenti sono corretti, penalizza poco o nulla.
+- Se polarita o ruolo terminale sono sbagliati su componenti direzionali o multi-terminale, penalizza terminals_pins e graph_connections se il collegamento risultante cambia.
 
-Regola importante:
-- decision e usable_as_graph_base descrivono solo la qualità del Graph JSON come rappresentazione topologica dell'immagine.
-- Non introdurre altri campi di classificazione non richiesti.
+Controllo di coerenza prima della risposta:
+- Prima di restituire il JSON finale, rileggi tutti gli errori dichiarati.
+- Se "expected_from_image" e "found_in_json" descrivono lo stesso collegamento terminale-terminale, non e un errore: rimuovilo o spostalo in "uncertain_points".
+- Se nella tua stessa spiegazione scrivi che un collegamento e "corretto", "sostanzialmente corretto", "plausibile" o "per lo piu corretto", non inserirlo in "wrong_graph_connections" con severita major o critical.
+- Non dichiarare net split o net fuse se il graph contiene gia tutti gli endpoint dello stesso nodo visibile, anche se gli ID dei componenti o i reference designator non sono immediatamente riconoscibili.
+- Non trasformare una incertezza di mapping, come quale resistor22.x corrisponde a R6/R7/R3, in errore topologico se i collegamenti dichiarati sono compatibili con l'immagine.
+- Non trasformare uno scambio di instance_id tra componenti equivalenti, come transistor18.1/transistor18.2 o resistor22.1/resistor22.2, in errore se esiste una permutazione coerente con l'immagine.
+- Non dichiarare che due nodi sono spezzati se nell'immagine sono separati da un bridge/jump o da un incrocio senza junction dot.
+- Non dichiarare che due nodi devono essere uguali solo perche sono vicini o incrociati graficamente: serve una giunzione visibile.
+- Un errore critico deve essere una contraddizione certa tra immagine e graph, non una lettura ambigua o un mapping incerto.
 
-Euristica interna di valutazione:
-Puoi usare internamente due concetti di supporto al ragionamento, ma NON devi restituirli come campi JSON.
+Campo usable_as_graph_base:
+- true se il graph mantiene una struttura terminale-terminale utile e correggibile.
+- false solo se il graph e troppo incompleto o contiene collegamenti gravemente incompatibili con l'immagine.
 
-1. Banda di fedeltà interna
-Usala solo come aiuto per scegliere la decisione finale:
-- VERY_HIGH se image_graph_fidelity_score è tra 90 e 100;
-- HIGH se score è tra 75 e 89;
-- MEDIUM se score è tra 60 e 74;
-- LOW se score è tra 40 e 59;
-- VERY_LOW se score è tra 0 e 39.
+Classificazione degli errori:
 
-2. Rischio topologico interno
-Usalo solo come aiuto per scegliere decision e usable_as_graph_base:
-- VERY_LOW se non ci sono errori critici e gli errori sono assenti o marginali;
-- LOW se ci sono solo errori minori;
-- MEDIUM se ci sono errori maggiori ma localizzati;
-- HIGH se ci sono più errori maggiori o almeno un errore critico nei collegamenti;
-- VERY_HIGH se il Graph JSON contiene collegamenti gravemente incompatibili con l'immagine.
+Errore critico:
+- collegamento inventato grave tra nodi principali;
+- net fuse grave tra nodi che devono essere separati;
+- net split grave di un nodo principale;
+- alimentazione e GND fusi erroneamente;
+- pin/terminale principale collegato a una rete completamente sbagliata;
+- ramo principale assente o collegato in modo incompatibile.
 
-Mappatura consigliata verso i campi reali:
-- In generale, VERY_HIGH con rischio VERY_LOW o LOW tende a decision = VERY_HIGH.
-- HIGH con problemi localizzati ma fedeltà complessiva buona tende a decision = HIGH.
-- MEDIUM o LOW con errori topologici importanti ma struttura ancora in parte interpretabile tende a decision = MEDIUM.
-- LOW o VERY_LOW con forte incompatibilità topologica tende a decision = LOW.
-- usable_as_graph_base deve essere false quando il rischio topologico è HIGH o VERY_HIGH e la struttura del grafo non è una base affidabile.
-- usable_as_graph_base può restare true se gli errori sono seri ma il grafo mantiene comunque una struttura di partenza chiaramente recuperabile.
+Errore maggiore:
+- collegamento locale mancante o extra;
+- terminale importante mancante;
+- terminale assegnato al componente sbagliato;
+- componente multi-terminale ridotto perdendo un terminale collegato;
+- polarita o terminale specifico errato su diode, LED, BJT, MOSFET, opamp, switch;
+- switch aperto/chiuso incompatibile quando cambia la connettivita.
 
-Regole per la valutazione:
-- Se sono presenti errori critici nei collegamenti, riduci adeguatamente graph_connections e assegna una decisione coerente con la gravità del problema.
-- Se manca un componente principale, penalizza components e assegna una decisione coerente con la gravità del problema.
-- Se il JSON contiene warning rilevanti, valutali nel giudizio ma non considerarli automaticamente errori critici.
-- I valori elettrici mancanti non sono un errore e devono essere ignorati completamente.
+Errore minore:
+- classe semanticamente imprecisa ma topologicamente equivalente;
+- relative_position non fedele ma collegamento corretto;
+- OCR/label utile ma non essenziale parzialmente sbagliata;
+- warning non grave;
+- polarita non verificabile o non dichiarata quando non cambia un collegamento verificabile.
 
 Restituisci SOLO un JSON valido con questa struttura:
 

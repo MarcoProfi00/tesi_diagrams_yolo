@@ -1,0 +1,80 @@
+{
+  "metadata": {
+    "circuit_id": "b03",
+    "batch": "B",
+    "batch_dir": "batchB",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\images\\b03.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\json\\b03.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "b03.jpg",
+    "json_file": "b03.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:38:33",
+    "judge_latency_seconds": 14.628,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=14999, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=794, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=15793)",
+  "judge_result": {
+    "circuit_id": "b03",
+    "batch": "B",
+    "image_file": "b03.jpg",
+    "json_file": "b03.json",
+    "image_graph_fidelity_score": 92,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 23,
+      "graph_connections": 50,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 1,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "terminal_role_error_bjt",
+        "description": "Il transistor superiore destro (Q3, PNP visibile in immagine) è modellato nel JSON come NPN_Transistor con assegnazione E/C non coerente col simbolo visibile; i tre nodi principali risultano comunque sostanzialmente rappresentati, ma l'identità semantica dei terminali del transistor è errata.",
+        "image_evidence": "In alto a destra il simbolo di Q3 mostra un transistor PNP BC557 con un terminale verso la barra superiore, uno verso il nodo centrale orizzontale e uno verso R7/R8/D8-D10.",
+        "json_evidence": "npn_transistor18.3 è di classe NPN_Transistor e usa terminali B/C/E; npn_transistor18.3_E è posto sul nodo positivo superiore, npn_transistor18.3_C sul nodo centrale con diode7.1_anode/resistor22.6_t1."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "component_class_imprecision",
+        "description": "Il transistor Q3 visibile è PNP ma nel JSON è classificato come NPN; l'errore è soprattutto semantico perché la connettività dei tre nodi è quasi tutta preservata."
+      },
+      {
+        "type": "terminal_orientation_imprecision",
+        "description": "Alcune polarità/orientazioni dei terminali dichiarate per LED e diodi non sono chiaramente allineate alla geometria del simbolo, ma senza produrre una contraddizione topologica certa nei collegamenti del graph."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "Per il transistor superiore destro, il terminale sul ramo superiore dovrebbe essere l'emettitore del PNP e non un emettitore di NPN semanticamente equivalente.",
+        "found_in_json": "npn_transistor18.3_E collegato al nodo batteria positiva / led12.1_anode / led12.2_anode / diode7.3_anode / resistor22.8_t1 in un componente dichiarato NPN_Transistor.",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "La lettura precisa della polarità di alcuni diodi/zener verticali (D4-D10) è limitata dalla risoluzione; il graph però appare coerente come concatenazione di nodi.",
+      "Il mapping tra instance_id dei resistori e reference designator visibili (R1-R8) richiede permutazione topologica; con il mapping migliore le connessioni risultano coerenti.",
+      "Per Q1 e Q2 il JSON usa NPN_Transistor senza reference designator espliciti, ma esiste un mapping coerente ai due BC547 visibili."
+    ],
+    "short_explanation": "Il campo graph riproduce molto bene la topologia visibile: nodi superiore e inferiore della batteria, catene diodi, rami LED-resistore-transistor e rete attorno a Q3/R6/R7/R8/D8-D10 sono in gran parte coerenti con l’immagine. L’unica anomalia rilevante è la modellazione semantica del transistor superiore destro come NPN invece che PNP, con ruoli E/C non fedeli al simbolo, ma la struttura dei collegamenti rimane comunque quasi del tutto corretta."
+  },
+  "raw_model_output": "{\"circuit_id\":\"b03\",\"batch\":\"B\",\"image_file\":\"b03.jpg\",\"json_file\":\"b03.json\",\"image_graph_fidelity_score\":92,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":23,\"graph_connections\":50,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":1,\"minor\":2},\"critical_errors\":[],\"major_errors\":[{\"type\":\"terminal_role_error_bjt\",\"description\":\"Il transistor superiore destro (Q3, PNP visibile in immagine) è modellato nel JSON come NPN_Transistor con assegnazione E/C non coerente col simbolo visibile; i tre nodi principali risultano comunque sostanzialmente rappresentati, ma l'identità semantica dei terminali del transistor è errata.\",\"image_evidence\":\"In alto a destra il simbolo di Q3 mostra un transistor PNP BC557 con un terminale verso la barra superiore, uno verso il nodo centrale orizzontale e uno verso R7/R8/D8-D10.\",\"json_evidence\":\"npn_transistor18.3 è di classe NPN_Transistor e usa terminali B/C/E; npn_transistor18.3_E è posto sul nodo positivo superiore, npn_transistor18.3_C sul nodo centrale con diode7.1_anode/resistor22.6_t1.\"}],\"minor_errors\":[{\"type\":\"component_class_imprecision\",\"description\":\"Il transistor Q3 visibile è PNP ma nel JSON è classificato come NPN; l'errore è soprattutto semantico perché la connettività dei tre nodi è quasi tutta preservata.\"},{\"type\":\"terminal_orientation_imprecision\",\"description\":\"Alcune polarità/orientazioni dei terminali dichiarate per LED e diodi non sono chiaramente allineate alla geometria del simbolo, ma senza produrre una contraddizione topologica certa nei collegamenti del graph.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Per il transistor superiore destro, il terminale sul ramo superiore dovrebbe essere l'emettitore del PNP e non un emettitore di NPN semanticamente equivalente.\",\"found_in_json\":\"npn_transistor18.3_E collegato al nodo batteria positiva / led12.1_anode / led12.2_anode / diode7.3_anode / resistor22.8_t1 in un componente dichiarato NPN_Transistor.\",\"severity\":\"major\"}],\"uncertain_points\":[\"La lettura precisa della polarità di alcuni diodi/zener verticali (D4-D10) è limitata dalla risoluzione; il graph però appare coerente come concatenazione di nodi.\",\"Il mapping tra instance_id dei resistori e reference designator visibili (R1-R8) richiede permutazione topologica; con il mapping migliore le connessioni risultano coerenti.\",\"Per Q1 e Q2 il JSON usa NPN_Transistor senza reference designator espliciti, ma esiste un mapping coerente ai due BC547 visibili.\"],\"short_explanation\":\"Il campo graph riproduce molto bene la topologia visibile: nodi superiore e inferiore della batteria, catene diodi, rami LED-resistore-transistor e rete attorno a Q3/R6/R7/R8/D8-D10 sono in gran parte coerenti con l’immagine. L’unica anomalia rilevante è la modellazione semantica del transistor superiore destro come NPN invece che PNP, con ruoli E/C non fedeli al simbolo, ma la struttura dei collegamenti rimane comunque quasi del tutto corretta.\"}"
+}

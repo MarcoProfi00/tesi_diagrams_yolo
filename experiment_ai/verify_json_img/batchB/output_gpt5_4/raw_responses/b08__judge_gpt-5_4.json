@@ -1,0 +1,78 @@
+{
+  "metadata": {
+    "circuit_id": "b08",
+    "batch": "B",
+    "batch_dir": "batchB",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\images\\b08.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\json\\b08.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "b08.jpg",
+    "json_file": "b08.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:40:03",
+    "judge_latency_seconds": 18.224,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=12224, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=689, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=12913)",
+  "judge_result": {
+    "circuit_id": "b08",
+    "batch": "B",
+    "image_file": "b08.jpg",
+    "json_file": "b08.json",
+    "image_graph_fidelity_score": 92,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 23,
+      "graph_connections": 50,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 1,
+      "minor": 1
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "missing_connection",
+        "description": "Il terminale superiore della current source è visibilmente connesso al nodo etichettato VDD, ma nel graph il terminale current_source6.1_current_from è lasciato non connesso e manca un endpoint/terminal esplicito corrispondente a tale collegamento superiore.",
+        "image_evidence": "La sorgente di corrente in alto ha un filo verticale verso l'alto che termina sul nodo/rail etichettato VDD.",
+        "json_evidence": "\"current_source6.1_current_from\": [] e non esiste alcun componente/terminale nel graph che rappresenti il nodo VDD o il terminale superiore connesso."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "semantic_endpoint_choice",
+        "description": "Il nodo VBias/VDD/Rout sono trattati come etichette testuali e non come endpoint espliciti nel graph; questo riduce la completezza descrittiva ma non altera la topologia interna principale tra i terminali dei componenti presenti."
+      }
+    ],
+    "missing_from_json": [
+      "Collegamento del terminale superiore della current source al nodo/terminale visibile VDD"
+    ],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "current_source upper terminal connected to visible VDD node/terminal",
+        "found_in_json": "current_source6.1_current_from left unconnected []",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "Il mapping tra i MOSFET JSON mosfet16.1/16.2/16.3/16.4 e i transistor visibili M1/M2/M3/M4 non è esplicitato dai reference designator, ma esiste un mapping topologicamente coerente che rende il graph sostanzialmente corretto.",
+      "Le etichette VBias, VDD e Rout sono visibili come callout di nodo/porta; non vengono considerate componenti obbligatori salvo il caso del terminale superiore della current source, dove il filo verso VDD è chiaramente visibile.",
+      "La distinzione source/drain sui MOSFET potrebbe dipendere dall'orientazione simbolica, ma nel JSON i terminali principali risultano assegnati in modo compatibile con i nodi visibili; non emerge una contraddizione certa sui collegamenti terminale-terminale interni."
+    ],
+    "short_explanation": "Il graph riproduce molto bene la topologia visibile del core a 4 MOSFET: batteria di bias verso i due gate sinistri, nodo centrale condiviso tra current source bottom, gate di M1/M2 e drain di M2/M4, collegamenti drain-source verticali corretti e masse inferiori separate come disegnate. L’unica mancanza topologica chiara è il terminale superiore della current source, visibilmente collegato a VDD ma lasciato aperto nel JSON."
+  },
+  "raw_model_output": "{\"circuit_id\":\"b08\",\"batch\":\"B\",\"image_file\":\"b08.jpg\",\"json_file\":\"b08.json\",\"image_graph_fidelity_score\":92,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":23,\"graph_connections\":50,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":1,\"minor\":1},\"critical_errors\":[],\"major_errors\":[{\"type\":\"missing_connection\",\"description\":\"Il terminale superiore della current source è visibilmente connesso al nodo etichettato VDD, ma nel graph il terminale current_source6.1_current_from è lasciato non connesso e manca un endpoint/terminal esplicito corrispondente a tale collegamento superiore.\",\"image_evidence\":\"La sorgente di corrente in alto ha un filo verticale verso l'alto che termina sul nodo/rail etichettato VDD.\",\"json_evidence\":\"\\\"current_source6.1_current_from\\\": [] e non esiste alcun componente/terminale nel graph che rappresenti il nodo VDD o il terminale superiore connesso.\"}],\"minor_errors\":[{\"type\":\"semantic_endpoint_choice\",\"description\":\"Il nodo VBias/VDD/Rout sono trattati come etichette testuali e non come endpoint espliciti nel graph; questo riduce la completezza descrittiva ma non altera la topologia interna principale tra i terminali dei componenti presenti.\"}],\"missing_from_json\":[\"Collegamento del terminale superiore della current source al nodo/terminale visibile VDD\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"current_source upper terminal connected to visible VDD node/terminal\",\"found_in_json\":\"current_source6.1_current_from left unconnected []\",\"severity\":\"major\"}],\"uncertain_points\":[\"Il mapping tra i MOSFET JSON mosfet16.1/16.2/16.3/16.4 e i transistor visibili M1/M2/M3/M4 non è esplicitato dai reference designator, ma esiste un mapping topologicamente coerente che rende il graph sostanzialmente corretto.\",\"Le etichette VBias, VDD e Rout sono visibili come callout di nodo/porta; non vengono considerate componenti obbligatori salvo il caso del terminale superiore della current source, dove il filo verso VDD è chiaramente visibile.\",\"La distinzione source/drain sui MOSFET potrebbe dipendere dall'orientazione simbolica, ma nel JSON i terminali principali risultano assegnati in modo compatibile con i nodi visibili; non emerge una contraddizione certa sui collegamenti terminale-terminale interni.\"],\"short_explanation\":\"Il graph riproduce molto bene la topologia visibile del core a 4 MOSFET: batteria di bias verso i due gate sinistri, nodo centrale condiviso tra current source bottom, gate di M1/M2 e drain di M2/M4, collegamenti drain-source verticali corretti e masse inferiori separate come disegnate. L’unica mancanza topologica chiara è il terminale superiore della current source, visibilmente collegato a VDD ma lasciato aperto nel JSON.\"}"
+}

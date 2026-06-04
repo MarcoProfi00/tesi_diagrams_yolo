@@ -1,0 +1,135 @@
+{
+  "metadata": {
+    "circuit_id": "b06",
+    "batch": "B",
+    "batch_dir": "batchB",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\images\\b06.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\json\\b06.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "b06.jpg",
+    "json_file": "b06.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:39:31",
+    "judge_latency_seconds": 32.195,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=15216, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=2015, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=17231)",
+  "judge_result": {
+    "circuit_id": "b06",
+    "batch": "B",
+    "image_file": "b06.jpg",
+    "json_file": "b06.json",
+    "image_graph_fidelity_score": 70,
+    "decision": "MEDIUM",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 8,
+      "terminals_pins": 17,
+      "graph_connections": 38,
+      "visible_semantics": 7
+    },
+    "error_counts": {
+      "critical": 1,
+      "major": 5,
+      "minor": 1
+    },
+    "critical_errors": [
+      {
+        "type": "net_fuse_main_rail_to_ground",
+        "description": "Il JSON fonde in un unico nodo la rail inferiore di massa con il terminale negativo della batteria e con il terminale inferiore dell'interruttore, mentre nell'immagine il polo negativo della batteria e il lato batteria dell'interruttore stanno sulla rail destra di alimentazione e non sono collegati direttamente alla massa inferiore.",
+        "image_evidence": "Nell'immagine la linea inferiore con simbolo GND collega emettitore di Q1, pin 2 e 4 dell'LM386, lato basso di C2/C6/Z1 ecc.; la batteria B1 e in serie con S1 sulla rail verticale destra e il suo terminale inferiore non scende alla massa inferiore.",
+        "json_evidence": "battery2.1_negative e switch25.1_t2 sono associati a reti che nel graph includono gnd9.1_t1, inductor10.1_t2, npn_transistor18.1_E, operational_amplifier19.1_in2/aux2, polarized_capacitor20.1_negative, polarized_capacitor20.2_negative, polarized_capacitor20.6_negative, resistor22.3_t2."
+      }
+    ],
+    "major_errors": [
+      {
+        "type": "wrong_opamp_pin_mapping",
+        "description": "Il pin di ingresso non invertente dell'opamp e collegato nel JSON alla massa, mentre nell'immagine il pin 3 e collegato al cursore/nodo del resistore variabile R3, non alla massa. Inoltre il JSON lascia l'altro ingresso opamp non connesso, ma nell'immagine il pin 2 e chiaramente a massa.",
+        "image_evidence": "Nel simbolo LM386 il pin 3 (ingresso +) riceve il nodo proveniente dal cursore di R3; il pin 2 (ingresso -) scende alla linea di massa inferiore.",
+        "json_evidence": "operational_amplifier19.1_in2 e fuso con la massa; operational_amplifier19.1_in1 e [] unconnected."
+      },
+      {
+        "type": "wrong_opamp_supply_pin_mapping",
+        "description": "Il pin superiore dell'opamp nel JSON e chiamato aux1 ed e collegato a switch/C6/R2; nell'immagine il pin superiore numerato 6 e effettivamente la supply positiva, quindi la connettivita del nodo e plausibile, ma il pin inferiore aux2 viene fuso con la massa insieme a in2. La separazione dei ruoli/pin dell'opamp non segue bene i terminali visibili 2,3,4,5,6.",
+        "image_evidence": "LM386 mostra pin 6 verso la rail positiva, pin 4 verso massa, pin 3 ingresso, pin 2 ingresso, pin 5 uscita.",
+        "json_evidence": "operational_amplifier19.1_aux1 connesso alla rail positiva; operational_amplifier19.1_aux2 fuso con il nodo di massa e anche con operational_amplifier19.1_in2, mentre in1 resta scollegato."
+      },
+      {
+        "type": "component_reduction_variable_capacitor",
+        "description": "Il condensatore variabile C1 del circuito di sintonia visibile in parallelo a L1 non compare come componente dedicato nel JSON; il nodo rimane parzialmente rappresentato tramite altri componenti, ma manca un endpoint reale collegato tra il nodo antenna/L1/D1 e massa.",
+        "image_evidence": "A sinistra C1 365pF e in parallelo a L1 tra il nodo antenna-D1 e la rail inferiore.",
+        "json_evidence": "Nel JSON non esiste alcun Variable_Resistor/Trim_Capacitor/Capacitor equivalente a C1 nel campo components/graph."
+      },
+      {
+        "type": "missing_output_load_branch",
+        "description": "Manca nel JSON il ramo di uscita verso l'altoparlante/trasduttore Z1, che nell'immagine e collegato dal lato inferiore di C5 alla massa. Questo rimuove un collegamento terminale-terminale visibile importante sul lato uscita.",
+        "image_evidence": "Dall'uscita pin 5 dell'LM386 si va a C5 e poi al trasduttore Z1 verso la massa inferiore.",
+        "json_evidence": "Non esiste alcun componente Speaker/Lamp/Meter/Terminal per Z1; polarized_capacitor20.5_positive e connesso solo a operational_amplifier19.1_out e polarized_capacitor20.5_negative solo a breaker3.1_t1."
+      },
+      {
+        "type": "wrong_connection_c5_to_supply_switch_branch",
+        "description": "Il condensatore C5 e collocato nel JSON tra l'uscita opamp e un breaker separato, ma nell'immagine C5 e in serie tra uscita opamp e trasduttore Z1; non e collegato a un breaker. Il componente breaker sembra usato impropriamente per rappresentare il ramo di alimentazione/interruttore.",
+        "image_evidence": "C5 220uF e collegato dal pin 5 dell'LM386 al nodo superiore di Z1. S1 e il ramo batteria sono separati sulla destra.",
+        "json_evidence": "operational_amplifier19.1_out -> polarized_capacitor20.5_positive e polarized_capacitor20.5_negative -> breaker3.1_t1."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "class_semantics_imprecise",
+        "description": "Il componente breaker3.1 non corrisponde bene al simbolo visibile; nell'immagine e presente un interruttore S1 e non un breaker separato. L'imprecisione di classe diventa pero rilevante soprattutto per i collegamenti gia penalizzati."
+      }
+    ],
+    "missing_from_json": [
+      "Condensatore variabile C1 tra nodo antenna/L1/D1 e massa",
+      "Trasduttore/earpiece Z1 collegato al lato negativo di C5 e a massa",
+      "Collegamento del pin 2 dell'opamp alla massa come endpoint distinto",
+      "Collegamento del pin 3 dell'opamp al cursore/nodo di R3 come endpoint distinto"
+    ],
+    "extra_in_json": [
+      "breaker3.1 come endpoint autonomo nel ramo di C5/alimentazione non chiaramente presente come tale nell'immagine",
+      "Fusione esplicita battery2.1_negative nel nodo di massa inferiore"
+    ],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "battery negative e switch lower terminal su rail di alimentazione destra, separata dalla massa inferiore",
+        "found_in_json": "battery2.1_negative e switch25.1_t2/breaker3.1_t2 fusi con gnd9.1_t1 e con il nodo di massa principale",
+        "severity": "critical"
+      },
+      {
+        "expected_from_image": "operational_amplifier19.1 pin 3 (ingresso +) collegato al nodo del cursore R3",
+        "found_in_json": "operational_amplifier19.1_in1 scollegato e operational_amplifier19.1_in2 collegato a massa",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "operational_amplifier19.1 pin 2 (ingresso -) collegato a massa",
+        "found_in_json": "il pin di ingresso effettivamente a massa nel graph e operational_amplifier19.1_in2, ma l'altro ingresso resta scollegato; mapping dei due ingressi non coerente con il simbolo visibile",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "operational_amplifier19.1_out collegato a polarized_capacitor20.5 e poi a Z1",
+        "found_in_json": "operational_amplifier19.1_out collegato a polarized_capacitor20.5_positive ma polarized_capacitor20.5_negative collegato a breaker3.1_t1 invece che al carico Z1",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "nodo antenna/L1/D1 collegato anche al condensatore variabile C1 verso massa",
+        "found_in_json": "nessun endpoint del condensatore variabile presente nel graph",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "La mappatura esatta tra alcuni polarized_capacitor JSON e i condensatori visibili C2/C3/C4/C6 e in gran parte plausibile ma non totalmente certa senza bounding box.",
+      "Il terminale aux1/aux2 dell'opamp nel JSON non usa numerazione pin; il nodo positivo di alimentazione su aux1 e topologicamente plausibile.",
+      "La polarita dei condensatori elettrolitici C5 e C6 appare coerente a grandi linee, ma non e necessaria per tutti i giudizi topologici qui assegnati."
+    ],
+    "short_explanation": "Il graph cattura una parte rilevante della topologia del ricevitore AM, inclusi nodo antenna-L1-D1, transistor e alcuni rami dell'opamp, ma contiene un errore critico: fonde la massa principale con il ramo batteria/interruttore. Inoltre sbaglia la rappresentazione dei pin di ingresso dell'opamp e omette il ramo di carico Z1 e il condensatore variabile C1. Struttura ancora correggibile, ma fedelta solo parziale."
+  },
+  "raw_model_output": "{\"circuit_id\":\"b06\",\"batch\":\"B\",\"image_file\":\"b06.jpg\",\"json_file\":\"b06.json\",\"image_graph_fidelity_score\":70,\"decision\":\"MEDIUM\",\"usable_as_graph_base\":true,\"scores\":{\"components\":8,\"terminals_pins\":17,\"graph_connections\":38,\"visible_semantics\":7},\"error_counts\":{\"critical\":1,\"major\":5,\"minor\":1},\"critical_errors\":[{\"type\":\"net_fuse_main_rail_to_ground\",\"description\":\"Il JSON fonde in un unico nodo la rail inferiore di massa con il terminale negativo della batteria e con il terminale inferiore dell'interruttore, mentre nell'immagine il polo negativo della batteria e il lato batteria dell'interruttore stanno sulla rail destra di alimentazione e non sono collegati direttamente alla massa inferiore.\",\"image_evidence\":\"Nell'immagine la linea inferiore con simbolo GND collega emettitore di Q1, pin 2 e 4 dell'LM386, lato basso di C2/C6/Z1 ecc.; la batteria B1 e in serie con S1 sulla rail verticale destra e il suo terminale inferiore non scende alla massa inferiore.\",\"json_evidence\":\"battery2.1_negative e switch25.1_t2 sono associati a reti che nel graph includono gnd9.1_t1, inductor10.1_t2, npn_transistor18.1_E, operational_amplifier19.1_in2/aux2, polarized_capacitor20.1_negative, polarized_capacitor20.2_negative, polarized_capacitor20.6_negative, resistor22.3_t2.\"}],\"major_errors\":[{\"type\":\"wrong_opamp_pin_mapping\",\"description\":\"Il pin di ingresso non invertente dell'opamp e collegato nel JSON alla massa, mentre nell'immagine il pin 3 e collegato al cursore/nodo del resistore variabile R3, non alla massa. Inoltre il JSON lascia l'altro ingresso opamp non connesso, ma nell'immagine il pin 2 e chiaramente a massa.\",\"image_evidence\":\"Nel simbolo LM386 il pin 3 (ingresso +) riceve il nodo proveniente dal cursore di R3; il pin 2 (ingresso -) scende alla linea di massa inferiore.\",\"json_evidence\":\"operational_amplifier19.1_in2 e fuso con la massa; operational_amplifier19.1_in1 e [] unconnected.\"},{\"type\":\"wrong_opamp_supply_pin_mapping\",\"description\":\"Il pin superiore dell'opamp nel JSON e chiamato aux1 ed e collegato a switch/C6/R2; nell'immagine il pin superiore numerato 6 e effettivamente la supply positiva, quindi la connettivita del nodo e plausibile, ma il pin inferiore aux2 viene fuso con la massa insieme a in2. La separazione dei ruoli/pin dell'opamp non segue bene i terminali visibili 2,3,4,5,6.\",\"image_evidence\":\"LM386 mostra pin 6 verso la rail positiva, pin 4 verso massa, pin 3 ingresso, pin 2 ingresso, pin 5 uscita.\",\"json_evidence\":\"operational_amplifier19.1_aux1 connesso alla rail positiva; operational_amplifier19.1_aux2 fuso con il nodo di massa e anche con operational_amplifier19.1_in2, mentre in1 resta scollegato.\"},{\"type\":\"component_reduction_variable_capacitor\",\"description\":\"Il condensatore variabile C1 del circuito di sintonia visibile in parallelo a L1 non compare come componente dedicato nel JSON; il nodo rimane parzialmente rappresentato tramite altri componenti, ma manca un endpoint reale collegato tra il nodo antenna/L1/D1 e massa.\",\"image_evidence\":\"A sinistra C1 365pF e in parallelo a L1 tra il nodo antenna-D1 e la rail inferiore.\",\"json_evidence\":\"Nel JSON non esiste alcun Variable_Resistor/Trim_Capacitor/Capacitor equivalente a C1 nel campo components/graph.\"},{\"type\":\"missing_output_load_branch\",\"description\":\"Manca nel JSON il ramo di uscita verso l'altoparlante/trasduttore Z1, che nell'immagine e collegato dal lato inferiore di C5 alla massa. Questo rimuove un collegamento terminale-terminale visibile importante sul lato uscita.\",\"image_evidence\":\"Dall'uscita pin 5 dell'LM386 si va a C5 e poi al trasduttore Z1 verso la massa inferiore.\",\"json_evidence\":\"Non esiste alcun componente Speaker/Lamp/Meter/Terminal per Z1; polarized_capacitor20.5_positive e connesso solo a operational_amplifier19.1_out e polarized_capacitor20.5_negative solo a breaker3.1_t1.\"},{\"type\":\"wrong_connection_c5_to_supply_switch_branch\",\"description\":\"Il condensatore C5 e collocato nel JSON tra l'uscita opamp e un breaker separato, ma nell'immagine C5 e in serie tra uscita opamp e trasduttore Z1; non e collegato a un breaker. Il componente breaker sembra usato impropriamente per rappresentare il ramo di alimentazione/interruttore.\",\"image_evidence\":\"C5 220uF e collegato dal pin 5 dell'LM386 al nodo superiore di Z1. S1 e il ramo batteria sono separati sulla destra.\",\"json_evidence\":\"operational_amplifier19.1_out -> polarized_capacitor20.5_positive e polarized_capacitor20.5_negative -> breaker3.1_t1.\"}],\"minor_errors\":[{\"type\":\"class_semantics_imprecise\",\"description\":\"Il componente breaker3.1 non corrisponde bene al simbolo visibile; nell'immagine e presente un interruttore S1 e non un breaker separato. L'imprecisione di classe diventa pero rilevante soprattutto per i collegamenti gia penalizzati.\"}],\"missing_from_json\":[\"Condensatore variabile C1 tra nodo antenna/L1/D1 e massa\",\"Trasduttore/earpiece Z1 collegato al lato negativo di C5 e a massa\",\"Collegamento del pin 2 dell'opamp alla massa come endpoint distinto\",\"Collegamento del pin 3 dell'opamp al cursore/nodo di R3 come endpoint distinto\"],\"extra_in_json\":[\"breaker3.1 come endpoint autonomo nel ramo di C5/alimentazione non chiaramente presente come tale nell'immagine\",\"Fusione esplicita battery2.1_negative nel nodo di massa inferiore\"],\"wrong_graph_connections\":[{\"expected_from_image\":\"battery negative e switch lower terminal su rail di alimentazione destra, separata dalla massa inferiore\",\"found_in_json\":\"battery2.1_negative e switch25.1_t2/breaker3.1_t2 fusi con gnd9.1_t1 e con il nodo di massa principale\",\"severity\":\"critical\"},{\"expected_from_image\":\"operational_amplifier19.1 pin 3 (ingresso +) collegato al nodo del cursore R3\",\"found_in_json\":\"operational_amplifier19.1_in1 scollegato e operational_amplifier19.1_in2 collegato a massa\",\"severity\":\"major\"},{\"expected_from_image\":\"operational_amplifier19.1 pin 2 (ingresso -) collegato a massa\",\"found_in_json\":\"il pin di ingresso effettivamente a massa nel graph e operational_amplifier19.1_in2, ma l'altro ingresso resta scollegato; mapping dei due ingressi non coerente con il simbolo visibile\",\"severity\":\"major\"},{\"expected_from_image\":\"operational_amplifier19.1_out collegato a polarized_capacitor20.5 e poi a Z1\",\"found_in_json\":\"operational_amplifier19.1_out collegato a polarized_capacitor20.5_positive ma polarized_capacitor20.5_negative collegato a breaker3.1_t1 invece che al carico Z1\",\"severity\":\"major\"},{\"expected_from_image\":\"nodo antenna/L1/D1 collegato anche al condensatore variabile C1 verso massa\",\"found_in_json\":\"nessun endpoint del condensatore variabile presente nel graph\",\"severity\":\"major\"}],\"uncertain_points\":[\"La mappatura esatta tra alcuni polarized_capacitor JSON e i condensatori visibili C2/C3/C4/C6 e in gran parte plausibile ma non totalmente certa senza bounding box.\",\"Il terminale aux1/aux2 dell'opamp nel JSON non usa numerazione pin; il nodo positivo di alimentazione su aux1 e topologicamente plausibile.\",\"La polarita dei condensatori elettrolitici C5 e C6 appare coerente a grandi linee, ma non e necessaria per tutti i giudizi topologici qui assegnati.\"],\"short_explanation\":\"Il graph cattura una parte rilevante della topologia del ricevitore AM, inclusi nodo antenna-L1-D1, transistor e alcuni rami dell'opamp, ma contiene un errore critico: fonde la massa principale con il ramo batteria/interruttore. Inoltre sbaglia la rappresentazione dei pin di ingresso dell'opamp e omette il ramo di carico Z1 e il condensatore variabile C1. Struttura ancora correggibile, ma fedelta solo parziale.\"}"
+}

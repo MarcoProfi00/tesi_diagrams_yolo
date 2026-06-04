@@ -1,0 +1,66 @@
+{
+  "metadata": {
+    "circuit_id": "c06",
+    "batch": "C1",
+    "batch_dir": "batchC1",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\images\\c06.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\json\\c06.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "c06.jpg",
+    "json_file": "c06.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:32:31",
+    "judge_latency_seconds": 10.067,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=17200, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=523, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=17723)",
+  "judge_result": {
+    "circuit_id": "c06",
+    "batch": "C1",
+    "image_file": "c06.jpg",
+    "json_file": "c06.json",
+    "image_graph_fidelity_score": 95,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 23,
+      "graph_connections": 53,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "component_count_mismatch",
+        "description": "L'immagine mostra 7 resistori di segmento tra CD4026 e display (uno per a,b,c,d,e,f,g), mentre il JSON ne include 7 in totale per i segmenti: la topologia risulta coerente, ma la dicitura visiva '6 x 330Ω' vicino al blocco resistivo puo creare ambiguita testuale non topologica."
+      },
+      {
+        "type": "terminal_naming_imprecision",
+        "description": "Per il display a 7 segmenti il JSON modella solo i pin effettivamente cablati visibili (a-g e cc), senza altri eventuali pin fisici del package; topologicamente e adeguato."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "La scritta visiva '6 x 330Ω' e in apparente tensione con i 7 collegamenti ai segmenti a-g, ma i sette resistori e i sette fili sono visibili e il graph li rappresenta correttamente.",
+      "I pin bottom_3 (pin4) e bottom_4 (pin5) del CD4026 appaiono lasciati non connessi con simboli terminali aperti; il JSON li lascia scollegati, coerentemente."
+    ],
+    "short_explanation": "Il campo graph e sostanzialmente fedele all'immagine: il pulsante collega Vdd/pin16 al nodo CLK/DEI (pin1 e pin3), il resistore da 10k collega quel nodo a massa, RST/INH (pin15 e pin2) sono sul nodo di massa a sinistra, Vss/pin8 e pin14 sono uniti e portati a massa, i sette output a-g del CD4026 sono collegati tramite sette resistori ai corrispondenti ingressi a-g del display, e il common cathode del display va a GND. Non emergono contraddizioni topologiche certe nel graph."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c06\",\"batch\":\"C1\",\"image_file\":\"c06.jpg\",\"json_file\":\"c06.json\",\"image_graph_fidelity_score\":95,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":23,\"graph_connections\":53,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":2},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"component_count_mismatch\",\"description\":\"L'immagine mostra 7 resistori di segmento tra CD4026 e display (uno per a,b,c,d,e,f,g), mentre il JSON ne include 7 in totale per i segmenti: la topologia risulta coerente, ma la dicitura visiva '6 x 330Ω' vicino al blocco resistivo puo creare ambiguita testuale non topologica.\"},{\"type\":\"terminal_naming_imprecision\",\"description\":\"Per il display a 7 segmenti il JSON modella solo i pin effettivamente cablati visibili (a-g e cc), senza altri eventuali pin fisici del package; topologicamente e adeguato.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"La scritta visiva '6 x 330Ω' e in apparente tensione con i 7 collegamenti ai segmenti a-g, ma i sette resistori e i sette fili sono visibili e il graph li rappresenta correttamente.\",\"I pin bottom_3 (pin4) e bottom_4 (pin5) del CD4026 appaiono lasciati non connessi con simboli terminali aperti; il JSON li lascia scollegati, coerentemente.\"],\"short_explanation\":\"Il campo graph e sostanzialmente fedele all'immagine: il pulsante collega Vdd/pin16 al nodo CLK/DEI (pin1 e pin3), il resistore da 10k collega quel nodo a massa, RST/INH (pin15 e pin2) sono sul nodo di massa a sinistra, Vss/pin8 e pin14 sono uniti e portati a massa, i sette output a-g del CD4026 sono collegati tramite sette resistori ai corrispondenti ingressi a-g del display, e il common cathode del display va a GND. Non emergono contraddizioni topologiche certe nel graph.\"}"
+}

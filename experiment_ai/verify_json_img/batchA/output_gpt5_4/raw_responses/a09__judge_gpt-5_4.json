@@ -1,0 +1,120 @@
+{
+  "metadata": {
+    "circuit_id": "a09",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a09.png",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a09.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "a09.png",
+    "json_file": "a09.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "d43b698894dbc528bd8e1f7d52a835fdd99cc52aa5cb338f2193dbbb46c00acd",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 15:40:44",
+    "judge_latency_seconds": 47.977,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=12069, input_tokens_details=InputTokensDetails(cached_tokens=2816), output_tokens=2392, output_tokens_details=OutputTokensDetails(reasoning_tokens=832), total_tokens=14461)",
+  "judge_result": {
+    "circuit_id": "a09",
+    "batch": "A",
+    "image_file": "a09.png",
+    "json_file": "a09.json",
+    "image_graph_fidelity_score": 60,
+    "decision": "MEDIUM",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 9,
+      "terminals_pins": 18,
+      "graph_connections": 28,
+      "visible_semantics": 5
+    },
+    "error_counts": {
+      "critical": 2,
+      "major": 3,
+      "minor": 1
+    },
+    "critical_errors": [
+      {
+        "type": "net_fuse",
+        "description": "Il JSON fonde erroneamente il nodo di massa del condensatore con il nodo J1 pin4 / ingresso del resistore. Nell'immagine il terminale inferiore di C1 va a GND, mentre J1 pin4 va al lato sinistro di R3 su una rete distinta.",
+        "image_evidence": "Nel disegno C1 e verticale: il terminale inferiore scende a un simbolo GND; J1 pin4 esce orizzontalmente verso R3. Non c'e collegamento visibile tra il nodo pin4/R3 e la massa di C1.",
+        "json_evidence": "capacitor4.1_t2 e collegato a connector5.1_pin4, gnd9.3_t1 e resistor22.1_t1; anche connector5.1_pin4, gnd9.3_t1 e resistor22.1_t1 sono tutti fusi nello stesso nodo."
+      },
+      {
+        "type": "net_split",
+        "description": "Il JSON separa un nodo che nell'immagine appare unico: J1 pin2, J1 pin3, il terminale superiore di C1 e il lato sinistro dell'interruttore SW2.",
+        "image_evidence": "J1 pin2 va a destra su una linea che scende verticalmente fino a C1; questa stessa verticale incontra la linea di J1 pin3 che prosegue fino al terminale sinistro di SW2, formando un unico nodo visibile.",
+        "json_evidence": "capacitor4.1_t1 e collegato solo a connector5.1_pin2; connector5.1_pin3 e collegato solo a switch25.1_t1. Manca la fusione tra i due sotto-nodi."
+      }
+    ],
+    "major_errors": [
+      {
+        "type": "missing_connection",
+        "description": "Manca il collegamento del terminale inferiore della lampada alla massa.",
+        "image_evidence": "La lampada a destra ha il terminale inferiore collegato verso il basso a un simbolo GND.",
+        "json_evidence": "lamp13.1_t2 e vuoto; gnd9.5_t1 e vuoto."
+      },
+      {
+        "type": "missing_connection",
+        "description": "Il nodo del terminale superiore di C1 dovrebbe includere anche J1 pin3 e il lato sinistro dell'interruttore, non solo J1 pin2.",
+        "image_evidence": "Il nodo visibile che parte da J1 pin2 prosegue sulla verticale e incontra la linea di J1 pin3 fino a SW2.",
+        "json_evidence": "capacitor4.1_t1 e collegato solo a connector5.1_pin2."
+      },
+      {
+        "type": "wrong_node_assignment",
+        "description": "Il lato sinistro di R3 e stato assegnato al nodo di massa/C1 invece che restare sul nodo separato di J1 pin4.",
+        "image_evidence": "J1 pin4 va direttamente al lato sinistro di R3; questo ramo e distinto dal GND del condensatore.",
+        "json_evidence": "resistor22.1_t1 e connesso a capacitor4.1_t2 e gnd9.3_t1 oltre a connector5.1_pin4."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "warning_alignment",
+        "description": "Il warning sugli unconnected terminals riflette una parte reale del problema topologico (lampada/GND), ma la presenza di un GND separato inutilizzato suggerisce mapping incompleto piu che pura assenza del simbolo."
+      }
+    ],
+    "missing_from_json": [
+      "lamp13.1_t2 -> gnd9.5_t1",
+      "connector5.1_pin3 -> capacitor4.1_t1",
+      "connector5.1_pin3 -> connector5.1_pin2",
+      "switch25.1_t1 -> capacitor4.1_t1"
+    ],
+    "extra_in_json": [
+      "capacitor4.1_t2 -> connector5.1_pin4",
+      "capacitor4.1_t2 -> resistor22.1_t1",
+      "gnd9.3_t1 -> connector5.1_pin4",
+      "gnd9.3_t1 -> resistor22.1_t1"
+    ],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "capacitor4.1_t2 collegato solo alla massa locale (GND), non al nodo J1 pin4 / resistor22.1_t1",
+        "found_in_json": "capacitor4.1_t2 collegato a connector5.1_pin4, gnd9.3_t1, resistor22.1_t1",
+        "severity": "critical"
+      },
+      {
+        "expected_from_image": "connector5.1_pin2, connector5.1_pin3, capacitor4.1_t1 e switch25.1_t1 sullo stesso nodo",
+        "found_in_json": "connector5.1_pin2 e separato da connector5.1_pin3/switch25.1_t1",
+        "severity": "critical"
+      },
+      {
+        "expected_from_image": "lamp13.1_t2 collegato a gnd9.5_t1",
+        "found_in_json": "lamp13.1_t2 non collegato; gnd9.5_t1 non collegato",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "La polarita anodo/catodo del LED sembra compatibile con il JSON, ma il dettaglio grafico della barretta non e perfettamente nitido; non la considero una inversione certa.",
+      "Il connettore J1 e numerato chiaramente 1-5; il mapping dei pin nel JSON appare plausibile e non mostra errori certi di numerazione."
+    ],
+    "short_explanation": "Il graph cattura diversi collegamenti locali corretti (batteria-fusibile-J1 pin1, J1 pin5 a GND, J1 pin4-R3-LED, SW2-lampada), ma contiene un grave net fuse tra massa del condensatore e nodo J1 pin4/R3, piu un net split sul nodo comune J1 pin2/J1 pin3/C1/SW2. Inoltre manca la massa della lampada. Struttura ancora correggibile, ma non abbastanza fedele per HIGH."
+  },
+  "raw_model_output": "{\n  \"circuit_id\": \"a09\",\n  \"batch\": \"A\",\n  \"image_file\": \"a09.png\",\n  \"json_file\": \"a09.json\",\n  \"image_graph_fidelity_score\": 60,\n  \"decision\": \"MEDIUM\",\n  \"usable_as_graph_base\": true,\n  \"scores\": {\n    \"components\": 9,\n    \"terminals_pins\": 18,\n    \"graph_connections\": 28,\n    \"visible_semantics\": 5\n  },\n  \"error_counts\": {\n    \"critical\": 2,\n    \"major\": 3,\n    \"minor\": 1\n  },\n  \"critical_errors\": [\n    {\n      \"type\": \"net_fuse\",\n      \"description\": \"Il JSON fonde erroneamente il nodo di massa del condensatore con il nodo J1 pin4 / ingresso del resistore. Nell'immagine il terminale inferiore di C1 va a GND, mentre J1 pin4 va al lato sinistro di R3 su una rete distinta.\",\n      \"image_evidence\": \"Nel disegno C1 e verticale: il terminale inferiore scende a un simbolo GND; J1 pin4 esce orizzontalmente verso R3. Non c'e collegamento visibile tra il nodo pin4/R3 e la massa di C1.\",\n      \"json_evidence\": \"capacitor4.1_t2 e collegato a connector5.1_pin4, gnd9.3_t1 e resistor22.1_t1; anche connector5.1_pin4, gnd9.3_t1 e resistor22.1_t1 sono tutti fusi nello stesso nodo.\"\n    },\n    {\n      \"type\": \"net_split\",\n      \"description\": \"Il JSON separa un nodo che nell'immagine appare unico: J1 pin2, J1 pin3, il terminale superiore di C1 e il lato sinistro dell'interruttore SW2.\",\n      \"image_evidence\": \"J1 pin2 va a destra su una linea che scende verticalmente fino a C1; questa stessa verticale incontra la linea di J1 pin3 che prosegue fino al terminale sinistro di SW2, formando un unico nodo visibile.\",\n      \"json_evidence\": \"capacitor4.1_t1 e collegato solo a connector5.1_pin2; connector5.1_pin3 e collegato solo a switch25.1_t1. Manca la fusione tra i due sotto-nodi.\"\n    }\n  ],\n  \"major_errors\": [\n    {\n      \"type\": \"missing_connection\",\n      \"description\": \"Manca il collegamento del terminale inferiore della lampada alla massa.\",\n      \"image_evidence\": \"La lampada a destra ha il terminale inferiore collegato verso il basso a un simbolo GND.\",\n      \"json_evidence\": \"lamp13.1_t2 e vuoto; gnd9.5_t1 e vuoto.\"\n    },\n    {\n      \"type\": \"missing_connection\",\n      \"description\": \"Il nodo del terminale superiore di C1 dovrebbe includere anche J1 pin3 e il lato sinistro dell'interruttore, non solo J1 pin2.\",\n      \"image_evidence\": \"Il nodo visibile che parte da J1 pin2 prosegue sulla verticale e incontra la linea di J1 pin3 fino a SW2.\",\n      \"json_evidence\": \"capacitor4.1_t1 e collegato solo a connector5.1_pin2.\"\n    },\n    {\n      \"type\": \"wrong_node_assignment\",\n      \"description\": \"Il lato sinistro di R3 e stato assegnato al nodo di massa/C1 invece che restare sul nodo separato di J1 pin4.\",\n      \"image_evidence\": \"J1 pin4 va direttamente al lato sinistro di R3; questo ramo e distinto dal GND del condensatore.\",\n      \"json_evidence\": \"resistor22.1_t1 e connesso a capacitor4.1_t2 e gnd9.3_t1 oltre a connector5.1_pin4.\"\n    }\n  ],\n  \"minor_errors\": [\n    {\n      \"type\": \"warning_alignment\",\n      \"description\": \"Il warning sugli unconnected terminals riflette una parte reale del problema topologico (lampada/GND), ma la presenza di un GND separato inutilizzato suggerisce mapping incompleto piu che pura assenza del simbolo.\"\n    }\n  ],\n  \"missing_from_json\": [\n    \"lamp13.1_t2 -> gnd9.5_t1\",\n    \"connector5.1_pin3 -> capacitor4.1_t1\",\n    \"connector5.1_pin3 -> connector5.1_pin2\",\n    \"switch25.1_t1 -> capacitor4.1_t1\"\n  ],\n  \"extra_in_json\": [\n    \"capacitor4.1_t2 -> connector5.1_pin4\",\n    \"capacitor4.1_t2 -> resistor22.1_t1\",\n    \"gnd9.3_t1 -> connector5.1_pin4\",\n    \"gnd9.3_t1 -> resistor22.1_t1\"\n  ],\n  \"wrong_graph_connections\": [\n    {\n      \"expected_from_image\": \"capacitor4.1_t2 collegato solo alla massa locale (GND), non al nodo J1 pin4 / resistor22.1_t1\",\n      \"found_in_json\": \"capacitor4.1_t2 collegato a connector5.1_pin4, gnd9.3_t1, resistor22.1_t1\",\n      \"severity\": \"critical\"\n    },\n    {\n      \"expected_from_image\": \"connector5.1_pin2, connector5.1_pin3, capacitor4.1_t1 e switch25.1_t1 sullo stesso nodo\",\n      \"found_in_json\": \"connector5.1_pin2 e separato da connector5.1_pin3/switch25.1_t1\",\n      \"severity\": \"critical\"\n    },\n    {\n      \"expected_from_image\": \"lamp13.1_t2 collegato a gnd9.5_t1\",\n      \"found_in_json\": \"lamp13.1_t2 non collegato; gnd9.5_t1 non collegato\",\n      \"severity\": \"major\"\n    }\n  ],\n  \"uncertain_points\": [\n    \"La polarita anodo/catodo del LED sembra compatibile con il JSON, ma il dettaglio grafico della barretta non e perfettamente nitido; non la considero una inversione certa.\",\n    \"Il connettore J1 e numerato chiaramente 1-5; il mapping dei pin nel JSON appare plausibile e non mostra errori certi di numerazione.\"\n  ],\n  \"short_explanation\": \"Il graph cattura diversi collegamenti locali corretti (batteria-fusibile-J1 pin1, J1 pin5 a GND, J1 pin4-R3-LED, SW2-lampada), ma contiene un grave net fuse tra massa del condensatore e nodo J1 pin4/R3, piu un net split sul nodo comune J1 pin2/J1 pin3/C1/SW2. Inoltre manca la massa della lampada. Struttura ancora correggibile, ma non abbastanza fedele per HIGH.\"\n}"
+}

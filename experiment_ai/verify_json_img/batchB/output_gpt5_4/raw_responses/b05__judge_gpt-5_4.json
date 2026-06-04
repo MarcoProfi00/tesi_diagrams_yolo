@@ -1,0 +1,77 @@
+{
+  "metadata": {
+    "circuit_id": "b05",
+    "batch": "B",
+    "batch_dir": "batchB",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\images\\b05.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\json\\b05.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "b05.jpg",
+    "json_file": "b05.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:38:58",
+    "judge_latency_seconds": 11.995,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=14748, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=710, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=15458)",
+  "judge_result": {
+    "circuit_id": "b05",
+    "batch": "B",
+    "image_file": "b05.jpg",
+    "json_file": "b05.json",
+    "image_graph_fidelity_score": 91,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 9,
+      "terminals_pins": 22,
+      "graph_connections": 52,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 1,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "component_omission_connector",
+        "description": "L'immagine mostra un connettore cuffia a due terminali (J1/J2) collegato al nodo di collettore di Q2 e al nodo di ritorno inferiore, ma nel JSON questi endpoint non sono rappresentati come componenti/terminali nel graph.",
+        "image_evidence": "Sul lato destro sono visibili J1 e J2; J1 e' collegato al conduttore superiore, J2 al nodo inferiore comune.",
+        "json_evidence": "Nel campo components non compare alcun Connector/Terminal per J1/J2 e il graph non contiene endpoint equivalenti per questi collegamenti."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "terminal_orientation_inconsistency",
+        "description": "breaker3.1 ha entrambi i terminali con relative_position='left', metadato incoerente ma non topologicamente determinante per i collegamenti del graph."
+      },
+      {
+        "type": "class_semantics_imprecision",
+        "description": "Il nodo batteria positivo e il nodo di massa/ritorno sono modellati insieme nel graph tramite battery2.1_positive e gnd9.1_t1; topologicamente coerente con il filo visibile, ma semanticamente poco pulito."
+      }
+    ],
+    "missing_from_json": [
+      "Connector/terminal superiore J1 collegato al nodo comune di npn_transistor18.2_C e polarized_capacitor20.4_positive",
+      "Connector/terminal inferiore J2 collegato al nodo di ritorno comune con battery2.1_positive/gnd9.1_t1"
+    ],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "Il mapping tra resistor22.1/resistor22.2/resistor22.3 e i resistori visibili R1/R2/R3 non e' verificabile dai reference designator nel JSON, ma esiste un mapping topologicamente coerente.",
+      "La polarita' dei condensatori polarizzati nel JSON non e' realmente verificabile dall'immagine, che mostra condensatori generici/variabile; non trattato come errore topologico certo.",
+      "Il componente breaker3.1 sembra rappresentare il connettore/cuffia o un elemento di giunzione sul nodo d'uscita; la scelta di classe non e' topologicamente critica ma semanticamente ambigua."
+    ],
+    "short_explanation": "Il graph JSON riproduce molto bene la topologia principale visibile: nodo antenna/L1/C1/CR1, accoppiamenti CR1-C2-Q1 e C3-Q2, rete di polarizzazione a tre resistori verso il ritorno comune, collettore di Q2 con C4 verso il ritorno e alimentazione tramite batteria e interruttore aperto. Non emergono errori certi di collegamenti terminale-terminale nel graph; la principale mancanza e' l'assenza esplicita dei due terminali del connettore cuffia J1/J2."
+  },
+  "raw_model_output": "{\"circuit_id\":\"b05\",\"batch\":\"B\",\"image_file\":\"b05.jpg\",\"json_file\":\"b05.json\",\"image_graph_fidelity_score\":91,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":9,\"terminals_pins\":22,\"graph_connections\":52,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":1,\"minor\":2},\"critical_errors\":[],\"major_errors\":[{\"type\":\"component_omission_connector\",\"description\":\"L'immagine mostra un connettore cuffia a due terminali (J1/J2) collegato al nodo di collettore di Q2 e al nodo di ritorno inferiore, ma nel JSON questi endpoint non sono rappresentati come componenti/terminali nel graph.\",\"image_evidence\":\"Sul lato destro sono visibili J1 e J2; J1 e' collegato al conduttore superiore, J2 al nodo inferiore comune.\",\"json_evidence\":\"Nel campo components non compare alcun Connector/Terminal per J1/J2 e il graph non contiene endpoint equivalenti per questi collegamenti.\"}],\"minor_errors\":[{\"type\":\"terminal_orientation_inconsistency\",\"description\":\"breaker3.1 ha entrambi i terminali con relative_position='left', metadato incoerente ma non topologicamente determinante per i collegamenti del graph.\"},{\"type\":\"class_semantics_imprecision\",\"description\":\"Il nodo batteria positivo e il nodo di massa/ritorno sono modellati insieme nel graph tramite battery2.1_positive e gnd9.1_t1; topologicamente coerente con il filo visibile, ma semanticamente poco pulito.\"}],\"missing_from_json\":[\"Connector/terminal superiore J1 collegato al nodo comune di npn_transistor18.2_C e polarized_capacitor20.4_positive\",\"Connector/terminal inferiore J2 collegato al nodo di ritorno comune con battery2.1_positive/gnd9.1_t1\"],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"Il mapping tra resistor22.1/resistor22.2/resistor22.3 e i resistori visibili R1/R2/R3 non e' verificabile dai reference designator nel JSON, ma esiste un mapping topologicamente coerente.\",\"La polarita' dei condensatori polarizzati nel JSON non e' realmente verificabile dall'immagine, che mostra condensatori generici/variabile; non trattato come errore topologico certo.\",\"Il componente breaker3.1 sembra rappresentare il connettore/cuffia o un elemento di giunzione sul nodo d'uscita; la scelta di classe non e' topologicamente critica ma semanticamente ambigua.\"],\"short_explanation\":\"Il graph JSON riproduce molto bene la topologia principale visibile: nodo antenna/L1/C1/CR1, accoppiamenti CR1-C2-Q1 e C3-Q2, rete di polarizzazione a tre resistori verso il ritorno comune, collettore di Q2 con C4 verso il ritorno e alimentazione tramite batteria e interruttore aperto. Non emergono errori certi di collegamenti terminale-terminale nel graph; la principale mancanza e' l'assenza esplicita dei due terminali del connettore cuffia J1/J2.\"}"
+}

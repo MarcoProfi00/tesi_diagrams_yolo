@@ -1,0 +1,66 @@
+{
+  "metadata": {
+    "circuit_id": "c12",
+    "batch": "C2",
+    "batch_dir": "batchC2",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\images\\c12.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\json\\c12.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "c12.jpg",
+    "json_file": "c12.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:34:50",
+    "judge_latency_seconds": 14.407,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=14670, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=488, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=15158)",
+  "judge_result": {
+    "circuit_id": "c12",
+    "batch": "C2",
+    "image_file": "c12.jpg",
+    "json_file": "c12.json",
+    "image_graph_fidelity_score": 96,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 24,
+      "graph_connections": 53,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "component_class_semantics",
+        "description": "C1 appare visivamente come condensatore non polarizzato, mentre nel JSON e rappresentato come Polarized_Capacitor; la topologia dei due terminali resta comunque corretta."
+      },
+      {
+        "type": "switch_state_uncertainty",
+        "description": "Lo stato del deviatore S1 nel JSON e 'closed', ma dall'immagine simbolica il contatto e stilizzato e lo stato non e del tutto affidabile come informazione semantica; la connettivita usata nel graph risulta comunque coerente con il filo visibile tra rail 12V e pin 11 tramite S1."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "Il mapping dei terminali IC usa nomi geometrici (left_1, top_2, ecc.) con numeri pin OCR; tale mapping appare coerente con i fili visibili, ma senza ulteriore zoom non tutti i contatti lato corpo sono leggibili con la stessa nitidezza.",
+      "La polarita di C2 e C3 nel JSON non e necessaria per la verifica topologica; i loro terminali alto/basso risultano comunque collegati ai nodi visibili corretti."
+    ],
+    "short_explanation": "Il campo graph e sostanzialmente fedele all'immagine: ingresso Audio IN tramite C1 al nodo comune dei pin 2/13, massa separata ai pin 3 e 7 come disegnato, rail +12V comune ai pin 6/8/10 e ai positivi di C2/C3, speaker tra pin 5 e 9, e pin 11 collegato al rail +12V attraverso S1. Non emergono errori topologici certi; solo piccole imprecisioni semantiche non strutturali."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c12\",\"batch\":\"C2\",\"image_file\":\"c12.jpg\",\"json_file\":\"c12.json\",\"image_graph_fidelity_score\":96,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":24,\"graph_connections\":53,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":2},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"component_class_semantics\",\"description\":\"C1 appare visivamente come condensatore non polarizzato, mentre nel JSON e rappresentato come Polarized_Capacitor; la topologia dei due terminali resta comunque corretta.\"},{\"type\":\"switch_state_uncertainty\",\"description\":\"Lo stato del deviatore S1 nel JSON e 'closed', ma dall'immagine simbolica il contatto e stilizzato e lo stato non e del tutto affidabile come informazione semantica; la connettivita usata nel graph risulta comunque coerente con il filo visibile tra rail 12V e pin 11 tramite S1.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"Il mapping dei terminali IC usa nomi geometrici (left_1, top_2, ecc.) con numeri pin OCR; tale mapping appare coerente con i fili visibili, ma senza ulteriore zoom non tutti i contatti lato corpo sono leggibili con la stessa nitidezza.\",\"La polarita di C2 e C3 nel JSON non e necessaria per la verifica topologica; i loro terminali alto/basso risultano comunque collegati ai nodi visibili corretti.\"],\"short_explanation\":\"Il campo graph e sostanzialmente fedele all'immagine: ingresso Audio IN tramite C1 al nodo comune dei pin 2/13, massa separata ai pin 3 e 7 come disegnato, rail +12V comune ai pin 6/8/10 e ai positivi di C2/C3, speaker tra pin 5 e 9, e pin 11 collegato al rail +12V attraverso S1. Non emergono errori topologici certi; solo piccole imprecisioni semantiche non strutturali.\"}"
+}

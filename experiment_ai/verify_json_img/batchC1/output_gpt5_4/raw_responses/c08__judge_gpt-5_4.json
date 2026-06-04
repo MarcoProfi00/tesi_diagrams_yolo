@@ -1,0 +1,96 @@
+{
+  "metadata": {
+    "circuit_id": "c08",
+    "batch": "C1",
+    "batch_dir": "batchC1",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\images\\c08.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\json\\c08.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "c08.jpg",
+    "json_file": "c08.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:27:58",
+    "judge_latency_seconds": 47.702,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=19553, input_tokens_details=InputTokensDetails(cached_tokens=19200), output_tokens=2442, output_tokens_details=OutputTokensDetails(reasoning_tokens=1426), total_tokens=21995)",
+  "judge_result": {
+    "circuit_id": "c08",
+    "batch": "C1",
+    "image_file": "c08.jpg",
+    "json_file": "c08.json",
+    "image_graph_fidelity_score": 78,
+    "decision": "HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 9,
+      "terminals_pins": 18,
+      "graph_connections": 43,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 3,
+      "minor": 1
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "switch_terminal_loss",
+        "description": "Il selettore visibile e uno SPDT con un contatto comune e due rami distinti; nel JSON e ridotto a uno switch a 2 terminali, quindi uno dei due collegamenti del selettore sparisce dalla topologia.",
+        "image_evidence": "S1 mostra chiaramente due uscite/throw etichettate R e L, una verso il ramo con R4 e una verso il ramo con R3.",
+        "json_evidence": "switch25.1 ha solo t1 e t2; nel graph switch25.1 e collegato solo al nodo di alimentazione e a resistor22.5_t1."
+      },
+      {
+        "type": "missing_connection",
+        "description": "Manca il collegamento del secondo ramo del selettore al resistore da 1k rimanente: un terminale di uno dei due resistori di ingresso alle reti LED e lasciato scollegato nel graph.",
+        "image_evidence": "Entrambi i resistori da 1k (R3 e R4) sono visibilmente collegati ai due throw dello switch S1.",
+        "json_evidence": "resistor22.4_t1 e dichiarato non connesso; warnings.unconnected_terminals include resistor22.4_t1."
+      },
+      {
+        "type": "state_connectivity_mismatch",
+        "description": "La connettivita del selettore non riproduce fedelmente l'immagine: il JSON rappresenta un solo percorso commutato verso un solo ramo, mentre lo schema mostra una commutazione tra due rami alternativi.",
+        "image_evidence": "S1 commuta il nodo comune di alimentazione verso il ramo superiore o inferiore; i due rami restano topologicamente distinti.",
+        "json_evidence": "switch25.1_t1 e sul nodo di alimentazione comune, mentre switch25.1_t2 e connesso solo a resistor22.5_t1; non esiste endpoint JSON per il secondo throw."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "switch_semantics_partial",
+        "description": "Lo stato 'closed' assegnato allo switch e poco affidabile rispetto al simbolo SPDT dell'immagine; la posizione attiva del throw e ambigua a bassa risoluzione."
+      }
+    ],
+    "missing_from_json": [
+      "Collegamento tra il secondo throw di S1 e il terminale superiore del secondo resistore da 1k (il ramo rimasto fuori, corrispondente al resistore con terminale resistor22.4_t1 lasciato aperto).",
+      "Terzo terminale/topologia completa del selettore SPDT S1."
+    ],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "secondo throw di S1 collegato al terminale superiore dell'altro resistore da 1k (ramo alternativo R3/R4)",
+        "found_in_json": "resistor22.4_t1 senza connessioni e switch25.1 modellato solo verso resistor22.5_t1",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "S1 come commutatore SPDT con comune + due throw distinti",
+        "found_in_json": "switch25.1 come switch a 2 terminali singolo",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "La posizione effettiva del cursore di S1 nell'immagine non e perfettamente certa a questa risoluzione; e chiaro pero che il simbolo e SPDT e che esistono due rami alternativi.",
+      "Il mapping preciso resistor22.4 <-> R3/R4 e resistor22.5 <-> R3/R4 puo essere permutato, ma non cambia l'errore topologico principale: uno dei due rami dello switch manca.",
+      "La polarita grafica dei LED e poco leggibile a questa risoluzione; non dichiaro inversioni certe dei terminali anodo/catodo oltre ai nodi chiaramente condivisi."
+    ],
+    "short_explanation": "Il graph riproduce bene la parte principale 555/CD4017, i quattro transistor, le basi con i rispettivi resistori e le due reti di LED pari/dispari. L'errore sostanziale e sul selettore S1: nell'immagine e uno SPDT che commuta due rami distinti verso i due resistori da 1k, mentre nel JSON e ridotto a uno switch a 2 terminali con un solo ramo collegato e l'altro lasciato aperto."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c08\",\"batch\":\"C1\",\"image_file\":\"c08.jpg\",\"json_file\":\"c08.json\",\"image_graph_fidelity_score\":78,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":9,\"terminals_pins\":18,\"graph_connections\":43,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":3,\"minor\":1},\"critical_errors\":[],\"major_errors\":[{\"type\":\"switch_terminal_loss\",\"description\":\"Il selettore visibile e uno SPDT con un contatto comune e due rami distinti; nel JSON e ridotto a uno switch a 2 terminali, quindi uno dei due collegamenti del selettore sparisce dalla topologia.\",\"image_evidence\":\"S1 mostra chiaramente due uscite/throw etichettate R e L, una verso il ramo con R4 e una verso il ramo con R3.\",\"json_evidence\":\"switch25.1 ha solo t1 e t2; nel graph switch25.1 e collegato solo al nodo di alimentazione e a resistor22.5_t1.\"},{\"type\":\"missing_connection\",\"description\":\"Manca il collegamento del secondo ramo del selettore al resistore da 1k rimanente: un terminale di uno dei due resistori di ingresso alle reti LED e lasciato scollegato nel graph.\",\"image_evidence\":\"Entrambi i resistori da 1k (R3 e R4) sono visibilmente collegati ai due throw dello switch S1.\",\"json_evidence\":\"resistor22.4_t1 e dichiarato non connesso; warnings.unconnected_terminals include resistor22.4_t1.\"},{\"type\":\"state_connectivity_mismatch\",\"description\":\"La connettivita del selettore non riproduce fedelmente l'immagine: il JSON rappresenta un solo percorso commutato verso un solo ramo, mentre lo schema mostra una commutazione tra due rami alternativi.\",\"image_evidence\":\"S1 commuta il nodo comune di alimentazione verso il ramo superiore o inferiore; i due rami restano topologicamente distinti.\",\"json_evidence\":\"switch25.1_t1 e sul nodo di alimentazione comune, mentre switch25.1_t2 e connesso solo a resistor22.5_t1; non esiste endpoint JSON per il secondo throw.\"}],\"minor_errors\":[{\"type\":\"switch_semantics_partial\",\"description\":\"Lo stato 'closed' assegnato allo switch e poco affidabile rispetto al simbolo SPDT dell'immagine; la posizione attiva del throw e ambigua a bassa risoluzione.\"}],\"missing_from_json\":[\"Collegamento tra il secondo throw di S1 e il terminale superiore del secondo resistore da 1k (il ramo rimasto fuori, corrispondente al resistore con terminale resistor22.4_t1 lasciato aperto).\",\"Terzo terminale/topologia completa del selettore SPDT S1.\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"secondo throw di S1 collegato al terminale superiore dell'altro resistore da 1k (ramo alternativo R3/R4)\",\"found_in_json\":\"resistor22.4_t1 senza connessioni e switch25.1 modellato solo verso resistor22.5_t1\",\"severity\":\"major\"},{\"expected_from_image\":\"S1 come commutatore SPDT con comune + due throw distinti\",\"found_in_json\":\"switch25.1 come switch a 2 terminali singolo\",\"severity\":\"major\"}],\"uncertain_points\":[\"La posizione effettiva del cursore di S1 nell'immagine non e perfettamente certa a questa risoluzione; e chiaro pero che il simbolo e SPDT e che esistono due rami alternativi.\",\"Il mapping preciso resistor22.4 <-> R3/R4 e resistor22.5 <-> R3/R4 puo essere permutato, ma non cambia l'errore topologico principale: uno dei due rami dello switch manca.\",\"La polarita grafica dei LED e poco leggibile a questa risoluzione; non dichiaro inversioni certe dei terminali anodo/catodo oltre ai nodi chiaramente condivisi.\"],\"short_explanation\":\"Il graph riproduce bene la parte principale 555/CD4017, i quattro transistor, le basi con i rispettivi resistori e le due reti di LED pari/dispari. L'errore sostanziale e sul selettore S1: nell'immagine e uno SPDT che commuta due rami distinti verso i due resistori da 1k, mentre nel JSON e ridotto a uno switch a 2 terminali con un solo ramo collegato e l'altro lasciato aperto.\"}"
+}

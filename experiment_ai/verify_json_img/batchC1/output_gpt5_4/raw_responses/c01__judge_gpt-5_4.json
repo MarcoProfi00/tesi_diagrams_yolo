@@ -1,0 +1,61 @@
+{
+  "metadata": {
+    "circuit_id": "c01",
+    "batch": "C1",
+    "batch_dir": "batchC1",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\images\\c01.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\json\\c01.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "c01.jpg",
+    "json_file": "c01.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:22:59",
+    "judge_latency_seconds": 20.134,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=14025, input_tokens_details=InputTokensDetails(cached_tokens=13696), output_tokens=1145, output_tokens_details=OutputTokensDetails(reasoning_tokens=662), total_tokens=15170)",
+  "judge_result": {
+    "circuit_id": "c01",
+    "batch": "C1",
+    "image_file": "c01.jpg",
+    "json_file": "c01.json",
+    "image_graph_fidelity_score": 98,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 24,
+      "graph_connections": 55,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 1
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "semantic_component_labeling",
+        "description": "Il nodo di alimentazione +9V e rappresentato come Terminal generico invece che come simbolo di alimentazione dedicato; la topologia del graph resta comunque corretta."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "Il mapping tra resistor22.1/resistor22.2 e i resistori visibili R1/R2 non e esplicito per instance_id, ma esiste una permutazione coerente con l'immagine: resistor22.2 = R1 (+9V a pin7) e resistor22.1 = R2 (pin7 a nodo pin6/pin2/C1)."
+    ],
+    "short_explanation": "Il campo graph e sostanzialmente fedele all'immagine: pin 4 e 8 del 555 sono uniti al nodo +9V con R1 e C3; pin 7 e correttamente tra R1 e R2; pin 6 e 2 sono correttamente uniti al nodo con C1; pin 5 va a C2 verso massa; pin 3 pilota R3 e poi LED verso massa; il nodo di massa include C1, C2, C3, pin 1 del 555 e il catodo LED. Non emergono errori topologici certi nei collegamenti terminale-terminale."
+  },
+  "raw_model_output": "{\n  \"circuit_id\": \"c01\",\n  \"batch\": \"C1\",\n  \"image_file\": \"c01.jpg\",\n  \"json_file\": \"c01.json\",\n  \"image_graph_fidelity_score\": 98,\n  \"decision\": \"VERY_HIGH\",\n  \"usable_as_graph_base\": true,\n  \"scores\": {\n    \"components\": 10,\n    \"terminals_pins\": 24,\n    \"graph_connections\": 55,\n    \"visible_semantics\": 9\n  },\n  \"error_counts\": {\n    \"critical\": 0,\n    \"major\": 0,\n    \"minor\": 1\n  },\n  \"critical_errors\": [],\n  \"major_errors\": [],\n  \"minor_errors\": [\n    {\n      \"type\": \"semantic_component_labeling\",\n      \"description\": \"Il nodo di alimentazione +9V e rappresentato come Terminal generico invece che come simbolo di alimentazione dedicato; la topologia del graph resta comunque corretta.\"\n    }\n  ],\n  \"missing_from_json\": [],\n  \"extra_in_json\": [],\n  \"wrong_graph_connections\": [],\n  \"uncertain_points\": [\n    \"Il mapping tra resistor22.1/resistor22.2 e i resistori visibili R1/R2 non e esplicito per instance_id, ma esiste una permutazione coerente con l'immagine: resistor22.2 = R1 (+9V a pin7) e resistor22.1 = R2 (pin7 a nodo pin6/pin2/C1).\"\n  ],\n  \"short_explanation\": \"Il campo graph e sostanzialmente fedele all'immagine: pin 4 e 8 del 555 sono uniti al nodo +9V con R1 e C3; pin 7 e correttamente tra R1 e R2; pin 6 e 2 sono correttamente uniti al nodo con C1; pin 5 va a C2 verso massa; pin 3 pilota R3 e poi LED verso massa; il nodo di massa include C1, C2, C3, pin 1 del 555 e il catodo LED. Non emergono errori topologici certi nei collegamenti terminale-terminale.\"\n}"
+}

@@ -1,0 +1,70 @@
+{
+  "metadata": {
+    "circuit_id": "c02",
+    "batch": "C1",
+    "batch_dir": "batchC1",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\images\\c02.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\json\\c02.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "c02.jpg",
+    "json_file": "c02.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:23:47",
+    "judge_latency_seconds": 48.749,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=14524, input_tokens_details=InputTokensDetails(cached_tokens=14208), output_tokens=2450, output_tokens_details=OutputTokensDetails(reasoning_tokens=1893), total_tokens=16974)",
+  "judge_result": {
+    "circuit_id": "c02",
+    "batch": "C1",
+    "image_file": "c02.jpg",
+    "json_file": "c02.json",
+    "image_graph_fidelity_score": 95,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 22,
+      "graph_connections": 55,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 3
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "component_class_semantic_mismatch",
+        "description": "Il componente che corrisponde a R5 appare come resistore variabile/potenziometro nel disegno, ma nel JSON è modellato come Resistor a 2 terminali. In questa immagine il cursore è unito allo stesso nodo inferiore, quindi la topologia dei collegamenti principali resta comunque corretta."
+      },
+      {
+        "type": "component_class_semantic_mismatch",
+        "description": "C1 visivamente appare come condensatore non polarizzato, mentre nel JSON è classificato come Polarized_Capacitor. I due terminali risultano però collegati ai nodi corretti (pin 5 e rail inferiore)."
+      },
+      {
+        "type": "terminal_polarity_uncertain",
+        "description": "La polarità anodo/catodo dei LED non è perfettamente leggibile dal simbolo rasterizzato; i collegamenti fisici dei due terminali risultano comunque coerenti con i fili visibili."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "La resa grafica dei simboli LED D1 e D2 è poco nitida; la distinzione visiva certa tra anodo e catodo non è completamente affidabile, anche se i due-terminali e i nodi connessi sono coerenti.",
+      "Il simbolo di R5 è quello di un resistore variabile; nel graph è trattato come due-terminale semplice. Topologicamente non crea una contraddizione visibile perché il cursore è riportato sul nodo inferiore dello stesso ramo."
+    ],
+    "short_explanation": "Il campo graph riproduce in modo fedele i collegamenti visibili dell’immagine: rail positivo e negativo della batteria, nodo comune pin 6-7 con C2 e R4, ramo LED D1 con R2 verso massa, ramo LED D2 con R3 dal rail positivo al pin 3, R1 e pulsante sul nodo di ingresso a sinistra, e C1 dal pin 5 al rail inferiore. Non emergono errori topologici certi; restano solo lievi imprecisioni semantiche di classe/polarità."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c02\",\"batch\":\"C1\",\"image_file\":\"c02.jpg\",\"json_file\":\"c02.json\",\"image_graph_fidelity_score\":95,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":22,\"graph_connections\":55,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":3},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"component_class_semantic_mismatch\",\"description\":\"Il componente che corrisponde a R5 appare come resistore variabile/potenziometro nel disegno, ma nel JSON è modellato come Resistor a 2 terminali. In questa immagine il cursore è unito allo stesso nodo inferiore, quindi la topologia dei collegamenti principali resta comunque corretta.\"},{\"type\":\"component_class_semantic_mismatch\",\"description\":\"C1 visivamente appare come condensatore non polarizzato, mentre nel JSON è classificato come Polarized_Capacitor. I due terminali risultano però collegati ai nodi corretti (pin 5 e rail inferiore).\"},{\"type\":\"terminal_polarity_uncertain\",\"description\":\"La polarità anodo/catodo dei LED non è perfettamente leggibile dal simbolo rasterizzato; i collegamenti fisici dei due terminali risultano comunque coerenti con i fili visibili.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"La resa grafica dei simboli LED D1 e D2 è poco nitida; la distinzione visiva certa tra anodo e catodo non è completamente affidabile, anche se i due-terminali e i nodi connessi sono coerenti.\",\"Il simbolo di R5 è quello di un resistore variabile; nel graph è trattato come due-terminale semplice. Topologicamente non crea una contraddizione visibile perché il cursore è riportato sul nodo inferiore dello stesso ramo.\"],\"short_explanation\":\"Il campo graph riproduce in modo fedele i collegamenti visibili dell’immagine: rail positivo e negativo della batteria, nodo comune pin 6-7 con C2 e R4, ramo LED D1 con R2 verso massa, ramo LED D2 con R3 dal rail positivo al pin 3, R1 e pulsante sul nodo di ingresso a sinistra, e C1 dal pin 5 al rail inferiore. Non emergono errori topologici certi; restano solo lievi imprecisioni semantiche di classe/polarità.\"}"
+}

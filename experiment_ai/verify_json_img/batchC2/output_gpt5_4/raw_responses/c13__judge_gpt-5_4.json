@@ -1,0 +1,79 @@
+{
+  "metadata": {
+    "circuit_id": "c13",
+    "batch": "C2",
+    "batch_dir": "batchC2",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\images\\c13.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\json\\c13.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "c13.jpg",
+    "json_file": "c13.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:35:06",
+    "judge_latency_seconds": 16.634,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=15617, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=684, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=16301)",
+  "judge_result": {
+    "circuit_id": "c13",
+    "batch": "C2",
+    "image_file": "c13.jpg",
+    "json_file": "c13.json",
+    "image_graph_fidelity_score": 95,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 22,
+      "graph_connections": 53,
+      "visible_semantics": 10
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 1,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "terminal_polarity_error",
+        "description": "Il condensatore di ingresso C4 visibile in orizzontale ha il terminale positivo sul lato destro, mentre nel JSON polarized_capacitor20.1 e rappresentato con negative a sinistra e positive a destra. La topologia dei nodi collegati resta coerente, ma l'identita dei terminali polarizzati e invertita rispetto al simbolo visibile.",
+        "image_evidence": "Nel simbolo C4 il segno '+' e sul lato destro del condensatore tra R5/R4 e pin 1 dell'IC.",
+        "json_evidence": "polarized_capacitor20.1 ha polarized_capacitor20.1_negative con relative_position 'left' e polarized_capacitor20.1_positive con relative_position 'right'."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "class_semantics_imprecision",
+        "description": "C6 e C2 sono condensatori non polarizzati nell'immagine ma nel JSON sono modellati come Polarized_Capacitor; i collegamenti ai nodi risultano comunque corretti."
+      },
+      {
+        "type": "class_semantics_imprecision",
+        "description": "C7 sembra non polarizzato nell'immagine ma nel JSON e modellato come Polarized_Capacitor; la connessione serie R6-C7 verso massa resta topologicamente corretta."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "Per C4 il terminale positivo deve essere il lato verso IC pin 1 e R3, mentre il lato verso R5/R4 e il terminale opposto.",
+        "found_in_json": "polarized_capacitor20.1_positive e sul lato destro corretto, ma polarized_capacitor20.1_negative e usato come lato sinistro in modo semanticamente incompatibile con il simbolo polarizzato visibile.",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "La corrispondenza esatta tra i reference designator visibili (R1..R6, C1..C7) e gli instance_id JSON e stata valutata tramite mapping topologico, non per nome.",
+      "I pin IC 1..5 nel JSON risultano coerenti con le posizioni visibili; non e stato usato alcun datasheet per inferire funzioni ulteriori."
+    ],
+    "short_explanation": "Il graph JSON riproduce molto bene la topologia visibile: ingressi, rete di feedback, uscita verso speaker, e rail di alimentazione con fusibili e condensatori sono collegati correttamente. Non emergono net fuse/net split o collegamenti inventati. L'unico errore rilevante riguarda la semantica/polarita del condensatore di ingresso C4; alcune classi di condensatore sono semanticamente imprecise ma senza impatto topologico."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c13\",\"batch\":\"C2\",\"image_file\":\"c13.jpg\",\"json_file\":\"c13.json\",\"image_graph_fidelity_score\":95,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":22,\"graph_connections\":53,\"visible_semantics\":10},\"error_counts\":{\"critical\":0,\"major\":1,\"minor\":2},\"critical_errors\":[],\"major_errors\":[{\"type\":\"terminal_polarity_error\",\"description\":\"Il condensatore di ingresso C4 visibile in orizzontale ha il terminale positivo sul lato destro, mentre nel JSON polarized_capacitor20.1 e rappresentato con negative a sinistra e positive a destra. La topologia dei nodi collegati resta coerente, ma l'identita dei terminali polarizzati e invertita rispetto al simbolo visibile.\",\"image_evidence\":\"Nel simbolo C4 il segno '+' e sul lato destro del condensatore tra R5/R4 e pin 1 dell'IC.\",\"json_evidence\":\"polarized_capacitor20.1 ha polarized_capacitor20.1_negative con relative_position 'left' e polarized_capacitor20.1_positive con relative_position 'right'.\"}],\"minor_errors\":[{\"type\":\"class_semantics_imprecision\",\"description\":\"C6 e C2 sono condensatori non polarizzati nell'immagine ma nel JSON sono modellati come Polarized_Capacitor; i collegamenti ai nodi risultano comunque corretti.\"},{\"type\":\"class_semantics_imprecision\",\"description\":\"C7 sembra non polarizzato nell'immagine ma nel JSON e modellato come Polarized_Capacitor; la connessione serie R6-C7 verso massa resta topologicamente corretta.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Per C4 il terminale positivo deve essere il lato verso IC pin 1 e R3, mentre il lato verso R5/R4 e il terminale opposto.\",\"found_in_json\":\"polarized_capacitor20.1_positive e sul lato destro corretto, ma polarized_capacitor20.1_negative e usato come lato sinistro in modo semanticamente incompatibile con il simbolo polarizzato visibile.\",\"severity\":\"major\"}],\"uncertain_points\":[\"La corrispondenza esatta tra i reference designator visibili (R1..R6, C1..C7) e gli instance_id JSON e stata valutata tramite mapping topologico, non per nome.\",\"I pin IC 1..5 nel JSON risultano coerenti con le posizioni visibili; non e stato usato alcun datasheet per inferire funzioni ulteriori.\"],\"short_explanation\":\"Il graph JSON riproduce molto bene la topologia visibile: ingressi, rete di feedback, uscita verso speaker, e rail di alimentazione con fusibili e condensatori sono collegati correttamente. Non emergono net fuse/net split o collegamenti inventati. L'unico errore rilevante riguarda la semantica/polarita del condensatore di ingresso C4; alcune classi di condensatore sono semanticamente imprecise ma senza impatto topologico.\"}"
+}

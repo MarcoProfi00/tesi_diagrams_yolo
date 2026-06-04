@@ -1,0 +1,62 @@
+{
+  "metadata": {
+    "circuit_id": "a04",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a04.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a04.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "a04.jpg",
+    "json_file": "a04.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "d43b698894dbc528bd8e1f7d52a835fdd99cc52aa5cb338f2193dbbb46c00acd",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 15:38:37",
+    "judge_latency_seconds": 13.309,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=12575, input_tokens_details=InputTokensDetails(cached_tokens=2816), output_tokens=895, output_tokens_details=OutputTokensDetails(reasoning_tokens=400), total_tokens=13470)",
+  "judge_result": {
+    "circuit_id": "a04",
+    "batch": "A",
+    "image_file": "a04.jpg",
+    "json_file": "a04.json",
+    "image_graph_fidelity_score": 98,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 24,
+      "graph_connections": 55,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 1
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "component_mapping_ambiguity",
+        "description": "I resistori nel JSON non sono riconducibili in modo univoco ai reference designator R1-R5 dell'immagine, ma i nodi terminale-terminale risultano comunque coerenti con la topologia visibile."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "La corrispondenza esatta tra resistor22.1..22.5 e i reference designator R1..R5 non e esplicitata, ma il pattern di connessioni dei cinque resistori combacia con il circuito visibile.",
+      "I marker di polarita/orientazione dei condensatori sono poco rilevanti qui: la topologia dei nodi risulta verificabile anche senza usarli."
+    ],
+    "short_explanation": "Il graph JSON riproduce correttamente i nodi visibili del circuito: nodo base comune a C1, B, R3 e R4; nodo collettore comune a C2, C, R1; nodo emettitore comune a C3, E, R2; nodo di uscita comune a C2 e R5; rail positivo comune a V1+ con R1 e R3; rail inferiore comune a V1-, GND, sorgente V2-, R4, R2, R5 e C3. Non emergono collegamenti inventati, mancanti o fusi in modo scorretto."
+  },
+  "raw_model_output": "{\n  \"circuit_id\": \"a04\",\n  \"batch\": \"A\",\n  \"image_file\": \"a04.jpg\",\n  \"json_file\": \"a04.json\",\n  \"image_graph_fidelity_score\": 98,\n  \"decision\": \"VERY_HIGH\",\n  \"usable_as_graph_base\": true,\n  \"scores\": {\n    \"components\": 10,\n    \"terminals_pins\": 24,\n    \"graph_connections\": 55,\n    \"visible_semantics\": 9\n  },\n  \"error_counts\": {\n    \"critical\": 0,\n    \"major\": 0,\n    \"minor\": 1\n  },\n  \"critical_errors\": [],\n  \"major_errors\": [],\n  \"minor_errors\": [\n    {\n      \"type\": \"component_mapping_ambiguity\",\n      \"description\": \"I resistori nel JSON non sono riconducibili in modo univoco ai reference designator R1-R5 dell'immagine, ma i nodi terminale-terminale risultano comunque coerenti con la topologia visibile.\"\n    }\n  ],\n  \"missing_from_json\": [],\n  \"extra_in_json\": [],\n  \"wrong_graph_connections\": [],\n  \"uncertain_points\": [\n    \"La corrispondenza esatta tra resistor22.1..22.5 e i reference designator R1..R5 non e esplicitata, ma il pattern di connessioni dei cinque resistori combacia con il circuito visibile.\",\n    \"I marker di polarita/orientazione dei condensatori sono poco rilevanti qui: la topologia dei nodi risulta verificabile anche senza usarli.\"\n  ],\n  \"short_explanation\": \"Il graph JSON riproduce correttamente i nodi visibili del circuito: nodo base comune a C1, B, R3 e R4; nodo collettore comune a C2, C, R1; nodo emettitore comune a C3, E, R2; nodo di uscita comune a C2 e R5; rail positivo comune a V1+ con R1 e R3; rail inferiore comune a V1-, GND, sorgente V2-, R4, R2, R5 e C3. Non emergono collegamenti inventati, mancanti o fusi in modo scorretto.\"\n}"
+}
