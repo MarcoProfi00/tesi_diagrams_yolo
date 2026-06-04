@@ -13,7 +13,7 @@ def _is_same_non_shorting_component(source: dict, target: dict) -> bool:
     if source_class != target_class:
         return False
 
-    if source_class == "integrated_circuit" and _is_valid_same_ic_external_edge(source, target):
+    if source_class == "integrated_circuit":
         return False
 
     return source_class in NON_SHORTING_MULTI_TERMINAL_CLASSES

@@ -1,5 +1,7 @@
 """Raggruppamento dei terminali agganciati alle stesse label dello skeleton."""
 
+import cv2
+
 from .config import NON_SHORTING_MULTI_TERMINAL_CLASSES
 from .ids import normalize_class_name
 
@@ -110,13 +112,24 @@ def _is_valid_same_ic_external_branch(
 def split_polarized_capacitor_self_short_groups(
     label_to_terminal_ids: dict,
     terminals: list[dict],
+    components: list[dict] | None = None,
+    skeleton_binary=None,
 ):
     terminal_by_id = {term["terminal_id"]: term for term in terminals}
+    component_by_instance = {
+        str(component.get("instance_id")): component
+        for component in (components or [])
+    }
     relabeled_groups = []
 
     for _, terminal_ids in label_to_terminal_ids.items():
         unique_ids = sorted(set(terminal_ids))
-        split_groups = _split_group_on_polarized_capacitor_axis(unique_ids, terminal_by_id)
+        split_groups = _split_group_on_polarized_capacitor_axis(
+            unique_ids,
+            terminal_by_id,
+            component_by_instance,
+            skeleton_binary,
+        )
         relabeled_groups.extend(split_groups)
 
     relabeled = {}
@@ -129,6 +142,8 @@ def split_polarized_capacitor_self_short_groups(
 def _split_group_on_polarized_capacitor_axis(
     terminal_ids: list[str],
     terminal_by_id: dict,
+    component_by_instance: dict | None = None,
+    skeleton_binary=None,
 ):
     terms = [terminal_by_id.get(terminal_id) for terminal_id in terminal_ids]
     terms = [term for term in terms if term is not None]
@@ -142,6 +157,22 @@ def _split_group_on_polarized_capacitor_axis(
     for cap_terms in by_instance.values():
         if len(cap_terms) != 2:
             continue
+
+        structural_split = _split_group_on_cut_polarized_capacitor(
+            terms,
+            cap_terms,
+            component_by_instance or {},
+            skeleton_binary,
+        )
+        if structural_split is not None:
+            return structural_split
+
+        grounded_split = _split_group_on_grounded_polarized_capacitor(
+            terms,
+            cap_terms,
+        )
+        if grounded_split is not None:
+            return grounded_split
 
         term_a, term_b = cap_terms
         try:
@@ -183,6 +214,168 @@ def _split_group_on_polarized_capacitor_axis(
             return [first_side, second_side]
 
     return [terminal_ids]
+
+
+def _split_group_on_cut_polarized_capacitor(
+    terms: list[dict],
+    cap_terms: list[dict],
+    component_by_instance: dict,
+    skeleton_binary,
+):
+    if skeleton_binary is None:
+        return None
+
+    cap_instance = str(cap_terms[0].get("instance_id"))
+    component = component_by_instance.get(cap_instance)
+    if component is None:
+        return None
+
+    bbox = component.get("bbox")
+    if not bbox or len(bbox) < 4:
+        return None
+
+    h, w = skeleton_binary.shape[:2]
+    x1, y1, x2, y2 = [int(round(float(v))) for v in bbox[:4]]
+    pad = 12
+    x1 = max(0, min(w - 1, x1 - pad))
+    y1 = max(0, min(h - 1, y1 - pad))
+    x2 = max(0, min(w - 1, x2 + pad))
+    y2 = max(0, min(h - 1, y2 + pad))
+    if x2 <= x1 or y2 <= y1:
+        return None
+
+    cut = skeleton_binary.copy()
+    cut[y1:y2 + 1, x1:x2 + 1] = 0
+    _, split_labels, _, _ = cv2.connectedComponentsWithStats(cut, connectivity=8)
+
+    grouped = {}
+    unassigned = []
+    cap_ids = {str(term.get("terminal_id")) for term in cap_terms}
+    for term in terms:
+        term_id = str(term.get("terminal_id"))
+        radius = 24 if term_id in cap_ids else 8
+        label = _nearest_split_label(split_labels, term.get("x"), term.get("y"), radius=radius)
+        if label is None:
+            unassigned.append(term_id)
+        else:
+            grouped.setdefault(int(label), []).append(term_id)
+
+    if len(grouped) < 2 or unassigned:
+        return None
+
+    groups = [sorted(set(ids)) for ids in grouped.values()]
+    groups = [group for group in groups if group]
+    if len(groups) < 2:
+        return None
+
+    cap_group_count = sum(1 for group in groups if any(term_id in cap_ids for term_id in group))
+    if cap_group_count < 2:
+        return None
+
+    return groups
+
+
+def _nearest_split_label(labels, x, y, radius: int = 8):
+    try:
+        px = int(round(float(x)))
+        py = int(round(float(y)))
+    except (TypeError, ValueError):
+        return None
+
+    h, w = labels.shape[:2]
+    x1 = max(0, px - radius)
+    x2 = min(w, px + radius + 1)
+    y1 = max(0, py - radius)
+    y2 = min(h, py + radius + 1)
+    roi = labels[y1:y2, x1:x2]
+    if roi.size == 0:
+        return None
+
+    ys, xs = (roi > 0).nonzero()
+    if len(xs) == 0:
+        return None
+
+    abs_xs = xs + x1
+    abs_ys = ys + y1
+    best_idx = min(
+        range(len(xs)),
+        key=lambda idx: (abs(int(abs_xs[idx]) - px) ** 2 + abs(int(abs_ys[idx]) - py) ** 2),
+    )
+    return int(labels[int(abs_ys[best_idx]), int(abs_xs[best_idx])])
+
+
+def _split_group_on_grounded_polarized_capacitor(
+    terms: list[dict],
+    cap_terms: list[dict],
+):
+    gnd_terms = [
+        term for term in terms
+        if normalize_class_name(term.get("component_class_name")) in {"gnd", "ground"}
+    ]
+    if not gnd_terms:
+        return None
+
+    def xy(term):
+        return float(term.get("x") or 0.0), float(term.get("y") or 0.0)
+
+    def distance_sq(term_a, term_b):
+        ax, ay = xy(term_a)
+        bx, by = xy(term_b)
+        return (ax - bx) ** 2 + (ay - by) ** 2
+
+    grounded_cap = min(
+        cap_terms,
+        key=lambda cap: min(distance_sq(cap, gnd) for gnd in gnd_terms),
+    )
+    other_cap = cap_terms[0] if cap_terms[1] is grounded_cap else cap_terms[1]
+    nearest_gnd = min(gnd_terms, key=lambda gnd: distance_sq(grounded_cap, gnd))
+
+    if distance_sq(grounded_cap, nearest_gnd) > 160.0 ** 2:
+        return None
+
+    cap_x, cap_y = xy(grounded_cap)
+    gnd_x, gnd_y = xy(nearest_gnd)
+    other_x, other_y = xy(other_cap)
+    vertical_cap = abs(cap_y - other_y) >= abs(cap_x - other_x)
+
+    grounded_ids = {str(grounded_cap["terminal_id"])}
+    grounded_ids.update(str(term["terminal_id"]) for term in gnd_terms)
+
+    if vertical_cap:
+        x_tol = 28.0
+        y_min = min(cap_y, gnd_y) - 22.0
+        y_max = max(cap_y, gnd_y) + 22.0
+        for term in terms:
+            term_id = str(term.get("terminal_id"))
+            if term_id in grounded_ids or term is other_cap:
+                continue
+            term_x, term_y = xy(term)
+            if abs(term_x - cap_x) <= x_tol and y_min <= term_y <= y_max:
+                grounded_ids.add(term_id)
+    else:
+        y_tol = 28.0
+        x_min = min(cap_x, gnd_x) - 22.0
+        x_max = max(cap_x, gnd_x) + 22.0
+        for term in terms:
+            term_id = str(term.get("terminal_id"))
+            if term_id in grounded_ids or term is other_cap:
+                continue
+            term_x, term_y = xy(term)
+            if abs(term_y - cap_y) <= y_tol and x_min <= term_x <= x_max:
+                grounded_ids.add(term_id)
+
+    other_ids = {
+        str(term["terminal_id"])
+        for term in terms
+        if str(term.get("terminal_id")) not in grounded_ids
+    }
+
+    if str(other_cap.get("terminal_id")) not in other_ids:
+        return None
+    if len(grounded_ids) < 2 or len(other_ids) < 2:
+        return None
+
+    return [sorted(grounded_ids), sorted(other_ids)]
 
 # Costruisce una mappa instance_id -> bbox
 # è usato in molte euristiche che confrontano distanze tra componenti

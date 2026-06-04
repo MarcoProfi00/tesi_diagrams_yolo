@@ -153,6 +153,8 @@ def build_terminal_graph_for_image(data: dict):
     label_to_terminal_ids = split_polarized_capacitor_self_short_groups(
         label_to_terminal_ids,
         terminals,
+        components,
+        skeleton_for_graph,
     )
     label_to_terminal_ids = merge_mosfet_gate_rail_groups(
         label_to_terminal_ids,
