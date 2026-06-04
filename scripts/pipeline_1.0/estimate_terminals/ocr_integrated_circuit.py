@@ -162,6 +162,22 @@ def get_ic_body_bbox_from_component(component: Dict, image_shape) -> List[int]:
     return _clamp_bbox(component["bbox"], image_shape)
 
 
+def get_ic_detection_bbox_from_component(component: Dict, image_shape) -> Optional[List[int]]:
+    """
+    Recupera il bbox YOLO originale dell'IC, se disponibile.
+
+    Il body_bbox raffinato e' ottimo per terminali e masking, ma puo' essere
+    troppo conservativo per leggere marking lunghi stampati vicino ai bordi.
+    Per l'OCR del solo part number possiamo provare anche una ROI interna
+    derivata dal bbox di detection, senza cambiare la geometria del componente.
+    """
+    bbox = component.get("bbox")
+    if bbox is None or len(bbox) != 4:
+        return None
+
+    return _clamp_bbox(bbox, image_shape)
+
+
 # =========================================================
 # OCR REGIONS
 # =========================================================
@@ -295,6 +311,7 @@ def build_ic_marking_regions(component: Dict, image_bgr, meta: Dict, mode: str =
     """
     image_shape = image_bgr.shape
     body_bbox = get_ic_body_bbox_from_component(component, image_shape)
+    detection_bbox = get_ic_detection_bbox_from_component(component, image_shape)
 
     x1, y1, x2, y2 = body_bbox
     bw = max(1, x2 - x1)
@@ -387,6 +404,55 @@ def build_ic_marking_regions(component: Dict, image_bgr, meta: Dict, mode: str =
             "bbox": bbox,
             "image": crop,
         })
+
+    # ---------------------------------------------------------
+    # ROI interna piu' larga basata sul bbox YOLO originale.
+    #
+    # Il body_bbox raffinato puo' stringersi sui lati per stimare meglio i
+    # terminali. Per il marking, pero', una parola lunga puo' finire al bordo
+    # del crop e perdere l'ultimo carattere. Questa ROI e' generale: non
+    # conosce alcun part number, prova solo una lettura centrale meno tagliata.
+    # ---------------------------------------------------------
+    if (
+        detection_bbox is not None
+        and ocr_cfg.get("body_inner_wide_region_enabled", True)
+    ):
+        dx1, dy1, dx2, dy2 = detection_bbox
+        dbw = max(1, dx2 - dx1)
+        dbh = max(1, dy2 - dy1)
+
+        refined_area = max(1, bw * bh)
+        detection_area = max(1, dbw * dbh)
+        min_area_ratio = float(ocr_cfg.get("body_inner_wide_min_area_ratio", 1.12))
+
+        if detection_area >= refined_area * min_area_ratio:
+            wide_margin_x_ratio = float(
+                ocr_cfg.get(
+                    "body_inner_wide_margin_x_ratio",
+                    ocr_cfg.get("body_inner_margin_x_ratio", 0.12),
+                )
+            )
+            wide_margin_y_ratio = float(
+                ocr_cfg.get(
+                    "body_inner_wide_margin_y_ratio",
+                    ocr_cfg.get("body_inner_margin_y_ratio", 0.12),
+                )
+            )
+
+            wmx = int(round(dbw * wide_margin_x_ratio))
+            wmy = int(round(dbh * wide_margin_y_ratio))
+            if (dx2 - dx1) > 2 * wmx + 10 and (dy2 - dy1) > 2 * wmy + 10:
+                bbox = _clamp_bbox(
+                    [dx1 + wmx, dy1 + wmy, dx2 - wmx, dy2 - wmy],
+                    image_shape,
+                )
+                crop = _crop(image_bgr, bbox)
+                if crop is not None:
+                    regions.append({
+                        "name": "body_inner_wide",
+                        "bbox": bbox,
+                        "image": crop,
+                    })
 
     if ocr_cfg.get("body_top_marking_region_enabled", True):
         top_margin_x_ratio = float(ocr_cfg.get("body_top_marking_margin_x_ratio", 0.08))
@@ -1156,6 +1222,7 @@ def _score_ic_marking_candidate(text: str, confidence: float, region_name: str, 
         "body_line_3": 0.24,
         "above_body": 0.15,
         "expanded_bbox": 0.10,
+        "body_inner_wide": 0.16,
         "below_body": -0.05,
         "left_of_body": -0.10,
         "right_of_body": -0.10,
@@ -1183,7 +1250,11 @@ def _add_ocr_words_as_candidates(
     """
     Converte parole OCR in candidate marking usando scoring e filtri comuni.
     """
-    rx1, ry1, _, _ = region["bbox"]
+    rx1, ry1, rx2, ry2 = region["bbox"]
+    region_w = max(1, rx2 - rx1 + 1)
+    ocr_cfg = ((meta.get("ocr") or {}).get("ic_marking") or {})
+    edge_margin_px = int(ocr_cfg.get("candidate_edge_touch_margin_px", 2))
+    edge_penalty = float(ocr_cfg.get("candidate_edge_touch_penalty", 0.85))
 
     for word in words:
         normalized = _normalize_text(word["text"])
@@ -1202,6 +1273,19 @@ def _add_ocr_words_as_candidates(
         lx1, ly1, lx2, ly2 = word["bbox_local"]
         abs_bbox = [rx1 + lx1, ry1 + ly1, rx1 + lx2, ry1 + ly2]
         cand_debug["bbox"] = abs_bbox
+        cand_debug["region_bbox"] = list(region["bbox"])
+
+        touches_left = lx1 <= edge_margin_px
+        touches_right = lx2 >= (region_w - 1 - edge_margin_px)
+        touches_horizontal_edge = touches_left or touches_right
+        if touches_horizontal_edge and score > -900:
+            # Il testo al bordo della ROI puo' essere troncato: non lo
+            # scartiamo, ma lo rendiamo meno competitivo rispetto a crop piu'
+            # completi o a letture di consenso.
+            score -= edge_penalty
+            cand_debug["edge_touch_penalty"] = round(edge_penalty, 4)
+            cand_debug["touches_horizontal_region_edge"] = True
+            cand_debug["score"] = round(float(score), 4)
 
         if region["name"] == "expanded_bbox":
             bw = max(1, body_bbox[2] - body_bbox[0])
@@ -1225,6 +1309,8 @@ def _add_ocr_words_as_candidates(
             "score": round(float(score), 4),
             "confidence": round(float(word.get("confidence", 0.0)), 4),
             "bbox": abs_bbox,
+            "region_bbox": list(region["bbox"]),
+            "touches_horizontal_region_edge": bool(touches_horizontal_edge),
             "source_region": region["name"],
             "raw_text": word["text"],
             "engine": engine_name,
@@ -1295,7 +1381,12 @@ def _region_priority(region_name: Optional[str]) -> int:
     """
     Preferisce letture dentro il package rispetto a testo esterno vicino.
     """
-    if region_name in {"body_top_marking", "body_top_text_line", "body_inner"}:
+    if region_name in {
+        "body_top_marking",
+        "body_top_text_line",
+        "body_inner",
+        "body_inner_wide",
+    }:
         return 2
     if str(region_name or "").startswith("body_top_marking_"):
         return 2
@@ -1969,6 +2060,9 @@ def _should_run_deep_ocr(candidates: List[Dict], meta: Dict) -> bool:
         return True
 
     source_region = best.get("source_region")
+    if best.get("touches_horizontal_region_edge"):
+        return True
+
     if source_region == "above_body":
         return True
 

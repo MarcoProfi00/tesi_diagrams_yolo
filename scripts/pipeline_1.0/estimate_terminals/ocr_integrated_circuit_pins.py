@@ -700,17 +700,6 @@ def _ocr_single_digit_component(image_bgr, bbox: List[int], cfg: Dict) -> Option
     return text if text and len(text) == 1 else None
 
 
-def _ocr_split_digit_group(image_bgr, components: List[Dict], cfg: Dict) -> Optional[str]:
-    digits = []
-    for comp in sorted(components, key=lambda item: item["bbox"][0]):
-        digit = _ocr_single_digit_component(image_bgr, comp["bbox"], cfg)
-        if digit is None:
-            return None
-        digits.append(digit)
-    text = "".join(digits)
-    return text if _is_number_text(text, cfg) and len(text) >= 2 else None
-
-
 def _ocr_digit_component_candidate(image_bgr, bbox: List[int], component_count: int, cfg: Dict) -> Optional[Dict]:
     variants = [
         (4, 4.0, "bin", 6),
@@ -2195,6 +2184,7 @@ def _repair_unique_pin_numbers(component: Dict) -> None:
             "reason": "complete_missing_numbers_in_1_to_terminal_count",
         }
 
+#Heuristics
 
 def _is_555_family_marking(marking: str) -> bool:
     normalized = re.sub(r"\s+", "", str(marking or "").upper())

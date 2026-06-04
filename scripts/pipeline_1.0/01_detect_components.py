@@ -560,25 +560,6 @@ def is_mosfet_like_bbox(image_gray, box) -> bool:
 
     return True
 
-#def is_switch_like_bbox(image_gray, box) -> bool:
-    """Filtra false positive di Switch mantenendo solo simboli con due contatti circolari reali."""
-    x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_gray.shape)
-    width = max(x2 - x1, 1)
-    height = max(y2 - y1, 1)
-
-    if width < 90 or height < 55 or width < height * 0.95:
-        return False
-
-    circle_count = _count_hough_circles(
-        image_gray,
-        box,
-        min_dist=max(22, int(round(width * 0.28))),
-        param1=80,
-        param2=13,
-        min_radius=7,
-        max_radius=22,
-    )
-    return circle_count >= 2
 
 # Riconosce bbox compatibili con simboli switch-like.
 def is_switch_like_bbox(image_gray, box) -> bool:
@@ -928,39 +909,6 @@ def is_led_like_diode_box(image_binary, box) -> bool:
 # =========================================================
 # CONNECTOR E ANALOG METER STRUTTURATI
 # =========================================================
-def _count_connector_pin_rows(image_binary, box):
-    """Stima il numero di pin di un connettore verticale usando la proiezione interna."""
-    x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)
-    width = max(x2 - x1, 1)
-    height = max(y2 - y1, 1)
-    xc = int(round((x1 + x2) / 2))
-    band_half = max(3, int(round(width * 0.22)))
-    bx1 = max(x1, xc - band_half)
-    bx2 = min(x2, xc + band_half)
-
-    projection = [
-        int(cv2.countNonZero(image_binary[y:y + 1, bx1:bx2 + 1]))
-        for y in range(y1, y2 + 1)
-    ]
-    if not projection:
-        return 0
-
-    threshold = max(2, int(round(max(projection) * 0.32)))
-    groups = _group_close_indices(
-        [i for i, score in enumerate(projection) if score >= threshold],
-        max_gap=6,
-    )
-    centers = [
-        y1 + int(round((group[0] + group[-1]) / 2.0))
-        for group in groups
-    ]
-    centers = _merge_close_values(
-        sorted(centers),
-        min_gap=max(18, int(round(height * 0.10))),
-    )
-    return len(centers)
-
-
 def is_connector_like_bbox(image_binary, box) -> bool:
     """Verifica se un bbox assomiglia a un connettore multipin verticale del batch v9.1."""
     x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)

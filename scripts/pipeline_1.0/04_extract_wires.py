@@ -119,6 +119,14 @@ CLASS_TERMINAL_KEEP_OVERRIDES = {
         "inward_len": 2,
         "outward_len": 16,
     },
+    # Il simbolo GND e' monoterminale: se riapriamo troppo il bbox, le barre
+    # del simbolo possono diventare ponti laterali verso fili vicini.
+    "GND": {
+        "radius": 3,
+        "thickness": 3,
+        "inward_len": 0,
+        "outward_len": 18,
+    },
     # Nei polarizzati il body e i marker grafici (+ / piastra curva) possono
     # riaprire il simbolo come fosse un filo continuo. Manteniamo solo stub
     # corti vicino ai terminali.
