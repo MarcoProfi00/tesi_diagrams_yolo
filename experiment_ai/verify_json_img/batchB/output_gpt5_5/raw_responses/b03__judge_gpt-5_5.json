@@ -8,102 +8,110 @@
     "image_file": "b03.jpg",
     "json_file": "b03.json",
     "judge_model": "gpt-5.5",
-    "timestamp": "2026-06-03 18:04:14",
-    "judge_latency_seconds": 32.435,
+    "timestamp": "2026-06-04 11:50:06",
+    "judge_latency_seconds": 32.523,
     "input_json_valid": true,
     "input_json_error": null,
     "parsed_ok": true,
     "parse_error": null
   },
-  "judge_usage": "ResponseUsage(input_tokens=8195, input_tokens_details=InputTokensDetails(cached_tokens=7424), output_tokens=1733, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=9928)",
+  "judge_usage": "ResponseUsage(input_tokens=8195, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=1642, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=9837)",
   "judge_result": {
     "circuit_id": "b03",
     "batch": "B",
     "image_file": "b03.jpg",
     "json_file": "b03.json",
-    "image_graph_fidelity_score": 77,
+    "image_graph_fidelity_score": 76,
     "decision": "HIGH",
     "usable_as_graph_base": true,
     "scores": {
-      "components": 21,
-      "terminals_pins": 15,
+      "components": 20,
+      "terminals_pins": 14,
       "graph_connections": 34,
-      "visible_semantics": 7
+      "visible_semantics": 8
     },
     "error_counts": {
       "critical": 0,
       "major": 4,
-      "minor": 3
+      "minor": 4
     },
     "critical_errors": [],
     "major_errors": [
       {
         "type": "component_class_mismatch",
-        "description": "Il transistor Q3 nell'immagine è un transistor PNP, mentre nel JSON è classificato come NPN_Transistor.",
-        "image_evidence": "Q3 è disegnato come transistor diverso da Q1 e Q2 ed è etichettato BC557; il simbolo mostra configurazione PNP rispetto ai due BC547.",
+        "description": "Il transistor Q3 visibile è di tipo PNP, mentre nel JSON è classificato come NPN_Transistor.",
+        "image_evidence": "Q3 è disegnato come transistor diverso dai due BC547 e riportato come BC557; il simbolo è quello del transistor superiore sul ramo positivo.",
         "json_evidence": "npn_transistor18.3 ha class_name \"NPN_Transistor\"."
       },
       {
-        "type": "missing_component",
-        "description": "Nel JSON manca un diodo visibile nell'immagine: sono presenti D1-D10, con tre LED e sette diodi discreti, mentre il JSON contiene tre LED e solo sette diodi identificati come diode7.1-diodes7.7 ma uno di questi insiemi non rappresenta chiaramente tutti i diodi verticali della catena centrale e destra con semantica coerente; in particolare D10 non è distinguibile come zener/diode separato nella semantica del JSON.",
-        "image_evidence": "L'immagine mostra D3, D4, D5, D6, D8, D9 e D10 oltre ai LED D1, D2 e D7.",
-        "json_evidence": "Il JSON elenca diode7.1 through diode7.7 senza distinzione di zener; la presenza numerica è corretta, ma la classe generica e le polarità/posizioni rendono ambiguo il riconoscimento dei diodi zener visibili."
+        "type": "wrong_transistor_terminals",
+        "description": "Per Q3 il JSON assegna il terminale superiore come E e quello inferiore/centrale come C in modo non coerente con il simbolo visibile e con i collegamenti del ramo superiore.",
+        "image_evidence": "Nel disegno Q3 ha un terminale collegato alla barra superiore, un terminale verso il nodo centrale/R6/D7 e un terminale verso R7.",
+        "json_evidence": "npn_transistor18.3_E è connesso al nodo positivo comune; npn_transistor18.3_C è connesso a diode7.1_anode e resistor22.6_t1; npn_transistor18.3_B è connesso a resistor22.7_t1."
       },
       {
-        "type": "wrong_graph_connection",
-        "description": "La rete inferiore/negativa nel JSON include anche il catodo del LED D7, ma nell'immagine D7 è in serie sotto R6 verso il rail inferiore: il terminale inferiore del LED è effettivamente al rail inferiore, mentre il terminale superiore è collegato a R6; la rappresentazione è plausibile solo se led12.3 è D7. Tuttavia il JSON collega anche diode7.5_anode allo stesso rail negativo, che corrisponde alla catena destra/centrale e può fondere reti differenti se diode7.5 non è D10.",
-        "image_evidence": "Il rail inferiore unisce negativo batteria, emettitori di Q1/Q2, parte inferiore di R5, terminale inferiore di D7 e fondo della catena D8-D10.",
-        "json_evidence": "battery2.1_negative è connesso a diode7.5_anode, led12.3_cathode, npn_transistor18.1_E, npn_transistor18.2_E, resistor22.5_t2."
+        "type": "graph_connection_missing_or_wrong",
+        "description": "Il nodo centrale a destra di D3 e in alto alla colonna D4-D5-D6 dovrebbe unire anche il terminale superiore della catena di diodi verticale e il nodo di Q3/R6, ma nel JSON D3 è collegato direttamente al transistor Q3 e a R6 senza includere correttamente il terminale superiore della catena D4-D5-D6.",
+        "image_evidence": "Il filo orizzontale da D3 arriva al nodo sulla colonna dei diodi verticali e prosegue al nodo con Q3 e R6; il terminale superiore di D4 è sullo stesso nodo.",
+        "json_evidence": "diode7.1_anode è connesso a npn_transistor18.3_C e resistor22.6_t1; diode7.2_cathode è connesso solo a diode7.4_cathode, separato da quel nodo."
       },
       {
-        "type": "terminal_orientation_mismatch",
-        "description": "Q3 ha terminali e orientamento incompatibili con l'immagine: nell'immagine il terminale superiore va al rail positivo, il terminale sinistro/centrale va al nodo con R6 e D4, e il terminale destro va a R7; nel JSON il componente è trattato come NPN con E in alto, C in basso e B a destra, creando una semantica dei terminali non affidabile.",
-        "image_evidence": "Q3 è collegato in alto al rail superiore, a destra a R7, e sul lato sinistro/inferiore al nodo orizzontale verso R6/D4.",
-        "json_evidence": "npn_transistor18.3 terminals: B right, E top, C bottom; graph: B con resistor22.7_t1, C con diode7.1_anode/resistor22.6_t1, E con rail positivo."
+        "type": "graph_connection_missing_or_wrong",
+        "description": "La catena verticale D4-D5-D6 e R5 è rappresentata con connessioni spezzate o orientate su diodi non chiaramente corrispondenti, lasciando il nodo superiore della catena separato dal nodo superiore comune e il nodo inferiore della catena non chiaramente collegato a R4/R5 come in immagine.",
+        "image_evidence": "Nell'immagine D4, D5 e D6 sono in serie sulla colonna centrale; il nodo inferiore di D6 è collegato a R4 e alla parte superiore di R5, mentre il terminale inferiore di R5 va alla barra inferiore.",
+        "json_evidence": "diode7.2_cathode è collegato a diode7.4_cathode; diode7.3_cathode a diode7.4_anode; diode7.2_anode a resistor22.4_t2 e resistor22.5_t1; la continuità con il nodo superiore di D4 non risulta rappresentata come visibile."
       }
     ],
     "minor_errors": [
       {
-        "type": "diode_semantics_generic",
-        "description": "I diodi zener visibili sono rappresentati semplicemente come Diode; la classe generica conserva in parte la topologia ma perde una semantica visibile del simbolo."
+        "type": "component_class_or_semantics",
+        "description": "I diodi Zener visibili sono rappresentati genericamente come Diode; la topologia a due terminali resta in gran parte utilizzabile."
       },
       {
-        "type": "component_label_absent",
-        "description": "Il JSON non conserva le etichette visibili dei componenti come Q1, Q2, Q3, D1-D10 e R1-R8; ciò rende più difficile verificare la corrispondenza ma non altera direttamente la topologia dichiarata."
+        "type": "component_label_mapping_uncertain",
+        "description": "Il JSON non mantiene etichette visibili dei componenti, rendendo difficile verificare univocamente la corrispondenza fra diode7.x e D3-D10."
       },
       {
-        "type": "relative_position_inaccuracy",
-        "description": "Alcune relative_position dei terminali non corrispondono bene all'orientamento grafico dei simboli, specialmente per diodi verticali e transistor, pur non sempre producendo un collegamento errato nel graph."
+        "type": "terminal_orientation_uncertain",
+        "description": "Alcune polarità/orientazioni dei diodi verticali nel JSON sono difficili da confermare visivamente e potrebbero non corrispondere esattamente al simbolo."
+      },
+      {
+        "type": "visible_terminal_labels_missing",
+        "description": "I terminali esterni A e B visibili accanto alla batteria non sono modellati come terminali separati, anche se la batteria e le barre di alimentazione principali sono presenti."
       }
     ],
     "missing_from_json": [
-      "Classe PNP per Q3",
-      "Semantica zener visibile per D6 e D10"
+      "Terminali esterni A e B come nodi/terminali separati visibili nell'immagine"
     ],
     "extra_in_json": [],
     "wrong_graph_connections": [
       {
-        "expected_from_image": "Il terminale destro di Q3 è collegato a R7, il terminale superiore al rail positivo, e il terminale verso sinistra/basso al nodo comune con R6 superiore e catena D4-D5-D6.",
-        "found_in_json": "npn_transistor18.3_B è collegato a resistor22.7_t1, npn_transistor18.3_E al rail positivo, npn_transistor18.3_C a diode7.1_anode e resistor22.6_t1; la connettività dei tre terminali è topologicamente simile ma associata a una classe/terminali di transistor errati.",
+        "expected_from_image": "Nodo da D3 verso la colonna D4-D5-D6, Q3 e R6 collegato come unico nodo superiore centrale.",
+        "found_in_json": "diode7.1_anode è collegato a npn_transistor18.3_C e resistor22.6_t1, mentre il terminale superiore della catena verticale dei diodi è rappresentato su nodi separati diode7.2/diode7.4.",
         "severity": "major"
       },
       {
-        "expected_from_image": "La catena centrale collega il nodo alto con D4-D5-D6 e poi al nodo tra R4/R5, con R5 verso il rail inferiore.",
-        "found_in_json": "diode7.2_cathode con diode7.4_cathode, diode7.3_cathode con diode7.4_anode, resistor22.5_t1 con diode7.2_anode/resistor22.4_t2; la catena è presente ma la sequenza/polarità dei diodi non è chiaramente corrispondente all'immagine.",
+        "expected_from_image": "Q3 deve avere collegamenti coerenti con il simbolo PNP: un terminale alla barra superiore, uno al nodo centrale D3/R6/D7, uno a R7.",
+        "found_in_json": "npn_transistor18.3 è NPN e collega E al nodo positivo, C al nodo D3/R6 e B a R7.",
         "severity": "major"
       },
       {
-        "expected_from_image": "La catena destra collega il nodo tra R7/R8 a D8, poi D9, poi D10, poi rail inferiore.",
-        "found_in_json": "resistor22.7_t2/resistor22.8_t2 sono collegati a diode7.6_anode; diode7.6_cathode a diode7.7_anode; diode7.7_cathode a diode7.5_cathode; diode7.5_anode al rail negativo. La serie è resa, ma la polarità/ordine dei terminali non è pienamente verificabile e sembra parzialmente invertita rispetto ai simboli visibili.",
+        "expected_from_image": "La catena D4-D5-D6 deve essere una serie verticale tra il nodo superiore centrale e il nodo R4/R5.",
+        "found_in_json": "I diodi diode7.2, diode7.3, diode7.4 risultano collegati in sottoreti non chiaramente corrispondenti alla serie verticale visibile.",
         "severity": "major"
+      },
+      {
+        "expected_from_image": "Il ramo destro R8-D8-D9-D10 è in serie fra barra superiore e barra inferiore, con il nodo R7 collegato tra R8 e D8.",
+        "found_in_json": "resistor22.8_t1 è al nodo positivo, resistor22.8_t2 è connesso a resistor22.7_t2 e diode7.6_anode; diode7.6-diode7.7-diode7.5 formano una catena verso il nodo negativo. La topologia generale è presente ma la corrispondenza dei singoli diodi/polarità è incerta.",
+        "severity": "minor"
       }
     ],
     "uncertain_points": [
-      "La corrispondenza esatta tra gli identificativi automatici diode7.1-diode7.7 e i diodi D3-D6/D8-D10 dell'immagine non è esplicitata, quindi alcune valutazioni su ordine e polarità dei diodi restano incerte.",
-      "Le polarità precise di alcuni diodi piccoli sono parzialmente leggibili ma non sempre abbastanza nette da distinguere ogni anodo/catodo con assoluta sicurezza.",
-      "La corrispondenza fra led12.1, led12.2, led12.3 e i tre LED dell'immagine è dedotta dalla topologia, non da etichette nel JSON."
+      "La polarità esatta di alcuni diodi piccoli e Zener non è sempre verificabile con certezza dall'immagine a causa della risoluzione e della sovrapposizione grafica.",
+      "La corrispondenza esatta fra gli identificativi diode7.2-diode7.7 e le etichette visibili D4-D10 è parzialmente ambigua perché il JSON non conserva i designator originali.",
+      "La denominazione dei terminali B/C/E dei transistor è valutabile solo dal simbolo visibile, ma senza usare pinout esterni."
     ],
-    "short_explanation": "Il JSON contiene quasi tutti i componenti principali e molte reti principali sono riconoscibili: rail positivo e negativo, tre LED, tre transistor, otto resistori e le catene di diodi. La fedeltà è però ridotta da un errore importante sul tipo/terminali di Q3, dalla semantica generica dei diodi zener e da incertezze o possibili inversioni nella rappresentazione delle catene di diodi. Nel complesso resta una buona base topologica correggibile."
+    "short_explanation": "Il JSON riconosce quasi tutti i componenti principali e molte connessioni dei rami LED, resistori, transistor Q1/Q2 e barre di alimentazione. Tuttavia Q3 è classificato come NPN anziché PNP e la zona centrale con D3 e la catena verticale D4-D5-D6 contiene connessioni non fedeli o spezzate rispetto ai nodi visibili. La struttura complessiva resta correggibile e abbastanza aderente, ma con discrepanze topologiche localizzate importanti."
   },
-  "raw_model_output": "{\"circuit_id\":\"b03\",\"batch\":\"B\",\"image_file\":\"b03.jpg\",\"json_file\":\"b03.json\",\"image_graph_fidelity_score\":77,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":21,\"terminals_pins\":15,\"graph_connections\":34,\"visible_semantics\":7},\"error_counts\":{\"critical\":0,\"major\":4,\"minor\":3},\"critical_errors\":[],\"major_errors\":[{\"type\":\"component_class_mismatch\",\"description\":\"Il transistor Q3 nell'immagine è un transistor PNP, mentre nel JSON è classificato come NPN_Transistor.\",\"image_evidence\":\"Q3 è disegnato come transistor diverso da Q1 e Q2 ed è etichettato BC557; il simbolo mostra configurazione PNP rispetto ai due BC547.\",\"json_evidence\":\"npn_transistor18.3 ha class_name \\\"NPN_Transistor\\\".\"},{\"type\":\"missing_component\",\"description\":\"Nel JSON manca un diodo visibile nell'immagine: sono presenti D1-D10, con tre LED e sette diodi discreti, mentre il JSON contiene tre LED e solo sette diodi identificati come diode7.1-diodes7.7 ma uno di questi insiemi non rappresenta chiaramente tutti i diodi verticali della catena centrale e destra con semantica coerente; in particolare D10 non è distinguibile come zener/diode separato nella semantica del JSON.\",\"image_evidence\":\"L'immagine mostra D3, D4, D5, D6, D8, D9 e D10 oltre ai LED D1, D2 e D7.\",\"json_evidence\":\"Il JSON elenca diode7.1 through diode7.7 senza distinzione di zener; la presenza numerica è corretta, ma la classe generica e le polarità/posizioni rendono ambiguo il riconoscimento dei diodi zener visibili.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"La rete inferiore/negativa nel JSON include anche il catodo del LED D7, ma nell'immagine D7 è in serie sotto R6 verso il rail inferiore: il terminale inferiore del LED è effettivamente al rail inferiore, mentre il terminale superiore è collegato a R6; la rappresentazione è plausibile solo se led12.3 è D7. Tuttavia il JSON collega anche diode7.5_anode allo stesso rail negativo, che corrisponde alla catena destra/centrale e può fondere reti differenti se diode7.5 non è D10.\",\"image_evidence\":\"Il rail inferiore unisce negativo batteria, emettitori di Q1/Q2, parte inferiore di R5, terminale inferiore di D7 e fondo della catena D8-D10.\",\"json_evidence\":\"battery2.1_negative è connesso a diode7.5_anode, led12.3_cathode, npn_transistor18.1_E, npn_transistor18.2_E, resistor22.5_t2.\"},{\"type\":\"terminal_orientation_mismatch\",\"description\":\"Q3 ha terminali e orientamento incompatibili con l'immagine: nell'immagine il terminale superiore va al rail positivo, il terminale sinistro/centrale va al nodo con R6 e D4, e il terminale destro va a R7; nel JSON il componente è trattato come NPN con E in alto, C in basso e B a destra, creando una semantica dei terminali non affidabile.\",\"image_evidence\":\"Q3 è collegato in alto al rail superiore, a destra a R7, e sul lato sinistro/inferiore al nodo orizzontale verso R6/D4.\",\"json_evidence\":\"npn_transistor18.3 terminals: B right, E top, C bottom; graph: B con resistor22.7_t1, C con diode7.1_anode/resistor22.6_t1, E con rail positivo.\"}],\"minor_errors\":[{\"type\":\"diode_semantics_generic\",\"description\":\"I diodi zener visibili sono rappresentati semplicemente come Diode; la classe generica conserva in parte la topologia ma perde una semantica visibile del simbolo.\"},{\"type\":\"component_label_absent\",\"description\":\"Il JSON non conserva le etichette visibili dei componenti come Q1, Q2, Q3, D1-D10 e R1-R8; ciò rende più difficile verificare la corrispondenza ma non altera direttamente la topologia dichiarata.\"},{\"type\":\"relative_position_inaccuracy\",\"description\":\"Alcune relative_position dei terminali non corrispondono bene all'orientamento grafico dei simboli, specialmente per diodi verticali e transistor, pur non sempre producendo un collegamento errato nel graph.\"}],\"missing_from_json\":[\"Classe PNP per Q3\",\"Semantica zener visibile per D6 e D10\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Il terminale destro di Q3 è collegato a R7, il terminale superiore al rail positivo, e il terminale verso sinistra/basso al nodo comune con R6 superiore e catena D4-D5-D6.\",\"found_in_json\":\"npn_transistor18.3_B è collegato a resistor22.7_t1, npn_transistor18.3_E al rail positivo, npn_transistor18.3_C a diode7.1_anode e resistor22.6_t1; la connettività dei tre terminali è topologicamente simile ma associata a una classe/terminali di transistor errati.\",\"severity\":\"major\"},{\"expected_from_image\":\"La catena centrale collega il nodo alto con D4-D5-D6 e poi al nodo tra R4/R5, con R5 verso il rail inferiore.\",\"found_in_json\":\"diode7.2_cathode con diode7.4_cathode, diode7.3_cathode con diode7.4_anode, resistor22.5_t1 con diode7.2_anode/resistor22.4_t2; la catena è presente ma la sequenza/polarità dei diodi non è chiaramente corrispondente all'immagine.\",\"severity\":\"major\"},{\"expected_from_image\":\"La catena destra collega il nodo tra R7/R8 a D8, poi D9, poi D10, poi rail inferiore.\",\"found_in_json\":\"resistor22.7_t2/resistor22.8_t2 sono collegati a diode7.6_anode; diode7.6_cathode a diode7.7_anode; diode7.7_cathode a diode7.5_cathode; diode7.5_anode al rail negativo. La serie è resa, ma la polarità/ordine dei terminali non è pienamente verificabile e sembra parzialmente invertita rispetto ai simboli visibili.\",\"severity\":\"major\"}],\"uncertain_points\":[\"La corrispondenza esatta tra gli identificativi automatici diode7.1-diode7.7 e i diodi D3-D6/D8-D10 dell'immagine non è esplicitata, quindi alcune valutazioni su ordine e polarità dei diodi restano incerte.\",\"Le polarità precise di alcuni diodi piccoli sono parzialmente leggibili ma non sempre abbastanza nette da distinguere ogni anodo/catodo con assoluta sicurezza.\",\"La corrispondenza fra led12.1, led12.2, led12.3 e i tre LED dell'immagine è dedotta dalla topologia, non da etichette nel JSON.\"],\"short_explanation\":\"Il JSON contiene quasi tutti i componenti principali e molte reti principali sono riconoscibili: rail positivo e negativo, tre LED, tre transistor, otto resistori e le catene di diodi. La fedeltà è però ridotta da un errore importante sul tipo/terminali di Q3, dalla semantica generica dei diodi zener e da incertezze o possibili inversioni nella rappresentazione delle catene di diodi. Nel complesso resta una buona base topologica correggibile.\"}"
+  "raw_model_output": "{\"circuit_id\":\"b03\",\"batch\":\"B\",\"image_file\":\"b03.jpg\",\"json_file\":\"b03.json\",\"image_graph_fidelity_score\":76,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":20,\"terminals_pins\":14,\"graph_connections\":34,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":4,\"minor\":4},\"critical_errors\":[],\"major_errors\":[{\"type\":\"component_class_mismatch\",\"description\":\"Il transistor Q3 visibile è di tipo PNP, mentre nel JSON è classificato come NPN_Transistor.\",\"image_evidence\":\"Q3 è disegnato come transistor diverso dai due BC547 e riportato come BC557; il simbolo è quello del transistor superiore sul ramo positivo.\",\"json_evidence\":\"npn_transistor18.3 ha class_name \\\"NPN_Transistor\\\".\"},{\"type\":\"wrong_transistor_terminals\",\"description\":\"Per Q3 il JSON assegna il terminale superiore come E e quello inferiore/centrale come C in modo non coerente con il simbolo visibile e con i collegamenti del ramo superiore.\",\"image_evidence\":\"Nel disegno Q3 ha un terminale collegato alla barra superiore, un terminale verso il nodo centrale/R6/D7 e un terminale verso R7.\",\"json_evidence\":\"npn_transistor18.3_E è connesso al nodo positivo comune; npn_transistor18.3_C è connesso a diode7.1_anode e resistor22.6_t1; npn_transistor18.3_B è connesso a resistor22.7_t1.\"},{\"type\":\"graph_connection_missing_or_wrong\",\"description\":\"Il nodo centrale a destra di D3 e in alto alla colonna D4-D5-D6 dovrebbe unire anche il terminale superiore della catena di diodi verticale e il nodo di Q3/R6, ma nel JSON D3 è collegato direttamente al transistor Q3 e a R6 senza includere correttamente il terminale superiore della catena D4-D5-D6.\",\"image_evidence\":\"Il filo orizzontale da D3 arriva al nodo sulla colonna dei diodi verticali e prosegue al nodo con Q3 e R6; il terminale superiore di D4 è sullo stesso nodo.\",\"json_evidence\":\"diode7.1_anode è connesso a npn_transistor18.3_C e resistor22.6_t1; diode7.2_cathode è connesso solo a diode7.4_cathode, separato da quel nodo.\"},{\"type\":\"graph_connection_missing_or_wrong\",\"description\":\"La catena verticale D4-D5-D6 e R5 è rappresentata con connessioni spezzate o orientate su diodi non chiaramente corrispondenti, lasciando il nodo superiore della catena separato dal nodo superiore comune e il nodo inferiore della catena non chiaramente collegato a R4/R5 come in immagine.\",\"image_evidence\":\"Nell'immagine D4, D5 e D6 sono in serie sulla colonna centrale; il nodo inferiore di D6 è collegato a R4 e alla parte superiore di R5, mentre il terminale inferiore di R5 va alla barra inferiore.\",\"json_evidence\":\"diode7.2_cathode è collegato a diode7.4_cathode; diode7.3_cathode a diode7.4_anode; diode7.2_anode a resistor22.4_t2 e resistor22.5_t1; la continuità con il nodo superiore di D4 non risulta rappresentata come visibile.\"}],\"minor_errors\":[{\"type\":\"component_class_or_semantics\",\"description\":\"I diodi Zener visibili sono rappresentati genericamente come Diode; la topologia a due terminali resta in gran parte utilizzabile.\"},{\"type\":\"component_label_mapping_uncertain\",\"description\":\"Il JSON non mantiene etichette visibili dei componenti, rendendo difficile verificare univocamente la corrispondenza fra diode7.x e D3-D10.\"},{\"type\":\"terminal_orientation_uncertain\",\"description\":\"Alcune polarità/orientazioni dei diodi verticali nel JSON sono difficili da confermare visivamente e potrebbero non corrispondere esattamente al simbolo.\"},{\"type\":\"visible_terminal_labels_missing\",\"description\":\"I terminali esterni A e B visibili accanto alla batteria non sono modellati come terminali separati, anche se la batteria e le barre di alimentazione principali sono presenti.\"}],\"missing_from_json\":[\"Terminali esterni A e B come nodi/terminali separati visibili nell'immagine\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Nodo da D3 verso la colonna D4-D5-D6, Q3 e R6 collegato come unico nodo superiore centrale.\",\"found_in_json\":\"diode7.1_anode è collegato a npn_transistor18.3_C e resistor22.6_t1, mentre il terminale superiore della catena verticale dei diodi è rappresentato su nodi separati diode7.2/diode7.4.\",\"severity\":\"major\"},{\"expected_from_image\":\"Q3 deve avere collegamenti coerenti con il simbolo PNP: un terminale alla barra superiore, uno al nodo centrale D3/R6/D7, uno a R7.\",\"found_in_json\":\"npn_transistor18.3 è NPN e collega E al nodo positivo, C al nodo D3/R6 e B a R7.\",\"severity\":\"major\"},{\"expected_from_image\":\"La catena D4-D5-D6 deve essere una serie verticale tra il nodo superiore centrale e il nodo R4/R5.\",\"found_in_json\":\"I diodi diode7.2, diode7.3, diode7.4 risultano collegati in sottoreti non chiaramente corrispondenti alla serie verticale visibile.\",\"severity\":\"major\"},{\"expected_from_image\":\"Il ramo destro R8-D8-D9-D10 è in serie fra barra superiore e barra inferiore, con il nodo R7 collegato tra R8 e D8.\",\"found_in_json\":\"resistor22.8_t1 è al nodo positivo, resistor22.8_t2 è connesso a resistor22.7_t2 e diode7.6_anode; diode7.6-diode7.7-diode7.5 formano una catena verso il nodo negativo. La topologia generale è presente ma la corrispondenza dei singoli diodi/polarità è incerta.\",\"severity\":\"minor\"}],\"uncertain_points\":[\"La polarità esatta di alcuni diodi piccoli e Zener non è sempre verificabile con certezza dall'immagine a causa della risoluzione e della sovrapposizione grafica.\",\"La corrispondenza esatta fra gli identificativi diode7.2-diode7.7 e le etichette visibili D4-D10 è parzialmente ambigua perché il JSON non conserva i designator originali.\",\"La denominazione dei terminali B/C/E dei transistor è valutabile solo dal simbolo visibile, ma senza usare pinout esterni.\"],\"short_explanation\":\"Il JSON riconosce quasi tutti i componenti principali e molte connessioni dei rami LED, resistori, transistor Q1/Q2 e barre di alimentazione. Tuttavia Q3 è classificato come NPN anziché PNP e la zona centrale con D3 e la catena verticale D4-D5-D6 contiene connessioni non fedeli o spezzate rispetto ai nodi visibili. La struttura complessiva resta correggibile e abbastanza aderente, ma con discrepanze topologiche localizzate importanti.\"}"
 }

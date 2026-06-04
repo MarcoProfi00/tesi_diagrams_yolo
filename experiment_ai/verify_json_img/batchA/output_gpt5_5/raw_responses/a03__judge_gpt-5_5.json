@@ -8,26 +8,26 @@
     "image_file": "a03.jpg",
     "json_file": "a03.json",
     "judge_model": "gpt-5.5",
-    "timestamp": "2026-06-03 18:03:38",
-    "judge_latency_seconds": 33.987,
+    "timestamp": "2026-06-04 11:45:49",
+    "judge_latency_seconds": 28.468,
     "input_json_valid": true,
     "input_json_error": null,
     "parsed_ok": true,
     "parse_error": null
   },
-  "judge_usage": "ResponseUsage(input_tokens=6226, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=1934, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=8160)",
+  "judge_usage": "ResponseUsage(input_tokens=6226, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=1498, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=7724)",
   "judge_result": {
     "circuit_id": "a03",
     "batch": "A",
     "image_file": "a03.jpg",
     "json_file": "a03.json",
-    "image_graph_fidelity_score": 72,
+    "image_graph_fidelity_score": 67,
     "decision": "MEDIUM",
     "usable_as_graph_base": true,
     "scores": {
       "components": 18,
-      "terminals_pins": 15,
-      "graph_connections": 31,
+      "terminals_pins": 13,
+      "graph_connections": 28,
       "visible_semantics": 8
     },
     "error_counts": {
@@ -37,91 +37,84 @@
     },
     "critical_errors": [
       {
-        "type": "wrong_component_and_topology",
-        "description": "Il diodo D1 visibile in parallelo alla bobina del relè è rappresentato nel JSON come LED e collegato con polarità/nodi incoerenti rispetto all'immagine.",
-        "image_evidence": "D1 è un diodo posto tra il nodo superiore di alimentazione e il nodo inferiore della bobina del relè; non è un LED.",
-        "json_evidence": "Il componente è `led12.1` class_name `LED`; nel graph `led12.1_cathode` è sul nodo con `battery2.1_positive`, `inductor10.1_t1`, `resistor22.2_t1`, `variable_resistor30.1_t1`, mentre `led12.1_anode` è con `inductor10.1_t2` e `npn_transistor18.2_C`."
+        "type": "wrong_component_class_and_topology",
+        "description": "Il relè visibile nell'immagine, composto da bobina e contatti di commutazione, è rappresentato nel JSON come un induttore isolato più uno switch separato non collegato correttamente alla bobina e al circuito di carico. Questo altera una parte importante della topologia tra circuito di controllo e circuito di potenza.",
+        "image_evidence": "A destra della bobina è visibile RL1: la bobina è nel circuito di controllo e i contatti comandano il ramo con sorgente AC e lampada.",
+        "json_evidence": "Il JSON contiene inductor10.1 e switch25.1 come componenti separati; switch25.1_t1 è non connesso e switch25.1_t2 è collegato solo a lamp13.1_t2."
       }
     ],
     "major_errors": [
       {
         "type": "missing_component",
-        "description": "Il contatto del relè RL1 visibile sul lato destro del circuito non è rappresentato correttamente come parte del relè o come interruttore collegato nel circuito di carico; il JSON contiene uno switch isolato solo parzialmente collegato.",
-        "image_evidence": "Il contatto RL1 collega il ramo di alimentazione AC al carico L1 sul circuito di destra, comandato dalla bobina del relè sul lato sinistro.",
-        "json_evidence": "`switch25.1_t2` è collegato solo a `lamp13.1_t2`, mentre `switch25.1_t1` è vuoto; non rispecchia il collegamento visibile del contatto nel ramo di carico."
+        "description": "Il componente LDR visibile nell'immagine non è rappresentato come LDR/fotoresistenza nel JSON; è stato modellato come una batteria aggiuntiva.",
+        "image_evidence": "A sinistra è visibile il simbolo LDR con frecce luminose e collegamento tra rail superiore e nodo RV1/base Q1.",
+        "json_evidence": "Nel JSON compare battery2.2 con terminali positive/negative; non compare alcun componente LDR o fotoresistore."
       },
       {
-        "type": "wrong_component_class",
-        "description": "Il carico L1 visibile come lampada/carico AC è rappresentato come `Lamp`, ma i collegamenti al generatore AC e al contatto RL1 sono incompleti.",
-        "image_evidence": "L1 è in serie con il generatore V1 e il contatto RL1 nel circuito di destra.",
-        "json_evidence": "`lamp13.1_t1` è collegato a `signal_source23.1_t2`, `lamp13.1_t2` a `switch25.1_t2`, ma manca il collegamento del terminale alto del generatore al contatto RL1."
+        "type": "extra_component",
+        "description": "Il JSON include una seconda batteria che non corrisponde a un secondo generatore DC separato nell'immagine; quella posizione corrisponde visivamente alla LDR.",
+        "image_evidence": "Nell'immagine è presente una sola batteria DC B1 sul lato sinistro.",
+        "json_evidence": "components contiene battery2.1 e battery2.2."
       },
       {
-        "type": "wrong_component",
-        "description": "La sorgente B1 visibile è una singola batteria/alimentazione DC; il JSON contiene due componenti Battery separati, con una batteria usata per il nodo positivo e l'altra per il nodo negativo.",
-        "image_evidence": "A sinistra è visibile una sola sorgente B1 inserita tra il bus superiore e il bus inferiore.",
-        "json_evidence": "Sono presenti `battery2.1` e `battery2.2`; `battery2.1_positive` è sul bus superiore, mentre `battery2.2_negative` è sul bus inferiore. `battery2.1_negative` e `battery2.2_positive` risultano scollegati."
+        "type": "wrong_graph_connection",
+        "description": "Il nodo inferiore comune dell'alimentazione DC è associato nel JSON al negativo della batteria sbagliata, lasciando non connesso il negativo della batteria principale.",
+        "image_evidence": "Il terminale inferiore di B1 è collegato al rail inferiore comune che unisce RV1, gli emettitori di Q1 e Q2 e il ritorno del circuito di controllo.",
+        "json_evidence": "battery2.1_negative è []; battery2.2_negative è collegato a npn_transistor18.1_E, npn_transistor18.2_E e resistor22.1_t2."
       },
       {
-        "type": "missing_or_incomplete_connection",
-        "description": "Il circuito AC di destra è spezzato nel JSON: il terminale superiore della sorgente AC e un terminale dello switch risultano non collegati, mentre nell'immagine formano il loop con contatto RL1 e lampada.",
-        "image_evidence": "Il ramo destro mostra un circuito chiuso/serie: sorgente V1, lampada L1 e contatto RL1, con fili verticali e orizzontali continui.",
-        "json_evidence": "`signal_source23.1_t1`: [], `switch25.1_t1`: [], warning `unconnected_terminals` include entrambi."
+        "type": "wrong_graph_connection",
+        "description": "Il contatto del relè nel circuito di carico è incompleto: il ramo con sorgente AC, contatto RL1 e lampada dovrebbe formare un circuito chiuso, ma nel JSON una estremità della sorgente e una estremità dello switch risultano non connesse.",
+        "image_evidence": "Nel lato destro la sorgente V1 e la lampada L1 sono in serie attraverso il contatto RL1, con ritorno sul lato inferiore del rettangolo di cablaggio.",
+        "json_evidence": "signal_source23.1_t1 è []; switch25.1_t1 è []; sono presenti solo lamp13.1_t1--signal_source23.1_t2 e lamp13.1_t2--switch25.1_t2."
       }
     ],
     "minor_errors": [
       {
-        "type": "component_naming_semantics",
-        "description": "La bobina del relè è rappresentata come `Inductor`; topologicamente può corrispondere alla bobina, ma non preserva la semantica di relè con contatto associato."
+        "type": "component_class",
+        "description": "Il diodo D1 è rappresentato come LED; il simbolo visibile è un diodo generico, non un LED."
       },
       {
-        "type": "switch_state_uncertain",
-        "description": "Il JSON assegna allo switch lo stato `closed`, ma nell'immagine il contatto RL1 appare graficamente aperto; lo stato elettrico comandato dal relè non è deducibile con certezza come stato fisso."
+        "type": "terminal_model",
+        "description": "Il resistore variabile RV1 è rappresentato con due terminali, mentre nell'immagine è visibile anche il cursore collegato al rail inferiore; tuttavia il cursore sembra cortocircuitato al terminale inferiore, quindi l'impatto topologico è limitato."
       }
     ],
     "missing_from_json": [
-      "Componente relè RL1 completo come associazione bobina-contatto",
-      "Diodo D1 come diodo non LED",
-      "Singola batteria/alimentazione DC B1 rappresentata coerentemente tra bus superiore e inferiore",
-      "Collegamento completo del circuito AC tra sorgente V1, contatto RL1 e lampada/carico L1"
+      "LDR/fotoresistenza come componente distinto",
+      "relè RL1 come componente coerente con bobina e contatti associati"
     ],
     "extra_in_json": [
-      "Seconda batteria `battery2.2` come componente separato dalla sorgente B1",
-      "`led12.1` come LED al posto del diodo D1"
+      "battery2.2 come seconda batteria distinta",
+      "led12.1 come LED invece di diodo generico"
     ],
     "wrong_graph_connections": [
       {
-        "expected_from_image": "Il bus superiore DC collega il positivo di B1, LDR superiore, R1 superiore, un terminale di D1 e un terminale della bobina del relè.",
-        "found_in_json": "Il nodo `battery2.1_positive` collega `inductor10.1_t1`, `led12.1_cathode`, `resistor22.2_t1`, `variable_resistor30.1_t1`; la presenza del LED al posto del diodo e la batteria separata rendono la rappresentazione solo parzialmente corretta.",
+        "expected_from_image": "Il negativo della batteria B1 deve essere sul rail inferiore comune con emettitori di Q1/Q2 e terminale inferiore di RV1.",
+        "found_in_json": "battery2.1_negative è non connesso; il rail inferiore è rappresentato tramite battery2.2_negative.",
         "severity": "major"
       },
       {
-        "expected_from_image": "Il bus inferiore DC collega il negativo di B1, il terminale basso del potenziometro, gli emettitori di Q1 e Q2 e altri ritorni inferiori.",
-        "found_in_json": "Il nodo inferiore è associato a `battery2.2_negative`, `npn_transistor18.1_E`, `npn_transistor18.2_E`, `resistor22.1_t2`; la sorgente è spezzata in due batterie e il potenziometro/LDR non sono modellati in modo pienamente coerente.",
+        "expected_from_image": "La LDR collega il rail superiore al nodo che va verso RV1 e base di Q1.",
+        "found_in_json": "La LDR non esiste; battery2.2_negative è collegato al rail inferiore e battery2.2_positive è non connesso.",
         "severity": "major"
       },
       {
-        "expected_from_image": "La bobina del relè è tra bus superiore e collettore di Q2, con D1 in parallelo tra gli stessi due nodi.",
-        "found_in_json": "`inductor10.1_t1` è sul bus superiore e `inductor10.1_t2` è con `npn_transistor18.2_C`; questo è topologicamente corretto per la bobina, ma D1 è rappresentato come LED e con polarità/nome componente errati.",
-        "severity": "major"
-      },
-      {
-        "expected_from_image": "Il circuito AC di destra deve avere una continuità tra terminale superiore di V1, contatto RL1, lampada L1 e terminale inferiore di V1.",
-        "found_in_json": "`signal_source23.1_t1` e `switch25.1_t1` sono scollegati; solo `signal_source23.1_t2`-`lamp13.1_t1` e `lamp13.1_t2`-`switch25.1_t2` sono dichiarati.",
+        "expected_from_image": "Il contatto RL1 deve collegare il ramo della sorgente AC al ramo della lampada quando rappresentato chiuso, formando il circuito serie visibile.",
+        "found_in_json": "switch25.1_t1 è non connesso e switch25.1_t2 va solo a lamp13.1_t2; signal_source23.1_t1 è non connesso.",
         "severity": "critical"
       },
       {
-        "expected_from_image": "Il contatto RL1 appare come contatto del relè, non come switch indipendente non associato alla bobina.",
-        "found_in_json": "`switch25.1` è un componente separato con stato `closed` e senza relazione con `inductor10.1`.",
-        "severity": "major"
+        "expected_from_image": "La bobina del relè e il diodo D1 sono collegati tra rail superiore e collettore di Q2, in parallelo visibile.",
+        "found_in_json": "inductor10.1 e led12.1 sono collegati in parallelo tra il nodo superiore e npn_transistor18.2_C; la connettività è sostanzialmente corretta, ma la classe LED è errata per D1.",
+        "severity": "minor"
       }
     ],
     "uncertain_points": [
-      "La corrispondenza esatta tra `resistor22.1`, `variable_resistor30.1` e i simboli LDR/RV1 è parzialmente ambigua perché il JSON usa classi generiche e terminali a due pin, mentre l'immagine mostra un LDR e un potenziometro/regolazione.",
-      "La polarità esatta del diodo D1 è visibile graficamente ma la resa del simbolo nell'immagine non consente una verifica robusta dei nomi anodo/catodo nel JSON senza ambiguità.",
-      "La posizione dei terminali base/collettore/emettitore dei due transistor è coerente a grandi linee, ma il simbolo non permette di validare con assoluta certezza ogni terminal name oltre alla topologia dei collegamenti visibili."
+      "La polarità esatta del diodo D1 è visibile solo parzialmente e non viene usata come errore principale.",
+      "L'associazione dei nomi terminali t1/t2 per resistori, bobina, lampada e sorgente non è verificabile con certezza dall'immagine.",
+      "Lo stato meccanico del contatto del relè è rappresentato nel JSON come switch chiuso, ma nell'immagine il simbolo del contatto non consente una verifica certa dello stato operativo."
     ],
-    "short_explanation": "Il JSON riconosce gran parte della struttura principale del lato DC: LDR/resistenze, due transistor, bobina del relè e nodi principali sono in parte coerenti. Tuttavia introduce due batterie al posto di una sorgente, modella D1 come LED, non rappresenta correttamente il relè come bobina con contatto associato e lascia incompleto il circuito AC di destra con sorgente, contatto e lampada. La topologia è ancora recuperabile, ma contiene errori importanti."
+    "short_explanation": "Il JSON riconosce diversi elementi principali del circuito di controllo, inclusi due transistor, resistori, RV1, bobina, diodo, sorgente e lampada, e molte connessioni centrali sono recuperabili. Tuttavia scambia la LDR con una batteria, lascia non connesso il negativo della batteria principale, modella il relè come induttore e switch separati con collegamenti del carico incompleti, e classifica il diodo come LED. La fedeltà topologica è quindi parziale ma ancora utilizzabile come base di correzione."
   },
-  "raw_model_output": "{\"circuit_id\":\"a03\",\"batch\":\"A\",\"image_file\":\"a03.jpg\",\"json_file\":\"a03.json\",\"image_graph_fidelity_score\":72,\"decision\":\"MEDIUM\",\"usable_as_graph_base\":true,\"scores\":{\"components\":18,\"terminals_pins\":15,\"graph_connections\":31,\"visible_semantics\":8},\"error_counts\":{\"critical\":1,\"major\":4,\"minor\":2},\"critical_errors\":[{\"type\":\"wrong_component_and_topology\",\"description\":\"Il diodo D1 visibile in parallelo alla bobina del relè è rappresentato nel JSON come LED e collegato con polarità/nodi incoerenti rispetto all'immagine.\",\"image_evidence\":\"D1 è un diodo posto tra il nodo superiore di alimentazione e il nodo inferiore della bobina del relè; non è un LED.\",\"json_evidence\":\"Il componente è `led12.1` class_name `LED`; nel graph `led12.1_cathode` è sul nodo con `battery2.1_positive`, `inductor10.1_t1`, `resistor22.2_t1`, `variable_resistor30.1_t1`, mentre `led12.1_anode` è con `inductor10.1_t2` e `npn_transistor18.2_C`.\"}],\"major_errors\":[{\"type\":\"missing_component\",\"description\":\"Il contatto del relè RL1 visibile sul lato destro del circuito non è rappresentato correttamente come parte del relè o come interruttore collegato nel circuito di carico; il JSON contiene uno switch isolato solo parzialmente collegato.\",\"image_evidence\":\"Il contatto RL1 collega il ramo di alimentazione AC al carico L1 sul circuito di destra, comandato dalla bobina del relè sul lato sinistro.\",\"json_evidence\":\"`switch25.1_t2` è collegato solo a `lamp13.1_t2`, mentre `switch25.1_t1` è vuoto; non rispecchia il collegamento visibile del contatto nel ramo di carico.\"},{\"type\":\"wrong_component_class\",\"description\":\"Il carico L1 visibile come lampada/carico AC è rappresentato come `Lamp`, ma i collegamenti al generatore AC e al contatto RL1 sono incompleti.\",\"image_evidence\":\"L1 è in serie con il generatore V1 e il contatto RL1 nel circuito di destra.\",\"json_evidence\":\"`lamp13.1_t1` è collegato a `signal_source23.1_t2`, `lamp13.1_t2` a `switch25.1_t2`, ma manca il collegamento del terminale alto del generatore al contatto RL1.\"},{\"type\":\"wrong_component\",\"description\":\"La sorgente B1 visibile è una singola batteria/alimentazione DC; il JSON contiene due componenti Battery separati, con una batteria usata per il nodo positivo e l'altra per il nodo negativo.\",\"image_evidence\":\"A sinistra è visibile una sola sorgente B1 inserita tra il bus superiore e il bus inferiore.\",\"json_evidence\":\"Sono presenti `battery2.1` e `battery2.2`; `battery2.1_positive` è sul bus superiore, mentre `battery2.2_negative` è sul bus inferiore. `battery2.1_negative` e `battery2.2_positive` risultano scollegati.\"},{\"type\":\"missing_or_incomplete_connection\",\"description\":\"Il circuito AC di destra è spezzato nel JSON: il terminale superiore della sorgente AC e un terminale dello switch risultano non collegati, mentre nell'immagine formano il loop con contatto RL1 e lampada.\",\"image_evidence\":\"Il ramo destro mostra un circuito chiuso/serie: sorgente V1, lampada L1 e contatto RL1, con fili verticali e orizzontali continui.\",\"json_evidence\":\"`signal_source23.1_t1`: [], `switch25.1_t1`: [], warning `unconnected_terminals` include entrambi.\"}],\"minor_errors\":[{\"type\":\"component_naming_semantics\",\"description\":\"La bobina del relè è rappresentata come `Inductor`; topologicamente può corrispondere alla bobina, ma non preserva la semantica di relè con contatto associato.\"},{\"type\":\"switch_state_uncertain\",\"description\":\"Il JSON assegna allo switch lo stato `closed`, ma nell'immagine il contatto RL1 appare graficamente aperto; lo stato elettrico comandato dal relè non è deducibile con certezza come stato fisso.\"}],\"missing_from_json\":[\"Componente relè RL1 completo come associazione bobina-contatto\",\"Diodo D1 come diodo non LED\",\"Singola batteria/alimentazione DC B1 rappresentata coerentemente tra bus superiore e inferiore\",\"Collegamento completo del circuito AC tra sorgente V1, contatto RL1 e lampada/carico L1\"],\"extra_in_json\":[\"Seconda batteria `battery2.2` come componente separato dalla sorgente B1\",\"`led12.1` come LED al posto del diodo D1\"],\"wrong_graph_connections\":[{\"expected_from_image\":\"Il bus superiore DC collega il positivo di B1, LDR superiore, R1 superiore, un terminale di D1 e un terminale della bobina del relè.\",\"found_in_json\":\"Il nodo `battery2.1_positive` collega `inductor10.1_t1`, `led12.1_cathode`, `resistor22.2_t1`, `variable_resistor30.1_t1`; la presenza del LED al posto del diodo e la batteria separata rendono la rappresentazione solo parzialmente corretta.\",\"severity\":\"major\"},{\"expected_from_image\":\"Il bus inferiore DC collega il negativo di B1, il terminale basso del potenziometro, gli emettitori di Q1 e Q2 e altri ritorni inferiori.\",\"found_in_json\":\"Il nodo inferiore è associato a `battery2.2_negative`, `npn_transistor18.1_E`, `npn_transistor18.2_E`, `resistor22.1_t2`; la sorgente è spezzata in due batterie e il potenziometro/LDR non sono modellati in modo pienamente coerente.\",\"severity\":\"major\"},{\"expected_from_image\":\"La bobina del relè è tra bus superiore e collettore di Q2, con D1 in parallelo tra gli stessi due nodi.\",\"found_in_json\":\"`inductor10.1_t1` è sul bus superiore e `inductor10.1_t2` è con `npn_transistor18.2_C`; questo è topologicamente corretto per la bobina, ma D1 è rappresentato come LED e con polarità/nome componente errati.\",\"severity\":\"major\"},{\"expected_from_image\":\"Il circuito AC di destra deve avere una continuità tra terminale superiore di V1, contatto RL1, lampada L1 e terminale inferiore di V1.\",\"found_in_json\":\"`signal_source23.1_t1` e `switch25.1_t1` sono scollegati; solo `signal_source23.1_t2`-`lamp13.1_t1` e `lamp13.1_t2`-`switch25.1_t2` sono dichiarati.\",\"severity\":\"critical\"},{\"expected_from_image\":\"Il contatto RL1 appare come contatto del relè, non come switch indipendente non associato alla bobina.\",\"found_in_json\":\"`switch25.1` è un componente separato con stato `closed` e senza relazione con `inductor10.1`.\",\"severity\":\"major\"}],\"uncertain_points\":[\"La corrispondenza esatta tra `resistor22.1`, `variable_resistor30.1` e i simboli LDR/RV1 è parzialmente ambigua perché il JSON usa classi generiche e terminali a due pin, mentre l'immagine mostra un LDR e un potenziometro/regolazione.\",\"La polarità esatta del diodo D1 è visibile graficamente ma la resa del simbolo nell'immagine non consente una verifica robusta dei nomi anodo/catodo nel JSON senza ambiguità.\",\"La posizione dei terminali base/collettore/emettitore dei due transistor è coerente a grandi linee, ma il simbolo non permette di validare con assoluta certezza ogni terminal name oltre alla topologia dei collegamenti visibili.\"],\"short_explanation\":\"Il JSON riconosce gran parte della struttura principale del lato DC: LDR/resistenze, due transistor, bobina del relè e nodi principali sono in parte coerenti. Tuttavia introduce due batterie al posto di una sorgente, modella D1 come LED, non rappresenta correttamente il relè come bobina con contatto associato e lascia incompleto il circuito AC di destra con sorgente, contatto e lampada. La topologia è ancora recuperabile, ma contiene errori importanti.\"}"
+  "raw_model_output": "{\"circuit_id\":\"a03\",\"batch\":\"A\",\"image_file\":\"a03.jpg\",\"json_file\":\"a03.json\",\"image_graph_fidelity_score\":67,\"decision\":\"MEDIUM\",\"usable_as_graph_base\":true,\"scores\":{\"components\":18,\"terminals_pins\":13,\"graph_connections\":28,\"visible_semantics\":8},\"error_counts\":{\"critical\":1,\"major\":4,\"minor\":2},\"critical_errors\":[{\"type\":\"wrong_component_class_and_topology\",\"description\":\"Il relè visibile nell'immagine, composto da bobina e contatti di commutazione, è rappresentato nel JSON come un induttore isolato più uno switch separato non collegato correttamente alla bobina e al circuito di carico. Questo altera una parte importante della topologia tra circuito di controllo e circuito di potenza.\",\"image_evidence\":\"A destra della bobina è visibile RL1: la bobina è nel circuito di controllo e i contatti comandano il ramo con sorgente AC e lampada.\",\"json_evidence\":\"Il JSON contiene inductor10.1 e switch25.1 come componenti separati; switch25.1_t1 è non connesso e switch25.1_t2 è collegato solo a lamp13.1_t2.\"}],\"major_errors\":[{\"type\":\"missing_component\",\"description\":\"Il componente LDR visibile nell'immagine non è rappresentato come LDR/fotoresistenza nel JSON; è stato modellato come una batteria aggiuntiva.\",\"image_evidence\":\"A sinistra è visibile il simbolo LDR con frecce luminose e collegamento tra rail superiore e nodo RV1/base Q1.\",\"json_evidence\":\"Nel JSON compare battery2.2 con terminali positive/negative; non compare alcun componente LDR o fotoresistore.\"},{\"type\":\"extra_component\",\"description\":\"Il JSON include una seconda batteria che non corrisponde a un secondo generatore DC separato nell'immagine; quella posizione corrisponde visivamente alla LDR.\",\"image_evidence\":\"Nell'immagine è presente una sola batteria DC B1 sul lato sinistro.\",\"json_evidence\":\"components contiene battery2.1 e battery2.2.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il nodo inferiore comune dell'alimentazione DC è associato nel JSON al negativo della batteria sbagliata, lasciando non connesso il negativo della batteria principale.\",\"image_evidence\":\"Il terminale inferiore di B1 è collegato al rail inferiore comune che unisce RV1, gli emettitori di Q1 e Q2 e il ritorno del circuito di controllo.\",\"json_evidence\":\"battery2.1_negative è []; battery2.2_negative è collegato a npn_transistor18.1_E, npn_transistor18.2_E e resistor22.1_t2.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il contatto del relè nel circuito di carico è incompleto: il ramo con sorgente AC, contatto RL1 e lampada dovrebbe formare un circuito chiuso, ma nel JSON una estremità della sorgente e una estremità dello switch risultano non connesse.\",\"image_evidence\":\"Nel lato destro la sorgente V1 e la lampada L1 sono in serie attraverso il contatto RL1, con ritorno sul lato inferiore del rettangolo di cablaggio.\",\"json_evidence\":\"signal_source23.1_t1 è []; switch25.1_t1 è []; sono presenti solo lamp13.1_t1--signal_source23.1_t2 e lamp13.1_t2--switch25.1_t2.\"}],\"minor_errors\":[{\"type\":\"component_class\",\"description\":\"Il diodo D1 è rappresentato come LED; il simbolo visibile è un diodo generico, non un LED.\"},{\"type\":\"terminal_model\",\"description\":\"Il resistore variabile RV1 è rappresentato con due terminali, mentre nell'immagine è visibile anche il cursore collegato al rail inferiore; tuttavia il cursore sembra cortocircuitato al terminale inferiore, quindi l'impatto topologico è limitato.\"}],\"missing_from_json\":[\"LDR/fotoresistenza come componente distinto\",\"relè RL1 come componente coerente con bobina e contatti associati\"],\"extra_in_json\":[\"battery2.2 come seconda batteria distinta\",\"led12.1 come LED invece di diodo generico\"],\"wrong_graph_connections\":[{\"expected_from_image\":\"Il negativo della batteria B1 deve essere sul rail inferiore comune con emettitori di Q1/Q2 e terminale inferiore di RV1.\",\"found_in_json\":\"battery2.1_negative è non connesso; il rail inferiore è rappresentato tramite battery2.2_negative.\",\"severity\":\"major\"},{\"expected_from_image\":\"La LDR collega il rail superiore al nodo che va verso RV1 e base di Q1.\",\"found_in_json\":\"La LDR non esiste; battery2.2_negative è collegato al rail inferiore e battery2.2_positive è non connesso.\",\"severity\":\"major\"},{\"expected_from_image\":\"Il contatto RL1 deve collegare il ramo della sorgente AC al ramo della lampada quando rappresentato chiuso, formando il circuito serie visibile.\",\"found_in_json\":\"switch25.1_t1 è non connesso e switch25.1_t2 va solo a lamp13.1_t2; signal_source23.1_t1 è non connesso.\",\"severity\":\"critical\"},{\"expected_from_image\":\"La bobina del relè e il diodo D1 sono collegati tra rail superiore e collettore di Q2, in parallelo visibile.\",\"found_in_json\":\"inductor10.1 e led12.1 sono collegati in parallelo tra il nodo superiore e npn_transistor18.2_C; la connettività è sostanzialmente corretta, ma la classe LED è errata per D1.\",\"severity\":\"minor\"}],\"uncertain_points\":[\"La polarità esatta del diodo D1 è visibile solo parzialmente e non viene usata come errore principale.\",\"L'associazione dei nomi terminali t1/t2 per resistori, bobina, lampada e sorgente non è verificabile con certezza dall'immagine.\",\"Lo stato meccanico del contatto del relè è rappresentato nel JSON come switch chiuso, ma nell'immagine il simbolo del contatto non consente una verifica certa dello stato operativo.\"],\"short_explanation\":\"Il JSON riconosce diversi elementi principali del circuito di controllo, inclusi due transistor, resistori, RV1, bobina, diodo, sorgente e lampada, e molte connessioni centrali sono recuperabili. Tuttavia scambia la LDR con una batteria, lascia non connesso il negativo della batteria principale, modella il relè come induttore e switch separati con collegamenti del carico incompleti, e classifica il diodo come LED. La fedeltà topologica è quindi parziale ma ancora utilizzabile come base di correzione.\"}"
 }

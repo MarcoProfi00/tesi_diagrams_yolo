@@ -8,80 +8,90 @@
     "image_file": "b02.jpg",
     "json_file": "b02.json",
     "judge_model": "gpt-5.5",
-    "timestamp": "2026-06-03 18:03:42",
-    "judge_latency_seconds": 19.415,
+    "timestamp": "2026-06-04 11:49:33",
+    "judge_latency_seconds": 26.072,
     "input_json_valid": true,
     "input_json_error": null,
     "parsed_ok": true,
     "parse_error": null
   },
-  "judge_usage": "ResponseUsage(input_tokens=5988, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=1061, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=7049)",
+  "judge_usage": "ResponseUsage(input_tokens=5988, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=1333, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=7321)",
   "judge_result": {
     "circuit_id": "b02",
     "batch": "B",
     "image_file": "b02.jpg",
     "json_file": "b02.json",
-    "image_graph_fidelity_score": 88,
+    "image_graph_fidelity_score": 78,
     "decision": "HIGH",
     "usable_as_graph_base": true,
     "scores": {
       "components": 23,
-      "terminals_pins": 17,
-      "graph_connections": 39,
-      "visible_semantics": 9
+      "terminals_pins": 16,
+      "graph_connections": 32,
+      "visible_semantics": 7
     },
     "error_counts": {
       "critical": 0,
-      "major": 2,
+      "major": 3,
       "minor": 2
     },
     "critical_errors": [],
     "major_errors": [
       {
-        "type": "component_missing",
-        "description": "Il Graph JSON non rappresenta esplicitamente le etichette/terminali topologici visibili X1, X2, B1 e B2, che nell'immagine marcano nodi di collettore/base dei transistor e aiutano a identificare i collegamenti principali.",
-        "image_evidence": "Sono visibili label boxed X1 sul nodo del collettore di Q1, X2 sul nodo del collettore di Q2, B1 sulla base di Q1 e B2 sulla base di Q2.",
-        "json_evidence": "Nei components non sono presenti terminali o label per X1, X2, B1, B2; il graph contiene solo LED, resistori, transistor, condensatori e GND."
+        "type": "component_missing_or_semantic_label",
+        "description": "Il JSON non rappresenta esplicitamente il terminale/alimentazione superiore visibile come label +5V; la relativa net è solo implicita tramite i terminali collegati.",
+        "image_evidence": "Nell'immagine la barra superiore è etichettata +5V e connette i terminali superiori dei due LED e dei due resistori verticali centrali.",
+        "json_evidence": "Nel JSON non esiste un componente o terminale per +5V; la net superiore è descritta solo collegando led12.1_anode, led12.2_anode, resistor22.2_t1 e resistor22.3_t1."
+      },
+      {
+        "type": "wrong_component_identification",
+        "description": "I due resistori di polarizzazione centrali sono presenti ma la corrispondenza nominale/topologica appare scambiata rispetto alle etichette visibili R2/R4: il resistore sinistro scende alla base di Q1, quello destro al collettore/base-net di Q2, mentre nel JSON le istanze resistor22.2 e resistor22.3 sono collegate rispettivamente a Q1 base e Q2 base. Questo è recuperabile ma rende ambigua la mappatura dei resistori centrali.",
+        "image_evidence": "R2 è il resistore verticale centrale sinistro collegato in basso al nodo base di Q1; R4 è il resistore verticale centrale destro collegato in basso al nodo del collettore di Q2 e alla linea verso la base di Q1 tramite C2.",
+        "json_evidence": "resistor22.2_t2 è connesso a npn_transistor18.1_B e polarized_capacitor20.2_positive; resistor22.3_t2 è connesso a npn_transistor18.2_B e polarized_capacitor20.1_negative."
       },
       {
         "type": "polarity_or_terminal_orientation_mismatch",
-        "description": "La polarità dei condensatori polarizzati appare incoerente con l'immagine per almeno uno dei due condensatori: C1 mostra il lato positivo a sinistra, mentre C2 mostra il lato positivo a destra; nel JSON entrambi i condensatori hanno positive a sinistra e negative a destra.",
-        "image_evidence": "Nel disegno C1 ha il simbolo '+' sul lato sinistro del condensatore; C2 ha il simbolo '+' sul lato destro.",
-        "json_evidence": "polarized_capacitor20.1_positive ha relative_position left e polarized_capacitor20.1_negative right; polarized_capacitor20.2_positive ha relative_position left e polarized_capacitor20.2_negative right."
+        "description": "La polarità dei condensatori nel JSON non è pienamente coerente con i segni visibili: per C2 il terminale positivo è sul lato destro nell'immagine, mentre il JSON assegna il positivo al lato sinistro per entrambi i condensatori.",
+        "image_evidence": "C1 mostra il segno positivo sul lato sinistro; C2 mostra il segno positivo sul lato destro.",
+        "json_evidence": "polarized_capacitor20.1_positive ha relative_position left e polarized_capacitor20.2_positive ha relative_position left."
       }
     ],
     "minor_errors": [
       {
-        "type": "component_identity_ambiguous",
-        "description": "Le istanze dei resistori non conservano le etichette visibili R1, R2, R3, R4, rendendo meno chiara la corrispondenza nominale pur mantenendo le classi e gran parte della topologia."
+        "type": "terminal_relative_position_inaccuracy",
+        "description": "Le posizioni relative dei terminali dei transistor nel JSON sono semplificate e non sempre corrispondono chiaramente alla geometria del simbolo nell'immagine, anche se i collegamenti principali risultano interpretabili."
       },
       {
-        "type": "component_identity_ambiguous",
-        "description": "Le istanze dei LED, transistor e condensatori non conservano le etichette visibili D1, D2, Q1, Q2, C1, C2; la corrispondenza resta deducibile dalla posizione/topologia, ma non è esplicitata."
+        "type": "component_naming_ambiguity",
+        "description": "Le istanze dei resistori non mantengono le designazioni visibili R1, R2, R3, R4; ciò non compromette da solo la topologia ma rende meno chiara la corrispondenza visiva."
       }
     ],
     "missing_from_json": [
-      "Label/terminali topologici visibili X1, X2, B1, B2",
-      "Etichette visibili dei componenti D1, D2, Q1, Q2, R1, R2, R3, R4, C1, C2"
+      "terminale/label di alimentazione +5V visibile sulla barra superiore"
     ],
     "extra_in_json": [],
     "wrong_graph_connections": [
       {
-        "expected_from_image": "Il condensatore C2 ha il terminale positivo sul nodo di destra, collegato al nodo base di Q2/ramo R4; il terminale sinistro va al nodo base di Q1/ramo R2.",
-        "found_in_json": "polarized_capacitor20.2_positive è connesso a npn_transistor18.1_B e resistor22.2_t2; polarized_capacitor20.2_negative è connesso a npn_transistor18.2_C e resistor22.4_t2.",
+        "expected_from_image": "La barra superiore visibile è una net etichettata +5V che collega i terminali superiori dei due LED e dei due resistori centrali.",
+        "found_in_json": "La stessa net è rappresentata solo come collegamento tra led12.1_anode, led12.2_anode, resistor22.2_t1 e resistor22.3_t1, senza terminale/label +5V.",
         "severity": "major"
       },
       {
-        "expected_from_image": "Le etichette X1, X2, B1, B2 sono nodi visibili rispettivamente sui collegamenti verso collettori e basi dei transistor.",
-        "found_in_json": "Nessun nodo/terminale/label X1, X2, B1 o B2 è presente nel JSON.",
+        "expected_from_image": "Il condensatore inferiore ha il terminale positivo sul lato destro, collegato al nodo destro che comprende la base di Q2 e il ramo verso il collettore di Q1.",
+        "found_in_json": "polarized_capacitor20.2_positive è indicato con relative_position left ed è collegato alla base del transistor sinistro; polarized_capacitor20.2_negative è collegato al collettore del transistor destro.",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "Il nodo inferiore di R4 è sul lato destro e si connette al nodo del collettore di Q2/C1 destro, non al nodo base di Q2 se si segue la designazione visiva dei resistori.",
+        "found_in_json": "resistor22.3_t2 è connesso a npn_transistor18.2_B e polarized_capacitor20.1_negative, mentre resistor22.2_t2 è connesso a npn_transistor18.1_B e polarized_capacitor20.2_positive.",
         "severity": "major"
       }
     ],
     "uncertain_points": [
-      "La corrispondenza esatta tra component_id generici e sigle visibili dei componenti è dedotta dalla topologia, perché il JSON non riporta le sigle schematiche originali.",
-      "La denominazione B, C, E dei transistor nel JSON sembra coerente con il simbolo visibile, ma la verifica è limitata alla geometria del disegno e non a pinout fisici esterni."
+      "La corrispondenza esatta tra component_id generici del JSON e le designazioni visive D1/D2, R1-R4, C1/C2, Q1/Q2 non è dichiarata nel JSON e deve essere dedotta solo dalla topologia.",
+      "Le etichette B1, B2, X1 e X2 sono callout di nodi/punti del circuito nell'immagine; il JSON non le rappresenta come terminali separati, ma potrebbero essere solo annotazioni e non componenti elettrici autonomi."
     ],
-    "short_explanation": "Il JSON riconosce correttamente i componenti principali e riproduce bene la topologia dell'astabile: due LED con resistori verso i collettori, due transistor NPN con emettitori a GND, due resistori di base verso la linea superiore e due condensatori incrociati. I collegamenti principali sono in larga parte fedeli. Le principali discrepanze sono l'assenza delle label/nodi visibili X1, X2, B1, B2 e una polarità/orientamento incoerente per uno dei condensatori polarizzati. Nel complesso il grafo è una buona base correggibile."
+    "short_explanation": "Il JSON riconosce quasi tutti i componenti principali e ricostruisce gran parte della topologia dell'astabile: LED, resistori, transistor, condensatori e GND sono presenti e molte connessioni fondamentali sono coerenti. Le principali discrepanze riguardano la mancata rappresentazione esplicita della label di alimentazione superiore, ambiguità/scambi nella mappatura dei resistori centrali e una polarità errata del condensatore inferiore. Nel complesso è una base recuperabile e abbastanza fedele, ma non perfetta."
   },
-  "raw_model_output": "{\"circuit_id\":\"b02\",\"batch\":\"B\",\"image_file\":\"b02.jpg\",\"json_file\":\"b02.json\",\"image_graph_fidelity_score\":88,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":23,\"terminals_pins\":17,\"graph_connections\":39,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":2,\"minor\":2},\"critical_errors\":[],\"major_errors\":[{\"type\":\"component_missing\",\"description\":\"Il Graph JSON non rappresenta esplicitamente le etichette/terminali topologici visibili X1, X2, B1 e B2, che nell'immagine marcano nodi di collettore/base dei transistor e aiutano a identificare i collegamenti principali.\",\"image_evidence\":\"Sono visibili label boxed X1 sul nodo del collettore di Q1, X2 sul nodo del collettore di Q2, B1 sulla base di Q1 e B2 sulla base di Q2.\",\"json_evidence\":\"Nei components non sono presenti terminali o label per X1, X2, B1, B2; il graph contiene solo LED, resistori, transistor, condensatori e GND.\"},{\"type\":\"polarity_or_terminal_orientation_mismatch\",\"description\":\"La polarità dei condensatori polarizzati appare incoerente con l'immagine per almeno uno dei due condensatori: C1 mostra il lato positivo a sinistra, mentre C2 mostra il lato positivo a destra; nel JSON entrambi i condensatori hanno positive a sinistra e negative a destra.\",\"image_evidence\":\"Nel disegno C1 ha il simbolo '+' sul lato sinistro del condensatore; C2 ha il simbolo '+' sul lato destro.\",\"json_evidence\":\"polarized_capacitor20.1_positive ha relative_position left e polarized_capacitor20.1_negative right; polarized_capacitor20.2_positive ha relative_position left e polarized_capacitor20.2_negative right.\"}],\"minor_errors\":[{\"type\":\"component_identity_ambiguous\",\"description\":\"Le istanze dei resistori non conservano le etichette visibili R1, R2, R3, R4, rendendo meno chiara la corrispondenza nominale pur mantenendo le classi e gran parte della topologia.\"},{\"type\":\"component_identity_ambiguous\",\"description\":\"Le istanze dei LED, transistor e condensatori non conservano le etichette visibili D1, D2, Q1, Q2, C1, C2; la corrispondenza resta deducibile dalla posizione/topologia, ma non è esplicitata.\"}],\"missing_from_json\":[\"Label/terminali topologici visibili X1, X2, B1, B2\",\"Etichette visibili dei componenti D1, D2, Q1, Q2, R1, R2, R3, R4, C1, C2\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Il condensatore C2 ha il terminale positivo sul nodo di destra, collegato al nodo base di Q2/ramo R4; il terminale sinistro va al nodo base di Q1/ramo R2.\",\"found_in_json\":\"polarized_capacitor20.2_positive è connesso a npn_transistor18.1_B e resistor22.2_t2; polarized_capacitor20.2_negative è connesso a npn_transistor18.2_C e resistor22.4_t2.\",\"severity\":\"major\"},{\"expected_from_image\":\"Le etichette X1, X2, B1, B2 sono nodi visibili rispettivamente sui collegamenti verso collettori e basi dei transistor.\",\"found_in_json\":\"Nessun nodo/terminale/label X1, X2, B1 o B2 è presente nel JSON.\",\"severity\":\"major\"}],\"uncertain_points\":[\"La corrispondenza esatta tra component_id generici e sigle visibili dei componenti è dedotta dalla topologia, perché il JSON non riporta le sigle schematiche originali.\",\"La denominazione B, C, E dei transistor nel JSON sembra coerente con il simbolo visibile, ma la verifica è limitata alla geometria del disegno e non a pinout fisici esterni.\"],\"short_explanation\":\"Il JSON riconosce correttamente i componenti principali e riproduce bene la topologia dell'astabile: due LED con resistori verso i collettori, due transistor NPN con emettitori a GND, due resistori di base verso la linea superiore e due condensatori incrociati. I collegamenti principali sono in larga parte fedeli. Le principali discrepanze sono l'assenza delle label/nodi visibili X1, X2, B1, B2 e una polarità/orientamento incoerente per uno dei condensatori polarizzati. Nel complesso il grafo è una buona base correggibile.\"}"
+  "raw_model_output": "{\"circuit_id\":\"b02\",\"batch\":\"B\",\"image_file\":\"b02.jpg\",\"json_file\":\"b02.json\",\"image_graph_fidelity_score\":78,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":23,\"terminals_pins\":16,\"graph_connections\":32,\"visible_semantics\":7},\"error_counts\":{\"critical\":0,\"major\":3,\"minor\":2},\"critical_errors\":[],\"major_errors\":[{\"type\":\"component_missing_or_semantic_label\",\"description\":\"Il JSON non rappresenta esplicitamente il terminale/alimentazione superiore visibile come label +5V; la relativa net è solo implicita tramite i terminali collegati.\",\"image_evidence\":\"Nell'immagine la barra superiore è etichettata +5V e connette i terminali superiori dei due LED e dei due resistori verticali centrali.\",\"json_evidence\":\"Nel JSON non esiste un componente o terminale per +5V; la net superiore è descritta solo collegando led12.1_anode, led12.2_anode, resistor22.2_t1 e resistor22.3_t1.\"},{\"type\":\"wrong_component_identification\",\"description\":\"I due resistori di polarizzazione centrali sono presenti ma la corrispondenza nominale/topologica appare scambiata rispetto alle etichette visibili R2/R4: il resistore sinistro scende alla base di Q1, quello destro al collettore/base-net di Q2, mentre nel JSON le istanze resistor22.2 e resistor22.3 sono collegate rispettivamente a Q1 base e Q2 base. Questo è recuperabile ma rende ambigua la mappatura dei resistori centrali.\",\"image_evidence\":\"R2 è il resistore verticale centrale sinistro collegato in basso al nodo base di Q1; R4 è il resistore verticale centrale destro collegato in basso al nodo del collettore di Q2 e alla linea verso la base di Q1 tramite C2.\",\"json_evidence\":\"resistor22.2_t2 è connesso a npn_transistor18.1_B e polarized_capacitor20.2_positive; resistor22.3_t2 è connesso a npn_transistor18.2_B e polarized_capacitor20.1_negative.\"},{\"type\":\"polarity_or_terminal_orientation_mismatch\",\"description\":\"La polarità dei condensatori nel JSON non è pienamente coerente con i segni visibili: per C2 il terminale positivo è sul lato destro nell'immagine, mentre il JSON assegna il positivo al lato sinistro per entrambi i condensatori.\",\"image_evidence\":\"C1 mostra il segno positivo sul lato sinistro; C2 mostra il segno positivo sul lato destro.\",\"json_evidence\":\"polarized_capacitor20.1_positive ha relative_position left e polarized_capacitor20.2_positive ha relative_position left.\"}],\"minor_errors\":[{\"type\":\"terminal_relative_position_inaccuracy\",\"description\":\"Le posizioni relative dei terminali dei transistor nel JSON sono semplificate e non sempre corrispondono chiaramente alla geometria del simbolo nell'immagine, anche se i collegamenti principali risultano interpretabili.\"},{\"type\":\"component_naming_ambiguity\",\"description\":\"Le istanze dei resistori non mantengono le designazioni visibili R1, R2, R3, R4; ciò non compromette da solo la topologia ma rende meno chiara la corrispondenza visiva.\"}],\"missing_from_json\":[\"terminale/label di alimentazione +5V visibile sulla barra superiore\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"La barra superiore visibile è una net etichettata +5V che collega i terminali superiori dei due LED e dei due resistori centrali.\",\"found_in_json\":\"La stessa net è rappresentata solo come collegamento tra led12.1_anode, led12.2_anode, resistor22.2_t1 e resistor22.3_t1, senza terminale/label +5V.\",\"severity\":\"major\"},{\"expected_from_image\":\"Il condensatore inferiore ha il terminale positivo sul lato destro, collegato al nodo destro che comprende la base di Q2 e il ramo verso il collettore di Q1.\",\"found_in_json\":\"polarized_capacitor20.2_positive è indicato con relative_position left ed è collegato alla base del transistor sinistro; polarized_capacitor20.2_negative è collegato al collettore del transistor destro.\",\"severity\":\"major\"},{\"expected_from_image\":\"Il nodo inferiore di R4 è sul lato destro e si connette al nodo del collettore di Q2/C1 destro, non al nodo base di Q2 se si segue la designazione visiva dei resistori.\",\"found_in_json\":\"resistor22.3_t2 è connesso a npn_transistor18.2_B e polarized_capacitor20.1_negative, mentre resistor22.2_t2 è connesso a npn_transistor18.1_B e polarized_capacitor20.2_positive.\",\"severity\":\"major\"}],\"uncertain_points\":[\"La corrispondenza esatta tra component_id generici del JSON e le designazioni visive D1/D2, R1-R4, C1/C2, Q1/Q2 non è dichiarata nel JSON e deve essere dedotta solo dalla topologia.\",\"Le etichette B1, B2, X1 e X2 sono callout di nodi/punti del circuito nell'immagine; il JSON non le rappresenta come terminali separati, ma potrebbero essere solo annotazioni e non componenti elettrici autonomi.\"],\"short_explanation\":\"Il JSON riconosce quasi tutti i componenti principali e ricostruisce gran parte della topologia dell'astabile: LED, resistori, transistor, condensatori e GND sono presenti e molte connessioni fondamentali sono coerenti. Le principali discrepanze riguardano la mancata rappresentazione esplicita della label di alimentazione superiore, ambiguità/scambi nella mappatura dei resistori centrali e una polarità errata del condensatore inferiore. Nel complesso è una base recuperabile e abbastanza fedele, ma non perfetta.\"}"
 }

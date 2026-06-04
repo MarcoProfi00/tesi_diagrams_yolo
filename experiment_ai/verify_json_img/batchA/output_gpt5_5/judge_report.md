@@ -1,21 +1,21 @@
 # Report verifica immagine ↔ Graph JSON
 
-Generato: 2026-06-03 18:05:24
+Generato: 2026-06-04 11:47:41
 
 ## Tabella sintetica
 
 | Circuito | Batch | Score | Fedeltà | Critici | Maggiori | Minori | Usabile come graph base |
 |---|---:|---:|---|---:|---:|---:|---|
-| a01 | A | 94 | VERY_HIGH | 0 | 0 | 2 | True |
-| a02 | A | 93 | VERY_HIGH | 0 | 0 | 2 | True |
-| a03 | A | 72 | MEDIUM | 1 | 4 | 2 | True |
-| a04 | A | 92 | VERY_HIGH | 0 | 1 | 2 | True |
+| a01 | A | 94 | VERY_HIGH | 0 | 0 | 3 | True |
+| a02 | A | 89 | HIGH | 0 | 1 | 2 | True |
+| a03 | A | 67 | MEDIUM | 1 | 4 | 2 | True |
+| a04 | A | 95 | VERY_HIGH | 0 | 0 | 2 | True |
 | a05 | A | 94 | VERY_HIGH | 0 | 0 | 3 | True |
-| a06 | A | 89 | HIGH | 0 | 1 | 2 | True |
-| a07 | A | 74 | MEDIUM | 0 | 4 | 2 | True |
-| a08 | A | 76 | HIGH | 0 | 3 | 2 | True |
-| a09 | A | 83 | HIGH | 0 | 2 | 3 | True |
-| a10 | A | 96 | VERY_HIGH | 0 | 0 | 2 | True |
+| a06 | A | 86 | HIGH | 0 | 2 | 3 | True |
+| a07 | A | 78 | HIGH | 0 | 3 | 2 | True |
+| a08 | A | 67 | MEDIUM | 1 | 4 | 2 | True |
+| a09 | A | 86 | HIGH | 0 | 2 | 3 | True |
+| a10 | A | 93 | VERY_HIGH | 0 | 0 | 3 | True |
 
 ## Dettagli per circuito
 
@@ -25,76 +25,78 @@ Generato: 2026-06-03 18:05:24
 - Score: `94`
 - Fedeltà: `VERY_HIGH`
 - Usabile come graph base: `True`
-- Spiegazione: Il Graph JSON riproduce molto fedelmente i componenti principali visibili: connettore a 4 pin, switch, tre simboli GND, due resistori, LED e lampada. I collegamenti principali corrispondono all'immagine: pin 1 verso resistore e LED, pin 2 verso resistore e lampada, pin 3 verso switch, pin 4 verso GND, switch verso GND, e ritorno comune di LED e lampada verso GND. Le discrepanze sono minori e riguardano soprattutto label/posizioni descrittive, non la topologia.
+- Spiegazione: Il Graph JSON rispecchia molto bene la topologia visibile: sono presenti connettore a 4 pin, switch aperto verso GND, due resistori, LED, lampada e i tre riferimenti GND. I collegamenti principali da J2 ai due rami LED/lampada e ai GND sono corretti. Restano solo piccole incertezze su posizioni relative/polarità e sulla semantica dello switch aperto, senza compromettere la struttura del grafo.
 
 **Errori minori:**
-- Il connettore visibile è etichettato J2 nell'immagine, mentre nel JSON è rappresentato genericamente come Connector senza label visibile associata.
-- Nel JSON i pin 1 e 2 del connettore hanno relative_position 'right' e i pin 3 e 4 'left', ma nell'immagine i quattro terminali grafici sono sul lato interno destro del corpo del connettore; la numerazione dei pin è comunque corretta e i collegamenti risultano coerenti.
+- Nel JSON i pin del connettore hanno relative_position incoerenti: pin1 e pin2 sono indicati a destra mentre nell'immagine i terminali di J2 escono a destra ma i fori/pin sono sul lato sinistro del simbolo; pin3 e pin4 sono indicati a sinistra pur essendo collegati verso sinistra/giù in modo parzialmente ambiguo. Questo non altera sostanzialmente la topologia.
+- Il JSON assegna anodo a sinistra e catodo a destra per il LED; la direzione del simbolo nell'immagine è compatibile, ma la verifica puntuale della polarità può essere leggermente ambigua per la resa grafica.
+- Lo switch è dichiarato open e l'immagine mostra un contatto aperto; tuttavia il campo graph collega comunque ciascun terminale al proprio nodo esterno, non rappresentando esplicitamente l'assenza di conduzione interna. Come descrizione topologica dei fili esterni è comunque coerente.
 
 **Punti incerti:**
-- La polarità anodo/catodo del LED è coerente con il simbolo visibile, ma la verifica dipende dall'interpretazione grafica del simbolo; non emergono comunque collegamenti incompatibili.
-- Lo stato 'open' dello switch nel JSON appare coerente con il disegno, ma la distanza del contatto mobile dal terminale destro è una rappresentazione schematica e non un'informazione elettrica misurabile.
+- La numerazione dei pin del connettore J2 è visibile e il JSON la rappresenta come pin1-pin4; l'orientamento relativo dei terminali nel JSON è però solo descrittivo e non sempre verificabile con precisione dall'immagine.
+- L'associazione tra gli instance_id dei due resistori e le loro posizioni superiore/inferiore non è semanticamente nominata nel JSON; risulta comunque coerente tramite i collegamenti del graph.
+- Il nome di classe Lamp per il simbolo della lampada è coerente, ma il simbolo include dettagli grafici interni non rappresentati nei terminali JSON, senza impatto topologico.
 
 ### a02
 
 - Batch: `A`
-- Score: `93`
-- Fedeltà: `VERY_HIGH`
+- Score: `89`
+- Fedeltà: `HIGH`
 - Usabile come graph base: `True`
-- Spiegazione: Il JSON riproduce molto bene la topologia visibile: alimentazione verso il pin 1 del connettore, resistore tra il nodo superiore/switch e il pin 2, condensatore dal pin 3 a GND, pin 4 a GND, e switch aperto verso GND. I componenti principali e i collegamenti sono sostanzialmente corretti; restano solo lievi discrepanze semantiche sulla classe dell'alimentazione e su una label visibile non codificata.
+- Spiegazione: Il JSON riconosce correttamente quasi tutti i componenti principali e gran parte della topologia: connettore a 4 pin, resistore verso pin 2, condensatore tra pin 3 e GND, pin 4 a GND e switch aperto verso GND. La principale discrepanza è l'inversione topologica/polarità della batteria nel grafo rispetto al simbolo visibile, che assegna il nodo superiore al terminale negativo e il pin 1 al positivo. Per il resto la struttura è una buona base correggibile.
+
+**Errori maggiori:**
+- Il JSON collega il terminale negativo della batteria direttamente sia al terminale superiore del resistore sia al terminale sinistro dello switch. Nell'immagine il nodo superiore comune unisce batteria, resistore e lato sinistro dello switch, ma la polarità della batteria nel JSON sembra invertita rispetto al simbolo visibile: il terminale superiore del simbolo batteria è la piastra positiva e va al nodo superiore, mentre il terminale inferiore va al connettore J3 pin 1.
 
 **Errori minori:**
-- Il simbolo di alimentazione a sinistra è rappresentato nel JSON come Battery; topologicamente i due terminali sono coerenti, ma la classe non corrisponde perfettamente alla label/simbolo di alimentazione visibile.
-- La label topologica visibile associata allo switch non è riportata nel JSON; lo switch e il suo stato aperto sono comunque presenti.
+- Le posizioni relative dei pin del connettore non sono pienamente coerenti con l'immagine: i pin del connettore J3 sono disposti verticalmente sul lato destro del corpo, mentre nel JSON alcuni sono dichiarati left e altri right.
+- Il connettore visibile è etichettato J3 nell'immagine, mentre nel JSON è presente solo come Connector senza conservare tale label visibile.
 
 **Punti incerti:**
-- La polarità del condensatore non è indicata chiaramente nell'immagine e il JSON lo rappresenta come condensatore non polarizzato.
-- La corrispondenza esatta tra la numerazione fisica del connettore J3 e i pin JSON è coerente visivamente, ma dipende dall'ordine dei terminali disegnati lungo il simbolo.
+- La corrispondenza esatta tra i terminali t1/t2 del resistore e i capi fisici è deducibile solo dalla posizione relativa riportata nel JSON, non da nomi terminali standardizzati nell'immagine.
+- Lo stato aperto dello switch è coerente con il simbolo visibile, ma la denominazione t1/t2 dei suoi due terminali non è marcata nell'immagine.
 
 ### a03
 
 - Batch: `A`
-- Score: `72`
+- Score: `67`
 - Fedeltà: `MEDIUM`
 - Usabile come graph base: `True`
-- Spiegazione: Il JSON riconosce gran parte della struttura principale del lato DC: LDR/resistenze, due transistor, bobina del relè e nodi principali sono in parte coerenti. Tuttavia introduce due batterie al posto di una sorgente, modella D1 come LED, non rappresenta correttamente il relè come bobina con contatto associato e lascia incompleto il circuito AC di destra con sorgente, contatto e lampada. La topologia è ancora recuperabile, ma contiene errori importanti.
+- Spiegazione: Il JSON riconosce diversi elementi principali del circuito di controllo, inclusi due transistor, resistori, RV1, bobina, diodo, sorgente e lampada, e molte connessioni centrali sono recuperabili. Tuttavia scambia la LDR con una batteria, lascia non connesso il negativo della batteria principale, modella il relè come induttore e switch separati con collegamenti del carico incompleti, e classifica il diodo come LED. La fedeltà topologica è quindi parziale ma ancora utilizzabile come base di correzione.
 
 **Errori critici:**
-- Il diodo D1 visibile in parallelo alla bobina del relè è rappresentato nel JSON come LED e collegato con polarità/nodi incoerenti rispetto all'immagine.
+- Il relè visibile nell'immagine, composto da bobina e contatti di commutazione, è rappresentato nel JSON come un induttore isolato più uno switch separato non collegato correttamente alla bobina e al circuito di carico. Questo altera una parte importante della topologia tra circuito di controllo e circuito di potenza.
 
 **Errori maggiori:**
-- Il contatto del relè RL1 visibile sul lato destro del circuito non è rappresentato correttamente come parte del relè o come interruttore collegato nel circuito di carico; il JSON contiene uno switch isolato solo parzialmente collegato.
-- Il carico L1 visibile come lampada/carico AC è rappresentato come `Lamp`, ma i collegamenti al generatore AC e al contatto RL1 sono incompleti.
-- La sorgente B1 visibile è una singola batteria/alimentazione DC; il JSON contiene due componenti Battery separati, con una batteria usata per il nodo positivo e l'altra per il nodo negativo.
-- Il circuito AC di destra è spezzato nel JSON: il terminale superiore della sorgente AC e un terminale dello switch risultano non collegati, mentre nell'immagine formano il loop con contatto RL1 e lampada.
+- Il componente LDR visibile nell'immagine non è rappresentato come LDR/fotoresistenza nel JSON; è stato modellato come una batteria aggiuntiva.
+- Il JSON include una seconda batteria che non corrisponde a un secondo generatore DC separato nell'immagine; quella posizione corrisponde visivamente alla LDR.
+- Il nodo inferiore comune dell'alimentazione DC è associato nel JSON al negativo della batteria sbagliata, lasciando non connesso il negativo della batteria principale.
+- Il contatto del relè nel circuito di carico è incompleto: il ramo con sorgente AC, contatto RL1 e lampada dovrebbe formare un circuito chiuso, ma nel JSON una estremità della sorgente e una estremità dello switch risultano non connesse.
 
 **Errori minori:**
-- La bobina del relè è rappresentata come `Inductor`; topologicamente può corrispondere alla bobina, ma non preserva la semantica di relè con contatto associato.
-- Il JSON assegna allo switch lo stato `closed`, ma nell'immagine il contatto RL1 appare graficamente aperto; lo stato elettrico comandato dal relè non è deducibile con certezza come stato fisso.
+- Il diodo D1 è rappresentato come LED; il simbolo visibile è un diodo generico, non un LED.
+- Il resistore variabile RV1 è rappresentato con due terminali, mentre nell'immagine è visibile anche il cursore collegato al rail inferiore; tuttavia il cursore sembra cortocircuitato al terminale inferiore, quindi l'impatto topologico è limitato.
 
 **Punti incerti:**
-- La corrispondenza esatta tra `resistor22.1`, `variable_resistor30.1` e i simboli LDR/RV1 è parzialmente ambigua perché il JSON usa classi generiche e terminali a due pin, mentre l'immagine mostra un LDR e un potenziometro/regolazione.
-- La polarità esatta del diodo D1 è visibile graficamente ma la resa del simbolo nell'immagine non consente una verifica robusta dei nomi anodo/catodo nel JSON senza ambiguità.
-- La posizione dei terminali base/collettore/emettitore dei due transistor è coerente a grandi linee, ma il simbolo non permette di validare con assoluta certezza ogni terminal name oltre alla topologia dei collegamenti visibili.
+- La polarità esatta del diodo D1 è visibile solo parzialmente e non viene usata come errore principale.
+- L'associazione dei nomi terminali t1/t2 per resistori, bobina, lampada e sorgente non è verificabile con certezza dall'immagine.
+- Lo stato meccanico del contatto del relè è rappresentato nel JSON come switch chiuso, ma nell'immagine il simbolo del contatto non consente una verifica certa dello stato operativo.
 
 ### a04
 
 - Batch: `A`
-- Score: `92`
+- Score: `95`
 - Fedeltà: `VERY_HIGH`
 - Usabile come graph base: `True`
-- Spiegazione: Il JSON rappresenta molto bene la topologia principale: sorgente di segnale accoppiata tramite condensatore alla base del transistor, rete di polarizzazione con due resistori, collettore con resistore verso la linea superiore e condensatore di uscita verso il carico, emettitore con resistore e condensatore verso massa, batteria tra linea superiore e rete inferiore, e GND sulla rete inferiore. Non emergono collegamenti errati rilevanti nel campo graph. Le discrepanze sono soprattutto semantiche o di etichettatura visibile, non strutturali.
-
-**Errori maggiori:**
-- Il riferimento di massa visibile nell'immagine è etichettato come X1/GND sul nodo inferiore centrale; il JSON include correttamente un componente GND collegato alla rete inferiore, ma non conserva l'etichetta visibile X1. Questo non altera la connettività principale, ma perde una semantica topologica visibile.
+- Spiegazione: Il Graph JSON rappresenta molto fedelmente il circuito visibile: sono presenti sorgente di segnale, batteria, transistor NPN, cinque resistori, tre condensatori e GND. Le reti principali corrispondono all'immagine: nodo superiore di alimentazione, massa comune inferiore, rete di base con condensatore di ingresso e partitore, collettore con resistore verso alimentazione e condensatore di uscita, emettitore con resistore e condensatore verso massa. Restano solo lievi limiti semantici su polarità/etichette, senza compromissione topologica.
 
 **Errori minori:**
-- Le sigle visibili dei componenti non sono preservate nei component_id/instance_id del JSON; la corrispondenza resta comunque deducibile per classe e posizione topologica.
-- Alcune posizioni relative dei terminali sono semplificate rispetto al disegno, in particolare per condensatori accoppiati e sorgenti, ma senza evidente errore topologico nei collegamenti.
+- Alcuni condensatori mostrano una polarità visibile nell'immagine, mentre nel JSON sono modellati genericamente come Capacitor con terminali t1/t2; la topologia dei collegamenti resta comunque coerente.
+- Le etichette visibili dei nodi/componenti principali non sono preservate nel JSON, anche se le classi dei componenti e i collegamenti risultano sostanzialmente corretti.
 
 **Punti incerti:**
-- La polarità dei condensatori polarizzati è visibile graficamente ma il JSON usa terminali generici t1/t2; senza coordinate o marcatori di polarità nel JSON la verifica della polarità esatta resta solo parziale.
-- L'associazione tra i resistori JSON resistor22.1-22.5 e le sigle visive R1-R5 non è esplicitata, anche se la topologia consente una corrispondenza plausibile.
+- L'associazione esatta tra gli identificativi generici dei resistori nel JSON e le sigle visive R1-R5 è deducibile dalla posizione/topologia ma non è esplicitata nel JSON.
+- La polarità precisa dei condensatori rispetto ai terminali t1/t2 non è completamente verificabile dal JSON perché non sono presenti metadati di polarità.
 
 ### a05
 
@@ -102,112 +104,118 @@ Generato: 2026-06-03 18:05:24
 - Score: `94`
 - Fedeltà: `VERY_HIGH`
 - Usabile come graph base: `True`
-- Spiegazione: Il Graph JSON rappresenta molto fedelmente la topologia visibile: sono presenti connettore a 4 pin, switch verso GND, condensatore verso GND, resistore verso misuratore analogico e ritorno a GND. I collegamenti nel campo graph corrispondono ai fili principali dell'immagine. Le discrepanze sono limitate a dettagli descrittivi di orientamento dei pin e a label visibili non riportate.
+- Spiegazione: Il JSON rappresenta correttamente i componenti principali visibili: connettore a 4 pin, switch TEST, più simboli GND, condensatore, resistore e misuratore analogico. I collegamenti principali del graph corrispondono all'immagine: pin 1 tramite resistore al misuratore, pin 2 al condensatore verso massa, pin 3 allo switch verso massa, pin 4 a massa, e terminale destro del misuratore a massa. Le discrepanze sono minori e riguardano soprattutto dettagli di label/posizione dei terminali, non la topologia principale.
 
 **Errori minori:**
-- Nel JSON i pin 3 e 4 del connettore sono indicati con relative_position 'left', mentre nell'immagine i terminali del connettore J15 sono disegnati sul lato sinistro ma il collegamento elettrico prosegue verso sinistra; la distinzione di posizione/orientamento è comunque poco rilevante per la topologia.
-- Nel JSON i pin 1 e 2 del connettore sono indicati con relative_position 'right', mentre nell'immagine i relativi contatti sono sul lato sinistro del simbolo J15 e i fili escono verso destra; è una discrepanza descrittiva dei terminali, non un errore di connessione.
-- La label visibile del connettore e quella del misuratore non sono riportate come proprietà semantiche nel JSON, pur essendo le classi dei componenti riconosciute correttamente.
+- Il misuratore analogico visibile è etichettato VMON nell'immagine, mentre nel JSON è presente solo come Analog_Meter senza riportare la label visibile.
+- I terminali del misuratore sono descritti entrambi come bottom; nell'immagine i due punti di connessione sono nella parte inferiore del simbolo, ma solo quello destro è effettivamente cablato verso massa e quello sinistro appare non collegato.
+- Le posizioni relative dei pin del connettore J15 nel JSON sono semplificate e non riflettono perfettamente la disposizione grafica verticale dei pin visibile nell'immagine.
 
 **Punti incerti:**
-- Lo stato aperto dello switch è coerente con il disegno, ma la separazione grafica dei contatti non permette di valutare aspetti meccanici oltre alla connessione aperta visibile.
-- La corrispondenza esatta tra i nomi pin1-pin4 del connettore nel JSON e la numerazione disegnata è sostanzialmente coerente, ma le relative_position non rappresentano perfettamente la geometria del simbolo.
+- La numerazione pin del connettore J15 è coerente visivamente con le etichette 1-4, ma l'associazione interna ai terminal_id dipende dalla convenzione adottata nel JSON.
+- Lo stato del pulsante/switch TEST appare aperto nell'immagine ed è indicato open nel JSON; la verifica è visiva ma non implica comportamento elettrico.
 
 ### a06
 
 - Batch: `A`
-- Score: `89`
+- Score: `86`
 - Fedeltà: `HIGH`
 - Usabile come graph base: `True`
-- Spiegazione: Il Graph JSON riproduce molto bene la struttura principale: sorgente con massa, resistenza e condensatore di ingresso verso la base, partitore di bias, transistor NPN, rete di collettore, rete di emettitore con condensatore verso massa, condensatore di uscita e carico verso massa. I collegamenti del campo graph sono sostanzialmente coerenti con i fili visibili. Le principali carenze riguardano la semantica dei terminali etichettati, rappresentati come terminali generici, più che errori topologici.
+- Spiegazione: Il JSON riconosce quasi tutti i componenti principali visibili e la topologia dei collegamenti è nel complesso fedele: sorgente, rete di ingresso, partitore di base, transistor, rete di collettore, emettitore con bypass, accoppiamento di uscita e carico risultano collegati coerentemente. Le discrepanze principali riguardano la perdita di label topologiche visibili sui terminali di alimentazione e uscita e la mancata codifica di alcune semantiche/polarità visibili o parzialmente visibili. Non emergono collegamenti del graph gravemente incompatibili con l'immagine.
 
 **Errori maggiori:**
-- Il nodo di alimentazione superiore etichettato Vcc è rappresentato come un generico Terminal; topologicamente il collegamento ai due resistori è corretto, ma la semantica visibile del terminale di alimentazione non è preservata.
+- Il terminale superiore di alimentazione indicato visivamente come Vcc è rappresentato nel JSON solo come Terminal generico, senza conservare la semantica topologica visibile della label.
+- Il terminale inferiore dell'emettitore indicato visivamente come VEE/0 V è rappresentato nel JSON solo come Terminal generico, senza conservare la semantica topologica visibile della label.
 
 **Errori minori:**
-- Il terminale inferiore dell'emettitore, visivamente etichettato come nodo di riferimento/alimentazione inferiore, è rappresentato come Terminal generico.
-- Il terminale di uscita a destra è rappresentato come Terminal generico senza conservare la semantica visibile di uscita.
+- Il terminale di uscita a destra è rappresentato come Terminal generico; la polarità/label visiva dell'uscita non è esplicitamente conservata.
+- I simboli GND visibili sono rappresentati come istanze separate; questo è accettabile graficamente ma non esplicita che appartengano alla stessa reference topologica.
+- Alcuni condensatori polarizzati appaiono con indicazione grafica o label di componente, ma il JSON usa terminali generici senza polarità.
 
 **Punti incerti:**
-- L'immagine mostra più simboli di massa separati; il JSON li rappresenta come componenti GND separati senza indicare esplicitamente se siano lo stesso nodo globale, ma nel campo graph non risultano cortocircuitati tra loro.
-- La polarità dei condensatori non è codificata nel JSON; nell'immagine alcune polarità non sono marcate graficamente in modo univoco dal solo simbolo.
+- La polarità effettiva dei condensatori non è completamente verificabile dal solo schema per tutti i terminali e il JSON non la codifica.
+- L'identificazione esatta di quale resistore JSON corrisponda a ciascun resistore fisico è dedotta dalla posizione e dai collegamenti, non dai valori ignorati.
 
 ### a07
 
 - Batch: `A`
-- Score: `74`
-- Fedeltà: `MEDIUM`
+- Score: `78`
+- Fedeltà: `HIGH`
 - Usabile come graph base: `True`
-- Spiegazione: Il JSON riconosce quasi tutti i componenti principali e molti collegamenti locali: connettore J7, switch RESET verso massa, massa del pin 4, resistore, misuratore, LED e masse. Tuttavia la topologia del trasformatore e della linea superiore è problematica: due terminali del trasformatore sono lasciati non connessi e i collegamenti al pin 1 e al misuratore non rispecchiano chiaramente i fili visibili. La rete del ramo inferiore è abbastanza fedele, ma ci sono discrepanze di polarità del LED e mancano alcune label topologiche visibili. Il grafo resta recuperabile come base, ma la fedeltà complessiva è solo media.
+- Spiegazione: Il JSON riconosce quasi tutti i componenti principali e molte connessioni secondarie, inclusi switch, connettore, resistore, misuratore, LED e masse. La parte più problematica è il trasformatore: il lato sinistro visibilmente collegato a J7 pin 1 e al nodo del resistore/J7 pin 2 è lasciato non connesso, mentre vengono usati terminali del lato destro. La topologia rimane in gran parte recuperabile ma richiede correzioni localizzate importanti.
 
 **Errori maggiori:**
-- Il primario del trasformatore è visibilmente collegato tra il pin 1 del connettore J7 e il terminale superiore del misuratore VAC, ma nel JSON il trasformatore ha due terminali lasciati non connessi e il collegamento al pin 1 è assegnato a un terminale del secondario/lato opposto.
-- Il terminale del misuratore VAC collegato alla linea superiore non risulta collegato direttamente alla stessa rete del pin 1 del connettore come appare nell'immagine, ma passa solo tramite terminali del trasformatore con due terminali non connessi.
-- La rete del pin 2 del connettore, del resistore, del terminale inferiore del misuratore, della massa centrale e dell'anodo del LED è sostanzialmente riconosciuta, ma il collegamento del LED nel JSON usa polarità opposta rispetto al simbolo visibile.
-- Il trasformatore è presente ma la corrispondenza dei suoi quattro terminali nel JSON non rappresenta chiaramente i terminali visibili: due terminali sono lasciati non connessi nonostante nell'immagine entrambe le parti del trasformatore siano attraversate da fili visibili.
+- Il primario del trasformatore visibile a sinistra è collegato tra il pin 1 del connettore e il nodo del resistore/pin 2; nel JSON i terminali transformer28.1_t1 e transformer28.1_t2 risultano non connessi.
+- Il JSON collega il pin 1 del connettore al terminale transformer28.1_t3, che appare invece appartenere al lato destro del trasformatore, mentre nell'immagine il pin 1 è collegato al lato sinistro del trasformatore.
+- Il JSON collega il resistore direttamente al pin 2 del connettore ma non include il collegamento del nodo del resistore al terminale sinistro del trasformatore visibile sull'immagine.
 
 **Errori minori:**
-- La label topologica RESET è visibile vicino allo switch ma non è rappresentata nel JSON come etichetta o metadata.
-- Le label visibili VAC e PWR non sono rappresentate nel JSON come label topologiche associate al misuratore o al LED.
+- I terminali del connettore sono assegnati con relative_position mista destra/sinistra, mentre nell'immagine i quattro pin di J7 sono disposti sul lato sinistro del simbolo del connettore con collegamenti verso l'esterno.
+- Il misuratore analogico è rappresentato come Analog_Meter ma la label visibile VAC non è riportata come semantica; questo non altera molto la topologia.
 
 **Punti incerti:**
-- L'esatta associazione tra i terminal_id t1-t4 del trasformatore e le posizioni grafiche del simbolo non è completamente verificabile senza coordinate, ma la presenza di due terminali non connessi contrasta con i fili visibili.
-- Lo stato open dello switch appare coerente visivamente, ma il disegno stilizzato non permette di verificare dettagli ulteriori dei terminali oltre alla separazione del contatto.
+- La denominazione anode/cathode del LED nel JSON non è verificabile con assoluta certezza dall'immagine senza assumere convenzioni esterne; topologicamente i due terminali risultano comunque collegati ai nodi corretti.
+- L'assegnazione esatta dei terminali t1-t4 del trasformatore non è etichettata nell'immagine; l'errore valutato riguarda la mancata connessione del lato sinistro e non il nome funzionale dei terminali.
 
 ### a08
 
 - Batch: `A`
-- Score: `76`
-- Fedeltà: `HIGH`
+- Score: `67`
+- Fedeltà: `MEDIUM`
 - Usabile come graph base: `True`
-- Spiegazione: Il JSON riconosce quasi tutti i componenti principali e gran parte delle connessioni tra sorgente, resistori, condensatore, LED e transistor. La topologia principale è in larga misura recuperabile. Le discrepanze principali riguardano l'assenza delle label topologiche visibili IN, Trigger e LED e soprattutto la separazione dei due simboli GND, che nell'immagine rappresentano la massa comune. Per questo la fedeltà è buona ma non perfetta.
+- Spiegazione: Il JSON riconosce quasi tutti i componenti principali e gran parte della topologia centrale: sorgente, LED, transistor, condensatore e resistori sono presenti e molti nodi sono coerenti. Tuttavia separa le masse in due reti distinte, omette le label topologiche visibili IN, Trigger e LED, e semplifica R1 come resistore a due terminali nonostante il simbolo variabile. La struttura resta recuperabile, ma la fedeltà topologica è solo parziale.
+
+**Errori critici:**
+- Il JSON collega il terminale inferiore della sorgente di segnale a un GND separato, mentre nell'immagine il riferimento a massa della sorgente è sullo stesso nodo di massa inferiore comune che comprende anche il condensatore e il resistore inferiore.
 
 **Errori maggiori:**
-- Il JSON non rappresenta i terminali/etichette topologiche visibili 'IN', 'Trigger' e 'LED' come nodi o componenti separati; tali label sono utili per la topologia visibile del circuito.
-- Il nodo inferiore della sorgente è collegato solo al proprio simbolo GND separato, mentre nell'immagine il riferimento di massa della sorgente dovrebbe corrispondere alla stessa massa inferiore del resto del circuito.
-- La rete centrale che include il nodo Trigger, il terminale inferiore di R1, il terminale superiore di C1 e l'ingresso della resistenza verso la base del transistor è rappresentata in modo parziale: manca il terminale/label Trigger e la connessione è affidata solo ai componenti discreti.
+- Le etichette topologiche visibili Trigger, IN e LED non sono rappresentate come terminali/net label nel JSON.
+- Il nodo del terminale inferiore del LED e del collettore del transistor dovrebbe includere anche la label visibile LED, assente dal JSON.
+- Il nodo di trigger che unisce condensatore, resistore superiore variabile e ingresso della resistenza verso la base non include la label Trigger visibile.
+- Il componente R1 nell'immagine è disegnato come resistore variabile/potenziometro o trimmer con terminale laterale/slider, mentre nel JSON è rappresentato come semplice resistore a due terminali.
 
 **Errori minori:**
-- La sorgente visibile è descritta genericamente come Signal_Source; la classe è accettabile ma non conserva alcuni dettagli simbolici visibili della sorgente.
-- Alcune posizioni relative dei terminali nei componenti discreti sono semplificate rispetto al disegno, pur senza alterare necessariamente la connessione principale.
+- La polarità anodo/catodo del LED nel JSON è plausibile rispetto al disegno, ma l'immagine non rende tutti i dettagli terminali verificabili con assoluta certezza.
+- Il JSON usa identificativi generici e non conserva i designator visibili dei componenti, pur mantenendo in gran parte le classi dei componenti principali.
 
 **Punti incerti:**
-- La polarità esatta del condensatore non è chiaramente verificabile come informazione topologica dal JSON e dall'immagine.
-- La distinzione funzionale dei pin del transistor è stata valutata solo in base alla disposizione grafica visibile, senza usare pinout esterni.
+- L'immagine mostra R1 come resistore variabile/trimmer; non è completamente verificabile dal solo JSON se la pipeline intendesse semplificarlo intenzionalmente come resistore a due terminali.
+- La distinzione tra i due simboli GND potrebbe essere trattata graficamente come riferimento comune implicito; nel campo graph però non sono connessi, quindi la rete risulta separata.
 
 ### a09
 
 - Batch: `A`
-- Score: `83`
+- Score: `86`
 - Fedeltà: `HIGH`
 - Usabile come graph base: `True`
-- Spiegazione: Il JSON riconosce quasi tutti i componenti principali e gran parte delle connessioni: batteria-fusibile-J1 pin1, J1 pin5 a massa, J1 pin3 verso switch/lampada, e ramo resistore-LED-massa. Gli errori principali riguardano il condensatore, il cui terminale inferiore è unito erroneamente al nodo del pin4/resistore, e la massa mancante sul terminale inferiore della lampada. Nel complesso il grafo è abbastanza fedele e utilizzabile come base di correzione.
+- Spiegazione: Il JSON riconosce quasi tutti i componenti principali e gran parte della topologia: batteria, fusibile, connettore, switch, resistore, LED, lampada, condensatore e GND. La discrepanza principale è il nodo del condensatore, che nel JSON viene unito al nodo di J1 pin4/R3 mentre nell'immagine il terminale inferiore del condensatore va a GND. Inoltre manca il collegamento della lampada a GND. Nel complesso il grafo resta una buona base correggibile.
 
 **Errori maggiori:**
-- Il condensatore è collegato visivamente tra il nodo del pin 2 di J1 e massa; nel JSON il suo terminale inferiore è collegato al nodo di J1 pin4/resistore invece che solo a massa.
-- Il terminale inferiore della lampada è visivamente collegato a massa, ma nel JSON risulta non connesso.
+- Il condensatore è collegato visivamente tra il nodo del pin 2 di J1 e il nodo del pin 4 di J1, con il terminale inferiore a GND; nel JSON il terminale inferiore del condensatore è unito anche al nodo di J1 pin4 e al resistore, mentre visivamente il GND del condensatore è separato dal nodo orizzontale di pin4/resistore.
+- Il terminale inferiore della lampada è collegato visivamente a GND, ma nel JSON risulta non connesso.
 
 **Errori minori:**
-- È presente un simbolo GND extra non collegato nel JSON, non chiaramente corrispondente a un terminale topologico distinto dell'immagine.
-- Lo switch è indicato come open nel JSON; l'immagine mostra effettivamente contatti aperti, ma il collegamento grafico ai terminali resta rappresentato come due lati separati e non come conduzione interna, quindi lo stato è semanticamente solo parzialmente utile.
-- Alcune relative_position dei pin del connettore non sono perfettamente coerenti con la disposizione visiva verticale del connettore, pur non alterando direttamente la topologia.
+- Sono presenti più istanze GND separate, coerenti come simboli visibili, ma una istanza GND extra risulta non connessa.
+- Le relative_position dei pin del connettore sono poco coerenti: nel disegno tutti i pin di J1 sono sul lato sinistro del connettore grafico, mentre nel JSON alcuni sono indicati a destra.
+- Il JSON segnala gnd9.5_t1 come terminale non connesso; questo corrisponde a un GND extra non agganciato alla topologia.
 
 **Punti incerti:**
-- La polarità/nominazione anode-cathode del LED non è verificabile con assoluta certezza solo dal simbolo e dall'orientamento nel JSON, anche se la connessione topologica resistore-LED-GND è presente.
-- L'associazione esatta degli identificativi GND multipli ai singoli simboli di massa dell'immagine non è completamente verificabile, poiché i simboli GND sono separati e nel JSON sono modellati come componenti distinti.
+- L'immagine mostra il simbolo dell'interruttore aperto; lo stato open nel JSON appare coerente, ma la verifica non dipende da dettagli funzionali.
+- La polarità esatta del LED è visibile come simbolo, ma l'associazione anode/cathode nel JSON non è completamente verificabile senza interpretazione del verso del simbolo.
 
 ### a10
 
 - Batch: `A`
-- Score: `96`
+- Score: `93`
 - Fedeltà: `VERY_HIGH`
 - Usabile come graph base: `True`
-- Spiegazione: Il Graph JSON corrisponde molto bene alla topologia visibile: batteria verso switch, switch verso pin 1 del connettore, pin 2 verso resistore e LED a massa, pin 3 verso lampada a massa, pin 4 a massa. I componenti principali sono presenti e i collegamenti del campo graph risultano sostanzialmente fedeli. Restano solo lievi imprecisioni descrittive su orientamenti dei pin e semantica delle masse separate.
+- Spiegazione: Il Graph JSON rappresenta molto fedelmente i componenti visibili e i collegamenti principali: batteria a switch, switch a pin 1 del connettore, pin 2 a resistore e LED verso GND, pin 3 a lampada verso GND, pin 4 a GND, e negativo batteria a GND. Non risultano collegamenti topologici mancanti o extra nel campo graph. Le discrepanze sono limitate a dettagli accessori di orientamento dei terminali e verificabilità della polarità.
 
 **Errori minori:**
-- Nel JSON i pin del connettore hanno posizioni relative left/right non pienamente coerenti con il disegno, dove i quattro pin sono contatti sul lato destro del blocco con collegamenti esterni; questo non compromette la topologia.
-- Il JSON rappresenta i simboli GND separati come istanze distinte; nell'immagine sono simboli di massa separati graficamente. La scelta è accettabile topologicamente, ma non esplicita un'eventuale equivalenza globale dei simboli GND.
+- Gli orientamenti relativi dei pin del connettore sono parzialmente incoerenti: nell'immagine tutti i pin di J1 si collegano graficamente dal lato destro verso i rispettivi fili esterni o dal lato sinistro per il pin 4, mentre nel JSON pin1 e pin4 sono indicati left e pin2/pin3 right. Questo non altera la topologia del campo graph.
+- Il JSON indica lo switch come open; l'immagine mostra effettivamente un contatto aperto, ma lo stato non è un collegamento nel campo graph e quindi resta una semantica visiva accessoria.
+- La polarità dell'LED nel JSON è plausibile rispetto al simbolo, ma la verifica precisa anodo/catodo dal solo disegno può essere parzialmente ambigua.
 
 **Punti incerti:**
-- Lo stato aperto dello switch è visibile e coerente, ma la valutazione dello stato meccanico esatto resta limitata alla simbologia grafica.
-- La polarità precisa del LED è indicata nel JSON come anodo in alto e catodo in basso; dall'immagine la connessione superiore arriva dal resistore e quella inferiore va a massa, ma la verifica dei nomi anodo/catodo dipende dall'interpretazione del simbolo.
+- La corrispondenza esatta tra i terminali anode/cathode dell'LED e la geometria del simbolo è solo parzialmente verificabile dall'immagine.
+- Gli orientamenti relativi left/right dei pin del connettore non sono essenziali per la topologia e sono in parte ambigui rispetto al disegno.

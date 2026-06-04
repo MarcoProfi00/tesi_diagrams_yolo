@@ -8,14 +8,14 @@
     "image_file": "a01.png",
     "json_file": "a01.json",
     "judge_model": "gpt-5.5",
-    "timestamp": "2026-06-03 18:02:55",
-    "judge_latency_seconds": 12.205,
+    "timestamp": "2026-06-04 11:45:04",
+    "judge_latency_seconds": 16.518,
     "input_json_valid": true,
     "input_json_error": null,
     "parsed_ok": true,
     "parse_error": null
   },
-  "judge_usage": "ResponseUsage(input_tokens=5113, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=481, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=5594)",
+  "judge_usage": "ResponseUsage(input_tokens=5113, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=793, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=5906)",
   "judge_result": {
     "circuit_id": "a01",
     "batch": "A",
@@ -25,36 +25,52 @@
     "decision": "VERY_HIGH",
     "usable_as_graph_base": true,
     "scores": {
-      "components": 24,
+      "components": 25,
       "terminals_pins": 19,
       "graph_connections": 42,
-      "visible_semantics": 9
+      "visible_semantics": 8
     },
     "error_counts": {
       "critical": 0,
       "major": 0,
-      "minor": 2
+      "minor": 3
     },
     "critical_errors": [],
     "major_errors": [],
     "minor_errors": [
       {
-        "type": "component_label_semantics",
-        "description": "Il connettore visibile è etichettato J2 nell'immagine, mentre nel JSON è rappresentato genericamente come Connector senza label visibile associata."
+        "type": "connector_pin_positions",
+        "description": "Nel JSON i pin del connettore hanno relative_position incoerenti: pin1 e pin2 sono indicati a destra mentre nell'immagine i terminali di J2 escono a destra ma i fori/pin sono sul lato sinistro del simbolo; pin3 e pin4 sono indicati a sinistra pur essendo collegati verso sinistra/giù in modo parzialmente ambiguo. Questo non altera sostanzialmente la topologia."
       },
       {
-        "type": "terminal_position_inconsistency",
-        "description": "Nel JSON i pin 1 e 2 del connettore hanno relative_position 'right' e i pin 3 e 4 'left', ma nell'immagine i quattro terminali grafici sono sul lato interno destro del corpo del connettore; la numerazione dei pin è comunque corretta e i collegamenti risultano coerenti."
+        "type": "led_polarity_uncertainty",
+        "description": "Il JSON assegna anodo a sinistra e catodo a destra per il LED; la direzione del simbolo nell'immagine è compatibile, ma la verifica puntuale della polarità può essere leggermente ambigua per la resa grafica."
+      },
+      {
+        "type": "switch_state_semantics",
+        "description": "Lo switch è dichiarato open e l'immagine mostra un contatto aperto; tuttavia il campo graph collega comunque ciascun terminale al proprio nodo esterno, non rappresentando esplicitamente l'assenza di conduzione interna. Come descrizione topologica dei fili esterni è comunque coerente."
       }
     ],
     "missing_from_json": [],
     "extra_in_json": [],
-    "wrong_graph_connections": [],
-    "uncertain_points": [
-      "La polarità anodo/catodo del LED è coerente con il simbolo visibile, ma la verifica dipende dall'interpretazione grafica del simbolo; non emergono comunque collegamenti incompatibili.",
-      "Lo stato 'open' dello switch nel JSON appare coerente con il disegno, ma la distanza del contatto mobile dal terminale destro è una rappresentazione schematica e non un'informazione elettrica misurabile."
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "Pin 1 del connettore collegato al resistore superiore, poi al LED, poi al nodo di ritorno a GND destro.",
+        "found_in_json": "connector5.1_pin1 -> resistor22.2_t1 -> resistor22.2_t2 -> led12.1_anode -> led12.1_cathode -> gnd9.3_t1",
+        "severity": "minor"
+      },
+      {
+        "expected_from_image": "Pin 2 del connettore collegato al resistore inferiore, poi alla lampada, poi allo stesso nodo di ritorno a GND destro.",
+        "found_in_json": "connector5.1_pin2 -> resistor22.1_t1 -> resistor22.1_t2 -> lamp13.1_t1 -> lamp13.1_t2 -> gnd9.3_t1",
+        "severity": "minor"
+      }
     ],
-    "short_explanation": "Il Graph JSON riproduce molto fedelmente i componenti principali visibili: connettore a 4 pin, switch, tre simboli GND, due resistori, LED e lampada. I collegamenti principali corrispondono all'immagine: pin 1 verso resistore e LED, pin 2 verso resistore e lampada, pin 3 verso switch, pin 4 verso GND, switch verso GND, e ritorno comune di LED e lampada verso GND. Le discrepanze sono minori e riguardano soprattutto label/posizioni descrittive, non la topologia."
+    "uncertain_points": [
+      "La numerazione dei pin del connettore J2 è visibile e il JSON la rappresenta come pin1-pin4; l'orientamento relativo dei terminali nel JSON è però solo descrittivo e non sempre verificabile con precisione dall'immagine.",
+      "L'associazione tra gli instance_id dei due resistori e le loro posizioni superiore/inferiore non è semanticamente nominata nel JSON; risulta comunque coerente tramite i collegamenti del graph.",
+      "Il nome di classe Lamp per il simbolo della lampada è coerente, ma il simbolo include dettagli grafici interni non rappresentati nei terminali JSON, senza impatto topologico."
+    ],
+    "short_explanation": "Il Graph JSON rispecchia molto bene la topologia visibile: sono presenti connettore a 4 pin, switch aperto verso GND, due resistori, LED, lampada e i tre riferimenti GND. I collegamenti principali da J2 ai due rami LED/lampada e ai GND sono corretti. Restano solo piccole incertezze su posizioni relative/polarità e sulla semantica dello switch aperto, senza compromettere la struttura del grafo."
   },
-  "raw_model_output": "{\"circuit_id\":\"a01\",\"batch\":\"A\",\"image_file\":\"a01.png\",\"json_file\":\"a01.json\",\"image_graph_fidelity_score\":94,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":24,\"terminals_pins\":19,\"graph_connections\":42,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":2},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"component_label_semantics\",\"description\":\"Il connettore visibile è etichettato J2 nell'immagine, mentre nel JSON è rappresentato genericamente come Connector senza label visibile associata.\"},{\"type\":\"terminal_position_inconsistency\",\"description\":\"Nel JSON i pin 1 e 2 del connettore hanno relative_position 'right' e i pin 3 e 4 'left', ma nell'immagine i quattro terminali grafici sono sul lato interno destro del corpo del connettore; la numerazione dei pin è comunque corretta e i collegamenti risultano coerenti.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"La polarità anodo/catodo del LED è coerente con il simbolo visibile, ma la verifica dipende dall'interpretazione grafica del simbolo; non emergono comunque collegamenti incompatibili.\",\"Lo stato 'open' dello switch nel JSON appare coerente con il disegno, ma la distanza del contatto mobile dal terminale destro è una rappresentazione schematica e non un'informazione elettrica misurabile.\"],\"short_explanation\":\"Il Graph JSON riproduce molto fedelmente i componenti principali visibili: connettore a 4 pin, switch, tre simboli GND, due resistori, LED e lampada. I collegamenti principali corrispondono all'immagine: pin 1 verso resistore e LED, pin 2 verso resistore e lampada, pin 3 verso switch, pin 4 verso GND, switch verso GND, e ritorno comune di LED e lampada verso GND. Le discrepanze sono minori e riguardano soprattutto label/posizioni descrittive, non la topologia.\"}"
+  "raw_model_output": "{\"circuit_id\":\"a01\",\"batch\":\"A\",\"image_file\":\"a01.png\",\"json_file\":\"a01.json\",\"image_graph_fidelity_score\":94,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":25,\"terminals_pins\":19,\"graph_connections\":42,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":3},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"connector_pin_positions\",\"description\":\"Nel JSON i pin del connettore hanno relative_position incoerenti: pin1 e pin2 sono indicati a destra mentre nell'immagine i terminali di J2 escono a destra ma i fori/pin sono sul lato sinistro del simbolo; pin3 e pin4 sono indicati a sinistra pur essendo collegati verso sinistra/giù in modo parzialmente ambiguo. Questo non altera sostanzialmente la topologia.\"},{\"type\":\"led_polarity_uncertainty\",\"description\":\"Il JSON assegna anodo a sinistra e catodo a destra per il LED; la direzione del simbolo nell'immagine è compatibile, ma la verifica puntuale della polarità può essere leggermente ambigua per la resa grafica.\"},{\"type\":\"switch_state_semantics\",\"description\":\"Lo switch è dichiarato open e l'immagine mostra un contatto aperto; tuttavia il campo graph collega comunque ciascun terminale al proprio nodo esterno, non rappresentando esplicitamente l'assenza di conduzione interna. Come descrizione topologica dei fili esterni è comunque coerente.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Pin 1 del connettore collegato al resistore superiore, poi al LED, poi al nodo di ritorno a GND destro.\",\"found_in_json\":\"connector5.1_pin1 -> resistor22.2_t1 -> resistor22.2_t2 -> led12.1_anode -> led12.1_cathode -> gnd9.3_t1\",\"severity\":\"minor\"},{\"expected_from_image\":\"Pin 2 del connettore collegato al resistore inferiore, poi alla lampada, poi allo stesso nodo di ritorno a GND destro.\",\"found_in_json\":\"connector5.1_pin2 -> resistor22.1_t1 -> resistor22.1_t2 -> lamp13.1_t1 -> lamp13.1_t2 -> gnd9.3_t1\",\"severity\":\"minor\"}],\"uncertain_points\":[\"La numerazione dei pin del connettore J2 è visibile e il JSON la rappresenta come pin1-pin4; l'orientamento relativo dei terminali nel JSON è però solo descrittivo e non sempre verificabile con precisione dall'immagine.\",\"L'associazione tra gli instance_id dei due resistori e le loro posizioni superiore/inferiore non è semanticamente nominata nel JSON; risulta comunque coerente tramite i collegamenti del graph.\",\"Il nome di classe Lamp per il simbolo della lampada è coerente, ma il simbolo include dettagli grafici interni non rappresentati nei terminali JSON, senza impatto topologico.\"],\"short_explanation\":\"Il Graph JSON rispecchia molto bene la topologia visibile: sono presenti connettore a 4 pin, switch aperto verso GND, due resistori, LED, lampada e i tre riferimenti GND. I collegamenti principali da J2 ai due rami LED/lampada e ai GND sono corretti. Restano solo piccole incertezze su posizioni relative/polarità e sulla semantica dello switch aperto, senza compromettere la struttura del grafo.\"}"
 }

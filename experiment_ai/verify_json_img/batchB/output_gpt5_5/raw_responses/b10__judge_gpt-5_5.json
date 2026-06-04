@@ -8,109 +8,93 @@
     "image_file": "b10.jpg",
     "json_file": "b10.json",
     "judge_model": "gpt-5.5",
-    "timestamp": "2026-06-03 18:06:59",
-    "judge_latency_seconds": 25.849,
+    "timestamp": "2026-06-04 11:53:14",
+    "judge_latency_seconds": 25.749,
     "input_json_valid": true,
     "input_json_error": null,
     "parsed_ok": true,
     "parse_error": null
   },
-  "judge_usage": "ResponseUsage(input_tokens=7679, input_tokens_details=InputTokensDetails(cached_tokens=6912), output_tokens=1462, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=9141)",
+  "judge_usage": "ResponseUsage(input_tokens=7679, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=1303, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=8982)",
   "judge_result": {
     "circuit_id": "b10",
     "batch": "B",
     "image_file": "b10.jpg",
     "json_file": "b10.json",
-    "image_graph_fidelity_score": 62,
-    "decision": "MEDIUM",
+    "image_graph_fidelity_score": 80,
+    "decision": "HIGH",
     "usable_as_graph_base": true,
     "scores": {
-      "components": 18,
-      "terminals_pins": 13,
-      "graph_connections": 24,
+      "components": 22,
+      "terminals_pins": 17,
+      "graph_connections": 34,
       "visible_semantics": 7
     },
     "error_counts": {
-      "critical": 1,
-      "major": 4,
-      "minor": 2
+      "critical": 0,
+      "major": 3,
+      "minor": 3
     },
-    "critical_errors": [
-      {
-        "type": "wrong_net_merge",
-        "description": "Il JSON unisce sullo stesso nodo il terminale A con il nodo centrale C, mentre nell'immagine A e C sono separati da un condensatore e non sono lo stesso nodo.",
-        "image_evidence": "Il nodo A a sinistra alimenta la barra sinistra; il nodo C è il punto centrale collegato al terminale VC e al lato destro del condensatore tra A e C. Tra A e C è disegnato un condensatore, quindi i due nodi non sono cortocircuitati.",
-        "json_evidence": "Nel graph, current_source6.1_current_from, polarized_capacitor20.2_positive, polarized_capacitor20.3_positive, resistor22.1_t1, resistor22.2_t1 e terminal26.1_t1 sono tutti nella stessa net; ciò include terminale A, lato positivo di C_AC e lato sinistro di C_AB, fondendo A e C."
-      }
-    ],
+    "critical_errors": [],
     "major_errors": [
       {
-        "type": "missing_component",
-        "description": "Manca un terminale visibile associato al nodo centrale VC sotto C.",
-        "image_evidence": "Sotto il nodo C sono visibili due piccoli terminali/circoletti verticali etichettati VC, uno collegato al nodo C e uno sulla linea verticale verso massa.",
-        "json_evidence": "Il JSON contiene terminal26.1, terminal26.2, terminal26.3 e terminal26.4, ma non rappresenta distintamente entrambi i terminali visibili di VC; terminal26.3 è collegato alla net tra due condensatori e terminal26.2 alla massa, senza una chiara corrispondenza completa ai due punti VC."
+        "type": "component_class_mismatch",
+        "description": "I condensatori non polarizzati visibili tra A-C, A-B e B-C sono rappresentati nel JSON come Polarized_Capacitor, introducendo polarità non visibile per questi elementi.",
+        "image_evidence": "I condensatori C_AB, C_AC e C_BC sono disegnati con simbolo a due piastre non polarizzato.",
+        "json_evidence": "polarized_capacitor20.2, polarized_capacitor20.3 e polarized_capacitor20.4 sono class_name Polarized_Capacitor con terminali positive/negative."
       },
       {
         "type": "wrong_graph_connection",
-        "description": "Il condensatore tra A e C è collegato nel JSON tra la net A/C fusa e il nodo B, invece dovrebbe stare tra A e C.",
-        "image_evidence": "Il condensatore C_AC è disegnato orizzontalmente tra la barra sinistra del nodo A e il nodo centrale C.",
-        "json_evidence": "polarized_capacitor20.3_positive è nella net di A insieme a terminal26.1_t1, mentre polarized_capacitor20.3_negative è nella net di B insieme a terminal26.4_t1 e voltage_source31.1_negative."
+        "description": "Il nodo centrale C/VC è erroneamente unito nel JSON al nodo destro B attraverso una rete più ampia, mentre nell'immagine C è separato da B dal condensatore tra C e B e dal terminale VC.",
+        "image_evidence": "Il nodo C è al centro, collegato al terminale VC e ai lati interni dei condensatori C_AC e C_BC; non è direttamente collegato alla barra destra B.",
+        "json_evidence": "terminal26.4_t1 è nella stessa rete di polarized_capacitor20.3_negative, polarized_capacitor20.4_negative, polarized_capacitor20.5_positive, resistor22.2_t2 e voltage_source31.1_negative."
       },
       {
         "type": "wrong_graph_connection",
-        "description": "Il condensatore tra A e B nella parte centrale-superiore è interpretato con un lato collegato al nodo centrale C invece che al nodo A.",
-        "image_evidence": "Il condensatore C_AB è sulla linea orizzontale superiore interna tra la barra sinistra A e la barra destra B, non collegato al nodo centrale C.",
-        "json_evidence": "polarized_capacitor20.2_positive è nella net di A/C fusa, mentre polarized_capacitor20.2_negative è collegato a terminal26.3_t1 e polarized_capacitor20.4_positive, cioè alla net del nodo C."
-      },
-      {
-        "type": "component_class_or_polarity",
-        "description": "I condensatori nell'immagine sono simboli non polarizzati, mentre il JSON li classifica tutti come Polarized_Capacitor con terminali positive/negative.",
-        "image_evidence": "I cinque condensatori visibili sono rappresentati con piastre senza indicazioni di polarità +/-.",
-        "json_evidence": "polarized_capacitor20.1, 20.2, 20.3, 20.4 e 20.5 sono tutti class_name Polarized_Capacitor con terminali positive e negative."
+        "description": "Il ramo resistore r_ON, switch aperto e sorgente di tensione è collegato in modo incompleto/errato: nel JSON la sorgente di tensione positiva è collegata solo allo switch e la negativa alla rete B, ma il nodo tra switch e sorgente e la separazione prodotta dallo switch aperto non sono rappresentati in modo pienamente coerente con i fili visibili.",
+        "image_evidence": "Nell'immagine r_ON parte dal nodo A, poi arriva a un interruttore aperto, poi al terminale positivo della sorgente V_OS e infine al nodo B.",
+        "json_evidence": "resistor22.1_t2 è collegato solo a switch25.1_t1; switch25.1_t2 è collegato solo a voltage_source31.1_positive; voltage_source31.1_negative è nella rete di B/C indicata dal JSON."
       }
     ],
     "minor_errors": [
       {
-        "type": "component_semantics",
-        "description": "I quattro terminali A, B e VC sono rappresentati genericamente come Terminal senza label topologiche visibili A, B, VC."
+        "type": "terminal_label_semantics",
+        "description": "I quattro terminali esterni A, B, C/VC sono rappresentati come terminali generici senza conservare le label visibili."
+      },
+      {
+        "type": "polarity_uncertain_or_overstated",
+        "description": "Alcune polarità positive/negative dei condensatori sono dichiarate nel JSON anche dove l'immagine non mostra una polarità verificabile."
       },
       {
         "type": "source_orientation_uncertainty",
-        "description": "Le sorgenti di corrente sono presenti, ma la corrispondenza esatta delle tre istanze alle frecce visibili non è completamente verificabile dai soli ID e posizioni del JSON."
+        "description": "Le direzioni/terminali current_from e current_to delle sorgenti di corrente non sono sempre verificabili in modo certo dal solo JSON rispetto alla posizione grafica, anche se i componenti principali sono presenti."
       }
     ],
-    "missing_from_json": [
-      "Terminale VC inferiore o superiore rappresentato in modo non distintamente fedele come coppia di terminali visibili",
-      "Label topologiche visibili A, B e VC"
-    ],
+    "missing_from_json": [],
     "extra_in_json": [],
     "wrong_graph_connections": [
       {
-        "expected_from_image": "A e C devono essere nodi distinti separati dal condensatore C_AC.",
-        "found_in_json": "A, il lato sinistro di C_AC e il nodo centrale C risultano nella stessa net tramite terminal26.1_t1, polarized_capacitor20.3_positive e altri terminali.",
-        "severity": "critical"
-      },
-      {
-        "expected_from_image": "Il condensatore C_AC deve collegare A a C.",
-        "found_in_json": "polarized_capacitor20.3 collega la net A/C fusa alla net B.",
+        "expected_from_image": "Il terminale C/VC deve appartenere al nodo centrale tra i condensatori verso A e verso B, non alla barra destra B.",
+        "found_in_json": "terminal26.4_t1 è connesso nella stessa rete di voltage_source31.1_negative, resistor22.2_t2, current_source6.2_current_to e polarized_capacitor20.5_positive, cioè la rete destra/B.",
         "severity": "major"
       },
       {
-        "expected_from_image": "Il condensatore C_AB deve collegare A a B.",
-        "found_in_json": "polarized_capacitor20.2 risulta tra la net A/C fusa e la net centrale C.",
+        "expected_from_image": "Il condensatore tra A e B deve collegare direttamente la rete A alla rete B tramite i suoi due terminali.",
+        "found_in_json": "polarized_capacitor20.2_negative è collegato a terminal26.3_t1 e polarized_capacitor20.4_positive, creando una piccola rete separata che non corrisponde chiaramente alla barra destra B se terminal26.3 è il nodo C/VC.",
         "severity": "major"
       },
       {
-        "expected_from_image": "Il nodo centrale C deve collegarsi al punto tra i condensatori C_AC e C_BC e al terminale VC superiore, rimanendo separato da A e B tramite condensatori.",
-        "found_in_json": "terminal26.3_t1 è collegato a polarized_capacitor20.2_negative e polarized_capacitor20.4_positive, ma il lato di C_AC è stato assorbito nella net A/B errata e la struttura del nodo C è parziale.",
-        "severity": "major"
+        "expected_from_image": "Il ramo r_ON-switch aperto-V_OS deve mantenere i nodi intermedi visibili e la discontinuità dello switch aperto.",
+        "found_in_json": "resistor22.1_t2-switch25.1_t1 e switch25.1_t2-voltage_source31.1_positive sono separati, ma l'associazione dei terminali esterni e della rete di ritorno della sorgente è parzialmente ambigua/errata.",
+        "severity": "minor"
       }
     ],
     "uncertain_points": [
-      "La polarità delle sorgenti di tensione e dei condensatori non è pienamente valutabile come terminali elettrici oltre ai segni visibili della sorgente VOS; non è stato usato alcun pinout o significato funzionale esterno.",
-      "La corrispondenza esatta tra gli ID dei componenti JSON e i singoli simboli omonimi dell'immagine è dedotta dalle connessioni e dalle posizioni relative, non da etichette ID visibili."
+      "L'associazione esatta degli instance_id dei vari condensatori ai simboli C_A, C_B, C_AB, C_AC e C_BC non è esplicitata nel JSON e va dedotta solo dai collegamenti.",
+      "La polarità dei condensatori laterali verso massa non è chiaramente indicata nell'immagine, quindi la polarità dichiarata nel JSON non è pienamente verificabile.",
+      "La corrispondenza tra terminal26.2, terminal26.3 e terminal26.4 e i terminali visibili B, C/VC e il nodo inferiore non è completamente certa solo dai nomi JSON."
     ],
-    "short_explanation": "Il JSON riconosce molti componenti principali e mantiene alcune net corrette, come B con la sorgente di tensione, il ramo verso massa e parte dei rami resistivi/sorgenti. Tuttavia contiene un errore topologico importante: fonde il nodo A con il nodo centrale C e di conseguenza collega in modo errato alcuni condensatori interni. La rappresentazione resta parzialmente recuperabile, ma non è fedele alla topologia completa dell'immagine."
+    "short_explanation": "Il JSON riconosce quasi tutti i componenti principali visibili: terminali, sorgenti di corrente, sorgente di tensione, resistori, switch, GND e condensatori. La topologia principale A/B/massa è in parte ricostruita, ma ci sono discrepanze importanti: diversi condensatori non polarizzati sono modellati come polarizzati, il nodo centrale C/VC risulta probabilmente fuso con la rete destra B, e il ramo con switch aperto e sorgente di tensione è solo parzialmente coerente. Nel complesso il grafo resta una base recuperabile ma non è una rappresentazione perfetta dell'immagine."
   },
-  "raw_model_output": "{\"circuit_id\":\"b10\",\"batch\":\"B\",\"image_file\":\"b10.jpg\",\"json_file\":\"b10.json\",\"image_graph_fidelity_score\":62,\"decision\":\"MEDIUM\",\"usable_as_graph_base\":true,\"scores\":{\"components\":18,\"terminals_pins\":13,\"graph_connections\":24,\"visible_semantics\":7},\"error_counts\":{\"critical\":1,\"major\":4,\"minor\":2},\"critical_errors\":[{\"type\":\"wrong_net_merge\",\"description\":\"Il JSON unisce sullo stesso nodo il terminale A con il nodo centrale C, mentre nell'immagine A e C sono separati da un condensatore e non sono lo stesso nodo.\",\"image_evidence\":\"Il nodo A a sinistra alimenta la barra sinistra; il nodo C è il punto centrale collegato al terminale VC e al lato destro del condensatore tra A e C. Tra A e C è disegnato un condensatore, quindi i due nodi non sono cortocircuitati.\",\"json_evidence\":\"Nel graph, current_source6.1_current_from, polarized_capacitor20.2_positive, polarized_capacitor20.3_positive, resistor22.1_t1, resistor22.2_t1 e terminal26.1_t1 sono tutti nella stessa net; ciò include terminale A, lato positivo di C_AC e lato sinistro di C_AB, fondendo A e C.\"}],\"major_errors\":[{\"type\":\"missing_component\",\"description\":\"Manca un terminale visibile associato al nodo centrale VC sotto C.\",\"image_evidence\":\"Sotto il nodo C sono visibili due piccoli terminali/circoletti verticali etichettati VC, uno collegato al nodo C e uno sulla linea verticale verso massa.\",\"json_evidence\":\"Il JSON contiene terminal26.1, terminal26.2, terminal26.3 e terminal26.4, ma non rappresenta distintamente entrambi i terminali visibili di VC; terminal26.3 è collegato alla net tra due condensatori e terminal26.2 alla massa, senza una chiara corrispondenza completa ai due punti VC.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il condensatore tra A e C è collegato nel JSON tra la net A/C fusa e il nodo B, invece dovrebbe stare tra A e C.\",\"image_evidence\":\"Il condensatore C_AC è disegnato orizzontalmente tra la barra sinistra del nodo A e il nodo centrale C.\",\"json_evidence\":\"polarized_capacitor20.3_positive è nella net di A insieme a terminal26.1_t1, mentre polarized_capacitor20.3_negative è nella net di B insieme a terminal26.4_t1 e voltage_source31.1_negative.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il condensatore tra A e B nella parte centrale-superiore è interpretato con un lato collegato al nodo centrale C invece che al nodo A.\",\"image_evidence\":\"Il condensatore C_AB è sulla linea orizzontale superiore interna tra la barra sinistra A e la barra destra B, non collegato al nodo centrale C.\",\"json_evidence\":\"polarized_capacitor20.2_positive è nella net di A/C fusa, mentre polarized_capacitor20.2_negative è collegato a terminal26.3_t1 e polarized_capacitor20.4_positive, cioè alla net del nodo C.\"},{\"type\":\"component_class_or_polarity\",\"description\":\"I condensatori nell'immagine sono simboli non polarizzati, mentre il JSON li classifica tutti come Polarized_Capacitor con terminali positive/negative.\",\"image_evidence\":\"I cinque condensatori visibili sono rappresentati con piastre senza indicazioni di polarità +/-.\",\"json_evidence\":\"polarized_capacitor20.1, 20.2, 20.3, 20.4 e 20.5 sono tutti class_name Polarized_Capacitor con terminali positive e negative.\"}],\"minor_errors\":[{\"type\":\"component_semantics\",\"description\":\"I quattro terminali A, B e VC sono rappresentati genericamente come Terminal senza label topologiche visibili A, B, VC.\"},{\"type\":\"source_orientation_uncertainty\",\"description\":\"Le sorgenti di corrente sono presenti, ma la corrispondenza esatta delle tre istanze alle frecce visibili non è completamente verificabile dai soli ID e posizioni del JSON.\"}],\"missing_from_json\":[\"Terminale VC inferiore o superiore rappresentato in modo non distintamente fedele come coppia di terminali visibili\",\"Label topologiche visibili A, B e VC\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"A e C devono essere nodi distinti separati dal condensatore C_AC.\",\"found_in_json\":\"A, il lato sinistro di C_AC e il nodo centrale C risultano nella stessa net tramite terminal26.1_t1, polarized_capacitor20.3_positive e altri terminali.\",\"severity\":\"critical\"},{\"expected_from_image\":\"Il condensatore C_AC deve collegare A a C.\",\"found_in_json\":\"polarized_capacitor20.3 collega la net A/C fusa alla net B.\",\"severity\":\"major\"},{\"expected_from_image\":\"Il condensatore C_AB deve collegare A a B.\",\"found_in_json\":\"polarized_capacitor20.2 risulta tra la net A/C fusa e la net centrale C.\",\"severity\":\"major\"},{\"expected_from_image\":\"Il nodo centrale C deve collegarsi al punto tra i condensatori C_AC e C_BC e al terminale VC superiore, rimanendo separato da A e B tramite condensatori.\",\"found_in_json\":\"terminal26.3_t1 è collegato a polarized_capacitor20.2_negative e polarized_capacitor20.4_positive, ma il lato di C_AC è stato assorbito nella net A/B errata e la struttura del nodo C è parziale.\",\"severity\":\"major\"}],\"uncertain_points\":[\"La polarità delle sorgenti di tensione e dei condensatori non è pienamente valutabile come terminali elettrici oltre ai segni visibili della sorgente VOS; non è stato usato alcun pinout o significato funzionale esterno.\",\"La corrispondenza esatta tra gli ID dei componenti JSON e i singoli simboli omonimi dell'immagine è dedotta dalle connessioni e dalle posizioni relative, non da etichette ID visibili.\"],\"short_explanation\":\"Il JSON riconosce molti componenti principali e mantiene alcune net corrette, come B con la sorgente di tensione, il ramo verso massa e parte dei rami resistivi/sorgenti. Tuttavia contiene un errore topologico importante: fonde il nodo A con il nodo centrale C e di conseguenza collega in modo errato alcuni condensatori interni. La rappresentazione resta parzialmente recuperabile, ma non è fedele alla topologia completa dell'immagine.\"}"
+  "raw_model_output": "{\"circuit_id\":\"b10\",\"batch\":\"B\",\"image_file\":\"b10.jpg\",\"json_file\":\"b10.json\",\"image_graph_fidelity_score\":80,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":22,\"terminals_pins\":17,\"graph_connections\":34,\"visible_semantics\":7},\"error_counts\":{\"critical\":0,\"major\":3,\"minor\":3},\"critical_errors\":[],\"major_errors\":[{\"type\":\"component_class_mismatch\",\"description\":\"I condensatori non polarizzati visibili tra A-C, A-B e B-C sono rappresentati nel JSON come Polarized_Capacitor, introducendo polarità non visibile per questi elementi.\",\"image_evidence\":\"I condensatori C_AB, C_AC e C_BC sono disegnati con simbolo a due piastre non polarizzato.\",\"json_evidence\":\"polarized_capacitor20.2, polarized_capacitor20.3 e polarized_capacitor20.4 sono class_name Polarized_Capacitor con terminali positive/negative.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il nodo centrale C/VC è erroneamente unito nel JSON al nodo destro B attraverso una rete più ampia, mentre nell'immagine C è separato da B dal condensatore tra C e B e dal terminale VC.\",\"image_evidence\":\"Il nodo C è al centro, collegato al terminale VC e ai lati interni dei condensatori C_AC e C_BC; non è direttamente collegato alla barra destra B.\",\"json_evidence\":\"terminal26.4_t1 è nella stessa rete di polarized_capacitor20.3_negative, polarized_capacitor20.4_negative, polarized_capacitor20.5_positive, resistor22.2_t2 e voltage_source31.1_negative.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il ramo resistore r_ON, switch aperto e sorgente di tensione è collegato in modo incompleto/errato: nel JSON la sorgente di tensione positiva è collegata solo allo switch e la negativa alla rete B, ma il nodo tra switch e sorgente e la separazione prodotta dallo switch aperto non sono rappresentati in modo pienamente coerente con i fili visibili.\",\"image_evidence\":\"Nell'immagine r_ON parte dal nodo A, poi arriva a un interruttore aperto, poi al terminale positivo della sorgente V_OS e infine al nodo B.\",\"json_evidence\":\"resistor22.1_t2 è collegato solo a switch25.1_t1; switch25.1_t2 è collegato solo a voltage_source31.1_positive; voltage_source31.1_negative è nella rete di B/C indicata dal JSON.\"}],\"minor_errors\":[{\"type\":\"terminal_label_semantics\",\"description\":\"I quattro terminali esterni A, B, C/VC sono rappresentati come terminali generici senza conservare le label visibili.\"},{\"type\":\"polarity_uncertain_or_overstated\",\"description\":\"Alcune polarità positive/negative dei condensatori sono dichiarate nel JSON anche dove l'immagine non mostra una polarità verificabile.\"},{\"type\":\"source_orientation_uncertainty\",\"description\":\"Le direzioni/terminali current_from e current_to delle sorgenti di corrente non sono sempre verificabili in modo certo dal solo JSON rispetto alla posizione grafica, anche se i componenti principali sono presenti.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Il terminale C/VC deve appartenere al nodo centrale tra i condensatori verso A e verso B, non alla barra destra B.\",\"found_in_json\":\"terminal26.4_t1 è connesso nella stessa rete di voltage_source31.1_negative, resistor22.2_t2, current_source6.2_current_to e polarized_capacitor20.5_positive, cioè la rete destra/B.\",\"severity\":\"major\"},{\"expected_from_image\":\"Il condensatore tra A e B deve collegare direttamente la rete A alla rete B tramite i suoi due terminali.\",\"found_in_json\":\"polarized_capacitor20.2_negative è collegato a terminal26.3_t1 e polarized_capacitor20.4_positive, creando una piccola rete separata che non corrisponde chiaramente alla barra destra B se terminal26.3 è il nodo C/VC.\",\"severity\":\"major\"},{\"expected_from_image\":\"Il ramo r_ON-switch aperto-V_OS deve mantenere i nodi intermedi visibili e la discontinuità dello switch aperto.\",\"found_in_json\":\"resistor22.1_t2-switch25.1_t1 e switch25.1_t2-voltage_source31.1_positive sono separati, ma l'associazione dei terminali esterni e della rete di ritorno della sorgente è parzialmente ambigua/errata.\",\"severity\":\"minor\"}],\"uncertain_points\":[\"L'associazione esatta degli instance_id dei vari condensatori ai simboli C_A, C_B, C_AB, C_AC e C_BC non è esplicitata nel JSON e va dedotta solo dai collegamenti.\",\"La polarità dei condensatori laterali verso massa non è chiaramente indicata nell'immagine, quindi la polarità dichiarata nel JSON non è pienamente verificabile.\",\"La corrispondenza tra terminal26.2, terminal26.3 e terminal26.4 e i terminali visibili B, C/VC e il nodo inferiore non è completamente certa solo dai nomi JSON.\"],\"short_explanation\":\"Il JSON riconosce quasi tutti i componenti principali visibili: terminali, sorgenti di corrente, sorgente di tensione, resistori, switch, GND e condensatori. La topologia principale A/B/massa è in parte ricostruita, ma ci sono discrepanze importanti: diversi condensatori non polarizzati sono modellati come polarizzati, il nodo centrale C/VC risulta probabilmente fuso con la rete destra B, e il ramo con switch aperto e sorgente di tensione è solo parzialmente coerente. Nel complesso il grafo resta una base recuperabile ma non è una rappresentazione perfetta dell'immagine.\"}"
 }

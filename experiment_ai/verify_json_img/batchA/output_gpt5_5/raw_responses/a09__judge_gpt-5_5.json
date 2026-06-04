@@ -8,27 +8,27 @@
     "image_file": "a09.png",
     "json_file": "a09.json",
     "judge_model": "gpt-5.5",
-    "timestamp": "2026-06-03 18:05:14",
-    "judge_latency_seconds": 15.286,
+    "timestamp": "2026-06-04 11:47:31",
+    "judge_latency_seconds": 17.682,
     "input_json_valid": true,
     "input_json_error": null,
     "parsed_ok": true,
     "parse_error": null
   },
-  "judge_usage": "ResponseUsage(input_tokens=5804, input_tokens_details=InputTokensDetails(cached_tokens=5376), output_tokens=890, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=6694)",
+  "judge_usage": "ResponseUsage(input_tokens=5804, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=922, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=6726)",
   "judge_result": {
     "circuit_id": "a09",
     "batch": "A",
     "image_file": "a09.png",
     "json_file": "a09.json",
-    "image_graph_fidelity_score": 83,
+    "image_graph_fidelity_score": 86,
     "decision": "HIGH",
     "usable_as_graph_base": true,
     "scores": {
       "components": 24,
-      "terminals_pins": 18,
-      "graph_connections": 34,
-      "visible_semantics": 7
+      "terminals_pins": 17,
+      "graph_connections": 37,
+      "visible_semantics": 8
     },
     "error_counts": {
       "critical": 0,
@@ -39,41 +39,41 @@
     "major_errors": [
       {
         "type": "wrong_graph_connection",
-        "description": "Il condensatore è collegato visivamente tra il nodo del pin 2 di J1 e massa; nel JSON il suo terminale inferiore è collegato al nodo di J1 pin4/resistore invece che solo a massa.",
-        "image_evidence": "C1 ha il terminale superiore sul filo proveniente da J1 pin2 e il terminale inferiore verso un simbolo GND separato.",
-        "json_evidence": "capacitor4.1_t2 è connesso a connector5.1_pin4, gnd9.3_t1 e resistor22.1_t1."
+        "description": "Il condensatore è collegato visivamente tra il nodo del pin 2 di J1 e il nodo del pin 4 di J1, con il terminale inferiore a GND; nel JSON il terminale inferiore del condensatore è unito anche al nodo di J1 pin4 e al resistore, mentre visivamente il GND del condensatore è separato dal nodo orizzontale di pin4/resistore.",
+        "image_evidence": "C1 è disegnato verticalmente tra la linea proveniente da J1 pin2 e un simbolo GND sotto il condensatore; la linea di J1 pin4 passa orizzontalmente verso R3 e attraversa la zona senza essere collegata al terminale inferiore del condensatore.",
+        "json_evidence": "capacitor4.1_t2 è collegato a connector5.1_pin4, gnd9.3_t1 e resistor22.1_t1."
       },
       {
         "type": "missing_graph_connection",
-        "description": "Il terminale inferiore della lampada è visivamente collegato a massa, ma nel JSON risulta non connesso.",
-        "image_evidence": "La lampada a destra ha il terminale inferiore collegato con un filo verticale a un simbolo GND.",
-        "json_evidence": "lamp13.1_t2: [] e warning unconnected_terminals include lamp13.1_t2."
+        "description": "Il terminale inferiore della lampada è collegato visivamente a GND, ma nel JSON risulta non connesso.",
+        "image_evidence": "Il lato inferiore della lampada a destra scende a un simbolo GND.",
+        "json_evidence": "lamp13.1_t2 ha lista vuota ed è segnalato in warnings.unconnected_terminals."
       }
     ],
     "minor_errors": [
       {
-        "type": "extra_component",
-        "description": "È presente un simbolo GND extra non collegato nel JSON, non chiaramente corrispondente a un terminale topologico distinto dell'immagine."
+        "type": "component_duplication_or_ground_instance",
+        "description": "Sono presenti più istanze GND separate, coerenti come simboli visibili, ma una istanza GND extra risulta non connessa."
       },
       {
-        "type": "switch_state",
-        "description": "Lo switch è indicato come open nel JSON; l'immagine mostra effettivamente contatti aperti, ma il collegamento grafico ai terminali resta rappresentato come due lati separati e non come conduzione interna, quindi lo stato è semanticamente solo parzialmente utile."
+        "type": "terminal_pin_orientation",
+        "description": "Le relative_position dei pin del connettore sono poco coerenti: nel disegno tutti i pin di J1 sono sul lato sinistro del connettore grafico, mentre nel JSON alcuni sono indicati a destra."
       },
       {
-        "type": "terminal_orientation",
-        "description": "Alcune relative_position dei pin del connettore non sono perfettamente coerenti con la disposizione visiva verticale del connettore, pur non alterando direttamente la topologia."
+        "type": "unconnected_warning",
+        "description": "Il JSON segnala gnd9.5_t1 come terminale non connesso; questo corrisponde a un GND extra non agganciato alla topologia."
       }
     ],
     "missing_from_json": [
       "Collegamento tra lamp13.1_t2 e il GND visibile sotto la lampada"
     ],
     "extra_in_json": [
-      "Collegamento del nodo capacitor4.1_t2 con connector5.1_pin4 e resistor22.1_t1",
-      "gnd9.5_t1 non connesso"
+      "gnd9.5_t1 come GND non connesso",
+      "Collegamento di capacitor4.1_t2 al nodo connector5.1_pin4/resistor22.1_t1"
     ],
     "wrong_graph_connections": [
       {
-        "expected_from_image": "capacitor4.1_t2 collegato a GND, separato dal nodo J1 pin4/resistore",
+        "expected_from_image": "capacitor4.1_t2 collegato solo al GND sotto C1, separato dal nodo J1 pin4/R3",
         "found_in_json": "capacitor4.1_t2 collegato a connector5.1_pin4, gnd9.3_t1 e resistor22.1_t1",
         "severity": "major"
       },
@@ -84,10 +84,10 @@
       }
     ],
     "uncertain_points": [
-      "La polarità/nominazione anode-cathode del LED non è verificabile con assoluta certezza solo dal simbolo e dall'orientamento nel JSON, anche se la connessione topologica resistore-LED-GND è presente.",
-      "L'associazione esatta degli identificativi GND multipli ai singoli simboli di massa dell'immagine non è completamente verificabile, poiché i simboli GND sono separati e nel JSON sono modellati come componenti distinti."
+      "L'immagine mostra il simbolo dell'interruttore aperto; lo stato open nel JSON appare coerente, ma la verifica non dipende da dettagli funzionali.",
+      "La polarità esatta del LED è visibile come simbolo, ma l'associazione anode/cathode nel JSON non è completamente verificabile senza interpretazione del verso del simbolo."
     ],
-    "short_explanation": "Il JSON riconosce quasi tutti i componenti principali e gran parte delle connessioni: batteria-fusibile-J1 pin1, J1 pin5 a massa, J1 pin3 verso switch/lampada, e ramo resistore-LED-massa. Gli errori principali riguardano il condensatore, il cui terminale inferiore è unito erroneamente al nodo del pin4/resistore, e la massa mancante sul terminale inferiore della lampada. Nel complesso il grafo è abbastanza fedele e utilizzabile come base di correzione."
+    "short_explanation": "Il JSON riconosce quasi tutti i componenti principali e gran parte della topologia: batteria, fusibile, connettore, switch, resistore, LED, lampada, condensatore e GND. La discrepanza principale è il nodo del condensatore, che nel JSON viene unito al nodo di J1 pin4/R3 mentre nell'immagine il terminale inferiore del condensatore va a GND. Inoltre manca il collegamento della lampada a GND. Nel complesso il grafo resta una buona base correggibile."
   },
-  "raw_model_output": "{\"circuit_id\":\"a09\",\"batch\":\"A\",\"image_file\":\"a09.png\",\"json_file\":\"a09.json\",\"image_graph_fidelity_score\":83,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":24,\"terminals_pins\":18,\"graph_connections\":34,\"visible_semantics\":7},\"error_counts\":{\"critical\":0,\"major\":2,\"minor\":3},\"critical_errors\":[],\"major_errors\":[{\"type\":\"wrong_graph_connection\",\"description\":\"Il condensatore è collegato visivamente tra il nodo del pin 2 di J1 e massa; nel JSON il suo terminale inferiore è collegato al nodo di J1 pin4/resistore invece che solo a massa.\",\"image_evidence\":\"C1 ha il terminale superiore sul filo proveniente da J1 pin2 e il terminale inferiore verso un simbolo GND separato.\",\"json_evidence\":\"capacitor4.1_t2 è connesso a connector5.1_pin4, gnd9.3_t1 e resistor22.1_t1.\"},{\"type\":\"missing_graph_connection\",\"description\":\"Il terminale inferiore della lampada è visivamente collegato a massa, ma nel JSON risulta non connesso.\",\"image_evidence\":\"La lampada a destra ha il terminale inferiore collegato con un filo verticale a un simbolo GND.\",\"json_evidence\":\"lamp13.1_t2: [] e warning unconnected_terminals include lamp13.1_t2.\"}],\"minor_errors\":[{\"type\":\"extra_component\",\"description\":\"È presente un simbolo GND extra non collegato nel JSON, non chiaramente corrispondente a un terminale topologico distinto dell'immagine.\"},{\"type\":\"switch_state\",\"description\":\"Lo switch è indicato come open nel JSON; l'immagine mostra effettivamente contatti aperti, ma il collegamento grafico ai terminali resta rappresentato come due lati separati e non come conduzione interna, quindi lo stato è semanticamente solo parzialmente utile.\"},{\"type\":\"terminal_orientation\",\"description\":\"Alcune relative_position dei pin del connettore non sono perfettamente coerenti con la disposizione visiva verticale del connettore, pur non alterando direttamente la topologia.\"}],\"missing_from_json\":[\"Collegamento tra lamp13.1_t2 e il GND visibile sotto la lampada\"],\"extra_in_json\":[\"Collegamento del nodo capacitor4.1_t2 con connector5.1_pin4 e resistor22.1_t1\",\"gnd9.5_t1 non connesso\"],\"wrong_graph_connections\":[{\"expected_from_image\":\"capacitor4.1_t2 collegato a GND, separato dal nodo J1 pin4/resistore\",\"found_in_json\":\"capacitor4.1_t2 collegato a connector5.1_pin4, gnd9.3_t1 e resistor22.1_t1\",\"severity\":\"major\"},{\"expected_from_image\":\"lamp13.1_t2 collegato a GND\",\"found_in_json\":\"lamp13.1_t2 non connesso\",\"severity\":\"major\"}],\"uncertain_points\":[\"La polarità/nominazione anode-cathode del LED non è verificabile con assoluta certezza solo dal simbolo e dall'orientamento nel JSON, anche se la connessione topologica resistore-LED-GND è presente.\",\"L'associazione esatta degli identificativi GND multipli ai singoli simboli di massa dell'immagine non è completamente verificabile, poiché i simboli GND sono separati e nel JSON sono modellati come componenti distinti.\"],\"short_explanation\":\"Il JSON riconosce quasi tutti i componenti principali e gran parte delle connessioni: batteria-fusibile-J1 pin1, J1 pin5 a massa, J1 pin3 verso switch/lampada, e ramo resistore-LED-massa. Gli errori principali riguardano il condensatore, il cui terminale inferiore è unito erroneamente al nodo del pin4/resistore, e la massa mancante sul terminale inferiore della lampada. Nel complesso il grafo è abbastanza fedele e utilizzabile come base di correzione.\"}"
+  "raw_model_output": "{\"circuit_id\":\"a09\",\"batch\":\"A\",\"image_file\":\"a09.png\",\"json_file\":\"a09.json\",\"image_graph_fidelity_score\":86,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":24,\"terminals_pins\":17,\"graph_connections\":37,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":2,\"minor\":3},\"critical_errors\":[],\"major_errors\":[{\"type\":\"wrong_graph_connection\",\"description\":\"Il condensatore è collegato visivamente tra il nodo del pin 2 di J1 e il nodo del pin 4 di J1, con il terminale inferiore a GND; nel JSON il terminale inferiore del condensatore è unito anche al nodo di J1 pin4 e al resistore, mentre visivamente il GND del condensatore è separato dal nodo orizzontale di pin4/resistore.\",\"image_evidence\":\"C1 è disegnato verticalmente tra la linea proveniente da J1 pin2 e un simbolo GND sotto il condensatore; la linea di J1 pin4 passa orizzontalmente verso R3 e attraversa la zona senza essere collegata al terminale inferiore del condensatore.\",\"json_evidence\":\"capacitor4.1_t2 è collegato a connector5.1_pin4, gnd9.3_t1 e resistor22.1_t1.\"},{\"type\":\"missing_graph_connection\",\"description\":\"Il terminale inferiore della lampada è collegato visivamente a GND, ma nel JSON risulta non connesso.\",\"image_evidence\":\"Il lato inferiore della lampada a destra scende a un simbolo GND.\",\"json_evidence\":\"lamp13.1_t2 ha lista vuota ed è segnalato in warnings.unconnected_terminals.\"}],\"minor_errors\":[{\"type\":\"component_duplication_or_ground_instance\",\"description\":\"Sono presenti più istanze GND separate, coerenti come simboli visibili, ma una istanza GND extra risulta non connessa.\"},{\"type\":\"terminal_pin_orientation\",\"description\":\"Le relative_position dei pin del connettore sono poco coerenti: nel disegno tutti i pin di J1 sono sul lato sinistro del connettore grafico, mentre nel JSON alcuni sono indicati a destra.\"},{\"type\":\"unconnected_warning\",\"description\":\"Il JSON segnala gnd9.5_t1 come terminale non connesso; questo corrisponde a un GND extra non agganciato alla topologia.\"}],\"missing_from_json\":[\"Collegamento tra lamp13.1_t2 e il GND visibile sotto la lampada\"],\"extra_in_json\":[\"gnd9.5_t1 come GND non connesso\",\"Collegamento di capacitor4.1_t2 al nodo connector5.1_pin4/resistor22.1_t1\"],\"wrong_graph_connections\":[{\"expected_from_image\":\"capacitor4.1_t2 collegato solo al GND sotto C1, separato dal nodo J1 pin4/R3\",\"found_in_json\":\"capacitor4.1_t2 collegato a connector5.1_pin4, gnd9.3_t1 e resistor22.1_t1\",\"severity\":\"major\"},{\"expected_from_image\":\"lamp13.1_t2 collegato a GND\",\"found_in_json\":\"lamp13.1_t2 non connesso\",\"severity\":\"major\"}],\"uncertain_points\":[\"L'immagine mostra il simbolo dell'interruttore aperto; lo stato open nel JSON appare coerente, ma la verifica non dipende da dettagli funzionali.\",\"La polarità esatta del LED è visibile come simbolo, ma l'associazione anode/cathode nel JSON non è completamente verificabile senza interpretazione del verso del simbolo.\"],\"short_explanation\":\"Il JSON riconosce quasi tutti i componenti principali e gran parte della topologia: batteria, fusibile, connettore, switch, resistore, LED, lampada, condensatore e GND. La discrepanza principale è il nodo del condensatore, che nel JSON viene unito al nodo di J1 pin4/R3 mentre nell'immagine il terminale inferiore del condensatore va a GND. Inoltre manca il collegamento della lampada a GND. Nel complesso il grafo resta una buona base correggibile.\"}"
 }

@@ -8,26 +8,26 @@
     "image_file": "b04.jpg",
     "json_file": "b04.json",
     "judge_model": "gpt-5.5",
-    "timestamp": "2026-06-03 18:04:35",
-    "judge_latency_seconds": 20.382,
+    "timestamp": "2026-06-04 11:50:32",
+    "judge_latency_seconds": 26.08,
     "input_json_valid": true,
     "input_json_error": null,
     "parsed_ok": true,
     "parse_error": null
   },
-  "judge_usage": "ResponseUsage(input_tokens=7073, input_tokens_details=InputTokensDetails(cached_tokens=6400), output_tokens=1134, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=8207)",
+  "judge_usage": "ResponseUsage(input_tokens=7073, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=1256, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=8329)",
   "judge_result": {
     "circuit_id": "b04",
     "batch": "B",
     "image_file": "b04.jpg",
     "json_file": "b04.json",
-    "image_graph_fidelity_score": 85,
+    "image_graph_fidelity_score": 86,
     "decision": "HIGH",
     "usable_as_graph_base": true,
     "scores": {
-      "components": 21,
-      "terminals_pins": 16,
-      "graph_connections": 40,
+      "components": 23,
+      "terminals_pins": 17,
+      "graph_connections": 38,
       "visible_semantics": 8
     },
     "error_counts": {
@@ -39,56 +39,60 @@
     "major_errors": [
       {
         "type": "component_class_mismatch",
-        "description": "Il componente H1 visibile nell'immagine è un dispositivo a tre terminali con simbolo tipo SCR/thyristor, mentre nel JSON è rappresentato come NPN_Transistor. La connettività a tre terminali è in gran parte preservata, ma la classe del componente non corrisponde al simbolo visivo.",
-        "image_evidence": "H1 è disegnato come semiconduttore di potenza a tre terminali collegato tra il nodo sinistro, il nodo superiore destro e un terminale di gate verso D3.",
-        "json_evidence": "Il JSON contiene npn_transistor18.1 con terminali B, C, E per rappresentare quel componente."
+        "description": "Il componente H1 visibile nell'immagine è un SCR/thyristor, mentre nel JSON è classificato come NPN_Transistor. La topologia a tre terminali è in parte recuperabile, ma la classe del componente principale non corrisponde al simbolo visibile.",
+        "image_evidence": "Il simbolo H1/2N3668 mostra un dispositivo controllato a tre terminali di tipo SCR inserito tra il nodo sinistro del secondario e il nodo positivo a destra, con gate collegato al ramo inferiore.",
+        "json_evidence": "Il JSON contiene \"npn_transistor18.1\" con class_name \"NPN_Transistor\" e terminali B, C, E."
       },
       {
         "type": "component_class_mismatch",
-        "description": "Il trasformatore T1 appare con primario e secondario separati, ma il JSON modella il trasformatore con soli quattro terminali semplici senza esplicitare le due bobine visibili; ciò è accettabile topologicamente solo in modo parziale.",
-        "image_evidence": "Nell'immagine T1 mostra due avvolgimenti distinti, primario collegato ai terminali AC e secondario collegato ai nodi 15 e 0.",
-        "json_evidence": "Il JSON contiene transformer28.1 con terminali t1, t2, t3, t4 collegati ai terminali esterni e ai nodi del circuito."
+        "description": "Il componente Q1 visibile nell'immagine è un transistor BJT, mentre nel JSON il dispositivo equivalente è rappresentato come un diodo aggiuntivo, perdendo un componente attivo a tre terminali.",
+        "image_evidence": "Nella parte bassa centrale è visibile Q1/BC148 con tre connessioni: una verso D1/R1-D3, una verso D2 e una verso la linea inferiore comune.",
+        "json_evidence": "Il JSON contiene \"diode7.5\" collegato tra npn_transistor18.1_B e il nodo resistor22.4_t1/resistor22.5_t2, ma non contiene un secondo transistor per Q1."
       }
     ],
     "minor_errors": [
       {
-        "type": "terminal_orientation_mismatch",
-        "description": "Alcune posizioni relative dei terminali dei diodi verticali non sembrano coerenti con l'orientamento grafico visibile, anche se la topologia dei collegamenti resta comprensibile."
+        "type": "terminal_role_mismatch",
+        "description": "I terminali assegnati al componente H1/SCR sono etichettati come B, C, E da transistor NPN; la numerazione/funzione corretta non è verificata dal JSON e non corrisponde semanticamente al simbolo SCR."
       },
       {
-        "type": "semantic_label_loss",
-        "description": "Le etichette visibili dei terminali del secondario del trasformatore e del carico batteria non sono rappresentate come semantica nel JSON."
+        "type": "diode_orientation_uncertainty_or_mismatch",
+        "description": "Alcune polarità dei diodi sono difficili da validare completamente; in particolare il ramo del diodo equivalente a D2/Q1 è rappresentato con una connessione semplificata che non conserva chiaramente la relazione visiva tra D2 e il transistor Q1."
       },
       {
-        "type": "component_naming_generic",
-        "description": "I terminali esterni sono rappresentati genericamente come Terminal senza distinguere visivamente ingresso AC e uscita batteria/carico."
+        "type": "terminal_representation_simplification",
+        "description": "I terminali esterni della batteria/carico e della rete AC sono rappresentati come terminali singoli; ciò è accettabile topologicamente ma manca una descrizione semantica delle label visibili."
       }
     ],
-    "missing_from_json": [],
-    "extra_in_json": [],
+    "missing_from_json": [
+      "Transistor Q1 visibile come componente a tre terminali"
+    ],
+    "extra_in_json": [
+      "diode7.5 usato al posto del transistor Q1"
+    ],
     "wrong_graph_connections": [
       {
-        "expected_from_image": "Il nodo sinistro del secondario del trasformatore si collega al lato sinistro di R1, al lato sinistro di R2 e a un terminale principale di H1.",
-        "found_in_json": "transformer28.1_t2 è connesso a resistor22.1_t1, resistor22.2_t1 e diode7.2_anode; il terminale principale di H1 è rappresentato tramite diode7.2_anode/diode7.3_anode e npn_transistor18.1 ma la classificazione del componente rende il nodo meno chiaro.",
-        "severity": "minor"
+        "expected_from_image": "Q1 deve avere tre terminali distinti: uno verso il nodo D1/R1/D3, uno verso D2, e uno verso la linea inferiore comune.",
+        "found_in_json": "Il JSON rappresenta questa zona con diode7.5 tra npn_transistor18.1_B e il nodo resistor22.4_t1/resistor22.5_t2, senza il terzo terminale di Q1 verso la linea inferiore.",
+        "severity": "major"
       },
       {
-        "expected_from_image": "D1 collega il nodo tra R1 e D3 al nodo di controllo/base-gate di Q1.",
-        "found_in_json": "diode7.1_anode è collegato al nodo resistor22.2_t2/diode7.3_anode e diode7.1_cathode a npn_transistor18.1_C; il collegamento è topologicamente plausibile ma dipende dall'identificazione incerta dei terminali del transistor/SCR.",
-        "severity": "minor"
+        "expected_from_image": "Il componente H1 è un SCR tra il nodo sinistro del secondario e il nodo positivo destro, con terminale di controllo collegato al ramo inferiore verso D3/Q1.",
+        "found_in_json": "Il JSON collega npn_transistor18.1_C a diode7.1_cathode, npn_transistor18.1_E al nodo inferiore/secondario, e npn_transistor18.1_B a diode7.5_cathode: la connettività a tre nodi è in parte coerente ma semanticamente assegnata a un NPN, non a un SCR.",
+        "severity": "major"
       },
       {
-        "expected_from_image": "Il nodo inferiore comune collega il secondario inferiore del trasformatore, Q1, R5, terminale inferiore batteria e ritorno del circuito.",
-        "found_in_json": "npn_transistor18.1_E, resistor22.4_t2, terminal26.4_t1 e transformer28.1_t4 sono uniti correttamente; questa connessione risulta coerente.",
+        "expected_from_image": "Il nodo inferiore comune collega il terminale basso del secondario, l'emettitore di Q1, il terminale inferiore della catena R3-R4-R5 e il terminale basso della batteria/carico.",
+        "found_in_json": "Il nodo inferiore comune è riportato come transformer28.1_t4, resistor22.4_t2, terminal26.4_t1 e npn_transistor18.1_E, ma manca il terminale del transistor Q1 perché Q1 non è rappresentato.",
         "severity": "minor"
       }
     ],
     "uncertain_points": [
-      "L'identificazione automatica tra i singoli diodi JSON diode7.1-diodes7.5 e i diodi etichettati D1-D4/D2 nell'immagine è deducibile dai collegamenti ma non esplicitata dai nomi component_id.",
-      "La polarità esatta di alcuni diodi, in particolare D1 e D2, è visibile ma non sempre facilmente verificabile rispetto ai nomi anode/cathode del JSON senza ambiguità grafica.",
-      "Il simbolo H1 potrebbe essere interpretato dalla pipeline come transistor per la somiglianza a tre terminali, ma visivamente è diverso da Q1."
+      "La corrispondenza esatta tra gli identificativi resistor22.3, resistor22.4, resistor22.5 e i resistori verticali R3, R4, R5 è dedotta dalla posizione e dai collegamenti, ma il JSON non conserva le label originali dell'immagine.",
+      "La polarità esatta di alcuni diodi è valutabile solo visivamente e può essere ambigua a causa della qualità dell'immagine; non tutti gli orientamenti sono penalizzati come errori certi.",
+      "Le label testuali dei terminali esterni AC e batteria/carico sono visibili nell'immagine ma non codificate esplicitamente nel JSON."
     ],
-    "short_explanation": "Il JSON include quasi tutti i componenti principali visibili e riproduce bene la maggior parte delle reti: trasformatore, resistenze, diodi, fusibile, terminali e nodo inferiore comune sono sostanzialmente coerenti. Le principali discrepanze riguardano la classificazione di H1 come transistor NPN invece che come dispositivo tipo SCR/thyristor e una rappresentazione semplificata del trasformatore e dei terminali esterni. La topologia è comunque recuperabile e abbastanza fedele all'immagine."
+    "short_explanation": "Il JSON ricostruisce bene molti componenti e la maggior parte delle reti principali: trasformatore, terminali esterni, resistori, diodi, fusibile e catena verso il carico sono in gran parte coerenti. Gli errori principali riguardano il riconoscimento dei due dispositivi attivi: H1 è classificato come NPN invece che SCR e Q1 manca come transistor a tre terminali, sostituito da un diodo. La topologia generale resta comunque in buona parte recuperabile."
   },
-  "raw_model_output": "{\"circuit_id\":\"b04\",\"batch\":\"B\",\"image_file\":\"b04.jpg\",\"json_file\":\"b04.json\",\"image_graph_fidelity_score\":85,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":21,\"terminals_pins\":16,\"graph_connections\":40,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":2,\"minor\":3},\"critical_errors\":[],\"major_errors\":[{\"type\":\"component_class_mismatch\",\"description\":\"Il componente H1 visibile nell'immagine è un dispositivo a tre terminali con simbolo tipo SCR/thyristor, mentre nel JSON è rappresentato come NPN_Transistor. La connettività a tre terminali è in gran parte preservata, ma la classe del componente non corrisponde al simbolo visivo.\",\"image_evidence\":\"H1 è disegnato come semiconduttore di potenza a tre terminali collegato tra il nodo sinistro, il nodo superiore destro e un terminale di gate verso D3.\",\"json_evidence\":\"Il JSON contiene npn_transistor18.1 con terminali B, C, E per rappresentare quel componente.\"},{\"type\":\"component_class_mismatch\",\"description\":\"Il trasformatore T1 appare con primario e secondario separati, ma il JSON modella il trasformatore con soli quattro terminali semplici senza esplicitare le due bobine visibili; ciò è accettabile topologicamente solo in modo parziale.\",\"image_evidence\":\"Nell'immagine T1 mostra due avvolgimenti distinti, primario collegato ai terminali AC e secondario collegato ai nodi 15 e 0.\",\"json_evidence\":\"Il JSON contiene transformer28.1 con terminali t1, t2, t3, t4 collegati ai terminali esterni e ai nodi del circuito.\"}],\"minor_errors\":[{\"type\":\"terminal_orientation_mismatch\",\"description\":\"Alcune posizioni relative dei terminali dei diodi verticali non sembrano coerenti con l'orientamento grafico visibile, anche se la topologia dei collegamenti resta comprensibile.\"},{\"type\":\"semantic_label_loss\",\"description\":\"Le etichette visibili dei terminali del secondario del trasformatore e del carico batteria non sono rappresentate come semantica nel JSON.\"},{\"type\":\"component_naming_generic\",\"description\":\"I terminali esterni sono rappresentati genericamente come Terminal senza distinguere visivamente ingresso AC e uscita batteria/carico.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Il nodo sinistro del secondario del trasformatore si collega al lato sinistro di R1, al lato sinistro di R2 e a un terminale principale di H1.\",\"found_in_json\":\"transformer28.1_t2 è connesso a resistor22.1_t1, resistor22.2_t1 e diode7.2_anode; il terminale principale di H1 è rappresentato tramite diode7.2_anode/diode7.3_anode e npn_transistor18.1 ma la classificazione del componente rende il nodo meno chiaro.\",\"severity\":\"minor\"},{\"expected_from_image\":\"D1 collega il nodo tra R1 e D3 al nodo di controllo/base-gate di Q1.\",\"found_in_json\":\"diode7.1_anode è collegato al nodo resistor22.2_t2/diode7.3_anode e diode7.1_cathode a npn_transistor18.1_C; il collegamento è topologicamente plausibile ma dipende dall'identificazione incerta dei terminali del transistor/SCR.\",\"severity\":\"minor\"},{\"expected_from_image\":\"Il nodo inferiore comune collega il secondario inferiore del trasformatore, Q1, R5, terminale inferiore batteria e ritorno del circuito.\",\"found_in_json\":\"npn_transistor18.1_E, resistor22.4_t2, terminal26.4_t1 e transformer28.1_t4 sono uniti correttamente; questa connessione risulta coerente.\",\"severity\":\"minor\"}],\"uncertain_points\":[\"L'identificazione automatica tra i singoli diodi JSON diode7.1-diodes7.5 e i diodi etichettati D1-D4/D2 nell'immagine è deducibile dai collegamenti ma non esplicitata dai nomi component_id.\",\"La polarità esatta di alcuni diodi, in particolare D1 e D2, è visibile ma non sempre facilmente verificabile rispetto ai nomi anode/cathode del JSON senza ambiguità grafica.\",\"Il simbolo H1 potrebbe essere interpretato dalla pipeline come transistor per la somiglianza a tre terminali, ma visivamente è diverso da Q1.\"],\"short_explanation\":\"Il JSON include quasi tutti i componenti principali visibili e riproduce bene la maggior parte delle reti: trasformatore, resistenze, diodi, fusibile, terminali e nodo inferiore comune sono sostanzialmente coerenti. Le principali discrepanze riguardano la classificazione di H1 come transistor NPN invece che come dispositivo tipo SCR/thyristor e una rappresentazione semplificata del trasformatore e dei terminali esterni. La topologia è comunque recuperabile e abbastanza fedele all'immagine.\"}"
+  "raw_model_output": "{\"circuit_id\":\"b04\",\"batch\":\"B\",\"image_file\":\"b04.jpg\",\"json_file\":\"b04.json\",\"image_graph_fidelity_score\":86,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":23,\"terminals_pins\":17,\"graph_connections\":38,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":2,\"minor\":3},\"critical_errors\":[],\"major_errors\":[{\"type\":\"component_class_mismatch\",\"description\":\"Il componente H1 visibile nell'immagine è un SCR/thyristor, mentre nel JSON è classificato come NPN_Transistor. La topologia a tre terminali è in parte recuperabile, ma la classe del componente principale non corrisponde al simbolo visibile.\",\"image_evidence\":\"Il simbolo H1/2N3668 mostra un dispositivo controllato a tre terminali di tipo SCR inserito tra il nodo sinistro del secondario e il nodo positivo a destra, con gate collegato al ramo inferiore.\",\"json_evidence\":\"Il JSON contiene \\\"npn_transistor18.1\\\" con class_name \\\"NPN_Transistor\\\" e terminali B, C, E.\"},{\"type\":\"component_class_mismatch\",\"description\":\"Il componente Q1 visibile nell'immagine è un transistor BJT, mentre nel JSON il dispositivo equivalente è rappresentato come un diodo aggiuntivo, perdendo un componente attivo a tre terminali.\",\"image_evidence\":\"Nella parte bassa centrale è visibile Q1/BC148 con tre connessioni: una verso D1/R1-D3, una verso D2 e una verso la linea inferiore comune.\",\"json_evidence\":\"Il JSON contiene \\\"diode7.5\\\" collegato tra npn_transistor18.1_B e il nodo resistor22.4_t1/resistor22.5_t2, ma non contiene un secondo transistor per Q1.\"}],\"minor_errors\":[{\"type\":\"terminal_role_mismatch\",\"description\":\"I terminali assegnati al componente H1/SCR sono etichettati come B, C, E da transistor NPN; la numerazione/funzione corretta non è verificata dal JSON e non corrisponde semanticamente al simbolo SCR.\"},{\"type\":\"diode_orientation_uncertainty_or_mismatch\",\"description\":\"Alcune polarità dei diodi sono difficili da validare completamente; in particolare il ramo del diodo equivalente a D2/Q1 è rappresentato con una connessione semplificata che non conserva chiaramente la relazione visiva tra D2 e il transistor Q1.\"},{\"type\":\"terminal_representation_simplification\",\"description\":\"I terminali esterni della batteria/carico e della rete AC sono rappresentati come terminali singoli; ciò è accettabile topologicamente ma manca una descrizione semantica delle label visibili.\"}],\"missing_from_json\":[\"Transistor Q1 visibile come componente a tre terminali\"],\"extra_in_json\":[\"diode7.5 usato al posto del transistor Q1\"],\"wrong_graph_connections\":[{\"expected_from_image\":\"Q1 deve avere tre terminali distinti: uno verso il nodo D1/R1/D3, uno verso D2, e uno verso la linea inferiore comune.\",\"found_in_json\":\"Il JSON rappresenta questa zona con diode7.5 tra npn_transistor18.1_B e il nodo resistor22.4_t1/resistor22.5_t2, senza il terzo terminale di Q1 verso la linea inferiore.\",\"severity\":\"major\"},{\"expected_from_image\":\"Il componente H1 è un SCR tra il nodo sinistro del secondario e il nodo positivo destro, con terminale di controllo collegato al ramo inferiore verso D3/Q1.\",\"found_in_json\":\"Il JSON collega npn_transistor18.1_C a diode7.1_cathode, npn_transistor18.1_E al nodo inferiore/secondario, e npn_transistor18.1_B a diode7.5_cathode: la connettività a tre nodi è in parte coerente ma semanticamente assegnata a un NPN, non a un SCR.\",\"severity\":\"major\"},{\"expected_from_image\":\"Il nodo inferiore comune collega il terminale basso del secondario, l'emettitore di Q1, il terminale inferiore della catena R3-R4-R5 e il terminale basso della batteria/carico.\",\"found_in_json\":\"Il nodo inferiore comune è riportato come transformer28.1_t4, resistor22.4_t2, terminal26.4_t1 e npn_transistor18.1_E, ma manca il terminale del transistor Q1 perché Q1 non è rappresentato.\",\"severity\":\"minor\"}],\"uncertain_points\":[\"La corrispondenza esatta tra gli identificativi resistor22.3, resistor22.4, resistor22.5 e i resistori verticali R3, R4, R5 è dedotta dalla posizione e dai collegamenti, ma il JSON non conserva le label originali dell'immagine.\",\"La polarità esatta di alcuni diodi è valutabile solo visivamente e può essere ambigua a causa della qualità dell'immagine; non tutti gli orientamenti sono penalizzati come errori certi.\",\"Le label testuali dei terminali esterni AC e batteria/carico sono visibili nell'immagine ma non codificate esplicitamente nel JSON.\"],\"short_explanation\":\"Il JSON ricostruisce bene molti componenti e la maggior parte delle reti principali: trasformatore, terminali esterni, resistori, diodi, fusibile e catena verso il carico sono in gran parte coerenti. Gli errori principali riguardano il riconoscimento dei due dispositivi attivi: H1 è classificato come NPN invece che SCR e Q1 manca come transistor a tre terminali, sostituito da un diodo. La topologia generale resta comunque in buona parte recuperabile.\"}"
 }

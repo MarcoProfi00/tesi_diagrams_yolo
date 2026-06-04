@@ -8,53 +8,66 @@
     "image_file": "a02.png",
     "json_file": "a02.json",
     "judge_model": "gpt-5.5",
-    "timestamp": "2026-06-03 18:03:04",
-    "judge_latency_seconds": 8.744,
+    "timestamp": "2026-06-04 11:45:20",
+    "judge_latency_seconds": 16.754,
     "input_json_valid": true,
     "input_json_error": null,
     "parsed_ok": true,
     "parse_error": null
   },
-  "judge_usage": "ResponseUsage(input_tokens=4738, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=417, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=5155)",
+  "judge_usage": "ResponseUsage(input_tokens=4738, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=748, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=5486)",
   "judge_result": {
     "circuit_id": "a02",
     "batch": "A",
     "image_file": "a02.png",
     "json_file": "a02.json",
-    "image_graph_fidelity_score": 93,
-    "decision": "VERY_HIGH",
+    "image_graph_fidelity_score": 89,
+    "decision": "HIGH",
     "usable_as_graph_base": true,
     "scores": {
       "components": 24,
-      "terminals_pins": 19,
-      "graph_connections": 42,
-      "visible_semantics": 8
+      "terminals_pins": 18,
+      "graph_connections": 38,
+      "visible_semantics": 9
     },
     "error_counts": {
       "critical": 0,
-      "major": 0,
+      "major": 1,
       "minor": 2
     },
     "critical_errors": [],
-    "major_errors": [],
+    "major_errors": [
+      {
+        "type": "graph_connection_extra_or_misassigned_net",
+        "description": "Il JSON collega il terminale negativo della batteria direttamente sia al terminale superiore del resistore sia al terminale sinistro dello switch. Nell'immagine il nodo superiore comune unisce batteria, resistore e lato sinistro dello switch, ma la polarità della batteria nel JSON sembra invertita rispetto al simbolo visibile: il terminale superiore del simbolo batteria è la piastra positiva e va al nodo superiore, mentre il terminale inferiore va al connettore J3 pin 1.",
+        "image_evidence": "Il simbolo batteria a sinistra ha la piastra più lunga in alto collegata alla linea superiore; la linea inferiore scende e si collega a J3 pin 1.",
+        "json_evidence": "Nel graph: battery2.1_negative -> resistor22.1_t1, switch25.1_t1; battery2.1_positive -> connector5.1_pin1."
+      }
+    ],
     "minor_errors": [
       {
-        "type": "component_class_semantics",
-        "description": "Il simbolo di alimentazione a sinistra è rappresentato nel JSON come Battery; topologicamente i due terminali sono coerenti, ma la classe non corrisponde perfettamente alla label/simbolo di alimentazione visibile."
+        "type": "terminal_position_inaccuracy",
+        "description": "Le posizioni relative dei pin del connettore non sono pienamente coerenti con l'immagine: i pin del connettore J3 sono disposti verticalmente sul lato destro del corpo, mentre nel JSON alcuni sono dichiarati left e altri right."
       },
       {
-        "type": "visible_label_not_represented",
-        "description": "La label topologica visibile associata allo switch non è riportata nel JSON; lo switch e il suo stato aperto sono comunque presenti."
+        "type": "component_semantics_label_missing",
+        "description": "Il connettore visibile è etichettato J3 nell'immagine, mentre nel JSON è presente solo come Connector senza conservare tale label visibile."
       }
     ],
     "missing_from_json": [],
     "extra_in_json": [],
-    "wrong_graph_connections": [],
-    "uncertain_points": [
-      "La polarità del condensatore non è indicata chiaramente nell'immagine e il JSON lo rappresenta come condensatore non polarizzato.",
-      "La corrispondenza esatta tra la numerazione fisica del connettore J3 e i pin JSON è coerente visivamente, ma dipende dall'ordine dei terminali disegnati lungo il simbolo."
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "Il terminale superiore della batteria è sul nodo superiore comune con resistore e lato sinistro dello switch; il terminale inferiore della batteria va al pin 1 del connettore.",
+        "found_in_json": "battery2.1_negative è connesso al nodo superiore con resistor22.1_t1 e switch25.1_t1, mentre battery2.1_positive è connesso a connector5.1_pin1.",
+        "severity": "major"
+      }
     ],
-    "short_explanation": "Il JSON riproduce molto bene la topologia visibile: alimentazione verso il pin 1 del connettore, resistore tra il nodo superiore/switch e il pin 2, condensatore dal pin 3 a GND, pin 4 a GND, e switch aperto verso GND. I componenti principali e i collegamenti sono sostanzialmente corretti; restano solo lievi discrepanze semantiche sulla classe dell'alimentazione e su una label visibile non codificata."
+    "uncertain_points": [
+      "La corrispondenza esatta tra i terminali t1/t2 del resistore e i capi fisici è deducibile solo dalla posizione relativa riportata nel JSON, non da nomi terminali standardizzati nell'immagine.",
+      "Lo stato aperto dello switch è coerente con il simbolo visibile, ma la denominazione t1/t2 dei suoi due terminali non è marcata nell'immagine."
+    ],
+    "short_explanation": "Il JSON riconosce correttamente quasi tutti i componenti principali e gran parte della topologia: connettore a 4 pin, resistore verso pin 2, condensatore tra pin 3 e GND, pin 4 a GND e switch aperto verso GND. La principale discrepanza è l'inversione topologica/polarità della batteria nel grafo rispetto al simbolo visibile, che assegna il nodo superiore al terminale negativo e il pin 1 al positivo. Per il resto la struttura è una buona base correggibile."
   },
-  "raw_model_output": "{\"circuit_id\":\"a02\",\"batch\":\"A\",\"image_file\":\"a02.png\",\"json_file\":\"a02.json\",\"image_graph_fidelity_score\":93,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":24,\"terminals_pins\":19,\"graph_connections\":42,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":2},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"component_class_semantics\",\"description\":\"Il simbolo di alimentazione a sinistra è rappresentato nel JSON come Battery; topologicamente i due terminali sono coerenti, ma la classe non corrisponde perfettamente alla label/simbolo di alimentazione visibile.\"},{\"type\":\"visible_label_not_represented\",\"description\":\"La label topologica visibile associata allo switch non è riportata nel JSON; lo switch e il suo stato aperto sono comunque presenti.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"La polarità del condensatore non è indicata chiaramente nell'immagine e il JSON lo rappresenta come condensatore non polarizzato.\",\"La corrispondenza esatta tra la numerazione fisica del connettore J3 e i pin JSON è coerente visivamente, ma dipende dall'ordine dei terminali disegnati lungo il simbolo.\"],\"short_explanation\":\"Il JSON riproduce molto bene la topologia visibile: alimentazione verso il pin 1 del connettore, resistore tra il nodo superiore/switch e il pin 2, condensatore dal pin 3 a GND, pin 4 a GND, e switch aperto verso GND. I componenti principali e i collegamenti sono sostanzialmente corretti; restano solo lievi discrepanze semantiche sulla classe dell'alimentazione e su una label visibile non codificata.\"}"
+  "raw_model_output": "{\"circuit_id\":\"a02\",\"batch\":\"A\",\"image_file\":\"a02.png\",\"json_file\":\"a02.json\",\"image_graph_fidelity_score\":89,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":24,\"terminals_pins\":18,\"graph_connections\":38,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":1,\"minor\":2},\"critical_errors\":[],\"major_errors\":[{\"type\":\"graph_connection_extra_or_misassigned_net\",\"description\":\"Il JSON collega il terminale negativo della batteria direttamente sia al terminale superiore del resistore sia al terminale sinistro dello switch. Nell'immagine il nodo superiore comune unisce batteria, resistore e lato sinistro dello switch, ma la polarità della batteria nel JSON sembra invertita rispetto al simbolo visibile: il terminale superiore del simbolo batteria è la piastra positiva e va al nodo superiore, mentre il terminale inferiore va al connettore J3 pin 1.\",\"image_evidence\":\"Il simbolo batteria a sinistra ha la piastra più lunga in alto collegata alla linea superiore; la linea inferiore scende e si collega a J3 pin 1.\",\"json_evidence\":\"Nel graph: battery2.1_negative -> resistor22.1_t1, switch25.1_t1; battery2.1_positive -> connector5.1_pin1.\"}],\"minor_errors\":[{\"type\":\"terminal_position_inaccuracy\",\"description\":\"Le posizioni relative dei pin del connettore non sono pienamente coerenti con l'immagine: i pin del connettore J3 sono disposti verticalmente sul lato destro del corpo, mentre nel JSON alcuni sono dichiarati left e altri right.\"},{\"type\":\"component_semantics_label_missing\",\"description\":\"Il connettore visibile è etichettato J3 nell'immagine, mentre nel JSON è presente solo come Connector senza conservare tale label visibile.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Il terminale superiore della batteria è sul nodo superiore comune con resistore e lato sinistro dello switch; il terminale inferiore della batteria va al pin 1 del connettore.\",\"found_in_json\":\"battery2.1_negative è connesso al nodo superiore con resistor22.1_t1 e switch25.1_t1, mentre battery2.1_positive è connesso a connector5.1_pin1.\",\"severity\":\"major\"}],\"uncertain_points\":[\"La corrispondenza esatta tra i terminali t1/t2 del resistore e i capi fisici è deducibile solo dalla posizione relativa riportata nel JSON, non da nomi terminali standardizzati nell'immagine.\",\"Lo stato aperto dello switch è coerente con il simbolo visibile, ma la denominazione t1/t2 dei suoi due terminali non è marcata nell'immagine.\"],\"short_explanation\":\"Il JSON riconosce correttamente quasi tutti i componenti principali e gran parte della topologia: connettore a 4 pin, resistore verso pin 2, condensatore tra pin 3 e GND, pin 4 a GND e switch aperto verso GND. La principale discrepanza è l'inversione topologica/polarità della batteria nel grafo rispetto al simbolo visibile, che assegna il nodo superiore al terminale negativo e il pin 1 al positivo. Per il resto la struttura è una buona base correggibile.\"}"
 }

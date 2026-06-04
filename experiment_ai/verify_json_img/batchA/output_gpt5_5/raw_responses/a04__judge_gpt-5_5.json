@@ -8,62 +8,53 @@
     "image_file": "a04.jpg",
     "json_file": "a04.json",
     "judge_model": "gpt-5.5",
-    "timestamp": "2026-06-03 18:03:52",
-    "judge_latency_seconds": 13.578,
+    "timestamp": "2026-06-04 11:46:00",
+    "judge_latency_seconds": 10.807,
     "input_json_valid": true,
     "input_json_error": null,
     "parsed_ok": true,
     "parse_error": null
   },
-  "judge_usage": "ResponseUsage(input_tokens=6310, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=624, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=6934)",
+  "judge_usage": "ResponseUsage(input_tokens=6310, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=446, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=6756)",
   "judge_result": {
     "circuit_id": "a04",
     "batch": "A",
     "image_file": "a04.jpg",
     "json_file": "a04.json",
-    "image_graph_fidelity_score": 92,
+    "image_graph_fidelity_score": 95,
     "decision": "VERY_HIGH",
     "usable_as_graph_base": true,
     "scores": {
-      "components": 24,
-      "terminals_pins": 18,
-      "graph_connections": 41,
-      "visible_semantics": 9
+      "components": 25,
+      "terminals_pins": 19,
+      "graph_connections": 43,
+      "visible_semantics": 8
     },
     "error_counts": {
       "critical": 0,
-      "major": 1,
+      "major": 0,
       "minor": 2
     },
     "critical_errors": [],
-    "major_errors": [
-      {
-        "type": "missing_visible_node_label",
-        "description": "Il riferimento di massa visibile nell'immagine è etichettato come X1/GND sul nodo inferiore centrale; il JSON include correttamente un componente GND collegato alla rete inferiore, ma non conserva l'etichetta visibile X1. Questo non altera la connettività principale, ma perde una semantica topologica visibile.",
-        "image_evidence": "Nell'immagine il simbolo di massa è sotto il nodo inferiore centrale ed è indicato con X1.",
-        "json_evidence": "Il JSON contiene solo il componente gnd9.1 con terminale gnd9.1_t1, senza label X1 o metadati associati."
-      }
-    ],
+    "major_errors": [],
     "minor_errors": [
       {
-        "type": "component_label_mapping_not_preserved",
-        "description": "Le sigle visibili dei componenti non sono preservate nei component_id/instance_id del JSON; la corrispondenza resta comunque deducibile per classe e posizione topologica."
+        "type": "capacitor_polarity_not_encoded",
+        "description": "Alcuni condensatori mostrano una polarità visibile nell'immagine, mentre nel JSON sono modellati genericamente come Capacitor con terminali t1/t2; la topologia dei collegamenti resta comunque coerente."
       },
       {
-        "type": "terminal_orientation_approximation",
-        "description": "Alcune posizioni relative dei terminali sono semplificate rispetto al disegno, in particolare per condensatori accoppiati e sorgenti, ma senza evidente errore topologico nei collegamenti."
+        "type": "semantic_labels_not_preserved",
+        "description": "Le etichette visibili dei nodi/componenti principali non sono preservate nel JSON, anche se le classi dei componenti e i collegamenti risultano sostanzialmente corretti."
       }
     ],
-    "missing_from_json": [
-      "Etichetta visibile X1 associata al simbolo di massa"
-    ],
+    "missing_from_json": [],
     "extra_in_json": [],
     "wrong_graph_connections": [],
     "uncertain_points": [
-      "La polarità dei condensatori polarizzati è visibile graficamente ma il JSON usa terminali generici t1/t2; senza coordinate o marcatori di polarità nel JSON la verifica della polarità esatta resta solo parziale.",
-      "L'associazione tra i resistori JSON resistor22.1-22.5 e le sigle visive R1-R5 non è esplicitata, anche se la topologia consente una corrispondenza plausibile."
+      "L'associazione esatta tra gli identificativi generici dei resistori nel JSON e le sigle visive R1-R5 è deducibile dalla posizione/topologia ma non è esplicitata nel JSON.",
+      "La polarità precisa dei condensatori rispetto ai terminali t1/t2 non è completamente verificabile dal JSON perché non sono presenti metadati di polarità."
     ],
-    "short_explanation": "Il JSON rappresenta molto bene la topologia principale: sorgente di segnale accoppiata tramite condensatore alla base del transistor, rete di polarizzazione con due resistori, collettore con resistore verso la linea superiore e condensatore di uscita verso il carico, emettitore con resistore e condensatore verso massa, batteria tra linea superiore e rete inferiore, e GND sulla rete inferiore. Non emergono collegamenti errati rilevanti nel campo graph. Le discrepanze sono soprattutto semantiche o di etichettatura visibile, non strutturali."
+    "short_explanation": "Il Graph JSON rappresenta molto fedelmente il circuito visibile: sono presenti sorgente di segnale, batteria, transistor NPN, cinque resistori, tre condensatori e GND. Le reti principali corrispondono all'immagine: nodo superiore di alimentazione, massa comune inferiore, rete di base con condensatore di ingresso e partitore, collettore con resistore verso alimentazione e condensatore di uscita, emettitore con resistore e condensatore verso massa. Restano solo lievi limiti semantici su polarità/etichette, senza compromissione topologica."
   },
-  "raw_model_output": "{\"circuit_id\":\"a04\",\"batch\":\"A\",\"image_file\":\"a04.jpg\",\"json_file\":\"a04.json\",\"image_graph_fidelity_score\":92,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":24,\"terminals_pins\":18,\"graph_connections\":41,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":1,\"minor\":2},\"critical_errors\":[],\"major_errors\":[{\"type\":\"missing_visible_node_label\",\"description\":\"Il riferimento di massa visibile nell'immagine è etichettato come X1/GND sul nodo inferiore centrale; il JSON include correttamente un componente GND collegato alla rete inferiore, ma non conserva l'etichetta visibile X1. Questo non altera la connettività principale, ma perde una semantica topologica visibile.\",\"image_evidence\":\"Nell'immagine il simbolo di massa è sotto il nodo inferiore centrale ed è indicato con X1.\",\"json_evidence\":\"Il JSON contiene solo il componente gnd9.1 con terminale gnd9.1_t1, senza label X1 o metadati associati.\"}],\"minor_errors\":[{\"type\":\"component_label_mapping_not_preserved\",\"description\":\"Le sigle visibili dei componenti non sono preservate nei component_id/instance_id del JSON; la corrispondenza resta comunque deducibile per classe e posizione topologica.\"},{\"type\":\"terminal_orientation_approximation\",\"description\":\"Alcune posizioni relative dei terminali sono semplificate rispetto al disegno, in particolare per condensatori accoppiati e sorgenti, ma senza evidente errore topologico nei collegamenti.\"}],\"missing_from_json\":[\"Etichetta visibile X1 associata al simbolo di massa\"],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"La polarità dei condensatori polarizzati è visibile graficamente ma il JSON usa terminali generici t1/t2; senza coordinate o marcatori di polarità nel JSON la verifica della polarità esatta resta solo parziale.\",\"L'associazione tra i resistori JSON resistor22.1-22.5 e le sigle visive R1-R5 non è esplicitata, anche se la topologia consente una corrispondenza plausibile.\"],\"short_explanation\":\"Il JSON rappresenta molto bene la topologia principale: sorgente di segnale accoppiata tramite condensatore alla base del transistor, rete di polarizzazione con due resistori, collettore con resistore verso la linea superiore e condensatore di uscita verso il carico, emettitore con resistore e condensatore verso massa, batteria tra linea superiore e rete inferiore, e GND sulla rete inferiore. Non emergono collegamenti errati rilevanti nel campo graph. Le discrepanze sono soprattutto semantiche o di etichettatura visibile, non strutturali.\"}"
+  "raw_model_output": "{\"circuit_id\":\"a04\",\"batch\":\"A\",\"image_file\":\"a04.jpg\",\"json_file\":\"a04.json\",\"image_graph_fidelity_score\":95,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":25,\"terminals_pins\":19,\"graph_connections\":43,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":2},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"capacitor_polarity_not_encoded\",\"description\":\"Alcuni condensatori mostrano una polarità visibile nell'immagine, mentre nel JSON sono modellati genericamente come Capacitor con terminali t1/t2; la topologia dei collegamenti resta comunque coerente.\"},{\"type\":\"semantic_labels_not_preserved\",\"description\":\"Le etichette visibili dei nodi/componenti principali non sono preservate nel JSON, anche se le classi dei componenti e i collegamenti risultano sostanzialmente corretti.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"L'associazione esatta tra gli identificativi generici dei resistori nel JSON e le sigle visive R1-R5 è deducibile dalla posizione/topologia ma non è esplicitata nel JSON.\",\"La polarità precisa dei condensatori rispetto ai terminali t1/t2 non è completamente verificabile dal JSON perché non sono presenti metadati di polarità.\"],\"short_explanation\":\"Il Graph JSON rappresenta molto fedelmente il circuito visibile: sono presenti sorgente di segnale, batteria, transistor NPN, cinque resistori, tre condensatori e GND. Le reti principali corrispondono all'immagine: nodo superiore di alimentazione, massa comune inferiore, rete di base con condensatore di ingresso e partitore, collettore con resistore verso alimentazione e condensatore di uscita, emettitore con resistore e condensatore verso massa. Restano solo lievi limiti semantici su polarità/etichette, senza compromissione topologica.\"}"
 }

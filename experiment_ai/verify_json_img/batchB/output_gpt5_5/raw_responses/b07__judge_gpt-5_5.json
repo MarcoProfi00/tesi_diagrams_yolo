@@ -8,53 +8,88 @@
     "image_file": "b07.jpg",
     "json_file": "b07.json",
     "judge_model": "gpt-5.5",
-    "timestamp": "2026-06-03 18:06:00",
-    "judge_latency_seconds": 20.82,
+    "timestamp": "2026-06-04 11:52:16",
+    "judge_latency_seconds": 24.201,
     "input_json_valid": true,
     "input_json_error": null,
     "parsed_ok": true,
     "parse_error": null
   },
-  "judge_usage": "ResponseUsage(input_tokens=5029, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=945, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=5974)",
+  "judge_usage": "ResponseUsage(input_tokens=5029, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=1191, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=6220)",
   "judge_result": {
     "circuit_id": "b07",
     "batch": "B",
     "image_file": "b07.jpg",
     "json_file": "b07.json",
-    "image_graph_fidelity_score": 94,
-    "decision": "VERY_HIGH",
+    "image_graph_fidelity_score": 71,
+    "decision": "MEDIUM",
     "usable_as_graph_base": true,
     "scores": {
-      "components": 25,
-      "terminals_pins": 18,
-      "graph_connections": 43,
-      "visible_semantics": 8
+      "components": 20,
+      "terminals_pins": 14,
+      "graph_connections": 30,
+      "visible_semantics": 7
     },
     "error_counts": {
-      "critical": 0,
-      "major": 0,
-      "minor": 2
+      "critical": 1,
+      "major": 2,
+      "minor": 1
     },
-    "critical_errors": [],
-    "major_errors": [],
-    "minor_errors": [
+    "critical_errors": [
       {
-        "type": "visible_label_not_encoded",
-        "description": "Le etichette topologiche visibili per il nodo di ingresso e il nodo di uscita non sono rappresentate esplicitamente nel JSON, anche se i rispettivi terminali e collegamenti sono presenti."
-      },
-      {
-        "type": "terminal_role_generic",
-        "description": "I terminali esterni visibili sono modellati come Terminal generici senza distinguere chiaramente i ruoli visivi dei nodi di alimentazione/uscita, ma ciò non altera in modo sostanziale la topologia."
+        "type": "wrong_component_connection",
+        "description": "Il JSON collega insieme drain e source di M2 sulla stessa net di massa, cortocircuitando i due terminali del MOSFET. Nell'immagine M2 ha un terminale superiore collegato al nodo di uscita superiore e un terminale inferiore collegato alla linea di massa, quindi i due terminali di conduzione non sono sulla stessa net.",
+        "image_evidence": "M2 è disegnato tra il nodo superiore di uscita e la linea inferiore con GND; il terminale superiore di M2 è connesso al nodo orizzontale superiore, mentre il terminale inferiore è connesso al nodo inferiore di massa.",
+        "json_evidence": "Nel campo graph, gnd9.1_t1, mosfet16.2_D, mosfet16.2_S, terminal26.3_t1 e voltage_source31.1_negative sono tutti sulla stessa net."
       }
     ],
-    "missing_from_json": [],
-    "extra_in_json": [],
-    "wrong_graph_connections": [],
-    "uncertain_points": [
-      "La denominazione S/D dei due MOSFET non è verificabile con certezza dalla sola immagine, quindi non è penalizzata.",
-      "Il simbolo del MOSFET M2 mostra entrambi i terminali di conduzione collegati al nodo inferiore; questa connessione appare coerente con il JSON, anche se l'orientamento fisico S/D non è determinabile visivamente."
+    "major_errors": [
+      {
+        "type": "missing_or_misclassified_terminal",
+        "description": "Il terminale superiore indicato nell'immagine come alimentazione è rappresentato nel JSON come terminale positivo di un Voltage_Source insieme al terminale negativo del generatore d'ingresso. Visivamente ci sono un terminale di alimentazione superiore separato e una sorgente di ingresso a sinistra.",
+        "image_evidence": "In alto è visibile un nodo/terminale circolare separato collegato al gate superiore di M1; a sinistra è visibile una sorgente di tensione d'ingresso con terminali positivo e negativo.",
+        "json_evidence": "Il JSON contiene un solo Voltage_Source con positive collegato a mosfet16.1_S e negative collegato alla massa, invece di distinguere il terminale superiore di alimentazione dalla sorgente d'ingresso a sinistra."
+      },
+      {
+        "type": "wrong_graph_connection",
+        "description": "Il JSON collega il gate di M1 al terminale26.1, ma nell'immagine il gate di M1 è collegato al terminale superiore di alimentazione, mentre il terminale d'ingresso a sinistra è collegato a un terminale di conduzione di M1.",
+        "image_evidence": "La linea verticale dal terminale superiore arriva alla piastra/gate di M1; la sorgente d'ingresso a sinistra si collega al nodo orizzontale sinistro che entra in M1.",
+        "json_evidence": "Nel graph, mosfet16.1_G è collegato a terminal26.1_t1, mentre voltage_source31.1_positive è collegato a mosfet16.1_S."
+      }
     ],
-    "short_explanation": "Il JSON riproduce molto bene la struttura visibile: due MOSFET, sorgente di ingresso, massa e tre terminali esterni sono presenti; i collegamenti principali tra ingresso, gate di M1, nodo di uscita, gate di M2 e massa corrispondono all'immagine. Restano solo piccole carenze semantiche nei nomi/ruoli dei terminali visibili e incertezze non penalizzate sull'orientamento S/D dei MOSFET."
+    "minor_errors": [
+      {
+        "type": "terminal_orientation_mismatch",
+        "description": "Alcune relative_position dei terminali MOSFET nel JSON non sono coerenti con la disposizione visiva dei simboli, specialmente per M1 e M2; questo rende più difficile verificare l'identità dei terminali, pur non aggiungendo componenti extra."
+      }
+    ],
+    "missing_from_json": [
+      "Sorgente di ingresso a sinistra rappresentata come componente separato rispetto al terminale/alimentazione superiore",
+      "Terminale di uscita superiore e terminale di uscita inferiore esplicitamente associati alla coppia di uscita visibile"
+    ],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "Il terminale superiore di alimentazione è collegato al gate di M1; il nodo di ingresso sinistro è collegato a un terminale di conduzione di M1.",
+        "found_in_json": "voltage_source31.1_positive è collegato a mosfet16.1_S e mosfet16.1_G è collegato a terminal26.1_t1.",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "M2 collega il nodo superiore di uscita alla linea inferiore di massa con due terminali distinti.",
+        "found_in_json": "mosfet16.2_D e mosfet16.2_S sono entrambi collegati alla stessa net di gnd9.1_t1.",
+        "severity": "critical"
+      },
+      {
+        "expected_from_image": "Il nodo superiore di uscita è comune al terminale destro superiore, a un terminale di M1 e al terminale superiore di M2.",
+        "found_in_json": "terminal26.2_t1 è collegato a mosfet16.1_D e mosfet16.2_G, non a un terminale di conduzione distinto di M2.",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "L'immagine non consente di verificare in modo univoco i nomi funzionali G, S e D dei MOSFET senza usare conoscenza esterna; la valutazione considera solo la posizione topologica dei terminali visibili.",
+      "Il terminale26.1 del JSON potrebbe rappresentare il terminale superiore o il nodo d'ingresso sinistro, ma la sua identità grafica non è esplicitamente annotata nel JSON."
+    ],
+    "short_explanation": "Il JSON riconosce i componenti principali visibili, cioè due MOSFET, una massa, terminali e una sorgente/terminale, ma confonde la sorgente d'ingresso con il terminale superiore e contiene un errore topologico grave su M2, i cui due terminali di conduzione risultano collegati entrambi a massa. La struttura generale è parzialmente recuperabile, ma la fedeltà topologica è solo media."
   },
-  "raw_model_output": "{\"circuit_id\":\"b07\",\"batch\":\"B\",\"image_file\":\"b07.jpg\",\"json_file\":\"b07.json\",\"image_graph_fidelity_score\":94,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":25,\"terminals_pins\":18,\"graph_connections\":43,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":2},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"visible_label_not_encoded\",\"description\":\"Le etichette topologiche visibili per il nodo di ingresso e il nodo di uscita non sono rappresentate esplicitamente nel JSON, anche se i rispettivi terminali e collegamenti sono presenti.\"},{\"type\":\"terminal_role_generic\",\"description\":\"I terminali esterni visibili sono modellati come Terminal generici senza distinguere chiaramente i ruoli visivi dei nodi di alimentazione/uscita, ma ciò non altera in modo sostanziale la topologia.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"La denominazione S/D dei due MOSFET non è verificabile con certezza dalla sola immagine, quindi non è penalizzata.\",\"Il simbolo del MOSFET M2 mostra entrambi i terminali di conduzione collegati al nodo inferiore; questa connessione appare coerente con il JSON, anche se l'orientamento fisico S/D non è determinabile visivamente.\"],\"short_explanation\":\"Il JSON riproduce molto bene la struttura visibile: due MOSFET, sorgente di ingresso, massa e tre terminali esterni sono presenti; i collegamenti principali tra ingresso, gate di M1, nodo di uscita, gate di M2 e massa corrispondono all'immagine. Restano solo piccole carenze semantiche nei nomi/ruoli dei terminali visibili e incertezze non penalizzate sull'orientamento S/D dei MOSFET.\"}"
+  "raw_model_output": "{\"circuit_id\":\"b07\",\"batch\":\"B\",\"image_file\":\"b07.jpg\",\"json_file\":\"b07.json\",\"image_graph_fidelity_score\":71,\"decision\":\"MEDIUM\",\"usable_as_graph_base\":true,\"scores\":{\"components\":20,\"terminals_pins\":14,\"graph_connections\":30,\"visible_semantics\":7},\"error_counts\":{\"critical\":1,\"major\":2,\"minor\":1},\"critical_errors\":[{\"type\":\"wrong_component_connection\",\"description\":\"Il JSON collega insieme drain e source di M2 sulla stessa net di massa, cortocircuitando i due terminali del MOSFET. Nell'immagine M2 ha un terminale superiore collegato al nodo di uscita superiore e un terminale inferiore collegato alla linea di massa, quindi i due terminali di conduzione non sono sulla stessa net.\",\"image_evidence\":\"M2 è disegnato tra il nodo superiore di uscita e la linea inferiore con GND; il terminale superiore di M2 è connesso al nodo orizzontale superiore, mentre il terminale inferiore è connesso al nodo inferiore di massa.\",\"json_evidence\":\"Nel campo graph, gnd9.1_t1, mosfet16.2_D, mosfet16.2_S, terminal26.3_t1 e voltage_source31.1_negative sono tutti sulla stessa net.\"}],\"major_errors\":[{\"type\":\"missing_or_misclassified_terminal\",\"description\":\"Il terminale superiore indicato nell'immagine come alimentazione è rappresentato nel JSON come terminale positivo di un Voltage_Source insieme al terminale negativo del generatore d'ingresso. Visivamente ci sono un terminale di alimentazione superiore separato e una sorgente di ingresso a sinistra.\",\"image_evidence\":\"In alto è visibile un nodo/terminale circolare separato collegato al gate superiore di M1; a sinistra è visibile una sorgente di tensione d'ingresso con terminali positivo e negativo.\",\"json_evidence\":\"Il JSON contiene un solo Voltage_Source con positive collegato a mosfet16.1_S e negative collegato alla massa, invece di distinguere il terminale superiore di alimentazione dalla sorgente d'ingresso a sinistra.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il JSON collega il gate di M1 al terminale26.1, ma nell'immagine il gate di M1 è collegato al terminale superiore di alimentazione, mentre il terminale d'ingresso a sinistra è collegato a un terminale di conduzione di M1.\",\"image_evidence\":\"La linea verticale dal terminale superiore arriva alla piastra/gate di M1; la sorgente d'ingresso a sinistra si collega al nodo orizzontale sinistro che entra in M1.\",\"json_evidence\":\"Nel graph, mosfet16.1_G è collegato a terminal26.1_t1, mentre voltage_source31.1_positive è collegato a mosfet16.1_S.\"}],\"minor_errors\":[{\"type\":\"terminal_orientation_mismatch\",\"description\":\"Alcune relative_position dei terminali MOSFET nel JSON non sono coerenti con la disposizione visiva dei simboli, specialmente per M1 e M2; questo rende più difficile verificare l'identità dei terminali, pur non aggiungendo componenti extra.\"}],\"missing_from_json\":[\"Sorgente di ingresso a sinistra rappresentata come componente separato rispetto al terminale/alimentazione superiore\",\"Terminale di uscita superiore e terminale di uscita inferiore esplicitamente associati alla coppia di uscita visibile\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Il terminale superiore di alimentazione è collegato al gate di M1; il nodo di ingresso sinistro è collegato a un terminale di conduzione di M1.\",\"found_in_json\":\"voltage_source31.1_positive è collegato a mosfet16.1_S e mosfet16.1_G è collegato a terminal26.1_t1.\",\"severity\":\"major\"},{\"expected_from_image\":\"M2 collega il nodo superiore di uscita alla linea inferiore di massa con due terminali distinti.\",\"found_in_json\":\"mosfet16.2_D e mosfet16.2_S sono entrambi collegati alla stessa net di gnd9.1_t1.\",\"severity\":\"critical\"},{\"expected_from_image\":\"Il nodo superiore di uscita è comune al terminale destro superiore, a un terminale di M1 e al terminale superiore di M2.\",\"found_in_json\":\"terminal26.2_t1 è collegato a mosfet16.1_D e mosfet16.2_G, non a un terminale di conduzione distinto di M2.\",\"severity\":\"major\"}],\"uncertain_points\":[\"L'immagine non consente di verificare in modo univoco i nomi funzionali G, S e D dei MOSFET senza usare conoscenza esterna; la valutazione considera solo la posizione topologica dei terminali visibili.\",\"Il terminale26.1 del JSON potrebbe rappresentare il terminale superiore o il nodo d'ingresso sinistro, ma la sua identità grafica non è esplicitamente annotata nel JSON.\"],\"short_explanation\":\"Il JSON riconosce i componenti principali visibili, cioè due MOSFET, una massa, terminali e una sorgente/terminale, ma confonde la sorgente d'ingresso con il terminale superiore e contiene un errore topologico grave su M2, i cui due terminali di conduzione risultano collegati entrambi a massa. La struttura generale è parzialmente recuperabile, ma la fedeltà topologica è solo media.\"}"
 }
