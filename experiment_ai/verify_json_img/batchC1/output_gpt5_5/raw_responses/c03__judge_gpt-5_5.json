@@ -8,24 +8,24 @@
     "image_file": "c03.jpg",
     "json_file": "c03.json",
     "judge_model": "gpt-5.5",
-    "timestamp": "2026-06-03 23:36:17",
-    "judge_latency_seconds": 20.404,
+    "timestamp": "2026-06-04 10:08:37",
+    "judge_latency_seconds": 33.449,
     "input_json_valid": true,
     "input_json_error": null,
     "parsed_ok": true,
     "parse_error": null
   },
-  "judge_usage": "ResponseUsage(input_tokens=9650, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=1271, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=10921)",
+  "judge_usage": "ResponseUsage(input_tokens=9676, input_tokens_details=InputTokensDetails(cached_tokens=8960), output_tokens=1225, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=10901)",
   "judge_result": {
     "circuit_id": "c03",
     "batch": "C1",
     "image_file": "c03.jpg",
     "json_file": "c03.json",
-    "image_graph_fidelity_score": 88,
+    "image_graph_fidelity_score": 89,
     "decision": "HIGH",
     "usable_as_graph_base": true,
     "scores": {
-      "components": 23,
+      "components": 24,
       "terminals_pins": 18,
       "graph_connections": 39,
       "visible_semantics": 8
@@ -38,57 +38,56 @@
     "critical_errors": [],
     "major_errors": [
       {
-        "type": "component_class_mismatch",
-        "description": "Diversi condensatori non polarizzati visibili nell'immagine sono classificati nel JSON come Polarized_Capacitor. Questo riguarda i condensatori attorno all'IC e all'uscita; la topologia dei due terminali resta per lo più utilizzabile, ma la classe e la polarità non sono coerenti con il simbolo visivo.",
-        "image_evidence": "C2, C3, C4 e C5 sono disegnati con simbolo di condensatore non polarizzato, senza marcatura di polarità visibile.",
-        "json_evidence": "polarized_capacitor20.2, polarized_capacitor20.3, polarized_capacitor20.4 e polarized_capacitor20.5 hanno class_name Polarized_Capacitor e terminali positive/negative."
+        "type": "wrong_graph_connection",
+        "description": "Il collettore del transistor è unito nel JSON al nodo dei pin 6/2 dell'IC e al lato inferiore di R4/C2, ma nell'immagine il collettore sale a un nodo separato collegato al lato inferiore di R4 e al pin 6/2; il JSON include correttamente questa rete ma la rende anche comune al positivo di C2. Nell'immagine C2 è collegato tra quel nodo e massa, quindi questo è compatibile; la discrepanza più rilevante è che il terminale inferiore/altro terminale del transistor verso massa e C2 inferiore risulta rappresentato come emettitore a massa, mentre l'immagine mostra l'emettitore a massa. Errore limitato alla possibile attribuzione dei terminali del transistor/polarità simbolica.",
+        "image_evidence": "Q1 è disegnato con base a sinistra tramite R3, collettore verso il nodo superiore R4/pin 6-2, emettitore verso la linea di massa inferiore.",
+        "json_evidence": "npn_transistor18.1_B collegato a resistor22.3_t2, npn_transistor18.1_C collegato a integrated_circuit11.1_left_1/left_2 e resistor22.4_t2, npn_transistor18.1_E collegato alla rete gnd9.1_t1."
       },
       {
-        "type": "graph_connection_extra",
-        "description": "Il JSON unisce il terminale inferiore del condensatore di accoppiamento di ingresso direttamente al terminale di ingresso, mentre nell'immagine il condensatore è in serie tra il terminale di ingresso e il nodo con diodo/resistore; non è visibile un filo diretto che cortocircuiti i due lati del condensatore.",
-        "image_evidence": "A sinistra, il terminale Signal in entra sul lato sinistro di C1; il lato destro di C1 prosegue verso D1 e R1. I due lati di C1 sono separati dal simbolo del condensatore.",
-        "json_evidence": "polarized_capacitor20.1_positive è collegato a terminal26.1_t1, mentre polarized_capacitor20.1_negative è collegato al nodo di diode7.1_anode e resistor22.1_t1; se terminal26.1_t1 rappresenta il terminale di ingresso, il lato sinistro di C1 è correttamente separato, ma la polarità/associazione dei lati è potenzialmente ambigua rispetto al disegno."
+        "type": "missing_graph_connection",
+        "description": "Il nodo di ingresso a sinistra include il terminale Signal in collegato al lato positivo di C1 e al terminale inferiore Signal in collegato alla massa comune; nel JSON ci sono due terminali a sinistra, ma il terminale superiore risulta collegato solo al positivo di C1 e quello inferiore alla massa. La label topologica Signal in non è esplicitata, rendendo meno chiara la semantica dei due terminali di ingresso.",
+        "image_evidence": "A sinistra sono visibili due morsetti/terminali del Signal in: quello superiore entra in C1, quello inferiore è sulla barra di massa.",
+        "json_evidence": "terminal26.1_t1 è collegato solo a polarized_capacitor20.1_positive; terminal26.2_t1 è nella rete gnd9.1_t1."
       }
     ],
     "minor_errors": [
       {
-        "type": "polarity_uncertain_or_mismatched",
-        "description": "La polarità del condensatore di ingresso è rappresentata con positive a sinistra e negative a destra; il simbolo mostra un segno di polarità sul lato sinistro, quindi la polarità sembra coerente, ma l'identificazione dei terminali nel JSON non è completamente verificabile solo dagli ID."
+        "type": "component_class_or_polarity_uncertain",
+        "description": "Diversi condensatori non polarizzati visibili sono rappresentati come Polarized_Capacitor nel JSON; ciò non altera molto la topologia, ma la classe/polarità non è coerente per tutti i simboli."
       },
       {
-        "type": "terminal_semantics_missing",
-        "description": "Le etichette topologiche visibili Signal in, Vout e alimentazione superiore sono rappresentate come terminali generici senza nomi semantici espliciti."
+        "type": "terminal_label_missing",
+        "description": "Le label visibili Signal in, Vout e alimentazione superiore non sono conservate come nomi semantici dei terminali nel JSON, pur essendo presenti terminali equivalenti."
       },
       {
-        "type": "gnd_representation",
-        "description": "Il JSON include un solo componente GND, mentre l'immagine mostra una barra di massa comune con simbolo GND esplicito; la net di massa è comunque sostanzialmente rappresentata."
+        "type": "ic_pin_position_simplification",
+        "description": "I pin dell'IC sono rappresentati con posizioni aggregate top/left/bottom/right; i numeri di pin principali corrispondono all'immagine, ma la geometria dei due pin superiori e inferiori è semplificata."
       }
     ],
-    "missing_from_json": [],
+    "missing_from_json": [
+      "Label semantica Signal in sui terminali di ingresso",
+      "Label semantica Vout sul terminale di uscita",
+      "Label semantica di alimentazione sul terminale superiore"
+    ],
     "extra_in_json": [],
     "wrong_graph_connections": [
       {
-        "expected_from_image": "Il nodo superiore di alimentazione collega il terminale superiore, i pin superiori dell'IC, e i terminali superiori di R4 e R5.",
-        "found_in_json": "terminal26.3_t1, integrated_circuit11.1_top_1, integrated_circuit11.1_top_2, resistor22.4_t1 e resistor22.5_t1 sono sulla stessa net; corrisponde alla struttura visibile.",
+        "expected_from_image": "Il nodo Signal in superiore è il terminale di ingresso collegato al lato sinistro/positivo di C1; il nodo Signal in inferiore è massa.",
+        "found_in_json": "terminal26.1_t1 è collegato a polarized_capacitor20.1_positive e terminal26.2_t1 alla rete gnd, ma senza semantica Signal in.",
         "severity": "minor"
       },
       {
-        "expected_from_image": "Il pin 5 dell'IC è collegato a un condensatore verso massa, senza altri collegamenti visibili.",
-        "found_in_json": "integrated_circuit11.1_bottom_2 è collegato solo a polarized_capacitor20.4_positive, e il lato opposto del condensatore è nella net di massa; collegamento topologicamente corretto, ma il condensatore è classificato come polarizzato.",
-        "severity": "minor"
-      },
-      {
-        "expected_from_image": "L'uscita dell'IC passa attraverso R6 a un nodo Vout che ha un condensatore verso massa.",
-        "found_in_json": "integrated_circuit11.1_right_1 è collegato a resistor22.6_t1; resistor22.6_t2 è collegato a terminal26.4_t1 e polarized_capacitor20.5_positive, con il lato opposto del condensatore a massa; topologia corretta, classe del condensatore non coerente.",
+        "expected_from_image": "I condensatori C2, C3, C4 e C5 sono disegnati come condensatori con un terminale verso massa e uno verso il rispettivo nodo del circuito; la polarità non è chiaramente indicata per tutti come elettrolitica.",
+        "found_in_json": "Tutti questi componenti sono indicati come Polarized_Capacitor con terminali positive/negative.",
         "severity": "minor"
       }
     ],
     "uncertain_points": [
-      "L'immagine mostra terminali/etichette esterne, ma il JSON usa terminal26.x senza display_name; l'associazione esatta di ciascun terminale esterno è dedotta dalla posizione e dai collegamenti.",
-      "Non tutti i numeri di pin dell'IC sono graficamente leggibili con uguale chiarezza, anche se quelli principali riportati nel JSON sembrano coerenti con le posizioni visibili.",
-      "La distinzione tra condensatori polarizzati e non polarizzati è visibile per alcuni simboli, ma l'automatismo ha usato una classe polarizzata uniforme per più condensatori."
+      "La polarità esatta di alcuni condensatori non è chiaramente verificabile dal solo simbolo nell'immagine.",
+      "La corrispondenza tra gli instance_id numerici del JSON e i designatori visibili R1-R6/C1-C5/D1/Q1 è dedotta dalla posizione e dai collegamenti, non dai nomi nel JSON.",
+      "Le attribuzioni fisiche dei terminali C/B/E del transistor sono in gran parte coerenti con il simbolo, ma la verifica resta visiva e non basata su datasheet."
     ],
-    "short_explanation": "Il Graph JSON riproduce bene la struttura principale: rete di ingresso con condensatore, diodo e resistori, transistor verso massa, IC con pin numerati, rete di temporizzazione, uscita con resistore e condensatore verso massa. Le connessioni principali del campo graph sono in larga parte coerenti con i fili visibili. Le discrepanze più rilevanti riguardano la classificazione/polarità di vari condensatori non polarizzati e la perdita delle etichette semantiche dei terminali esterni. Nel complesso il grafo è una buona base topologica, con errori localizzati."
+    "short_explanation": "Il Graph JSON riproduce quasi tutti i componenti principali e la maggior parte delle reti visibili: ingresso con C1, D1/R1/R2/R3, transistor, rete dell'IC LM555, condensatori verso massa, uscita tramite R6/C5 e massa comune. Le discrepanze principali riguardano semantiche di terminale mancanti, uso esteso di condensatori polarizzati e alcune semplificazioni/ambiguità di pin e terminali. La topologia complessiva resta buona e utilizzabile come base."
   },
-  "raw_model_output": "{\"circuit_id\":\"c03\",\"batch\":\"C1\",\"image_file\":\"c03.jpg\",\"json_file\":\"c03.json\",\"image_graph_fidelity_score\":88,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":23,\"terminals_pins\":18,\"graph_connections\":39,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":2,\"minor\":3},\"critical_errors\":[],\"major_errors\":[{\"type\":\"component_class_mismatch\",\"description\":\"Diversi condensatori non polarizzati visibili nell'immagine sono classificati nel JSON come Polarized_Capacitor. Questo riguarda i condensatori attorno all'IC e all'uscita; la topologia dei due terminali resta per lo più utilizzabile, ma la classe e la polarità non sono coerenti con il simbolo visivo.\",\"image_evidence\":\"C2, C3, C4 e C5 sono disegnati con simbolo di condensatore non polarizzato, senza marcatura di polarità visibile.\",\"json_evidence\":\"polarized_capacitor20.2, polarized_capacitor20.3, polarized_capacitor20.4 e polarized_capacitor20.5 hanno class_name Polarized_Capacitor e terminali positive/negative.\"},{\"type\":\"graph_connection_extra\",\"description\":\"Il JSON unisce il terminale inferiore del condensatore di accoppiamento di ingresso direttamente al terminale di ingresso, mentre nell'immagine il condensatore è in serie tra il terminale di ingresso e il nodo con diodo/resistore; non è visibile un filo diretto che cortocircuiti i due lati del condensatore.\",\"image_evidence\":\"A sinistra, il terminale Signal in entra sul lato sinistro di C1; il lato destro di C1 prosegue verso D1 e R1. I due lati di C1 sono separati dal simbolo del condensatore.\",\"json_evidence\":\"polarized_capacitor20.1_positive è collegato a terminal26.1_t1, mentre polarized_capacitor20.1_negative è collegato al nodo di diode7.1_anode e resistor22.1_t1; se terminal26.1_t1 rappresenta il terminale di ingresso, il lato sinistro di C1 è correttamente separato, ma la polarità/associazione dei lati è potenzialmente ambigua rispetto al disegno.\"}],\"minor_errors\":[{\"type\":\"polarity_uncertain_or_mismatched\",\"description\":\"La polarità del condensatore di ingresso è rappresentata con positive a sinistra e negative a destra; il simbolo mostra un segno di polarità sul lato sinistro, quindi la polarità sembra coerente, ma l'identificazione dei terminali nel JSON non è completamente verificabile solo dagli ID.\"},{\"type\":\"terminal_semantics_missing\",\"description\":\"Le etichette topologiche visibili Signal in, Vout e alimentazione superiore sono rappresentate come terminali generici senza nomi semantici espliciti.\"},{\"type\":\"gnd_representation\",\"description\":\"Il JSON include un solo componente GND, mentre l'immagine mostra una barra di massa comune con simbolo GND esplicito; la net di massa è comunque sostanzialmente rappresentata.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Il nodo superiore di alimentazione collega il terminale superiore, i pin superiori dell'IC, e i terminali superiori di R4 e R5.\",\"found_in_json\":\"terminal26.3_t1, integrated_circuit11.1_top_1, integrated_circuit11.1_top_2, resistor22.4_t1 e resistor22.5_t1 sono sulla stessa net; corrisponde alla struttura visibile.\",\"severity\":\"minor\"},{\"expected_from_image\":\"Il pin 5 dell'IC è collegato a un condensatore verso massa, senza altri collegamenti visibili.\",\"found_in_json\":\"integrated_circuit11.1_bottom_2 è collegato solo a polarized_capacitor20.4_positive, e il lato opposto del condensatore è nella net di massa; collegamento topologicamente corretto, ma il condensatore è classificato come polarizzato.\",\"severity\":\"minor\"},{\"expected_from_image\":\"L'uscita dell'IC passa attraverso R6 a un nodo Vout che ha un condensatore verso massa.\",\"found_in_json\":\"integrated_circuit11.1_right_1 è collegato a resistor22.6_t1; resistor22.6_t2 è collegato a terminal26.4_t1 e polarized_capacitor20.5_positive, con il lato opposto del condensatore a massa; topologia corretta, classe del condensatore non coerente.\",\"severity\":\"minor\"}],\"uncertain_points\":[\"L'immagine mostra terminali/etichette esterne, ma il JSON usa terminal26.x senza display_name; l'associazione esatta di ciascun terminale esterno è dedotta dalla posizione e dai collegamenti.\",\"Non tutti i numeri di pin dell'IC sono graficamente leggibili con uguale chiarezza, anche se quelli principali riportati nel JSON sembrano coerenti con le posizioni visibili.\",\"La distinzione tra condensatori polarizzati e non polarizzati è visibile per alcuni simboli, ma l'automatismo ha usato una classe polarizzata uniforme per più condensatori.\"],\"short_explanation\":\"Il Graph JSON riproduce bene la struttura principale: rete di ingresso con condensatore, diodo e resistori, transistor verso massa, IC con pin numerati, rete di temporizzazione, uscita con resistore e condensatore verso massa. Le connessioni principali del campo graph sono in larga parte coerenti con i fili visibili. Le discrepanze più rilevanti riguardano la classificazione/polarità di vari condensatori non polarizzati e la perdita delle etichette semantiche dei terminali esterni. Nel complesso il grafo è una buona base topologica, con errori localizzati.\"}"
+  "raw_model_output": "{\"circuit_id\":\"c03\",\"batch\":\"C1\",\"image_file\":\"c03.jpg\",\"json_file\":\"c03.json\",\"image_graph_fidelity_score\":89,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":24,\"terminals_pins\":18,\"graph_connections\":39,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":2,\"minor\":3},\"critical_errors\":[],\"major_errors\":[{\"type\":\"wrong_graph_connection\",\"description\":\"Il collettore del transistor è unito nel JSON al nodo dei pin 6/2 dell'IC e al lato inferiore di R4/C2, ma nell'immagine il collettore sale a un nodo separato collegato al lato inferiore di R4 e al pin 6/2; il JSON include correttamente questa rete ma la rende anche comune al positivo di C2. Nell'immagine C2 è collegato tra quel nodo e massa, quindi questo è compatibile; la discrepanza più rilevante è che il terminale inferiore/altro terminale del transistor verso massa e C2 inferiore risulta rappresentato come emettitore a massa, mentre l'immagine mostra l'emettitore a massa. Errore limitato alla possibile attribuzione dei terminali del transistor/polarità simbolica.\",\"image_evidence\":\"Q1 è disegnato con base a sinistra tramite R3, collettore verso il nodo superiore R4/pin 6-2, emettitore verso la linea di massa inferiore.\",\"json_evidence\":\"npn_transistor18.1_B collegato a resistor22.3_t2, npn_transistor18.1_C collegato a integrated_circuit11.1_left_1/left_2 e resistor22.4_t2, npn_transistor18.1_E collegato alla rete gnd9.1_t1.\"},{\"type\":\"missing_graph_connection\",\"description\":\"Il nodo di ingresso a sinistra include il terminale Signal in collegato al lato positivo di C1 e al terminale inferiore Signal in collegato alla massa comune; nel JSON ci sono due terminali a sinistra, ma il terminale superiore risulta collegato solo al positivo di C1 e quello inferiore alla massa. La label topologica Signal in non è esplicitata, rendendo meno chiara la semantica dei due terminali di ingresso.\",\"image_evidence\":\"A sinistra sono visibili due morsetti/terminali del Signal in: quello superiore entra in C1, quello inferiore è sulla barra di massa.\",\"json_evidence\":\"terminal26.1_t1 è collegato solo a polarized_capacitor20.1_positive; terminal26.2_t1 è nella rete gnd9.1_t1.\"}],\"minor_errors\":[{\"type\":\"component_class_or_polarity_uncertain\",\"description\":\"Diversi condensatori non polarizzati visibili sono rappresentati come Polarized_Capacitor nel JSON; ciò non altera molto la topologia, ma la classe/polarità non è coerente per tutti i simboli.\"},{\"type\":\"terminal_label_missing\",\"description\":\"Le label visibili Signal in, Vout e alimentazione superiore non sono conservate come nomi semantici dei terminali nel JSON, pur essendo presenti terminali equivalenti.\"},{\"type\":\"ic_pin_position_simplification\",\"description\":\"I pin dell'IC sono rappresentati con posizioni aggregate top/left/bottom/right; i numeri di pin principali corrispondono all'immagine, ma la geometria dei due pin superiori e inferiori è semplificata.\"}],\"missing_from_json\":[\"Label semantica Signal in sui terminali di ingresso\",\"Label semantica Vout sul terminale di uscita\",\"Label semantica di alimentazione sul terminale superiore\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Il nodo Signal in superiore è il terminale di ingresso collegato al lato sinistro/positivo di C1; il nodo Signal in inferiore è massa.\",\"found_in_json\":\"terminal26.1_t1 è collegato a polarized_capacitor20.1_positive e terminal26.2_t1 alla rete gnd, ma senza semantica Signal in.\",\"severity\":\"minor\"},{\"expected_from_image\":\"I condensatori C2, C3, C4 e C5 sono disegnati come condensatori con un terminale verso massa e uno verso il rispettivo nodo del circuito; la polarità non è chiaramente indicata per tutti come elettrolitica.\",\"found_in_json\":\"Tutti questi componenti sono indicati come Polarized_Capacitor con terminali positive/negative.\",\"severity\":\"minor\"}],\"uncertain_points\":[\"La polarità esatta di alcuni condensatori non è chiaramente verificabile dal solo simbolo nell'immagine.\",\"La corrispondenza tra gli instance_id numerici del JSON e i designatori visibili R1-R6/C1-C5/D1/Q1 è dedotta dalla posizione e dai collegamenti, non dai nomi nel JSON.\",\"Le attribuzioni fisiche dei terminali C/B/E del transistor sono in gran parte coerenti con il simbolo, ma la verifica resta visiva e non basata su datasheet.\"],\"short_explanation\":\"Il Graph JSON riproduce quasi tutti i componenti principali e la maggior parte delle reti visibili: ingresso con C1, D1/R1/R2/R3, transistor, rete dell'IC LM555, condensatori verso massa, uscita tramite R6/C5 e massa comune. Le discrepanze principali riguardano semantiche di terminale mancanti, uso esteso di condensatori polarizzati e alcune semplificazioni/ambiguità di pin e terminali. La topologia complessiva resta buona e utilizzabile come base.\"}"
 }

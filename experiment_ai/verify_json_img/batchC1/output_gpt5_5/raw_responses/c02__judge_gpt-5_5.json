@@ -8,95 +8,67 @@
     "image_file": "c02.jpg",
     "json_file": "c02.json",
     "judge_model": "gpt-5.5",
-    "timestamp": "2026-06-03 23:35:56",
-    "judge_latency_seconds": 20.826,
+    "timestamp": "2026-06-04 10:08:03",
+    "judge_latency_seconds": 13.758,
     "input_json_valid": true,
     "input_json_error": null,
     "parsed_ok": true,
     "parse_error": null
   },
-  "judge_usage": "ResponseUsage(input_tokens=7720, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=1279, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=8999)",
+  "judge_usage": "ResponseUsage(input_tokens=7720, input_tokens_details=InputTokensDetails(cached_tokens=6912), output_tokens=808, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=8528)",
   "judge_result": {
     "circuit_id": "c02",
     "batch": "C1",
     "image_file": "c02.jpg",
     "json_file": "c02.json",
-    "image_graph_fidelity_score": 83,
+    "image_graph_fidelity_score": 88,
     "decision": "HIGH",
     "usable_as_graph_base": true,
     "scores": {
-      "components": 23,
-      "terminals_pins": 16,
-      "graph_connections": 36,
+      "components": 22,
+      "terminals_pins": 18,
+      "graph_connections": 40,
       "visible_semantics": 8
     },
     "error_counts": {
       "critical": 0,
-      "major": 3,
-      "minor": 3
+      "major": 2,
+      "minor": 2
     },
     "critical_errors": [],
     "major_errors": [
       {
-        "type": "wrong_component_class",
-        "description": "C1 è disegnato come condensatore non polarizzato, mentre nel JSON è classificato come Polarized_Capacitor con terminali positive/negative.",
-        "image_evidence": "Il componente C1 collegato al pin 5 dell'IC e alla linea inferiore è rappresentato con simbolo di condensatore non polarizzato.",
-        "json_evidence": "Il componente polarized_capacitor20.1 ha class_name \"Polarized_Capacitor\" e terminali \"positive\"/\"negative\"."
+        "type": "component_class_mismatch",
+        "description": "Il condensatore C1 visibile sotto il pin 5 dell'IC è disegnato come condensatore non polarizzato, mentre nel JSON è classificato come Polarized_Capacitor con terminali positive/negative.",
+        "image_evidence": "C1 è collegato tra il pin 5 dell'IC e la linea inferiore comune, con simbolo a due piastre non polarizzato.",
+        "json_evidence": "polarized_capacitor20.1 ha class_name \"Polarized_Capacitor\" e terminali \"positive\" e \"negative\"."
       },
       {
-        "type": "wrong_graph_connection",
-        "description": "Il terminale inferiore del LED D1 dovrebbe essere collegato alla linea inferiore comune, non alla stessa rete del pin 6, del pin 7 e del nodo tra R4/R5/C2.",
-        "image_evidence": "D1 è disegnato verticalmente: il suo terminale superiore arriva da R2, mentre il terminale inferiore scende alla linea inferiore comune; il nodo dei pin 6/7 e C2 è su un filo orizzontale che passa accanto ma non è chiaramente connesso al terminale del LED.",
-        "json_evidence": "Nel graph led12.2_cathode è nella rete di battery2.1_negative, mentre led12.2_anode è collegato solo a resistor22.3_t2; la polarità/connessione topologica di D1 risulta invertita rispetto al simbolo visibile e al cablaggio."
-      },
-      {
-        "type": "wrong_graph_connection",
-        "description": "Il potenziometro/variabile R5 è rappresentato solo come resistore a due terminali e collegato in serie con R4; il collegamento del cursore visibile non è modellato come terminale separato.",
-        "image_evidence": "R5 mostra una freccia/cursore collegata al nodo inferiore di R5, cioè al nodo tra R5 e R4, caratteristica di un resistore variabile/potenziometro con terminale di cursore visibile.",
-        "json_evidence": "R5 è rappresentato come resistor22.5 con soli terminali t1 e t2; nel graph resistor22.5_t2 è collegato solo a resistor22.4_t1."
+        "type": "missing_or_incomplete_switch_terminal_model",
+        "description": "Il pulsante/interruttore S1 è rappresentato nell'immagine come elemento laterale con due contatti collegati tra la rete dei pin 2/4 e la linea inferiore comune. Il JSON lo modella con due terminali, ma non rappresenta chiaramente il simbolo/contatto laterale e il suo stato visibile; la topologia base dei due nodi è comunque presente.",
+        "image_evidence": "S1 è sul lato sinistro, tra il nodo comune dei pin 2 e 4 e la barra inferiore.",
+        "json_evidence": "push_button21.1_t1 è connesso a integrated_circuit11.1_left_1, integrated_circuit11.1_top_1 e resistor22.1_t2; push_button21.1_t2 è connesso alla rete negativa."
       }
     ],
     "minor_errors": [
       {
         "type": "component_semantics",
-        "description": "Il simbolo della batteria è presente e con polarità visibile, ma il JSON usa solo una classe Battery generica senza conservare eventuali etichette visive del componente."
+        "description": "Il resistore R5 nell'immagine è graficamente un resistore variabile/potenziometro o reostato con cursore collegato al nodo tra R5 e R4; il JSON lo rappresenta come semplice Resistor a due terminali."
       },
       {
-        "type": "terminal_orientation_uncertainty",
-        "description": "Le posizioni relative top/bottom/left/right di alcuni resistori verticali/orizzontali sono plausibili ma non sempre verificabili in modo univoco dall'immagine."
-      },
-      {
-        "type": "ic_terminal_modeling",
-        "description": "L'IC è modellato con posizioni terminali aggregate per lato; i numeri di pin sono presenti e in gran parte coerenti, ma la disposizione fisica nel JSON non distingue pienamente l'ordine verticale dei pin sul lato destro."
+        "type": "polarity_uncertainty",
+        "description": "Le polarità dei LED sono dichiarate come anode/cathode nel JSON, ma dall'immagine la verifica esatta dei terminali anodo/catodo non è completamente sicura per entrambi i LED."
       }
     ],
-    "missing_from_json": [
-      "Terminale/cursore separato del resistore variabile R5 visibile nell'immagine"
-    ],
+    "missing_from_json": [],
     "extra_in_json": [],
-    "wrong_graph_connections": [
-      {
-        "expected_from_image": "D1 collegato tra il nodo dopo R2 e la linea inferiore comune, con orientamento coerente col simbolo visibile.",
-        "found_in_json": "led12.2_anode è collegato a resistor22.3_t2 e led12.2_cathode è sulla rete comune negativa; la connessione può rappresentare i due nodi, ma la polarità/assegnazione anodo-cathode appare invertita rispetto al simbolo visibile.",
-        "severity": "major"
-      },
-      {
-        "expected_from_image": "R5 come resistore variabile con cursore visibile connesso al nodo tra R5 e R4.",
-        "found_in_json": "resistor22.5 ha solo due terminali; resistor22.5_t2 è collegato a resistor22.4_t1 senza terminale di cursore separato.",
-        "severity": "major"
-      },
-      {
-        "expected_from_image": "C1 come condensatore non polarizzato tra pin 5 dell'IC e linea inferiore comune.",
-        "found_in_json": "polarized_capacitor20.1_positive collegato a integrated_circuit11.1_bottom_1 e negative alla rete comune.",
-        "severity": "minor"
-      }
-    ],
+    "wrong_graph_connections": [],
     "uncertain_points": [
-      "La polarità effettiva dei LED è dedotta dal simbolo visibile ma la qualità dell'immagine rende non completamente agevole distinguere anodo e catodo per entrambi.",
-      "Il simbolo del pulsante S1 mostra due contatti su un ramo laterale; il JSON lo rappresenta come due terminali, ma lo stato aperto/chiuso non è esplicitato nel graph.",
-      "Il contatto visibile vicino al nodo di C2/R4/D1 può essere interpretato come incrocio o giunzione; dall'immagine appare un nodo, ma la sovrapposizione grafica può generare ambiguità locale."
+      "La corrispondenza esatta tra gli identificativi JSON dei resistori e le sigle visibili R1-R5 non è esplicitata; è stata valutata principalmente tramite posizione e connessioni.",
+      "La polarità anodo/catodo dei LED non è del tutto verificabile solo dal simbolo e dall'orientamento nell'immagine.",
+      "Lo stato fisico aperto/chiuso del pulsante S1 è visibile come simbolo, ma il campo graph rappresenta solo i due nodi terminali e non uno stato di contatto dinamico."
     ],
-    "short_explanation": "Il JSON riconosce quasi tutti i componenti principali e la maggior parte delle reti visibili: alimentazione superiore/inferiore, pin dell'NE555, R1/S1, C1, C2, R4/R5, LED e resistori sono in gran parte presenti. Le principali discrepanze riguardano la classificazione di C1 come polarizzato, la rappresentazione incompleta del resistore variabile R5 e una probabile inversione/ambiguità della polarità e connessione del LED D1. Nel complesso la topologia è abbastanza fedele e utilizzabile come base di correzione."
+    "short_explanation": "Il JSON riproduce bene la struttura principale: IC NE555 con pin numerati coerenti, batteria, due LED, cinque resistori, due condensatori e pulsante, con le principali reti di alimentazione, massa, pin 2/4, pin 6/7, uscita pin 3 e ramo R4/R5 correttamente rappresentate. Le discrepanze principali sono la classificazione di C1 come condensatore polarizzato e la semplificazione del resistore variabile R5; il modello del pulsante è topologicamente recuperabile. Nel complesso la fedeltà topologica è alta."
   },
-  "raw_model_output": "{\"circuit_id\":\"c02\",\"batch\":\"C1\",\"image_file\":\"c02.jpg\",\"json_file\":\"c02.json\",\"image_graph_fidelity_score\":83,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":23,\"terminals_pins\":16,\"graph_connections\":36,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":3,\"minor\":3},\"critical_errors\":[],\"major_errors\":[{\"type\":\"wrong_component_class\",\"description\":\"C1 è disegnato come condensatore non polarizzato, mentre nel JSON è classificato come Polarized_Capacitor con terminali positive/negative.\",\"image_evidence\":\"Il componente C1 collegato al pin 5 dell'IC e alla linea inferiore è rappresentato con simbolo di condensatore non polarizzato.\",\"json_evidence\":\"Il componente polarized_capacitor20.1 ha class_name \\\"Polarized_Capacitor\\\" e terminali \\\"positive\\\"/\\\"negative\\\".\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il terminale inferiore del LED D1 dovrebbe essere collegato alla linea inferiore comune, non alla stessa rete del pin 6, del pin 7 e del nodo tra R4/R5/C2.\",\"image_evidence\":\"D1 è disegnato verticalmente: il suo terminale superiore arriva da R2, mentre il terminale inferiore scende alla linea inferiore comune; il nodo dei pin 6/7 e C2 è su un filo orizzontale che passa accanto ma non è chiaramente connesso al terminale del LED.\",\"json_evidence\":\"Nel graph led12.2_cathode è nella rete di battery2.1_negative, mentre led12.2_anode è collegato solo a resistor22.3_t2; la polarità/connessione topologica di D1 risulta invertita rispetto al simbolo visibile e al cablaggio.\"},{\"type\":\"wrong_graph_connection\",\"description\":\"Il potenziometro/variabile R5 è rappresentato solo come resistore a due terminali e collegato in serie con R4; il collegamento del cursore visibile non è modellato come terminale separato.\",\"image_evidence\":\"R5 mostra una freccia/cursore collegata al nodo inferiore di R5, cioè al nodo tra R5 e R4, caratteristica di un resistore variabile/potenziometro con terminale di cursore visibile.\",\"json_evidence\":\"R5 è rappresentato come resistor22.5 con soli terminali t1 e t2; nel graph resistor22.5_t2 è collegato solo a resistor22.4_t1.\"}],\"minor_errors\":[{\"type\":\"component_semantics\",\"description\":\"Il simbolo della batteria è presente e con polarità visibile, ma il JSON usa solo una classe Battery generica senza conservare eventuali etichette visive del componente.\"},{\"type\":\"terminal_orientation_uncertainty\",\"description\":\"Le posizioni relative top/bottom/left/right di alcuni resistori verticali/orizzontali sono plausibili ma non sempre verificabili in modo univoco dall'immagine.\"},{\"type\":\"ic_terminal_modeling\",\"description\":\"L'IC è modellato con posizioni terminali aggregate per lato; i numeri di pin sono presenti e in gran parte coerenti, ma la disposizione fisica nel JSON non distingue pienamente l'ordine verticale dei pin sul lato destro.\"}],\"missing_from_json\":[\"Terminale/cursore separato del resistore variabile R5 visibile nell'immagine\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"D1 collegato tra il nodo dopo R2 e la linea inferiore comune, con orientamento coerente col simbolo visibile.\",\"found_in_json\":\"led12.2_anode è collegato a resistor22.3_t2 e led12.2_cathode è sulla rete comune negativa; la connessione può rappresentare i due nodi, ma la polarità/assegnazione anodo-cathode appare invertita rispetto al simbolo visibile.\",\"severity\":\"major\"},{\"expected_from_image\":\"R5 come resistore variabile con cursore visibile connesso al nodo tra R5 e R4.\",\"found_in_json\":\"resistor22.5 ha solo due terminali; resistor22.5_t2 è collegato a resistor22.4_t1 senza terminale di cursore separato.\",\"severity\":\"major\"},{\"expected_from_image\":\"C1 come condensatore non polarizzato tra pin 5 dell'IC e linea inferiore comune.\",\"found_in_json\":\"polarized_capacitor20.1_positive collegato a integrated_circuit11.1_bottom_1 e negative alla rete comune.\",\"severity\":\"minor\"}],\"uncertain_points\":[\"La polarità effettiva dei LED è dedotta dal simbolo visibile ma la qualità dell'immagine rende non completamente agevole distinguere anodo e catodo per entrambi.\",\"Il simbolo del pulsante S1 mostra due contatti su un ramo laterale; il JSON lo rappresenta come due terminali, ma lo stato aperto/chiuso non è esplicitato nel graph.\",\"Il contatto visibile vicino al nodo di C2/R4/D1 può essere interpretato come incrocio o giunzione; dall'immagine appare un nodo, ma la sovrapposizione grafica può generare ambiguità locale.\"],\"short_explanation\":\"Il JSON riconosce quasi tutti i componenti principali e la maggior parte delle reti visibili: alimentazione superiore/inferiore, pin dell'NE555, R1/S1, C1, C2, R4/R5, LED e resistori sono in gran parte presenti. Le principali discrepanze riguardano la classificazione di C1 come polarizzato, la rappresentazione incompleta del resistore variabile R5 e una probabile inversione/ambiguità della polarità e connessione del LED D1. Nel complesso la topologia è abbastanza fedele e utilizzabile come base di correzione.\"}"
+  "raw_model_output": "{\"circuit_id\":\"c02\",\"batch\":\"C1\",\"image_file\":\"c02.jpg\",\"json_file\":\"c02.json\",\"image_graph_fidelity_score\":88,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":22,\"terminals_pins\":18,\"graph_connections\":40,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":2,\"minor\":2},\"critical_errors\":[],\"major_errors\":[{\"type\":\"component_class_mismatch\",\"description\":\"Il condensatore C1 visibile sotto il pin 5 dell'IC è disegnato come condensatore non polarizzato, mentre nel JSON è classificato come Polarized_Capacitor con terminali positive/negative.\",\"image_evidence\":\"C1 è collegato tra il pin 5 dell'IC e la linea inferiore comune, con simbolo a due piastre non polarizzato.\",\"json_evidence\":\"polarized_capacitor20.1 ha class_name \\\"Polarized_Capacitor\\\" e terminali \\\"positive\\\" e \\\"negative\\\".\"},{\"type\":\"missing_or_incomplete_switch_terminal_model\",\"description\":\"Il pulsante/interruttore S1 è rappresentato nell'immagine come elemento laterale con due contatti collegati tra la rete dei pin 2/4 e la linea inferiore comune. Il JSON lo modella con due terminali, ma non rappresenta chiaramente il simbolo/contatto laterale e il suo stato visibile; la topologia base dei due nodi è comunque presente.\",\"image_evidence\":\"S1 è sul lato sinistro, tra il nodo comune dei pin 2 e 4 e la barra inferiore.\",\"json_evidence\":\"push_button21.1_t1 è connesso a integrated_circuit11.1_left_1, integrated_circuit11.1_top_1 e resistor22.1_t2; push_button21.1_t2 è connesso alla rete negativa.\"}],\"minor_errors\":[{\"type\":\"component_semantics\",\"description\":\"Il resistore R5 nell'immagine è graficamente un resistore variabile/potenziometro o reostato con cursore collegato al nodo tra R5 e R4; il JSON lo rappresenta come semplice Resistor a due terminali.\"},{\"type\":\"polarity_uncertainty\",\"description\":\"Le polarità dei LED sono dichiarate come anode/cathode nel JSON, ma dall'immagine la verifica esatta dei terminali anodo/catodo non è completamente sicura per entrambi i LED.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"La corrispondenza esatta tra gli identificativi JSON dei resistori e le sigle visibili R1-R5 non è esplicitata; è stata valutata principalmente tramite posizione e connessioni.\",\"La polarità anodo/catodo dei LED non è del tutto verificabile solo dal simbolo e dall'orientamento nell'immagine.\",\"Lo stato fisico aperto/chiuso del pulsante S1 è visibile come simbolo, ma il campo graph rappresenta solo i due nodi terminali e non uno stato di contatto dinamico.\"],\"short_explanation\":\"Il JSON riproduce bene la struttura principale: IC NE555 con pin numerati coerenti, batteria, due LED, cinque resistori, due condensatori e pulsante, con le principali reti di alimentazione, massa, pin 2/4, pin 6/7, uscita pin 3 e ramo R4/R5 correttamente rappresentate. Le discrepanze principali sono la classificazione di C1 come condensatore polarizzato e la semplificazione del resistore variabile R5; il modello del pulsante è topologicamente recuperabile. Nel complesso la fedeltà topologica è alta.\"}"
 }

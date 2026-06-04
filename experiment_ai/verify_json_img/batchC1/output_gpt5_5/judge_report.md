@@ -1,244 +1,244 @@
 # Report verifica immagine ↔ Graph JSON
 
-Generato: 2026-06-03 23:38:50
+Generato: 2026-06-04 10:11:54
 
 ## Tabella sintetica
 
 | Circuito | Batch | Score | Fedeltà | Critici | Maggiori | Minori | Usabile come graph base |
 |---|---:|---:|---|---:|---:|---:|---|
-| c01 | C1 | 96 | VERY_HIGH | 0 | 0 | 2 | True |
-| c02 | C1 | 83 | HIGH | 0 | 3 | 3 | True |
-| c03 | C1 | 88 | HIGH | 0 | 2 | 3 | True |
-| c04 | C1 | 88 | HIGH | 0 | 2 | 3 | True |
-| c05 | C1 | 80 | HIGH | 0 | 4 | 3 | True |
-| c06 | C1 | 76 | HIGH | 0 | 3 | 3 | True |
-| c07 | C1 | 78 | HIGH | 0 | 3 | 3 | True |
-| c08 | C1 | 73 | MEDIUM | 1 | 5 | 3 | True |
-| c17 | C1 | 86 | HIGH | 0 | 2 | 3 | True |
-| c18 | C1 | 80 | HIGH | 0 | 3 | 2 | True |
+| c01 | C1 | 94 | VERY_HIGH | 0 | 0 | 3 | True |
+| c02 | C1 | 88 | HIGH | 0 | 2 | 2 | True |
+| c03 | C1 | 89 | HIGH | 0 | 2 | 3 | True |
+| c04 | C1 | 78 | HIGH | 0 | 3 | 3 | True |
+| c05 | C1 | 86 | HIGH | 0 | 2 | 2 | True |
+| c06 | C1 | 62 | MEDIUM | 1 | 4 | 2 | True |
+| c07 | C1 | 66 | MEDIUM | 1 | 4 | 2 | True |
+| c08 | C1 | 82 | HIGH | 0 | 4 | 3 | True |
+| c17 | C1 | 88 | HIGH | 0 | 2 | 3 | True |
+| c18 | C1 | 78 | HIGH | 0 | 4 | 3 | True |
 
 ## Dettagli per circuito
 
 ### c01
 
 - Batch: `C1`
-- Score: `96`
+- Score: `94`
 - Fedeltà: `VERY_HIGH`
 - Usabile come graph base: `True`
-- Spiegazione: Il Graph JSON riproduce molto fedelmente componenti e collegamenti principali visibili: IC 555 con pin numerati, tre resistori, tre condensatori, LED, GND e terminale di alimentazione. Le net principali corrispondono all'immagine: pin 4 e 8 al nodo superiore, pin 1 al nodo inferiore/GND, pin 2 e 6 uniti con C1 e R2, pin 7 tra R1 e R2, pin 3 verso R3 e LED, pin 5 verso C2, C3 tra nodo superiore e inferiore. Restano solo lievi limiti semantici sul terminale di alimentazione e sulla conservazione della label visibile.
+- Spiegazione: Il Graph JSON rappresenta molto fedelmente la topologia visibile: sono presenti IC 555, tre resistori, tre condensatori, LED, GND e terminale di alimentazione. Le connessioni principali coincidono con l'immagine: pin 4 e 8 al nodo superiore, pin 1 a massa, pin 2 e 6 con il nodo del condensatore e del resistore, pin 7 tra i due resistori, pin 5 al condensatore verso massa, pin 3 verso resistore e LED a massa. Le discrepanze sono limitate a semantica/etichette e orientamenti terminali non essenziali.
 
 **Errori minori:**
-- Il terminale di alimentazione superiore è descritto nel JSON come Terminal con relative_position bottom; è una scelta non perfettamente aderente al simbolo visivo, ma non altera la topologia.
-- Il JSON rappresenta correttamente il terminale di alimentazione come Terminal, ma non conserva la label topologica visibile di alimentazione positiva.
+- I tre resistori, i tre condensatori e il terminale di alimentazione sono presenti con classi corrette, ma gli identificativi del JSON non conservano le etichette visibili R1/R2/R3 e C1/C2/C3; questo non altera la topologia.
+- Alcune posizioni relative dei terminali sono semplificate o non perfettamente corrispondenti all'orientamento grafico visibile, ad esempio il LED è disegnato lateralmente rispetto al ramo verticale ma nel JSON ha anodo top e catodo bottom.
+- La label di alimentazione visibile come terminale superiore è rappresentata genericamente come Terminal senza conservare la semantica testuale dell'alimentazione.
 
 **Punti incerti:**
-- La polarità fisica del LED è graficamente indicata dal simbolo, ma l'associazione esatta anode/cathode nel JSON non è completamente verificabile senza assumere convenzioni esterne; il collegamento topologico serie resistore-LED-verso nodo inferiore risulta comunque coerente.
-- Le polarità dei condensatori non sono valutate perché nell'immagine non risultano chiaramente marcate come polarizzati.
+- La polarità esatta del LED è visivamente suggerita dal simbolo, ma l'immagine non rende completamente inequivocabile il verso dei terminali rispetto ai nomi anode/cathode del JSON senza interpretazione simbolica dettagliata.
+- Le posizioni relative top/bottom/left/right dei terminali dei condensatori non sono tutte verificabili in modo univoco dall'immagine, soprattutto per i condensatori disegnati in orizzontale.
 
 ### c02
 
 - Batch: `C1`
-- Score: `83`
+- Score: `88`
 - Fedeltà: `HIGH`
 - Usabile come graph base: `True`
-- Spiegazione: Il JSON riconosce quasi tutti i componenti principali e la maggior parte delle reti visibili: alimentazione superiore/inferiore, pin dell'NE555, R1/S1, C1, C2, R4/R5, LED e resistori sono in gran parte presenti. Le principali discrepanze riguardano la classificazione di C1 come polarizzato, la rappresentazione incompleta del resistore variabile R5 e una probabile inversione/ambiguità della polarità e connessione del LED D1. Nel complesso la topologia è abbastanza fedele e utilizzabile come base di correzione.
+- Spiegazione: Il JSON riproduce bene la struttura principale: IC NE555 con pin numerati coerenti, batteria, due LED, cinque resistori, due condensatori e pulsante, con le principali reti di alimentazione, massa, pin 2/4, pin 6/7, uscita pin 3 e ramo R4/R5 correttamente rappresentate. Le discrepanze principali sono la classificazione di C1 come condensatore polarizzato e la semplificazione del resistore variabile R5; il modello del pulsante è topologicamente recuperabile. Nel complesso la fedeltà topologica è alta.
 
 **Errori maggiori:**
-- C1 è disegnato come condensatore non polarizzato, mentre nel JSON è classificato come Polarized_Capacitor con terminali positive/negative.
-- Il terminale inferiore del LED D1 dovrebbe essere collegato alla linea inferiore comune, non alla stessa rete del pin 6, del pin 7 e del nodo tra R4/R5/C2.
-- Il potenziometro/variabile R5 è rappresentato solo come resistore a due terminali e collegato in serie con R4; il collegamento del cursore visibile non è modellato come terminale separato.
+- Il condensatore C1 visibile sotto il pin 5 dell'IC è disegnato come condensatore non polarizzato, mentre nel JSON è classificato come Polarized_Capacitor con terminali positive/negative.
+- Il pulsante/interruttore S1 è rappresentato nell'immagine come elemento laterale con due contatti collegati tra la rete dei pin 2/4 e la linea inferiore comune. Il JSON lo modella con due terminali, ma non rappresenta chiaramente il simbolo/contatto laterale e il suo stato visibile; la topologia base dei due nodi è comunque presente.
 
 **Errori minori:**
-- Il simbolo della batteria è presente e con polarità visibile, ma il JSON usa solo una classe Battery generica senza conservare eventuali etichette visive del componente.
-- Le posizioni relative top/bottom/left/right di alcuni resistori verticali/orizzontali sono plausibili ma non sempre verificabili in modo univoco dall'immagine.
-- L'IC è modellato con posizioni terminali aggregate per lato; i numeri di pin sono presenti e in gran parte coerenti, ma la disposizione fisica nel JSON non distingue pienamente l'ordine verticale dei pin sul lato destro.
+- Il resistore R5 nell'immagine è graficamente un resistore variabile/potenziometro o reostato con cursore collegato al nodo tra R5 e R4; il JSON lo rappresenta come semplice Resistor a due terminali.
+- Le polarità dei LED sono dichiarate come anode/cathode nel JSON, ma dall'immagine la verifica esatta dei terminali anodo/catodo non è completamente sicura per entrambi i LED.
 
 **Punti incerti:**
-- La polarità effettiva dei LED è dedotta dal simbolo visibile ma la qualità dell'immagine rende non completamente agevole distinguere anodo e catodo per entrambi.
-- Il simbolo del pulsante S1 mostra due contatti su un ramo laterale; il JSON lo rappresenta come due terminali, ma lo stato aperto/chiuso non è esplicitato nel graph.
-- Il contatto visibile vicino al nodo di C2/R4/D1 può essere interpretato come incrocio o giunzione; dall'immagine appare un nodo, ma la sovrapposizione grafica può generare ambiguità locale.
+- La corrispondenza esatta tra gli identificativi JSON dei resistori e le sigle visibili R1-R5 non è esplicitata; è stata valutata principalmente tramite posizione e connessioni.
+- La polarità anodo/catodo dei LED non è del tutto verificabile solo dal simbolo e dall'orientamento nell'immagine.
+- Lo stato fisico aperto/chiuso del pulsante S1 è visibile come simbolo, ma il campo graph rappresenta solo i due nodi terminali e non uno stato di contatto dinamico.
 
 ### c03
 
 - Batch: `C1`
-- Score: `88`
+- Score: `89`
 - Fedeltà: `HIGH`
 - Usabile come graph base: `True`
-- Spiegazione: Il Graph JSON riproduce bene la struttura principale: rete di ingresso con condensatore, diodo e resistori, transistor verso massa, IC con pin numerati, rete di temporizzazione, uscita con resistore e condensatore verso massa. Le connessioni principali del campo graph sono in larga parte coerenti con i fili visibili. Le discrepanze più rilevanti riguardano la classificazione/polarità di vari condensatori non polarizzati e la perdita delle etichette semantiche dei terminali esterni. Nel complesso il grafo è una buona base topologica, con errori localizzati.
+- Spiegazione: Il Graph JSON riproduce quasi tutti i componenti principali e la maggior parte delle reti visibili: ingresso con C1, D1/R1/R2/R3, transistor, rete dell'IC LM555, condensatori verso massa, uscita tramite R6/C5 e massa comune. Le discrepanze principali riguardano semantiche di terminale mancanti, uso esteso di condensatori polarizzati e alcune semplificazioni/ambiguità di pin e terminali. La topologia complessiva resta buona e utilizzabile come base.
 
 **Errori maggiori:**
-- Diversi condensatori non polarizzati visibili nell'immagine sono classificati nel JSON come Polarized_Capacitor. Questo riguarda i condensatori attorno all'IC e all'uscita; la topologia dei due terminali resta per lo più utilizzabile, ma la classe e la polarità non sono coerenti con il simbolo visivo.
-- Il JSON unisce il terminale inferiore del condensatore di accoppiamento di ingresso direttamente al terminale di ingresso, mentre nell'immagine il condensatore è in serie tra il terminale di ingresso e il nodo con diodo/resistore; non è visibile un filo diretto che cortocircuiti i due lati del condensatore.
+- Il collettore del transistor è unito nel JSON al nodo dei pin 6/2 dell'IC e al lato inferiore di R4/C2, ma nell'immagine il collettore sale a un nodo separato collegato al lato inferiore di R4 e al pin 6/2; il JSON include correttamente questa rete ma la rende anche comune al positivo di C2. Nell'immagine C2 è collegato tra quel nodo e massa, quindi questo è compatibile; la discrepanza più rilevante è che il terminale inferiore/altro terminale del transistor verso massa e C2 inferiore risulta rappresentato come emettitore a massa, mentre l'immagine mostra l'emettitore a massa. Errore limitato alla possibile attribuzione dei terminali del transistor/polarità simbolica.
+- Il nodo di ingresso a sinistra include il terminale Signal in collegato al lato positivo di C1 e al terminale inferiore Signal in collegato alla massa comune; nel JSON ci sono due terminali a sinistra, ma il terminale superiore risulta collegato solo al positivo di C1 e quello inferiore alla massa. La label topologica Signal in non è esplicitata, rendendo meno chiara la semantica dei due terminali di ingresso.
 
 **Errori minori:**
-- La polarità del condensatore di ingresso è rappresentata con positive a sinistra e negative a destra; il simbolo mostra un segno di polarità sul lato sinistro, quindi la polarità sembra coerente, ma l'identificazione dei terminali nel JSON non è completamente verificabile solo dagli ID.
-- Le etichette topologiche visibili Signal in, Vout e alimentazione superiore sono rappresentate come terminali generici senza nomi semantici espliciti.
-- Il JSON include un solo componente GND, mentre l'immagine mostra una barra di massa comune con simbolo GND esplicito; la net di massa è comunque sostanzialmente rappresentata.
+- Diversi condensatori non polarizzati visibili sono rappresentati come Polarized_Capacitor nel JSON; ciò non altera molto la topologia, ma la classe/polarità non è coerente per tutti i simboli.
+- Le label visibili Signal in, Vout e alimentazione superiore non sono conservate come nomi semantici dei terminali nel JSON, pur essendo presenti terminali equivalenti.
+- I pin dell'IC sono rappresentati con posizioni aggregate top/left/bottom/right; i numeri di pin principali corrispondono all'immagine, ma la geometria dei due pin superiori e inferiori è semplificata.
 
 **Punti incerti:**
-- L'immagine mostra terminali/etichette esterne, ma il JSON usa terminal26.x senza display_name; l'associazione esatta di ciascun terminale esterno è dedotta dalla posizione e dai collegamenti.
-- Non tutti i numeri di pin dell'IC sono graficamente leggibili con uguale chiarezza, anche se quelli principali riportati nel JSON sembrano coerenti con le posizioni visibili.
-- La distinzione tra condensatori polarizzati e non polarizzati è visibile per alcuni simboli, ma l'automatismo ha usato una classe polarizzata uniforme per più condensatori.
+- La polarità esatta di alcuni condensatori non è chiaramente verificabile dal solo simbolo nell'immagine.
+- La corrispondenza tra gli instance_id numerici del JSON e i designatori visibili R1-R6/C1-C5/D1/Q1 è dedotta dalla posizione e dai collegamenti, non dai nomi nel JSON.
+- Le attribuzioni fisiche dei terminali C/B/E del transistor sono in gran parte coerenti con il simbolo, ma la verifica resta visiva e non basata su datasheet.
 
 ### c04
-
-- Batch: `C1`
-- Score: `88`
-- Fedeltà: `HIGH`
-- Usabile come graph base: `True`
-- Spiegazione: Il JSON riconosce quasi tutti i componenti principali e gran parte delle reti visibili: due NE555, resistori, diodo, condensatori principali, alimentazione, massa e speaker. La topologia generale è buona, inclusi i nodi di alimentazione, massa, reti dei pin 6/2 e collegamento allo speaker. La discrepanza più rilevante riguarda il ramo del pin 5 del secondo IC e il collegamento del resistore proveniente dal pin 3 del primo IC, dove manca un condensatore visibile e la rete risulta rappresentata in modo errato. Rimane comunque una base grafica utilizzabile per correzioni.
-
-**Errori maggiori:**
-- Il condensatore collegato al pin 5 del secondo IC è visibile nell'immagine ma non è rappresentato come componente separato nel JSON; al suo posto il pin 5 del secondo IC è collegato direttamente a un resistore.
-- Il resistore di collegamento tra uscita del primo IC e pin 5 del secondo IC è rappresentato in modo incompleto/errato: nell'immagine collega il pin 3 del primo IC al nodo inferiore che poi raggiunge il pin 5 del secondo IC attraverso il ramo visibile, mentre nel JSON il resistore22.3 è spezzato come collegamento diretto tra pin 3 del primo IC e pin 5 del secondo IC senza includere correttamente il nodo inferiore condiviso.
-
-**Errori minori:**
-- Alcuni condensatori sono classificati come Polarized_Capacitor anche dove il simbolo non mostra chiaramente polarità o è un condensatore non polarizzato nell'immagine.
-- Entrambi i terminali dello speaker sono indicati con relative_position left; la topologia è comunque sostanzialmente corretta.
-- I due integrati sono entrambi etichettati come IC1 nel disegno, mentre nel JSON sono distinti come integrated_circuit11.1 e integrated_circuit11.2; la distinzione topologica è corretta ma la semantica visibile è ambigua.
-
-**Punti incerti:**
-- La polarità del diodo nel JSON sembra plausibile rispetto al simbolo, ma l'orientamento anodo/catodo non è completamente verificabile senza ambiguità dall'immagine raster.
-- Le etichette funzionali dei pin degli IC non sono valutate; sono considerati solo i numeri di pin visibili.
-- La classificazione polarizzata/non polarizzata di alcuni condensatori è parzialmente ambigua nella resa grafica.
-
-### c05
-
-- Batch: `C1`
-- Score: `80`
-- Fedeltà: `HIGH`
-- Usabile come graph base: `True`
-- Spiegazione: Il JSON riconosce quasi tutti i componenti principali e rappresenta bene la catena 555, 4026, resistori di segmento e display. Tuttavia contiene un errore topologico importante nella zona tra OUT del 555 e i pin sinistri del 4026, dove unisce indebitamente CLK, RST, INH e GND, e lascia non collegato il terminale superiore del resistore verso +Vcc. La parte display tramite sette resistori è invece sostanzialmente fedele.
-
-**Errori maggiori:**
-- Il terminale superiore del resistore di sinistra collegato a +Vcc nell'immagine risulta non collegato nel graph.
-- Il pin di uscita del 555 è collegato al pin CLK del 4026 nell'immagine, ma nel JSON è unito anche a GND e ad altri pin del 4026.
-- Il pin 15 del 4026 è collegato a GND nell'immagine, ma il JSON lo mette nella stessa net del pin 3 OUT del 555 e dei pin 2 e 1 del 4026.
-- I pin inferiori 8, 14, 4 e 5 del 4026 sono tutti uniti a GND nel JSON, mentre nell'immagine solo 8, 14 e 4 sono sul nodo GND; il pin 5 è collegato localmente al pin 4 ma non mostra connessione diretta al simbolo GND se non tramite quel tratto comune ambiguo.
-
-**Errori minori:**
-- Il display a sette segmenti è modellato come Integrated_Circuit invece che come display dedicato, anche se il subtype e i pin di segmento sono presenti.
-- Alcune liste del graph non sono perfettamente simmetriche per la stessa net, ad esempio integrated_circuit11.2_bottom_1 non elenca bottom_4 mentre gnd9.3_t1 lo elenca.
-- Le label topologiche +Vcc visibili nell'immagine non sono rappresentate come terminali o nodi dedicati nel JSON; la connessione tra pin 4 e 8 del 555 e tra pin 3 e 16 del 4026 è però parzialmente catturata come net interne.
-
-**Punti incerti:**
-- La polarità del condensatore sul nodo dei pin 2/6 del 555 è visibile graficamente, ma il JSON usa terminali generici senza polarità; non è valutata come errore topologico principale.
-- Il collegamento esatto del pin 5 inferiore del 4026 al nodo GND è graficamente poco chiaro per la posizione della linea orizzontale inferiore.
-- I pin label del display a sette segmenti sono coerenti con le lettere visibili, ma l'ordine fisico dei terminali può essere verificato solo parzialmente dall'immagine.
-
-### c06
-
-- Batch: `C1`
-- Score: `76`
-- Fedeltà: `HIGH`
-- Usabile come graph base: `True`
-- Spiegazione: Il JSON riconosce quasi tutti i componenti principali e riproduce bene i sette collegamenti IC-resistori-display e le masse del display e dei pin inferiori 8/14. La parte sinistra del circuito attorno a pulsante, resistore, Vdd/CLK e pin 1/2/3/15/16 del CD4026 contiene però nodi uniti in modo errato, con il pin 3 collegato a Vdd nel JSON e il nodo del pulsante/resistore unito a pin che nell'immagine sono su altri rami. La struttura complessiva resta comunque recuperabile come base.
-
-**Errori maggiori:**
-- Il nodo del pulsante e del resistore a sinistra è collegato nel JSON a più pin sinistri dell'IC, mentre nell'immagine il nodo CLK esterno arriva al pin 3 e al resistore/pulsante, non ai pin 15, 2 e 1.
-- Il JSON collega il pin 3 dell'IC, il pin 16 e il terminale superiore del pulsante nello stesso nodo, ma nell'immagine il pin 3 è sul nodo CLK laterale, mentre il pin 16/Vdd e il lato superiore del pulsante appartengono al nodo di alimentazione superiore.
-- Il collegamento di massa dei pin 8 e 14 dell'IC è rappresentato, ma i pin 15, 2 e 1 risultano nel JSON tutti uniti al nodo del pulsante/resistore e a una GND, mentre nell'immagine almeno il pin 15 è collegato al simbolo GND laterale e i pin 2 e 1 seguono il bus verticale disegnato, non il nodo del pulsante.
-
-**Errori minori:**
-- Il display a sette segmenti è modellato come Integrated_Circuit; la topologia dei terminali è utilizzabile, ma la classe non descrive precisamente il simbolo visibile.
-- Il JSON rappresenta sette resistori di segmento separati; nell'immagine sono visibili sette rami resistivi verso i segmenti, anche se una nota testuale del disegno può renderne ambigua la conta automatica.
-- Il JSON segnala come non connessi i terminali bottom_3 e bottom_4 dell'IC; nell'immagine questi pin terminano con simboli di non connessione, quindi l'avviso non è grave ma indica una semantica non esplicitata come NC.
-
-**Punti incerti:**
-- La numerazione e le etichette funzionali dei pin del CD4026 sono leggibili nell'immagine, ma la verifica non deduce alcuna funzione dai numeri di pin.
-- Lo stato aperto/chiuso del pulsante S1 è rappresentato come simbolo di pulsante/interruttore, ma il JSON non codifica uno stato; ciò non è valutato come errore topologico.
-- Il simbolo di non connessione sui pin inferiori 4 e 5 è visibile; il JSON li lascia senza collegamenti e segnala warning, ma non distingue esplicitamente tra pin flottante e NC.
-
-### c07
 
 - Batch: `C1`
 - Score: `78`
 - Fedeltà: `HIGH`
 - Usabile come graph base: `True`
-- Spiegazione: Il JSON riconosce quasi tutti i componenti principali: due pulsanti, resistenza verso GND, IC CD4026, display a sette segmenti, resistori di segmento e GND. La parte destra IC-resistori-display è nel complesso fedele. Gli errori principali sono nella rete sinistra dei pulsanti/alimentazione: pin 3 e pin 16 sono uniti erroneamente, i terminali di un pulsante sono cortocircuitati nello stesso nodo e un terminale di S2 è lasciato scollegato. La struttura resta comunque recuperabile come base.
+- Spiegazione: Il JSON riconosce quasi tutti i componenti principali e gran parte delle reti visibili: due NE555, resistori, diodo, condensatori, massa, terminale di alimentazione e speaker. La rete superiore di alimentazione e molte connessioni dei pin dei due IC sono coerenti. Le principali discrepanze sono la classificazione polarizzata di C2 e C3 e soprattutto il collegamento inferiore di R5, che nell'immagine confluisce nella rete inferiore mentre nel JSON resta solo tra uscita del primo IC e pin 5 del secondo IC. La struttura complessiva resta comunque recuperabile come base topologica.
 
 **Errori maggiori:**
-- Il JSON unisce il pin 3 dell'IC CD4026 al pin 16, mentre nell'immagine il pin 3 è collegato alla linea CLK/debounce a sinistra e il pin 16 è collegato alla linea di alimentazione superiore; queste sono reti distinte visivamente.
-- La rete dei pulsanti e della resistenza di pull-down è fusa impropriamente con due pin diversi dell'IC e con entrambi i terminali di un pulsante. Nell'immagine la linea CLK/RST con S1, S2 e la resistenza non è un unico nodo che cortocircuita direttamente i terminali del pulsante S1.
-- Il terminale superiore di S2 risulta non collegato nel JSON, ma nell'immagine S2 ha un terminale collegato alla linea verticale superiore e l'altro al nodo RST/linea inferiore.
+- Il condensatore C2 visibile come condensatore non polarizzato è rappresentato nel JSON come Polarized_Capacitor.
+- Il condensatore C3 visibile come condensatore non polarizzato è rappresentato nel JSON come Polarized_Capacitor.
+- Manca nel grafo il collegamento visibile tra l'uscita del primo NE555, tramite R5, e la rete inferiore che prosegue verso il secondo stadio e massa.
 
 **Errori minori:**
-- Il display a sette segmenti è modellato come Integrated_Circuit con subtype seven_segment_display; la topologia dei terminali è comunque riconoscibile.
-- Nel gruppo delle resistenze verso il display sono presenti sette collegamenti grafici distinti, mentre il testo vicino indica un gruppo aggregato; il JSON usa sette resistori separati, scelta topologicamente accettabile ma non perfettamente aderente alla notazione grafica aggregata.
-- Il JSON segnala come non collegati due pin inferiori dell'IC che nell'immagine sono marcati con simboli di non connessione; questo non è grave, ma il warning su push_button21.2_t1 riflette invece una discrepanza già conteggiata.
+- La polarità del diodo nel JSON potrebbe non essere coerente con il simbolo visibile, ma l'orientamento anodo/catodo non è verificabile con certezza dall'estrazione testuale del simbolo.
+- Entrambi i terminali dello speaker sono indicati con relative_position "left"; nell'immagine i due terminali sono distinti verticalmente sul lato sinistro del simbolo.
+- Entrambi gli integrati sono marcati nel JSON come NE555 e display_name simile; nell'immagine entrambi sono effettivamente NE555 ma sono entrambi etichettati IC1, quindi la distinzione tra istanze non è visivamente nominale.
 
 **Punti incerti:**
-- La corrispondenza esatta tra ciascun terminale del display e il rispettivo terminale del resistore dipende dalla lettura delle etichette a-g; il JSON appare coerente con l'ordine visibile ma alcune etichette sono graficamente ravvicinate.
-- Lo stato operativo dei pulsanti è rappresentato graficamente come aperto, ma il JSON non contiene uno stato esplicito separato oltre ai terminali e ai collegamenti.
+- L'esatta corrispondenza spaziale tra resistor22.3 e R5 è dedotta dai collegamenti nel JSON, ma l'immagine mostra il terminale inferiore di R5 sulla linea inferiore mentre il JSON lo collega al pin 5 del secondo NE555; il punto di incrocio/giunzione può risultare ambiguo graficamente.
+- La polarità anodo/catodo del diodo D1 non è completamente verificabile solo dal simbolo nella risoluzione fornita.
+- Le polarità dei condensatori polarizzati C1 e C4 appaiono visibili, ma l'associazione esatta agli ID JSON dipende dalla corrispondenza spaziale automatica delle istanze.
 
-### c08
-
-- Batch: `C1`
-- Score: `73`
-- Fedeltà: `MEDIUM`
-- Usabile come graph base: `True`
-- Spiegazione: Il JSON riconosce gran parte dei componenti principali e conserva abbastanza bene la sezione LED-transistor e diversi collegamenti IC2-resistenze. Tuttavia contiene errori topologici importanti: una rete di alimentazione è etichettata/collegata come GND, il pin inferiore di IC1 è unito al nodo sbagliato, R4 risulta aperto e lo switch SPDT è semplificato in modo non fedele. La struttura resta recuperabile come base, ma la fedeltà complessiva è solo parziale.
-
-**Errori critici:**
-- Il JSON collega il simbolo GND superiore alla rete di alimentazione superiore e ai pin superiori degli IC, mentre nell'immagine la barra superiore è la rete di alimentazione e il GND di C2 è separato e connesso al terminale inferiore del condensatore.
-
-**Errori maggiori:**
-- Il pin inferiore di IC1 è inserito nella stessa net dei pin laterali e del condensatore C1 positivo, invece nell'immagine è collegato alla linea inferiore di massa.
-- Il condensatore C1 ha il terminale superiore collegato al nodo dei pin laterali di IC1 e il terminale inferiore a massa; nel JSON il terminale negativo è nella net di massa IC2 e il positivo è unito anche al pin inferiore di IC1.
-- Il terminale superiore di R4 risulta non connesso nel JSON, ma nell'immagine è collegato alla rete superiore tramite il lato destro dello switch/linea superiore.
-- Lo switch SPDT è modellato come switch a due terminali chiuso, ma nell'immagine ha tre contatti visibili R, comune e L; il contatto L alimenta R3 e il contatto destro alimenta R4, con stato meccanico non rappresentabile come semplice collegamento chiuso tra due soli terminali.
-- IC2 nel JSON contiene un terminale destro duplicato per pin 7 e un terminale bottom_1 senza pin_number, mentre nell'immagine sono visibili pin inferiori/laterali distinti inclusi 8, 13, 15 e 7; questo degrada la corrispondenza dei terminali dell'IC.
-
-**Errori minori:**
-- Il terminale di alimentazione superiore visibile nell'immagine è rappresentato come Terminal generico senza conservare la label topologica visibile.
-- Il marking dell'IC2 è riportato come CD401 invece della marcatura visibile più completa; ciò non altera direttamente i collegamenti.
-- Le polarità dei LED sono dichiarate nel JSON, ma la verifica puntuale anodo/catodo per tutti gli otto LED è solo parzialmente supportata dalla chiarezza dell'immagine.
-
-**Punti incerti:**
-- L'immagine è uno schema raster con alcuni incroci e ponticelli; alcune connessioni tra le barre degli anodi dei LED e i resistori R3/R4 sono visivamente complesse ma la struttura principale a coppie di LED e transistor è riconoscibile.
-- La corrispondenza esatta tra gli instance_id dei resistori/LED del JSON e le sigle grafiche R3-R8/D1-D8 è dedotta dalla posizione topologica, non da un mapping esplicito nel JSON.
-- La polarità puntuale di ogni LED e dei condensatori è visibile solo in parte con sufficiente chiarezza; non tutte le polarità dichiarate sono state penalizzate.
-
-### c17
+### c05
 
 - Batch: `C1`
 - Score: `86`
 - Fedeltà: `HIGH`
 - Usabile come graph base: `True`
-- Spiegazione: Il JSON riconosce quasi tutti i componenti principali e conserva la struttura topologica essenziale: ingresso tramite switch verso IN, C1 verso massa, LM317 con OUT su bus comune, lampada verso massa, tre rami condensatore verso la catena resistiva e GND comune. Le principali discrepanze riguardano lo stato dello switch dichiarato chiuso mentre il simbolo appare aperto e la polarità dichiarata/interpretata dei condensatori laterali C2-C4, oltre a qualche incertezza di mappatura dei designatori. Nel complesso è una base topologica buona e correggibile.
+- Spiegazione: Il JSON riconosce quasi tutti i componenti principali e gran parte dei collegamenti: 555, 4026, display a sette segmenti, sette resistori verso il display, condensatori e GND sono presenti. Le connessioni principali tra 555 e 4026 e tra 4026, resistori e display sono nel complesso fedeli. Gli errori più rilevanti sono il terminale superiore del resistore a sinistra del 555 lasciato non connesso invece che collegato a +Vcc e una possibile unione eccessiva dei pin inferiori del 4026 nel nodo GND. La rappresentazione resta comunque una buona base topologica correggibile.
 
 **Errori maggiori:**
-- Le polarità dei condensatori C2, C3 e C4 risultano invertite rispetto all'immagine: nell'immagine il terminale positivo è sul lato destro collegato al bus OUT/lampada, mentre il terminale sinistro è collegato alla catena ADJ/R1/R2/R3. Il JSON assegna il lato sinistro come negative e il lato destro come positive, ma poi collega i terminali negativi a nodi della catena resistiva: la topologia dei nodi è coerente, ma la polarità dichiarata è sospetta/invertita per questi condensatori.
-- Il JSON dichiara lo switch S1 come 'closed', ma nell'immagine il simbolo del deviatore/interruttore appare aperto, con contatto mobile non chiaramente chiuso sul terminale destro. Il collegamento topologico tra terminale di ingresso e nodo IN è però rappresentato tramite i due terminali dello switch, quindi l'errore riguarda soprattutto lo stato visibile dichiarato.
+- Il terminale superiore del resistore collegato a sinistra del 555 risulta non connesso nel JSON, mentre nell'immagine è collegato a una label +Vcc.
+- Il JSON unisce a GND quattro pin inferiori del 4026, mentre nell'immagine il simbolo GND è collegato al nodo comune dei pin 14, 4 e 5; il pin 8 scende separatamente al riferimento inferiore/ground, ma non è disegnato come lo stesso nodo orizzontale comune dei pin 14, 4 e 5 nella stessa maniera rappresentata dal JSON.
 
 **Errori minori:**
-- La lampada è rappresentata come class_name Lamp con due terminali, coerente nella sostanza; eventuali dettagli grafici interni del simbolo non sono modellati.
-- L'IC è correttamente riconosciuto come LM317T con terminali IN, OUT e ADJ; non sono presenti numeri di pin visibili nell'immagine, quindi la verifica si limita alle posizioni/etichette mostrate.
-- I due terminali di alimentazione sono modellati come Terminal generici; l'immagine mostra una sorgente/ingresso DC con due punti di connessione, quindi l'astrazione è accettabile ma non cattura la label testuale di polarità/alimentazione.
+- Il display a sette segmenti è rappresentato come Integrated_Circuit invece che come componente display dedicato, anche se il subtype e i terminali lo rendono riconoscibile.
+- Le label topologiche +Vcc visibili nell'immagine non sono rappresentate come terminali o nodi espliciti nel JSON; alcune connessioni a tali label sono comunque parzialmente rese tramite collegamenti diretti tra pin.
 
 **Punti incerti:**
-- L'associazione esatta tra resistor22.1/22.2/22.3 e i designatori visivi R1/R2/R3 non è verificabile dal solo JSON, anche se la catena resistiva a tre elementi è presente.
-- L'associazione esatta tra polarized_capacitor20.2/20.3/20.4 e C2/C3/C4 non è esplicitata; i collegamenti indicano tre condensatori verso il bus di uscita, coerenti nella struttura generale.
-- La polarità di C1 è visibile con '+' in alto nell'immagine e il JSON la rappresenta come positive top/negative bottom; questa parte appare coerente.
+- La corrispondenza esatta tra i sette resistori in serie al display e le lettere dei segmenti è visivamente plausibile ma difficile da verificare in modo univoco per tutti i segmenti senza ridisegnare il grafo.
+- La polarità del condensatore collegato ai pin 2/6 del 555 è visibile nell'immagine, ma il JSON usa una classe Capacitor generica senza informazione di polarità; la connessione topologica dei due terminali è comunque rappresentata.
+
+### c06
+
+- Batch: `C1`
+- Score: `62`
+- Fedeltà: `MEDIUM`
+- Usabile come graph base: `True`
+- Spiegazione: Il JSON riconosce quasi tutti i componenti principali e rappresenta bene il blocco dei sette collegamenti resistivi tra CD4026 e display. Tuttavia la parte sinistra attorno a pulsante, nodo CLK, pin 3, pin 16 e massa è topologicamente errata, con una fusione di net che altera collegamenti principali. Il grafo resta recuperabile come base, ma la fedeltà complessiva è solo parziale.
+
+**Errori critici:**
+- Il JSON unisce sulla stessa net il pin superiore dell'IC, il pin sinistro 3 dell'IC e il terminale superiore del pulsante; nell'immagine il pin 16 dell'IC è su una linea di alimentazione distinta dal nodo CLK/DEI/pulsante/resistenza.
+
+**Errori maggiori:**
+- La net del nodo CLK/resistenza/pulsante è collegata nel JSON a un GND e anche ai pin 15, 2 e 1 dell'IC, mentre nell'immagine il nodo CLK è collegato al pin 3 e alla resistenza, non direttamente a massa né ai pin 15, 2 e 1.
+- Il collegamento visibile tra il nodo CLK e il pin 3 dell'IC non è rappresentato correttamente: nel JSON il pin 3 è messo sulla net del pin 16/pulsante superiore invece che sulla net del nodo CLK/resistenza.
+- Il JSON collega il pin 14 dell'IC alla stessa massa del pin 8; nell'immagine il pin 14 è collegato al nodo di massa del pin 8 tramite una linea con giunzione, quindi questo è plausibile, ma il warning segnala altri pin inferiori non connessi e il grafo non rappresenta esplicitamente i terminali marcati con X per pin 4 e 5 in modo semantico chiaro.
+- Il display a sette segmenti è modellato come Integrated_Circuit generico invece che come classe display dedicata; la topologia dei terminali principali è comunque presente.
+
+**Errori minori:**
+- Sono presenti sette resistori di segmento nel JSON, mentre l'immagine contiene sette collegamenti resistivi verso i segmenti ma l'annotazione testuale sotto il gruppo è ambigua rispetto al conteggio; la topologia dei sette rami è comunque coerente con i terminali a-g visibili.
+- Il pulsante/interruttore S1 è modellato con due terminali top/bottom; nell'immagine il simbolo ha contatti visibili e una posizione aperta, ma il modello a due terminali è una semplificazione accettabile.
+
+**Punti incerti:**
+- La corrispondenza esatta tra i sette resistori di segmento nel JSON e le posizioni fisiche dei sette resistori nell'immagine è in parte difficile da verificare graficamente, anche se i collegamenti a-g appaiono complessivamente coerenti.
+- La classe specifica del display non è distinta nel class_name, ma il subtype e i pin label indicano il riconoscimento del sette segmenti.
+- Lo stato aperto del pulsante/interruttore è visibile, ma il campo graph descrive solo i nodi terminali e non uno stato elettrico dinamico.
+
+### c07
+
+- Batch: `C1`
+- Score: `66`
+- Fedeltà: `MEDIUM`
+- Usabile come graph base: `True`
+- Spiegazione: Il JSON riconosce quasi tutti i componenti principali e rappresenta bene la catena CD4026-resistori-display con comune del display a GND. Tuttavia la parte sinistra con S1, S2, i nodi CLK/RST/GND e vari pin del CD4026 è gravemente fusa in una rete unica, con switch cortocircuitati o terminali lasciati isolati. Anche il pin 14 è collegato a GND nel JSON senza evidenza visiva. La struttura resta recuperabile, ma la fedeltà topologica complessiva è solo parziale.
+
+**Errori critici:**
+- Il JSON fonde in un'unica rete nodi che nell'immagine appartengono a reti distinte: i pin sinistri 15, 2 e 1 del CD4026, entrambi i terminali di S1, un terminale di S2 e il nodo superiore della resistenza R2 risultano tutti connessi a gnd9.2_t1. Nell'immagine il pin 2 e il nodo RST sono a GND, mentre il pin 1/CLK è sul nodo CLK e il pin 15/RST è su un ramo separato verso S1/Vdd; S1 e S2 non hanno i due terminali cortocircuitati fra loro.
+
+**Errori maggiori:**
+- Il terminale superiore del secondo pulsante/switch è lasciato non connesso nel JSON, ma nell'immagine S2 ha un terminale collegato al nodo CLK e l'altro al nodo RST.
+- Il pin 3 del CD4026 è collegato nel JSON al pin 16, ma nell'immagine il pin 3 è connesso al ramo superiore verticale che raggiunge Vdd, non direttamente al terminale/pin 16 come corto locale rappresentato dal JSON.
+- Il terminale superiore di S1 e il nodo superiore/Vdd non sono rappresentati correttamente come rete di alimentazione/terminale separato; nel JSON S1 è invece incluso nella rete di massa errata.
+- Il pin 8 del CD4026 è correttamente a GND, ma il JSON collega anche il pin 14 alla stessa massa, mentre nell'immagine il pin 14/UCS appare non collegato esternamente.
+
+**Errori minori:**
+- Il gruppo di resistori verso il display è rappresentato come sette resistori discreti, mentre nell'immagine il testo del simbolo suggerisce un gruppo di resistori; topologicamente i sette rami risultano comunque quasi tutti rappresentati.
+- Il JSON segnala terminali non connessi; alcuni sono coerenti con terminali marcati non collegati nell'immagine, ma almeno push_button21.2_t1 non dovrebbe essere isolato.
+
+**Punti incerti:**
+- La corrispondenza esatta tra l'ordine dei sette resistori e le etichette a-g del display è parzialmente verificabile visivamente, ma senza usare conoscenza funzionale esterna non va penalizzata oltre la topologia dei sette rami.
+- Il simbolo superiore a sinistra e il ramo Vdd non sono rappresentati nel JSON come componente terminale dedicato; la natura esatta del terminale di alimentazione non è classificabile con certezza dall'immagine.
+
+### c08
+
+- Batch: `C1`
+- Score: `82`
+- Fedeltà: `HIGH`
+- Usabile come graph base: `True`
+- Spiegazione: Il JSON riconosce quasi tutti i componenti principali e gran parte della struttura: due IC, rete di temporizzazione, contatore, otto LED, quattro transistor, resistori, condensatori e masse. Tuttavia contiene errori topologici localizzati ma importanti: lo switch SPDT è ridotto a due terminali, R4 risulta con un terminale scollegato, i due bus LED/R3/R4 sono rappresentati in modo incoerente e il pin 7 di IC1 è fuso col nodo dei pin 2/6. La base resta recuperabile, ma non è una rappresentazione completamente fedele.
+
+**Errori maggiori:**
+- Il terminale superiore di resistor22.4 risulta non collegato nel JSON, mentre nell'immagine R4 è collegato superiormente al ramo destro dello switch S1 e inferiormente al bus superiore dei LED dispari.
+- Il JSON modella lo switch come se il terminale sinistro fosse direttamente sulla rete di alimentazione e il terminale destro andasse solo a R3; nell'immagine S1 è un deviatore con nodo comune verso l'alimentazione e due uscite alternative verso R4 e R3, quindi manca il ramo verso R4 e la rappresentazione a due soli terminali è incompleta.
+- L'associazione dei LED ai due bus superiori appare scambiata o incoerente: nell'immagine un bus alimenta D2, D4, D6, D8 tramite R4, mentre l'altro alimenta D1, D3, D5, D7 tramite R3. Nel JSON resistor22.4 alimenta led12.1/12.3/12.5/12.7 e resistor22.5 alimenta led12.2/12.4/12.6/12.8, ma il componente resistor22.4 è l'elemento posto sul ramo R4 e resistor22.5 è posto sul ramo R3 secondo la connettività dichiarata con lo switch.
+- Alcuni pin visibili degli IC non sono rappresentati come terminali separati o sono implicitamente fusi: per IC1 i pin 2 e 6 sono visibili sullo stesso nodo, ma il JSON aggiunge anche il pin 7 nello stesso nodo; per IC2 i pin di uscita e controllo visibili sono rappresentati solo in parte rispetto ai numeri mostrati.
+
+**Errori minori:**
+- Lo switch visibile è indicato come SPDT, mentre il JSON lo rappresenta genericamente come Switch a due terminali; la classe generale è corretta ma il modello dei terminali è ridotto.
+- La polarità dei LED e dei condensatori è indicata nel JSON, ma dall'immagine alcune polarità dei LED non sono completamente distinguibili senza interpretazione del simbolo; non tutte le assegnazioni anodo/catodo sono direttamente verificabili.
+- Il JSON usa più componenti GND separati. Questo è accettabile per simboli di massa separati visibili, ma non esplicita una net comune tra tutte le masse; nell'immagine i simboli GND rappresentano semanticamente lo stesso riferimento, pur non essendo tutti collegati da fili disegnati.
+
+**Punti incerti:**
+- La corrispondenza numerica tra led12.1-led12.8 e D1-D8 non è dichiarata esplicitamente nel JSON e va dedotta solo dalla disposizione grafica.
+- La posizione esatta dei terminali base/collettore/emettitore dei transistor è plausibile ma non completamente verificabile solo dai nomi nel JSON senza una mappa geometrica.
+- Lo stato 'closed' dello switch nel JSON è ambiguo rispetto al simbolo SPDT disegnato, perché l'immagine mostra il selettore ma non una codifica univoca del contatto selezionato per la verifica automatica.
+
+### c17
+
+- Batch: `C1`
+- Score: `88`
+- Fedeltà: `HIGH`
+- Usabile come graph base: `True`
+- Spiegazione: Il JSON riconosce quasi tutti i componenti principali e conserva bene i nodi fondamentali: ingresso tramite switch, IC con IN/OUT/ADJ, massa, lampada su OUT-GND, C1 su ingresso-GND e bus OUT comune. La fedeltà è però ridotta da discrepanze localizzate nella rete dei tre condensatori laterali e della scala resistiva: almeno un condensatore risulta collegato al nodo ADJ invece che a un nodo intermedio, e l'ordine/associazione dei resistori non è chiaramente allineato all'immagine. Nel complesso il grafo resta una buona base correggibile.
+
+**Errori maggiori:**
+- Il condensatore C3 nell'immagine è collegato tra il nodo intermedio R1-R2 e la linea OUT, mentre nel JSON polarized_capacitor20.3 è collegato tra ADJ e OUT, sovrapponendosi topologicamente a C2.
+- Il condensatore C4 nell'immagine è collegato tra il nodo intermedio R2-R3 e la linea OUT, mentre nel JSON polarized_capacitor20.4 è collegato tra un nodo resistivo diverso e OUT: la sua terminale negativa è associata al nodo tra resistor22.1_t2 e resistor22.2_t1, non chiaramente corrispondente al nodo R2-R3 atteso se la catena resistiva è R1-R2-R3 dall'alto al basso.
+
+**Errori minori:**
+- Lo switch è dichiarato closed nel JSON, ma il simbolo nell'immagine mostra un interruttore schematico la cui chiusura non è rappresentata in modo univoco come stato operativo verificabile.
+- I due terminali di alimentazione sono rappresentati come Terminal generici senza preservare la semantica visibile di ingresso positivo e riferimento inferiore; topologicamente i collegamenti principali sono comunque presenti.
+- Il JSON include pin_label funzionali IN, OUT e ADJ coerenti con le scritte visibili, ma non sono pin_number fisici; questo non compromette la topologia.
+
+**Punti incerti:**
+- L'associazione esatta tra gli instance_id dei resistori nel JSON e le etichette visive R1, R2, R3 non è esplicitata, quindi alcuni disallineamenti possono dipendere dalla mappatura degli identificativi.
+- L'associazione esatta tra polarized_capacitor20.2/20.3/20.4 e le etichette visive C2/C3/C4 non è dichiarata esplicitamente nel JSON; la valutazione si basa su posizione e connettività dichiarate.
+- La polarità dei condensatori sul lato destro è visibile con il segno positivo verso il bus OUT; il JSON usa terminali positive verso OUT, coerente, ma l'identificazione individuale dei condensatori resta parzialmente incerta.
 
 ### c18
 
 - Batch: `C1`
-- Score: `80`
+- Score: `78`
 - Fedeltà: `HIGH`
 - Usabile come graph base: `True`
-- Spiegazione: Il JSON cattura quasi tutti i componenti principali e gran parte della topologia: ingresso, due uscite, quattro operazionali, nove resistori, tre condensatori e quattro GND sono presenti, e molti nodi di feedback/interconnessione corrispondono all'immagine. Le principali discrepanze riguardano la classificazione dei condensatori come polarizzati, la rappresentazione incompleta/ambigua dei pin di alimentazione degli operazionali e la mancanza dei numeri di pin e delle label visibili. La struttura resta comunque una buona base topologica correggibile.
+- Spiegazione: Il JSON include quasi tutti i componenti principali e gran parte della struttura a quattro operazionali con resistori, condensatori, masse e terminali. Tuttavia classifica erroneamente i condensatori come polarizzati, perde le label topologiche visibili e contiene alcune connessioni importanti errate, soprattutto nel ramo R1/R2/R3 e nei terminali ausiliari di alimentazione degli operazionali. La struttura complessiva resta recuperabile come base, ma non è una corrispondenza molto alta.
 
 **Errori maggiori:**
-- I condensatori C1, C2 e C3 sono disegnati come condensatori non polarizzati; nel JSON sono tutti classificati come Polarized_Capacitor con terminali positive/negative.
-- Il pin di alimentazione superiore di IC1a è collegato visivamente a un terminale di alimentazione, ma nel JSON il collegamento al terminale di alimentazione è assegnato al terminale inferiore aux2; inoltre il terminale superiore aux1 non è presente per IC1a.
-- Il pin di alimentazione inferiore di IC2b è collegato visivamente a un terminale di alimentazione, ma nel JSON il collegamento al terminale di alimentazione è assegnato al terminale inferiore aux2 senza preservare i numeri/posizioni visibili e non distingue chiaramente il pin 4 mostrato nell'immagine.
+- I condensatori C1, C2 e C3 sono disegnati come condensatori non polarizzati, mentre nel JSON sono tutti classificati come Polarized_Capacitor con terminali positive/negative.
+- Nel ramo superiore, il nodo tra R1 e R2 è collegato visivamente al terminale invertente dell'operazionale IC1a tramite R3 e al nodo di ingresso comune; il JSON non rappresenta correttamente R1/R2/R3 come rete di retroazione di IC1a, ma collega R3_t1 al nodo di uscita Low out dell'ultimo stadio.
+- Il JSON collega il terminale di uscita Low out anche a R1 e R3, unendo il nodo di uscita finale con elementi che nell'immagine appartengono al ramo di ingresso/retroazione superiore.
+- I terminali di alimentazione degli operazionali sono rappresentati in modo incompleto e in parte associati a terminali generici; nell'immagine sono presenti collegamenti visibili a +15V per IC1a e IC2a e a -15V per IC1b e IC2b.
 
 **Errori minori:**
-- Alcuni terminali esterni hanno orientamento relativo non coerente con la posizione grafica visibile, ad esempio uscite a destra dichiarate con terminale a sinistra o top.
-- Le label topologiche visibili Audio IN, High out e Low out non sono riportate nel JSON come metadati dei terminali.
+- Le etichette topologiche visibili Audio IN, High out e Low out sono rappresentate solo come terminali generici senza label nel JSON.
+- Gli operazionali sono indicati con terminali funzionali in1/in2/out e aux, ma non conservano i numeri di pin visibili nello schema.
+- L'uso di terminali positive/negative per i condensatori introduce una polarità non verificabile visivamente.
 
 **Punti incerti:**
-- L'associazione degli identificativi resistor22.x ai resistori R1-R9 è deducibile solo dalla topologia del JSON e non dai nomi, quindi alcune corrispondenze di istanza restano non verificabili direttamente.
-- Le label di alimentazione dei terminali terminal26.2 e terminal26.4 non sono memorizzate nel JSON; la topologia dei fili è comunque in parte verificabile visivamente.
-- La denominazione in1/in2 degli ingressi degli operazionali non consente di verificare con certezza il segno +/− senza una convenzione esplicita nel JSON.
+- La corrispondenza esatta tra gli ID resistor22.x e le sigle R1-R9 è dedotta dalla topologia e non è esplicitata nel JSON.
+- La corrispondenza tra operational_amplifier19.x e IC1a/IC1b/IC2a/IC2b è dedotta dalla posizione topologica, non da label nel JSON.
+- Alcuni incroci e giunzioni nel lato sinistro dello schema sono visivamente densi; la continuità del bus di ingresso/ritorno è comunque in gran parte riconoscibile.

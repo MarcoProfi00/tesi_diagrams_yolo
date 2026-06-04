@@ -8,131 +8,111 @@
     "image_file": "c08.jpg",
     "json_file": "c08.json",
     "judge_model": "gpt-5.5",
-    "timestamp": "2026-06-03 23:38:11",
-    "judge_latency_seconds": 31.925,
+    "timestamp": "2026-06-04 10:10:58",
+    "judge_latency_seconds": 35.66,
     "input_json_valid": true,
     "input_json_error": null,
     "parsed_ok": true,
     "parse_error": null
   },
-  "judge_usage": "ResponseUsage(input_tokens=12555, input_tokens_details=InputTokensDetails(cached_tokens=1792), output_tokens=1981, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=14536)",
+  "judge_usage": "ResponseUsage(input_tokens=12749, input_tokens_details=InputTokensDetails(cached_tokens=12032), output_tokens=1992, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=14741)",
   "judge_result": {
     "circuit_id": "c08",
     "batch": "C1",
     "image_file": "c08.jpg",
     "json_file": "c08.json",
-    "image_graph_fidelity_score": 73,
-    "decision": "MEDIUM",
+    "image_graph_fidelity_score": 82,
+    "decision": "HIGH",
     "usable_as_graph_base": true,
     "scores": {
-      "components": 22,
-      "terminals_pins": 14,
-      "graph_connections": 30,
-      "visible_semantics": 7
+      "components": 23,
+      "terminals_pins": 17,
+      "graph_connections": 34,
+      "visible_semantics": 8
     },
     "error_counts": {
-      "critical": 1,
-      "major": 5,
+      "critical": 0,
+      "major": 4,
       "minor": 3
     },
-    "critical_errors": [
-      {
-        "type": "wrong_power_ground_net",
-        "description": "Il JSON collega il simbolo GND superiore alla rete di alimentazione superiore e ai pin superiori degli IC, mentre nell'immagine la barra superiore è la rete di alimentazione e il GND di C2 è separato e connesso al terminale inferiore del condensatore.",
-        "image_evidence": "La linea orizzontale superiore porta il terminale di alimentazione e alimenta i pin superiori degli IC; il simbolo GND sotto C2 è collegato solo al terminale inferiore di C2.",
-        "json_evidence": "graph: gnd9.1_t1 è collegato a integrated_circuit11.1_top_1, integrated_circuit11.1_top_2, integrated_circuit11.2_top_1 e polarized_capacitor20.2_negative."
-      }
-    ],
+    "critical_errors": [],
     "major_errors": [
       {
-        "type": "wrong_ic1_bottom_pin_connection",
-        "description": "Il pin inferiore di IC1 è inserito nella stessa net dei pin laterali e del condensatore C1 positivo, invece nell'immagine è collegato alla linea inferiore di massa.",
-        "image_evidence": "Il pin 1 di IC1 scende alla barra inferiore con simbolo GND, separata dal nodo laterale dei pin 2, 6, 7 e dal terminale superiore di C1.",
-        "json_evidence": "integrated_circuit11.1_bottom_1 è collegato a integrated_circuit11.1_left_1, integrated_circuit11.1_left_2, integrated_circuit11.1_left_3, polarized_capacitor20.1_positive e resistor22.2_t2."
+        "type": "missing_graph_connection",
+        "description": "Il terminale superiore di resistor22.4 risulta non collegato nel JSON, mentre nell'immagine R4 è collegato superiormente al ramo destro dello switch S1 e inferiormente al bus superiore dei LED dispari.",
+        "image_evidence": "R4 è visibilmente tra il contatto destro di S1 in alto e la linea orizzontale che alimenta D2/D4/D6/D8 sul lato destro.",
+        "json_evidence": "\"resistor22.4_t1\": [] e warning unconnected_terminals contiene \"resistor22.4_t1\"; resistor22.4_t2 è collegato agli anodi led12.1/12.3/12.5/12.7."
       },
       {
-        "type": "wrong_capacitor_c1_polarity_net",
-        "description": "Il condensatore C1 ha il terminale superiore collegato al nodo dei pin laterali di IC1 e il terminale inferiore a massa; nel JSON il terminale negativo è nella net di massa IC2 e il positivo è unito anche al pin inferiore di IC1.",
-        "image_evidence": "C1 è disegnato a sinistra in basso: terminale superiore verso il nodo dei pin 2/6/7 di IC1, terminale inferiore verso la barra di massa.",
-        "json_evidence": "polarized_capacitor20.1_positive è collegato anche a integrated_circuit11.1_bottom_1; polarized_capacitor20.1_negative è collegato a gnd9.2_t1 con i pin inferiori di IC2."
+        "type": "wrong_switch_topology",
+        "description": "Il JSON modella lo switch come se il terminale sinistro fosse direttamente sulla rete di alimentazione e il terminale destro andasse solo a R3; nell'immagine S1 è un deviatore con nodo comune verso l'alimentazione e due uscite alternative verso R4 e R3, quindi manca il ramo verso R4 e la rappresentazione a due soli terminali è incompleta.",
+        "image_evidence": "S1 SPDT mostra un contatto comune a sinistra sulla linea superiore e due contatti a destra: quello superiore verso R4 e quello inferiore verso R3.",
+        "json_evidence": "switch25.1 ha solo t1 e t2; \"switch25.1_t1\" è nella rete di alimentazione, \"switch25.1_t2\" è collegato solo a \"resistor22.5_t1\"; nessun collegamento switch-resistor22.4_t1."
       },
       {
-        "type": "missing_top_supply_to_r4",
-        "description": "Il terminale superiore di R4 risulta non connesso nel JSON, ma nell'immagine è collegato alla rete superiore tramite il lato destro dello switch/linea superiore.",
-        "image_evidence": "R4 scende dalla linea superiore a destra dello switch verso la barra che alimenta gli anodi dei LED pari/dispari.",
-        "json_evidence": "warnings.unconnected_terminals contiene resistor22.4_t1 e graph resistor22.4_t1 è una lista vuota."
+        "type": "wrong_led_bus_grouping",
+        "description": "L'associazione dei LED ai due bus superiori appare scambiata o incoerente: nell'immagine un bus alimenta D2, D4, D6, D8 tramite R4, mentre l'altro alimenta D1, D3, D5, D7 tramite R3. Nel JSON resistor22.4 alimenta led12.1/12.3/12.5/12.7 e resistor22.5 alimenta led12.2/12.4/12.6/12.8, ma il componente resistor22.4 è l'elemento posto sul ramo R4 e resistor22.5 è posto sul ramo R3 secondo la connettività dichiarata con lo switch.",
+        "image_evidence": "R3 scende dal contatto inferiore di S1 al bus che raggiunge D1, D3, D5, D7; R4 scende dal contatto superiore di S1 al bus che raggiunge D2, D4, D6, D8.",
+        "json_evidence": "\"resistor22.5_t1\": [\"switch25.1_t2\"] e \"resistor22.5_t2\" agli anodi led12.2/12.4/12.6/12.8; \"resistor22.4_t2\" agli anodi led12.1/12.3/12.5/12.7, con t1 non connesso."
       },
       {
-        "type": "switch_state_and_connections_incomplete",
-        "description": "Lo switch SPDT è modellato come switch a due terminali chiuso, ma nell'immagine ha tre contatti visibili R, comune e L; il contatto L alimenta R3 e il contatto destro alimenta R4, con stato meccanico non rappresentabile come semplice collegamento chiuso tra due soli terminali.",
-        "image_evidence": "S1 è etichettato SPDT con contatti R e L e cursore comune; sono visibili tre nodi collegati a reti diverse.",
-        "json_evidence": "switch25.1 ha solo t1 e t2 e state closed; graph collega switch25.1_t1 alla rete del terminale superiore e switch25.1_t2 solo a resistor22.5_t1."
-      },
-      {
-        "type": "ic2_pin_terminal_mismatch",
-        "description": "IC2 nel JSON contiene un terminale destro duplicato per pin 7 e un terminale bottom_1 senza pin_number, mentre nell'immagine sono visibili pin inferiori/laterali distinti inclusi 8, 13, 15 e 7; questo degrada la corrispondenza dei terminali dell'IC.",
-        "image_evidence": "Sul simbolo IC2 sono visibili pin numerati 16 in alto, 14 a sinistra, 3/2/4/7 a destra, 10/15 a sinistra-basso, e 8/13 in basso.",
-        "json_evidence": "integrated_circuit11.2_right_3 e integrated_circuit11.2_right_4 hanno entrambi pin_number 7; integrated_circuit11.2_bottom_1 non ha pin_number."
+        "type": "missing_or_incomplete_pin_terminals",
+        "description": "Alcuni pin visibili degli IC non sono rappresentati come terminali separati o sono implicitamente fusi: per IC1 i pin 2 e 6 sono visibili sullo stesso nodo, ma il JSON aggiunge anche il pin 7 nello stesso nodo; per IC2 i pin di uscita e controllo visibili sono rappresentati solo in parte rispetto ai numeri mostrati.",
+        "image_evidence": "Su IC1 i pin laterali 2, 6 e 7 sono visibili; 2 e 6 sono collegati allo stesso nodo con C1/R2, mentre 7 è collegato al nodo tra R1 e R2. Su IC2 sono visibili pin 14, 3, 2, 4, 7, 10, 15, 8, 13, 16.",
+        "json_evidence": "\"integrated_circuit11.1_left_1\", \"left_2\" e \"left_3\" sono tutti collegati tra loro nel graph; IC2 ha terminali per i pin visibili principali ma la topologia dei pin 10/15 e dei pin di uscita è molto semplificata."
       }
     ],
     "minor_errors": [
       {
-        "type": "terminal_label_missing",
-        "description": "Il terminale di alimentazione superiore visibile nell'immagine è rappresentato come Terminal generico senza conservare la label topologica visibile."
+        "type": "component_class_or_terminal_model",
+        "description": "Lo switch visibile è indicato come SPDT, mentre il JSON lo rappresenta genericamente come Switch a due terminali; la classe generale è corretta ma il modello dei terminali è ridotto."
       },
       {
-        "type": "ic_marking_truncated",
-        "description": "Il marking dell'IC2 è riportato come CD401 invece della marcatura visibile più completa; ciò non altera direttamente i collegamenti."
+        "type": "polarity_uncertainty",
+        "description": "La polarità dei LED e dei condensatori è indicata nel JSON, ma dall'immagine alcune polarità dei LED non sono completamente distinguibili senza interpretazione del simbolo; non tutte le assegnazioni anodo/catodo sono direttamente verificabili."
       },
       {
-        "type": "led_polarity_uncertain_or_simplified",
-        "description": "Le polarità dei LED sono dichiarate nel JSON, ma la verifica puntuale anodo/catodo per tutti gli otto LED è solo parzialmente supportata dalla chiarezza dell'immagine."
+        "type": "gnd_representation",
+        "description": "Il JSON usa più componenti GND separati. Questo è accettabile per simboli di massa separati visibili, ma non esplicita una net comune tra tutte le masse; nell'immagine i simboli GND rappresentano semanticamente lo stesso riferimento, pur non essendo tutti collegati da fili disegnati."
       }
     ],
     "missing_from_json": [
-      "Un terminale esplicito dello switch SPDT a tre contatti",
-      "Collegamento del terminale superiore di R4 alla rete superiore",
-      "Label topologica del terminale di alimentazione superiore"
+      "Terzo terminale dello switch SPDT S1 verso il ramo di R4",
+      "Collegamento superiore di R4 al contatto superiore dello switch",
+      "Separazione topologica tra pin 7 di IC1 e il nodo comune dei pin 2/6"
     ],
     "extra_in_json": [
-      "Collegamento di gnd9.1_t1 alla rete superiore di alimentazione",
-      "Collegamento di integrated_circuit11.1_bottom_1 alla rete dei pin laterali di IC1",
-      "Duplicazione di un terminale pin 7 su IC2",
-      "Stato 'closed' per switch a due terminali non coerente con il simbolo SPDT visibile"
+      "Collegamento diretto di integrated_circuit11.1_left_3 con integrated_circuit11.1_left_1 e integrated_circuit11.1_left_2",
+      "Rete di alimentazione che include switch25.1_t1 ma non rappresenta esplicitamente il terminale comune SPDT distinto dai due contatti di uscita"
     ],
     "wrong_graph_connections": [
       {
-        "expected_from_image": "La rete superiore di alimentazione collega il terminale superiore, i pin superiori di IC1/IC2, il lato superiore di C2 e il ramo dello switch/R4; non è un simbolo GND.",
-        "found_in_json": "gnd9.1_t1 collega integrated_circuit11.1_top_1, integrated_circuit11.1_top_2, integrated_circuit11.2_top_1 e polarized_capacitor20.2_negative.",
-        "severity": "critical"
-      },
-      {
-        "expected_from_image": "Il pin inferiore di IC1 deve andare alla linea inferiore di massa.",
-        "found_in_json": "integrated_circuit11.1_bottom_1 è unito ai pin laterali di IC1, a C1 positivo e a resistor22.2_t2.",
+        "expected_from_image": "IC1 pin 2 e pin 6 collegati insieme al nodo con C1 positivo e parte inferiore di R2; IC1 pin 7 collegato al nodo tra R1 e R2, non allo stesso nodo di pin 2/6.",
+        "found_in_json": "integrated_circuit11.1_left_1, left_2 e left_3 sono tutti nello stesso nodo con polarized_capacitor20.1_positive e resistor22.2_t2.",
         "severity": "major"
       },
       {
-        "expected_from_image": "R4_t1 dovrebbe essere collegato alla linea superiore/ramo destro dello switch.",
-        "found_in_json": "resistor22.4_t1 è non connesso.",
+        "expected_from_image": "R4 deve collegarsi dal contatto superiore destro di S1 al bus superiore dei LED D2/D4/D6/D8.",
+        "found_in_json": "resistor22.4_t1 è vuoto; resistor22.4_t2 è collegato a led12.1/led12.3/led12.5/led12.7.",
         "severity": "major"
       },
       {
-        "expected_from_image": "C2 negativo dovrebbe essere collegato al suo simbolo GND locale, non alla rete superiore con i pin di alimentazione.",
-        "found_in_json": "polarized_capacitor20.2_negative è nella stessa net di gnd9.1_t1 e dei pin superiori degli IC.",
+        "expected_from_image": "R3 deve collegarsi dal contatto inferiore destro di S1 al bus superiore dei LED D1/D3/D5/D7.",
+        "found_in_json": "switch25.1_t2 è collegato a resistor22.5_t1 e resistor22.5_t2 alimenta led12.2/led12.4/led12.6/led12.8.",
         "severity": "major"
       },
       {
-        "expected_from_image": "Lo switch SPDT mostra tre nodi: comune, R e L, con R verso la linea superiore/R4 e L verso R3.",
-        "found_in_json": "switch25.1 ha due soli terminali: t1 nella rete del terminale superiore e t2 verso resistor22.5_t1.",
+        "expected_from_image": "Lo switch S1 ha un comune sulla linea di alimentazione e due uscite alternative verso R3 e R4.",
+        "found_in_json": "switch25.1 è a due terminali, con t1 sulla rete di alimentazione e t2 solo verso resistor22.5_t1; manca il contatto verso resistor22.4_t1.",
         "severity": "major"
       }
     ],
     "uncertain_points": [
-      "L'immagine è uno schema raster con alcuni incroci e ponticelli; alcune connessioni tra le barre degli anodi dei LED e i resistori R3/R4 sono visivamente complesse ma la struttura principale a coppie di LED e transistor è riconoscibile.",
-      "La corrispondenza esatta tra gli instance_id dei resistori/LED del JSON e le sigle grafiche R3-R8/D1-D8 è dedotta dalla posizione topologica, non da un mapping esplicito nel JSON.",
-      "La polarità puntuale di ogni LED e dei condensatori è visibile solo in parte con sufficiente chiarezza; non tutte le polarità dichiarate sono state penalizzate."
+      "La corrispondenza numerica tra led12.1-led12.8 e D1-D8 non è dichiarata esplicitamente nel JSON e va dedotta solo dalla disposizione grafica.",
+      "La posizione esatta dei terminali base/collettore/emettitore dei transistor è plausibile ma non completamente verificabile solo dai nomi nel JSON senza una mappa geometrica.",
+      "Lo stato 'closed' dello switch nel JSON è ambiguo rispetto al simbolo SPDT disegnato, perché l'immagine mostra il selettore ma non una codifica univoca del contatto selezionato per la verifica automatica."
     ],
-    "short_explanation": "Il JSON riconosce gran parte dei componenti principali e conserva abbastanza bene la sezione LED-transistor e diversi collegamenti IC2-resistenze. Tuttavia contiene errori topologici importanti: una rete di alimentazione è etichettata/collegata come GND, il pin inferiore di IC1 è unito al nodo sbagliato, R4 risulta aperto e lo switch SPDT è semplificato in modo non fedele. La struttura resta recuperabile come base, ma la fedeltà complessiva è solo parziale."
+    "short_explanation": "Il JSON riconosce quasi tutti i componenti principali e gran parte della struttura: due IC, rete di temporizzazione, contatore, otto LED, quattro transistor, resistori, condensatori e masse. Tuttavia contiene errori topologici localizzati ma importanti: lo switch SPDT è ridotto a due terminali, R4 risulta con un terminale scollegato, i due bus LED/R3/R4 sono rappresentati in modo incoerente e il pin 7 di IC1 è fuso col nodo dei pin 2/6. La base resta recuperabile, ma non è una rappresentazione completamente fedele."
   },
-  "raw_model_output": "{\"circuit_id\":\"c08\",\"batch\":\"C1\",\"image_file\":\"c08.jpg\",\"json_file\":\"c08.json\",\"image_graph_fidelity_score\":73,\"decision\":\"MEDIUM\",\"usable_as_graph_base\":true,\"scores\":{\"components\":22,\"terminals_pins\":14,\"graph_connections\":30,\"visible_semantics\":7},\"error_counts\":{\"critical\":1,\"major\":5,\"minor\":3},\"critical_errors\":[{\"type\":\"wrong_power_ground_net\",\"description\":\"Il JSON collega il simbolo GND superiore alla rete di alimentazione superiore e ai pin superiori degli IC, mentre nell'immagine la barra superiore è la rete di alimentazione e il GND di C2 è separato e connesso al terminale inferiore del condensatore.\",\"image_evidence\":\"La linea orizzontale superiore porta il terminale di alimentazione e alimenta i pin superiori degli IC; il simbolo GND sotto C2 è collegato solo al terminale inferiore di C2.\",\"json_evidence\":\"graph: gnd9.1_t1 è collegato a integrated_circuit11.1_top_1, integrated_circuit11.1_top_2, integrated_circuit11.2_top_1 e polarized_capacitor20.2_negative.\"}],\"major_errors\":[{\"type\":\"wrong_ic1_bottom_pin_connection\",\"description\":\"Il pin inferiore di IC1 è inserito nella stessa net dei pin laterali e del condensatore C1 positivo, invece nell'immagine è collegato alla linea inferiore di massa.\",\"image_evidence\":\"Il pin 1 di IC1 scende alla barra inferiore con simbolo GND, separata dal nodo laterale dei pin 2, 6, 7 e dal terminale superiore di C1.\",\"json_evidence\":\"integrated_circuit11.1_bottom_1 è collegato a integrated_circuit11.1_left_1, integrated_circuit11.1_left_2, integrated_circuit11.1_left_3, polarized_capacitor20.1_positive e resistor22.2_t2.\"},{\"type\":\"wrong_capacitor_c1_polarity_net\",\"description\":\"Il condensatore C1 ha il terminale superiore collegato al nodo dei pin laterali di IC1 e il terminale inferiore a massa; nel JSON il terminale negativo è nella net di massa IC2 e il positivo è unito anche al pin inferiore di IC1.\",\"image_evidence\":\"C1 è disegnato a sinistra in basso: terminale superiore verso il nodo dei pin 2/6/7 di IC1, terminale inferiore verso la barra di massa.\",\"json_evidence\":\"polarized_capacitor20.1_positive è collegato anche a integrated_circuit11.1_bottom_1; polarized_capacitor20.1_negative è collegato a gnd9.2_t1 con i pin inferiori di IC2.\"},{\"type\":\"missing_top_supply_to_r4\",\"description\":\"Il terminale superiore di R4 risulta non connesso nel JSON, ma nell'immagine è collegato alla rete superiore tramite il lato destro dello switch/linea superiore.\",\"image_evidence\":\"R4 scende dalla linea superiore a destra dello switch verso la barra che alimenta gli anodi dei LED pari/dispari.\",\"json_evidence\":\"warnings.unconnected_terminals contiene resistor22.4_t1 e graph resistor22.4_t1 è una lista vuota.\"},{\"type\":\"switch_state_and_connections_incomplete\",\"description\":\"Lo switch SPDT è modellato come switch a due terminali chiuso, ma nell'immagine ha tre contatti visibili R, comune e L; il contatto L alimenta R3 e il contatto destro alimenta R4, con stato meccanico non rappresentabile come semplice collegamento chiuso tra due soli terminali.\",\"image_evidence\":\"S1 è etichettato SPDT con contatti R e L e cursore comune; sono visibili tre nodi collegati a reti diverse.\",\"json_evidence\":\"switch25.1 ha solo t1 e t2 e state closed; graph collega switch25.1_t1 alla rete del terminale superiore e switch25.1_t2 solo a resistor22.5_t1.\"},{\"type\":\"ic2_pin_terminal_mismatch\",\"description\":\"IC2 nel JSON contiene un terminale destro duplicato per pin 7 e un terminale bottom_1 senza pin_number, mentre nell'immagine sono visibili pin inferiori/laterali distinti inclusi 8, 13, 15 e 7; questo degrada la corrispondenza dei terminali dell'IC.\",\"image_evidence\":\"Sul simbolo IC2 sono visibili pin numerati 16 in alto, 14 a sinistra, 3/2/4/7 a destra, 10/15 a sinistra-basso, e 8/13 in basso.\",\"json_evidence\":\"integrated_circuit11.2_right_3 e integrated_circuit11.2_right_4 hanno entrambi pin_number 7; integrated_circuit11.2_bottom_1 non ha pin_number.\"}],\"minor_errors\":[{\"type\":\"terminal_label_missing\",\"description\":\"Il terminale di alimentazione superiore visibile nell'immagine è rappresentato come Terminal generico senza conservare la label topologica visibile.\"},{\"type\":\"ic_marking_truncated\",\"description\":\"Il marking dell'IC2 è riportato come CD401 invece della marcatura visibile più completa; ciò non altera direttamente i collegamenti.\"},{\"type\":\"led_polarity_uncertain_or_simplified\",\"description\":\"Le polarità dei LED sono dichiarate nel JSON, ma la verifica puntuale anodo/catodo per tutti gli otto LED è solo parzialmente supportata dalla chiarezza dell'immagine.\"}],\"missing_from_json\":[\"Un terminale esplicito dello switch SPDT a tre contatti\",\"Collegamento del terminale superiore di R4 alla rete superiore\",\"Label topologica del terminale di alimentazione superiore\"],\"extra_in_json\":[\"Collegamento di gnd9.1_t1 alla rete superiore di alimentazione\",\"Collegamento di integrated_circuit11.1_bottom_1 alla rete dei pin laterali di IC1\",\"Duplicazione di un terminale pin 7 su IC2\",\"Stato 'closed' per switch a due terminali non coerente con il simbolo SPDT visibile\"],\"wrong_graph_connections\":[{\"expected_from_image\":\"La rete superiore di alimentazione collega il terminale superiore, i pin superiori di IC1/IC2, il lato superiore di C2 e il ramo dello switch/R4; non è un simbolo GND.\",\"found_in_json\":\"gnd9.1_t1 collega integrated_circuit11.1_top_1, integrated_circuit11.1_top_2, integrated_circuit11.2_top_1 e polarized_capacitor20.2_negative.\",\"severity\":\"critical\"},{\"expected_from_image\":\"Il pin inferiore di IC1 deve andare alla linea inferiore di massa.\",\"found_in_json\":\"integrated_circuit11.1_bottom_1 è unito ai pin laterali di IC1, a C1 positivo e a resistor22.2_t2.\",\"severity\":\"major\"},{\"expected_from_image\":\"R4_t1 dovrebbe essere collegato alla linea superiore/ramo destro dello switch.\",\"found_in_json\":\"resistor22.4_t1 è non connesso.\",\"severity\":\"major\"},{\"expected_from_image\":\"C2 negativo dovrebbe essere collegato al suo simbolo GND locale, non alla rete superiore con i pin di alimentazione.\",\"found_in_json\":\"polarized_capacitor20.2_negative è nella stessa net di gnd9.1_t1 e dei pin superiori degli IC.\",\"severity\":\"major\"},{\"expected_from_image\":\"Lo switch SPDT mostra tre nodi: comune, R e L, con R verso la linea superiore/R4 e L verso R3.\",\"found_in_json\":\"switch25.1 ha due soli terminali: t1 nella rete del terminale superiore e t2 verso resistor22.5_t1.\",\"severity\":\"major\"}],\"uncertain_points\":[\"L'immagine è uno schema raster con alcuni incroci e ponticelli; alcune connessioni tra le barre degli anodi dei LED e i resistori R3/R4 sono visivamente complesse ma la struttura principale a coppie di LED e transistor è riconoscibile.\",\"La corrispondenza esatta tra gli instance_id dei resistori/LED del JSON e le sigle grafiche R3-R8/D1-D8 è dedotta dalla posizione topologica, non da un mapping esplicito nel JSON.\",\"La polarità puntuale di ogni LED e dei condensatori è visibile solo in parte con sufficiente chiarezza; non tutte le polarità dichiarate sono state penalizzate.\"],\"short_explanation\":\"Il JSON riconosce gran parte dei componenti principali e conserva abbastanza bene la sezione LED-transistor e diversi collegamenti IC2-resistenze. Tuttavia contiene errori topologici importanti: una rete di alimentazione è etichettata/collegata come GND, il pin inferiore di IC1 è unito al nodo sbagliato, R4 risulta aperto e lo switch SPDT è semplificato in modo non fedele. La struttura resta recuperabile come base, ma la fedeltà complessiva è solo parziale.\"}"
+  "raw_model_output": "{\"circuit_id\":\"c08\",\"batch\":\"C1\",\"image_file\":\"c08.jpg\",\"json_file\":\"c08.json\",\"image_graph_fidelity_score\":82,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":23,\"terminals_pins\":17,\"graph_connections\":34,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":4,\"minor\":3},\"critical_errors\":[],\"major_errors\":[{\"type\":\"missing_graph_connection\",\"description\":\"Il terminale superiore di resistor22.4 risulta non collegato nel JSON, mentre nell'immagine R4 è collegato superiormente al ramo destro dello switch S1 e inferiormente al bus superiore dei LED dispari.\",\"image_evidence\":\"R4 è visibilmente tra il contatto destro di S1 in alto e la linea orizzontale che alimenta D2/D4/D6/D8 sul lato destro.\",\"json_evidence\":\"\\\"resistor22.4_t1\\\": [] e warning unconnected_terminals contiene \\\"resistor22.4_t1\\\"; resistor22.4_t2 è collegato agli anodi led12.1/12.3/12.5/12.7.\"},{\"type\":\"wrong_switch_topology\",\"description\":\"Il JSON modella lo switch come se il terminale sinistro fosse direttamente sulla rete di alimentazione e il terminale destro andasse solo a R3; nell'immagine S1 è un deviatore con nodo comune verso l'alimentazione e due uscite alternative verso R4 e R3, quindi manca il ramo verso R4 e la rappresentazione a due soli terminali è incompleta.\",\"image_evidence\":\"S1 SPDT mostra un contatto comune a sinistra sulla linea superiore e due contatti a destra: quello superiore verso R4 e quello inferiore verso R3.\",\"json_evidence\":\"switch25.1 ha solo t1 e t2; \\\"switch25.1_t1\\\" è nella rete di alimentazione, \\\"switch25.1_t2\\\" è collegato solo a \\\"resistor22.5_t1\\\"; nessun collegamento switch-resistor22.4_t1.\"},{\"type\":\"wrong_led_bus_grouping\",\"description\":\"L'associazione dei LED ai due bus superiori appare scambiata o incoerente: nell'immagine un bus alimenta D2, D4, D6, D8 tramite R4, mentre l'altro alimenta D1, D3, D5, D7 tramite R3. Nel JSON resistor22.4 alimenta led12.1/12.3/12.5/12.7 e resistor22.5 alimenta led12.2/12.4/12.6/12.8, ma il componente resistor22.4 è l'elemento posto sul ramo R4 e resistor22.5 è posto sul ramo R3 secondo la connettività dichiarata con lo switch.\",\"image_evidence\":\"R3 scende dal contatto inferiore di S1 al bus che raggiunge D1, D3, D5, D7; R4 scende dal contatto superiore di S1 al bus che raggiunge D2, D4, D6, D8.\",\"json_evidence\":\"\\\"resistor22.5_t1\\\": [\\\"switch25.1_t2\\\"] e \\\"resistor22.5_t2\\\" agli anodi led12.2/12.4/12.6/12.8; \\\"resistor22.4_t2\\\" agli anodi led12.1/12.3/12.5/12.7, con t1 non connesso.\"},{\"type\":\"missing_or_incomplete_pin_terminals\",\"description\":\"Alcuni pin visibili degli IC non sono rappresentati come terminali separati o sono implicitamente fusi: per IC1 i pin 2 e 6 sono visibili sullo stesso nodo, ma il JSON aggiunge anche il pin 7 nello stesso nodo; per IC2 i pin di uscita e controllo visibili sono rappresentati solo in parte rispetto ai numeri mostrati.\",\"image_evidence\":\"Su IC1 i pin laterali 2, 6 e 7 sono visibili; 2 e 6 sono collegati allo stesso nodo con C1/R2, mentre 7 è collegato al nodo tra R1 e R2. Su IC2 sono visibili pin 14, 3, 2, 4, 7, 10, 15, 8, 13, 16.\",\"json_evidence\":\"\\\"integrated_circuit11.1_left_1\\\", \\\"left_2\\\" e \\\"left_3\\\" sono tutti collegati tra loro nel graph; IC2 ha terminali per i pin visibili principali ma la topologia dei pin 10/15 e dei pin di uscita è molto semplificata.\"}],\"minor_errors\":[{\"type\":\"component_class_or_terminal_model\",\"description\":\"Lo switch visibile è indicato come SPDT, mentre il JSON lo rappresenta genericamente come Switch a due terminali; la classe generale è corretta ma il modello dei terminali è ridotto.\"},{\"type\":\"polarity_uncertainty\",\"description\":\"La polarità dei LED e dei condensatori è indicata nel JSON, ma dall'immagine alcune polarità dei LED non sono completamente distinguibili senza interpretazione del simbolo; non tutte le assegnazioni anodo/catodo sono direttamente verificabili.\"},{\"type\":\"gnd_representation\",\"description\":\"Il JSON usa più componenti GND separati. Questo è accettabile per simboli di massa separati visibili, ma non esplicita una net comune tra tutte le masse; nell'immagine i simboli GND rappresentano semanticamente lo stesso riferimento, pur non essendo tutti collegati da fili disegnati.\"}],\"missing_from_json\":[\"Terzo terminale dello switch SPDT S1 verso il ramo di R4\",\"Collegamento superiore di R4 al contatto superiore dello switch\",\"Separazione topologica tra pin 7 di IC1 e il nodo comune dei pin 2/6\"],\"extra_in_json\":[\"Collegamento diretto di integrated_circuit11.1_left_3 con integrated_circuit11.1_left_1 e integrated_circuit11.1_left_2\",\"Rete di alimentazione che include switch25.1_t1 ma non rappresenta esplicitamente il terminale comune SPDT distinto dai due contatti di uscita\"],\"wrong_graph_connections\":[{\"expected_from_image\":\"IC1 pin 2 e pin 6 collegati insieme al nodo con C1 positivo e parte inferiore di R2; IC1 pin 7 collegato al nodo tra R1 e R2, non allo stesso nodo di pin 2/6.\",\"found_in_json\":\"integrated_circuit11.1_left_1, left_2 e left_3 sono tutti nello stesso nodo con polarized_capacitor20.1_positive e resistor22.2_t2.\",\"severity\":\"major\"},{\"expected_from_image\":\"R4 deve collegarsi dal contatto superiore destro di S1 al bus superiore dei LED D2/D4/D6/D8.\",\"found_in_json\":\"resistor22.4_t1 è vuoto; resistor22.4_t2 è collegato a led12.1/led12.3/led12.5/led12.7.\",\"severity\":\"major\"},{\"expected_from_image\":\"R3 deve collegarsi dal contatto inferiore destro di S1 al bus superiore dei LED D1/D3/D5/D7.\",\"found_in_json\":\"switch25.1_t2 è collegato a resistor22.5_t1 e resistor22.5_t2 alimenta led12.2/led12.4/led12.6/led12.8.\",\"severity\":\"major\"},{\"expected_from_image\":\"Lo switch S1 ha un comune sulla linea di alimentazione e due uscite alternative verso R3 e R4.\",\"found_in_json\":\"switch25.1 è a due terminali, con t1 sulla rete di alimentazione e t2 solo verso resistor22.5_t1; manca il contatto verso resistor22.4_t1.\",\"severity\":\"major\"}],\"uncertain_points\":[\"La corrispondenza numerica tra led12.1-led12.8 e D1-D8 non è dichiarata esplicitamente nel JSON e va dedotta solo dalla disposizione grafica.\",\"La posizione esatta dei terminali base/collettore/emettitore dei transistor è plausibile ma non completamente verificabile solo dai nomi nel JSON senza una mappa geometrica.\",\"Lo stato 'closed' dello switch nel JSON è ambiguo rispetto al simbolo SPDT disegnato, perché l'immagine mostra il selettore ma non una codifica univoca del contatto selezionato per la verifica automatica.\"],\"short_explanation\":\"Il JSON riconosce quasi tutti i componenti principali e gran parte della struttura: due IC, rete di temporizzazione, contatore, otto LED, quattro transistor, resistori, condensatori e masse. Tuttavia contiene errori topologici localizzati ma importanti: lo switch SPDT è ridotto a due terminali, R4 risulta con un terminale scollegato, i due bus LED/R3/R4 sono rappresentati in modo incoerente e il pin 7 di IC1 è fuso col nodo dei pin 2/6. La base resta recuperabile, ma non è una rappresentazione completamente fedele.\"}"
 }
