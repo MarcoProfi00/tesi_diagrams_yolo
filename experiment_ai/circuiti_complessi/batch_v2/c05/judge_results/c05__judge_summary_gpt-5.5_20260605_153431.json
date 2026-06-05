@@ -1,0 +1,918 @@
+[
+  {
+    "metadata": {
+      "circuit": "c05",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c05\\results_json\\c05_gpt-4.1-mini_20260605_151747.txt",
+      "model_under_test": "gpt-4.1-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 30.122,
+      "timestamp": "2026-06-05 15:27:17",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=15397, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1376, output_tokens_details=OutputTokensDetails(reasoning_tokens=411), total_tokens=16773)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 17,
+      "max_score": 21,
+      "normalized_score": 0.8095,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Una o più resistenze di limitazione dei segmenti aperte, scollegate o con saldatura/pista interrotta",
+        "Collegamenti scambiati o errati tra uscite a-g del CD4026 e segmenti a-g del display",
+        "Display a 7 segmenti guasto o non compatibile, ad esempio common anode invece di common cathode",
+        "Comune cathode del display non correttamente collegato a massa",
+        "Uscita segmento del CD4026 danneggiata o non commutante"
+      ],
+      "model_primary_cause": "Resistenze di limitazione dei segmenti aperte, danneggiate o scollegate, oppure collegamenti segmenti scambiati tra CD4026 e display",
+      "major_errors": [
+        "Afferma in un punto che il DISPLAY ENABLE IN pin 3 non è evidente o non presente nel JSON, mentre dal JSON risulta collegato al pin 16 VDD del CD4026, quindi abilitato.",
+        "La descrizione dell'alimentazione del 555 è poco accurata rispetto al JSON: il pin 8 è collegato al pin 4, ma la connessione esplicita a VCC non è rappresentata nel grafo, verosimilmente per simbolo di alimentazione non modellato."
+      ],
+      "hallucinations": [
+        "Dice che le resistenze del display sono da 330 ohm come se fosse ricavato dal JSON; il valore è supportato dal datasheet/descrizione dello schema, non dal JSON strutturato.",
+        "Ipotesi su PCB reale o resistenze fisicamente rotte non direttamente presenti nel JSON, anche se diagnostica plausibile per il sintomo."
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che nel JSON tutte le sette linee segmento CD4026-display risultano topologicamente corrette e nella corrispondenza giusta: pin 10-a, 12-b, 13-c, 9-d, 11-e, 6-f, 7-g.",
+        "Non considera esplicitamente come causa possibile un'uscita segmento del CD4026 danneggiata, utile se resistenze, cablaggi e display risultano buoni.",
+        "Non interpreta bene il warning su resistor22.2_t1: è nella rete di temporizzazione del 555, non nella rete dei segmenti, quindi non è una causa diretta di segmenti incompleti."
+      ],
+      "strengths": [
+        "Comprende correttamente la funzione generale: NE555 come generatore di clock, CD4026 come contatore/driver e display common cathode.",
+        "Usa correttamente il pinout principale del CD4026 per le uscite dei segmenti.",
+        "Identifica correttamente le cause più probabili per segmenti mancanti o errati: resistenze/piste dei segmenti, collegamenti scambiati, comune del display, display incompatibile o guasto.",
+        "Propone controlli pratici sensati: continuità delle resistenze, verifica corrispondenza pin-segmenti, controllo del comune a massa, alimentazione e clock."
+      ],
+      "short_explanation": "La risposta è tecnicamente utile e la diagnosi principale è coerente con il sintomo: per cifre incomplete o segmenti sbagliati le cause più probabili sono resistenze/connessioni dei segmenti, cablaggi scambiati o display/common difettosi. Usa bene datasheet e JSON per il pinout dei segmenti. Ha però alcune imprecisioni: tratta il DISPLAY ENABLE come non evidente nonostante sia collegato a VDD nel JSON, interpreta in modo un po' incerto alcune alimentazioni e dà peso al warning su resistor22.2 pur non essendo nel percorso del display."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c05",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c05\\results_json\\c05_gpt-4.1-nano_20260605_151820.txt",
+      "model_under_test": "gpt-4.1-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 28.729,
+      "timestamp": "2026-06-05 15:27:46",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=14598, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1425, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=16023)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 1,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 1,
+        "cause_priority": 1,
+        "practical_checks": 2,
+        "hallucination_absence": 1
+      },
+      "total_score": 9,
+      "max_score": 21,
+      "normalized_score": 0.4285714286,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Collegamenti dei segmenti a-g scambiati o errati tra CD4026, resistenze e display",
+        "Resistenza o pista di un segmento aperta/interrotta",
+        "Pin del display o segmento LED guasto/non collegato",
+        "Display non compatibile o common cathode non correttamente a GND"
+      ],
+      "model_primary_cause": "resistor22.2_t1 non collegato, interpretato come resistenza di un segmento scollegata",
+      "major_errors": [
+        "Ha identificato resistor22.2_t1 come possibile resistenza di segmento, ma nel JSON resistor22.2 appartiene alla rete del 555, non alle sette resistenze tra CD4026 e display.",
+        "Ha dato priorità a un terminale scollegato del circuito 555 come causa di segmenti incompleti, mentre il sintomo indicato riguarda segmenti errati durante il conteggio.",
+        "Ha scritto che il RESET del CD4026 deve essere alto, ma nel circuito e secondo il funzionamento del 4026 il reset attivo deve essere inattivo, quindi basso; nel JSON pin 15 è correttamente a GND.",
+        "Ha descritto il collegamento tra uscita 555 e clock CD4026 come una cascata tra più CD4026, interpretazione errata."
+      ],
+      "hallucinations": [
+        "Riferimento a una cascata tra più CD4026 non presente.",
+        "Riferimento a condensatori su alimentazione/reset non supportato dal JSON per il CD4026.",
+        "Associazione di resistor22.2 alle resistenze dei segmenti, non coerente con la topologia."
+      ],
+      "missed_important_points": [
+        "Non ha riconosciuto che le sette resistenze dei segmenti nel JSON sono resistor22.3-resistor22.9 e risultano tutte collegate alle uscite corrette a-g del 4026.",
+        "Non ha distinto chiaramente tra guasto di clock/555, che causerebbe blocco o conteggio irregolare, e guasto segmenti, che causa cifre incomplete o segmenti sbagliati mentre il conteggio avviene.",
+        "Non ha evidenziato abbastanza che per il sintomo specifico i controlli principali sono continuità segmento-per-segmento, resistenze 330 ohm, pin del display e corrispondenza a-g."
+      ],
+      "strengths": [
+        "Comprende la funzione generale del circuito: 555 come generatore di clock, CD4026 come contatore/driver e display common cathode.",
+        "Propone controlli pratici utili su continuità dei segmenti, common cathode, alimentazione, clock, reset e inhibit.",
+        "Include tra le cause possibili lo scambio delle linee a-g e problemi sulle resistenze dei segmenti, che sono coerenti con il sintomo."
+      ],
+      "short_explanation": "La risposta è utile solo in parte: contiene buoni controlli generici e cita correttamente la possibilità di linee a-g scambiate o resistenze/segmenti difettosi, ma la diagnosi principale è basata su una lettura errata del JSON. Il terminale non collegato resistor22.2_t1 appartiene alla rete del 555, non a una resistenza di segmento; quindi non è la causa più diretta di cifre incomplete durante il conteggio. Inoltre ci sono errori su reset del CD4026 e una falsa interpretazione del collegamento 555-4026 come cascata."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c05",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c05\\results_json\\c05_gpt-4o-mini_20260605_151651.txt",
+      "model_under_test": "gpt-4o-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 26.843,
+      "timestamp": "2026-06-05 15:28:13",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=13961, input_tokens_details=InputTokensDetails(cached_tokens=9984), output_tokens=1316, output_tokens_details=OutputTokensDetails(reasoning_tokens=432), total_tokens=15277)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 1,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 2,
+        "hallucination_absence": 1
+      },
+      "total_score": 12,
+      "max_score": 21,
+      "normalized_score": 0.5714285714,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Collegamento errato o scambiato tra uscite a-g del CD4026 e segmenti del display",
+        "Resistenza serie di un segmento aperta, di valore errato o non collegata",
+        "Segmento del display guasto o pin del display non correttamente collegato",
+        "Display non compatibile o common cathode non correttamente a GND",
+        "Uscita del CD4026 danneggiata su uno o più segmenti"
+      ],
+      "model_primary_cause": "Collegamento errato dei segmenti tra CD4026 e display a 7 segmenti",
+      "major_errors": [
+        "Attribuisce inizialmente pin errati al CD4026: indica pin 1 come RESET e pin 2 come CLOCK, mentre dal datasheet pin 1 è CLOCK, pin 2 è CLOCK INHIBIT e pin 15 è RESET.",
+        "Afferma che il RESET del CD4026 non deve essere collegato a GND, ma per il CD4026 il reset è attivo alto, quindi tenerlo a GND è normalmente corretto per il funzionamento.",
+        "Suggerisce RESET attivo come causa rilevante per cifre incomplete, ma nel JSON il pin 15 è collegato a GND, quindi non risulta attivo."
+      ],
+      "hallucinations": [
+        "Descrizione errata dei pin principali del CD4026 nella sezione iniziale.",
+        "Interpretazione fuorviante del collegamento del RESET a GND come possibile problema."
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che nel JSON le connessioni a-g appaiono topologicamente coerenti: pin 10-a, 12-b, 13-c, 9-d, 11-e, 6-f, 7-g tramite resistenze.",
+        "Non distingue abbastanza tra un problema di segmenti incompleti, più compatibile con linee/resistenze/display, e problemi di clock/reset/inhibit, che causerebbero più facilmente conteggio assente o bloccato.",
+        "Non precisa che CLOCK INHIBIT pin 2 e RESET pin 15 sono collegati a GND nel JSON, condizione corretta per permettere il conteggio.",
+        "Non cita che DISPLAY ENABLE IN pin 3 è collegato a VDD, quindi il display dovrebbe essere abilitato."
+      ],
+      "strengths": [
+        "Identifica come causa primaria plausibile un errore nei collegamenti dei segmenti a-g o nelle resistenze dei segmenti.",
+        "Comprende la struttura generale del circuito: NE555 come generatore di clock, CD4026 come contatore/driver, display common cathode.",
+        "Propone controlli pratici utili su continuità delle linee dei segmenti, resistenze, common cathode e clock.",
+        "Considera correttamente la possibilità di un display common cathode non collegato bene a GND."
+      ],
+      "short_explanation": "La risposta è utile perché mette al primo posto la causa più coerente con il sintomo, cioè collegamenti/resistenze/segmenti del display. Tuttavia contiene errori importanti di pinout e logica del CD4026, soprattutto su CLOCK, CLOCK INHIBIT e RESET, e interpreta male il reset a GND. Inoltre non sfrutta pienamente il JSON, che mostra reset e inhibit a GND e display enable a VDD, condizioni corrette."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c05",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c05\\results_json\\c05_gpt-5-mini_20260605_151957.txt",
+      "model_under_test": "gpt-5-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 30.407,
+      "timestamp": "2026-06-05 15:28:43",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=14843, input_tokens_details=InputTokensDetails(cached_tokens=9984), output_tokens=1470, output_tokens_details=OutputTokensDetails(reasoning_tokens=472), total_tokens=16313)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 16,
+      "max_score": 21,
+      "normalized_score": 0.7619047619,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Una o più resistenze di segmento aperte, di valore errato o con saldature/piste interrotte tra CD4026 e display",
+        "Collegamenti dei segmenti a-g scambiati o errati tra uscite del CD4026 e pin del display",
+        "Display non compatibile o tipo common anode invece di common cathode",
+        "Uscita segmenti del CD4026 danneggiata o non commutante correttamente"
+      ],
+      "model_primary_cause": "Pin VDD del CD4026 non alimentato o mal collegato",
+      "major_errors": [
+        "La diagnosi prioritaria su VDD del CD4026 è poco coerente con il sintomo descritto: se il circuito conta e mostra cifre, anche se incomplete, è più probabile un problema sulle linee dei segmenti, sulle resistenze, sul display o sulla mappatura a-g.",
+        "L'immagine dello schema mostra il pin 16 del CD4026 collegato a +Vcc e anche il pin 3 Display Enable collegato alla stessa rete; quindi la causa principale indicata non è confermata dallo schema reale.",
+        "Il modello interpreta l'assenza di un componente VCC nel JSON come forte evidenza di alimentazione mancante, ma nel JSON le reti di alimentazione positive non sono modellate esplicitamente in modo completo."
+      ],
+      "hallucinations": [
+        "L'indicazione 'pin16 / integrated_circuit11.2_top_1 / integrated_circuit11.2_left_1' è imprecisa: left_1 è il pin 3 Display Enable In, non un alias del pin 16, anche se nel JSON è connesso alla stessa rete.",
+        "L'ipotesi di VDD assente è supportata solo da una limitazione del JSON e non dallo schema reale."
+      ],
+      "missed_important_points": [
+        "Avrebbe dovuto dare massima priorità ai singoli rami dei segmenti: uscita CD4026, resistenza serie e pin del display, perché il sintomo parla di segmenti sempre spenti o accesi in modo errato.",
+        "Avrebbe dovuto distinguere meglio tra segmenti sempre spenti, tipico di resistenza/pista/display/uscita aperta, e segmenti accesi nel modo sbagliato, tipico di linee a-g scambiate.",
+        "Avrebbe dovuto essere più cauto nel concludere che VDD non sia collegato, dato che il JSON non include sorgenti +VCC come componenti espliciti."
+      ],
+      "strengths": [
+        "Comprende correttamente la funzione generale del circuito: NE555 come clock, CD4026 come contatore/driver, display common cathode.",
+        "Usa correttamente il pinout del CD4026 e del 555 dal datasheet.",
+        "Riconosce correttamente che RESET e CLOCK INHIBIT del CD4026 sono a GND e quindi in condizioni compatibili con il conteggio.",
+        "Include controlli pratici utili su resistenze, continuità delle linee dei segmenti, uscite del CD4026 e tipo di display.",
+        "Individua correttamente il warning del JSON su resistor22.2_t1, anche se lo considera solo come anomalia indiretta."
+      ],
+      "short_explanation": "La risposta è tecnicamente utile e ben strutturata, ma la priorità diagnostica non è ottimale. Per cifre incomplete o segmenti errati, la causa più probabile è nei collegamenti/resistenze/segmenti del display o nella mappatura a-g, non nell'alimentazione VDD del CD4026. L'immagine mostra VDD collegato a +Vcc, quindi la causa principale scelta dal modello non è coerente con lo schema reale, anche se deriva da una lettura comprensibile del JSON privo di simboli VCC espliciti."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c05",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c05\\results_json\\c05_gpt-5-nano_20260605_151905.txt",
+      "model_under_test": "gpt-5-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 37.564,
+      "timestamp": "2026-06-05 15:29:21",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=15449, input_tokens_details=InputTokensDetails(cached_tokens=9984), output_tokens=1349, output_tokens_details=OutputTokensDetails(reasoning_tokens=359), total_tokens=16798)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 1,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 2,
+        "hallucination_absence": 1
+      },
+      "total_score": 11,
+      "max_score": 21,
+      "normalized_score": 0.5238,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Collegamenti tra uscite a-g del CD4026 e segmenti del display scambiati o errati",
+        "Resistenza di limitazione di un segmento aperta, di valore errato o non collegata",
+        "Pista/saldatura/interruzione su una linea segmento o segmento LED del display guasto",
+        "Display non compatibile o non realmente common cathode",
+        "Common cathode o massa del display difettosi, se il problema coinvolge molti segmenti"
+      ],
+      "model_primary_cause": "resistor22.2_t1 non connesso, interpretato come interruzione critica del percorso segnali/clock/abilitazione",
+      "major_errors": [
+        "Ha dato priorità massima al warning resistor22.2_t1 non collegato, che nel circuito riguarda la rete resistiva del 555 e non le linee dei segmenti del display; inoltre il sintomo specifica che il circuito conta, quindi il clock non è la causa più coerente di segmenti incompleti o scambiati.",
+        "Ha collegato in modo speculativo resistor22.2_t1 a clock, inhibit, display enable o codifica segmenti senza supporto topologico nel JSON.",
+        "Ha indicato in modo errato alcuni pin del CD4026: ad esempio ha associato il controllo RESET anche a integrated_circuit11.2_right_4 pin9, che invece è l'uscita segmento d; il clock è pin1 left_4, non left_3."
+      ],
+      "hallucinations": [
+        "Riferimento a una logica sincronizzata e a un possibile percorso tra resistor22.2_t1 e segnali di abilitazione/codifica del 4026 non supportato dal JSON.",
+        "Affermazione che le uscite segmenti siano anche integrated_circuit11.2_left_1/left_2/left_3/left_4: nel JSON e nel datasheet le uscite a-g sono sui pin right_1...right_7 del 4026.",
+        "Ipotesi che resistor22.2_t1 possa influire direttamente su clock inhibit, display enable o linee di codifica senza evidenza."
+      ],
+      "missed_important_points": [
+        "Non ha riconosciuto chiaramente che, secondo il JSON, le linee segmento a-g risultano mappate correttamente: pin10-a, pin12-b, pin13-c, pin9-d, pin11-e, pin6-f, pin7-g.",
+        "Non ha distinto abbastanza tra un problema di conteggio/clock e un problema di visualizzazione segmenti: il sintomo dice che il circuito conta, quindi la diagnosi dovrebbe concentrarsi soprattutto su linee a-g, resistenze, display e common cathode.",
+        "Non ha evidenziato che resistor22.2_t1 è verosimilmente parte della rete astabile del 555, non del cablaggio dei segmenti."
+      ],
+      "strengths": [
+        "Ha compreso la funzione generale del circuito: 555 come generatore di clock, CD4026 come contatore/driver e display common cathode con resistenze di segmento.",
+        "Ha citato correttamente controlli utili su resistenze dei segmenti, continuità delle linee a-g, common cathode, alimentazione, reset, inhibit e display enable.",
+        "Ha incluso tra le cause il cablaggio errato tra 4026 e display, che è una diagnosi coerente con il sintomo."
+      ],
+      "short_explanation": "La risposta è utile ma la priorità diagnostica è sbagliata: il warning su resistor22.2_t1 riguarda la rete del 555 e non spiega bene segmenti incompleti mentre il circuito conta. La causa più coerente è un problema su cablaggio/resistenze/segmenti del display. Sono presenti anche errori di pinout del CD4026 e alcune inferenze non supportate dal JSON."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c05",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c05\\results_json\\c05_gpt-5.4-mini_20260605_152115.txt",
+      "model_under_test": "gpt-5.4-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 26.618,
+      "timestamp": "2026-06-05 15:29:48",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=14404, input_tokens_details=InputTokensDetails(cached_tokens=9984), output_tokens=1180, output_tokens_details=OutputTokensDetails(reasoning_tokens=411), total_tokens=15584)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 19,
+      "max_score": 21,
+      "normalized_score": 0.9048,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Uscite del CD4026 non usate collegate impropriamente a massa, in particolare pin 14 UCS/ungated C segment output, pin 4 DEO e pin 5 carry out",
+        "Possibile segmento/resistenza/pista del display aperta o guasta se il problema riguarda un singolo segmento",
+        "Possibile scambio o cablaggio errato delle linee a-g, anche se nel JSON la mappatura a-g risulta corretta"
+      ],
+      "model_primary_cause": "Pin 14 del CD4026 collegato direttamente a GND, con altre uscite del 4026 messe a massa, causando segmenti errati o mancanti",
+      "major_errors": [
+        "Attribuisce abbastanza peso alla rete del 555 e a resistor22.2_t1 non collegato come possibile causa di cifre incomplete, ma il sintomo indica che il circuito conta e il difetto è più coerente con il pilotaggio dei segmenti; inoltre l'assenza del collegamento a VCC nel JSON può dipendere dalla rappresentazione della rail di alimentazione."
+      ],
+      "hallucinations": [],
+      "missed_important_points": [
+        "Avrebbe potuto evidenziare con più chiarezza che anche pin 4 DEO e pin 5 carry out sono uscite del CD4026 cortocircuitate a massa, non solo il pin 14.",
+        "Avrebbe potuto distinguere meglio tra difetto di clock, che causa conteggi irregolari, e difetto dei segmenti, che causa cifre incomplete o segmenti sempre spenti."
+      ],
+      "strengths": [
+        "Comprende correttamente la struttura del circuito: NE555 come generatore di clock, CD4026 come contatore/driver, display common cathode.",
+        "Usa correttamente il pinout del CD4026 e riconosce la mappatura corretta delle uscite a-g verso il display.",
+        "Identifica la principale anomalia topologica nel JSON: pin 14 del CD4026 collegato a GND.",
+        "Propone controlli pratici utili su pin 14, collegamenti dei segmenti, resistenze e uscita clock del 555.",
+        "Non penalizzabile per mancato riferimento all'immagine, dato che il modello valutato aveva ricevuto JSON e datasheet."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida: individua correttamente il problema più forte supportato dal JSON e dal datasheet, cioè il collegamento a massa di uscite del CD4026, soprattutto il pin 14 UCS. La diagnosi è coerente con segmenti mancanti o errati. L'unico limite rilevante è l'enfasi secondaria sulla rete del 555/resistor22.2_t1, che è meno pertinente al sintomo e potrebbe derivare da una rappresentazione incompleta della rail VCC nel JSON."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c05",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c05\\results_json\\c05_gpt-5.4-nano_20260605_152045.txt",
+      "model_under_test": "gpt-5.4-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 31.071,
+      "timestamp": "2026-06-05 15:30:19",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=15512, input_tokens_details=InputTokensDetails(cached_tokens=9984), output_tokens=1394, output_tokens_details=OutputTokensDetails(reasoning_tokens=396), total_tokens=16906)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 12,
+      "max_score": 21,
+      "normalized_score": 0.5714285714,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Resistenza di limitazione aperta, saldatura/pista interrotta o collegamento difettoso su uno dei rami dei segmenti a-g",
+        "Linee dei segmenti a-g scambiate tra uscite del CD4026 e display",
+        "Display a 7 segmenti non compatibile, pinout display errato o segmento LED interno guasto",
+        "Uscita segmento del CD4026 danneggiata o non funzionante",
+        "Comune catodico non correttamente a massa, se il problema fosse più generale"
+      ],
+      "model_primary_cause": "DISPLAY ENABLE IN del 4026 pin 3 flottante o cablato male a causa di resistor22.2_t1 non connesso",
+      "major_errors": [
+        "Ha interpretato erroneamente resistor22.2 come collegato al pin 3 del CD4026; nel JSON resistor22.2 appartiene alla rete del 555, non al DISPLAY ENABLE IN del 4026.",
+        "Ha affermato che VDD pin 16 e GND pin 8 del 4026 non compaiono nel grafo; invece pin 8 è collegato a GND e pin 16 è collegato al pin 3 DISPLAY ENABLE IN, coerente con l'alimentazione/abilitazione mostrata nello schema.",
+        "Ha dato priorità a una causa non supportata dal JSON, cioè DISPLAY ENABLE IN flottante, mentre il pin 3 risulta collegato al nodo del pin 16/VDD."
+      ],
+      "hallucinations": [
+        "Collegamento di resistor22.2_t2 al pin 3 del 4026, non presente nel grafo.",
+        "Ipotesi di pin 3 DISPLAY ENABLE IN flottante basata su una lettura errata del warning.",
+        "Mancanza di GND del 4026 nel grafo, quando il pin 8 è collegato a gnd9.3."
+      ],
+      "missed_important_points": [
+        "Il warning su resistor22.2_t1 riguarda la rete astabile del 555, probabilmente il collegamento a VCC della resistenza di timing, non direttamente i segmenti del display.",
+        "Il cablaggio a-g nel JSON risulta ordinato correttamente secondo il pinout del CD4026: pin 10-a, 12-b, 13-c, 9-d, 11-e, 6-f, 7-g.",
+        "Per il sintomo di cifre incomplete o segmenti sempre spenti, la diagnosi primaria dovrebbe puntare prima a resistenze/connessioni dei singoli segmenti, pinout del display o guasto del display/CD4026."
+      ],
+      "strengths": [
+        "Comprende correttamente la funzione generale del 555 come generatore di clock e del CD4026 come contatore/driver per display a 7 segmenti.",
+        "Elenca correttamente i rami segmento per segmento tra uscite del 4026, resistenze e display.",
+        "Propone controlli pratici utili su continuità delle resistenze, piste e segmenti.",
+        "Considera correttamente la possibilità di linee a-g scambiate o rami segmento aperti."
+      ],
+      "short_explanation": "La risposta è utile nella parte sui rami dei segmenti e sui controlli pratici, ma la diagnosi principale è basata su una lettura errata del JSON: resistor22.2 non è sul pin 3 del CD4026 e il DISPLAY ENABLE IN non risulta flottante. Inoltre il modello dichiara assenti alimentazione e massa del 4026 quando il grafo mostra almeno il GND e il collegamento pin16-pin3. La causa più coerente con segmenti mancanti o cifre errate è invece un problema sui singoli rami a-g: resistenze, piste, pin del display, segmenti scambiati o guasto del display/uscite 4026."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c05",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c05\\results_json\\c05_gpt-5.4_20260605_152210.txt",
+      "model_under_test": "gpt-5.4",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 31.477,
+      "timestamp": "2026-06-05 15:30:50",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=15233, input_tokens_details=InputTokensDetails(cached_tokens=9984), output_tokens=1413, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=16646)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 3
+      },
+      "total_score": 19,
+      "max_score": 21,
+      "normalized_score": 0.9047619047619048,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Uscite non usate del CD4026, in particolare pin14 UCS, pin4 DEO e pin5 carry out, collegate direttamente a GND invece che lasciate aperte, con possibile sovraccarico o malfunzionamento dell'integrato",
+        "Guasto o discontinuità su una linea segmento: resistenza aperta, pista interrotta, saldatura difettosa o segmento LED guasto",
+        "Collegamenti fisici del display o piedinatura del display non coerenti con le etichette a-g, oppure display non common cathode"
+      ],
+      "model_primary_cause": "Pin14 del CD4026, uscita ungated C segment output, collegato direttamente a massa; inoltre pin4 e pin5, anch'essi uscite, messi a GND",
+      "major_errors": [
+        "La risposta suggerisce che il pin14 a massa possa disturbare direttamente la logica/uscita del segmento c; questo è plausibile come stress o danno dell'IC, ma il pin14 è un'uscita ausiliaria separata dal pin13 che pilota il segmento c, quindi il nesso diretto con un singolo segmento c sempre spento non è garantito."
+      ],
+      "hallucinations": [],
+      "missed_important_points": [
+        "Avrebbe potuto distinguere meglio tra errore schematico certo, cioè uscite del 4026 cortocircuitate a massa, e cause fisiche più tipiche del sintomo, come resistenza o segmento aperto.",
+        "Non esplicita che pin4 e pin5 a massa possono non alterare immediatamente la visualizzazione se le uscite non stanno tentando di andare alte, ma restano comunque collegamenti elettricamente scorretti."
+      ],
+      "strengths": [
+        "Identifica correttamente la struttura del circuito: 555 come clock, 4026 come contatore/driver e display common cathode.",
+        "Usa correttamente il pinout del CD4026 e mappa accuratamente le uscite a-g verso le resistenze e i segmenti del display.",
+        "Rileva dal JSON che i collegamenti principali dei segmenti sono uno-a-uno e non risultano scambiati.",
+        "Rileva correttamente che reset e clock inhibit sono a GND, quindi in stati coerenti con il conteggio.",
+        "Individua correttamente come anomalia forte il collegamento a massa di pin14, pin4 e pin5 del 4026, che il datasheet descrive come uscite.",
+        "Propone controlli pratici utili: verifica pin14/4/5, continuità delle linee segmento, resistenze, display common cathode e alimentazione."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida e ben supportata dal JSON e dal datasheet. Individua correttamente il problema più evidente: alcune uscite del CD4026, specialmente pin14, pin4 e pin5, sono collegate direttamente a massa. Questo è un errore plausibile e potenzialmente causa di malfunzionamenti o danni. Buona anche la verifica dei collegamenti a-g, che risultano corretti. Il limite principale è che attribuisce forse in modo troppo diretto il difetto dei segmenti al pin14, che è un'uscita ausiliaria separata dal segmento c pilotato dal pin13; tuttavia il collegamento resta una forte anomalia diagnostica."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c05",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c05\\results_json_img\\c05_gpt-4.1-mini_20260605_152244.txt",
+      "model_under_test": "gpt-4.1-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 24.02,
+      "timestamp": "2026-06-05 15:31:14",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=14859, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1218, output_tokens_details=OutputTokensDetails(reasoning_tokens=337), total_tokens=16077)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 19,
+      "max_score": 21,
+      "normalized_score": 0.9047619047619048,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "resistenza di limitazione di un segmento aperta, errata o mal collegata",
+        "pista, saldatura o collegamento interrotto tra uscita CD4026, resistenza e segmento",
+        "segmento LED del display guasto",
+        "linee a-g scambiate o collegate al segmento sbagliato",
+        "display non compatibile o terminale common cathode non correttamente a GND"
+      ],
+      "model_primary_cause": "Problema sulle resistenze di limitazione o sui collegamenti tra CD4026 e display, con resistenza aperta o pista interrotta che lascia spenti uno o più segmenti.",
+      "major_errors": [],
+      "hallucinations": [
+        "Afferma che JSON e immagine sono pienamente coerenti, ma nel JSON resistor22.2_t1 risulta non connesso mentre nello schema visivo il resistore superiore del 555 è collegato a +Vcc.",
+        "Dichiara che il terminale resistor22.2_t1 non connesso non ha impatto diretto sul display; è vero rispetto al sintomo dei segmenti, ma se fosse realmente aperto influenzerebbe la generazione del clock del 555."
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente la piccola discrepanza tra JSON e immagine sul resistore della rete RC del 555.",
+        "Poteva menzionare più esplicitamente che, dato che il circuito conta, clock/reset/inhibit sono meno probabili rispetto alla catena uscite CD4026-resistenze-display.",
+        "Non dà una tabella pin CD4026-segmento-resistenza per isolare rapidamente quale linea controllare in base al segmento mancante."
+      ],
+      "strengths": [
+        "Comprende correttamente l'architettura generale: NE555 astabile come clock, CD4026 come contatore/driver, display common cathode.",
+        "Usa correttamente il pinout del CD4026: pin 1 clock, pin 2 inhibit, pin 3 display enable, pin 15 reset, pin 16 VDD, pin 8 GND e uscite a-g.",
+        "Individua correttamente le cause più coerenti con il sintomo: resistenze aperte, connessioni interrotte, segmenti guasti o linee a-g scambiate.",
+        "Propone controlli pratici realistici: continuità delle resistenze, test diretto dei segmenti, verifica saldature, misure sui pin di controllo e clock.",
+        "Distingue correttamente tra segmenti sempre spenti e segmenti accesi nel modo sbagliato, associando il primo a interruzioni/guasti e il secondo a cablaggio scambiato."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida e la diagnosi principale è coerente con il sintomo: se il contatore avanza ma il display mostra segmenti mancanti o errati, la priorità va a resistenze, piste, saldature, segmenti del display e corrispondenza delle linee a-g. Buon uso del datasheet e buoni controlli pratici. L'unico limite rilevante è la gestione un po' superficiale della discrepanza JSON/immagine sul resistore del 555 indicato come non connesso nel JSON."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c05",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c05\\results_json_img\\c05_gpt-4.1-nano_20260605_152321.txt",
+      "model_under_test": "gpt-4.1-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 28.242,
+      "timestamp": "2026-06-05 15:31:42",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=14473, input_tokens_details=InputTokensDetails(cached_tokens=9984), output_tokens=1325, output_tokens_details=OutputTokensDetails(reasoning_tokens=415), total_tokens=15798)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 14,
+      "max_score": 21,
+      "normalized_score": 0.6667,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Collegamento errato o scambiato tra uscite a-g del CD4026 e segmenti corrispondenti del display",
+        "Resistenza di limitazione di un segmento aperta, errata o collegamento interrotto tra CD4026, resistenza e display",
+        "Display a 7 segmenti difettoso o non realmente common cathode",
+        "Terminale common cathode non collegato correttamente a GND",
+        "Uscita del CD4026 relativa a un segmento danneggiata"
+      ],
+      "model_primary_cause": "Collegamenti delle uscite a-g del CD4026 errati o scambiati",
+      "major_errors": [
+        "Interpreta il warning resistor22.2_t1 non connesso come possibile problema su una resistenza di segmento, ma resistor22.2 appartiene alla rete del 555, non alle sette resistenze tra CD4026 e display.",
+        "Suggerisce che nel JSON o nell'immagine ci possano essere incongruenze sui collegamenti a-g, mentre la mappatura segmenti nel JSON è coerente: pin 10-a, 12-b, 13-c, 9-d, 11-e, 6-f, 7-g.",
+        "Attribuisce supporto JSON a difetti dei segmenti che non sono direttamente indicati dal JSON."
+      ],
+      "hallucinations": [
+        "Il warning su resistor22.2_t1 viene collegato a un segmento del display, ma non è una resistenza di segmento.",
+        "Formula vaga 'valvola errata' per le resistenze, probabilmente intende valore errato.",
+        "Parla di 'controlli e verifiche statistiche', termine non pertinente al troubleshooting circuitale."
+      ],
+      "missed_important_points": [
+        "Non evidenzia esplicitamente che, secondo il JSON e lo schema, i collegamenti a-g risultano corretti.",
+        "Non distingue bene tra un problema che causa cifre errate per segmenti scambiati e un problema che causa segmenti sempre spenti per resistenza/pista/LED aperto.",
+        "Non chiarisce che reset, clock o inhibit normalmente causerebbero conteggio bloccato o assente, non singoli segmenti sempre spenti o accesi in modo sbagliato."
+      ],
+      "strengths": [
+        "Comprende correttamente la funzione generale del circuito: NE555 come generatore di clock e CD4026 come contatore/driver per display a 7 segmenti common cathode.",
+        "Indica cause tecnicamente plausibili per il sintomo, in particolare scambio delle linee a-g, resistenze di segmento aperte o display incompatibile.",
+        "Propone controlli pratici utili: continuità delle linee segmento, verifica del common cathode a GND, alimentazione, reset, clock e display enable.",
+        "Usa in modo generalmente corretto le funzioni principali dei pin del CD4026 e del display common cathode."
+      ],
+      "short_explanation": "La risposta è utile e la causa principale proposta, cioè errore nei collegamenti dei segmenti a-g o problemi nelle resistenze/linee dei segmenti, è coerente con il sintomo. Tuttavia usa male il JSON: il warning su resistor22.2_t1 riguarda la rete del 555, non una resistenza del display, e lo schema/JSON mostrano in realtà una mappatura a-g corretta. Alcune cause secondarie come clock o reset sono meno pertinenti per segmenti singoli incompleti."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c05",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c05\\results_json_img\\c05_gpt-4o-mini_20260605_152008.txt",
+      "model_under_test": "gpt-4o-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 29.851,
+      "timestamp": "2026-06-05 15:32:12",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=13975, input_tokens_details=InputTokensDetails(cached_tokens=9984), output_tokens=1386, output_tokens_details=OutputTokensDetails(reasoning_tokens=434), total_tokens=15361)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 1,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 2,
+        "hallucination_absence": 1
+      },
+      "total_score": 11,
+      "max_score": 21,
+      "normalized_score": 0.5238095238,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Collegamenti errati/scambiati tra uscite a-g del CD4026 e segmenti del display",
+        "Resistenza serie di un segmento aperta, errata o pista/interconnessione interrotta",
+        "Segmento del display guasto o display non compatibile/common cathode non correttamente a GND"
+      ],
+      "model_primary_cause": "Collegamenti a-g errati o segmenti invertiti tra CD4026 e display",
+      "major_errors": [
+        "Attribuisce erroneamente al CD4026 il pin 1 come RESET, mentre da datasheet il pin 1 è CLOCK; il RESET è il pin 15.",
+        "Indica erroneamente 'CLOCK pin 1 NE555', mentre il pin 1 del NE555 è GND e l'uscita clock verso il 4026 è il pin 3 del 555.",
+        "Non usa in modo specifico il JSON/immagine per verificare che le linee segmenti risultano effettivamente collegate in ordine corretto nello schema: pin 10-a, 12-b, 13-c, 9-d, 11-e, 6-f, 7-g.",
+        "Non segnala il warning JSON su resistor22.2_t1 non connesso, anche se riguarda più il generatore 555 che il sintomo dei segmenti incompleti."
+      ],
+      "hallucinations": [
+        "Descrive genericamente i condensatori come 'di filtraggio per stabilizzazione', mentre nel circuito uno è il condensatore di temporizzazione del 555 e l'altro è sul pin control.",
+        "Menziona conferme dall'immagine e dal JSON senza riportare controlli topologici reali o evidenze specifiche."
+      ],
+      "missed_important_points": [
+        "Avrebbe dovuto distinguere meglio tra segmenti sempre spenti, più indicativi di resistenza/pista/segmento aperto, e segmenti accesi nel modo sbagliato, più indicativi di linee a-g scambiate.",
+        "Avrebbe dovuto indicare che nello schema/JSON i collegamenti a-g appaiono corretti, quindi in assenza di modifica simulata la verifica prioritaria sarebbe continuità/resistenze/segmento guasto.",
+        "Non cita che il display enable del CD4026, pin 3, è collegato a VDD nello schema, quindi è correttamente abilitato.",
+        "Non cita che reset pin 15 e clock inhibit pin 2 sono collegati a GND, quindi non dovrebbero causare cifre incomplete se il circuito conta."
+      ],
+      "strengths": [
+        "Comprende la funzione generale del circuito: 555 come generatore di clock, CD4026 come contatore/driver, display common cathode.",
+        "Identifica cause plausibili per il sintomo: collegamenti a-g errati e resistenze dei segmenti aperte o errate.",
+        "Propone controlli pratici utili: continuità tra uscite CD4026 e segmenti, verifica resistenze, alimentazione e clock.",
+        "La diagnosi principale è coerente con il sintomo generale di cifre errate o incomplete."
+      ],
+      "short_explanation": "Risposta utile ma con errori di pinout importanti e uso poco specifico di JSON/immagine. La causa principale proposta, cioè collegamenti segmenti a-g errati, è plausibile per segmenti accesi nel modo sbagliato, e le resistenze aperte sono correttamente incluse per segmenti sempre spenti. Tuttavia nel circuito fornito le linee a-g risultano ordinate correttamente e il modello non lo evidenzia; inoltre sbaglia il pin 1 del CD4026 e il pin 1 del 555."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c05",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c05\\results_json_img\\c05_gpt-5-mini_20260605_152448.txt",
+      "model_under_test": "gpt-5-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 35.368,
+      "timestamp": "2026-06-05 15:32:48",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=15378, input_tokens_details=InputTokensDetails(cached_tokens=9984), output_tokens=1639, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=17017)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 16,
+      "max_score": 21,
+      "normalized_score": 0.7619047619,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "resistenza di segmento aperta, valore errato o saldatura/pista interrotta tra uscita CD4026 e display",
+        "collegamenti a-g scambiati o cablaggio errato tra CD4026 e segmenti del display",
+        "segmento del display guasto o display non common cathode",
+        "uscita del CD4026 danneggiata o cortocircuitata",
+        "catodo comune del display non correttamente a GND"
+      ],
+      "model_primary_cause": "resistenza di segmento aperta o contatto/interruzione tra uscita 4026 e relativo segmento",
+      "major_errors": [
+        "Considera molto sospetti i pin 4, 5 e 14 del CD4026 collegati a GND e suggerisce di rimuovere tali collegamenti; mentre per pin 4 e 5 sono uscite normalmente da lasciare aperte se non usate, il collegamento mostrato nello schema è effettivamente presente ma non è la causa più direttamente correlata a singoli segmenti scambiati o spenti.",
+        "Non sfrutta pienamente l'immagine per correggere il warning JSON sul terminale resistor22.2_t1: nell'immagine la resistenza superiore del 555 è collegata a +Vcc, quindi il warning del JSON non dovrebbe essere trattato come forte evidenza di guasto del clock.",
+        "Introduce l'ipotesi 'se RESET è active-low' per il CD4026, ma dal datasheet fornito RESET è attivo alto; questa ambiguità non è necessaria e può confondere."
+      ],
+      "hallucinations": [
+        "Il valore 7 x 330 ohm è supportato da datasheet/immagine, quindi non è una vera allucinazione.",
+        "Il riferimento a un condensatore elettrolitico sul pin 2/6 del 555 è coerente con l'immagine, ma non esplicitato nel JSON.",
+        "L'ipotesi di RESET active-low per il CD4026 non è supportata dal datasheet fornito."
+      ],
+      "missed_important_points": [
+        "Poteva evidenziare più chiaramente che il JSON mostra una corrispondenza corretta delle linee: pin10→a, 12→b, 13→c, 9→d, 11→e, 6→f, 7→g; quindi il problema, se presente nel circuito reale, sarebbe più probabilmente un guasto fisico/saldatura/resistenza/display piuttosto che un errore topologico nel JSON.",
+        "Poteva distinguere meglio tra segmento sempre spento, tipico di circuito aperto/resistenza/LED guasto, e segmento acceso nel modo sbagliato, tipico di linee a-g scambiate o display di tipo errato.",
+        "Poteva non dare troppo peso diagnostico al clock del 555, perché un clock difettoso di solito altera il conteggio o lo rende instabile, ma non causa selettivamente segmenti sempre spenti."
+      ],
+      "strengths": [
+        "Comprende correttamente l'architettura generale 555 → clock CD4026 → display a 7 segmenti common cathode.",
+        "Usa correttamente gran parte del pinout del CD4026 e del 555.",
+        "Individua le cause più rilevanti per il sintomo: resistenze/connessioni dei segmenti, mapping a-g errato, display guasto o tipo errato.",
+        "Propone controlli pratici utili: continuità uscita-resistenza-segmento, misura livelli sui pin di controllo, verifica display e common cathode.",
+        "La diagnosi principale è coerente con il sintomo di segmenti mancanti o errati."
+      ],
+      "short_explanation": "La risposta è complessivamente utile e tecnicamente abbastanza solida: identifica correttamente come prime cause resistenze o collegamenti dei segmenti, mapping a-g errato e display/uscite difettose. Tuttavia dà troppo peso ad alcune anomalie del JSON, in particolare il terminale della resistenza del 555 non connesso nonostante nell'immagine sia collegato a Vcc, e tratta i pin 4/5/14 del CD4026 a massa come causa primaria senza distinguere bene il loro impatto rispetto ai segmenti a-g. C'è anche una piccola imprecisione sul reset del CD4026. Diagnosi principale corretta, ma con priorità e uso delle fonti non perfetti."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c05",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c05\\results_json_img\\c05_gpt-5-nano_20260605_152359.txt",
+      "model_under_test": "gpt-5-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 35.596,
+      "timestamp": "2026-06-05 15:33:23",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=15935, input_tokens_details=InputTokensDetails(cached_tokens=9984), output_tokens=1578, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=17513)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 1,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 2,
+        "hallucination_absence": 1
+      },
+      "total_score": 10,
+      "max_score": 21,
+      "normalized_score": 0.47619047619047616,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Collegamento errato o scambiato tra uscite a-g del CD4026 e segmenti del display",
+        "Resistenza di limitazione aperta, di valore errato o mal collegata su uno o più segmenti",
+        "Segmento/display guasto o display non compatibile, ad esempio common anode invece di common cathode",
+        "Comune cathode del display non correttamente collegato a GND",
+        "Uscita segmento del CD4026 danneggiata o non correttamente collegata"
+      ],
+      "model_primary_cause": "Connessione mancante su resistor22.2_t1 che comprometterebbe il clock del 555/4026",
+      "major_errors": [
+        "Attribuisce al CD4026 il pin 3 come CLOCK, mentre dal datasheet e dal JSON il CLOCK è il pin 1; il pin 3 è DISPLAY ENABLE IN.",
+        "Indica che il RESET del CD4026 dovrebbe essere alto durante il funzionamento normale, ma il reset del CD4026 è attivo alto e deve restare basso/inattivo.",
+        "Dà priorità al warning resistor22.2_t1 come causa principale di cifre incomplete, ma quel ramo appartiene alla rete astabile del 555 e, se realmente aperto, causerebbe soprattutto clock assente o anomalo, non segmenti permanentemente mancanti o scambiati durante un conteggio presente.",
+        "Interpreta in modo eccessivo il warning JSON come difetto chiave, nonostante l'immagine mostri il terminale della resistenza collegato a +Vcc tramite simbolo di alimentazione."
+      ],
+      "hallucinations": [
+        "Afferma che resistor22.2_t1 sarebbe collegato o critico direttamente verso il pin 3 del 4026/clock, mentre nel JSON resistor22.2 è nella rete del 555 sul pin 7.",
+        "Parla di possibile gestione di RESET, CLOCK INHIBIT e DISPLAY ENABLE IN/OUT come funzione di controllo e cascata in modo generico e non sempre coerente con i collegamenti reali.",
+        "Usa espressioni non tecniche o confuse come 'OUTPUT jaw/pilota'."
+      ],
+      "missed_important_points": [
+        "Non mette come causa principale l'apertura o il cattivo collegamento di una delle sette resistenze dei segmenti, che è molto coerente con segmenti sempre spenti.",
+        "Non enfatizza abbastanza il controllo diretto della corrispondenza pin CD4026-segmento: pin 10=a, 12=b, 13=c, 9=d, 11=e, 6=f, 7=g.",
+        "Non distingue bene tra sintomi da clock/reset/inhibit, che causano cifra ferma o conteggio erratico, e sintomi da collegamento segmenti, che causano cifre incomplete o segmenti sbagliati."
+      ],
+      "strengths": [
+        "Riconosce correttamente la struttura generale: 555 astabile, CD4026 contatore/driver, display a 7 segmenti common cathode con resistenze in serie.",
+        "Include tra le possibili cause il mismatch dei collegamenti a-g e problemi su resistenze/display, che sono pertinenti al sintomo.",
+        "Propone controlli pratici utili come verifica alimentazione, common cathode, resistenze dei segmenti, continuità e stato dei pin di controllo.",
+        "Nota il warning JSON su resistor22.2_t1, anche se lo sovrastima e lo interpreta in modo non ottimale."
+      ],
+      "short_explanation": "La risposta è parzialmente utile perché comprende l'architettura del circuito e propone controlli realistici, includendo anche la verifica dei collegamenti a-g e delle resistenze. Tuttavia la diagnosi principale è poco coerente con il sintomo: cifre incomplete o segmenti sbagliati durante il conteggio puntano prima a cablaggio segmenti, resistenze aperte, display errato o uscita segmento guasta, non al clock del 555. Inoltre ci sono errori importanti di pinout/funzione del CD4026, in particolare pin 3 scambiato per clock e reset indicato erroneamente alto in funzionamento normale."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c05",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c05\\results_json_img\\c05_gpt-5.4-mini_20260605_152530.txt",
+      "model_under_test": "gpt-5.4-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 21.145,
+      "timestamp": "2026-06-05 15:33:44",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=14079, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1040, output_tokens_details=OutputTokensDetails(reasoning_tokens=432), total_tokens=15119)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 3
+      },
+      "total_score": 21,
+      "max_score": 21,
+      "normalized_score": 1.0,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Collegamento aperto, resistenza serie difettosa o pista/saldatura interrotta su uno o più segmenti del display",
+        "Linee a-g del CD4026 scambiate o cablate al segmento errato",
+        "Display non compatibile common cathode o comune catodo non correttamente collegato a GND",
+        "Uscita segmento del CD4026 danneggiata"
+      ],
+      "model_primary_cause": "Resistenza da 330 Ω o collegamento di un segmento aperto/difettoso",
+      "major_errors": [],
+      "hallucinations": [],
+      "missed_important_points": [],
+      "strengths": [
+        "Comprende correttamente la struttura del circuito: 555 come generatore di clock, CD4026 come contatore/driver, display common cathode.",
+        "Usa correttamente il pinout del CD4026 e verifica reset, inhibit, display enable, alimentazione e uscite segmento.",
+        "Confronta in modo coerente JSON e immagine, inclusa la mappatura pin-segmenti.",
+        "Individua cause coerenti con il sintomo: resistenze/connessioni dei segmenti, scambio linee a-g, common cathode, possibile uscita 4026 guasta.",
+        "Propone controlli pratici utili: continuità uscita-resistenza-display, verifica cablaggio a-g, controllo comune a GND, misura delle uscite del 4026.",
+        "Rileva correttamente l'anomalia JSON su resistor22.2_t1 e la contestualizza come problema del ramo 555, non come causa diretta dei segmenti mancanti."
+      ],
+      "short_explanation": "La risposta è tecnicamente corretta e ben supportata da datasheet, JSON e immagine. La diagnosi principale è coerente con cifre incomplete o segmenti sempre spenti: apertura o difetto nella catena uscita CD4026-resistenza-segmento. Include anche correttamente il caso di linee a-g scambiate per segmenti accesi nel modo sbagliato. I controlli proposti sono realistici e pertinenti."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c05",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c05\\results_json_img\\c05_gpt-5.4-nano_20260605_152510.txt",
+      "model_under_test": "gpt-5.4-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 30.304,
+      "timestamp": "2026-06-05 15:34:15",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=14708, input_tokens_details=InputTokensDetails(cached_tokens=9984), output_tokens=1415, output_tokens_details=OutputTokensDetails(reasoning_tokens=480), total_tokens=16123)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 13,
+      "max_score": 21,
+      "normalized_score": 0.6190476190476191,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "collegamento interrotto o resistenza aperta su uno dei segmenti a-g",
+        "cablaggio dei segmenti a-g scambiato tra CD4026 e display",
+        "display non compatibile o common cathode non correttamente a GND",
+        "guasto di una uscita segmento del CD4026 o del segmento LED del display"
+      ],
+      "model_primary_cause": "resistenza o connessione di un segmento interrotta/non collegata, supportata dal warning resistor22.2_t1 non connesso",
+      "major_errors": [
+        "Interpreta erroneamente resistor22.2_t1 come possibile resistenza di un segmento; nel JSON resistor22.2 appartiene alla rete RC del 555, non ai sette resistori del display.",
+        "Afferma una discrepanza JSON/immagine sui resistori dei segmenti e dice che il graph è incompleto, ma nel JSON le connessioni dei segmenti 4026 -> resistori 22.3-22.9 -> display risultano complete.",
+        "Dice che il RESET del CD4026 pin 15 in figura è mantenuto alto e non attivo; in realtà nello schema e nel JSON è collegato a GND, che è lo stato inattivo per il reset attivo alto del CD4026.",
+        "Nel controllo del cablaggio indica erroneamente pin 14 come segmento c, mentre il segmento c del CD4026 è il pin 13; il pin 14 è l'uscita ausiliaria ungated C."
+      ],
+      "hallucinations": [
+        "Warning resistor22.2_t1 usato come prova di un difetto su un resistore di segmento.",
+        "Presunta incompletezza del graph per le linee dei segmenti.",
+        "RESET pin 15 del CD4026 dichiarato alto in figura."
+      ],
+      "missed_important_points": [
+        "Non distingue correttamente tra i resistori della rete temporizzatrice del 555 e i resistori serie dei segmenti.",
+        "Non segnala che il pin 14 del CD4026 nel circuito è collegato a GND insieme a VSS, DEO e carry out, mentre non è il normale segmento c.",
+        "Non evidenzia che il warning JSON riguarda la rete di alimentazione/temporizzazione del 555 e non spiega direttamente segmenti incompleti."
+      ],
+      "strengths": [
+        "Comprende correttamente la funzione generale 555 come generatore di clock e CD4026 come contatore/driver per display common cathode.",
+        "Propone cause realistiche per il sintomo: resistenza/pista/segmento aperto e linee a-g scambiate.",
+        "Fornisce controlli pratici utili con multimetro e verifica continuità tra uscite CD4026, resistori e segmenti.",
+        "Riconosce correttamente che problemi di clock o pin di controllo di solito causano conteggio bloccato/spento più che singoli segmenti sempre mancanti."
+      ],
+      "short_explanation": "La risposta è utile e la causa principale proposta è plausibile per il sintomo, cioè un ramo di segmento aperto o cablaggio a-g errato. Tuttavia contiene errori rilevanti nell'uso del JSON e del datasheet: scambia il warning su resistor22.2, che appartiene al 555, per un resistore di segmento; dichiara incompleto il graph dei segmenti quando invece è completo; interpreta male lo stato del reset del CD4026; e assegna erroneamente il segmento c al pin 14 invece che al pin 13. Per questo la valutazione è solo parziale."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c05",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c05\\results_json_img\\c05_gpt-5.4_20260605_152638.txt",
+      "model_under_test": "gpt-5.4",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 16.092,
+      "timestamp": "2026-06-05 15:34:31",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=16014, input_tokens_details=InputTokensDetails(cached_tokens=9984), output_tokens=853, output_tokens_details=OutputTokensDetails(reasoning_tokens=253), total_tokens=16867)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 3
+      },
+      "total_score": 21,
+      "max_score": 21,
+      "normalized_score": 1.0,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "collegamenti dei segmenti a-g scambiati o pinout reale del display diverso da quello previsto",
+        "resistenza di limitazione o pista/saldatura di un segmento aperta o difettosa",
+        "display common anode montato al posto di un common cathode",
+        "segmento interno del display guasto",
+        "uscita specifica del CD4026 guasta"
+      ],
+      "model_primary_cause": "collegamenti dei segmenti del display scambiati o pinout reale del display diverso da quello atteso",
+      "major_errors": [],
+      "hallucinations": [],
+      "missed_important_points": [],
+      "strengths": [
+        "Comprende correttamente l'architettura 555 come clock, CD4026 come contatore/driver e display common cathode.",
+        "Usa correttamente il pinout del CD4026 e identifica le uscite a-g con i rispettivi pin.",
+        "Confronta in modo appropriato JSON e immagine, riconoscendo che il JSON non rappresenta esplicitamente il nodo +Vcc.",
+        "Distingue correttamente un problema di conteggio da un problema nella catena 4026-resistenze-display.",
+        "Ordina le cause in modo plausibile rispetto al sintomo: prima cablaggio/pinout segmenti, poi resistenze/connessioni, tipo display e guasti hardware.",
+        "Propone controlli pratici realistici: test segmento per segmento, continuità, verifica resistenze, verifica tipo common cathode/common anode e misure sui pin del 4026."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida e ben supportata da datasheet, JSON e immagine. Identifica correttamente che, se il circuito conta ma le cifre sono incomplete o errate, il problema più probabile è nella catena delle linee segmento, nel pinout/cablaggio del display, nelle resistenze o nel tipo di display, non nel clock o nei pin di controllo del contatore. Non introduce difetti non supportati e fornisce una checklist diagnostica utile."
+    }
+  }
+]

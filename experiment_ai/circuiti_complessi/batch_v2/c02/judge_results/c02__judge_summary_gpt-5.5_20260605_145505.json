@@ -1,0 +1,883 @@
+[
+  {
+    "metadata": {
+      "circuit": "c02",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c02\\results_json\\c02_gpt-4.1-mini_20260605_143316.txt",
+      "model_under_test": "gpt-4.1-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 31.358,
+      "timestamp": "2026-06-05 14:47:51",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8774, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1307, output_tokens_details=OutputTokensDetails(reasoning_tokens=473), total_tokens=10081)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 19,
+      "max_score": 21,
+      "normalized_score": 0.9047619047619048,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Il pulsante porta a massa sia il pin 2 TRIGGER sia il pin 4 RESET, perché pin 2 e pin 4 sono sullo stesso nodo; durante la pressione il reset attivo basso blocca il NE555 invece di consentire un trigger valido.",
+        "Collegamento improprio tra RESET e TRIGGER: il pin 4 dovrebbe restare alto durante il normale funzionamento, mentre il pin 2 dovrebbe ricevere solo l'impulso basso di trigger.",
+        "Verificare che il pin 3 commuti; se commuta, controllare LED, polarità e resistenze serie."
+      ],
+      "model_primary_cause": "Errato collegamento tra pulsante, RESET pin 4 e TRIGGER pin 2: premendo il pulsante il reset viene portato basso e blocca il timer.",
+      "major_errors": [],
+      "hallucinations": [
+        "Indica resistor22.4 e resistor22.5 come relative ai LED in un punto, mentre dal JSON appartengono alla rete temporizzante.",
+        "Afferma che il condensatore sul pin 5 è polarizzato e che la polarità è corretta; il JSON lo classifica polarizzato, ma nello schema reale è tipicamente un 0.01 uF non polarizzato. Non è però un errore grave dato l'input JSON.",
+        "La soglia suggerita per RESET come > circa 0.7*Vcc non è fornita dal datasheet estratto; resta comunque un controllo pratico ragionevole come livello alto."
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che pin 2 e pin 4 sono direttamente lo stesso nodo anche a pulsante non premuto, non solo 'tramite' il pulsante.",
+        "Non descrive in modo completo la configurazione dei due LED: uno è collegato verso VCC e l'altro verso GND, quindi l'uscita del pin 3 può accendere alternativamente/sink-source i LED."
+      ],
+      "strengths": [
+        "Identifica correttamente il problema principale: il RESET del 555 viene abbassato dal pulsante insieme al TRIGGER.",
+        "Usa correttamente il pinout del NE555 e le funzioni dei pin 1, 2, 3, 4, 5, 6, 7 e 8.",
+        "Si basa in modo esplicito sulle connessioni del JSON.",
+        "Propone controlli pratici utili: misura del pin 4 durante la pressione, misura del pin 3, verifica rete RC e LED.",
+        "Ordina correttamente le cause dando priorità al reset/trigger rispetto a LED e rete temporizzante."
+      ],
+      "short_explanation": "La risposta è tecnicamente molto buona: dal JSON riconosce che il pulsante mette a massa il nodo comune pin 2/pin 4, quindi il reset attivo basso blocca il 555 quando si tenta di attivarlo. I controlli suggeriti sono pertinenti. Ci sono solo alcune imprecisioni minori sui resistori associati ai LED, sul condensatore del pin 5 e sul fatto che pin 2 e pin 4 sono direttamente lo stesso nodo."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c02",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c02\\results_json\\c02_gpt-4.1-nano_20260605_143339.txt",
+      "model_under_test": "gpt-4.1-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 28.184,
+      "timestamp": "2026-06-05 14:48:19",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8347, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1283, output_tokens_details=OutputTokensDetails(reasoning_tokens=469), total_tokens=9630)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 1,
+        "cause_priority": 1,
+        "practical_checks": 2,
+        "hallucination_absence": 2
+      },
+      "total_score": 11,
+      "max_score": 21,
+      "normalized_score": 0.5238095238,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Il pin 4 RESET del NE555 è collegato allo stesso nodo del pin 2 TRIGGER e del pulsante: premendo il pulsante il nodo viene portato a massa, quindi si attiva anche il reset basso e il 555 può restare bloccato invece di temporizzare correttamente.",
+        "Il nodo trigger/reset è tirato alto da R1 ma viene forzato basso dal pulsante; il reset dovrebbe invece essere mantenuto stabilmente alto a VCC, separato dal trigger.",
+        "Verificare se il pin 3 commuta; se non commuta durante la pressione del pulsante, la causa è molto probabilmente il reset forzato basso insieme al trigger."
+      ],
+      "model_primary_cause": "Reset del NE555 non a livello alto o non correttamente collegato a VCC",
+      "major_errors": [
+        "Non identifica esplicitamente il difetto topologico principale presente nel JSON: pin 4 RESET e pin 2 TRIGGER sono collegati insieme e al pulsante verso massa.",
+        "Afferma che il pin 4 sembra collegato a VCC tramite R1 e quindi abilitato, ma trascura che lo stesso nodo viene portato a GND quando si preme il pulsante.",
+        "La diagnosi resta generica e non sfrutta l'evidenza più forte del circuito."
+      ],
+      "hallucinations": [
+        "Dice che le polarità dei LED sembrano correttamente polarizzate senza motivare in modo specifico; è plausibile, ma non centrale.",
+        "Parla genericamente di pin 2 e 6 collegati a vari componenti, senza descrivere correttamente la reale separazione tra rete trigger/reset e rete RC threshold/discharge."
+      ],
+      "missed_important_points": [
+        "Il reset del 555 è attivo basso e deve rimanere alto durante il trigger; qui invece viene abbassato dal pulsante insieme al pin 2.",
+        "La correzione pratica sarebbe separare pin 4 dal nodo del pulsante/trigger e collegarlo direttamente a VCC o tramite pull-up dedicato.",
+        "Il controllo diagnostico chiave è misurare il pin 4 mentre si preme il pulsante: scenderà a 0 V, bloccando il 555."
+      ],
+      "strengths": [
+        "Usa correttamente il datasheet per ricordare che pin 4 RESET deve essere alto.",
+        "Suggerisce controlli pratici utili come misurare pin 3, verificare pin 4, rete RC e LED.",
+        "Riconosce correttamente alimentazione pin 8/pin 1 e funzione generale del NE555."
+      ],
+      "short_explanation": "La risposta è utile ma troppo generica. Il modello individua l'area del reset come possibile causa, però non coglie il problema specifico del circuito: pin 4 RESET è collegato al pin 2 e al pulsante, quindi premendo il pulsante viene portato basso e resetta il 555. La priorità diagnostica non è ottimale perché questa evidenza è direttamente presente nel JSON."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c02",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c02\\results_json\\c02_gpt-4o-mini_20260605_143214.txt",
+      "model_under_test": "gpt-4o-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 32.66,
+      "timestamp": "2026-06-05 14:48:52",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8012, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1379, output_tokens_details=OutputTokensDetails(reasoning_tokens=494), total_tokens=9391)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 2,
+        "hallucination_absence": 2
+      },
+      "total_score": 13,
+      "max_score": 21,
+      "normalized_score": 0.619,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Il pin 4 RESET del NE555 è collegato allo stesso nodo del pin 2 TRIGGER e del pulsante: premendo il pulsante il nodo viene portato a massa, quindi si abbassa anche RESET, che è attivo basso, bloccando o alterando il funzionamento del 555.",
+        "Il reset dovrebbe essere mantenuto alto a VCC indipendentemente dal trigger; il pulsante dovrebbe agire sul solo pin 2, con pull-up adeguato.",
+        "Verificare che il pin 3 commuti e che la rete di temporizzazione su pin 6/7 e C2/R4/R5 funzioni, ma la criticità più evidente è il collegamento reset-trigger-pulsante."
+      ],
+      "model_primary_cause": "Pin 4 RESET non alto",
+      "major_errors": [
+        "Non riconosce esplicitamente dal JSON che pin 4 RESET è collegato direttamente al pin 2 TRIGGER e al pulsante, quindi viene portato basso quando si preme il pulsante.",
+        "Afferma che il pin 4 non è verificato nel graph, mentre il graph mostra chiaramente il collegamento del pin 4 al nodo di trigger/pulsante/R1.",
+        "Descrive il circuito come probabilmente monostabile per lampeggiamento, ma lo schema è più coerente con un timer a singolo intervallo/indicazione di stato, non necessariamente con lampeggio periodico."
+      ],
+      "hallucinations": [
+        "Suggerisce genericamente un lampeggiamento dei LED senza che dal circuito risulti una configurazione astabile classica.",
+        "Indica che entrambi i condensatori sono coinvolti nella temporizzazione, mentre il condensatore sul pin 5 è un filtro del control voltage e non il condensatore principale di temporizzazione."
+      ],
+      "missed_important_points": [
+        "Manca la diagnosi specifica: il pulsante mette a massa contemporaneamente trigger e reset.",
+        "Non evidenzia che il reset del 555 deve essere separato dal trigger e tenuto alto a VCC per il funzionamento normale.",
+        "Non specifica che LED D2 e D1 sono collegati in modo complementare all'uscita pin 3: uno verso VCC e uno verso GND tramite resistenze.",
+        "Non usa i valori visibili nello schema, come R1 pull-up da 10 kΩ, R4/R5 e C2 da 150 µF, per contestualizzare il timer."
+      ],
+      "strengths": [
+        "Identifica correttamente i pin principali del NE555 e la necessità che pin 4 RESET sia alto.",
+        "Propone controlli pratici sensati: misurare reset, trigger, uscita pin 3, rete RC e LED.",
+        "Riconosce correttamente che pin 8 è a VCC e pin 1 è a massa.",
+        "Individua che il pin 3 pilota i LED tramite resistenze."
+      ],
+      "short_explanation": "La risposta è utile ma generica. La causa principale è effettivamente legata al reset, ma il modello non coglie il punto specifico mostrato dal JSON: pin 4 RESET è collegato insieme al pin 2 e al pulsante, quindi premendo S1 viene portato basso e il 555 viene resettato. Buoni i controlli pratici, ma l'uso del JSON è incompleto e ci sono alcune affermazioni imprecise."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c02",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c02\\results_json\\c02_gpt-5-mini_20260605_143517.txt",
+      "model_under_test": "gpt-5-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 22.372,
+      "timestamp": "2026-06-05 14:49:14",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9040, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1127, output_tokens_details=OutputTokensDetails(reasoning_tokens=415), total_tokens=10167)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 19,
+      "max_score": 21,
+      "normalized_score": 0.9048,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Il pin 4 RESET del NE555 è collegato allo stesso nodo del pin 2 TRIGGER e del pulsante",
+        "Premendo il pulsante, il pin 4 RESET viene portato a GND insieme al trigger, bloccando il 555 perché il reset è attivo basso",
+        "Il pin 4 dovrebbe restare alto a VCC indipendentemente dal pulsante, mentre il pulsante dovrebbe agire solo sul trigger"
+      ],
+      "model_primary_cause": "RESET pin4 collegato al TRIGGER pin2 e portato a massa dal pulsante, quindi il 555 viene tenuto in reset quando si preme il pulsante",
+      "major_errors": [],
+      "hallucinations": [
+        "Indica in alcuni punti che la rete R-C di temporizzazione è legata anche al pin 2, ma nel JSON pin 2 non è collegato alla rete R-C di pin 6/7",
+        "Descrive il circuito anche come possibile oscillatore/astabile, mentre la topologia mostrata è più coerente con un timer monostabile/lungo ritardo"
+      ],
+      "missed_important_points": [
+        "Avrebbe potuto evidenziare più chiaramente che, con pin2 e pin4 rilasciati insieme verso VCC, il fronte di trigger valido potrebbe non essere generato perché il trigger basso avviene mentre il reset è attivo"
+      ],
+      "strengths": [
+        "Identifica correttamente il problema principale supportato dal JSON: pin2 e pin4 sono sullo stesso nodo e il pulsante li porta a massa",
+        "Usa correttamente il datasheet sul reset attivo basso del NE555",
+        "Riporta correttamente i collegamenti principali di alimentazione, uscita e LED",
+        "Propone misure pratiche mirate: tensione su pin4 durante la pressione, misura del pin3, controllo della rete R-C",
+        "Ordina bene le cause dando priorità al difetto di cablaggio più evidente"
+      ],
+      "short_explanation": "La risposta è tecnicamente molto buona: la diagnosi principale è corretta e ben motivata dal JSON e dal datasheet. Il modello riconosce che il pulsante porta a massa sia TRIGGER sia RESET, e poiché RESET è attivo basso il 555 non può commutare correttamente durante la pressione. I controlli proposti sono realistici e utili. Restano piccoli errori descrittivi sulla rete R-C, che viene talvolta detta collegata anche al pin2, e una caratterizzazione un po' generica come astabile/oscillatore, ma non compromettono la diagnosi principale."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c02",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c02\\results_json\\c02_gpt-5-nano_20260605_143423.txt",
+      "model_under_test": "gpt-5-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 31.773,
+      "timestamp": "2026-06-05 14:49:46",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9200, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1398, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10598)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 16,
+      "max_score": 21,
+      "normalized_score": 0.7619047619,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Il pin 4 RESET del NE555 è collegato allo stesso nodo del pin 2 TRIGGER e del pulsante: premendo il pulsante questo nodo viene portato a GND, quindi anche RESET va basso e blocca l'uscita invece di permettere un normale trigger.",
+        "Il nodo pin 2/pin 4 è tirato alto da R1 verso VCC quando il pulsante non è premuto; quindi il problema non è l'assenza di pull-up, ma il fatto che il pulsante aziona contemporaneamente trigger e reset.",
+        "Verificare direttamente che il pin 3 commuti; se non commuta durante/ dopo la pressione, la causa è nella logica trigger/reset o nella rete temporizzatrice pin 6/7/C2/R4/R5."
+      ],
+      "model_primary_cause": "RESET del NE555 non correttamente tirato alto o non collegato nettamente a VCC",
+      "major_errors": [
+        "Interpreta come problema principale un RESET non tirato alto, ma dal JSON il pin 4 è collegato a VCC tramite resistor22.1/R1; la criticità più specifica è che pin 4 RESET è cortocircuitato al nodo trigger/pulsante e viene portato basso quando si preme il pulsante.",
+        "Non evidenzia chiaramente che la pressione del pulsante mette a massa contemporaneamente pin 2 e pin 4, causando reset attivo basso e impedendo la corretta commutazione del 555."
+      ],
+      "hallucinations": [
+        "Accenna a un possibile array di LED, non presente nel circuito.",
+        "La frase sul pin 5 collegato a un condensatore 'più ampio' o 'alimentazione del pin 5' è imprecisa: nel JSON pin 5 è semplicemente collegato al condensatore C1 verso GND, coerente con il filtro di controllo.",
+        "Alcune formulazioni sui pin 6/7 e sulla configurazione monostabile/astabile sono generiche e non sempre aderenti alla topologia specifica."
+      ],
+      "missed_important_points": [
+        "Non propone esplicitamente di separare RESET dal nodo TRIGGER/pulsante e di collegare pin 4 stabilmente a VCC per il normale funzionamento.",
+        "Non sottolinea che R1 collega già il nodo pin2/pin4 a VCC, quindi il livello alto a riposo dovrebbe esserci.",
+        "Non analizza in modo specifico il comportamento dei due LED: uno è collegato dal VCC all'uscita tramite LED/resistenza, l'altro dall'uscita verso GND tramite resistenza/LED, quindi possono indicare stati opposti dell'uscita."
+      ],
+      "strengths": [
+        "Usa correttamente il pinout del NE555 e richiama le soglie principali del trigger e la funzione del reset attivo basso.",
+        "Fa buon uso dei riferimenti del JSON, citando terminali e nodi specifici.",
+        "Propone controlli pratici sensati: misura di VCC, GND, pin 4, pin 2 e pin 3, verifica della rete RC e dei LED.",
+        "La diagnosi resta vicina alla causa reale perché identifica il nodo RESET/pin 4 come punto critico."
+      ],
+      "short_explanation": "Risposta utile e abbastanza ben strutturata, ma la diagnosi principale è formulata in modo impreciso: il reset non è semplicemente non tirato alto, perché nel circuito è tirato a VCC tramite R1; il vero problema evidenziato dalla topologia è che RESET pin 4 è collegato al trigger pin 2 e al pulsante, quindi premendo il pulsante viene portato basso e blocca il 555. Buoni i controlli pratici e l'uso del datasheet, ma manca la correzione circuitale specifica."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c02",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c02\\results_json\\c02_gpt-5.4-mini_20260605_143616.txt",
+      "model_under_test": "gpt-5.4-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 24.366,
+      "timestamp": "2026-06-05 14:50:11",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8395, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1153, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=9548)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 19,
+      "max_score": 21,
+      "normalized_score": 0.9047619047619048,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 4 RESET del NE555 collegato allo stesso nodo del pin 2 TRIGGER e del pulsante, quindi premendo il pulsante il reset viene portato basso insieme al trigger",
+        "Il RESET dovrebbe essere mantenuto alto stabilmente a VCC per permettere al 555 di temporizzare",
+        "Verificare se il pin 3 commuta; se commuta, controllare rami LED/resistenze/polarità"
+      ],
+      "model_primary_cause": "Pin 4 RESET collegato insieme al pin 2 TRIGGER e al pulsante, con pull-up a VCC e pulsante verso massa, causando reset del 555 durante la pressione",
+      "major_errors": [
+        "Descrive in modo impreciso il collegamento dei LED di uscita, suggerendo che resistor22.2 e resistor22.3 siano parte della stessa catena LED, mentre nel JSON sono due rami separati collegati al pin 3"
+      ],
+      "hallucinations": [],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che ci sono due LED sul pin 3: uno verso VCC e uno verso GND, che possono indicare stati opposti dell'uscita"
+      ],
+      "strengths": [
+        "Identifica correttamente il collegamento critico pin 2 TRIGGER e pin 4 RESET sullo stesso nodo",
+        "Usa correttamente il datasheet per spiegare che RESET è attivo basso e deve restare alto",
+        "La diagnosi principale è ben supportata dal JSON",
+        "Propone controlli pratici utili: separare RESET dal trigger, misurare il pin 3, verificare rete RC e LED",
+        "Ordina correttamente la causa principale prima delle ipotesi secondarie"
+      ],
+      "short_explanation": "La risposta individua correttamente il difetto più probabile: il pin 4 RESET è collegato al pin 2 TRIGGER e viene portato a massa dal pulsante, impedendo al 555 di temporizzare correttamente. L'uso del datasheet e del JSON è molto buono. L'unico limite rilevante è una lettura imprecisa dei rami LED/resistenze sul pin 3, ma non compromette la diagnosi principale."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c02",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c02\\results_json\\c02_gpt-5.4-nano_20260605_143555.txt",
+      "model_under_test": "gpt-5.4-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 31.124,
+      "timestamp": "2026-06-05 14:50:42",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9105, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1385, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10490)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 19,
+      "max_score": 21,
+      "normalized_score": 0.9047619047619048,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Il pin 4 RESET del NE555 è collegato allo stesso nodo del pin 2 TRIGGER e del pulsante verso massa: premendo il pulsante si porta basso anche RESET, bloccando o impedendo la corretta commutazione del 555.",
+        "Verificare che il pin 4 sia mantenuto alto durante il funzionamento normale, idealmente collegato a VCC/pull-up e non trascinato a massa dal pulsante.",
+        "Controllare se il pin 3 commuta realmente; se non commuta, controllare rete RC su pin 6/7, condensatore di temporizzazione e collegamenti del trigger."
+      ],
+      "model_primary_cause": "RESET pin 4 non correttamente tenuto alto perché collegato allo stesso nodo del trigger pin 2 e del pulsante; premendo il pulsante viene portato a massa e il 555 viene resettato/bloccato.",
+      "major_errors": [],
+      "hallucinations": [
+        "Descrive il funzionamento atteso come lampeggio/alternanza dei LED, mentre lo schema appare più coerente con un timer monostabile a lungo ritardo con due LED di stato complementari, non necessariamente un lampeggiatore astabile.",
+        "Afferma che pin 6 e pin 7 sullo stesso nodo sono 'in genere in astabile comune'; in un astabile classico pin 2 e pin 6 sono spesso comuni, mentre pin 7 è sul nodo della rete resistiva di carica/scarica. Nel circuito mostrato pin 6/7 comuni sono più compatibili con una configurazione monostabile/timing."
+      ],
+      "missed_important_points": [
+        "Non evidenzia esplicitamente che R1 fornisce un pull-up al nodo pin 2/pin 4, quindi il problema critico avviene soprattutto durante la pressione del pulsante, quando RESET viene forzato basso.",
+        "Non chiarisce del tutto che, con RESET basso mentre TRIGGER è basso, il trigger può essere annullato o non produrre l'impulso atteso al rilascio."
+      ],
+      "strengths": [
+        "Identifica correttamente dal JSON il collegamento critico tra pin 2 TRIGGER, pin 4 RESET e pulsante verso massa.",
+        "Usa correttamente il datasheet: RESET attivo basso, pin 3 uscita, pin 8 VCC, pin 1 GND.",
+        "La causa principale è ben supportata dalla topologia del circuito e coerente con il sintomo dei LED fissi.",
+        "Propone controlli pratici molto utili: misurare pin 4 durante la pressione e verificare se pin 3 commuta.",
+        "Analizza correttamente il collegamento complementare dei due LED all'uscita del 555."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida: individua la causa più probabile, cioè il pin RESET del 555 collegato al nodo del pulsante/trigger e quindi portato basso alla pressione, condizione che può bloccare l'uscita. Buono l'uso del JSON e del datasheet, con controlli diagnostici appropriati. Restano piccoli limiti nella descrizione del funzionamento come lampeggio/astabile e in qualche formulazione sulla rete pin 6/7, ma non compromettono la diagnosi principale."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c02",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c02\\results_json\\c02_gpt-5.4_20260605_143712.txt",
+      "model_under_test": "gpt-5.4",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 18.687,
+      "timestamp": "2026-06-05 14:51:01",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9008, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=874, output_tokens_details=OutputTokensDetails(reasoning_tokens=324), total_tokens=9882)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 3
+      },
+      "total_score": 21,
+      "max_score": 21,
+      "normalized_score": 1.0,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Il pin 4 RESET del NE555 è collegato allo stesso nodo del pin 2 TRIGGER e del pulsante",
+        "Premendo il pulsante il nodo TRIGGER/RESET viene portato a massa, quindi il 555 viene resettato invece di temporizzare correttamente",
+        "Il RESET dovrebbe essere mantenuto alto a VCC mentre il pulsante dovrebbe agire solo sul TRIGGER"
+      ],
+      "model_primary_cause": "RESET e TRIGGER sono collegati insieme; quando si preme il pulsante si porta basso anche il pin 4 RESET, bloccando o resettando il NE555.",
+      "major_errors": [],
+      "hallucinations": [],
+      "missed_important_points": [],
+      "strengths": [
+        "Identifica correttamente i pin del NE555 e i nodi principali dal JSON",
+        "Riconosce correttamente che pin 2 TRIGGER e pin 4 RESET sono collegati insieme",
+        "Dà priorità alla causa più supportata dal circuito: il pulsante porta basso anche il RESET",
+        "Propone una correzione concreta: separare RESET dal nodo del pulsante e collegarlo stabilmente a VCC",
+        "Include controlli pratici utili su pin 4, pin 3, rete RC, LED e condensatore sul pin 5",
+        "Usa correttamente le informazioni del datasheet sul RESET attivo basso e sul trigger sotto 1/3 VCC"
+      ],
+      "short_explanation": "La risposta è tecnicamente corretta e ben supportata dal JSON e dal datasheet. Il modello individua la causa principale più probabile: il pin 4 RESET è collegato al pin 2 TRIGGER e al pulsante, quindi durante la pressione viene portato basso e il 555 viene resettato. La diagnosi, la priorità delle cause e i controlli pratici sono coerenti con lo schema."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c02",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c02\\results_json_img\\c02_gpt-4.1-mini_20260605_143828.txt",
+      "model_under_test": "gpt-4.1-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 34.531,
+      "timestamp": "2026-06-05 14:51:35",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8665, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1608, output_tokens_details=OutputTokensDetails(reasoning_tokens=617), total_tokens=10273)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 14,
+      "max_score": 21,
+      "normalized_score": 0.6667,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Il pin 4 RESET del NE555 è collegato allo stesso nodo del pin 2 TRIGGER e del pulsante: premendo S1 il RESET viene portato basso insieme al trigger, quindi il 555 può restare resettato o non avviarsi correttamente.",
+        "Verificare che il pin 4 sia mantenuto alto durante il trigger; idealmente RESET dovrebbe essere collegato stabilmente a VCC e non al nodo del pulsante.",
+        "Controllare la rete di temporizzazione C2/R4/R5 e il pin 3 per capire se l'uscita commuta davvero.",
+        "Se il pin 3 commuta ma i LED restano fissi, controllare LED, polarità e resistenze serie."
+      ],
+      "model_primary_cause": "Pin 4 RESET non mantenuto alto o flottante",
+      "major_errors": [
+        "Il modello afferma che il pin 4 RESET è collegato a VCC come collegamento corretto, ma nel circuito reale/JSON il pin 4 è collegato al nodo del pin 2 TRIGGER e del pulsante, quindi viene portato a massa quando si preme S1.",
+        "Non evidenzia chiaramente che il difetto strutturale più sospetto è proprio l'accoppiamento RESET-TRIGGER: premendo il pulsante si attiva anche il reset del 555.",
+        "Tratta il circuito come pienamente conforme a un monostabile corretto, mentre il collegamento del reset rende il comportamento potenzialmente anomalo."
+      ],
+      "hallucinations": [
+        "Dice che il pin 4 RESET è collegato a VCC/pin 8, mentre dal JSON e dall'immagine risulta collegato al nodo del pin 2, del pulsante e di R1.",
+        "Definisce il collegamento pin 4-pin 2-pulsante come 'schema giusto', ma secondo il datasheet RESET deve rimanere alto per il funzionamento normale.",
+        "Suggerisce che i LED dovrebbero 'lampeggiare', mentre questo schema è un timer monostabile con due LED pilotati in modo complementare dall'uscita, non necessariamente un lampeggiatore astabile."
+      ],
+      "missed_important_points": [
+        "Non spiega che durante la pressione del pulsante il pin 4 va basso insieme al pin 2, bloccando/resettando il 555.",
+        "Non suggerisce esplicitamente la modifica circuitale: separare RESET dal nodo TRIGGER e collegarlo direttamente a VCC o tramite pull-up dedicato.",
+        "Non distingue bene tra LED fissi per mancata commutazione del pin 3 e comportamento normale di un monostabile, in cui l'uscita resta stabile per la durata del timing."
+      ],
+      "strengths": [
+        "Usa correttamente il datasheet per identificare i pin principali del NE555 e la funzione di RESET, TRIGGER, OUTPUT, THRESHOLD, DISCHARGE e CONTROL.",
+        "Propone controlli pratici utili: misurare pin 4, pin 2, pin 3, verificare C2, LED e resistenze.",
+        "Riconosce correttamente che C2 e la rete R4/R5 possono causare uscita fissa se guasti o collegati male.",
+        "Individua correttamente il pin 3 come punto diagnostico chiave per capire se il problema è nel timer o nello stadio LED."
+      ],
+      "short_explanation": "La risposta è utile e contiene buoni controlli pratici, ma manca il punto più importante dello schema: RESET pin 4 è collegato al nodo del trigger e viene tirato basso dal pulsante, cosa che può impedire al 555 di avviarsi correttamente. Il modello cita RESET come causa possibile, quindi la diagnosi è parzialmente centrata, ma interpreta erroneamente il collegamento come corretto o come se fosse a VCC."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c02",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c02\\results_json_img\\c02_gpt-4.1-nano_20260605_143852.txt",
+      "model_under_test": "gpt-4.1-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 31.194,
+      "timestamp": "2026-06-05 14:52:06",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8553, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1447, output_tokens_details=OutputTokensDetails(reasoning_tokens=491), total_tokens=10000)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 1,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 1,
+        "cause_priority": 1,
+        "practical_checks": 2,
+        "hallucination_absence": 1
+      },
+      "total_score": 9,
+      "max_score": 21,
+      "normalized_score": 0.428571,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Il pin 4 RESET del NE555 è collegato allo stesso nodo del pin 2 TRIGGER e del pulsante: premendo S1 il nodo viene portato a massa, quindi oltre a triggerare il pin 2 si porta basso anche RESET, bloccando il 555.",
+        "Il pin 4 dovrebbe rimanere alto durante il funzionamento normale, idealmente collegato direttamente a VCC o separato dal pulsante di trigger.",
+        "La rete di trigger/reset è quindi il sospetto principale per LED fissi o assenza di commutazione."
+      ],
+      "model_primary_cause": "NE555 difettoso o non alimentato correttamente",
+      "major_errors": [
+        "Non identifica il problema topologico più evidente: pin 2 e pin 4 sono cortocircuitati insieme e il pulsante li porta entrambi a GND.",
+        "Afferma che il reset pin 4 è collegato correttamente a VCC, ma nel circuito è sì tirato alto da R1 a riposo, però viene portato basso quando si preme il pulsante.",
+        "Classifica il circuito come astabile, mentre la presenza del pulsante di trigger e della rete temporizzata su pin 6/7 è più coerente con un monostabile/timer.",
+        "Mette come causa più probabile un NE555 difettoso o alimentazione errata, senza evidenza dal JSON o dall'immagine."
+      ],
+      "hallucinations": [
+        "La rete di temporizzazione indicata come pin 2 e 6 collegati a C2 non corrisponde al JSON: C2 è collegato ai pin 6 e 7, non al pin 2.",
+        "R2 e R3 sono resistenze associate ai LED/output, non le resistenze principali di temporizzazione.",
+        "L'affermazione che la batteria funziona correttamente e fornisce tensione stabile non è verificabile dalle fonti.",
+        "Il reset descritto come collegato direttamente a VCC è inaccurato rispetto allo schema reale."
+      ],
+      "missed_important_points": [
+        "Premendo S1 si forza basso il pin 4 RESET, che è attivo basso, impedendo la normale commutazione dell'uscita.",
+        "La verifica più mirata sarebbe misurare il pin 4 durante la pressione del pulsante: dovrebbe restare alto, invece nello schema scende a 0 V.",
+        "La correzione principale sarebbe separare RESET dal nodo trigger e collegare pin 4 stabilmente a VCC.",
+        "Il pin 3 pilota due LED in modo complementare: uno verso VCC tramite LED/resistenza e uno verso GND tramite resistenza/LED, quindi l'uscita va misurata per confermare se commuta."
+      ],
+      "strengths": [
+        "Usa correttamente diverse informazioni del datasheet: pin 8 VCC, pin 1 GND, pin 3 output, pin 2 trigger sotto 1/3 VCC, pin 4 reset attivo basso.",
+        "Propone controlli pratici utili come misurare alimentazione, pin 3, pin 2 e verificare LED, resistenze e condensatori.",
+        "Include il reset tra le possibili cause entro le prime tre, anche se non ne riconosce la connessione specifica al pulsante."
+      ],
+      "short_explanation": "La risposta è utile come checklist generale, ma manca la diagnosi principale supportata dallo schema: il pulsante porta a massa sia TRIGGER pin 2 sia RESET pin 4, quindi il 555 viene resettato quando dovrebbe attivarsi. La priorità data a IC difettoso/alimentazione è poco giustificata e ci sono alcune letture errate della rete di temporizzazione."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c02",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c02\\results_json_img\\c02_gpt-4o-mini_20260605_143753.txt",
+      "model_under_test": "gpt-4o-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 31.047,
+      "timestamp": "2026-06-05 14:52:37",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=7946, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1346, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=9292)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 2,
+        "hallucination_absence": 2
+      },
+      "total_score": 13,
+      "max_score": 21,
+      "normalized_score": 0.619047619,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Il pin 4 RESET del NE555 è collegato allo stesso nodo del pin 2 TRIGGER e del pulsante: premendo S1 si porta basso anche RESET, che è attivo basso, quindi il 555 viene tenuto resettato proprio durante il trigger.",
+        "Il RESET dovrebbe essere mantenuto stabilmente alto a VCC, separato dal nodo di trigger, altrimenti l'uscita può restare bloccata e i LED non commutano correttamente.",
+        "Verificare se il pin 3 commuta; se non commuta, controllare la rete trigger/reset e la rete RC sui pin 6/7."
+      ],
+      "model_primary_cause": "Pin 4 RESET che non è alto",
+      "major_errors": [
+        "Non evidenzia esplicitamente il difetto topologico principale presente nello schema: pin 2 TRIGGER e pin 4 RESET sono collegati insieme e vengono entrambi portati a massa dal pulsante.",
+        "Descrive il circuito come probabilmente monostabile o astabile senza chiarire che la rete visibile è di tipo timer/monostabile e che il problema principale è il reset attivo basso durante la pressione."
+      ],
+      "hallucinations": [
+        "Attribuisce valori e funzioni a componenti come C2 150 uF e C1 0.01 uF usando l'immagine, quindi non è necessariamente inventato, ma dal solo JSON tali valori non sarebbero presenti.",
+        "Dice che R1 è probabilmente usato per il RESET, ma nello schema R1 tira su il nodo comune RESET/TRIGGER, dettaglio importante non spiegato."
+      ],
+      "missed_important_points": [
+        "Manca la raccomandazione concreta di separare il pin 4 dal pin 2 e collegare RESET direttamente o tramite pull-up a VCC.",
+        "Non spiega che premendo il pulsante il trigger scende sotto 1/3 VCC ma contemporaneamente RESET va basso, impedendo il normale avvio del temporizzatore.",
+        "Non sfrutta pienamente JSON/immagine per descrivere i collegamenti reali dei LED e della rete RC."
+      ],
+      "strengths": [
+        "Usa correttamente il pinout del NE555 e le funzioni principali dei pin 2, 3, 4, 6, 7 e 8.",
+        "Propone controlli pratici sensati: alimentazione, massa, livello del reset, commutazione del pin 3, trigger e condensatore di temporizzazione.",
+        "La causa indicata come più probabile, RESET non alto, è coerente con il datasheet e vicina al problema reale."
+      ],
+      "short_explanation": "La risposta è utile e individua correttamente il RESET come area critica, ma resta generica. Il punto fondamentale dello schema è che RESET pin 4 è collegato al nodo del TRIGGER pin 2 e al pulsante: quando si preme S1 si porta basso anche RESET, quindi il 555 viene resettato invece di temporizzare correttamente. Il modello non esplicita questa connessione e quindi non dà la correzione più diretta, pur fornendo controlli diagnostici validi."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c02",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c02\\results_json_img\\c02_gpt-5-mini_20260605_144400.txt",
+      "model_under_test": "gpt-5-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 30.688,
+      "timestamp": "2026-06-05 14:53:08",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9159, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1330, output_tokens_details=OutputTokensDetails(reasoning_tokens=438), total_tokens=10489)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 15,
+      "max_score": 21,
+      "normalized_score": 0.7142857143,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 4 RESET del NE555 collegato allo stesso nodo del pin 2 TRIGGER e del pulsante: premendo S1 viene portato basso anche RESET, bloccando o impedendo la corretta commutazione dell'uscita",
+        "RESET non mantenuto stabilmente alto durante il funzionamento normale",
+        "Verificare se il pin 3 OUTPUT commuta; se commuta ma i LED restano fissi, controllare LED, resistenze e polarità",
+        "Possibile problema nella rete di temporizzazione su pin 6/7 e C2/R4/R5"
+      ],
+      "model_primary_cause": "Il pulsante mette a massa anche il pin RESET oppure RESET è cablato male/non mantenuto alto, impedendo al NE555 di commutare correttamente.",
+      "major_errors": [
+        "Afferma che JSON e immagine non coincidono sul collegamento tra pin 2 e pin 4, ma nello schema mostrato pin 2 e pin 4 risultano effettivamente collegati allo stesso nodo con R1 verso VCC e S1 verso massa. La discrepanza dichiarata è quindi errata.",
+        "Interpreta l'immagine come se il pulsante portasse a massa solo il pin 2 mentre il pin 4 fosse separato e collegato a VCC tramite R1; questa lettura non è coerente con lo schema reale."
+      ],
+      "hallucinations": [
+        "Dichiarazione di una discrepanza JSON/immagine inesistente sul nodo TRIGGER/RESET.",
+        "Descrizione non del tutto precisa dei LED, in particolare l'affermazione che uno sia collegato al nodo di scarica/output: nello schema entrambi i LED sono riferiti all'uscita pin 3, con D1 anche legato al nodo di temporizzazione tramite il suo ramo."
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che anche secondo l'immagine, non solo secondo il JSON, il collegamento pin 2-pin 4 è il punto critico del circuito.",
+        "Non sottolinea che premere S1 forza contemporaneamente TRIGGER e RESET bassi, condizione incompatibile con un normale trigger monostabile se RESET deve rimanere alto."
+      ],
+      "strengths": [
+        "La causa principale proposta è tecnicamente corretta: RESET viene portato basso o collegato al trigger, bloccando il 555.",
+        "Usa correttamente il datasheet per ricordare che pin 4 RESET è attivo basso e deve restare alto.",
+        "Propone controlli pratici molto utili: misura del pin 4 durante la pressione, continuità tra pin 2 e pin 4, misura del pin 3, verifica della rete RC e dei LED.",
+        "Ordina le cause in modo generalmente ragionevole, dando priorità al problema più evidente sul cablaggio del reset."
+      ],
+      "short_explanation": "La risposta individua correttamente il problema principale: il pin RESET del 555 è collegato al nodo del trigger/pulsante e può essere portato basso, impedendo la commutazione dell'uscita. Tuttavia commette un errore importante nell'uso combinato di JSON e immagine, sostenendo che l'immagine non mostri il collegamento pin 2-pin 4, mentre in realtà lo mostra. Nonostante questa lettura errata, la diagnosi operativa e i controlli suggeriti sono validi e utili."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c02",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c02\\results_json_img\\c02_gpt-5-nano_20260605_143931.txt",
+      "model_under_test": "gpt-5-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 30.661,
+      "timestamp": "2026-06-05 14:53:39",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9309, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1460, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10769)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 13,
+      "max_score": 21,
+      "normalized_score": 0.6190476190476191,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Il pin 4 RESET del NE555 è collegato allo stesso nodo del pin 2 TRIGGER e del pulsante: premendo S1 si porta basso anche RESET, quindi il 555 viene resettato proprio durante il trigger e l'uscita può restare bloccata o non temporizzare correttamente.",
+        "Il pin 4 dovrebbe essere mantenuto alto a VCC per il funzionamento normale, non comandato dal pulsante insieme al trigger.",
+        "Verificare direttamente la commutazione del pin 3 e il nodo temporizzatore pin 6/7-C2-R4/R5, ma la criticità topologica più evidente è il collegamento RESET/TRIGGER."
+      ],
+      "model_primary_cause": "RESET non tirato alto correttamente, pin 4 basso o flottante",
+      "major_errors": [
+        "Non identifica esplicitamente il difetto più evidente nello schema/JSON: pin 4 RESET è collegato al pin 2 TRIGGER e al pulsante, quindi viene portato a massa quando si preme S1.",
+        "Afferma che il circuito è coerente e che non ci sono divergenze o anomalie evidenti, mentre il collegamento RESET-TRIGGER è una forte anomalia funzionale.",
+        "Descrive più volte C2 come collegato tra pin 2/6 e GND, ma nel JSON e nello schema C2 è sul nodo pin 6/7 verso GND, mentre pin 2 è su un nodo separato con pulsante/R1/reset."
+      ],
+      "hallucinations": [
+        "Nodo pin 2 e pin 6 indicati come effettivamente collegati tra loro o entrambi collegati a C2, cosa non supportata dal JSON né dall'immagine.",
+        "Dichiarazione che tutti i collegamenti principali sono coerenti con un monostabile normale, ignorando il reset collegato al trigger.",
+        "Riferimento a pin 2/6 come rete RC principale in modo non corrispondente a questo schema."
+      ],
+      "missed_important_points": [
+        "Il pulsante non solo trigghera il pin 2, ma mette a massa anche il pin 4 RESET.",
+        "Con RESET basso il 555 è disabilitato; quindi premere il pulsante può impedire l'impulso invece di avviarlo correttamente.",
+        "La correzione più diretta sarebbe separare RESET dal nodo del pulsante/trigger e tenerlo stabilmente alto a VCC, eventualmente con collegamento diretto o pull-up dedicato."
+      ],
+      "strengths": [
+        "Usa correttamente diverse funzioni del NE555 dal datasheet, in particolare alimentazione, output, trigger, threshold, discharge e reset attivo basso.",
+        "Propone controlli pratici utili: misurare pin 8-pin 1, pin 4, pin 3 e verificare LED, resistenze e condensatori.",
+        "Mette il RESET come prima causa, che è nella direzione corretta anche se non coglie il problema topologico specifico.",
+        "La risposta è strutturata e diagnostically utile per una verifica generale."
+      ],
+      "short_explanation": "La risposta è utile e individua genericamente il RESET come possibile causa principale, ma manca il punto critico dello schema: il pin 4 RESET è collegato al pin 2 e al pulsante, quindi quando si preme il pulsante viene resettato il 555. Inoltre interpreta erroneamente il nodo RC sostenendo che pin 2 e pin 6 siano collegati a C2. Buoni i controlli pratici, ma l'uso di JSON/immagine è incompleto e contiene letture topologiche sbagliate."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c02",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c02\\results_json_img\\c02_gpt-5.4-mini_20260605_144453.txt",
+      "model_under_test": "gpt-5.4-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 29.687,
+      "timestamp": "2026-06-05 14:54:08",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8570, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1381, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=9951)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 17,
+      "max_score": 21,
+      "normalized_score": 0.8095238095238095,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 4 RESET del NE555 collegato allo stesso nodo del pin 2 TRIGGER e del pulsante: premendo S1 il reset viene portato basso insieme al trigger, quindi il 555 può restare bloccato o non avviare correttamente la temporizzazione",
+        "Nodo trigger/reset che non torna alto correttamente tramite R1 o pulsante/cablaggio difettoso",
+        "Rete di temporizzazione su pin 6/7, C2, R4/R5 difettosa o non caricata/scaricata correttamente"
+      ],
+      "model_primary_cause": "Problema sul nodo del pulsante collegato ai pin 2 e 4 del NE555: RESET potrebbe non restare alto oppure il trigger non riceve un impulso pulito",
+      "major_errors": [
+        "Descrive in modo errato il collegamento di uno dei LED, affermando che un LED è riferito al nodo di temporizzazione; dal JSON i due LED sono invece collegati al pin 3, uno verso VCC e uno verso GND tramite resistenze.",
+        "Afferma che D1/R2 sono tra pin 3 e nodo di temporizzazione, cosa non supportata dal JSON e non coerente con lo schema reale."
+      ],
+      "hallucinations": [
+        "Indicazione che uno dei LED sia collegato al nodo RC di temporizzazione.",
+        "Alcune sigle/valori come C1 0.01 µF, C2 150 µF e valori R sono presi dall'immagine, quindi non sono una hallucination dato l'input includeva l'immagine, ma non sono presenti nel JSON."
+      ],
+      "missed_important_points": [
+        "Non esplicita chiaramente che, con pin 2 e pin 4 cortocircuitati, la pressione del pulsante genera simultaneamente trigger e reset attivo basso, condizione funzionalmente critica perché il reset può prevalere sul trigger.",
+        "Non chiarisce correttamente che i due LED dovrebbero indicare stati opposti dell'uscita pin 3: uno si accende quando l'uscita è bassa e l'altro quando è alta."
+      ],
+      "strengths": [
+        "Identifica correttamente il nodo anomalo pin 2/pin 4/pulsante come causa più probabile.",
+        "Usa correttamente il datasheet per ricordare che il pin 4 RESET deve essere mantenuto alto.",
+        "Propone controlli pratici sensati: misura del pin 4, misura del pin 3, verifica della rete RC e del condensatore di temporizzazione.",
+        "Riconosce correttamente pin 1, pin 8, pin 3, pin 6 e pin 7 e la natura monostabile/timer del circuito."
+      ],
+      "short_explanation": "La diagnosi principale è sostanzialmente corretta: il collegamento del RESET pin 4 insieme al TRIGGER pin 2 e al pulsante è il punto più critico, perché premendo S1 si porta basso anche il reset del 555. La risposta è utile e propone verifiche realistiche, ma contiene un errore importante nella lettura del cablaggio dei LED, sostenendo che uno sia riferito al nodo di temporizzazione mentre dal JSON entrambi dipendono dall'uscita pin 3."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c02",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c02\\results_json_img\\c02_gpt-5.4-nano_20260605_144638.txt",
+      "model_under_test": "gpt-5.4-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 32.994,
+      "timestamp": "2026-06-05 14:54:41",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9240, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1475, output_tokens_details=OutputTokensDetails(reasoning_tokens=467), total_tokens=10715)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 14,
+      "max_score": 21,
+      "normalized_score": 0.6667,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Il pin 4 RESET del NE555 è collegato allo stesso nodo del pin 2 TRIGGER e del pulsante: premendo S1 il nodo viene portato a massa, quindi il reset attivo basso blocca il 555 invece di permettere una normale temporizzazione.",
+        "Il trigger/reset non è cablato in modo ideale: il pulsante non genera solo un impulso di trigger sul pin 2, ma forza anche il reset sul pin 4.",
+        "Verificare se il pin 3 dell'NE555 commuta realmente; se non commuta, il problema è nella rete trigger/reset o nella rete RC pin 6/7."
+      ],
+      "model_primary_cause": "RESET pin 4 non correttamente tenuto alto / flottante o portato basso dal nodo del pulsante",
+      "major_errors": [
+        "Ha indicato una forte incongruenza tra JSON e immagine sul pin 5, ma dal JSON il pin 5 è collegato al positivo di un condensatore il cui terminale negativo è a massa, quindi la topologia del condensatore verso massa è presente, anche se senza valore.",
+        "Ha dato eccessiva priorità al pin 5 come seconda causa, mentre il collegamento reset/trigger/pulsante è l'evidenza più forte e specifica del circuito.",
+        "Non ha esplicitato con sufficiente chiarezza che premendo il pulsante si porta basso anche il pin 4 RESET, condizione che secondo datasheet disabilita il funzionamento normale del 555."
+      ],
+      "hallucinations": [
+        "Afferma che nel JSON non compare un condensatore verso massa sul pin 5, ma il grafo mostra polarized_capacitor20.1 tra pin 5 e massa.",
+        "Suggerisce di verificare la polarità di C1 sul pin 5 come se fosse polarizzato; nell'immagine C1 è indicato come 0,01 µF tipicamente non polarizzato, anche se il JSON lo classifica come polarized_capacitor.",
+        "Parla di possibili discrepanze ampie tra JSON e immagine sulla rete RC senza dimostrare una reale incongruenza topologica significativa."
+      ],
+      "missed_important_points": [
+        "Non sottolinea abbastanza che pin 2 e pin 4 sono direttamente collegati insieme: questa è la particolarità diagnostica centrale.",
+        "Non spiega chiaramente che il pulsante collega quel nodo a massa, quindi durante la pressione il 555 è in reset attivo.",
+        "Non distingue bene tra problema di progetto/cablaggio del reset e semplice pin 4 flottante: nel JSON il pin 4 non è flottante, è collegato a R1 verso VCC e al pulsante verso GND."
+      ],
+      "strengths": [
+        "Usa correttamente il datasheet del NE555, in particolare il ruolo del pin 4 RESET attivo basso, del pin 3 OUTPUT e dei pin 2/6/7.",
+        "Propone controlli pratici utili: misurare VCC, pin 4, pin 2, pin 3, polarità LED e condensatore di temporizzazione.",
+        "La diagnosi principale sul reset è coerente con il sintomo e con la topologia del circuito.",
+        "Considera correttamente la possibilità di distinguere tra mancata commutazione del 555 e problema nel ramo LED."
+      ],
+      "short_explanation": "La risposta è utile e individua come prima causa il RESET del 555 non mantenuto alto, che è effettivamente il punto critico: nel circuito pin 2 e pin 4 sono collegati al pulsante, quindi premendo si porta basso anche RESET. Tuttavia commette un errore rilevante nell'interpretazione del JSON sul pin 5, perché il condensatore verso massa risulta presente topologicamente, e dà troppa importanza a questa presunta discrepanza. Buoni i controlli pratici, ma la priorità e la lettura JSON/immagine sono solo parzialmente corrette."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c02",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c02\\results_json_img\\c02_gpt-5.4_20260605_144610.txt",
+      "model_under_test": "gpt-5.4",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 23.417,
+      "timestamp": "2026-06-05 14:55:05",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9585, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1159, output_tokens_details=OutputTokensDetails(reasoning_tokens=452), total_tokens=10744)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9523809523809523,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 2 TRIGGER e pin 4 RESET del NE555 sono collegati insieme e il pulsante li porta entrambi a massa, quindi premendo si attiva anche il reset attivo basso",
+        "Il circuito è un timer monostabile/temporizzato, non un lampeggiatore astabile continuo: i LED possono restare fissi durante l'intervallo di temporizzazione",
+        "Possibile problema o tempo molto lungo nella rete di temporizzazione sui pin 6/7 con R4, R5 e C2",
+        "Se il pin 3 commuta ma i LED no, possibile guasto/polarità errata nei rami LED e resistenze"
+      ],
+      "model_primary_cause": "Pin 2 TRIGGER e pin 4 RESET sono collegati insieme; premendo il pulsante il nodo va basso e quindi viene portato basso anche RESET, bloccando o alterando la commutazione del 555.",
+      "major_errors": [],
+      "hallucinations": [
+        "Nella prima descrizione dei LED il modello scambia parzialmente le etichette D1/D2 rispetto allo schema, anche se più avanti descrive correttamente i rami LED secondo il JSON.",
+        "Chiama C1 polarizzato in alcuni passaggi impliciti seguendo il JSON, mentre nell'immagine è indicato come 0.01 uF non polarizzato; non incide sulla diagnosi principale."
+      ],
+      "missed_important_points": [],
+      "strengths": [
+        "Individua correttamente il collegamento critico tra pin 2 e pin 4 del NE555.",
+        "Usa correttamente il datasheet: RESET attivo basso deve restare alto, TRIGGER deve scendere sotto soglia per avviare il timer.",
+        "Distingue correttamente tra comportamento monostabile e aspettativa errata di lampeggio continuo.",
+        "Propone controlli pratici sensati: misura pin 4, pin 3, nodo pin 6/7/C2, alimentazione e rami LED.",
+        "Integra bene JSON e immagine, citando connessioni reali e valori visibili nello schema."
+      ],
+      "short_explanation": "La risposta è tecnicamente molto solida: la causa principale proposta, cioè il fatto che il pulsante abbassi insieme TRIGGER e RESET, è direttamente supportata da JSON, immagine e datasheet ed è coerente con il sintomo. Buona anche la priorità delle cause e i controlli diagnostici. Restano solo piccole imprecisioni sulle etichette dei LED e su C1, non determinanti."
+    }
+  }
+]

@@ -34,11 +34,11 @@ Nei dataset YOLOv8 usati finora Ultralytics ha segnalato la presenza contemporan
 
 | Exp ID | Input     | Augmentation   | Epochs | Batch | Precision | Recall | F1-score | mAP@0.5 | mAP@0.5:0.95 | Best epoch | Note                                                                  |
 | ------ | --------- | -------------- | -----: | ----: | --------: | -----: | -------: | ------: | -----------: | ---------: | --------------------------------------------------------------------- |
-| exp05  | RGB       | No             |    100 |     4 |    0.8846 | 0.8167 |   0.8493 |  0.8553 |       0.5856 |         80 | Baseline RGB                                                          |
-| exp06  | Grayscale | No             |    100 |     4 |    0.8554 | 0.8279 |   0.8414 |  0.8759 |       0.6011 |         58 | Migliore mAP@0.5:0.95 tra le baseline                                 |
-| exp07  | RGB       | aug_v1         |    100 |     4 |    0.8281 | 0.8445 |   0.8362 |  0.8878 |       0.5953 |         43 | Migliore mAP@0.5 complessiva YOLOv8 finora                            |
-| exp08  | RGB       | aug_v2_compose |    100 |     4 |    0.8502 | 0.8581 |   0.8541 |  0.8734 |       0.5894 |         77 | Miglior F1-score e recall YOLOv8 finora                               |
-| exp07b | RGB       | aug_strong_v3  |    100 |     4 |    0.8862 | 0.8200 |   0.8518 |  0.8660 |       0.5877 |       90 | Miglior precision tra le augmentation YOLOv8; strong rotation 25°–45° |
+| exp05  | RGB       | No             |    100 |     4 |    0.8847 | 0.8167 |   0.8493 |  0.8553 |       0.5856 |         80 | Baseline RGB                                                          |
+| exp06  | Grayscale | No             |    100 |     4 |    0.8555 | 0.8279 |   0.8415 |  0.8760 |       0.6012 |         58 | Migliore mAP@0.5:0.95 tra le baseline                                 |
+| exp07  | RGB       | aug_v1         |    100 |     4 |    0.8281 | 0.8445 |   0.8362 |  0.8879 |       0.5953 |         43 | Migliore mAP@0.5 complessiva YOLOv8 finora                            |
+| exp08  | RGB       | aug_v2_compose |    100 |     4 |    0.8515 | 0.8671 |   0.8592 |  0.8818 |       0.6024 |         77 | Miglior F1-score, recall e mAP@0.5:0.95 YOLOv8 finora                 |
+| exp07b | RGB       | aug_strong_v3  |    100 |     4 |    0.8862 | 0.8200 |   0.8518 |  0.8747 |       0.6001 |         93 | Miglior precision tra le augmentation YOLOv8; strong rotation 25°–45° |
 
 
 ---
@@ -264,9 +264,9 @@ L’obiettivo è verificare se, anche nel caso di YOLOv8, la rimozione dell’in
 | ----------------- | ----------: |
 | Precision         |      0.8554 |
 | Recall            |      0.8279 |
-| F1-score          |      0.8414 |
-| mAP@0.5           |      0.8759 |
-| mAP@0.5:0.95      |      0.6011 |
+| F1-score          |      0.8415 |
+| mAP@0.5           |      0.8760 |
+| mAP@0.5:0.95      |      0.6012 |
 | Best epoch        |          58 |
 | Speed preprocess  |  5.1 ms/img |
 | Speed inference   | 21.8 ms/img |
@@ -617,11 +617,11 @@ L'augmentation è applicata **solo al training set**, mentre validation e test r
 
 | Metrica                  |      Valore |
 | ------------------------ | ----------: |
-| Precision                |      0.8502 |
-| Recall                   |      0.8581 |
-| F1-score                 |      0.8541 |
-| mAP@0.5                  |      0.8734 |
-| mAP@0.5:0.95             |      0.5894 |
+| Precision                |      0.8515 |
+| Recall                   |      0.8671 |
+| F1-score                 |      0.8592 |
+| mAP@0.5                  |      0.8818 |
+| mAP@0.5:0.95             |      0.6024 |
 | Best epoch               |          77 |
 | Best mAP@0.5             |      0.8818 |
 | Best mAP@0.5:0.95        |      0.6024 |
@@ -630,7 +630,7 @@ L'augmentation è applicata **solo al training set**, mentre validation e test r
 
 ### Commento sintetico
 
-L'esperimento **YOLOv8 RGB + aug_v2_compose** mostra un comportamento molto interessante: non raggiunge il massimo assoluto di **mAP@0.5** ottenuto da `exp07`, ma ottiene il **miglior F1-score** e la **miglior recall** tra gli esperimenti YOLOv8 completati finora, mantenendo anche una **mAP@0.5:0.95** molto alta e quasi allineata alla variante grayscale.
+L'esperimento **YOLOv8 RGB + aug_v2_compose** mostra un comportamento molto interessante: non raggiunge il massimo assoluto di **mAP@0.5** ottenuto da `exp07`, ma ottiene il **miglior F1-score**, la **miglior recall** e la migliore **mAP@0.5:0.95** tra gli esperimenti YOLOv8 completati.
 
 In altre parole, `exp08` sembra offrire il compromesso più equilibrato tra copertura degli oggetti reali e qualità media della localizzazione.
 
@@ -702,7 +702,7 @@ Nel complesso, `aug_v2_compose` sembra fornire a YOLOv8 un vantaggio reale in te
 - migliore **recall** tra gli esperimenti YOLOv8 completati finora;
 - migliore **F1-score** tra gli esperimenti YOLOv8 completati finora;
 - **mAP@0.5** molto alta, seconda solo a `exp07`;
-- **mAP@0.5:0.95** molto alta e quasi allineata a `exp06`;
+- migliore **mAP@0.5:0.95** tra gli esperimenti YOLOv8 completati;
 - configurazione complessivamente molto equilibrata.
 
 ### Criticità
@@ -728,7 +728,7 @@ Dal punto di vista operativo, si possono trarre queste conclusioni:
 
 1. se la priorità è la **migliore mAP@0.5**, `exp07` resta leggermente davanti;
 2. se la priorità è il **miglior equilibrio complessivo**, `exp08` è attualmente la configurazione YOLOv8 più convincente;
-3. se la priorità è la **migliore mAP@0.5:0.95**, `exp06` grayscale resta ancora di pochissimo superiore.
+3. se la priorità è la **migliore mAP@0.5:0.95**, `exp08` è la configurazione YOLOv8 più convincente.
 
 ---
 
@@ -792,9 +792,9 @@ La variante `aug_strong_v3` è stata progettata come versione più drastica risp
 | Precision                |      0.8862 |
 | Recall                   |      0.8200 |
 | F1-score                 |      0.8518 |
-| mAP@0.5                  |      0.8660 |
-| mAP@0.5:0.95             |      0.5877 |
-| Best epoch               |        n.d. |
+| mAP@0.5                  |      0.8747 |
+| mAP@0.5:0.95             |      0.6001 |
+| Best epoch               |          93 |
 | F1 massimo (dal grafico) |  circa 0.84 |
 | Confidence al F1 massimo | circa 0.512 |
 | Speed preprocess         | 16.5 ms/img |
@@ -897,7 +897,7 @@ Dal punto di vista operativo, l’esperimento suggerisce che:
 
 1. se la priorità è la **massima precisione**, `exp07b` è la migliore augmentation YOLOv8 finora provata;
 2. se la priorità è il **miglior equilibrio complessivo**, `exp08` resta preferibile;
-3. se la priorità è la **migliore localizzazione media**, `exp06` grayscale resta ancora leggermente superiore.
+3. se la priorità è la **migliore localizzazione media**, `exp08` resta leggermente superiore.
 
 ---
 

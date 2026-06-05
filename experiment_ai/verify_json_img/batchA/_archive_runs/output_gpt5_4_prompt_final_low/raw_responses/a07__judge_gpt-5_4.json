@@ -1,0 +1,90 @@
+{
+  "metadata": {
+    "circuit_id": "a07",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a07.png",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a07.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "a07.png",
+    "json_file": "a07.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-05 17:51:20",
+    "judge_latency_seconds": 34.396,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=12270, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=1887, output_tokens_details=OutputTokensDetails(reasoning_tokens=967), total_tokens=14157)",
+  "judge_result": {
+    "circuit_id": "a07",
+    "batch": "A",
+    "image_file": "a07.png",
+    "json_file": "a07.json",
+    "image_graph_fidelity_score": 72,
+    "decision": "MEDIUM",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 9,
+      "terminals_pins": 22,
+      "graph_connections": 34,
+      "visible_semantics": 7
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 3,
+      "minor": 1
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "net_split_transformer_meter_connector",
+        "description": "Il nodo superiore visibile che collega J7 pin1 al lato sinistro del voltmetro AC risulta spezzato nel graph: il JSON mette connector5.1_pin1 e analog_meter0.1_t1 su due terminali diversi del trasformatore invece di rappresentarli sullo stesso nodo visibile.",
+        "image_evidence": "Nell'immagine il filo da J7 pin1 prosegue orizzontalmente senza interruzioni fino al terminale sinistro del meter; lungo lo stesso tratto passa sotto il simbolo del trasformatore.",
+        "json_evidence": "connector5.1_pin1 -> transformer28.1_t3 e analog_meter0.1_t1 -> transformer28.1_t4, ma manca un collegamento diretto o di stesso nodo tra connector5.1_pin1 e analog_meter0.1_t1."
+      },
+      {
+        "type": "missing_direct_connection",
+        "description": "Manca nel graph il collegamento visibile tra connector5.1_pin1 e analog_meter0.1_t1 sul ramo superiore.",
+        "image_evidence": "J7 pin1 e il terminale sinistro del meter sono uniti da un unico filo orizzontale.",
+        "json_evidence": "Nel campo graph connector5.1_pin1 non include analog_meter0.1_t1 e analog_meter0.1_t1 non include connector5.1_pin1."
+      },
+      {
+        "type": "transformer_terminal_assignment_uncertain_but_incompatible",
+        "description": "L'assegnazione dei terminali del trasformatore nel graph e incompatibile con la continuita del filo visibile sul ramo superiore: i due terminali transformer28.1_t3 e transformer28.1_t4 sono trattati come nodi distinti, mentre visivamente insistono sullo stesso ramo.",
+        "image_evidence": "Il ramo superiore appare unico; non si vede una separazione grafica tra il punto dove arriva J7 pin1 e quello dove entra il meter.",
+        "json_evidence": "transformer28.1_t3 e transformer28.1_t4 sono usati come endpoint separati con connessioni diverse."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "visible_semantics_transformer_ambiguity",
+        "description": "La lettura dei 4 terminali del trasformatore e ambigua dalla sola immagine; il warning sui terminali non connessi e plausibile, ma non chiarisce correttamente il nodo superiore continuo."
+      }
+    ],
+    "missing_from_json": [
+      "connector5.1_pin1 <-> analog_meter0.1_t1"
+    ],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "connector5.1_pin1 collegato allo stesso nodo di analog_meter0.1_t1",
+        "found_in_json": "connector5.1_pin1 -> transformer28.1_t3 e analog_meter0.1_t1 -> transformer28.1_t4 come nodi separati",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "La simbologia del trasformatore e resa in modo poco standard nell'immagine: non e completamente certo quali dei quattro terminali del componente JSON corrispondano ai contatti visibili del simbolo.",
+      "Non e verificabile con certezza dalla sola immagine se il ramo superiore tocchi uno o due terminali inferiori del trasformatore; e pero chiaramente visibile la continuita tra J7 pin1 e il terminale sinistro del meter.",
+      "Le masse sono rappresentate con simboli distinti; il JSON non le fonde globalmente e questo non va penalizzato."
+    ],
+    "short_explanation": "Il graph e in gran parte coerente per switch, resistor, LED, meter e GND locali, ma il ramo superiore principale e spezzato nel JSON: nell'immagine J7 pin1 e il terminale sinistro del meter sono sullo stesso filo, mentre il graph li separa tramite due terminali diversi del trasformatore. Questo errore topologico principale abbassa il giudizio a MEDIUM."
+  },
+  "raw_model_output": "{\"circuit_id\":\"a07\",\"batch\":\"A\",\"image_file\":\"a07.png\",\"json_file\":\"a07.json\",\"image_graph_fidelity_score\":72,\"decision\":\"MEDIUM\",\"usable_as_graph_base\":true,\"scores\":{\"components\":9,\"terminals_pins\":22,\"graph_connections\":34,\"visible_semantics\":7},\"error_counts\":{\"critical\":0,\"major\":3,\"minor\":1},\"critical_errors\":[],\"major_errors\":[{\"type\":\"net_split_transformer_meter_connector\",\"description\":\"Il nodo superiore visibile che collega J7 pin1 al lato sinistro del voltmetro AC risulta spezzato nel graph: il JSON mette connector5.1_pin1 e analog_meter0.1_t1 su due terminali diversi del trasformatore invece di rappresentarli sullo stesso nodo visibile.\",\"image_evidence\":\"Nell'immagine il filo da J7 pin1 prosegue orizzontalmente senza interruzioni fino al terminale sinistro del meter; lungo lo stesso tratto passa sotto il simbolo del trasformatore.\",\"json_evidence\":\"connector5.1_pin1 -> transformer28.1_t3 e analog_meter0.1_t1 -> transformer28.1_t4, ma manca un collegamento diretto o di stesso nodo tra connector5.1_pin1 e analog_meter0.1_t1.\"},{\"type\":\"missing_direct_connection\",\"description\":\"Manca nel graph il collegamento visibile tra connector5.1_pin1 e analog_meter0.1_t1 sul ramo superiore.\",\"image_evidence\":\"J7 pin1 e il terminale sinistro del meter sono uniti da un unico filo orizzontale.\",\"json_evidence\":\"Nel campo graph connector5.1_pin1 non include analog_meter0.1_t1 e analog_meter0.1_t1 non include connector5.1_pin1.\"},{\"type\":\"transformer_terminal_assignment_uncertain_but_incompatible\",\"description\":\"L'assegnazione dei terminali del trasformatore nel graph e incompatibile con la continuita del filo visibile sul ramo superiore: i due terminali transformer28.1_t3 e transformer28.1_t4 sono trattati come nodi distinti, mentre visivamente insistono sullo stesso ramo.\",\"image_evidence\":\"Il ramo superiore appare unico; non si vede una separazione grafica tra il punto dove arriva J7 pin1 e quello dove entra il meter.\",\"json_evidence\":\"transformer28.1_t3 e transformer28.1_t4 sono usati come endpoint separati con connessioni diverse.\"}],\"minor_errors\":[{\"type\":\"visible_semantics_transformer_ambiguity\",\"description\":\"La lettura dei 4 terminali del trasformatore e ambigua dalla sola immagine; il warning sui terminali non connessi e plausibile, ma non chiarisce correttamente il nodo superiore continuo.\"}],\"missing_from_json\":[\"connector5.1_pin1 <-> analog_meter0.1_t1\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"connector5.1_pin1 collegato allo stesso nodo di analog_meter0.1_t1\",\"found_in_json\":\"connector5.1_pin1 -> transformer28.1_t3 e analog_meter0.1_t1 -> transformer28.1_t4 come nodi separati\",\"severity\":\"major\"}],\"uncertain_points\":[\"La simbologia del trasformatore e resa in modo poco standard nell'immagine: non e completamente certo quali dei quattro terminali del componente JSON corrispondano ai contatti visibili del simbolo.\",\"Non e verificabile con certezza dalla sola immagine se il ramo superiore tocchi uno o due terminali inferiori del trasformatore; e pero chiaramente visibile la continuita tra J7 pin1 e il terminale sinistro del meter.\",\"Le masse sono rappresentate con simboli distinti; il JSON non le fonde globalmente e questo non va penalizzato.\"],\"short_explanation\":\"Il graph e in gran parte coerente per switch, resistor, LED, meter e GND locali, ma il ramo superiore principale e spezzato nel JSON: nell'immagine J7 pin1 e il terminale sinistro del meter sono sullo stesso filo, mentre il graph li separa tramite due terminali diversi del trasformatore. Questo errore topologico principale abbassa il giudizio a MEDIUM.\"}"
+}

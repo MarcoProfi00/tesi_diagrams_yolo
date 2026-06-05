@@ -1,0 +1,102 @@
+{
+  "metadata": {
+    "circuit_id": "a03",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a03.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a03.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "a03.jpg",
+    "json_file": "a03.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-05 17:49:55",
+    "judge_latency_seconds": 46.436,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=13030, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=2677, output_tokens_details=OutputTokensDetails(reasoning_tokens=1594), total_tokens=15707)",
+  "judge_result": {
+    "circuit_id": "a03",
+    "batch": "A",
+    "image_file": "a03.jpg",
+    "json_file": "a03.json",
+    "image_graph_fidelity_score": 78,
+    "decision": "HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 7,
+      "terminals_pins": 18,
+      "graph_connections": 47,
+      "visible_semantics": 6
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 3,
+      "minor": 3
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "missing_connection",
+        "description": "Nel ramo AC a destra manca il collegamento visibile tra un terminale della sorgente AC e un terminale del contatto RL1. Nell'immagine il filo superiore collega chiaramente la sorgente V1 al contatto del relay.",
+        "image_evidence": "Nel sottocircuito di destra il filo verde superiore parte dal lato alto di V1 e arriva al contatto superiore di RL1.",
+        "json_evidence": "signal_source23.1_t1 è vuoto e switch25.1_t1 è vuoto nel campo graph."
+      },
+      {
+        "type": "wrong_component_identity",
+        "description": "La batteria visibile B1 è stata spezzata in due componenti Battery distinti, uno usato solo per il nodo alto e uno solo per il nodo basso. Questo non corrisponde ai componenti endpoint visibili nell'immagine.",
+        "image_evidence": "A sinistra è visibile una sola batteria B1 con due terminali, collegata tra rail superiore e rail inferiore.",
+        "json_evidence": "Sono presenti battery2.1 e battery2.2; battery2.1 usa solo il terminale positive e battery2.2 usa solo il terminale negative."
+      },
+      {
+        "type": "state_mismatch",
+        "description": "Lo stato dichiarato dello switch è 'closed', ma il contatto RL1 nell'immagine appare aperto. Anche se il graph non unisce i due terminali dello switch, il metadato di stato è incompatibile con la connettività visibile.",
+        "image_evidence": "Il contatto RL1 è disegnato con il braccio mobile separato dal contatto fisso.",
+        "json_evidence": "switch25.1 ha \"state\": \"closed\"."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "class_imprecision",
+        "description": "D1 è un diodo ma nel JSON è rappresentato come LED; i due terminali risultano però collegati agli stessi due nodi visibili del ramo bobina."
+      },
+      {
+        "type": "class_imprecision",
+        "description": "LDR e RV1 sono mappati come Variable_Resistor e Resistor; la topologia del partitore resta comunque coerente con l'immagine."
+      },
+      {
+        "type": "component_modeling",
+        "description": "Il contatto RL1 è modellato come Switch a 2 terminali senza esplicita associazione al relay/bobina; scelta semplificata ma ancora utilizzabile topologicamente."
+      }
+    ],
+    "missing_from_json": [
+      "Collegamento visibile tra il terminale superiore della sorgente AC V1 e un terminale del contatto RL1 (signal_source23.1_t1 <-> switch25.1_t1).",
+      "B1 come singolo componente a due terminali; nel JSON è sostituita da due batterie separate."
+    ],
+    "extra_in_json": [
+      "battery2.2 come seconda batteria distinta non visibile nell'immagine.",
+      "Stato 'closed' per switch25.1 non supportato dal disegno del contatto RL1."
+    ],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "signal_source23.1_t1 collegato a switch25.1_t1",
+        "found_in_json": "signal_source23.1_t1 = [] ; switch25.1_t1 = []",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "La polarità esatta di D1 è solo moderatamente leggibile; il lato superiore sembra il catodo, ma non la tratto come inversione certa.",
+      "Nel ramo AC il mapping preciso tra i due terminali del contatto RL1 e i terminali t1/t2 del componente switch può essere permutato senza cambiare l'errore principale: manca comunque il collegamento della sorgente al contatto.",
+      "La rappresentazione di RV1 come reostato/potenziometro è semplificata nel JSON; topologicamente il nodo del cursore sembra riportato al rail inferiore, quindi la riduzione a due terminali non altera chiaramente i collegamenti visibili."
+    ],
+    "short_explanation": "Il graph riproduce bene la topologia principale del ramo di controllo: rail superiore/inferiore, LDR-RV1 verso la base di Q1, accoppiamento Q1->Q2, R1, bobina del relay e diodo in parallelo alla bobina sono sostanzialmente coerenti. L'errore topologico principale è nel ramo AC a destra, dove manca il collegamento visibile tra la sorgente AC e il contatto RL1. Inoltre la batteria reale è stata spezzata in due componenti Battery distinti e lo stato dello switch è marcato closed mentre il simbolo appare open. Nel complesso il graph resta una buona base correggibile, ma non è una corrispondenza quasi perfetta dell'immagine."
+  },
+  "raw_model_output": "{\"circuit_id\":\"a03\",\"batch\":\"A\",\"image_file\":\"a03.jpg\",\"json_file\":\"a03.json\",\"image_graph_fidelity_score\":78,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":7,\"terminals_pins\":18,\"graph_connections\":47,\"visible_semantics\":6},\"error_counts\":{\"critical\":0,\"major\":3,\"minor\":3},\"critical_errors\":[],\"major_errors\":[{\"type\":\"missing_connection\",\"description\":\"Nel ramo AC a destra manca il collegamento visibile tra un terminale della sorgente AC e un terminale del contatto RL1. Nell'immagine il filo superiore collega chiaramente la sorgente V1 al contatto del relay.\",\"image_evidence\":\"Nel sottocircuito di destra il filo verde superiore parte dal lato alto di V1 e arriva al contatto superiore di RL1.\",\"json_evidence\":\"signal_source23.1_t1 è vuoto e switch25.1_t1 è vuoto nel campo graph.\"},{\"type\":\"wrong_component_identity\",\"description\":\"La batteria visibile B1 è stata spezzata in due componenti Battery distinti, uno usato solo per il nodo alto e uno solo per il nodo basso. Questo non corrisponde ai componenti endpoint visibili nell'immagine.\",\"image_evidence\":\"A sinistra è visibile una sola batteria B1 con due terminali, collegata tra rail superiore e rail inferiore.\",\"json_evidence\":\"Sono presenti battery2.1 e battery2.2; battery2.1 usa solo il terminale positive e battery2.2 usa solo il terminale negative.\"},{\"type\":\"state_mismatch\",\"description\":\"Lo stato dichiarato dello switch è 'closed', ma il contatto RL1 nell'immagine appare aperto. Anche se il graph non unisce i due terminali dello switch, il metadato di stato è incompatibile con la connettività visibile.\",\"image_evidence\":\"Il contatto RL1 è disegnato con il braccio mobile separato dal contatto fisso.\",\"json_evidence\":\"switch25.1 ha \\\"state\\\": \\\"closed\\\".\"}],\"minor_errors\":[{\"type\":\"class_imprecision\",\"description\":\"D1 è un diodo ma nel JSON è rappresentato come LED; i due terminali risultano però collegati agli stessi due nodi visibili del ramo bobina.\"},{\"type\":\"class_imprecision\",\"description\":\"LDR e RV1 sono mappati come Variable_Resistor e Resistor; la topologia del partitore resta comunque coerente con l'immagine.\"},{\"type\":\"component_modeling\",\"description\":\"Il contatto RL1 è modellato come Switch a 2 terminali senza esplicita associazione al relay/bobina; scelta semplificata ma ancora utilizzabile topologicamente.\"}],\"missing_from_json\":[\"Collegamento visibile tra il terminale superiore della sorgente AC V1 e un terminale del contatto RL1 (signal_source23.1_t1 <-> switch25.1_t1).\",\"B1 come singolo componente a due terminali; nel JSON è sostituita da due batterie separate.\"],\"extra_in_json\":[\"battery2.2 come seconda batteria distinta non visibile nell'immagine.\",\"Stato 'closed' per switch25.1 non supportato dal disegno del contatto RL1.\"],\"wrong_graph_connections\":[{\"expected_from_image\":\"signal_source23.1_t1 collegato a switch25.1_t1\",\"found_in_json\":\"signal_source23.1_t1 = [] ; switch25.1_t1 = []\",\"severity\":\"major\"}],\"uncertain_points\":[\"La polarità esatta di D1 è solo moderatamente leggibile; il lato superiore sembra il catodo, ma non la tratto come inversione certa.\",\"Nel ramo AC il mapping preciso tra i due terminali del contatto RL1 e i terminali t1/t2 del componente switch può essere permutato senza cambiare l'errore principale: manca comunque il collegamento della sorgente al contatto.\",\"La rappresentazione di RV1 come reostato/potenziometro è semplificata nel JSON; topologicamente il nodo del cursore sembra riportato al rail inferiore, quindi la riduzione a due terminali non altera chiaramente i collegamenti visibili.\"],\"short_explanation\":\"Il graph riproduce bene la topologia principale del ramo di controllo: rail superiore/inferiore, LDR-RV1 verso la base di Q1, accoppiamento Q1->Q2, R1, bobina del relay e diodo in parallelo alla bobina sono sostanzialmente coerenti. L'errore topologico principale è nel ramo AC a destra, dove manca il collegamento visibile tra la sorgente AC e il contatto RL1. Inoltre la batteria reale è stata spezzata in due componenti Battery distinti e lo stato dello switch è marcato closed mentre il simbolo appare open. Nel complesso il graph resta una buona base correggibile, ma non è una corrispondenza quasi perfetta dell'immagine.\"}"
+}

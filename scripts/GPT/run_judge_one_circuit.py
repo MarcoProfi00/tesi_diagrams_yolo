@@ -12,10 +12,11 @@ import re
 # CONFIGURAZIONE
 # =========================
 JUDGE_MODEL = "gpt-5.5"
-CIRCUIT_NAME = "ic15"
+CIRCUIT_NAME = "c17"
+BATCH_NAME = "batch_v2"
 
 # Lo stesso problema usato per generare gli output del circuito
-PROBLEM = "Il circuito si accende, ma la tensione in uscita non e' corretta. Quale potrebbe essere il problema?"
+PROBLEM = "Quando alimento il circuito, la lampada dovrebbe lampeggiare, ma resta fissa o non si accende affatto. Quale potrebbe essere il problema?"
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -24,7 +25,7 @@ CIRCUIT_DIR = (
     PROJECT_ROOT
     / "experiment_ai"
     / "circuiti_complessi"
-    / "batch_v1"
+    / BATCH_NAME
     / CIRCUIT_NAME
 )
 
@@ -36,6 +37,12 @@ JUDGE_PROMPT_PATH = SCRIPT_DIR / "prompt_judge.txt"
 RESULTS_JSON_DIR = CIRCUIT_DIR / "results_json"
 RESULTS_JSON_IMG_DIR = CIRCUIT_DIR / "results_json_img"
 JUDGE_RESULTS_DIR = CIRCUIT_DIR / "judge_results"
+
+NO_DATASHEET_TEXT = (
+    "Datasheet non presente: il circuito non contiene circuiti integrati o "
+    "componenti che richiedono un datasheet dedicato. Valutare la risposta "
+    "usando JSON, immagine, collegamenti del graph e componenti discreti visibili."
+)
 
 # =========================
 # SETUP
@@ -206,7 +213,6 @@ def judge_one_file(result_path: Path, input_type: str, context):
 required_paths = [
     JSON_PATH,
     IMAGE_PATH,
-    DATASHEET_DIR,
     JUDGE_PROMPT_PATH,
 ]
 
@@ -214,10 +220,7 @@ for path in required_paths:
     if not path.exists():
         raise FileNotFoundError(f"File non trovato: {path}")
 
-DATASHEET_PATHS = sorted(DATASHEET_DIR.glob("*.txt"))
-
-if not DATASHEET_PATHS:
-    raise FileNotFoundError(f"Nessun file datasheet .txt trovato in: {DATASHEET_DIR}")
+DATASHEET_PATHS = sorted(DATASHEET_DIR.glob("*.txt")) if DATASHEET_DIR.exists() else []
 
 # =========================
 # LETTURA CONTESTO
@@ -225,9 +228,13 @@ if not DATASHEET_PATHS:
 
 context = {
     "circuit_json": read_text(JSON_PATH),
-    "datasheet": "\n\n---\n\n".join(
-        read_text(path)
-        for path in DATASHEET_PATHS
+    "datasheet": (
+        "\n\n---\n\n".join(
+            read_text(path)
+            for path in DATASHEET_PATHS
+        )
+        if DATASHEET_PATHS
+        else NO_DATASHEET_TEXT
     ),
     "judge_prompt_template": read_text(JUDGE_PROMPT_PATH),
     "image_data_url": encode_image_data_url(IMAGE_PATH),

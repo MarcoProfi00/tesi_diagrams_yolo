@@ -1,0 +1,62 @@
+{
+  "metadata": {
+    "circuit_id": "a08",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a08.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a08.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "a08.jpg",
+    "json_file": "a08.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-05 17:51:45",
+    "judge_latency_seconds": 24.284,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=12410, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=1378, output_tokens_details=OutputTokensDetails(reasoning_tokens=969), total_tokens=13788)",
+  "judge_result": {
+    "circuit_id": "a08",
+    "batch": "A",
+    "image_file": "a08.jpg",
+    "json_file": "a08.json",
+    "image_graph_fidelity_score": 97,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 23,
+      "graph_connections": 55,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 1
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "component_class_simplification",
+        "description": "Il componente visibile come potenziometro/variable resistor con wiper cortocircuitato a un estremo e rappresentato nel JSON come semplice resistore a 2 terminali; in questo caso la topologia dei nodi resta sostanzialmente corretta."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "L'immagine mostra due simboli GND separati; il JSON li mantiene come due endpoint distinti. Per le regole date questo non va penalizzato, anche se nello schema elettrico convenzionale potrebbero rappresentare la stessa massa.",
+      "Le label testuali IN, Trigger e LED sono visibili nell'immagine ma non sono necessarie nel graph terminale-terminale e la loro assenza non cambia la topologia."
+    ],
+    "short_explanation": "Il campo graph e sostanzialmente coerente con i collegamenti visibili: nodo superiore comune tra sorgente, LED anodo, R1 e R7; nodo Trigger tra R1, C1 e lato sinistro di R3; nodo del transistor/emettitore condiviso con R7 e R6; LED catodo al collettore; base tramite R3; massa inferiore su C1 e R6. Nessun errore topologico certo nei collegamenti dichiarati; solo una lieve semplificazione di classe sul potenziometro usato come resistore."
+  },
+  "raw_model_output": "{\"circuit_id\":\"a08\",\"batch\":\"A\",\"image_file\":\"a08.jpg\",\"json_file\":\"a08.json\",\"image_graph_fidelity_score\":97,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":23,\"graph_connections\":55,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":1},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"component_class_simplification\",\"description\":\"Il componente visibile come potenziometro/variable resistor con wiper cortocircuitato a un estremo e rappresentato nel JSON come semplice resistore a 2 terminali; in questo caso la topologia dei nodi resta sostanzialmente corretta.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"L'immagine mostra due simboli GND separati; il JSON li mantiene come due endpoint distinti. Per le regole date questo non va penalizzato, anche se nello schema elettrico convenzionale potrebbero rappresentare la stessa massa.\",\"Le label testuali IN, Trigger e LED sono visibili nell'immagine ma non sono necessarie nel graph terminale-terminale e la loro assenza non cambia la topologia.\"],\"short_explanation\":\"Il campo graph e sostanzialmente coerente con i collegamenti visibili: nodo superiore comune tra sorgente, LED anodo, R1 e R7; nodo Trigger tra R1, C1 e lato sinistro di R3; nodo del transistor/emettitore condiviso con R7 e R6; LED catodo al collettore; base tramite R3; massa inferiore su C1 e R6. Nessun errore topologico certo nei collegamenti dichiarati; solo una lieve semplificazione di classe sul potenziometro usato come resistore.\"}"
+}

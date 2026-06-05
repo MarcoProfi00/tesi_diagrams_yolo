@@ -1,0 +1,62 @@
+{
+  "metadata": {
+    "circuit_id": "a04",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a04.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a04.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "a04.jpg",
+    "json_file": "a04.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-05 17:50:11",
+    "judge_latency_seconds": 15.889,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=13114, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=945, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=14059)",
+  "judge_result": {
+    "circuit_id": "a04",
+    "batch": "A",
+    "image_file": "a04.jpg",
+    "json_file": "a04.json",
+    "image_graph_fidelity_score": 98,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 24,
+      "graph_connections": 55,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 1
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "terminal_naming_semantic_imprecision",
+        "description": "I terminali dei componenti a due poli sono nominati genericamente t1/t2 invece che con riferimenti visivi espliciti ai designator dell'immagine; la topologia pero resta coerente e verificabile tramite mapping."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "Il mapping tra resistor22.1..22.5 e i resistori visivi R1..R5 non e per designator ma esiste una permutazione topologicamente coerente: 22.2≈R3, 22.1≈R4, 22.3≈R1, 22.4≈R2, 22.5≈R5.",
+      "Le polarita dei condensatori C2 e C3 non sono rappresentate semanticamente nel JSON, ma i loro due terminali risultano collegati ai nodi visibili corretti; non altera la fedelta topologica del graph."
+    ],
+    "short_explanation": "Il campo graph e topologicamente coerente con l'immagine: ingresso V2 accoppiato tramite C1 al nodo di base, partitore R3-R4 sulla base, R1 dal collettore al rail positivo, R2 e C3 dall'emettitore a massa, C2 dal collettore al ramo con R5 verso massa, e batteria V1 tra rail superiore e rail inferiore/GND. Non emergono errori certi nei collegamenti terminale-terminale."
+  },
+  "raw_model_output": "{\"circuit_id\":\"a04\",\"batch\":\"A\",\"image_file\":\"a04.jpg\",\"json_file\":\"a04.json\",\"image_graph_fidelity_score\":98,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":24,\"graph_connections\":55,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":1},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"terminal_naming_semantic_imprecision\",\"description\":\"I terminali dei componenti a due poli sono nominati genericamente t1/t2 invece che con riferimenti visivi espliciti ai designator dell'immagine; la topologia pero resta coerente e verificabile tramite mapping.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"Il mapping tra resistor22.1..22.5 e i resistori visivi R1..R5 non e per designator ma esiste una permutazione topologicamente coerente: 22.2≈R3, 22.1≈R4, 22.3≈R1, 22.4≈R2, 22.5≈R5.\",\"Le polarita dei condensatori C2 e C3 non sono rappresentate semanticamente nel JSON, ma i loro due terminali risultano collegati ai nodi visibili corretti; non altera la fedelta topologica del graph.\"],\"short_explanation\":\"Il campo graph e topologicamente coerente con l'immagine: ingresso V2 accoppiato tramite C1 al nodo di base, partitore R3-R4 sulla base, R1 dal collettore al rail positivo, R2 e C3 dall'emettitore a massa, C2 dal collettore al ramo con R5 verso massa, e batteria V1 tra rail superiore e rail inferiore/GND. Non emergono errori certi nei collegamenti terminale-terminale.\"}"
+}

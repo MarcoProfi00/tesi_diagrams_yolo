@@ -1,0 +1,66 @@
+{
+  "metadata": {
+    "circuit_id": "a10",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a10.png",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a10.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "a10.png",
+    "json_file": "a10.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-05 17:52:42",
+    "judge_latency_seconds": 16.67,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=11826, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=988, output_tokens_details=OutputTokensDetails(reasoning_tokens=540), total_tokens=12814)",
+  "judge_result": {
+    "circuit_id": "a10",
+    "batch": "A",
+    "image_file": "a10.png",
+    "json_file": "a10.json",
+    "image_graph_fidelity_score": 96,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 23,
+      "graph_connections": 55,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "terminal_metadata_imprecision",
+        "description": "Alcune relative_position dei pin del connettore non sono pienamente coerenti con la geometria visibile del simbolo J1, ma questo non altera i collegamenti topologici dichiarati nel graph."
+      },
+      {
+        "type": "ground_convention_uncertainty",
+        "description": "L'immagine usa piu simboli GND separati; il JSON li mantiene distinti. Questo e compatibile con le regole di valutazione, ma la reale equivalenza globale dei GND resta una convenzione esterna non verificata solo dal graph."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "Le posizioni relative left/right assegnate ai pin del connettore non sono tutte chiaramente verificabili dal solo lato grafico del simbolo, ma i fili visibili corrispondono correttamente ai pin 1-4.",
+      "I diversi simboli GND nell'immagine potrebbero rappresentare la stessa massa elettrica, ma non va imposto; il JSON correttamente non li fonde automaticamente nel campo graph."
+    ],
+    "short_explanation": "Il graph JSON riproduce fedelmente i collegamenti visibili: batteria negativa a GND, batteria positiva al lato sinistro dello switch aperto, uscita switch a J1 pin1, J1 pin2 alla resistenza e poi all'anodo LED con catodo a GND, J1 pin3 alla lampada con ritorno a GND, e J1 pin4 a GND. Non emergono errori topologici certi nei collegamenti terminale-terminale."
+  },
+  "raw_model_output": "{\"circuit_id\":\"a10\",\"batch\":\"A\",\"image_file\":\"a10.png\",\"json_file\":\"a10.json\",\"image_graph_fidelity_score\":96,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":23,\"graph_connections\":55,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":2},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"terminal_metadata_imprecision\",\"description\":\"Alcune relative_position dei pin del connettore non sono pienamente coerenti con la geometria visibile del simbolo J1, ma questo non altera i collegamenti topologici dichiarati nel graph.\"},{\"type\":\"ground_convention_uncertainty\",\"description\":\"L'immagine usa piu simboli GND separati; il JSON li mantiene distinti. Questo e compatibile con le regole di valutazione, ma la reale equivalenza globale dei GND resta una convenzione esterna non verificata solo dal graph.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"Le posizioni relative left/right assegnate ai pin del connettore non sono tutte chiaramente verificabili dal solo lato grafico del simbolo, ma i fili visibili corrispondono correttamente ai pin 1-4.\",\"I diversi simboli GND nell'immagine potrebbero rappresentare la stessa massa elettrica, ma non va imposto; il JSON correttamente non li fonde automaticamente nel campo graph.\"],\"short_explanation\":\"Il graph JSON riproduce fedelmente i collegamenti visibili: batteria negativa a GND, batteria positiva al lato sinistro dello switch aperto, uscita switch a J1 pin1, J1 pin2 alla resistenza e poi all'anodo LED con catodo a GND, J1 pin3 alla lampada con ritorno a GND, e J1 pin4 a GND. Non emergono errori topologici certi nei collegamenti terminale-terminale.\"}"
+}

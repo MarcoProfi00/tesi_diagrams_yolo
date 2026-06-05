@@ -1,0 +1,45 @@
+IC: LM1875
+
+Descrizione:
+LM1875 e' un amplificatore audio di potenza monolitico. Viene usato per pilotare altoparlanti con una rete esterna di ingresso, feedback, alimentazione e compensazione/stabilita'.
+Puo' funzionare con alimentazione duale oppure singola, a seconda dello schema applicativo.
+
+Pin principali:
+- Pin 1: ingresso non invertente (+).
+- Pin 2: ingresso invertente (-).
+- Pin 3: alimentazione negativa, V-.
+- Pin 4: uscita audio.
+- Pin 5: alimentazione positiva, V+.
+
+Alimentazione:
+- Pin 5 deve essere collegato alla rail positiva.
+- Pin 3 deve essere collegato alla rail negativa oppure al riferimento previsto nello schema a singola alimentazione.
+- Le alimentazioni devono essere ben disaccoppiate con condensatori vicini all'integrato.
+- Se manca una delle due alimentazioni, l'uscita puo' saturare, restare muta o produrre forte distorsione.
+
+Ingressi:
+- Il segnale audio entra tipicamente sul pin 1 tramite una rete di accoppiamento e polarizzazione.
+- Il pin 2 riceve la rete di feedback dall'uscita e verso massa/riferimento.
+- Il guadagno dipende dal rapporto delle resistenze nella rete di feedback.
+- Se l'ingresso e' aperto, cortocircuitato a massa o non polarizzato correttamente, l'uscita puo' essere assente, molto debole o rumorosa.
+
+Uscita:
+- Pin 4 e' l'uscita che pilota il carico, tipicamente un altoparlante.
+- L'altoparlante deve essere collegato secondo lo schema applicativo e avere impedenza adeguata.
+- Un corto sull'uscita, un altoparlante interrotto o un collegamento errato possono causare assenza di audio, distorsione o protezione termica/corrente.
+
+Rete di feedback e stabilita':
+- Una rete di feedback collega l'uscita al pin invertente.
+- Condensatori e resistenze verso massa possono definire risposta in frequenza e guadagno a bassa frequenza.
+- Una rete serie resistenza-condensatore dall'uscita a massa puo' migliorare la stabilita' con carichi induttivi.
+- Errori nella rete di feedback possono causare guadagno errato, oscillazioni, distorsione o uscita saturata.
+
+Controlli diagnostici utili:
+- Verificare la presenza delle tensioni corrette su pin 5 e pin 3.
+- Verificare continuita' e massa dei condensatori di disaccoppiamento delle alimentazioni.
+- Verificare che il segnale audio arrivi al pin 1.
+- Verificare la rete di feedback tra pin 4, pin 2 e massa/riferimento.
+- Misurare la tensione DC sul pin 4: una tensione anomala puo' indicare saturazione o errore di alimentazione/feedback.
+- Verificare altoparlante, fusibili, connessioni di uscita e rete di stabilita' sull'uscita.
+- Se l'audio e' assente ma l'integrato e' alimentato, controllare ingresso, feedback, altoparlante e continuita' del percorso di uscita.
+- Se l'audio e' distorto, controllare alimentazione sotto carico, guadagno, feedback, dissipazione termica e impedenza del carico.

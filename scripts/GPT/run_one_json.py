@@ -18,7 +18,9 @@ import time
 # gpt-5.4
 MODEL = "gpt-5.4"
 
-PROBLEM = "Il circuito si accende, ma la tensione in uscita non e' corretta. Quale potrebbe essere il problema?"
+PROBLEM = "Quando alimento il circuito, la lampada dovrebbe lampeggiare, ma resta fissa o non si accende affatto. Quale potrebbe essere il problema?"
+
+BATCH_NAME = "batch_v2"
 
 # Lo script si trova in: scripts/GPT/run_one_json.py
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -26,13 +28,13 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 # Root del progetto: salgo da scripts/GPT a cartella principale
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-CIRCUIT_NAME = "ic15"
+CIRCUIT_NAME = "c17"
 
 CIRCUIT_DIR = (
     PROJECT_ROOT
     / "experiment_ai"
     / "circuiti_complessi"
-    / "batch_v1"
+    / BATCH_NAME
     / CIRCUIT_NAME
 )
 
@@ -43,6 +45,12 @@ PROMPT_PATH = CIRCUIT_DIR / "prompt_json.txt"
 
 # Cartella risultati
 RESULTS_DIR = CIRCUIT_DIR / "results_json"
+
+NO_DATASHEET_TEXT = (
+    "Datasheet non presente: il circuito non contiene circuiti integrati o "
+    "componenti che richiedono un datasheet dedicato. Analizzare il circuito "
+    "usando il JSON, i collegamenti del graph e le informazioni visibili nello schema."
+)
 
 # =========================
 # SETUP
@@ -57,23 +65,24 @@ RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 # CONTROLLO FILE
 # =========================
 
-for path in [JSON_PATH, DATASHEET_DIR, PROMPT_PATH]:
+for path in [JSON_PATH, PROMPT_PATH]:
     if not path.exists():
         raise FileNotFoundError(f"File non trovato: {path}")
 
-DATASHEET_PATHS = sorted(DATASHEET_DIR.glob("*.txt"))
-
-if not DATASHEET_PATHS:
-    raise FileNotFoundError(f"Nessun file datasheet .txt trovato in: {DATASHEET_DIR}")
+DATASHEET_PATHS = sorted(DATASHEET_DIR.glob("*.txt")) if DATASHEET_DIR.exists() else []
 
 # =========================
 # LETTURA FILE
 # =========================
 
 circuit_json = JSON_PATH.read_text(encoding="utf-8")
-datasheet = "\n\n---\n\n".join(
-    path.read_text(encoding="utf-8")
-    for path in DATASHEET_PATHS
+datasheet = (
+    "\n\n---\n\n".join(
+        path.read_text(encoding="utf-8")
+        for path in DATASHEET_PATHS
+    )
+    if DATASHEET_PATHS
+    else NO_DATASHEET_TEXT
 )
 prompt_template = PROMPT_PATH.read_text(encoding="utf-8")
 
@@ -92,9 +101,12 @@ prompt = (
 
 print(f"\nEseguo {MODEL} su circuito {CIRCUIT_NAME}...")
 print(f"JSON: {JSON_PATH}")
-print("DATASHEET:")
-for path in DATASHEET_PATHS:
-    print(f"- {path}")
+if DATASHEET_PATHS:
+    print("DATASHEET:")
+    for path in DATASHEET_PATHS:
+        print(f"- {path}")
+else:
+    print("DATASHEET: non presente")
 print(f"PROMPT: {PROMPT_PATH}\n")
 
 start_time = time.perf_counter()
@@ -129,9 +141,12 @@ with output_path.open("w", encoding="utf-8") as f:
     f.write(f"CIRCUITO: {CIRCUIT_NAME}\n")
     f.write(f"INPUT: JSON + datasheet\n")
     f.write(f"JSON: {JSON_PATH}\n")
-    f.write("DATASHEET:\n")
-    for path in DATASHEET_PATHS:
-        f.write(f"- {path}\n")
+    if DATASHEET_PATHS:
+        f.write("DATASHEET:\n")
+        for path in DATASHEET_PATHS:
+            f.write(f"- {path}\n")
+    else:
+        f.write("DATASHEET: non presente\n")
     f.write(f"PROBLEMA: {PROBLEM}\n")
     f.write(f"LATENCY_SECONDS: {latency_seconds:.3f}\n\n")
 

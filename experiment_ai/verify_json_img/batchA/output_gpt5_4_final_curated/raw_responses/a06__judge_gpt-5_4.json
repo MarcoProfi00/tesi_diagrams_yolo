@@ -1,0 +1,62 @@
+{
+  "metadata": {
+    "circuit_id": "a06",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a06.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a06.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "a06.jpg",
+    "json_file": "a06.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-05 17:50:46",
+    "judge_latency_seconds": 20.639,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=13405, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=1278, output_tokens_details=OutputTokensDetails(reasoning_tokens=849), total_tokens=14683)",
+  "judge_result": {
+    "circuit_id": "a06",
+    "batch": "A",
+    "image_file": "a06.jpg",
+    "json_file": "a06.json",
+    "image_graph_fidelity_score": 98,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 24,
+      "graph_connections": 55,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 1
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "minor_terminal_metadata_imprecision",
+        "description": "Alcuni terminali/relative_position dei Terminal simbolici e dei GND separati non aggiungono semantica forte oltre ai fili visibili; lieve imprecisione descrittiva possibile ma senza impatto topologico."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "I quattro simboli di massa nel disegno possono rappresentare una massa comune elettrica, ma secondo le regole di verifica non vanno fusi automaticamente: il JSON li mantiene separati e questo non contraddice i fili visibili.",
+      "Le etichette testuali Vcc 12 V, VEE 0 V, v_o, R_in e R_out sono usate solo come aiuto visivo; la loro mancata modellazione esplicita come net globali non cambia la correttezza del graph terminale-terminale."
+    ],
+    "short_explanation": "Il campo graph e coerente con l'immagine: ingresso AC -> Rs -> Cc1 -> base del BJT; nodo base condiviso con 100 kΩ verso Vcc e 47 kΩ verso GND; collettore condiviso con 6.8 kΩ verso Vcc e Cc2 verso uscita; emettitore condiviso con 3.9 kΩ verso VEE e Ce verso GND; nodo di uscita condiviso con RL verso GND e terminale di uscita. Non emergono errori topologici certi nei collegamenti dichiarati."
+  },
+  "raw_model_output": "{\"circuit_id\":\"a06\",\"batch\":\"A\",\"image_file\":\"a06.jpg\",\"json_file\":\"a06.json\",\"image_graph_fidelity_score\":98,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":24,\"graph_connections\":55,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":1},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"minor_terminal_metadata_imprecision\",\"description\":\"Alcuni terminali/relative_position dei Terminal simbolici e dei GND separati non aggiungono semantica forte oltre ai fili visibili; lieve imprecisione descrittiva possibile ma senza impatto topologico.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"I quattro simboli di massa nel disegno possono rappresentare una massa comune elettrica, ma secondo le regole di verifica non vanno fusi automaticamente: il JSON li mantiene separati e questo non contraddice i fili visibili.\",\"Le etichette testuali Vcc 12 V, VEE 0 V, v_o, R_in e R_out sono usate solo come aiuto visivo; la loro mancata modellazione esplicita come net globali non cambia la correttezza del graph terminale-terminale.\"],\"short_explanation\":\"Il campo graph e coerente con l'immagine: ingresso AC -> Rs -> Cc1 -> base del BJT; nodo base condiviso con 100 kΩ verso Vcc e 47 kΩ verso GND; collettore condiviso con 6.8 kΩ verso Vcc e Cc2 verso uscita; emettitore condiviso con 3.9 kΩ verso VEE e Ce verso GND; nodo di uscita condiviso con RL verso GND e terminale di uscita. Non emergono errori topologici certi nei collegamenti dichiarati.\"}"
+}

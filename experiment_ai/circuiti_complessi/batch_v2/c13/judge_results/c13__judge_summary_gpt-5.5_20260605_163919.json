@@ -1,0 +1,922 @@
+[
+  {
+    "metadata": {
+      "circuit": "c13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c13\\results_json\\c13_gpt-4.1-mini_20260605_161859.txt",
+      "model_under_test": "gpt-4.1-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 32.626,
+      "timestamp": "2026-06-05 16:31:06",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9759, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1396, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=11155)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 17,
+      "max_score": 21,
+      "normalized_score": 0.8095238095,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Segnale di ingresso assente o percorso di ingresso errato: nel JSON non risulta un vero terminale IN e resistor22.1_t1 è collegato a GND, quindi l'ingresso può essere di fatto portato a massa o non pilotato",
+        "Verifica delle alimentazioni duali su pin 5 e pin 3 tramite fusibili fuse8.2 e fuse8.1",
+        "Possibili problemi nella rete di feedback tra pin 4 e pin 2 o nel percorso altoparlante"
+      ],
+      "model_primary_cause": "Ingresso di segnale assente o errato al pin 1",
+      "major_errors": [
+        "Non evidenzia che dal JSON il percorso di ingresso appare privo di un terminale sorgente audio e collegato a massa tramite resistor22.1, che è una forte evidenza topologica per audio assente.",
+        "Afferma che il pin 1 è plausibilmente polarizzato e accoppiato correttamente, mentre il JSON mostra un ingresso sospetto/non chiaramente pilotato.",
+        "Non nota le polarità sospette di alcuni condensatori sulle rail di alimentazione nel JSON, in particolare sulla rail negativa e su un condensatore della rail positiva."
+      ],
+      "hallucinations": [
+        "Dice che resistor22.4 e resistor22.5 con condensatori formano la rete di feedback: resistor22.5 è effettivamente feedback uscita-pin 2, ma resistor22.4 è il ramo verso massa tramite condensatore; la descrizione è accettabile ma poco precisa.",
+        "Descrive i fusibili come non tranciati/non aperti sulla base del JSON: il JSON mostra solo la connessione, non lo stato elettrico reale del fusibile."
+      ],
+      "missed_important_points": [
+        "Mancata identificazione esplicita dell'assenza del terminale di ingresso audio nel JSON.",
+        "Mancata osservazione che resistor22.1 risulta collegato a GND, quindi l'ingresso potrebbe essere cortocircuitato o non ricevere segnale.",
+        "Mancata priorità alla verifica della continuità reale del nodo IN rispetto alla sorgente audio.",
+        "Mancata segnalazione delle polarità dei condensatori di alimentazione potenzialmente incoerenti nel JSON."
+      ],
+      "strengths": [
+        "Comprende correttamente il ruolo generale dell'LM1875 e dei pin principali.",
+        "Usa correttamente il datasheet per pinout, alimentazioni, ingresso, feedback e uscita.",
+        "Propone controlli pratici sensati: segnale su pin 1, tensioni su pin 3 e 5, feedback, speaker, fusibili e condensatori.",
+        "La causa principale proposta, segnale assente o errato al pin 1, è compatibile con il sintomo ed è tra le più probabili."
+      ],
+      "short_explanation": "La risposta è tecnicamente utile e ben strutturata, con buon uso del datasheet e controlli pratici validi. Tuttavia resta troppo generica e non sfrutta pienamente il JSON: il dato più forte è che l'ingresso audio non appare realmente presente e resistor22.1 è collegato a massa, possibile causa diretta di audio assente. Inoltre non nota polarità sospette dei condensatori di alimentazione. Diagnosi quindi parzialmente corretta, ma con priorità e lettura topologica non ottimali."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c13\\results_json\\c13_gpt-4.1-nano_20260605_161923.txt",
+      "model_under_test": "gpt-4.1-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 35.155,
+      "timestamp": "2026-06-05 16:31:42",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9364, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=1471, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10835)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 14,
+      "max_score": 21,
+      "normalized_score": 0.6666666666666666,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": false,
+      "expected_primary_causes": [
+        "Percorso di ingresso assente o errato: nel JSON il nodo di ingresso tramite resistor22.1 risulta collegato a GND, quindi il segnale audio può essere cortocircuitato a massa o non arrivare al pin 1",
+        "Verifica della rete di feedback reale tra pin 4 e pin 2: nel JSON è presente tramite resistor22.5, quindi non va descritta come assente",
+        "Possibile problema di alimentazione sui pin 5 e 3 o fusibili F1/F2 aperti, da verificare come causa generale compatibile con il datasheet",
+        "Possibile errata polarità/connessione dei condensatori di disaccoppiamento sulla rail negativa secondo i dati JSON, da controllare fisicamente"
+      ],
+      "model_primary_cause": "Mancanza o sbilanciamento delle tensioni di alimentazione ai pin 3 e 5 dell'IC",
+      "major_errors": [
+        "Non identifica come causa primaria il problema più evidente dal JSON: il percorso di ingresso appare collegato a massa e non a un vero terminale di ingresso audio.",
+        "Afferma che non ci sono dettagli specifici del collegamento tra pin 2 e uscita, ma nel JSON il feedback pin 4 -> resistor22.5 -> pin 2 è chiaramente presente.",
+        "Dice che le masse sono collegate correttamente senza notare che il nodo di ingresso risulta legato a GND nel JSON."
+      ],
+      "hallucinations": [
+        "Chiama l'integrato 'IC2' anche se nello schema/JSON è IC1/integrated_circuit11.1.",
+        "Suggerisce che la rete di feedback sia assente o non chiara, nonostante il JSON la mostri tramite resistor22.5.",
+        "Cita 'polarization_pcapacitor20.x', nome non presente nel JSON, probabilmente refuso."
+      ],
+      "missed_important_points": [
+        "Non sfrutta il JSON per riconoscere che resistor22.1_t1 è collegato a GND e che non è presente un terminale di ingresso audio distinto.",
+        "Non evidenzia il collegamento specifico dell'altoparlante tra pin 4 e massa, che è coerente con alimentazione duale.",
+        "Non discute in modo specifico i fusibili fuse8.1 e fuse8.2 sulle due rail di alimentazione.",
+        "Non segnala in modo specifico la possibile anomalia di polarità dei condensatori sulla rail negativa rappresentata nel JSON."
+      ],
+      "strengths": [
+        "Comprende correttamente che il circuito è un amplificatore audio con LM1875.",
+        "Usa correttamente il pinout principale del datasheet: pin 1 ingresso non invertente, pin 2 invertente/feedback, pin 3 V-, pin 4 uscita, pin 5 V+.",
+        "Propone controlli pratici sensati: tensioni di alimentazione, segnale al pin 1, feedback, disaccoppiamento e altoparlante.",
+        "Le cause generiche indicate sono tecnicamente compatibili con un LM1875 che non produce audio o distorce."
+      ],
+      "short_explanation": "La risposta è utile come checklist generale per un LM1875, ma non sfrutta bene il JSON. Il difetto più supportato dalla topologia è che il percorso di ingresso sembra finire a massa e non a un vero ingresso audio, mentre il modello lo mette solo come causa secondaria. Inoltre interpreta erroneamente la rete di feedback come poco chiara, quando nel JSON è presente tra uscita e pin 2 tramite resistor22.5. Diagnosi quindi parziale: tecnicamente plausibile, ma con priorità non ottimale e alcune letture errate del circuito."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c13\\results_json\\c13_gpt-4o-mini_20260605_161814.txt",
+      "model_under_test": "gpt-4o-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 27.197,
+      "timestamp": "2026-06-05 16:32:09",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9028, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1311, output_tokens_details=OutputTokensDetails(reasoning_tokens=439), total_tokens=10339)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 13,
+      "max_score": 21,
+      "normalized_score": 0.619,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Mancanza o caduta di una delle alimentazioni del LM1875, in particolare rail negativa su pin 3 o rail positiva su pin 5, eventualmente per fusibile aperto o collegamento di alimentazione difettoso",
+        "Problema nella rete di feedback tra uscita pin 4 e ingresso invertente pin 2, con conseguente guadagno errato, saturazione o forte distorsione",
+        "Segnale di ingresso assente o attenuato sul pin 1 attraverso la rete di accoppiamento",
+        "Altoparlante o collegamento di uscita difettoso, inclusa continuità tra pin 4 e speaker o speaker aperto/cortocircuitato",
+        "Condensatori di disaccoppiamento delle alimentazioni guasti o collegati male"
+      ],
+      "model_primary_cause": "Problemi di alimentazione, in particolare possibile mancanza dell'alimentazione negativa sul pin 3",
+      "major_errors": [
+        "Ha letto erroneamente il JSON affermando che il pin 3 del LM1875 è collegato a gnd9.9_t1; in realtà il pin 3 è collegato a fuse8.1_t1 e alla rail negativa con condensatori di disaccoppiamento verso massa.",
+        "Ha identificato in modo impreciso la rete di feedback: il collegamento di feedback dall'uscita al pin 2 passa tramite resistor22.5, mentre resistor22.4 è parte del ramo verso condensatore/massa.",
+        "Deduce che l'uscita audio 'sembra funzionare' solo perché è connessa allo speaker, ma la continuità topologica non dimostra il corretto funzionamento elettrico."
+      ],
+      "hallucinations": [
+        "Riferimento a 'collettore' in un circuito con LM1875, termine non pertinente.",
+        "Collegamento pin 3 a gnd9.9_t1 non supportato dal JSON."
+      ],
+      "missed_important_points": [
+        "Non cita esplicitamente i fusibili sulle due rail come elementi prioritari da controllare, pur essendo presenti nel JSON e molto rilevanti per il sintomo.",
+        "Non distingue chiaramente tra alimentazione duale +25 V/-25 V e massa dello speaker.",
+        "Non propone la misura della tensione DC sull'uscita pin 4, controllo molto utile indicato anche dal datasheet per saturazione o errore di alimentazione/feedback."
+      ],
+      "strengths": [
+        "Riconosce correttamente il LM1875 e le funzioni principali dei pin secondo il datasheet.",
+        "Individua correttamente che alimentazione, ingresso, feedback e speaker sono aree diagnostiche rilevanti.",
+        "Propone controlli pratici utili, come misurare pin 3 e pin 5, verificare segnale al pin 1, continuità dello speaker e condensatori di disaccoppiamento."
+      ],
+      "short_explanation": "La risposta è utile e individua come prima ipotesi un problema di alimentazione, coerente con LM1875 e sintomo. Tuttavia contiene una lettura errata importante del JSON sul pin 3, confonde parzialmente la rete di feedback e resta piuttosto generica. I controlli pratici sono validi, ma mancano enfasi su fusibili e misura DC dell'uscita."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c13\\results_json\\c13_gpt-5-mini_20260605_162054.txt",
+      "model_under_test": "gpt-5-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 45.836,
+      "timestamp": "2026-06-05 16:32:55",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10353, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1828, output_tokens_details=OutputTokensDetails(reasoning_tokens=852), total_tokens=12181)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 17,
+      "max_score": 21,
+      "normalized_score": 0.8095238095238095,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Mancanza o caduta di una delle alimentazioni dell'LM1875, in particolare tramite fusibili F1/F2 o cablaggio ai terminali +25 V e -25 V",
+        "Errore o guasto nel riferimento/alimentazione duale rispetto alla massa comune del circuito",
+        "Possibili condensatori di disaccoppiamento/alimentazione guasti o con polarità problematica, con conseguente distorsione o assenza di uscita",
+        "Problemi su altoparlante o percorso di uscita",
+        "Errore nella rete di ingresso o feedback"
+      ],
+      "model_primary_cause": "Mancanza o interruzione di una delle alimentazioni, fusibile aperto o cavo di alimentazione scollegato",
+      "major_errors": [
+        "La seconda causa sulla possibile mancanza di collegamento diretto tra rail e GND è formulata in modo un po' ambiguo: in uno schema duale ±25 V il pin 3 non deve essere semplicemente collegato a massa, ma alla rail negativa correttamente riferita alla massa comune.",
+        "Non evidenzia con sufficiente priorità la possibile criticità della polarità dei condensatori di disaccoppiamento sulle rail, pur menzionandola più avanti."
+      ],
+      "hallucinations": [
+        "Il riferimento a 'fusibili interni o protezioni aperte' è generico e non direttamente supportato dal JSON come componente specifico interno, anche se la protezione dell'IC è plausibile dal datasheet.",
+        "L'ipotesi di rail non riferita a massa è parzialmente dedotta dall'assenza di connessione esplicita nel grafo tra i simboli GND e i terminali di alimentazione, ma potrebbe dipendere dalla rappresentazione JSON dei simboli di massa e non da un difetto reale."
+      ],
+      "missed_important_points": [
+        "Avrebbe potuto distinguere meglio tra alimentazione duale ±25 V e alimentazione singola, evitando di suggerire genericamente che il negativo di alimentazione debba andare a massa.",
+        "Avrebbe potuto mettere più in evidenza il controllo della tensione DC sul pin 4, molto utile per capire se l'LM1875 è saturato per errore di alimentazione o feedback.",
+        "Avrebbe potuto segnalare più chiaramente che la rete R1/R2/C1 costituisce il feedback dal pin 4 al pin 2 e che un guasto lì può alterare fortemente il guadagno."
+      ],
+      "strengths": [
+        "Identifica correttamente il pinout dell'LM1875 secondo datasheet.",
+        "Legge correttamente dal JSON i collegamenti principali: pin 5 a V+, pin 3 a V-, pin 4 allo speaker, pin 1 ingresso e pin 2 feedback.",
+        "Dà priorità ragionevole al controllo delle alimentazioni e dei fusibili, coerente con il sintomo.",
+        "Propone controlli pratici utili: misura delle tensioni sui pin, continuità dei fusibili, verifica speaker, ingresso, feedback e condensatori.",
+        "Non inventa valori specifici non presenti nel JSON e mantiene una diagnosi generalmente coerente con datasheet e topologia."
+      ],
+      "short_explanation": "La risposta è tecnicamente utile e ben strutturata: comprende il circuito, usa correttamente il pinout LM1875 e propone controlli pratici sensati. La causa principale indicata, cioè perdita di una rail o fusibile aperto, è coerente con sintomo e datasheet. Tuttavia la priorità non è perfetta perché interpreta in modo un po' incerto il riferimento a massa in un circuito duale e non valorizza abbastanza la possibile criticità dei condensatori di alimentazione/polarità. Nel complesso è una diagnosi valida ma non impeccabile."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c13\\results_json\\c13_gpt-5-nano_20260605_162005.txt",
+      "model_under_test": "gpt-5-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 31.983,
+      "timestamp": "2026-06-05 16:33:27",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10575, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=1421, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=11996)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 15,
+      "max_score": 21,
+      "normalized_score": 0.7142857142857143,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Percorso di ingresso assente o errato: nel JSON il lato sinistro della resistenza di ingresso resistor22.1 è collegato a GND e non a un terminale IN, quindi il segnale audio potrebbe non arrivare al pin 1 dell'LM1875",
+        "Segnale al pin 1 mancante, cortocircuitato o fortemente attenuato dalla rete di ingresso/polarizzazione",
+        "Possibile problema di feedback tra uscita pin 4 e ingresso invertente pin 2, oppure di alimentazione duale/fusibili, ma meno evidenziato rispetto all'ingresso"
+      ],
+      "model_primary_cause": "Alimentazioni mancanti o mal disaccoppiate",
+      "major_errors": [
+        "Non identifica come causa principale la forte evidenza topologica del JSON: l'ingresso risulta collegato a massa tramite resistor22.1/gnd9.1 e non a un terminale di ingresso audio.",
+        "Attribuisce priorità massima all'alimentazione senza una evidenza specifica nel JSON o nei warning.",
+        "Descrive parzialmente in modo impreciso la rete di feedback includendo R22.6, che nello schema reale è la rete di Zobel/stabilità in serie con C7 verso massa, non il feedback verso il pin 2."
+      ],
+      "hallucinations": [
+        "Parla di 'decoupling tra V+ e V−', mentre nel circuito i condensatori di disaccoppiamento sono dalle rail a massa/riferimento, non direttamente tra le due rail.",
+        "Suggerisce genericamente che i condensatori polarizzati abbiano i positivi verso ingresso o V+, formulazione non sempre corretta per la rail negativa.",
+        "Menziona 'allarme protezione/corrente', non supportato direttamente dal datasheet fornito né dal JSON."
+      ],
+      "missed_important_points": [
+        "Mancata evidenziazione del fatto che nel JSON non compare un terminale di ingresso audio collegato alla rete di input.",
+        "Mancata distinzione tra rete di feedback R22.5/R22.4/C20.2 e rete di stabilità/Zobel R22.6/C20.7.",
+        "Non sfrutta l'anomalia più coerente con il sintomo: ingresso a massa o non pilotato, che porta a uscita muta o molto debole."
+      ],
+      "strengths": [
+        "Usa correttamente il pinout LM1875: pin 1 ingresso non invertente, pin 2 invertente, pin 3 V−, pin 4 uscita, pin 5 V+.",
+        "Propone controlli pratici utili: misure su pin 5 e pin 3, verifica segnale sul pin 1, controllo DC sul pin 4, verifica altoparlante e fusibili.",
+        "La diagnosi generale è tecnicamente plausibile per un LM1875 e coerente con il datasheet.",
+        "Evita di inventare valori numerici non presenti nel JSON/datasheet valutato."
+      ],
+      "short_explanation": "La risposta è utile e contiene buoni controlli diagnostici generali per un LM1875, ma non coglie la principale evidenza del JSON: il percorso di ingresso sembra collegato a massa e manca un vero terminale IN, causa molto coerente con assenza di audio. La priorità data all'alimentazione è plausibile ma non la più supportata dai dati. Ci sono inoltre alcune imprecisioni sulla rete di feedback e sui condensatori della rail negativa."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c13\\results_json\\c13_gpt-5.4-mini_20260605_162223.txt",
+      "model_under_test": "gpt-5.4-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 28.634,
+      "timestamp": "2026-06-05 16:33:55",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9730, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=1257, output_tokens_details=OutputTokensDetails(reasoning_tokens=463), total_tokens=10987)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9523809523809523,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Ingresso audio assente o collegato in modo errato: nel JSON il percorso di ingresso non mostra una sorgente audio effettiva e il nodo prima del condensatore di accoppiamento risulta riferito solo a massa tramite resistori",
+        "Possibile ingresso di fatto cortocircuitato o attenuato verso massa, coerente con audio assente o molto debole",
+        "Verifica secondaria di alimentazioni, fusibili, disaccoppiamenti e polarità dei condensatori sulle rail, perché errori su pin 3/pin 5 possono causare muting o distorsione",
+        "Verifica della rete di feedback pin 4-pin 2-massa/riferimento e del carico altoparlante"
+      ],
+      "model_primary_cause": "Ingresso audio assente o collegato male sul pin 1 dell'LM1875",
+      "major_errors": [],
+      "hallucinations": [
+        "La valutazione dei condensatori polarizzati di alimentazione come sospetti è plausibile dal JSON, ma viene presentata con una certa enfasi senza poter distinguere completamente tra errore reale del circuito e possibile anomalia di codifica/simbolo dei condensatori nel JSON"
+      ],
+      "missed_important_points": [
+        "Non evidenzia esplicitamente che, nel JSON, resistor22.1_t1 è collegato a GND, quindi il presunto ingresso attraverso la resistenza serie risulta di fatto verso massa e non verso un terminale IN",
+        "Non confronta direttamente la topologia con una possibile alimentazione duale ±25 V, anche se identifica correttamente i pin di alimentazione"
+      ],
+      "strengths": [
+        "Identifica correttamente il circuito come amplificatore LM1875 non invertente",
+        "Usa correttamente il pinout del datasheet: pin 1 ingresso non invertente, pin 2 invertente/feedback, pin 3 V-, pin 4 uscita, pin 5 V+",
+        "Legge bene il JSON e individua che non esiste un vero terminale di ingresso audio collegato alla rete del pin 1",
+        "La causa principale proposta è coerente con il sintomo di audio assente o molto debole",
+        "Propone controlli pratici utili: segnale sul pin 1, tensioni sui pin 3 e 5, DC in uscita, feedback, speaker e fusibili",
+        "Considera correttamente anche feedback, alimentazione e carico come cause secondarie compatibili"
+      ],
+      "short_explanation": "La risposta è tecnicamente solida: capisce il circuito LM1875, usa correttamente datasheet e JSON, e pone come causa principale l'assenza/errore del segnale d'ingresso, che è fortemente supportata dal JSON. Le verifiche proposte sono pratiche e pertinenti. L'unico limite è una certa enfasi sui condensatori di alimentazione sospetti, che è plausibile ma meno certa rispetto al problema evidente dell'ingresso."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c13\\results_json\\c13_gpt-5.4-nano_20260605_162127.txt",
+      "model_under_test": "gpt-5.4-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 46.048,
+      "timestamp": "2026-06-05 16:34:41",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10438, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=1928, output_tokens_details=OutputTokensDetails(reasoning_tokens=1034), total_tokens=12366)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 16,
+      "max_score": 21,
+      "normalized_score": 0.7619047619,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Condensatori elettrolitici di disaccoppiamento/polarizzazione con polarità sospetta o invertita, in particolare sui rail di alimentazione",
+        "Verifica delle alimentazioni duali su pin 5 e pin 3 dell'LM1875 e dei fusibili in serie",
+        "Possibile errore nella rete di ingresso/feedback o nel riferimento di massa, da verificare ma non necessariamente causa primaria"
+      ],
+      "model_primary_cause": "Masse GND separate/non comuni tra ingresso, feedback, alimentazione e ritorno altoparlante",
+      "major_errors": [
+        "Attribuisce priorità massima alla separazione dei simboli GND basandosi troppo letteralmente sul grafo JSON; in uno schema elettrico i simboli GND sono normalmente lo stesso nodo di riferimento, quindi questa è più probabilmente una limitazione/rappresentazione del JSON che un guasto reale.",
+        "Non evidenzia con sufficiente decisione la polarità anomala di alcuni condensatori di alimentazione, che è una causa più concreta e supportata dallo schema/JSON.",
+        "La diagnosi principale non è la più probabile rispetto alle evidenze circuitali."
+      ],
+      "hallucinations": [
+        "L'affermazione che le masse siano realmente separate è non dimostrata: il JSON le rappresenta come componenti distinti, ma lo schema usa simboli GND convenzionali che normalmente indicano un nodo comune."
+      ],
+      "missed_important_points": [
+        "Avrebbe dovuto mettere al primo posto il controllo della polarità degli elettrolitici sui rail di alimentazione, specialmente quelli collegati al rail negativo e quelli con terminali apparentemente invertiti rispetto al potenziale atteso.",
+        "Avrebbe potuto distinguere meglio tra un problema reale del circuito e un possibile artefatto della netlist JSON per i simboli di massa.",
+        "Non ha indicato chiaramente che una polarità errata dei condensatori di disaccoppiamento può causare alimentazione instabile, forte distorsione, attenuazione o danneggiamento del componente."
+      ],
+      "strengths": [
+        "Comprende correttamente la funzione generale del circuito con LM1875, ingresso, feedback, uscita verso altoparlante e alimentazione duale.",
+        "Usa correttamente il pinout del datasheet: pin 1 ingresso non invertente, pin 2 feedback/invertente, pin 3 V-, pin 4 uscita, pin 5 V+.",
+        "Traccia correttamente dal JSON il collegamento del feedback da uscita a pin 2 tramite la resistenza.",
+        "Propone controlli pratici utili: misure su pin 3 e pin 5, continuità fusibili, controllo della tensione DC in uscita, verifica rete feedback e condensatori.",
+        "Considera correttamente anche alimentazione sotto carico e fusibili come possibili cause del sintomo."
+      ],
+      "short_explanation": "La risposta è tecnicamente utile e ben strutturata, ma la causa messa al primo posto, cioè le masse separate, è probabilmente un'interpretazione troppo letterale del JSON e non una reale anomalia dello schema, dove i simboli GND sono normalmente comuni. Il modello cita la polarità dei condensatori, che è un punto importante e plausibile, ma la mette solo come seconda causa e resta troppo prudente. Buoni invece pinout, comprensione generale e controlli diagnostici."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c13\\results_json\\c13_gpt-5.4_20260605_162327.txt",
+      "model_under_test": "gpt-5.4",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 29.796,
+      "timestamp": "2026-06-05 16:35:11",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10607, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=1333, output_tokens_details=OutputTokensDetails(reasoning_tokens=655), total_tokens=11940)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 19,
+      "max_score": 21,
+      "normalized_score": 0.9047619047619048,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "assenza o errato collegamento del segnale di ingresso al pin 1 dell'LM1875 secondo il JSON",
+        "possibile problema sulle alimentazioni duali del LM1875, da verificare su pin 5 e pin 3",
+        "possibile errore o incoerenza di polarità/collegamento dei condensatori di alimentazione secondo il JSON"
+      ],
+      "model_primary_cause": "Il segnale audio di ingresso non arriva all'amplificatore: il nodo del condensatore di ingresso risulta collegato solo a resistenze verso massa e non a una sorgente audio.",
+      "major_errors": [
+        "Attribuisce una forte anomalia alle polarità dei condensatori di alimentazione basandosi sul JSON, ma parte di questa osservazione potrebbe dipendere dalla classificazione dei condensatori come polarizzati anche quando nello schema reale alcuni sono di disaccoppiamento non polarizzati."
+      ],
+      "hallucinations": [],
+      "missed_important_points": [
+        "Non evidenzia abbastanza che alcune anomalie sulle polarità dei condensatori potrebbero essere incerte perché dipendono dalla qualità dell'estrazione del JSON e non necessariamente da un difetto circuitale reale."
+      ],
+      "strengths": [
+        "Identifica correttamente pinout e funzioni principali dell'LM1875 usando il datasheet.",
+        "Analizza in modo specifico i nodi del JSON e riconosce che l'ingresso audio non risulta collegato a un terminale di sorgente.",
+        "Distingue bene ingresso, feedback, uscita, rete Zobel e alimentazioni.",
+        "Propone controlli pratici utili: verifica segnale sul pin 1, tensioni sui pin 5 e 3, DC in uscita, continuità altoparlante e rete di feedback.",
+        "Ordina le cause in modo ragionevole, dando priorità all'evidenza più forte nel JSON."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida e ben ancorata al JSON e al datasheet. La diagnosi principale, cioè ingresso audio non collegato al pin 1, è coerente con il grafo fornito e spiega bene il sintomo. Buoni anche i controlli proposti. L'unico limite è che l'analisi delle polarità dei condensatori di alimentazione viene presentata con molta sicurezza, mentre può essere influenzata da possibili errori di classificazione del JSON rispetto allo schema reale."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c13\\results_json_img\\c13_gpt-4.1-mini_20260605_162435.txt",
+      "model_under_test": "gpt-4.1-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 27.646,
+      "timestamp": "2026-06-05 16:35:39",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9576, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1294, output_tokens_details=OutputTokensDetails(reasoning_tokens=510), total_tokens=10870)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 17,
+      "max_score": 21,
+      "normalized_score": 0.8095238095238095,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Mancanza o anomalia di una delle due alimentazioni sull'LM1875, in particolare pin 5 V+ o pin 3 V-, anche per fusibile aperto",
+        "Segnale di ingresso assente o bloccato dalla rete di ingresso verso pin 1",
+        "Errore o guasto nella rete di feedback tra uscita pin 4, pin 2 e riferimento",
+        "Altoparlante o collegamento di uscita interrotto/cortocircuitato",
+        "Disaccoppiamento alimentazioni insufficiente o condensatori guasti"
+      ],
+      "model_primary_cause": "Fusibili F1 o F2 aperti o alimentazioni mancanti su pin 5 o pin 3",
+      "major_errors": [
+        "Descrive l'uscita come se pilotasse l'altoparlante tramite R6 e C7, mentre nello schema l'altoparlante è collegato direttamente al pin 4 e R6-C7 è una rete Zobel verso massa.",
+        "Suggerisce che R6 aperta possa far sembrare l'audio assente; in questo schema R6 non è in serie all'altoparlante, quindi un'apertura di R6 non interromperebbe direttamente il percorso audio.",
+        "Include C2 e C3 nella rete di feedback in alcuni punti, ma sono condensatori di disaccoppiamento della rail negativa."
+      ],
+      "hallucinations": [
+        "Attribuzione impropria di C2/C3 alla rete di feedback.",
+        "Percorso uscita tramite R6/C7 non supportato dallo schema."
+      ],
+      "missed_important_points": [
+        "Non evidenzia esplicitamente che R6-C7 è una rete di stabilità/Zobel e non il percorso di potenza verso il diffusore.",
+        "Non propone la misura della tensione DC sul pin 4 come controllo prioritario per saturazione o rail mancante, pur essendo raccomandata dal datasheet."
+      ],
+      "strengths": [
+        "Identifica correttamente l'LM1875 e il pinout principale.",
+        "Dà alta priorità alla verifica delle alimentazioni sui pin 5 e 3 e dei fusibili.",
+        "Propone controlli pratici sensati su ingresso, feedback, altoparlante e disaccoppiamento.",
+        "Usa sia schema/JSON sia datasheet per collegare il sintomo alle possibili cause."
+      ],
+      "short_explanation": "La risposta è complessivamente utile e la causa primaria proposta, cioè alimentazione o fusibili mancanti, è coerente con datasheet e sintomo. I controlli pratici sono buoni. Tuttavia contiene alcune letture errate dello schema: R6-C7 è una rete Zobel verso massa, non il percorso in serie verso l'altoparlante, e C2/C3 non fanno parte della retroazione. Questi errori riducono la precisione ma non invalidano la diagnosi principale."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c13\\results_json_img\\c13_gpt-4.1-nano_20260605_162504.txt",
+      "model_under_test": "gpt-4.1-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 31.105,
+      "timestamp": "2026-06-05 16:36:10",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9226, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=1486, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10712)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 13,
+      "max_score": 21,
+      "normalized_score": 0.6190476190476191,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Possibile errore di polarità/collegamento dei condensatori di disaccoppiamento sulle alimentazioni, in particolare sulla rail negativa del pin 3 e potenzialmente su alcuni condensatori modellati come polarizzati",
+        "Problema su una delle alimentazioni del LM1875, inclusi fusibili F1/F2, rail +25 V o -25 V mancanti, o disaccoppiamento difettoso",
+        "Errore nella rete di ingresso o feedback, oppure altoparlante/uscita interrotti o in corto"
+      ],
+      "model_primary_cause": "Mancanza o errore di alimentazione, con controlli generici su pin 3 e pin 5 e condensatori di disaccoppiamento",
+      "major_errors": [
+        "Non identifica il sospetto specifico più evidente nello schema/JSON: la polarità anomala dei condensatori di disaccoppiamento sulla rail negativa, che può causare guasti, alimentazione disturbata, distorsione o assenza audio.",
+        "Afferma che dal JSON e dall'immagine non si evidenziano collegamenti o componenti sospetti, nonostante siano presenti collegamenti/polarità dei condensatori di alimentazione potenzialmente incompatibili.",
+        "Descrive il circuito come 'amplificatore audio a transistore', mentre è un amplificatore integrato monolitico LM1875."
+      ],
+      "hallucinations": [
+        "Riferimento generico a configurazione a singola tensione, non supportata da questo schema che mostra chiaramente alimentazione duale +25 V e -25 V.",
+        "Indicazione indistinta di tutti i condensatori come disaccoppiamento, includendo anche condensatori di ingresso, feedback e rete Zobel.",
+        "Uso di designazioni e raggruppamenti dei condensatori poco accurati e duplicati."
+      ],
+      "missed_important_points": [
+        "Non segnala che il pin 3 del LM1875 è V- e nello schema è collegato alla rail -25 V tramite F2/fuse8.1, con condensatori verso massa la cui polarità va verificata attentamente.",
+        "Non distingue tra condensatori di alimentazione, condensatore di ingresso C4, condensatore nel ramo di feedback C1 e rete di stabilità R6-C7.",
+        "Non propone di verificare specificamente i fusibili F1/F2 come possibile causa di mancanza di una rail.",
+        "Non collega esplicitamente una rail mancante o un condensatore di alimentazione invertito alla possibile saturazione DC dell'uscita del LM1875."
+      ],
+      "strengths": [
+        "Usa correttamente il pinout principale del LM1875: pin 1 ingresso non invertente, pin 2 feedback/invertente, pin 3 V-, pin 4 uscita, pin 5 V+.",
+        "Suggerisce controlli pratici utili: misure su pin 3 e 5, verifica del segnale sul pin 1, controllo feedback, uscita e altoparlante.",
+        "Le cause generiche proposte sono tecnicamente plausibili per il sintomo di audio assente/debole/distorto.",
+        "La diagnosi dà correttamente priorità generale all'alimentazione, anche se non identifica il difetto specifico più sospetto."
+      ],
+      "short_explanation": "La risposta è utile come checklist generale per un LM1875 e usa correttamente il pinout, ma manca il punto diagnostico più forte ricavabile da schema/JSON: la polarità/connessione sospetta dei condensatori sulle rail di alimentazione, soprattutto sul ramo negativo. Inoltre dichiara che non ci sono anomalie evidenti e resta troppo generica. Buoni i controlli pratici, ma la priorità e la lettura dello schema non sono ottimali."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c13\\results_json_img\\c13_gpt-4o-mini_20260605_162403.txt",
+      "model_under_test": "gpt-4o-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 36.843,
+      "timestamp": "2026-06-05 16:36:47",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8981, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=1585, output_tokens_details=OutputTokensDetails(reasoning_tokens=615), total_tokens=10566)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 13,
+      "max_score": 21,
+      "normalized_score": 0.6190476190476191,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Percorso di ingresso problematico: nel JSON non c'è un vero terminale di ingresso audio e il nodo prima del condensatore di accoppiamento risulta riferito a massa tramite R5/R4, quindi il segnale potrebbe non arrivare al pin 1",
+        "Verifica delle alimentazioni duali su pin 5 e pin 3, inclusi fusibili F1/F2 e disaccoppiamenti",
+        "Possibile problema di polarità/connessione dei condensatori sulla rail negativa secondo il JSON, da confrontare con lo schema reale",
+        "Guasto o interruzione del percorso di uscita verso altoparlante",
+        "Errore nella rete di feedback tra uscita pin 4 e ingresso invertente pin 2"
+      ],
+      "model_primary_cause": "Alimentazione non corretta su pin 5 e pin 3",
+      "major_errors": [
+        "Non identifica chiaramente come causa principale il possibile problema del percorso di ingresso: nel JSON il segnale IN non è rappresentato come terminale di ingresso e R5 risulta collegata a massa.",
+        "Afferma che il pin 1 riceve il segnale in ingresso, pur riconoscendo poi che nel JSON manca una connessione chiara: la diagnosi resta ambigua.",
+        "Descrive la rete di feedback in modo impreciso includendo R3 e R4 tra i componenti da controllare come se facessero parte del feedback, mentre R3/R4 appartengono alla rete di ingresso/polarizzazione.",
+        "Non evidenzia la possibile anomalia di polarità dei condensatori associati alla rail negativa nel JSON."
+      ],
+      "hallucinations": [
+        "Attribuisce nomi e corrispondenze C5/C6/F1/F2 in modo non sempre coerente con gli identificativi del JSON, anche se compatibili con l'immagine.",
+        "Parla di dettagli sulle connessioni non completamente visibili nel JSON, ma il JSON fornisce proprio la topologia strutturata.",
+        "Definisce R5 e C4 come componenti attivi, mentre sono componenti passivi."
+      ],
+      "missed_important_points": [
+        "Non sfrutta a fondo il JSON per notare che l'ingresso audio effettivo non è presente come terminale separato e che il nodo di ingresso è sostanzialmente referenziato a massa.",
+        "Non propone una misura specifica del segnale AC direttamente sul pin 1 rispetto a massa come discriminante principale.",
+        "Non suggerisce di controllare la tensione DC sul pin 4 come indicatore di saturazione da alimentazione o feedback, pur essendo una verifica importante dal datasheet.",
+        "Non controlla esplicitamente la continuità dei fusibili in relazione ai pin 5 e 3."
+      ],
+      "strengths": [
+        "Riconosce correttamente il circuito come amplificatore audio con LM1875.",
+        "Usa correttamente il pinout principale del datasheet.",
+        "Propone controlli pratici utili su alimentazioni, ingresso, feedback e altoparlante.",
+        "Include tra le cause probabili l'assenza o errore del segnale di ingresso, che è coerente con il sintomo."
+      ],
+      "short_explanation": "La risposta è complessivamente utile ma generica. Capisce il circuito e propone controlli sensati, però non individua con sufficiente decisione la principale anomalia topologica emersa dal JSON, cioè il percorso di ingresso non chiaramente collegato a una sorgente audio e sostanzialmente riferito a massa. La priorità data all'alimentazione è plausibile ma non la più supportata dai dati. Sono presenti anche alcune imprecisioni sulla rete di feedback e una mancata osservazione della possibile polarità anomala dei condensatori sulla rail negativa."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c13\\results_json_img\\c13_gpt-5-mini_20260605_162707.txt",
+      "model_under_test": "gpt-5-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 24.825,
+      "timestamp": "2026-06-05 16:37:12",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10373, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=1157, output_tokens_details=OutputTokensDetails(reasoning_tokens=307), total_tokens=11530)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 19,
+      "max_score": 21,
+      "normalized_score": 0.9047619047619048,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "mancanza o anomalia di una delle due alimentazioni del LM1875, inclusi fusibili F1/F2 aperti",
+        "segnale di ingresso assente o bloccato dal condensatore di accoppiamento C4 o dalla rete di polarizzazione",
+        "rete di feedback tra uscita pin 4 e ingresso invertente pin 2 interrotta o fuori valore",
+        "altoparlante o collegamento di uscita aperto/cortocircuitato",
+        "condensatori di disaccoppiamento/alimentazione guasti o montati con polarità errata"
+      ],
+      "model_primary_cause": "Mancanza o anomalia di una rail di alimentazione, ad esempio fusibile aperto su +25 V o -25 V.",
+      "major_errors": [],
+      "hallucinations": [
+        "Cita un possibile fusibile dell'uscita aperto, ma nello schema/JSON non risulta un fusibile in serie all'altoparlante o all'uscita.",
+        "Accenna al dissipatore non a massa come possibile problema senza supporto specifico nel datasheet fornito o nel JSON.",
+        "Include R3/R4 tra le reti di feedback, mentre nello schema sono parte della polarizzazione/ingresso, non del feedback principale."
+      ],
+      "missed_important_points": [
+        "Avrebbe potuto distinguere più chiaramente la rete di feedback reale R1-R2-C1 dalla rete di polarizzazione ingresso R3/R4.",
+        "Avrebbe potuto evidenziare che, con alimentazione duale, il pin 4 deve stare vicino a 0 V DC a riposo e una DC elevata sull'altoparlante è un segnale critico da non ignorare."
+      ],
+      "strengths": [
+        "Comprende correttamente il circuito come amplificatore LM1875 con alimentazione duale, ingresso accoppiato, feedback, rete Zobel e altoparlante verso massa.",
+        "Usa correttamente il pinout del LM1875 dal datasheet: pin 1 ingresso non invertente, pin 2 invertente, pin 3 V-, pin 4 uscita, pin 5 V+.",
+        "Integra bene JSON e immagine, identificando fusibili, condensatori di disaccoppiamento, rete di ingresso, uscita e altoparlante.",
+        "La priorità data alla verifica delle alimentazioni e dei fusibili è tecnicamente molto sensata per il sintomo descritto.",
+        "Propone controlli pratici utili: misure DC sui pin di alimentazione, DC sul pin 4, verifica segnale al pin 1, continuità speaker, controllo feedback e condensatori."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida e ben allineata a JSON, immagine e datasheet. La diagnosi principale, cioè una rail di alimentazione mancante o un fusibile aperto, è coerente con il sintomo e con lo schema. Anche le cause alternative e i controlli proposti sono utili. Restano piccoli difetti: qualche confusione tra rete di feedback e rete di ingresso, un riferimento non supportato a un fusibile d'uscita e qualche ipotesi generica non direttamente documentata."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c13\\results_json_img\\c13_gpt-5-nano_20260605_162549.txt",
+      "model_under_test": "gpt-5-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 40.838,
+      "timestamp": "2026-06-05 16:37:52",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10909, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=1832, output_tokens_details=OutputTokensDetails(reasoning_tokens=848), total_tokens=12741)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 15,
+      "max_score": 21,
+      "normalized_score": 0.7142857142857143,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Condensatori elettrolitici di disaccoppiamento sul rail negativo collegati con polarità sospetta/errata: nel JSON e nell'immagine i condensatori sulla linea V- risultano con terminale positivo verso la rail negativa e negativo a massa, condizione potenzialmente grave",
+        "Alimentazione negativa o positiva mancante/errata, inclusi fusibili F1/F2 o collegamenti alle rail",
+        "Problemi nella rete di feedback tra uscita pin 4 e ingresso invertente pin 2",
+        "Segnale d'ingresso assente o rete di ingresso/polarizzazione errata",
+        "Altoparlante o collegamento d'uscita guasto"
+      ],
+      "model_primary_cause": "Alimentazioni mancanti o non corrette sui pin 5 e 3, con controllo di fusibili e disaccoppiamento",
+      "major_errors": [
+        "Non identifica la criticità più evidente nello schema: la polarità dei condensatori elettrolitici sulla rail negativa appare invertita rispetto a una corretta alimentazione duale.",
+        "Afferma che non ci sono collegamenti chiaramente errati o discrepanze evidenti, mentre l'immagine e il JSON mostrano una polarità sospetta dei condensatori collegati a V-.",
+        "Descrive in modo impreciso alcuni nodi, ad esempio suggerendo che R2/C1 siano legati a un riferimento su pin 3/50%, mentre pin 3 è V- dell'LM1875."
+      ],
+      "hallucinations": [
+        "Il riferimento a un possibile 'firmware mancante' è fuori contesto per un amplificatore analogico LM1875.",
+        "La descrizione dell'altoparlante come collegato tramite la rete Zobel è imprecisa: lo speaker è collegato direttamente tra uscita e massa, mentre R6-C7 sono una rete di stabilità in parallelo verso massa.",
+        "Alcune denominazioni dei fusibili e dei condensatori sono presentate con sicurezza ma non sempre coincidono chiaramente con la numerazione del JSON."
+      ],
+      "missed_important_points": [
+        "Mancato controllo esplicito della polarità degli elettrolitici sul rail negativo, in particolare C3/C5 equivalenti nel JSON e nell'immagine.",
+        "Mancata indicazione che un condensatore elettrolitico invertito sulla rail negativa può caricare male l'alimentazione, scaldarsi, andare in perdita/corto e causare audio assente o molto distorto.",
+        "Non propone di verificare la polarità fisica dei condensatori rispetto a massa e a -25 V."
+      ],
+      "strengths": [
+        "Comprende correttamente la topologia generale dell'amplificatore LM1875 con alimentazione duale, ingresso non invertente, feedback e uscita su altoparlante.",
+        "Usa correttamente il pinout principale del datasheet: pin 1 ingresso non invertente, pin 2 invertente, pin 3 V-, pin 4 uscita, pin 5 V+.",
+        "Propone controlli pratici utili: misure delle tensioni sui pin, verifica fusibili, segnale sul pin 1, rete di feedback, tensione DC in uscita e altoparlante.",
+        "Le cause generiche indicate sono tecnicamente plausibili per il sintomo."
+      ],
+      "short_explanation": "La risposta è utile e ben strutturata come checklist generale per un LM1875, ma manca la diagnosi specifica più supportata dallo schema: la polarità sospetta/errata degli elettrolitici sul rail negativo. Inoltre dichiara che non ci sono errori evidenti, cosa non coerente con JSON e immagine. Rimane comunque parzialmente corretta perché include controlli su alimentazione, disaccoppiamento, feedback, ingresso e carico."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c13\\results_json_img\\c13_gpt-5.4-mini_20260605_162845.txt",
+      "model_under_test": "gpt-5.4-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 28.402,
+      "timestamp": "2026-06-05 16:38:21",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9510, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=1341, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10851)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 19,
+      "max_score": 21,
+      "normalized_score": 0.9047619047619048,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Mancanza o caduta di una delle due alimentazioni del LM1875 sui pin 5 o 3, inclusi fusibili o collegamenti di alimentazione interrotti",
+        "Uscita saturata o polarizzazione anomala per errore di alimentazione o rete di feedback",
+        "Segnale assente o attenuato all'ingresso pin 1, oppure problema nel percorso di accoppiamento ingresso",
+        "Rete di feedback tra uscita pin 4 e ingresso invertente pin 2 aperta o errata",
+        "Altoparlante o collegamento di uscita interrotto"
+      ],
+      "model_primary_cause": "Mancanza di una delle due alimentazioni del LM1875 sui pin 5 o 3, fusibile o collegamento F1/F2 interrotto",
+      "major_errors": [],
+      "hallucinations": [
+        "Attribuisce sigle e valori come R1/R2/R3, C1/C4/C7 e K1 dall'immagine, non direttamente dal JSON; tuttavia sono coerenti con lo schema fornito.",
+        "La corrispondenza tra F1/F2 e i fuse del JSON non è esplicitamente disponibile nel JSON, ma è coerente con l'immagine."
+      ],
+      "missed_important_points": [
+        "Non evidenzia eventuali ambiguità del JSON sulla polarità dei condensatori di disaccoppiamento, anche se l'immagine chiarisce meglio lo schema.",
+        "Non indica valori attesi numerici approssimativi per le misure DC, ad esempio circa +25 V sul pin 5, -25 V sul pin 3 e circa 0 V DC sull'uscita in condizioni sane."
+      ],
+      "strengths": [
+        "Comprende correttamente la configurazione generale dell'LM1875 a doppia alimentazione.",
+        "Usa correttamente il pinout del datasheet: pin 1 ingresso non invertente, pin 2 feedback, pin 3 V-, pin 4 uscita, pin 5 V+.",
+        "Identifica in modo appropriato alimentazioni e fusibili come prima causa da verificare per assenza di audio o audio debole/distorto.",
+        "Propone controlli pratici validi: misure sui pin di alimentazione, tensione DC di uscita, verifica del segnale sul pin 1, feedback e altoparlante.",
+        "Le cause alternative sono tecnicamente coerenti con circuito, datasheet e sintomo."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida e ben aderente a schema, JSON e datasheet. La diagnosi principale, cioè una rail di alimentazione mancante o interrotta tramite fusibili/collegamenti, è molto plausibile per un LM1875 che si accende ma non produce audio o distorce fortemente. Buoni anche i controlli su uscita, ingresso, feedback e altoparlante. Piccoli limiti: priorità non dimostrabile con certezza dal solo guasto descritto e qualche riferimento a sigle/valori derivato dall'immagine più che dal JSON, ma senza errori sostanziali."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c13\\results_json_img\\c13_gpt-5.4-nano_20260605_162742.txt",
+      "model_under_test": "gpt-5.4-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 29.392,
+      "timestamp": "2026-06-05 16:38:50",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10318, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=1523, output_tokens_details=OutputTokensDetails(reasoning_tokens=388), total_tokens=11841)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 13,
+      "max_score": 21,
+      "normalized_score": 0.619,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "mancanza di una rail di alimentazione del LM1875, in particolare V- su pin 3 o V+ su pin 5, per fusibile aperto o collegamento interrotto",
+        "problema nella rete di feedback tra uscita pin 4 e ingresso invertente pin 2, inclusi R1/R2/C1 o saldature aperte",
+        "problema nel percorso di ingresso verso pin 1, inclusi condensatore di accoppiamento o resistenze di polarizzazione",
+        "altoparlante o collegamento di uscita aperto/cortocircuitato",
+        "condensatori di disaccoppiamento delle alimentazioni guasti o con polarità errata"
+      ],
+      "model_primary_cause": "Assenza o guasto della rail negativa V- su pin 3, eventualmente per fusibile aperto o problema sui condensatori di alimentazione",
+      "major_errors": [
+        "Afferma che il JSON non coincide in modo affidabile con l'immagine e che molti componenti dell'ingresso non compaiono, ma la topologia JSON contiene sostanzialmente ingresso, feedback, alimentazioni, uscita e rete Zobel; mancano solo etichette/valori, non necessariamente i componenti.",
+        "Interpreta erroneamente il pin 3 nell'immagine come parte della rete di feedback/ingresso invertente in un passaggio, mentre da datasheet e schema il pin 3 è V-; la linea di feedback attraversa visivamente la zona ma non deve essere confusa con il pin 3.",
+        "Dice che nel JSON il pin 3 collegato a fusibile e condensatori di alimentazione è anomalo, mentre per LM1875 il pin 3 è proprio l'alimentazione negativa ed è corretto che sia connesso alla rail negativa e al relativo disaccoppiamento."
+      ],
+      "hallucinations": [
+        "Dichiarazione di forte incoerenza JSON-immagine non supportata dalla topologia fornita.",
+        "Indicazione che nel JSON manchino chiaramente C4, R4, R3, R5, R1, R6/C7: i nomi non sono presenti, ma i componenti equivalenti e le connessioni sono rappresentati nel JSON.",
+        "Riferimento ambiguo ai pin 2/3 come se entrambi fossero associati alla rete invertente/feedback in alcuni punti."
+      ],
+      "missed_important_points": [
+        "Non riconosce che la connessione del pin 3 alla rail negativa nel JSON è un'informazione forte e corretta, non un'anomalia.",
+        "Non sfrutta pienamente il JSON per mappare i componenti equivalenti: resistor22.5 come feedback dall'uscita al pin 2, resistor22.4 e capacitor20.2 come ramo verso massa, resistor22.6/capacitor20.7 come rete Zobel.",
+        "Non evidenzia con chiarezza che una misura DC sul pin 4 dovrebbe essere circa 0 V in alimentazione duale; una DC elevata verso una rail indicherebbe saturazione/guasto di alimentazione o feedback."
+      ],
+      "strengths": [
+        "Usa correttamente il pinout principale del LM1875 nella maggior parte della risposta: pin 1 ingresso non invertente, pin 2 invertente, pin 3 V-, pin 4 uscita, pin 5 V+.",
+        "La causa primaria proposta, una rail di alimentazione mancante o fusibile aperto, è tecnicamente coerente con il sintomo di audio assente/debole/distorto.",
+        "Include controlli pratici utili: misurare V+ e V- sui pin dell'integrato, verificare fusibili, controllare uscita, altoparlante, rete di feedback e condensatori.",
+        "Considera correttamente anche ingresso, feedback, carico e disaccoppiamento come possibili cause secondarie."
+      ],
+      "short_explanation": "La risposta è utile e la diagnosi principale è plausibile: con un LM1875 alimentato a rail duale, la mancanza di V- o V+ per fusibile aperto può dare audio assente o molto distorto. Tuttavia contiene errori rilevanti nell'uso combinato di JSON e immagine: considera anomala la connessione del pin 3 all'alimentazione, che invece è corretta, e dichiara una non corrispondenza JSON-immagine molto più forte del reale. I controlli pratici sono buoni, ma la lettura topologica non è sempre affidabile."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c13\\results_json_img\\c13_gpt-5.4_20260605_163005.txt",
+      "model_under_test": "gpt-5.4",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 28.992,
+      "timestamp": "2026-06-05 16:39:19",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=11099, input_tokens_details=InputTokensDetails(cached_tokens=5888), output_tokens=1327, output_tokens_details=OutputTokensDetails(reasoning_tokens=462), total_tokens=12426)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 19,
+      "max_score": 21,
+      "normalized_score": 0.9047619047619048,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Condensatori elettrolitici del ramo negativo collegati con polarità sospetta/errata rispetto a una rail -25 V, con positivo verso la rail negativa e negativo verso massa",
+        "Assenza o anomalia di una delle due alimentazioni del LM1875, inclusi fusibili F1/F2 aperti",
+        "Problemi nella rete di ingresso verso pin 1, nella rete di feedback pin 4-pin 2 o nel percorso altoparlante"
+      ],
+      "model_primary_cause": "Manca una delle due alimentazioni ±25 V al LM1875 oppure un fusibile è aperto",
+      "major_errors": [
+        "La causa più evidenziata dallo schema/JSON, cioè la polarità sospetta dei condensatori sul ramo negativo, viene messa al secondo posto invece che come ipotesi primaria più specifica."
+      ],
+      "hallucinations": [
+        "Attribuisce al JSON alcuni nomi funzionali e label dello schema come R1, R2, R5, C4, C5/C6 che nel JSON non sono esplicitamente presenti come designatori, anche se sono coerenti con l'immagine.",
+        "Afferma che l'ingresso esterno entra tramite R5 dal JSON, ma nel JSON non è presente un vero terminale IN; questa informazione è ricavabile dall'immagine."
+      ],
+      "missed_important_points": [
+        "Non sottolinea abbastanza che la polarità errata degli elettrolitici sul ramo negativo è l'anomalia topologica più specifica e direttamente osservabile nello schema fornito.",
+        "Non distingue chiaramente tra condensatori elettrolitici e condensatori eventualmente non polarizzati nei simboli/valori, soprattutto nel ramo di disaccoppiamento."
+      ],
+      "strengths": [
+        "Comprende correttamente la funzione generale del circuito come amplificatore LM1875 a doppia alimentazione.",
+        "Usa correttamente il pinout del datasheet: pin 1 ingresso non invertente, pin 2 invertente/feedback, pin 3 V-, pin 4 uscita, pin 5 V+.",
+        "Ricostruisce bene alimentazione, ingresso, feedback, uscita, altoparlante e rete di stabilità.",
+        "Individua correttamente la polarità sospetta dei condensatori sul ramo negativo come possibile causa concreta di distorsione, instabilità e guasto.",
+        "Propone controlli pratici utili: misure su pin 5 e pin 3, fusibili, segnale su pin 1, feedback, tensione DC in uscita, speaker e oscillazioni."
+      ],
+      "short_explanation": "La risposta è tecnicamente molto buona e coerente con datasheet, JSON e immagine. Identifica sia i controlli generali corretti sia l'anomalia più specifica dello schema, cioè la polarità sospetta degli elettrolitici sul ramo negativo. Il limite principale è la priorità: mette come prima causa la mancanza generica di una rail/fusibile aperto, mentre l'evidenza più forte nel circuito fornito è la polarità errata dei condensatori sulla rail negativa. Ci sono lievi imprecisioni nel presentare come provenienti dal JSON alcuni designatori/componenti visibili soprattutto nell'immagine, ma non compromettono la diagnosi."
+    }
+  }
+]

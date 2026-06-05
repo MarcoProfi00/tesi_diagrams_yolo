@@ -8,7 +8,8 @@ from collections import defaultdict
 # CONFIGURAZIONE
 # =========================
 
-CIRCUIT_NAME = "ic15"
+CIRCUIT_NAME = "c17"
+BATCH_NAME = "batch_v2"
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -17,7 +18,7 @@ CIRCUIT_DIR = (
     PROJECT_ROOT
     / "experiment_ai"
     / "circuiti_complessi"
-    / "batch_v1"
+    / BATCH_NAME
     / CIRCUIT_NAME
 )
 

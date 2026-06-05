@@ -32,12 +32,11 @@ Questo documento raccoglie gli esperimenti svolti con **YOLOv11** sul dataset de
 
 | Exp ID | Input     | Augmentation   | Epochs | Batch | Precision | Recall | F1-score | mAP@0.5 | mAP@0.5:0.95 | Best epoch | Note                 |
 | ------ | --------- | -------------- | -----: | ----: | --------: | -----: | -------: | ------: | -----------: | ---------: | -------------------- |
-| exp09  | RGB       | No             |    100 |     4 |    0.9062 | 0.8806 |   0.8932 |  0.9114 |       0.6472 |         70 | Baseline YOLOv11 RGB |
-| exp10  | Grayscale | No             |    100 |     4 |    0.9387 | 0.8571 |   0.8960 |  0.9300 |       0.6492 |         78 | GrayScale            |
-| exp11  | RGB       | aug_v1         |    100 |     4 |    0.9436 | 0.9004 |   0.9215 |  0.9513 |       0.6552 |         63 | Augmentation Lieve   |
-| exp12  | RGB       | aug_v2_compose |    100 |     4 |    0.9201 | 0.8389 |   0.8776 |  0.9146 |       0.6442 |         34 | Compose of diagrams  |
-| exp11b | RGB       | aug_v3 strong  |    100 |     4 |    0.9404 | 0.9049 |   0.9223 |  0.9476 |       0.6665 |         97 | Augmentation forte   |
-| exp11b1 | RGB       | aug_v3 strong_dataset_sistemato  |    100 |     4 |    0.9379 | 0.8967 |   0.9168 |  0.9559 |       0.6687 |         59 | Augmentation forte + dataset sistemato   |
+| exp09  | RGB       | No             |    100 |     4 |    0.9062 | 0.8806 |   0.8932 |  0.9115 |       0.6472 |         70 | Baseline YOLOv11 RGB |
+| exp10  | Grayscale | No             |    100 |     4 |    0.9387 | 0.8571 |   0.8961 |  0.9300 |       0.6492 |         78 | GrayScale            |
+| exp11  | RGB       | aug_v1         |    100 |     4 |    0.9436 | 0.9005 |   0.9215 |  0.9513 |       0.6553 |         63 | Augmentation Lieve   |
+| exp12  | RGB       | aug_v2_compose |    100 |     4 |    0.9202 | 0.8390 |   0.8777 |  0.9146 |       0.6443 |         34 | Compose of diagrams  |
+| exp11b | RGB       | aug_v3 strong  |    100 |     4 |    0.9379 | 0.8967 |   0.9168 |  0.9559 |       0.6687 |         59 | Augmentation forte, dataset sistemato |
 
 ---
 
@@ -398,10 +397,9 @@ Nel complesso, YOLOv11 grayscale sembra beneficiare della semplificazione del do
 
 ### Punti di forza
 
-- migliore **precision** tra gli esperimenti YOLOv11 completati finora;
-- migliore **F1-score** tra gli esperimenti YOLOv11 completati finora;
-- migliore **mAP@0.5** tra gli esperimenti YOLOv11 completati finora;
-- migliore **mAP@0.5:0.95** tra gli esperimenti YOLOv11 completati finora;
+- precision e mAP superiori rispetto alla baseline RGB `exp09`;
+- F1-score leggermente superiore rispetto alla baseline RGB `exp09`;
+- buona qualità media della localizzazione tra le configurazioni senza augmentation RGB;
 - training stabile;
 - buona qualità media della localizzazione;
 - forte separazione tra molte classi nella confusion matrix.
@@ -605,7 +603,7 @@ In altre parole, `aug_v1` non migliora solo una singola metrica, ma produce il m
 
 #### Interpretazione
 
-Nel complesso, le curve suggeriscono che `aug_v1` aiuti YOLOv11 a generalizzare meglio senza introdurre instabilità evidenti. Il modello migliora sia la capacità di trovare gli oggetti reali sia la qualità media della detection, ottenendo il miglior compromesso complessivo tra tutte le configurazioni testate finora.
+Nel complesso, le curve suggeriscono che `aug_v1` aiuti YOLOv11 a generalizzare meglio senza introdurre instabilità evidenti. Il modello migliora sia la capacità di trovare gli oggetti reali sia la qualità media della detection, ottenendo il miglior compromesso precision/recall tra le configurazioni testate.
 
 ---
 
@@ -613,11 +611,10 @@ Nel complesso, le curve suggeriscono che `aug_v1` aiuti YOLOv11 a generalizzare 
 
 #### Punti di forza
 
-- migliore **precision** tra gli esperimenti YOLOv11 completati finora;
-- migliore **recall** tra gli esperimenti YOLOv11 completati finora;
-- migliore **F1-score** tra gli esperimenti YOLOv11 completati finora;
-- migliore **mAP@0.5** tra gli esperimenti YOLOv11 completati finora;
-- migliore **mAP@0.5:0.95** tra gli esperimenti YOLOv11 completati finora;
+- migliore **precision** tra gli esperimenti YOLOv11 completati;
+- migliore **recall** tra gli esperimenti YOLOv11 completati;
+- migliore **F1-score** tra gli esperimenti YOLOv11 completati;
+- secondo miglior valore su **mAP@0.5** e **mAP@0.5:0.95**, dietro a `exp11b`;
 - training stabile anche con resume da checkpoint;
 - ottimo equilibrio complessivo tra sensibilità e precisione.
 
@@ -632,17 +629,17 @@ Nel complesso, le curve suggeriscono che `aug_v1` aiuti YOLOv11 a generalizzare 
 
 ### 5.1.9 Conclusione sull’esperimento YOLOv11 RGB + aug_v1
 
-Nel complesso, **YOLOv11 + aug_v1** è, allo stato attuale, la configurazione più forte dell’intero blocco YOLOv11.
+Nel complesso, **YOLOv11 + aug_v1** è la configurazione più forte del blocco YOLOv11 se si privilegia il compromesso tra precision e recall.
 
 Le evidenze principali sono:
 
 - migliore **precision**;
 - migliore **recall**;
 - migliore **F1-score**;
-- migliore **mAP@0.5**;
-- migliore **mAP@0.5:0.95**.
+- secondo miglior valore su **mAP@0.5**;
+- secondo miglior valore su **mAP@0.5:0.95**.
 
-Dal punto di vista operativo, questo esperimento suggerisce che una augmentation offline leggera e controllata sia estremamente efficace anche su YOLOv11. Al momento, `exp11` rappresenta quindi il nuovo riferimento interno per i successivi confronti con `aug_v2_compose` e `aug_v3 strong`.
+Dal punto di vista operativo, questo esperimento suggerisce che una augmentation offline leggera e controllata sia estremamente efficace anche su YOLOv11. `exp11` resta il riferimento quando l'obiettivo principale è il bilancio precision/recall, mentre `exp11b` diventa preferibile quando si privilegiano le metriche mAP.
 
 ## 5.2 exp12 — aug_v2_compose
 
@@ -910,6 +907,8 @@ L’obiettivo è verificare se una augmentation offline più aggressiva rispetto
 
 **exp11b_yolo11_rgb_aug_strong_v3**
 
+La cartella sorgente della run corretta è `exp11b1_yolo11_rgb_aug_strong_v3`, ma nel confronto finale l’esperimento viene nominato `exp11b`.
+
 #### Configurazione
 
 - **Modello:** YOLO11s
@@ -958,16 +957,16 @@ Rispetto a `aug_v1`, introduce una variabilità più marcata nel training set, c
 ### 5.3.3 Metriche finali
 
 > Le metriche sotto riportate fanno riferimento alla **validazione finale del best checkpoint** (`best.pt`).  
-> La **best epoch = 97** è stata ricavata dal log di training sulla metrica `mAP@0.5:0.95`.
+> La **best epoch = 59** è stata ricavata dal log di training sulla metrica `mAP@0.5:0.95`.
 
 | Metrica                  |      Valore |
 | ------------------------ | ----------: |
-| Precision                |      0.9404 |
-| Recall                   |      0.9049 |
-| F1-score                 |      0.9223 |
-| mAP@0.5                  |      0.9476 |
-| mAP@0.5:0.95             |      0.6665 |
-| Best epoch               |          97 |
+| Precision                |      0.9379 |
+| Recall                   |      0.8967 |
+| F1-score                 |      0.9168 |
+| mAP@0.5                  |      0.9559 |
+| mAP@0.5:0.95             |      0.6687 |
+| Best epoch               |          59 |
 | F1 massimo (dal grafico) |  circa 0.92 |
 | Confidence al F1 massimo | circa 0.467 |
 | Speed preprocess         | 10.3 ms/img |
@@ -976,17 +975,17 @@ Rispetto a `aug_v1`, introduce una variabilità più marcata nel training set, c
 
 ### Commento sintetico
 
-L’esperimento **YOLOv11 RGB + aug_v3 strong** è il nuovo risultato più forte sul piano del compromesso complessivo.
+L’esperimento **YOLOv11 RGB + aug_v3 strong** è il risultato più forte sul piano della qualità media di detection/localizzazione.
 
 Rispetto a `exp11`:
 
 - la **precision** cala leggermente;
-- la **recall** migliora;
-- il **F1-score** migliora, anche se di poco;
-- **mAP@0.5** resta leggermente inferiore a `exp11`;
+- la **recall** cala leggermente;
+- il **F1-score** cala leggermente;
+- **mAP@0.5** diventa la migliore tra tutti gli esperimenti YOLOv11 completati;
 - **mAP@0.5:0.95** diventa invece la migliore tra tutti gli esperimenti YOLOv11 completati.
 
-In sintesi, `aug_v3 strong` sembra produrre un modello leggermente più robusto e migliore sulla metrica più severa, pur senza dominare su tutte le metriche.
+In sintesi, `aug_v3 strong` produce il miglior risultato sulle metriche mAP, pur senza dominare su precision, recall e F1-score.
 
 ---
 
@@ -995,45 +994,45 @@ In sintesi, `aug_v3 strong` sembra produrre un modello leggermente più robusto 
 
 #### Andamento complessivo del training
 
-![Andamento training YOLOv11 RGB + aug_v3 strong](/outputs/yolo11/exp11b_yolo11_rgb_aug_strong_v3/results.png)
+![Andamento training YOLOv11 RGB + aug_v3 strong](/outputs/yolo11/exp11b1_yolo11_rgb_aug_strong_v3/results.png)
 
 **Figura X.** Andamento delle loss di training/validation e delle metriche principali durante il training di YOLOv11 con `aug_v3 strong`. Le loss di training diminuiscono regolarmente, mentre le metriche aggregate crescono rapidamente nelle prime epoche e si stabilizzano su un plateau molto alto nella seconda metà del training.
 
 #### Distribuzione labels e box
 
-![Distribuzione labels YOLOv11 RGB + aug_v3 strong](/outputs/yolo11/exp11b_yolo11_rgb_aug_strong_v3/labels.jpg)
+![Distribuzione labels YOLOv11 RGB + aug_v3 strong](/outputs/yolo11/exp11b1_yolo11_rgb_aug_strong_v3/labels.jpg)
 
 **Figura X.** Distribuzione delle classi e delle bounding box nel dataset con augmentation `aug_v3 strong`. Il dataset di training mantiene la stessa numerosità di `aug_v1`, ma mostra una maggiore variabilità nelle proporzioni delle bounding box, coerente con una pipeline di augmentation più aggressiva.
 
 #### Confusion matrix normalizzata
 
-![Confusion matrix YOLOv11 RGB + aug_v3 strong](/outputs/yolo11/exp11b_yolo11_rgb_aug_strong_v3/confusion_matrix_normalized.png)
+![Confusion matrix YOLOv11 RGB + aug_v3 strong](/outputs/yolo11/exp11b1_yolo11_rgb_aug_strong_v3/confusion_matrix_normalized.png)
 
 **Figura X.** Confusion matrix normalizzata del best checkpoint YOLOv11 con `aug_v3 strong`. La diagonale principale resta molto marcata e gli errori verso background risultano contenuti, segnale di una buona robustezza complessiva.
 
 #### Precision curve
 
-![Precision curve YOLOv11 RGB + aug_v3 strong](/outputs/yolo11/exp11b_yolo11_rgb_aug_strong_v3/BoxP_curve.png)
+![Precision curve YOLOv11 RGB + aug_v3 strong](/outputs/yolo11/exp11b1_yolo11_rgb_aug_strong_v3/BoxP_curve.png)
 
 **Figura X.** Curva Precision-Confidence. La precisione cresce progressivamente al crescere della confidence threshold e raggiunge valori prossimi a **1.00** alle soglie più alte.
 
 #### Recall curve
 
-![Recall curve YOLOv11 RGB + aug_v3 strong](/outputs/yolo11/exp11b_yolo11_rgb_aug_strong_v3/BoxR_curve.png)
+![Recall curve YOLOv11 RGB + aug_v3 strong](/outputs/yolo11/exp11b1_yolo11_rgb_aug_strong_v3/BoxR_curve.png)
 
 **Figura X.** Curva Recall-Confidence. La recall parte da circa **0.96** a confidence quasi nulla e decresce progressivamente all’aumentare della soglia.
 
 #### F1 curve
 
-![F1 curve YOLOv11 RGB + aug_v3 strong](/outputs/yolo11/exp11b_yolo11_rgb_aug_strong_v3/BoxF1_curve.png)
+![F1 curve YOLOv11 RGB + aug_v3 strong](/outputs/yolo11/exp11b1_yolo11_rgb_aug_strong_v3/BoxF1_curve.png)
 
 **Figura X.** Curva F1-Confidence. Il miglior compromesso tra precision e recall si osserva a una confidence di circa **0.467**, con **F1 ≈ 0.92**.
 
 #### Precision-Recall curve
 
-![PR curve YOLOv11 RGB + aug_v3 strong](/outputs/yolo11/exp11b_yolo11_rgb_aug_strong_v3/BoxPR_curve.png)
+![PR curve YOLOv11 RGB + aug_v3 strong](/outputs/yolo11/exp11b1_yolo11_rgb_aug_strong_v3/BoxPR_curve.png)
 
-**Figura X.** Curva Precision-Recall del best checkpoint YOLOv11 con `aug_v3 strong`. Il valore globale riportato dal grafico è coerente con **mAP@0.5 ≈ 0.948**.
+**Figura X.** Curva Precision-Recall del best checkpoint YOLOv11 con `aug_v3 strong`. Il valore globale riportato dal grafico è coerente con **mAP@0.5 ≈ 0.956**.
 
 ---
 
@@ -1045,7 +1044,7 @@ In sintesi, `aug_v3 strong` sembra produrre un modello leggermente più robusto 
 - `val/box_loss` e `val/cls_loss` scendono rapidamente nelle prime epoche e poi si stabilizzano;
 - `val/dfl_loss` mostra il consueto minimo nelle epoche intermedie e una lieve risalita finale;
 - le metriche aggregate crescono molto rapidamente e restano su un plateau alto e stabile;
-- il best checkpoint arriva tardi, alla **epoch 97**, segnale che il modello continua a rifinire il risultato fino alla fine del training.
+- il best checkpoint arriva alla **epoch 59**, segnale che il massimo della metrica severa viene raggiunto nella parte centrale-avanzata del training.
 
 #### Interpretazione
 
@@ -1057,8 +1056,7 @@ Nel complesso, le curve suggeriscono che `aug_v3 strong` non introduca instabili
 
 #### Punti di forza
 
-- migliore **recall** tra gli esperimenti YOLOv11 completati;
-- migliore **F1-score** tra gli esperimenti YOLOv11 completati;
+- migliore **mAP@0.5** tra gli esperimenti YOLOv11 completati;
 - migliore **mAP@0.5:0.95** tra gli esperimenti YOLOv11 completati;
 - training stabile;
 - buona robustezza complessiva;
@@ -1066,8 +1064,7 @@ Nel complesso, le curve suggeriscono che `aug_v3 strong` non introduca instabili
 
 #### Criticità
 
-- **precision** leggermente inferiore a `exp11`;
-- **mAP@0.5** leggermente inferiore a `exp11`;
+- **precision**, **recall** e **F1-score** leggermente inferiori a `exp11`;
 - alcune classi rare, come **Antenna**, restano ancora instabili;
 - classi come **Terminal** e in parte **Switch** continuano a mostrare margini di miglioramento sulla localizzazione.
 
@@ -1075,16 +1072,14 @@ Nel complesso, le curve suggeriscono che `aug_v3 strong` non introduca instabili
 
 ### 5.3.10 Conclusione sull’esperimento YOLOv11 RGB + aug_v3 strong
 
-Nel complesso, **YOLOv11 + aug_v3 strong** è il nuovo candidato più interessante del blocco YOLOv11 se si considera il compromesso globale.
+Nel complesso, **YOLOv11 + aug_v3 strong** è il candidato più interessante del blocco YOLOv11 se si considera la qualità media della localizzazione.
 
 Le evidenze principali sono:
 
-- migliore **recall**;
-- migliore **F1-score**;
+- migliore **mAP@0.5**;
 - migliore **mAP@0.5:0.95**;
-- risultato molto vicino a `exp11` anche su **precision** e **mAP@0.5**.
+- risultato molto vicino a `exp11` anche su **precision**, **recall** e **F1-score**.
 
-Dal punto di vista operativo, la conclusione è che `exp11b` e `exp11` siano le due configurazioni migliori, ma con una leggera preferenza per `exp11b` se si vuole privilegiare la metrica più severa e il bilancio complessivo tra detection e localizzazione.
+Dal punto di vista operativo, la conclusione è che `exp11b` e `exp11` siano le due configurazioni migliori: `exp11` se si privilegia il compromesso precision/recall, `exp11b` se si privilegiano le metriche mAP e quindi la qualità media della detection/localizzazione.
 
 ---
-
