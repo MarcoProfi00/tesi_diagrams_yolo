@@ -10,17 +10,28 @@ Strategie principali:
     - one_terminal_by_orientation
     - two_terminal_by_connection_axis
     - terminal_auto_one_or_two
+    - integrated_circuit_wire_contacts
+    - opamp_by_orientation_and_optional_supply
+    - three_terminal_by_side_pattern
 
 Casi speciali:
     - Capacitor / Polarized_Capacitor
     - Switch
     - Terminal
     - Led
+    - Integrated_Circuit con OCR marking/pin
+    - Operational_Amplifier con pin ausiliari opzionali
 
     Per i componenti a 3 terminali non basta dire su quale lato cade il terminale
     ma serve anche capire dove si trova realmente lungo quel lato.
     Si usa una localizzazione "side peak": 
     prima stimiamo i lati attivi, poi cerchiamo il picco di connessione lungo il lato.
+
+Output:
+    Per ogni immagine produce un JSON con:
+      - components arricchiti con terminali stimati;
+      - terminals globale ricostruito dai componenti;
+      - eventuali campi OCR per gli Integrated_Circuit.
 """
 
 from concurrent.futures import ThreadPoolExecutor
@@ -42,7 +53,12 @@ from estimate_terminals.ocr_integrated_circuit_pins import (
     normalize_seven_segment_display_terminals,
 )
 
-#PATH / INPUT-OUTPUT
+# =========================================================
+# PATH / INPUT-OUTPUT
+# =========================================================
+# Lo script lavora sempre dentro una sottocartella di outputs.
+# PIPELINE_DATASET puo' essere sovrascritto da variabile ambiente quando si
+# vuole eseguire lo stesso codice su batch diversi.
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PIPELINE_DATASET = os.environ.get(
     "PIPELINE_DATASET",
@@ -62,6 +78,7 @@ CLASS_TERMINALS_PATH = PROJECT_ROOT / "metadata" / "class_terminals_v1.yaml"
 
 
 def _env_flag(name: str, default: bool = False) -> bool:
+    """Legge una variabile ambiente booleana in modo tollerante."""
     value = str(os.environ.get(name, "")).strip().lower()
     if value in {"1", "true", "yes", "on"}:
         return True
@@ -79,10 +96,12 @@ PIPELINE_IMAGE_IDS = {
 
 
 def _elapsed_ms(start_time: float) -> float:
+    """Converte un timestamp perf_counter in millisecondi arrotondati."""
     return round((time.perf_counter() - start_time) * 1000.0, 1)
 
 
 def _collect_ic_timing(file_timing: dict, component: dict) -> None:
+    """Accumula i tempi OCR di un singolo IC nel riepilogo del file corrente."""
     if not IC_OCR_TIMING_ENABLED or component.get("class_name") != "Integrated_Circuit":
         return
 
@@ -104,11 +123,16 @@ def _collect_ic_timing(file_timing: dict, component: dict) -> None:
 # Lo switch, ad esempio, puo' essere open/closed: questa informazione nasce
 # nel passo 03 perche' dipende dalla grafica del componente, non dal grafo.
 def apply_component_state_if_needed(component: dict, meta: dict, image_binary):
+    """Aggiunge lo stato logico dei componenti che lo prevedono nel metadata."""
     state_strategy = meta.get("state_strategy")
 
+    # Se la classe non dichiara una strategia di stato, lo step 03 non aggiunge
+    # alcun campo state: il componente viene lasciato invariato.
     if state_strategy is None:
         return
 
+    # Lo switch e' l'unico stato attualmente gestito: la stima deriva dalla
+    # continuita' grafica tra i due contatti interni del simbolo.
     if state_strategy == "switch_open_closed":
         state_info = estimate_switch_open_closed_state(image_binary, component)
         component["state"] = state_info["state"]
@@ -116,6 +140,8 @@ def apply_component_state_if_needed(component: dict, meta: dict, image_binary):
         component["state_debug"] = state_info["debug"]
         return
 
+    # Se in futuro il metadata introduce nuove strategie non ancora supportate,
+    # salviamo esplicitamente "unknown" invece di far fallire l'intero batch.
     component["state"] = "unknown"
     component["state_confidence"] = 0.0
     component["state_debug"] = {
@@ -143,10 +169,11 @@ def enrich_integrated_circuit_if_needed(component: dict, class_meta: dict, image
          - pin_label_text
 
     Regole importanti:
-      - NON crea nuovi terminali;
-      - NON cambia terminal_id;
-      - NON cambia name/display_name;
-      - aggiunge solo informazioni semantiche ai terminali già stimati.
+      - usa prima i terminali geometrici gia' stimati;
+      - mantiene terminal_id/name/display_name quando il terminale esiste gia';
+      - puo' recuperare terminali IC mancanti in casi controllati, quando
+        l'OCR dei pin fornisce evidenza sufficiente;
+      - aggiunge informazioni semantiche come pin_number e pin_label_text.
     """
 
     if component.get("class_name") != "Integrated_Circuit":
@@ -187,6 +214,7 @@ def enrich_integrated_circuit_if_needed(component: dict, class_meta: dict, image
 # OUTPUT JSON PUBBLICO
 # =========================================================
 def _round_bbox(bbox):
+    """Normalizza un bbox rendendolo leggibile nel JSON pubblico."""
     if not bbox:
         return None
     return [round(float(v), 2) for v in bbox]
@@ -225,6 +253,12 @@ def _extract_body_bbox(component: dict):
 
 
 def _public_terminal(term: dict, include_pin_fields: bool = False) -> dict:
+    """
+    Converte un terminale interno nel formato pubblico.
+
+    Il formato interno contiene anche debug e dati geometrici intermedi.
+    Qui teniamo solo i campi necessari agli step successivi e alla relazione.
+    """
     public = {
         "terminal_id": term.get("terminal_id"),
         "instance_id": term.get("instance_id"),
@@ -282,6 +316,7 @@ def _public_terminal(term: dict, include_pin_fields: bool = False) -> dict:
 
 
 def _public_integrated_circuit(component: dict) -> dict:
+    """Costruisce l'output pubblico specifico per gli Integrated_Circuit."""
     body_bbox = _extract_body_bbox(component)
 
     public = {
@@ -315,6 +350,7 @@ def _public_integrated_circuit(component: dict) -> dict:
 
 
 def _public_component(component: dict, class_meta: dict) -> dict:
+    """Costruisce il componente pubblico rimuovendo il debug non richiesto."""
     if component.get("class_name") == "Integrated_Circuit":
         return _public_integrated_circuit(component)
 
@@ -338,6 +374,7 @@ def _public_component(component: dict, class_meta: dict) -> dict:
 
 
 def _public_output_components_and_terminals(components: list, class_meta: dict):
+    """Produce le due viste pubbliche: componenti e lista globale terminali."""
     public_components = [
         _public_component(component, class_meta)
         for component in components
@@ -352,7 +389,9 @@ def _public_output_components_and_terminals(components: list, class_meta: dict):
 # =========================================================
 # MAIN
 # =========================================================
-# Run the entrypoint for this pipeline stage.
+# Entry point dello step 03.
+# Legge i JSON prodotti dallo step 02, stima i terminali, applica eventuale
+# OCR sugli IC e salva un nuovo JSON pronto per l'estrazione fili.
 def main() -> None:
     if not INPUT_DIR.exists():
         raise FileNotFoundError(f"Cartella input non trovata: {INPUT_DIR}")
@@ -368,11 +407,15 @@ def main() -> None:
         DEBUG_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
         IC_OCR_DEBUG_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Caricamento del metadata: qui sono definite strategie, terminali attesi,
+    # orientazioni e regole speciali per ogni classe YOLO.
     class_meta = io_load_class_metadata(CLASS_TERMINALS_PATH)
     json_files = sorted(INPUT_DIR.glob("*.json"))
     if not json_files:
         raise FileNotFoundError(f"Nessun file JSON trovato in: {INPUT_DIR}")
 
+    # Filtro opzionale per rilanciare lo step solo su alcune immagini, utile
+    # quando si corregge un singolo circuito senza rigenerare tutto il batch.
     if PIPELINE_IMAGE_IDS:
         json_files = [
             path
@@ -392,6 +435,8 @@ def main() -> None:
     if PIPELINE_IMAGE_IDS:
         print(f"Filtro immagini : {sorted(PIPELINE_IMAGE_IDS)}\n")
 
+    # Accumulatore opzionale dei tempi OCR: viene popolato solo se
+    # IC_OCR_TIMING=1, cosi' l'esecuzione normale resta pulita.
     batch_timing = {
         "ic_count": 0,
         "marking_ms": 0.0,
@@ -410,9 +455,13 @@ def main() -> None:
             "pin_side_ocr_ms": 0.0,
             "pin_side_fallback_ms": 0.0,
         }
+        # Ogni JSON di input contiene immagine originale e componenti gia'
+        # rilevati/istanziati dagli step 01 e 02.
         with open(json_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
+        # L'immagine BGR serve per OCR e debug; la binaria serve invece alle
+        # strategie geometriche di ricerca terminali/fili.
         image_path = Path(data["image_path"])
         image_bgr = cv2.imread(str(image_path))
         if image_bgr is None:
@@ -425,9 +474,17 @@ def main() -> None:
         ic_component_indexes = []
 
         for comp_idx, comp in enumerate(components):
+            # Lavoriamo su una copia del componente per non modificare
+            # direttamente il dizionario letto dal JSON di input.
             comp_copy = dict(comp)
+
+            # Stima geometrica dei terminali: questa e' la fase centrale dello
+            # step 03 e usa il dispatcher dentro estimate_terminals.
             terminals, estimated_orientation, connected_side, side_scores = estimate_terminals_for_component(comp_copy, class_meta, image_binary)
             comp_copy["terminals"] = terminals
+
+            # Le informazioni di orientazione/lato vengono salvate solo se la
+            # strategia le ha effettivamente prodotte.
             if estimated_orientation is not None:
                 comp_copy["estimated_orientation"] = estimated_orientation
             if connected_side is not None:
@@ -440,21 +497,14 @@ def main() -> None:
                 image_binary,
             )
 
-            # ---------------------------------------------------------
-            # OCR Integrated Circuit.
-            # ---------------------------------------------------------
-            # Qui siamo ancora nello script 03, quindi abbiamo:
-            # - immagine originale BGR, utile per OCR;
-            # - terminali geometrici già stimati;
-            # - body_bbox raffinato dentro connection_side_scores/terminal debug.
-            # Non creiamo terminali nuovi: aggiungiamo campi OCR ai componenti
-            # e ai terminali geometrici gia' stimati.
-            # ---------------------------------------------------------
             # OCR Integrated Circuit.
             #
-            # Per gli IC aggiungiamo, senza creare terminali nuovi:
+            # Per gli IC aggiungiamo:
             #   - ic_marking a livello componente;
             #   - pin_number / pin_label_text a livello terminale.
+            # In generale l'OCR arricchisce i terminali geometrici gia'
+            # stimati. In casi controllati puo' anche recuperare terminali IC
+            # mancanti se le parole OCR dei pin danno evidenza sufficiente.
             #
             # L'arricchimento OCR viene lanciato dopo il loop sui componenti,
             # cosi possiamo parallelizzare gli IC della stessa immagine.
@@ -466,6 +516,8 @@ def main() -> None:
             # Nota: i terminali sono gia' dentro comp_copy["terminals"].
             # enrich_integrated_circuit_if_needed li aggiorna direttamente
             # con i campi OCR senza cambiare terminal_id/name/display_name.
+        # Se l'immagine contiene zero/uno IC non vale la pena aprire thread.
+        # Con piu' IC parallelizziamo moderatamente per ridurre il tempo OCR.
         if len(ic_component_indexes) <= 1:
             for comp_idx in ic_component_indexes:
                 updated_components[comp_idx] = enrich_integrated_circuit_if_needed(
@@ -489,6 +541,11 @@ def main() -> None:
                     updated_components[comp_idx] = futures[comp_idx].result()
                     _collect_ic_timing(file_timing, updated_components[comp_idx])
 
+        # Post-processing geometrici dopo OCR:
+        # - l'opamp puo' spostare il pin ausiliario superiore verso un piccolo
+        #   terminale vicino;
+        # - il seven-segment display normalizza/pruna i terminali in base alla
+        #   geometria del componente.
         snap_opamp_top_aux_to_nearby_terminal(updated_components, image_binary)
         for component in updated_components:
             normalize_seven_segment_display_terminals(component)

@@ -4152,8 +4152,15 @@ def enrich_ic_pin_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
     """
     Arricchisce un Integrated_Circuit con OCR dei pin.
 
-    Non crea terminali: aggiorna pin_number, pin_label_text, confidence e debug
-    sui terminali geometrici gia' stimati.
+    Regola generale:
+      - parte dai terminali geometrici gia' stimati dallo step 03;
+      - aggiorna pin_number, pin_label_text, confidence e debug;
+      - mantiene terminal_id/name/display_name quando il terminale esiste gia'.
+
+    Eccezione controllata:
+      - per piccoli IC puo' recuperare terminali mancanti quando le parole OCR
+        dei pin e le lane laterali danno evidenza sufficiente. In quel caso il
+        chiamante deve ricostruire la lista globale dei terminali dopo l'OCR.
     """
     cfg = _get_pin_ocr_cfg(meta)
     cfg["component_subtype"] = component.get("component_subtype")

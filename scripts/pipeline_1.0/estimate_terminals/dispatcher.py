@@ -1,5 +1,9 @@
 """
-Sceglie quale strategia usare in base ai metadati YAML della classe
+Sceglie quale strategia usare in base ai metadati YAML della classe.
+
+Il dispatcher non calcola direttamente tutti i punti terminali: decide quale
+strategia chiamare, restituisce la definizione astratta dei terminali e passa al
+processor le informazioni necessarie per stimare le coordinate reali.
 """
 from .config import *
 from .geometry import geom_infer_orientation_from_bbox
@@ -29,7 +33,8 @@ from .strategies_integrated_circuit import detect_integrated_circuit_terminals
 from .strategies_speaker import detect_speaker_terminals
 
 
-# Estrae dalla sezione "orientations" dello yaml la definizione terminale corretta
+# Estrae dalla sezione "orientations" dello yaml la definizione terminale
+# corretta per l'orientazione scelta.
 def _get_oriented_terminals(meta: dict, orientation: str):
     terminals_def = meta.get("orientations", {}).get(orientation)
     if terminals_def is None:
@@ -37,14 +42,17 @@ def _get_oriented_terminals(meta: dict, orientation: str):
     return terminals_def
 
 
-# Stabilisce come sono localizzati i punti terminali, indipendentemente dal numero
+# Stabilisce come sono localizzati i punti terminali, indipendentemente dal
+# numero di terminali. Questa scelta dice al processor se usare centro bbox,
+# side-peak, punto assoluto prodotto dalla strategia, logica opamp, ecc.
 def resolve_terminal_point_mode(meta: dict):
-    #controlla se c'è un terminal_point_mode esplicito
+    # Il metadata puo' forzare esplicitamente la modalita' di localizzazione.
     explicit_mode = meta.get("terminal_point_mode")
     if explicit_mode is not None:
         return explicit_mode
 
-    # altrimenti ne sceglie uno implicito tramite terminal_strategy e class_name
+    # Altrimenti scegliamo una modalita' implicita tramite terminal_strategy e
+    # class_name, cosi' il YAML resta piu' compatto per i casi standard.
     strategy = meta.get("terminal_strategy", "")
     class_name = meta.get("name", "")
 
@@ -82,6 +90,9 @@ def resolve_terminal_point_mode(meta: dict):
 
 # Sceglie il risolutore giusto per l'orientazione dei componenti a 2 terminali perchè alcuni hanno una logica a parte
 def _resolve_two_terminal_orientation(strategy: str, class_name: str, image_binary, bbox, default_orientation: str):
+    # I componenti a due terminali sembrano simili, ma graficamente sono molto
+    # diversi: resistenze, condensatori, LED, induttori e sorgenti rotonde hanno
+    # tutti segnali visivi differenti per stimare l'asse di connessione.
     if strategy == "two_terminal_capacitor" or class_name in {"Capacitor", "Polarized_Capacitor"}:
         return detect_two_terminal_orientation_capacitor(
             image_binary,
@@ -155,11 +166,13 @@ def _resolve_two_terminal_orientation(strategy: str, class_name: str, image_bina
 def get_terminals_definition(meta: dict, bbox, image_binary=None):
     strategy = meta.get("terminal_strategy", "fixed")
 
-    # fixed -> nessuna stima, ritorna direttamente meta["terminals"]
+    # fixed -> nessuna stima geometrica: il metadata contiene gia' la lista
+    # terminali completa e il processor usera' i lati indicati.
     if strategy == "fixed":
         return meta.get("terminals", []), None, None, None
 
-    # auto_by_aspect_ratio -> rapporto tra altezza e larghezza del bbox
+    # auto_by_aspect_ratio -> orientazione dedotta dal rapporto altezza/larghezza
+    # del bbox, con eccezione Transformer che preferisce una lettura grafica.
     if strategy == "auto_by_aspect_ratio":
         class_name = meta.get("name", "")
         default_orientation = meta.get("default_orientation", "horizontal")
@@ -178,7 +191,8 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
         )
         return _get_oriented_terminals(meta, orientation), orientation, None, None
 
-    # one_terminal_by_orientation -> strategie a 2 terminali basate sull'asse di connessione
+    # one_terminal_by_orientation -> componenti con un solo terminale effettivo:
+    # si cerca il lato collegato e si sceglie l'orientazione corrispondente.
     if strategy == "one_terminal_by_orientation":
         if image_binary is None:
             raise ValueError("one_terminal_by_orientation richiede image_binary.")
@@ -209,6 +223,8 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
         "two_terminal_round_source",
         "two_terminal_variable_resistor",
     }:
+        # Famiglia dei componenti a due terminali. Prima scegliamo
+        # l'orientazione, poi recuperiamo dal metadata i due terminali associati.
         if image_binary is None:
             raise ValueError(f"{strategy} richiede image_binary.")
 
@@ -244,6 +260,8 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
 
     # terminal_auto_one_or_two -> classe terminal che può comportarsi come mono o bi terminale
     if strategy == "terminal_auto_one_or_two":
+        # Il simbolo Terminal puo' rappresentare un singolo morsetto oppure un
+        # piccolo passaggio a due contatti: la decisione dipende dai fili visibili.
         if image_binary is None:
             raise ValueError("terminal_auto_one_or_two richiede image_binary.")
 
@@ -257,6 +275,8 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
     
     # integrated circuit
     if strategy == "integrated_circuit_wire_contacts":
+        # IC: i terminali sono contatti/pin distribuiti sui lati del body.
+        # La strategia produce punti assoluti, poi l'OCR dei pin li arricchisce.
         if image_binary is None:
             raise ValueError("integrated_circuit_wire_contacts richiede image_binary.")
 
@@ -269,6 +289,8 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
 
     # connector
     if strategy == "connector_by_projection":
+        # Connector: proietta i contatti lungo il bordo del connettore invece di
+        # assumere semplicemente il centro dei lati.
         if image_binary is None:
             raise ValueError("connector_by_projection richiede image_binary.")
 
@@ -283,6 +305,8 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
 
     # analog meter
     if strategy == "analog_meter_by_posts":
+        # Analog meter: cerca i due post esterni del simbolo, che non sempre
+        # coincidono con i punti centrali del bbox.
         if image_binary is None:
             raise ValueError("analog_meter_by_posts richiede image_binary.")
 
@@ -295,6 +319,8 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
 
     # speaker
     if strategy == "speaker_by_connected_side":
+        # Speaker: prima capisce da quale lato arrivano i fili, poi genera i due
+        # terminali coerenti con quel lato collegato.
         if image_binary is None:
             raise ValueError("speaker_by_connected_side richiede image_binary.")
 
@@ -307,6 +333,8 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
 
     # transformer
     if strategy == "transformer_external_wires":
+        # Transformer: i terminali esterni possono trovarsi fuori dal corpo del
+        # simbolo, quindi usa una strategia dedicata sui fili visibili.
         if image_binary is None:
             raise ValueError("transformer_external_wires richiede image_binary.")
 
@@ -317,8 +345,10 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
         )
         return terminals_def, orientation, connected_side, side_scores
 
-    #opamp
+    # Operational Amplifier.
     if strategy == "opamp_by_orientation_and_optional_supply":
+        # Opamp: identifica orientazione, ingressi/uscita obbligatori e pin di
+        # alimentazione opzionali quando sono disegnati.
         if image_binary is None:
             raise ValueError("opamp_by_orientation_and_optional_supply richiede image_binary.")
 
@@ -332,6 +362,8 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
         return terminals_def, orientation, None, side_scores
 
     if strategy == "three_terminal_by_side_pattern":
+        # Transistor/MOSFET: stima il lato singolo e la coppia laterale per
+        # riconoscere una geometria a tre terminali.
         if image_binary is None:
             raise ValueError("three_terminal_by_side_pattern richiede image_binary.")
 

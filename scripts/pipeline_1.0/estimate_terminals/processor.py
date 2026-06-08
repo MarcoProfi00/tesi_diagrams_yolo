@@ -1,5 +1,11 @@
 """
-Prende un singolo componente e lo trasforma in una lista di terminali con coordinate, metadati geometrici e metadati semantici
+Prende un singolo componente e lo trasforma in una lista di terminali.
+
+Questo modulo e' il cuore dello step 03:
+  - riceve il componente rilevato/istanziato;
+  - chiede al dispatcher quali terminali aspettarsi;
+  - calcola le coordinate reali dei terminali sull'immagine;
+  - aggiunge metadati geometrici e semantici usati dagli step successivi.
 """
 from .config import *
 from .dispatcher import get_terminals_definition, resolve_terminal_point_mode
@@ -21,6 +27,13 @@ from .semantic_two_terminal import resolve_two_terminal_semantics
 
 
 def _get_led_side_peak_scan_window(bbox, estimated_orientation, relative_position):
+    """
+    Limita la scansione side-peak dei LED all'asse centrale.
+
+    Il LED puo' avere frecce/simboli interni che sporcano il bbox. Restringere
+    la finestra di ricerca aiuta a prendere il filo esterno invece del disegno
+    interno del simbolo.
+    """
     x1, y1, x2, y2 = bbox
     width = max(float(x2) - float(x1), 1.0)
     height = max(float(y2) - float(y1), 1.0)
@@ -47,10 +60,19 @@ def _get_led_side_peak_scan_window(bbox, estimated_orientation, relative_positio
 
 
 def _select_led_vertical_lead_x(binary, bbox):
+    """
+    Cerca la colonna verticale piu' probabile per i terminali top/bottom del LED.
+
+    Per un LED verticale il centro del bbox non sempre coincide con i reofori:
+    questa funzione misura il foreground sopra e sotto il componente e sceglie
+    la colonna che ha supporto grafico su entrambi i lati.
+    """
     x1, y1, x2, y2 = [int(round(float(v))) for v in bbox]
     if x2 <= x1 or y2 <= y1:
         return None, {"point_mode": "led_vertical_lead_column", "reason": "invalid_bbox"}
 
+    # Scansione colonna per colonna: un buon terminale verticale deve avere
+    # pixel foreground sia sopra sia sotto il simbolo.
     scores = []
     for x in range(x1, x2 + 1):
         top_score = img_count_foreground_pixels(binary, x - 2, y1 - 30, x + 3, y1 + 35)
@@ -67,6 +89,8 @@ def _select_led_vertical_lead_x(binary, bbox):
     keep_threshold = max_score * 0.90
     kept = [entry for entry in scores if entry[1] >= keep_threshold]
 
+    # Raggruppiamo colonne adiacenti con score alto: il filo puo' occupare piu'
+    # pixel, quindi scegliamo il gruppo migliore invece della singola colonna.
     groups = []
     current = []
     previous_x = None
@@ -130,22 +154,25 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
     class_id = component["class_id"]
     meta = class_meta.get(class_id, {})
 
-    # Caso use_for_terminals = False
+    # Alcune classi YOLO possono essere utili per detection/masking ma non
+    # diventano nodi elettrici: in quel caso non produciamo terminali.
     if not component.get("use_for_terminals", False):
         return [], None, None, None
 
     bbox = component["bbox"]
     instance_id = component["instance_id"]
     
-    # Definizione strutturale dei terminali
+    # Il dispatcher restituisce una definizione astratta dei terminali:
+    # nomi, lati relativi, orientazione stimata ed eventuali score di debug.
     terminals_def, estimated_orientation, connected_side, side_scores = get_terminals_definition(
         meta,
         bbox,
         image_binary=image_binary
     )
 
-    # Per quasi tutti i componenti usa il centro del lato.
-    # Per i 3-terminal invece usa una localizzazione più strutturata: prima il lato singolo, poi la coppia ortogonale coerente con quel lato.
+    # Scelta dell'immagine binaria da usare per localizzare i punti.
+    # Alcune strategie puliscono o restringono il bbox prima di cercare i picchi:
+    # per esempio transistor, terminali singoli e componenti a due terminali.
     point_mode = resolve_terminal_point_mode(meta)
     point_binary = image_binary
     if point_mode == "three_terminal_structured":
@@ -168,7 +195,8 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
             "point_mode": point_mode
         }
 
-        #Se term_def["point"] esiste, il terminale usa direttamente quel punto.
+        # Se term_def["point"] esiste, la strategia ha gia' prodotto un punto
+        # assoluto sull'immagine: non serve applicare un'altra geometria.
         if term_def.get("point") is not None:
             x, y = [round(float(v), 2) for v in term_def["point"]]
             point_debug["point_mode"] = "strategy_absolute_point"
@@ -178,7 +206,8 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
                 point_debug.update(term_def["point_debug"])
 
         elif point_mode == "three_terminal_structured":
-            # localizza terminale "singolo" e coppia di terminali ortogonale
+            # Componenti a 3 terminali: localizza terminale singolo e coppia
+            # ortogonale coerente con orientazione/lati rilevati.
             point, structured_debug = geom_terminal_point_three_terminal(
                 point_binary,
                 bbox,
@@ -199,7 +228,8 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
             point_debug.update(structured_debug)
 
         elif point_mode == OPAMP_POINT_MODE:
-            # gestisce terminali obbligatori (in1 in2 e out) e terminali ausiliari (aux1 aux2)
+            # Opamp: gestisce terminali obbligatori (in1, in2, out) e pin
+            # ausiliari opzionali (aux1, aux2) quando sono presenti nel disegno.
             point, opamp_debug = geom_terminal_point_opamp(
                 image_binary,
                 bbox,
@@ -210,8 +240,12 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
             point_debug.update(opamp_debug)
 
         elif point_mode == "two_terminal_side_peak":
-            # Diode usa il centro del lato e non il side-peak
+            # Componenti a due terminali con side-peak: il lato e' noto, ma il
+            # punto preciso lungo quel lato viene cercato sui pixel foreground.
+            # Alcuni simboli hanno pero' eccezioni dedicate.
             if component.get("class_name") == "Diode":
+                # Diode: il centro del lato e' piu' stabile del picco, perche'
+                # il simbolo interno puo' creare falsi massimi.
                 x, y = geom_terminal_point_from_bbox(bbox, rel_pos)
                 point_debug["point_mode"] = "two_terminal_axis_center"
                 if rel_pos in {"top", "bottom"}:
@@ -219,11 +253,14 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
                 else:
                     point_debug["anchor_offset_ratio"] = 0.5
             elif component.get("class_name") == "GND":
-                # GND usa il centro del lato superiore per non farsi influenzare dal testo vicino
+                # GND usa il centro del lato superiore per non farsi influenzare
+                # da testo o linee vicine.
                 x, y = geom_terminal_point_from_bbox(bbox, rel_pos)
                 point_debug["point_mode"] = "one_terminal_axis_center"
                 point_debug["anchor_offset_ratio"] = 0.5
             elif component.get("class_name") == "LED":
+                # LED: usa regole piu' restrittive per evitare che frecce e
+                # simboli interni vengano scambiati per terminali.
                 if estimated_orientation == "vertical" and rel_pos in {"top", "bottom"}:
                     lead_x, peak_debug = _select_led_vertical_lead_x(image_binary, bbox)
                     if lead_x is None:
@@ -260,7 +297,7 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
                     x, y = point
                 point_debug.update(peak_debug)
             else:
-                # altrimenti usa la classica
+                # Caso generale: cerca il massimo foreground lungo il lato.
                 point, peak_debug = geom_terminal_point_by_side_peak(
                     point_binary,
                     bbox,
@@ -270,6 +307,9 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
                 point_debug.update(peak_debug)
 
         else:
+            # Fallback comune: prende il centro del lato del bbox oppure, se il
+            # metadata fornisce anchor_offset_ratio, un punto ancorato lungo il
+            # lato con posizione relativa fissata.
             anchor_offset_ratio = term_def.get("anchor_offset_ratio")
             if anchor_offset_ratio is not None:
                 x, y = geom_terminal_point_from_bbox_with_anchor(
@@ -296,6 +336,8 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
             and estimated_orientation == "vertical"
             and rel_pos == "bottom"
         ):
+            # Motor verticale: il contatto inferiore puo' essere piu' affidabile
+            # cercandolo come side-peak sul lato bottom.
             motor_point, motor_debug = geom_terminal_point_by_side_peak(
                 point_binary,
                 bbox,
@@ -306,7 +348,9 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
             point_debug.update(motor_debug)
             point_debug["point_mode"] = "motor_vertical_lower_bottom_contact"
 
-        #arricchimento semantico
+        # Creazione del terminale interno.
+        # Qui salviamo sia identificativi stabili sia debug geometrico; piu'
+        # avanti lo step 03 filtrera' i campi debug nel JSON pubblico.
         terminals.append({
             "terminal_id": f"{instance_id}:{term_name}",
             "instance_id": instance_id,
@@ -325,9 +369,14 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
         })
 
     if meta.get("terminal_strategy") == "integrated_circuit_wire_contacts":
+        # Gli IC hanno terminali gia' legati ai contatti fisici/pin: la semantica
+        # dei pin viene arricchita dopo con OCR, non con le regole generiche
+        # dei componenti a due terminali.
         return terminals, estimated_orientation, connected_side, side_scores
 
     if point_mode == "three_terminal_structured":
+        # Transistor/MOSFET: assegna ruoli semantici coerenti con geometria e
+        # metadata, per esempio base/collector/emitter o gate/source/drain.
         terminals = resolve_three_terminal_semantics(
             point_binary,
             bbox,
@@ -336,6 +385,8 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
             meta,
         )
     else:
+        # Tutti gli altri componenti passano dal resolver semantico generico:
+        # polarita', positivo/negativo, anodo/catodo, lato superiore/inferiore.
         terminals = resolve_two_terminal_semantics(
             image_binary,
             bbox,
