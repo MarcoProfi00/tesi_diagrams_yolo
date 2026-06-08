@@ -15,18 +15,25 @@ from .ids import get_preferred_terminal_public_name, normalize_class_name
 
 # Riconosce aux1 / aux2.
 def is_opamp_aux_terminal(term: dict) -> bool:
+    """Riconosce aux1/aux2 di un Operational_Amplifier."""
     class_name = normalize_class_name(term.get("component_class_name"))
     terminal_name = str(get_preferred_terminal_public_name(term) or "").strip().lower()
     return class_name == "operational_amplifier" and terminal_name.startswith("aux")
 
 # Riconosce i componenti di Terminal.
 def is_external_terminal_component(term: dict) -> bool:
+    """Riconosce componenti Terminal esterni usati come VCC/VEE o riferimenti."""
     class_name = normalize_class_name(term.get("component_class_name"))
     return class_name == "terminal"
 
 # Verifica se un terminale estenro dta nella direzione giusta rispetto a un aux
 # Es. Se aux è top il terminale deve stare sopra
 def is_terminal_in_aux_direction(aux_term: dict, candidate_term: dict):
+    """
+    Verifica se un terminale esterno e' nella direzione corretta dell'aux.
+
+    Se aux e' top il terminale deve stare sopra; se e' bottom deve stare sotto.
+    """
     aux_y = float(aux_term["y"])
     candidate_y = float(candidate_term["y"])
     relative_position = aux_term.get("relative_position")
@@ -44,6 +51,7 @@ def collect_opamp_aux_external_terminal_pairs(
     terminals: list[dict],
     terminal_match_debug: dict,
 ):
+    """Raccoglie coppie plausibili aux opamp -> terminale esterno allineato."""
     pairs = []
     terminal_candidates = [
         term
@@ -94,6 +102,7 @@ def merge_opamp_aux_external_terminal_labels(
     terminals: list[dict],
     terminal_match_debug: dict,
 ):
+    """Unisce le label degli aux con quelle dei terminali esterni allineati."""
     pairs = collect_opamp_aux_external_terminal_pairs(terminals, terminal_match_debug)
     if not pairs:
         return label_to_terminal_ids

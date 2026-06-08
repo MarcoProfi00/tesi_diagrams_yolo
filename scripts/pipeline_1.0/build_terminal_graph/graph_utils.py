@@ -5,6 +5,13 @@ from .ids import normalize_class_name
 
 
 def _is_same_non_shorting_component(source: dict, target: dict) -> bool:
+    """
+    Riconosce terminali dello stesso componente multi-terminale non cortocircuitante.
+
+    Connector, transistor, opamp, transformer ecc. possono avere piu' pin sulla
+    stessa area di skeleton per artefatti grafici, ma i loro pin non devono
+    diventare automaticamente tutti collegati tra loro.
+    """
     if str(source.get("instance_id")) != str(target.get("instance_id")):
         return False
 
@@ -18,35 +25,18 @@ def _is_same_non_shorting_component(source: dict, target: dict) -> bool:
 
     return source_class in NON_SHORTING_MULTI_TERMINAL_CLASSES
 
-
-def _is_valid_same_ic_external_edge(source: dict, target: dict) -> bool:
-    source_side = str(source.get("relative_position"))
-    target_side = str(target.get("relative_position"))
-    sides = {source_side, target_side}
-    dx = float(source.get("x", 0.0)) - float(target.get("x", 0.0))
-    dy = float(source.get("y", 0.0)) - float(target.get("y", 0.0))
-    distance = (dx * dx + dy * dy) ** 0.5
-
-    if len(sides) == 1:
-        return distance <= 100.0
-
-    if len(sides) != 2:
-        return False
-    if not sides.intersection({"top", "bottom"}) or not sides.intersection({"left", "right"}):
-        return False
-
-    return distance <= 230.0
-
 # =========================================================
 # COSTRUZIONE DEL GRAFO FINALE TRA TERMINALI
 # =========================================================
-# Per ogni label
-#   prende i terminali di quel gruppo
-#   crea una clique completa tra loro trasformando i nodi impliciti in archi espliciti
-# Es:   A -> [B, C]
-#       B -> [A, C]
-#       C -> [A, B]
 def build_terminal_graph(terminals, label_to_terminal_ids: dict):
+    """
+    Converte gruppi label -> terminali in un grafo terminale esplicito.
+
+    Ogni connected component dello skeleton rappresenta un nodo elettrico
+    implicito. Se su quella label cadono A, B e C, il grafo finale esplicita una
+    clique: A-B, A-C, B-C. Durante la creazione evitiamo self-short interni di
+    componenti che non devono condurre tra i propri pin.
+    """
     graph = {term["terminal_id"]: [] for term in terminals}
     terminal_by_id = {term["terminal_id"]: term for term in terminals}
 

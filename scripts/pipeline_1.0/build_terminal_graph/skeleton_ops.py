@@ -21,9 +21,14 @@ FACING_RESTORE_MIN_PROJECTION_OVERLAP_RATIO = 0.45
 FACING_RESTORE_THICKNESS = 4
 FACING_RESTORE_LABEL_RADIUS = 5
 
-# Decide se cancellare il corpo del componente dallo skeleton
-# Cancella i componenti con 2 terminali perchè i terminali non devono risultare cortocircuitati dal corpo del simbolo
 def should_erase_component_body_from_skeleton(component: dict):
+    """
+    Decide se il corpo del componente va cancellato dallo skeleton.
+
+    Per componenti a due terminali il corpo grafico non e' un filo: se resta
+    nello skeleton puo' cortocircuitare i due morsetti. Alcuni multi-terminali
+    vengono gestiti esplicitamente per evitare artefatti interni.
+    """
     class_name = normalize_class_name(component.get("class_name"))
     terminals = component.get("terminals", [])
 
@@ -37,10 +42,12 @@ def should_erase_component_body_from_skeleton(component: dict):
 
 
 def _component_bbox(component: dict):
+    """Restituisce il bbox migliore disponibile per cancellazione/ripristino."""
     return component.get("body_bbox") or component.get("bbox")
 
 
 def _bbox_projection_overlap_ratio(a0, a1, b0, b1):
+    """Calcola la sovrapposizione normalizzata tra due intervalli."""
     inter = max(0.0, min(float(a1), float(b1)) - max(float(a0), float(b0)))
     len_a = max(1.0, float(a1) - float(a0))
     len_b = max(1.0, float(b1) - float(b0))
@@ -48,6 +55,7 @@ def _bbox_projection_overlap_ratio(a0, a1, b0, b1):
 
 
 def _flatten_component_terminals(components: list[dict]):
+    """Appiattisce i terminali mantenendo il bbox del componente padre."""
     flat = []
     for component in components:
         bbox = _component_bbox(component)
@@ -64,6 +72,12 @@ def _flatten_component_terminals(components: list[dict]):
 
 
 def _find_facing_restore_pairs(components: list[dict]):
+    """
+    Trova terminali frontali vicini da ripristinare dopo la cancellazione body.
+
+    Serve a non perdere piccoli collegamenti tra componenti ravvicinati quando
+    erase_component_bodies_from_skeleton azzera porzioni interne dei bbox.
+    """
     terminals = _flatten_component_terminals(components)
     pairs = []
 
@@ -134,6 +148,7 @@ def _find_facing_restore_pairs(components: list[dict]):
 
 
 def _nearest_label_in_radius(labels: np.ndarray, x: float, y: float, radius: int):
+    """Cerca la label positiva piu' vicina a un punto entro un raggio locale."""
     h, w = labels.shape[:2]
     tx = int(round(float(x)))
     ty = int(round(float(y)))
@@ -154,16 +169,20 @@ def _nearest_label_in_radius(labels: np.ndarray, x: float, y: float, radius: int
     py = int(abs_ys[best_idx])
     return int(labels[py, px])
 
-# Cancella i body dei componenti a due terminali dallo skeleton
-# Per ogni componente
-#   prende il bbox
-#   applica un padding interno
-#   azzera i pixel interni
-# Rompe i nodi FP generati dal simbolo del componente
 def erase_component_bodies_from_skeleton(
     skeleton_binary: np.ndarray,
     components: list[dict],
 ):
+    """
+    Cancella dallo skeleton i tratti interni dei componenti.
+
+    Flusso:
+      1. individua i componenti da cancellare;
+      2. azzera una finestra interna al bbox/body_bbox;
+      3. separa pin di connector quando necessario;
+      4. ripristina micro-collegamenti tra terminali frontali se erano gia'
+         parte della stessa label originale.
+    """
     cleaned = skeleton_binary.copy()
     h, w = cleaned.shape[:2]
     original_binary = (skeleton_binary > 0).astype(np.uint8)
@@ -238,6 +257,13 @@ def erase_component_bodies_from_skeleton(
 
 
 def cut_connector_pin_separators(cleaned: np.ndarray, component: dict):
+    """
+    Taglia piccoli ponti tra pin adiacenti dei connector.
+
+    I connettori hanno pin molto vicini: lo skeleton puo' unirli in un'unica
+    label anche quando sono morsetti distinti. Qui inseriamo tagli sottili tra
+    terminali consecutivi dello stesso lato.
+    """
     terminals = component.get("terminals", [])
     h, w = cleaned.shape[:2]
 
@@ -271,22 +297,21 @@ def cut_connector_pin_separators(cleaned: np.ndarray, component: dict):
             x1, y1, x2, y2 = window
             cleaned[y1:y2, x1:x2] = 0
 
-# =========================================================
-# LETTURA DELLE LABEL NELLA FINESTRA
-# =========================================================
-# Restituisce tutte le label positive (quindi esclude lo sfondo = 0) trovate dentro una finestra.
-# Aiuta a sapere quali candidati di filo esistono vicino al terminale
 def collect_labels_in_window(labels: np.ndarray, window):
+    """Restituisce tutte le label positive trovate dentro una finestra."""
     x1, y1, x2, y2 = window
     roi = labels[y1:y2, x1:x2]
     unique_labels = np.unique(roi)
     return [int(v) for v in unique_labels if int(v) > 0]
 
-# Carica, quando disponibile, una maschera piu' spessa dello skeleton.
-# Serve per distinguere un vero nodo con pallino da un semplice incrocio
-# geometrico: nello skeleton entrambi sembrano croci, ma nella maschera piena
-# il nodo con pallino ha molta piu' area nera locale.
 def load_junction_support_binary(wire_extraction: dict):
+    """
+    Carica la migliore immagine binaria spessa disponibile dallo step 04.
+
+    Viene usata per distinguere nodi pieni, incroci e ponticelli: nello skeleton
+    molti casi diventano visivamente simili, mentre filtered/bridged/closed
+    conservano ancora informazione di spessore.
+    """
     for key in ("filtered_path", "bridged_path", "closed_path", "binary_path"):
         path = wire_extraction.get(key)
         if not path:
@@ -298,7 +323,8 @@ def load_junction_support_binary(wire_extraction: dict):
             continue
 
     return None
-"""Caricamento e analisi connected-components dello skeleton dei fili."""
+# Import storicamente posizionati in fondo al file: funzionano perche' le
+# funzioni vengono eseguite solo dopo il caricamento completo del modulo.
 
 from pathlib import Path
 

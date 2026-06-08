@@ -1,3 +1,5 @@
+"""Euristiche per ricomporre stub orizzontali/verticali spezzati."""
+
 import numpy as np
 
 from .config import (
@@ -31,6 +33,12 @@ def merge_near_horizontal_stub_labels(
     terminal_match_debug: dict,
     labels: np.ndarray,
 ):
+    """
+    Unisce piccoli stub orizzontali vicini a una label principale.
+
+    E' pensato soprattutto per diodi/LED, dove il filo orizzontale puo' essere
+    tagliato dalla maschera del componente.
+    """
     terminal_by_id = {term["terminal_id"]: term for term in terminals}
     parent = {int(label): int(label) for label in label_to_terminal_ids.keys()}
 
@@ -135,6 +143,12 @@ def merge_near_vertical_stub_labels(
     labels: np.ndarray,
     filtered_binary: np.ndarray | None = None,
 ):
+    """
+    Unisce stub verticali stretti con reti verticali vicine.
+
+    Usa bbox delle label e, quando disponibile, filtered_binary per verificare
+    che tra due spezzoni ci sia supporto reale nel binario spesso.
+    """
     if not VERTICAL_STUB_NETWORK_MERGE_ENABLE:
         return label_to_terminal_ids
 
@@ -371,6 +385,7 @@ def _find_lateral_edge_pair(
     target_label: int,
     side: str,
 ):
+    """Trova la coppia di punti piu' vicina tra bordi laterali di due label."""
     source_ys, source_xs = np.where(labels == int(source_label))
     target_ys, target_xs = np.where(labels == int(target_label))
     if len(source_xs) == 0 or len(target_xs) == 0:
@@ -409,6 +424,7 @@ def _line_support_ratio(
     p0: list[int],
     p1: list[int],
 ):
+    """Misura quanta parte del segmento tra due punti e' supportata dal binario."""
     x0, y0 = map(int, p0)
     x1, y1 = map(int, p1)
     steps = max(abs(x1 - x0), abs(y1 - y0)) + 1
@@ -429,6 +445,7 @@ def _find_vertical_edge_pair(
     target_label: int,
     side: str,
 ):
+    """Trova la coppia di punti piu' vicina tra bordi verticali di due label."""
     source_ys, source_xs = np.where(labels == int(source_label))
     target_ys, target_xs = np.where(labels == int(target_label))
     if len(source_xs) == 0 or len(target_xs) == 0:

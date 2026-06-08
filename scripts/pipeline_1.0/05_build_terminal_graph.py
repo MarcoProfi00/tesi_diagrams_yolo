@@ -46,6 +46,8 @@ from build_terminal_graph.processor import build_terminal_graph_for_image
 # =========================================================
 # PERCORSI / INPUT-OUTPUT
 # =========================================================
+# Come negli altri step, il dataset puo' essere cambiato via variabile
+# ambiente. Lo script legge l'output di 04 e scrive il JSON canonico di 05.
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline1.0/batchC/batchC1")
 PIPELINE_IMAGE_IDS = [
@@ -65,18 +67,24 @@ DEBUG_SKELETON_OVERLAY_DIR = OUTPUT_DIR / "debug_skeleton_overlay"
 # =========================================================
 # MAIN
 # =========================================================
-# Run dell'entrypoint del nuovo passo 05.
 def main() -> None:
+    """Entry point dello step 05."""
     if not INPUT_DIR.exists():
         raise FileNotFoundError(f"Cartella input non trovata: {INPUT_DIR}")
 
+    # La cartella principale contiene i JSON finali; le sottocartelle debug sono
+    # opzionali e dipendono dalla configurazione in build_terminal_graph/config.py.
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     if SAVE_DEBUG_IMAGES:
         DEBUG_TERMINAL_OVERLAY_DIR.mkdir(parents=True, exist_ok=True)
         DEBUG_SKELETON_OVERLAY_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Ogni JSON di input e' un circuito gia' arricchito dallo step 04 con i path
+    # dello skeleton e delle immagini binarie intermedie.
     json_files = sorted(INPUT_DIR.glob("*.json"))
     if PIPELINE_IMAGE_IDS:
+        # Filtro utile per rilanciare il grafo su poche immagini senza
+        # rigenerare l'intero batch.
         wanted = set(PIPELINE_IMAGE_IDS)
         json_files = [json_path for json_path in json_files if json_path.stem in wanted]
     if not json_files:
@@ -94,12 +102,16 @@ def main() -> None:
         with open(json_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
+        # Tutta la logica vera del passo 05 sta nel processor: match terminale
+        # -> skeleton, euristiche di merge/split e costruzione del grafo.
         graph_info = build_terminal_graph_for_image(data)
 
         # -------------------------------------------------
         # 1) Eventuali immagini di debug
         # -------------------------------------------------
         if SAVE_DEBUG_IMAGES:
+            # Evidenziamo nei debug i terminali isolati o non agganciati: sono i
+            # punti piu' utili da controllare quando il grafo sembra sbagliato.
             problem_terminal_ids = set(graph_info["warnings"].get("unconnected_terminals", []))
             problem_terminal_ids.update(graph_info["warnings"].get("unmatched_terminals", []))
 
@@ -116,6 +128,8 @@ def main() -> None:
                 terminal_overlay_path = DEBUG_TERMINAL_OVERLAY_DIR / f"{json_path.stem}_terminal_overlay.jpg"
                 cv2.imwrite(str(terminal_overlay_path), terminal_overlay)
 
+            # Overlay sullo skeleton: mostra se il punto di aggancio cade
+            # davvero sul filo usato per costruire le connected components.
             skeleton_overlay = draw_skeleton_overlay(
                 graph_info["skeleton_binary"],
                 data.get("terminals", []),
@@ -129,6 +143,8 @@ def main() -> None:
         # -------------------------------------------------
         # 2) Salvataggio JSON canonico del passo 05
         # -------------------------------------------------
+        # Il JSON finale non contiene immagini debug o label interne dello
+        # skeleton: espone solo componenti, metadati terminali, grafo e warning.
         output_data = {
             "image_id": data.get("image_id"),
             "image_name": data.get("image_name"),

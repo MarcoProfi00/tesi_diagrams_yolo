@@ -1,4 +1,14 @@
-"""Heuristiche per distinguere incroci, ponticelli e falsi corti nello skeleton."""
+"""
+Heuristiche per distinguere incroci, ponticelli e falsi corti nello skeleton.
+
+Nel grafo terminale una connected component dello skeleton diventa un nodo
+elettrico. Se uno crossing grafico viene letto come una singola component,
+il circuito produce un falso corto. Questo modulo cerca di riconoscere:
+  - ponticelli con gobba;
+  - incroci piani senza pallino;
+  - micro-bridge dovuti a skeletonizzazione;
+  - nodi pieni reali che invece devono restare connessi.
+"""
 
 from __future__ import annotations
 
@@ -73,6 +83,7 @@ from .skeleton_ops import load_junction_support_binary
 # Verifica la presenza del ponte
 # Se c'è la gobba allora è un ponte
 def has_bridge_hump(binary: np.ndarray, x: int, y: int):
+    """Verifica se attorno a un candidato esiste una gobba da ponticello."""
     h, w = binary.shape[:2]
     left_count = 0
     right_count = 0
@@ -94,6 +105,13 @@ def has_bridge_hump(binary: np.ndarray, x: int, y: int):
 
 
 def bridge_direction_support(binary: np.ndarray, x: int, y: int):
+    """
+    Conta il supporto orizzontale/verticale attorno a un candidato ponte.
+
+    La gobba e il ramo verticale possono non cadere sullo stesso pixel dopo
+    skeletonizzazione, quindi cerchiamo il supporto verticale in una piccola
+    finestra locale.
+    """
     h, w = binary.shape[:2]
     local_radius = max(2, BRIDGE_CUT_HALF_WIDTH // 2)
 
@@ -562,6 +580,12 @@ def detect_wire_bridges(
     enable_thick_hump_detection: bool = True,
     enable_skeleton_hump_detection: bool = True,
 ):
+    """
+    Rileva candidati ponticello nello skeleton.
+
+    Combina rilevazione classica, micro-bridge e, per stili di disegno spessi o
+    blu, supporto dalla maschera binaria piena.
+    """
     if not enable_thick_hump_detection and enable_skeleton_hump_detection:
         return detect_legacy_wire_bridges(skeleton_binary, labels, junction_binary)
 
@@ -817,10 +841,16 @@ def detect_plain_wire_crossings(
     labels: np.ndarray,
     junction_binary: np.ndarray | None,
 ):
-    # Use the one-pixel skeleton to test the actual crossing geometry.  The
-    # thicker junction mask is useful only to decide whether a filled dot is
-    # present; using it for directional runs can turn tight bends or stubs into
-    # false four-way crossings.
+    """
+    Rileva incroci piani che non devono essere cortocircuitati.
+
+    Cerca geometrie a quattro direzioni nello skeleton e scarta i casi con
+    pallino/nodo pieno nella maschera di supporto.
+    """
+    # Usiamo lo skeleton a un pixel per testare la geometria reale
+    # dell'incrocio. La maschera piu' spessa serve solo a capire se esiste un
+    # pallino pieno: usarla per i run direzionali trasformerebbe curve strette
+    # o stub in falsi incroci a quattro vie.
     binary = np.where(skeleton_binary > 0, 1, 0).astype(np.uint8)
     h, w = binary.shape[:2]
     candidates = []
@@ -862,11 +892,11 @@ def detect_plain_wire_crossings(
 
     return collapsed
 
-# Trova label che contengono due o più terminali dello stesso componente
 def labels_with_multi_terminal_self_short(
     terminals: list[dict],
     terminal_match_debug: dict,
 ):
+    """Trova label che contengono due o piu' terminali dello stesso componente."""
     by_component_and_label = {}
 
     for term in terminals:
@@ -891,9 +921,8 @@ def labels_with_multi_terminal_self_short(
         if len(terminal_ids) >= 2
     }
 
-# Dopo uno split, trova una nuova label più vicina a un certo punto
-# Riassocia i terminali alle nuove connected components dopo il taglio
 def nearest_split_label(split_labels: np.ndarray, x: int, y: int, radius: int = 6):
+    """Trova la nuova label piu' vicina a un punto dopo uno split locale."""
     h, w = split_labels.shape[:2]
     window = clamp_window(x - radius, y - radius, x + radius + 1, y + radius + 1, w, h)
     x1, y1, x2, y2 = window
@@ -936,14 +965,6 @@ def has_four_way_split_support(
 
     return len({int(label) for label in branch_labels}) >= 2
 
-# Esegue gli split dovuti ai ponti e a incroci senza il nodo (dot)
-# Rileva i ponti
-# Rileva incroci da spezzare
-# Taglia localmente lo skeleton
-# Ricalcola le connected components
-# Riaggancia i terminali alle nuove label.
-# Ricrea i gruppi finali
-# Evita fusioni topologiche sbagliate
 def split_bridge_labels(
     label_to_terminal_ids: dict,
     terminals: list[dict],
@@ -952,6 +973,12 @@ def split_bridge_labels(
     labels: np.ndarray,
     wire_extraction: dict | None = None,
 ):
+    """
+    Divide gruppi di terminali quando una label contiene crossing o ponticelli.
+
+    E' uno degli step piu' delicati: parte dalle label gia' raggruppate e prova
+    a separare solo le geometrie che hanno evidenza locale sufficiente.
+    """
     junction_binary = load_junction_support_binary(wire_extraction or {})
     enable_thick_hump_detection = is_blue_wire_style(wire_extraction or {}, junction_binary)
     raw_bridges = filter_micro_bridge_candidates(

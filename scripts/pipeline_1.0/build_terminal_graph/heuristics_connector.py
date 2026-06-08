@@ -8,6 +8,7 @@ CONNECTOR_GND_MAX_GAP = 140.0
 
 
 def _is_aligned_in_direction(source: dict, target: dict):
+    """Verifica se target si trova nella direzione di uscita del terminale source."""
     side = source.get("relative_position")
     sx = float(source.get("x", 0.0))
     sy = float(source.get("y", 0.0))
@@ -27,6 +28,7 @@ def _is_aligned_in_direction(source: dict, target: dict):
 
 
 def _direction_gap(source: dict, target: dict):
+    """Restituisce gap laterale e assiale usati per scegliere il GND migliore."""
     side = source.get("relative_position")
     sx = float(source.get("x", 0.0))
     sy = float(source.get("y", 0.0))
@@ -39,6 +41,12 @@ def _direction_gap(source: dict, target: dict):
 
 
 def build_connector_aligned_gnd_edges(terminals: list[dict], terminal_graph: dict):
+    """
+    Aggiunge archi connector -> GND quando il connector e' isolato ma allineato.
+
+    Serve per piccoli tratti verso GND che possono essere persi dalla maschera o
+    dallo skeleton, specialmente nei connettori verticali.
+    """
     connector_terms = [
         term
         for term in terminals
@@ -76,6 +84,12 @@ def build_connector_aligned_gnd_edges(terminals: list[dict], terminal_graph: dic
 
 
 def fix_stacked_connector_gnd_crossing_edges(terminals: list[dict], terminal_graph: dict):
+    """
+    Corregge casi di connector impilati in cui il GND viene agganciato al pin sotto.
+
+    Se due pin laterali del connector sono molto vicini e il GND sotto sembra
+    attraversare il pin piu' basso, rimappiamo il collegamento al pin precedente.
+    """
     terminal_by_id = {term.get("terminal_id"): term for term in terminals}
     gnd_ids = {
         term.get("terminal_id")

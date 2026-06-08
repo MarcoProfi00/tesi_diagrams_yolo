@@ -36,12 +36,14 @@ from .heuristics_opamp import (
 from .ids import normalize_class_name
 from .skeleton_ops import collect_labels_in_window
 
-# Trova il pixel etichettato vicino al terminale in una finestra
-# Ritorna:
-#   label del pixel
-#   snap point
-#   distance
 def find_nearest_labeled_pixel(labels: np.ndarray, term: dict, window):
+    """
+    Trova il pixel di skeleton etichettato piu' vicino al terminale.
+
+    La ricerca e' limitata a una finestra gia' scelta dal chiamante. Ritorna la
+    label della connected component, il punto di aggancio e la distanza dal
+    terminale stimato.
+    """
     x1, y1, x2, y2 = window
     roi = labels[y1:y2, x1:x2]
 
@@ -70,22 +72,17 @@ def find_nearest_labeled_pixel(labels: np.ndarray, term: dict, window):
     }
 
 
-# =========================================================
-# MATCH DI UN SINGOLO TERMINALE
-# =========================================================
-# 1. prova finestra direzionale
-# 2. se non trova nulla, prova finestra quadrata
-# 3. se ancora nulla, terminale unmatched
-#
-# Ritorna:
-#   matched_label
-#   match_mode
-#   search_window
-#   snap_point
-#   snap_distance
-#   is_suspicious
 def match_terminal_to_skeleton_label(labels: np.ndarray, term: dict):
-    # Primo tentativo: finestra direzionale
+    """
+    Aggancia un terminale alla label dello skeleton piu' plausibile.
+
+    Ordine:
+      1. finestra direzionale coerente con relative_position;
+      2. fallback quadrato attorno al terminale;
+      3. unmatched se non si trova nessuna label.
+    """
+    # Primo tentativo: finestra direzionale, cioe' spinta verso l'esterno del
+    # componente lungo il lato del terminale.
     dir_window = get_directional_window(
         term,
         labels.shape,
@@ -108,7 +105,8 @@ def match_terminal_to_skeleton_label(labels: np.ndarray, term: dict):
             "is_suspicious": float(nearest["snap_distance"]) > float(MAX_REASONABLE_SNAP_DISTANCE),
         }
 
-    # Secondo tentativo: piccolo quadrato attorno al terminale
+    # Secondo tentativo: piccolo quadrato attorno al terminale, utile quando il
+    # lato stimato e' impreciso o lo skeleton e' leggermente disallineato.
     sq_window = get_square_window(term, labels.shape, radius=TERMINAL_SQUARE_FALLBACK_RADIUS)
     sq_labels = collect_labels_in_window(labels, sq_window)
     nearest = find_nearest_labeled_pixel(labels, term, sq_window)
@@ -138,13 +136,17 @@ def match_terminal_to_skeleton_label(labels: np.ndarray, term: dict):
     }
 
 
-# Recupera terminali di analog meter rimasti unmatched
-# Usa una finestra più grande
 def attach_unmatched_analog_meter_terminals(
     components: list[dict],
     terminal_match_debug: dict,
     labels: np.ndarray,
 ):
+    """
+    Recupera terminali Analog_Meter rimasti unmatched con una finestra ampia.
+
+    I post dell'analog meter possono essere distanti dal punto terminale stimato,
+    quindi il fallback standard puo' non bastare.
+    """
     for component in components:
         if normalize_class_name(component.get("class_name")) != "analog_meter":
             continue
@@ -182,12 +184,17 @@ def attach_unmatched_analog_meter_terminals(
                 "is_suspicious": False,
             }
 
-# Matcha un aux opamp unmatched se esiste un terminale esterno allineato
-# Gli aux degli opamp possono cadere dentro il traingolo dell'opamp e perdere lo skeleton reale
 def attach_unmatched_opamp_aux_to_external_terminals(
     terminals: list[dict],
     terminal_match_debug: dict,
 ):
+    """
+    Match virtuale per aux opamp rimasti unmatched.
+
+    Se un aux non trova skeleton ma c'e' un Terminal esterno allineato nella
+    direzione corretta, eredita la label di quel terminale. Serve per pin di
+    alimentazione disegnati vicino al triangolo dell'opamp.
+    """
     terminal_candidates = [
         term
         for term in terminals
@@ -262,6 +269,12 @@ def attach_unmatched_lateral_terminal_labels(
     terminal_match_debug: dict,
     labels: np.ndarray,
 ):
+    """
+    Recupera terminali top/bottom agganciandoli a label laterali vicine.
+
+    Alcuni terminali cadono vicino alla fine di uno stub laterale e non dentro
+    la finestra direzionale; qui cerchiamo label nella banda orizzontale.
+    """
     label_to_terminal_ids = {}
     for terminal_id, match in terminal_match_debug.items():
         matched_label = match.get("matched_label")
@@ -362,6 +375,12 @@ def remap_opamp_aux_to_aligned_label(
     terminal_match_debug: dict,
     labels: np.ndarray,
 ):
+    """
+    Rimappa aux opamp unmatched verso una label verticale allineata.
+
+    E' un fallback pixel-based diverso dal match virtuale con Terminal esterno:
+    cerca direttamente una label dello skeleton sopra/sotto l'aux.
+    """
     h, w = labels.shape[:2]
 
     for aux_term in terminals:
@@ -462,6 +481,13 @@ def remap_monoterminal_outward_stub_matches(
     terminal_match_debug: dict,
     labels: np.ndarray,
 ):
+    """
+    Corregge match su stub interni per componenti monoterminali.
+
+    Per classi come Antenna il primo match puo' cadere su un frammento vicino al
+    simbolo invece che sul filo esterno. Questo remap cerca una label sottile e
+    allineata verso l'esterno.
+    """
     label_to_terminal_ids = {}
     for terminal_id, match in terminal_match_debug.items():
         matched_label = match.get("matched_label")
@@ -520,6 +546,7 @@ def _find_outward_stub_target_label(
     label_to_terminal_ids: dict,
     terminal_id: str,
 ):
+    """Cerca la migliore label esterna verso cui rimappare uno stub monoterminale."""
     tx = int(round(float(term["x"])))
     ty = int(round(float(term["y"])))
     side = str(term.get("relative_position") or "").strip().lower()

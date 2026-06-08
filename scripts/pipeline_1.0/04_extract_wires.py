@@ -2,16 +2,29 @@
 04_extract_wires.py
 
 Scopo:
-    Estrarre i wire dal diagramma mascherando i componenti
-    e preservando localmente le zone dei terminali.
+    Estrarre i fili dal diagramma dopo lo step 03.
+
+    Lo step 03 fornisce:
+      - componenti con bbox/body_bbox;
+      - terminali con coordinate e lato stimato.
+
+    Lo step 04 usa queste informazioni per:
+      - mascherare il corpo dei componenti, evitando che simboli e testi
+        vengano interpretati come fili;
+      - riaprire piccole zone attorno ai terminali, cosi' il contatto tra
+        terminale e filo non viene cancellato dalla maschera;
+      - binarizzare, chiudere piccoli gap, filtrare rumore e produrre lo
+        skeleton dei fili usato dallo step 05.
 
 Output principali:
-    - component_mask
-    - masked_gray
-    - binary
-    - closed
-    - filtered
-    - skeleton
+    - component_mask: maschera dei componenti da rimuovere;
+    - terminal_keep_debug: zone terminali preservate;
+    - masked_gray: immagine grayscale con componenti cancellati;
+    - binary: binarizzazione dei fili;
+    - closed: binario dopo closing morfologico;
+    - bridged: binario dopo ricucitura di segmenti frammentati;
+    - filtered: binario dopo rimozione componenti piccoli;
+    - skeleton: skeleton monolinea dei fili.
 """
 
 from pathlib import Path
@@ -24,6 +37,8 @@ from skimage.morphology import skeletonize
 # =========================================================
 # PERCORSI / INPUT-OUTPUT
 # =========================================================
+# PIPELINE_DATASET e PIPELINE_IMAGE_IDS permettono di usare lo stesso script
+# su batch diversi o su un sottoinsieme di immagini, senza modificare il codice.
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline1.0/batchC/batchC1")
 PIPELINE_IMAGE_IDS = [
@@ -38,6 +53,9 @@ OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "04_extract_wires"
 # =========================================================
 # MASCHERAMENTO COMPONENTI
 # =========================================================
+# Ogni sottocartella salva una vista intermedia. Questo rende lo step 04
+# ispezionabile: quando il grafo finale e' sbagliato si puo' capire se il
+# problema nasce dalla maschera, dalla binarizzazione o dallo skeleton.
 MASK_DEBUG_DIR = OUTPUT_DIR / "mask_debug"
 COMPONENT_MASK_DIR = OUTPUT_DIR / "component_mask"
 TERMINAL_KEEP_DEBUG_DIR = OUTPUT_DIR / "terminal_keep_debug"
@@ -50,6 +68,10 @@ SKELETON_DIR = OUTPUT_DIR / "skeleton"
 
 
 MASK_SHRINK_FACTOR = 1.0
+
+# Padding aggiuntivo per classi in cui il bbox YOLO tende a lasciare fuori
+# porzioni del simbolo. Aumentare troppo questi valori puo' cancellare fili
+# vicini, quindi sono mantenuti specifici per classe.
 CLASS_MASK_PADDING = {
     "Analog_Meter": 8,
     "Antenna": 10,
@@ -60,8 +82,12 @@ CLASS_MASK_PADDING = {
 }
 
 # =========================================================
-# TERMINAL KEEP ZONES
+# ZONE TERMINALI DA PRESERVARE
 # =========================================================
+# Dopo aver mascherato i componenti, apriamo piccole zone attorno ai terminali:
+# senza questo passaggio il filo che tocca il componente verrebbe cancellato
+# insieme al corpo del simbolo e lo step 05 non riuscirebbe ad agganciare il
+# terminale allo skeleton.
 TERMINAL_KEEP_RADIUS = 10
 TERMINAL_KEEP_LINE_THICKNESS = 7
 TERMINAL_KEEP_INWARD_LEN = 14
@@ -72,6 +98,9 @@ FACING_KEEP_MAX_BBOX_GAP = 28
 FACING_KEEP_MAX_BBOX_OVERLAP = 36
 FACING_KEEP_MIN_PROJECTION_OVERLAP_RATIO = 0.45
 FACING_KEEP_MIN_THICKNESS = 4
+
+# I pin ausiliari degli opamp possono essere molto vicini al corpo del simbolo:
+# usiamo una keep zone piu' piccola per non riaprire troppo il triangolo.
 OPAMP_AUX_KEEP_RADIUS = 5
 OPAMP_AUX_KEEP_LINE_THICKNESS = 5
 OPAMP_AUX_KEEP_INWARD_LEN = 0
@@ -139,8 +168,13 @@ CLASS_TERMINAL_KEEP_OVERRIDES = {
 }
 
 # =========================================================
-# MORPHOLOGY
+# MORFOLOGIA
 # =========================================================
+# Parametri della pipeline morfologica:
+# - closing: ricuce piccoli gap locali;
+# - ricucitura fili frammentati: ricuce spezzoni, soprattutto dopo maschera;
+# - soppressione IC: evita che la ricucitura verticale crei falsi collegamenti
+#   paralleli lungo i lati degli integrati.
 CLOSING_KERNEL_SIZE = 3
 CLOSING_ITERATIONS = 1
 ENABLE_FRAGMENTED_WIRE_BRIDGE = True
@@ -153,22 +187,25 @@ IC_VERTICAL_BRIDGE_SUPPRESS_INWARD = 14
 IC_VERTICAL_BRIDGE_SUPPRESS_Y_PAD = 30
 
 # =========================================================
-# SMALL COMPONENT FILTER
+# FILTRO COMPONENTI CONNESSE PICCOLE
 # =========================================================
+# Rimuove piccole componenti connesse residue dopo binarizzazione/closing:
+# tipicamente pixel isolati, testo rimasto o frammenti non elettrici.
 ENABLE_SMALL_COMPONENT_FILTER = True
 MIN_COMPONENT_AREA = 40
 
-# utility geometriche
-# Clamp point.
+# =========================================================
+# UTILITY GEOMETRICHE
+# =========================================================
 def clamp_point(x, y, w, h):
+    """Porta un punto dentro i limiti dell'immagine."""
     x = max(0, min(w - 1, int(round(x))))
     y = max(0, min(h - 1, int(round(y))))
     return x, y
 
 
-
-# Shrink bounding box.
 def shrink_bbox(bbox, shrink_factor=0.88):
+    """Riduce un bbox mantenendone il centro."""
     x1, y1, x2, y2 = bbox
     xc = (x1 + x2) / 2.0
     yc = (y1 + y2) / 2.0
@@ -183,21 +220,35 @@ def shrink_bbox(bbox, shrink_factor=0.88):
     return [new_x1, new_y1, new_x2, new_y2]
 
 
-# Expand bounding box.
 def expand_bbox(bbox, pad=0):
+    """Espande un bbox dello stesso padding su tutti i lati."""
     x1, y1, x2, y2 = bbox
     return [x1 - pad, y1 - pad, x2 + pad, y2 + pad]
 
 
 def component_mask_bbox(comp):
+    """
+    Sceglie il bbox da usare per mascherare un componente.
+
+    Per gli Integrated_Circuit preferiamo body_bbox quando disponibile: il bbox
+    YOLO puo' includere pin/testo esterno, mentre body_bbox rappresenta meglio
+    il corpo da cancellare.
+    """
     if comp.get("class_name") == "Integrated_Circuit" and comp.get("body_bbox"):
         return comp["body_bbox"]
     return comp["bbox"]
 
 
-# costruzione maschere
-# Costruisce la maschera base dei componenti.
+# =========================================================
+# COSTRUZIONE MASCHERE
+# =========================================================
 def build_base_component_mask(image_shape, components):
+    """
+    Costruisce la maschera base dei componenti.
+
+    I pixel a 255 rappresentano zone da cancellare dall'immagine dei fili.
+    Le zone dei terminali vengono riaperte in un secondo momento.
+    """
     h, w = image_shape[:2]
     mask = np.zeros((h, w), dtype=np.uint8)
 
@@ -221,8 +272,8 @@ def build_base_component_mask(image_shape, components):
 
     return mask
 
-# Terminal keep params.
 def terminal_keep_params(term):
+    """Restituisce i parametri di keep zone per un singolo terminale."""
     name = str(term.get("name", "")).lower()
     class_name = str(term.get("component_class_name", "")).strip()
 
@@ -246,6 +297,13 @@ def terminal_keep_params(term):
 
 
 def adapt_terminal_keep_for_component(term, params, components_by_instance):
+    """
+    Adatta i parametri di keep zone usando informazioni del componente padre.
+
+    Caso principale: i display seven-segment hanno molti terminali vicini e
+    segmenti interni; sulle colonne laterali usiamo corridoi piu' stretti per
+    non trasformare il display in un falso nodo elettrico.
+    """
     instance_id = term.get("instance_id")
     if instance_id is None:
         return params
@@ -269,12 +327,20 @@ def adapt_terminal_keep_for_component(term, params, components_by_instance):
     return adapted
 
 
-# Terminal keep segment.
-def terminal_keep_segment(term):
+def terminal_keep_segment(term, params=None):
+    """
+    Calcola il segmento direzionato da preservare attorno a un terminale.
+
+    Il segmento si estende:
+      - verso l'esterno del componente, per mantenere il filo;
+      - leggermente verso l'interno, per tollerare terminali stimati non
+        perfettamente sul bordo.
+    """
     x = float(term["x"])
     y = float(term["y"])
     rel = term.get("relative_position")
-    params = terminal_keep_params(term)
+    if params is None:
+        params = terminal_keep_params(term)
 
     inward_len = params["inward_len"]
     outward_len = params["outward_len"]
@@ -299,6 +365,7 @@ def terminal_keep_segment(term):
 
 
 def _bbox_projection_overlap_ratio(a0, a1, b0, b1):
+    """Calcola quanto due intervalli si sovrappongono lungo un asse."""
     inter = max(0.0, min(float(a1), float(b1)) - max(float(a0), float(b0)))
     len_a = max(1.0, float(a1) - float(a0))
     len_b = max(1.0, float(b1) - float(b0))
@@ -306,6 +373,7 @@ def _bbox_projection_overlap_ratio(a0, a1, b0, b1):
 
 
 def _component_bbox_by_instance(components):
+    """Crea un lookup instance_id -> bbox usato per la maschera."""
     mapping = {}
     for comp in components:
         instance_id = comp.get("instance_id")
@@ -316,6 +384,13 @@ def _component_bbox_by_instance(components):
 
 
 def _facing_terminal_keep_pairs(terminals, components):
+    """
+    Trova terminali di componenti diversi che si fronteggiano a distanza breve.
+
+    Serve per preservare piccoli tratti di filo tra componenti molto vicini:
+    senza questa eccezione la maschera di entrambi i componenti potrebbe
+    cancellare completamente il collegamento intermedio.
+    """
     component_boxes = _component_bbox_by_instance(components)
     pairs = []
 
@@ -389,10 +464,23 @@ def _facing_terminal_keep_pairs(terminals, components):
     return pairs
 
 
-# Carve terminal keep zones.
 def carve_terminal_keep_zones(mask, terminals, components):
+    """
+    Riapre nella maschera le zone che devono rimanere visibili come filo.
+
+    La maschera parte con i componenti pieni a 255. Qui disegniamo a 0:
+      - un cerchio centrato sul terminale;
+      - una capsula direzionata lungo il lato stimato;
+      - eventuali segmenti tra terminali frontali molto vicini.
+
+    keep_debug salva le stesse zone in bianco, cosi' e' possibile verificare
+    visivamente quali parti sono state preservate.
+    """
     h, w = mask.shape[:2]
     keep_debug = np.zeros_like(mask)
+
+    # Lookup dei componenti per instance_id: serve per adattare le keep zone in
+    # base al componente padre, ad esempio per display seven-segment.
     components_by_instance = {}
     for comp in components:
         instance_id = comp.get("instance_id")
@@ -401,6 +489,8 @@ def carve_terminal_keep_zones(mask, terminals, components):
         components_by_instance[str(instance_id)] = comp
 
     for term in terminals:
+        # Parametri finali del terminale: default per classe piu' eventuale
+        # adattamento specifico del componente.
         params = adapt_terminal_keep_for_component(
             term,
             terminal_keep_params(term),
@@ -411,10 +501,14 @@ def carve_terminal_keep_zones(mask, terminals, components):
         y = int(round(term["y"]))
         x, y = clamp_point(x, y, w, h)
 
+        # Cerchio locale: protegge il punto stimato anche se la coordinata non
+        # cade esattamente sul pixel del filo.
         cv2.circle(mask, (x, y), params["radius"], 0, thickness=-1)
         cv2.circle(keep_debug, (x, y), params["radius"], 255, thickness=-1)
 
-        p1f, p2f = terminal_keep_segment(term)
+        # Segmento direzionato: preserva il tratto di filo che esce dal lato del
+        # componente e un piccolo tratto interno di tolleranza.
+        p1f, p2f = terminal_keep_segment(term, params=params)
         p1 = clamp_point(p1f[0], p1f[1], w, h)
         p2 = clamp_point(p2f[0], p2f[1], w, h)
 
@@ -422,6 +516,9 @@ def carve_terminal_keep_zones(mask, terminals, components):
         cv2.line(keep_debug, p1, p2, 255, thickness=params["thickness"])
 
     for term_a, term_b in _facing_terminal_keep_pairs(terminals, components):
+        # Quando due terminali di componenti diversi si fronteggiano molto da
+        # vicino, preserviamo anche il segmento tra i due punti: e' una difesa
+        # contro collegamenti corti cancellati da due maschere adiacenti.
         x1, y1 = clamp_point(term_a["x"], term_a["y"], w, h)
         x2, y2 = clamp_point(term_b["x"], term_b["y"], w, h)
 
@@ -448,13 +545,16 @@ def carve_terminal_keep_zones(mask, terminals, components):
 
 # Costruisce la maschera finale dei componenti e le zone terminali da preservare.
 def build_component_mask(image_shape, components, terminals):
+    """Costruisce maschera componenti finale e immagine debug delle keep zone."""
     mask = build_base_component_mask(image_shape, components)
     mask, keep_debug = carve_terminal_keep_zones(mask, terminals, components)
     return mask, keep_debug
 
-# Output di debug.
-# Salva la vista debug della maschera.
+# =========================================================
+# OUTPUT DI DEBUG
+# =========================================================
 def save_mask_debug(image_bgr, mask, out_path: Path):
+    """Salva un overlay rosso delle zone componenti mascherate."""
     overlay = image_bgr.copy()
     red_layer = np.zeros_like(image_bgr)
     red_layer[:, :, 2] = 255
@@ -468,8 +568,8 @@ def save_mask_debug(image_bgr, mask, out_path: Path):
     cv2.imwrite(str(out_path), overlay)
 
 
-# Salva la vista debug delle zone terminali preservate.
 def save_terminal_keep_debug(image_bgr, keep_debug, out_path: Path):
+    """Salva un overlay verde delle zone terminali preservate."""
     overlay = image_bgr.copy()
     green_layer = np.zeros_like(image_bgr)
     green_layer[:, :, 1] = 255
@@ -482,9 +582,11 @@ def save_terminal_keep_debug(image_bgr, keep_debug, out_path: Path):
 
     cv2.imwrite(str(out_path), overlay)
 
-# post-processing wires
-# Remove small connected components.
+# =========================================================
+# POST-PROCESSING FILI
+# =========================================================
 def remove_small_connected_components(binary_img, min_area=40):
+    """Rimuove componenti connesse troppo piccole per essere fili affidabili."""
     num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(binary_img, connectivity=8)
 
     filtered = np.zeros_like(binary_img)
@@ -504,6 +606,13 @@ def remove_small_connected_components(binary_img, min_area=40):
 
 
 def suppress_ic_side_vertical_bridge_pixels(vertical_bridged, base_img, components):
+    """
+    Elimina ricuciture verticali artificiali vicino ai lati degli IC.
+
+    Il bridge verticale puo' unire tra loro pin consecutivi dello stesso lato,
+    creando un falso filo parallelo al corpo dell'integrato. Per evitarlo
+    cancelliamo solo i pixel aggiunti dal bridge nelle fasce laterali degli IC.
+    """
     cleaned = vertical_bridged.copy()
     added_by_vertical_bridge = (vertical_bridged > 0) & (base_img == 0)
     h, w = cleaned.shape[:2]
@@ -543,8 +652,15 @@ def suppress_ic_side_vertical_bridge_pixels(vertical_bridged, base_img, componen
     return cleaned
 
 
-# Bridge fragmented wires.
 def bridge_fragmented_wires(binary_img, components=None):
+    """
+    Ricuce piccoli gap nei fili frammentati.
+
+    Usa due direzioni:
+      - closing orizzontale sul binario completo;
+      - closing verticale partendo da un seed verticale, per evitare che tratti
+        orizzontali o simboli diventino falsi fili verticali.
+    """
     if not ENABLE_FRAGMENTED_WIRE_BRIDGE:
         return binary_img.copy(), {
             "enabled": False,
@@ -554,6 +670,7 @@ def bridge_fragmented_wires(binary_img, components=None):
             "detect_length": None,
         }
 
+    # Kernel orientati: uno per gap orizzontali e uno per gap verticali.
     h_kernel = cv2.getStructuringElement(
         cv2.MORPH_RECT,
         (
@@ -577,6 +694,8 @@ def bridge_fragmented_wires(binary_img, components=None):
         (1, FRAGMENTED_WIRE_BRIDGE_DETECT_LENGTH),
     )
 
+    # Seed verticale: conserva solo evidenze gia' verticali prima di chiuderle,
+    # riducendo il rischio di creare colonne artificiali.
     vertical_seed = cv2.morphologyEx(binary_img, cv2.MORPH_OPEN, v_detect_kernel)
 
     horizontal_bridged = cv2.morphologyEx(
@@ -591,6 +710,8 @@ def bridge_fragmented_wires(binary_img, components=None):
         v_kernel,
         iterations=FRAGMENTED_WIRE_BRIDGE_ITERATIONS,
     )
+    # Pulizia specifica IC: rimuove le sole colonne introdotte dal bridge vicino
+    # ai pin laterali degli integrati.
     vertical_bridged = suppress_ic_side_vertical_bridge_pixels(
         vertical_bridged,
         binary_img,
@@ -615,26 +736,32 @@ def bridge_fragmented_wires(binary_img, components=None):
     }
 
 
-# Extract wires from image.
 def extract_wires_from_image(image_bgr, components, terminals):
-    # 1. grayscale
+    """
+    Esegue l'intera estrazione fili per una singola immagine.
+
+    Restituisce tutte le immagini intermedie per debug e i metadati tecnici da
+    salvare nel JSON dello step 04.
+    """
+    # 1. Conversione in grayscale: la pipeline lavora su intensita', non colore.
     gray = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2GRAY)
 
-    # 2. component mask + terminal keep zones
+    # 2. Maschera componenti + riapertura locale dei terminali.
     component_mask, terminal_keep_debug = build_component_mask(
         image_bgr.shape, components, terminals
     )
 
-    # 3. apply mask
+    # 3. Applicazione maschera: le zone a 255 della maschera diventano bianche,
+    # quindi spariscono nella successiva threshold invertita.
     masked_gray = gray.copy()
     masked_gray[component_mask > 0] = 255
 
-    # 4. threshold
+    # 4. Threshold Otsu invertita: i fili scuri diventano foreground bianco.
     _, binary = cv2.threshold(
         masked_gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
     )
 
-    # 5. closing
+    # 5. Closing leggero per chiudere micro-gap prodotti da scansione/maschera.
     kernel = cv2.getStructuringElement(
         cv2.MORPH_RECT, (CLOSING_KERNEL_SIZE, CLOSING_KERNEL_SIZE)
     )
@@ -645,10 +772,10 @@ def extract_wires_from_image(image_bgr, components, terminals):
         iterations=CLOSING_ITERATIONS,
     )
 
-    # 6. bridge fragmented dashed wires
+    # 6. Ricucitura orientata di fili frammentati.
     bridged, bridge_info = bridge_fragmented_wires(closed, components)
 
-    # 7. small component filter
+    # 7. Rimozione di piccole componenti residue non affidabili.
     if ENABLE_SMALL_COMPONENT_FILTER:
         filtered, kept_components, removed_components = remove_small_connected_components(
             bridged,
@@ -659,7 +786,8 @@ def extract_wires_from_image(image_bgr, components, terminals):
         kept_components = None
         removed_components = None
 
-    # 8. skeletonization
+    # 8. Skeletonizzazione: riduce i fili a un solo pixel di spessore, forma
+    # richiesta dallo step 05 per connected components e matching terminali.
     skeleton_bool = skeletonize(filtered > 0)
     skeleton = (skeleton_bool.astype(np.uint8)) * 255
 
@@ -697,12 +825,16 @@ def extract_wires_from_image(image_bgr, components, terminals):
         bridge_info,
     )
 
-# main
-# Run the entrypoint for this pipeline stage.
+# =========================================================
+# MAIN
+# =========================================================
 def main() -> None:
+    """Entry point dello step 04."""
     if not INPUT_DIR.exists():
         raise FileNotFoundError(f"Cartella input non trovata: {INPUT_DIR}")
 
+    # Creiamo sempre tutte le cartelle di output per mantenere ispezionabili le
+    # immagini intermedie prodotte dalla pipeline.
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     MASK_DEBUG_DIR.mkdir(parents=True, exist_ok=True)
     COMPONENT_MASK_DIR.mkdir(parents=True, exist_ok=True)
@@ -714,8 +846,10 @@ def main() -> None:
     FILTERED_DIR.mkdir(parents=True, exist_ok=True)
     SKELETON_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Ogni JSON di input e' l'output dello step 03 per una singola immagine.
     json_files = sorted(INPUT_DIR.glob("*.json"))
     if PIPELINE_IMAGE_IDS:
+        # Filtro opzionale per rilanciare lo step su immagini specifiche.
         wanted = set(PIPELINE_IMAGE_IDS)
         json_files = [json_path for json_path in json_files if json_path.stem in wanted]
 
@@ -731,6 +865,7 @@ def main() -> None:
         print()
 
     for i, json_path in enumerate(json_files, start=1):
+        # Caricamento dati step 03: componenti, terminali e path immagine.
         with open(json_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
@@ -743,6 +878,7 @@ def main() -> None:
         components = data.get("components", [])
         terminals = data.get("terminals", [])
 
+        # Estrazione fili vera e propria.
         (
             component_mask,
             terminal_keep_debug,
@@ -757,6 +893,7 @@ def main() -> None:
             bridge_info,
         ) = extract_wires_from_image(image_bgr, components, terminals)
 
+        # Path delle immagini intermedie associate al JSON corrente.
         stem = json_path.stem
 
         mask_debug_path = MASK_DEBUG_DIR / f"{stem}_mask_debug.jpg"
@@ -769,6 +906,8 @@ def main() -> None:
         filtered_path = FILTERED_DIR / f"{stem}_filtered.png"
         skeleton_path = SKELETON_DIR / f"{stem}_skeleton.png"
 
+        # Salvataggio viste intermedie: sono fondamentali per capire eventuali
+        # errori dello step 05 guardando cosa e' successo allo skeleton.
         save_mask_debug(image_bgr, component_mask, mask_debug_path)
         save_terminal_keep_debug(image_bgr, terminal_keep_debug, terminal_keep_debug_path)
         cv2.imwrite(str(component_mask_path), component_mask)
@@ -779,6 +918,8 @@ def main() -> None:
         cv2.imwrite(str(filtered_path), filtered)
         cv2.imwrite(str(skeleton_path), skeleton)
 
+        # Il JSON di output conserva i dati precedenti e aggiunge solo il blocco
+        # wire_extraction, che contiene parametri tecnici e path usati da 05.
         output_data = dict(data)
         output_data["wire_extraction"] = {
             "mask_shrink_factor": MASK_SHRINK_FACTOR,
@@ -802,7 +943,7 @@ def main() -> None:
         with open(out_json_path, "w", encoding="utf-8") as f:
             json.dump(output_data, f, indent=2, ensure_ascii=False)
 
-        print(f"[{i}/{len(json_files)}] {json_path.name} -> wire extraction completata")
+        print(f"[{i}/{len(json_files)}] {json_path.name} -> estrazione fili completata")
         if ENABLE_SMALL_COMPONENT_FILTER:
             print(
                 f"    filtro componenti piccoli -> kept={filter_info['kept_components']}, "

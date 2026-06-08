@@ -31,6 +31,12 @@ def merge_short_oblique_branch_labels(
     labels: np.ndarray,
     filtered_binary: np.ndarray | None,
 ):
+    """
+    Recupera rami obliqui brevi tra label spezzate.
+
+    Si attiva solo quando filtered_binary e' disponibile: lo skeleton da solo
+    puo' essere troppo povero per confermare un ramo obliquo reale.
+    """
     if not OBLIQUE_BRANCH_RECOVERY_ENABLE or filtered_binary is None:
         return label_to_terminal_ids
 
@@ -107,6 +113,7 @@ def _best_oblique_target(
     filtered_binary: np.ndarray,
     terminals_by_label: dict,
 ):
+    """Sceglie la migliore label target per un ramo obliquo uscente."""
     h, w = labels.shape[:2]
     x1, y1, x2, y2 = clamp_window(
         sx - OBLIQUE_BRANCH_SEARCH_HALF_WIDTH,
@@ -168,6 +175,7 @@ def _best_oblique_target(
 
 
 def _label_has_compatible_side_terminal(label_terms: list[dict | None], side: str):
+    """Verifica se la label target contiene un terminale compatibile col lato."""
     for term in label_terms:
         if term is None:
             continue
@@ -180,6 +188,7 @@ def _label_has_compatible_side_terminal(label_terms: list[dict | None], side: st
 
 
 def _line_support(binary: np.ndarray, p0: tuple[int, int], p1: tuple[int, int]):
+    """Conta i pixel di supporto lungo il segmento tra due punti."""
     x0, y0 = p0
     x1, y1 = p1
     steps = max(abs(int(x1) - int(x0)), abs(int(y1) - int(y0))) + 1

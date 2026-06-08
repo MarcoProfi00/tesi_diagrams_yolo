@@ -34,6 +34,7 @@ def draw_outlined_text(
     thickness=TEXT_THICKNESS,
     outline_thickness=TEXT_OUTLINE_THICKNESS,
 ):
+    """Disegna testo con contorno per renderlo leggibile su sfondi complessi."""
     cv2.putText(
         image,
         text,
@@ -55,11 +56,12 @@ def draw_outlined_text(
         cv2.LINE_AA,
     )
 
-# Sceglie il colore del terminale in base allo stato del match/grafo.
-# verde = matched
-# giallo-arancio acceso = unmatched o unconnected
-# arancione = suspicious
 def get_terminal_debug_color(match_info: dict, is_problem_terminal=False):
+    """
+    Sceglie il colore del terminale in base allo stato del match/grafo.
+
+    Verde = matched; rosso/giallo = problema; arancione = match sospetto.
+    """
     if is_problem_terminal:
         return PROBLEM_TERMINAL_COLOR
     if match_info.get("matched_label") is None:
@@ -70,12 +72,12 @@ def get_terminal_debug_color(match_info: dict, is_problem_terminal=False):
 
 
 def is_problem_terminal(terminal_id, simple_id, problem_terminal_ids):
+    """Controlla sia l'id interno sia quello semplificato usato nei warning."""
     if not problem_terminal_ids:
         return False
     return terminal_id in problem_terminal_ids or simple_id in problem_terminal_ids
 
 
-# Disegna overlay sul diagramma originale.
 def draw_terminal_overlay(
     image_bgr,
     terminals,
@@ -83,6 +85,12 @@ def draw_terminal_overlay(
     original_to_simple,
     problem_terminal_ids=None,
 ):
+    """
+    Disegna il debug sul diagramma originale.
+
+    Mostra terminale stimato, punto di snap sullo skeleton e linea tra i due.
+    E' la vista piu' utile per capire se il match e' geometricamente sensato.
+    """
     out = image_bgr.copy()
     problem_terminal_ids = set(problem_terminal_ids or [])
 
@@ -99,6 +107,8 @@ def draw_terminal_overlay(
         cv2.circle(out, (tx, ty), TERMINAL_RADIUS, color, -1)
         cv2.circle(out, (tx, ty), TERMINAL_RADIUS + 1, (0, 0, 0), 1)
 
+        # snap_point e' il pixel reale dello skeleton a cui il terminale e'
+        # stato agganciato.
         snap_point = info.get("snap_point")
         if snap_point is not None:
             sx, sy = map(int, snap_point)
@@ -120,7 +130,6 @@ def draw_terminal_overlay(
     return out
 
 
-# Disegna overlay sullo skeleton, utile per capire se il match cade davvero sul filo.
 def draw_skeleton_overlay(
     skeleton_binary,
     terminals,
@@ -128,6 +137,12 @@ def draw_skeleton_overlay(
     original_to_simple,
     problem_terminal_ids=None,
 ):
+    """
+    Disegna lo stesso debug direttamente sullo skeleton.
+
+    Questa vista rimuove il disegno originale e permette di vedere solo i fili
+    effettivamente usati per le connected components.
+    """
     out = cv2.cvtColor(skeleton_binary, cv2.COLOR_GRAY2BGR)
     problem_terminal_ids = set(problem_terminal_ids or [])
 

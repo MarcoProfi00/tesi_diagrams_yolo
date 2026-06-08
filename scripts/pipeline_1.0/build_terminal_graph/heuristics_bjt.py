@@ -1,3 +1,5 @@
+"""Euristiche per ricomporre label spezzate sui terminali base dei BJT."""
+
 import numpy as np
 
 from .config import BJT_BASE_ALIGN_Y_TOL, BJT_BASE_LABEL_MAX_GAP, BJT_BASE_MAX_DX
@@ -14,6 +16,7 @@ def is_bjt_base_terminal(term: dict) -> bool:
 
 
 def is_bjt_non_base_terminal(term: dict) -> bool:
+    """Riconosce terminali BJT diversi dalla base, quindi C/E o equivalenti."""
     class_name = normalize_class_name(term.get("component_class_name"))
     terminal_name = str(get_preferred_terminal_public_name(term) or "").strip().upper()
     return "transistor" in class_name and terminal_name != "B"
@@ -28,6 +31,13 @@ def merge_bjt_base_aligned_labels(
     terminal_match_debug: dict,
     labels: np.ndarray,
 ):
+    """
+    Unisce label spezzate che rappresentano la stessa linea della base.
+
+    La maschera dei componenti puo' spezzare il tratto che collega due basi
+    allineate. Uniamo solo se non trasciniamo dentro C/E o reti esterne gia'
+    complete.
+    """
     parent = {int(label): int(label) for label in label_to_terminal_ids.keys()}
 
     def find(label):

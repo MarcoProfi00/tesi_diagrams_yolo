@@ -4,16 +4,21 @@ from .config import MOSFET_GATE_SUPPLY_ALIGN_Y_TOL
 from .heuristics_mosfet import is_mosfet_gate_terminal
 from .ids import normalize_class_name
 
-# Dice se un terminale appartiene a una battery.
 def is_battery_terminal(term: dict) -> bool:
+    """Riconosce un terminale appartenente a una Battery."""
     class_name = normalize_class_name(term.get("component_class_name"))
     return class_name == "battery"
 
-# unisce gruppi di batteria con gruppi di gate mosfet se sono allineati verticalmente (caso particolare)
 def merge_battery_gate_rail_groups(
     label_to_terminal_ids: dict,
     terminals: list[dict],
 ):
+    """
+    Unisce gruppi Battery e gate MOSFET quando sono allineati verticalmente.
+
+    E' una correzione di dominio per rail di alimentazione/gate che possono
+    restare separati dopo skeletonizzazione.
+    """
     terminal_by_id = {term["terminal_id"]: term for term in terminals}
 
     parent = {int(label): int(label) for label in label_to_terminal_ids.keys()}

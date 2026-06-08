@@ -1,3 +1,5 @@
+"""Euristiche per reti di gate MOSFET e rail spezzati."""
+
 import numpy as np
 
 from .config import (
@@ -20,12 +22,14 @@ from .ids import get_preferred_terminal_public_name, normalize_class_name
 
 # Dice se un terminale è un gate (G) del MOSFET.
 def is_mosfet_gate_terminal(term: dict) -> bool:
+    """Riconosce il terminale gate G di un MOSFET."""
     class_name = normalize_class_name(term.get("component_class_name"))
     terminal_name = str(get_preferred_terminal_public_name(term) or "").strip().upper()
     return "mosfet" in class_name and terminal_name == "G"
 
 
 def is_mosfet_terminal(term: dict) -> bool:
+    """Riconosce qualunque terminale appartenente a un MOSFET."""
     class_name = normalize_class_name(term.get("component_class_name"))
     return "mosfet" in class_name
 
@@ -38,6 +42,12 @@ def merge_mosfet_gate_aligned_labels(
     terminal_match_debug: dict,
     labels: np.ndarray,
 ):
+    """
+    Unisce label spezzate che rappresentano la stessa rete di gate.
+
+    La fusione e' volutamente conservativa: accetta solo gruppi composti da gate
+    MOSFET, allineati e vicini, evitando di unire reti gia' complete.
+    """
     parent = {int(label): int(label) for label in label_to_terminal_ids.keys()}
 
     def find(label):
@@ -126,6 +136,12 @@ def merge_mosfet_gate_rail_groups(
     terminals: list[dict],
     components: list[dict],
 ):
+    """
+    Unisce gruppi di soli MOSFET quando formano una rail di gate.
+
+    Dopo gli split per crossing possono restare piccole reti MOSFET separate ma
+    allineate; questa euristica le ricompone se non includono componenti esterni.
+    """
     terminal_by_id = {term["terminal_id"]: term for term in terminals}
     bbox_by_instance = build_component_bbox_by_instance(components)
 

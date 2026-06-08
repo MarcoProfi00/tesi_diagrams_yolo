@@ -14,6 +14,12 @@ from .ids import normalize_class_name
 # raggruppa i terminali per label
 # deduplica e ordina
 def build_label_to_terminal_ids(match_debug_by_terminal_id: dict):
+    """
+    Costruisce la mappa label skeleton -> terminali agganciati.
+
+    Questa e' la prima rappresentazione del nodo elettrico implicito: ogni label
+    positiva dello skeleton puo' collegare zero, uno o piu' terminali.
+    """
     label_to_terminal_ids = {}
 
     for terminal_id, match_info in match_debug_by_terminal_id.items():
@@ -36,6 +42,13 @@ def remove_non_shorting_component_self_matches(
     terminals: list[dict],
     terminal_match_debug: dict,
 ):
+    """
+    Rimuove falsi match tra pin dello stesso componente non cortocircuitante.
+
+    Se piu' terminali dello stesso connector/transformer/opamp/MOSFET finiscono
+    sulla stessa label per artefatto dello skeleton, non devono diventare una
+    rete elettrica interna.
+    """
     terminal_by_id = {term["terminal_id"]: term for term in terminals}
     cleaned = {}
 
@@ -86,6 +99,13 @@ def _is_valid_same_ic_external_branch(
     terminal_match_debug: dict,
     terminal_by_id: dict,
 ):
+    """
+    Eccezione per alcuni rami esterni dello stesso IC.
+
+    Due pin dello stesso IC possono cadere sulla stessa label quando il filo
+    esterno e' davvero comune e vicino; questa funzione evita di cancellare
+    quei casi plausibili.
+    """
     if len(terms) != 2:
         return False
     if {
@@ -115,6 +135,13 @@ def split_polarized_capacitor_self_short_groups(
     components: list[dict] | None = None,
     skeleton_binary=None,
 ):
+    """
+    Divide gruppi che cortocircuitano i due poli di un condensatore polarizzato.
+
+    Il simbolo interno puo' lasciare pixel nello skeleton e far finire positivo e
+    negativo nella stessa label. Lo split prova prima una separazione strutturale
+    sul bbox, poi un caso specifico con GND.
+    """
     terminal_by_id = {term["terminal_id"]: term for term in terminals}
     component_by_instance = {
         str(component.get("instance_id")): component
@@ -145,6 +172,7 @@ def _split_group_on_polarized_capacitor_axis(
     component_by_instance: dict | None = None,
     skeleton_binary=None,
 ):
+    """Sceglie come dividere un gruppo attorno all'asse del condensatore."""
     terms = [terminal_by_id.get(terminal_id) for terminal_id in terminal_ids]
     terms = [term for term in terms if term is not None]
 
@@ -222,6 +250,7 @@ def _split_group_on_cut_polarized_capacitor(
     component_by_instance: dict,
     skeleton_binary,
 ):
+    """Prova lo split cancellando localmente il bbox del condensatore polarizzato."""
     if skeleton_binary is None:
         return None
 
@@ -308,6 +337,7 @@ def _split_group_on_grounded_polarized_capacitor(
     terms: list[dict],
     cap_terms: list[dict],
 ):
+    """Gestisce il caso frequente condensatore polarizzato collegato a GND."""
     gnd_terms = [
         term for term in terms
         if normalize_class_name(term.get("component_class_name")) in {"gnd", "ground"}
@@ -384,6 +414,13 @@ def merge_split_grounded_ic_side_branches(
     terminals: list[dict],
     terminal_match_debug: dict,
 ):
+    """
+    Ricompone rami IC/GND spezzati da switch o resistori vicini.
+
+    Alcuni circuiti generano label diverse per rami che appartengono allo stesso
+    nodo a causa di maschera/skeleton. Qui uniamo solo configurazioni molto
+    specifiche: ramo con switch/pulsante + resistor e lato IC collegato a GND.
+    """
     terminal_by_id = {term["terminal_id"]: term for term in terminals}
     groups = [sorted(set(ids)) for ids in label_to_terminal_ids.values()]
     merged = [False] * len(groups)
@@ -497,6 +534,13 @@ def split_same_side_ic_fanout_groups(
     label_to_terminal_ids: dict,
     terminals: list[dict],
 ):
+    """
+    Divide fanout di pin IC sullo stesso lato.
+
+    Se piu' pin dello stesso lato IC e piu' terminali esterni finiscono nella
+    stessa label, li appaiamo per ordine geometrico invece di considerarli tutti
+    cortocircuitati.
+    """
     terminal_by_id = {term["terminal_id"]: term for term in terminals}
     output_groups = []
 
@@ -567,6 +611,7 @@ def _split_same_side_ic_fanout_group(
 
 
 def build_component_bbox_by_instance(components: list[dict]):
+    """Costruisce una mappa instance_id -> bbox usata dalle euristiche."""
     bbox_by_instance = {}
     for comp in components:
         instance_id = comp.get("instance_id")

@@ -1,3 +1,5 @@
+"""Euristiche specifiche per display a sette segmenti riconosciuti come IC."""
+
 from .ids import normalize_class_name
 
 
@@ -5,6 +7,7 @@ SEGMENT_LABELS = {"a", "b", "c", "d", "e", "f", "g", "h", "dp"}
 
 
 def _is_seven_segment_display(component: dict) -> bool:
+    """Riconosce componenti IC promossi a sottotipo seven_segment_display."""
     return (
         normalize_class_name(component.get("class_name")) == "integrated_circuit"
         and component.get("component_subtype") == "seven_segment_display"
@@ -42,6 +45,7 @@ def _are_adjacent_displays(left: dict, right: dict) -> bool:
 
 
 def _segment_terminal_by_label(component: dict) -> dict[str, str]:
+    """Crea una mappa label segmento -> terminal_id per un singolo display."""
     by_label = {}
     for term in component.get("terminals", []):
         label = str(term.get("pin_label_text") or "").strip().lower()
@@ -78,6 +82,12 @@ def split_seven_segment_segment_label_groups(
     terminals: list[dict],
     components: list[dict],
 ):
+    """
+    Divide gruppi in cui segmenti diversi dello stesso display sono finiti insieme.
+
+    Le label a/b/c/... non rappresentano tutte la stessa net: se lo skeleton le
+    fonde, le separiamo usando la label OCR e la posizione verticale.
+    """
     term_by_id = {
         str(term.get("terminal_id")): term
         for term in terminals
@@ -156,6 +166,13 @@ def split_seven_segment_segment_label_groups(
 
 
 def build_seven_segment_shared_segment_edges(components: list[dict]):
+    """
+    Aggiunge archi tra segmenti omonimi di display adiacenti.
+
+    In display multipli affiancati, segmenti con la stessa label possono essere
+    parte della stessa linea di pilotaggio anche se lo skeleton non li collega
+    chiaramente.
+    """
     displays = [comp for comp in components if _is_seven_segment_display(comp)]
     edges = []
 

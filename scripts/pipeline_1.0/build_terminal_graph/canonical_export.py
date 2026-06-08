@@ -8,6 +8,12 @@ from .ids import (
 
 
 def build_integrated_circuit_display_name(comp: dict):
+    """
+    Sceglie il nome leggibile di un IC.
+
+    Preferiamo il marking OCR quando disponibile; se manca, usiamo il sottotipo
+    riconosciuto, ad esempio seven_segment_display.
+    """
     if comp.get("ic_marking") not in (None, ""):
         return str(comp.get("ic_marking"))
     if comp.get("component_subtype") not in (None, ""):
@@ -16,6 +22,12 @@ def build_integrated_circuit_display_name(comp: dict):
 
 
 def build_integrated_circuit_terminal_display_name(comp: dict, term: dict):
+    """
+    Crea una label terminale leggibile per IC.
+
+    La label combina nome componente, nome terminale geometrico/semantico e,
+    quando presenti, numero pin e label OCR.
+    """
     parts = []
     component_display_name = build_integrated_circuit_display_name(comp)
     terminal_name = get_preferred_terminal_public_name(term)
@@ -35,17 +47,16 @@ def build_integrated_circuit_terminal_display_name(comp: dict, term: dict):
 # =========================================================
 # COSTRUZIONE DEI COMPONENTI CANONICI
 # =========================================================
-# Produce una vista semplificata dei componenti.
-# Nel JSON finale teniamo solo:
-# - component_id
-# - instance_id
-# - class_name
-# - terminals con terminal_id, name e relative_position
-# Per Integrated_Circuit preserva anche le informazioni OCR gia' lette nel passo 03:
-# - ic_marking o component_subtype
-# - pin_number e/o pin_label
-# state e state_confidence per componenti come lo switch
 def build_canonical_components(components: list[dict]):
+    """
+    Produce la vista semplificata dei componenti per il JSON finale.
+
+    Manteniamo solo i campi utili a lettura, report e prompt AI:
+      - component_id, instance_id, class_name;
+      - terminali con id, nome e lato;
+      - OCR IC quando presente;
+      - stato di componenti come switch.
+    """
     canonical_components = []
 
     for comp in components:
@@ -96,6 +107,13 @@ def build_canonical_components(components: list[dict]):
 
 
 def build_terminal_metadata(canonical_components: list[dict]):
+    """
+    Costruisce un lookup terminal_id -> metadati opzionali.
+
+    Il grafo deve restare compatto, quindi i dettagli come display_name,
+    pin_number e pin_label vengono messi in una tabella separata consultabile
+    solo quando servono.
+    """
     metadata = {}
 
     for comp in canonical_components:
