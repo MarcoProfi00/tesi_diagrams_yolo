@@ -1,0 +1,223 @@
+# Mapping tra classi del Graph JSON e strategie SPICE della pipeline 2.0.
+#
+# class_terminals_v1.yaml descrive come la pipeline 1.0 riconosce componenti
+# e terminali. Questo file descrive invece come la pipeline 2.0 puo trattare
+# ogni classe durante la conversione verso SPICE.
+#
+# Convenzione:
+# - direct: emettibile direttamente come primitiva SPICE.
+# - model: richiede un modello .model o simile.
+# - equivalent: emettibile usando un equivalente dichiarato.
+# - simplified: gestito con una strategia semplificata.
+# - structural: utile per nodi/topologia ma non emesso in netlist.
+# - pin_aware: analizzato tramite profilo pin/datasheet, non simulato ora.
+# - unsupported_for_now: classe riconosciuta ma non ancora convertita.
+
+Analog_Meter:
+  spice_support: unsupported_for_now
+  reason: "Strumento di misura grafico; in futuro puo diventare probe/measure, non componente fisico emesso."
+
+Antenna:
+  spice_support: unsupported_for_now
+
+Battery:
+  spice_support: direct
+  spice_prefix: V
+  required_fields: [type, value]
+  node_order: [positive, negative]
+  emit_as: independent_voltage_source
+  example: "Vname positive negative DC value"
+
+Breaker:
+  spice_support: simplified
+  required_fields: [state]
+  node_order: [t1, t2]
+  strategies:
+    open: open_circuit
+    closed: short_circuit
+
+Capacitor:
+  spice_support: direct
+  spice_prefix: C
+  required_fields: [value]
+  node_order: [t1, t2]
+  emit_as: capacitor
+
+Connector:
+  spice_support: structural
+  emit: false
+  reason: "Connettore usato per nodi, label e interfacce esterne."
+
+Current_Source:
+  spice_support: direct
+  spice_prefix: I
+  required_fields: [type, value]
+  node_order: [current_from, current_to]
+  emit_as: independent_current_source
+
+Diode:
+  spice_support: model
+  spice_prefix: D
+  required_fields: [model]
+  node_order: [anode, cathode]
+  emit_as: diode
+
+Fuse:
+  spice_support: simplified
+  required_fields: [state]
+  node_order: [t1, t2]
+  strategies:
+    closed: short_circuit
+    open: open_circuit
+
+GND:
+  spice_support: structural
+  emit: false
+  reason: "I terminali GND vengono gia mappati al nodo SPICE 0."
+
+Inductor:
+  spice_support: direct
+  spice_prefix: L
+  required_fields: [value]
+  node_order: [t1, t2]
+  emit_as: inductor
+
+Integrated_Circuit:
+  spice_support: pin_aware
+  emit: false
+  reason: "Richiede device_profiles.yaml o modello .subckt."
+  future_spice_prefix: X
+
+LED:
+  spice_support: model
+  spice_prefix: D
+  required_fields: [model]
+  node_order: [anode, cathode]
+  emit_as: diode
+
+Lamp:
+  spice_support: equivalent
+  spice_prefix: R
+  required_fields: [equivalent_resistance]
+  node_order: [t1, t2]
+  emit_as: resistive_load
+
+Memristor:
+  spice_support: unsupported_for_now
+
+Meter:
+  spice_support: unsupported_for_now
+  reason: "Strumento di misura grafico; in futuro puo diventare probe/measure."
+
+Mosfet:
+  spice_support: model
+  spice_prefix: M
+  required_fields: [model]
+  node_order: [D, G, S]
+  optional_nodes: [B]
+  emit_as: mosfet
+  status: future_batch_b
+
+Motor:
+  spice_support: equivalent
+  spice_prefix: R
+  required_fields: [equivalent_resistance]
+  node_order: [t1, t2]
+  emit_as: resistive_or_behavioral_load
+  status: future_batch_c
+
+NPN_Transistor:
+  spice_support: model
+  spice_prefix: Q
+  required_fields: [model]
+  node_order: [C, B, E]
+  emit_as: bjt_npn
+  status: future_batch_b
+
+Operational_Amplifier:
+  spice_support: pin_aware
+  emit: false
+  reason: "Richiede modello opamp o device profile; per ora controlli topologici."
+  future_spice_prefix: X
+
+Polarized_Capacitor:
+  spice_support: direct
+  spice_prefix: C
+  required_fields: [value]
+  node_order: [positive, negative]
+  emit_as: capacitor
+
+Push_Button:
+  spice_support: simplified
+  required_fields: [state]
+  node_order: [t1, t2]
+  strategies:
+    open: open_circuit
+    closed: short_circuit
+
+Resistor:
+  spice_support: direct
+  spice_prefix: R
+  required_fields: [value]
+  node_order: [t1, t2]
+  emit_as: resistor
+
+Signal_Source:
+  spice_support: direct
+  spice_prefix: V
+  required_fields: [type, value]
+  node_order: [t1, t2]
+  emit_as: independent_voltage_source
+  note: "Per segnali AC/tran serviranno campi aggiuntivi."
+
+Speaker:
+  spice_support: equivalent
+  spice_prefix: R
+  required_fields: [equivalent_resistance]
+  node_order: [t1, t2]
+  emit_as: resistive_load
+
+Switch:
+  spice_support: simplified
+  required_fields: [state]
+  node_order: [t1, t2]
+  strategies:
+    open: open_circuit
+    closed: short_circuit
+
+Terminal:
+  spice_support: structural
+  emit: false
+  reason: "Terminale esterno/label; utile per nodi e interfaccia."
+
+Thermistor:
+  spice_support: equivalent
+  spice_prefix: R
+  required_fields: [equivalent_resistance]
+  node_order: [t1, t2]
+  emit_as: resistive_load
+
+Transformer:
+  spice_support: unsupported_for_now
+  reason: "Richiede accoppiamento induttivo/modello; non gestito nella prima versione."
+
+Trim_Capacitor:
+  spice_support: direct
+  spice_prefix: C
+  required_fields: [value]
+  node_order: [t1, t2]
+  emit_as: capacitor
+
+Variable_Resistor:
+  spice_support: equivalent
+  spice_prefix: R
+  required_fields: [equivalent_resistance]
+  node_order: [t1, t2]
+  emit_as: resistive_load
+
+Voltage_Source:
+  spice_support: direct
+  spice_prefix: V
+  required_fields: [type, value]
+  node_order: [positive, negative]
+  emit_as: independent_voltage_source

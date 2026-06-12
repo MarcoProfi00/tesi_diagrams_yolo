@@ -1,0 +1,40 @@
+circuit_id: a10
+
+components:
+  battery2.1:
+    type: dc
+    value: 5
+    unit: V
+    source: manual_from_image_label
+    label_text: "5 V DC"
+
+  resistor22.1:
+    value: 330
+    unit: ohm
+    source: manual_from_image_label
+    label_text: "330R"
+
+  lamp13.1:
+    equivalent_resistance: 250
+    unit: ohm
+    source: manual_from_image_label
+    label_text: "250 ohm"
+    spice: resistive_load
+
+  led12.1:
+    model: LED_RED
+    source: manual_assumption
+
+  switch25.1:
+    state: open
+    source: graph_json_state
+
+nodes:
+  connector5.1_pin1:
+    label: SW_VCC
+    source: inferred_from_switch_output
+
+  connector5.1_pin4:
+    label: GND
+    spice_node: 0
+    source: graph_json_gnd

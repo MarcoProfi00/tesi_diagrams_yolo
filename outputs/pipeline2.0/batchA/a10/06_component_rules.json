@@ -1,0 +1,153 @@
+{
+  "circuit_id": "a10",
+  "source_format": "pipeline2.0_component_rules",
+  "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\pipeline2_manual_values\\batchA\\a10_values.yaml",
+  "spice_classes_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\pipeline2_spice_classes.yaml",
+  "supplies": {},
+  "components": {
+    "battery2.1": {
+      "class_name": "Battery",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "V",
+      "emit_as": "independent_voltage_source",
+      "node_order": [
+        "positive",
+        "negative"
+      ],
+      "nodes": [
+        "N001",
+        "0"
+      ],
+      "parameters": {
+        "type": "dc",
+        "value": 5,
+        "unit": "V",
+        "source": "manual_from_image_label",
+        "label_text": "5 V DC"
+      }
+    },
+    "connector5.1": {
+      "class_name": "Connector",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "Connettore usato per nodi, label e interfacce esterne."
+    },
+    "gnd9.1": {
+      "class_name": "GND",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "I terminali GND vengono gia mappati al nodo SPICE 0."
+    },
+    "gnd9.2": {
+      "class_name": "GND",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "I terminali GND vengono gia mappati al nodo SPICE 0."
+    },
+    "gnd9.3": {
+      "class_name": "GND",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "I terminali GND vengono gia mappati al nodo SPICE 0."
+    },
+    "gnd9.4": {
+      "class_name": "GND",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "I terminali GND vengono gia mappati al nodo SPICE 0."
+    },
+    "lamp13.1": {
+      "class_name": "Lamp",
+      "status": "spice_ready",
+      "spice_support": "equivalent",
+      "spice_prefix": "R",
+      "emit_as": "resistive_load",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N004",
+        "0"
+      ],
+      "parameters": {
+        "equivalent_resistance": 250,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "250 ohm",
+        "spice": "resistive_load"
+      }
+    },
+    "led12.1": {
+      "class_name": "LED",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "D",
+      "emit_as": "diode",
+      "node_order": [
+        "anode",
+        "cathode"
+      ],
+      "nodes": [
+        "N005",
+        "0"
+      ],
+      "parameters": {
+        "model": "LED_RED",
+        "source": "manual_assumption"
+      }
+    },
+    "resistor22.1": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N003",
+        "N005"
+      ],
+      "parameters": {
+        "value": 330,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "330R"
+      }
+    },
+    "switch25.1": {
+      "class_name": "Switch",
+      "status": "spice_ready",
+      "spice_support": "simplified",
+      "spice_prefix": null,
+      "emit_as": null,
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N001",
+        "N002"
+      ],
+      "parameters": {
+        "state": "open",
+        "source": "graph_json_state"
+      },
+      "strategy": "open_circuit"
+    }
+  },
+  "stats": {
+    "components_total": 10,
+    "spice_ready_components": 5,
+    "not_emitted_components": 5,
+    "missing_components": 0,
+    "unsupported_components": 0,
+    "pin_aware_components": 0,
+    "invalid_components": 0,
+    "supplies_ready_count": 0
+  }
+}
