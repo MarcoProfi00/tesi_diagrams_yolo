@@ -102,7 +102,7 @@ def classify_component_rule(
     component_data: dict[str, Any],
     class_rule: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    """Applica una singola regola SPICE a un componente gia valorizzato."""
+    """Apply a single SPICE rule to an already value-bound component."""
     class_name = component_data.get("class_name")
     value_data = component_data.get("value_data") or {}
     terminal_nodes = component_data.get("terminal_nodes") or {}
@@ -112,7 +112,7 @@ def classify_component_rule(
         return {
             "class_name": class_name,
             "status": "unsupported_for_now",
-            "reason": "Classe non presente in pipeline2_spice_classes.yaml.",
+            "reason": "Class not found in pipeline2_spice_classes.yaml.",
         }
 
     spice_support = class_rule.get("spice_support", "unsupported_for_now")
@@ -122,7 +122,7 @@ def classify_component_rule(
             "class_name": class_name,
             "status": "not_emitted",
             "spice_support": spice_support,
-            "reason": class_rule.get("reason", "Componente strutturale, utile alla topologia ma non emesso."),
+            "reason": class_rule.get("reason", "Structural component used for topology and not emitted."),
         }
 
     if spice_support in DEFERRED_SUPPORT:
@@ -130,7 +130,7 @@ def classify_component_rule(
             "class_name": class_name,
             "status": spice_support,
             "spice_support": spice_support,
-            "reason": class_rule.get("reason", "Conversione rimandata a uno step successivo."),
+            "reason": class_rule.get("reason", "Conversion deferred to a later step."),
         }
 
     if spice_support not in READY_SUPPORT:
@@ -138,7 +138,7 @@ def classify_component_rule(
             "class_name": class_name,
             "status": "unsupported_for_now",
             "spice_support": spice_support,
-            "reason": "Strategia SPICE non riconosciuta.",
+            "reason": "Unrecognized SPICE support strategy.",
         }
 
     if value_status == "missing":

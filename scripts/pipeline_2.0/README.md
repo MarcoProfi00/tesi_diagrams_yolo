@@ -120,6 +120,23 @@ Output:
 07_spice_emit_report.json
 ```
 
+### 08 - SPICE Run
+
+Esegue opzionalmente ngspice sulla netlist prodotta dallo step 07.
+
+Lo step 08 non parte automaticamente: viene eseguito solo passando il flag
+`--run-spice` a `run_pipeline2.py`.
+
+Quando viene eseguito, produce:
+
+```text
+08_spice_run.json
+08_ngspice_stdout.txt
+08_ngspice_stderr.txt
+```
+
+Gli output tecnici dello step 08 sono in inglese.
+
 ## Comando principale
 
 Da terminale, nella root del progetto:
@@ -128,7 +145,8 @@ Da terminale, nella root del progetto:
 python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 a02 a10
 ```
 
-Questo comando esegue gli step disponibili per i tre circuiti:
+Questo comando esegue gli step disponibili fino alla generazione della netlist
+SPICE, senza lanciare ngspice.
 
 ```text
 a01
@@ -148,6 +166,122 @@ Esempio:
 outputs/pipeline2.0/batchA/a01/
 ```
 
+Per eseguire anche ngspice su un circuito:
+
+```powershell
+python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 --run-spice
+```
+
+Per forzare esplicitamente l'eseguibile console di ngspice:
+
+```powershell
+python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 --run-spice --ngspice-executable ngspice_con
+```
+
+## Ngspice su Windows e VS Code
+
+Su Windows, VS Code non installa ngspice direttamente. VS Code usa il terminale
+integrato, quindi deve riuscire a trovare `ngspice_con.exe`.
+
+Nel nostro caso ngspice si trova qui:
+
+```text
+C:\Users\m.profilo\Spice64\bin
+```
+
+Dentro questa cartella ci sono:
+
+```text
+C:\Users\m.profilo\Spice64\bin\ngspice.exe
+C:\Users\m.profilo\Spice64\bin\ngspice_con.exe
+```
+
+Per la pipeline conviene usare `ngspice_con.exe`, cioe la versione console. La
+versione `ngspice.exe` puo aprire una finestra grafica.
+
+### Verifica con path completo
+
+Da terminale PowerShell in VS Code:
+
+```powershell
+& "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe" -v
+```
+
+Per eseguire manualmente la netlist di `a01`:
+
+```powershell
+& "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe" -b outputs\pipeline2.0\batchA\a01\07_netlist.cir
+```
+
+Questo comando usa:
+
+```text
+-b
+```
+
+cioe batch mode: ngspice esegue la netlist senza aprire l'interfaccia
+interattiva.
+
+### Comando veloce temporaneo
+
+Per evitare di scrivere ogni volta il path completo, si puo aggiungere la
+cartella al `PATH` solo per il terminale aperto:
+
+```powershell
+$env:Path += ";C:\Users\m.profilo\Spice64\bin"
+```
+
+Poi si puo usare:
+
+```powershell
+ngspice_con -v
+```
+
+e:
+
+```powershell
+ngspice_con -b outputs\pipeline2.0\batchA\a01\07_netlist.cir
+```
+
+Questa modifica temporanea vale solo per il terminale corrente.
+
+### Comando veloce permanente
+
+Per rendere `ngspice_con` disponibile sempre:
+
+1. Aprire `Environment Variables` da Windows.
+2. Entrare in `Edit the system environment variables`.
+3. Cliccare `Environment Variables`.
+4. In `User variables`, selezionare `Path`.
+5. Cliccare `Edit`.
+6. Cliccare `New`.
+7. Aggiungere:
+
+```text
+C:\Users\m.profilo\Spice64\bin
+```
+
+8. Confermare con `OK`.
+9. Chiudere e riaprire VS Code.
+
+Dopo il riavvio di VS Code, questo comando dovrebbe funzionare:
+
+```powershell
+ngspice_con -v
+```
+
+E questo comando esegue manualmente la netlist di `a01`:
+
+```powershell
+ngspice_con -b outputs\pipeline2.0\batchA\a01\07_netlist.cir
+```
+
+La pipeline puo fare la stessa cosa tramite lo step 08:
+
+```powershell
+python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 --run-spice --ngspice-executable ngspice_con
+```
+
 ## File prodotti per ogni circuito
 
 Per ogni circuito, al momento, vengono prodotti:
@@ -160,6 +294,14 @@ Per ogni circuito, al momento, vengono prodotti:
 06_component_rules.json
 07_netlist.cir
 07_spice_emit_report.json
+```
+
+Se viene passato `--run-spice`, vengono prodotti anche:
+
+```text
+08_spice_run.json
+08_ngspice_stdout.txt
+08_ngspice_stderr.txt
 ```
 
 ## Come leggere gli output principali
@@ -237,7 +379,7 @@ Esempio:
   "skipped_elements": 5,
   "models": ["LED_RED"],
   "warnings": [
-    "switch25.1: switch open non emesso"
+    "switch25.1: open switch not emitted"
   ]
 }
 ```
@@ -308,7 +450,6 @@ SPICE eseguibile.
 
 I prossimi step saranno:
 
-- `08_spice_run.py`: prova a eseguire ngspice sulla netlist;
 - `09_checks.py`: interpreta errori, nodi flottanti, switch aperti e problemi
   di simulazione;
 - `10_report.py`: produce un report finale leggibile.

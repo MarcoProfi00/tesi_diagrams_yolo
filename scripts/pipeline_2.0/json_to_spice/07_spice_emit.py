@@ -32,21 +32,21 @@ MODEL_LINES = {
 
 
 def safe_name(raw_name: str) -> str:
-    """Rende un id componente adatto a un nome elemento SPICE."""
+    """Return a SPICE-safe element name fragment."""
     return re.sub(r"[^A-Za-z0-9_]", "_", raw_name)
 
 
 def element_name(prefix: str, raw_name: str) -> str:
-    """Costruisce il nome SPICE evitando caratteri non validi."""
+    """Build a SPICE element name with a valid prefix."""
     return f"{prefix}{safe_name(raw_name)}"
 
 
 def spice_value(value: Any, unit: str | None = None) -> str:
     """
-    Converte un valore semplice nel formato SPICE.
+    Convert a simple scalar value to SPICE text.
 
-    I valori nei YAML sono preferibilmente gia numerici in unita base. Qui
-    gestiamo solo suffissi comuni per condensatori e piccole comodita.
+    YAML values should preferably already be stored in base units. This helper
+    only adds a few common suffixes when needed.
     """
     if value is None:
         return ""
@@ -66,7 +66,7 @@ def spice_value(value: Any, unit: str | None = None) -> str:
 
 
 def source_kind(parameters: dict[str, Any]) -> str:
-    """Restituisce il tipo sorgente SPICE minimo, per ora quasi sempre DC."""
+    """Return the minimal SPICE source kind, usually DC for now."""
     kind = str(parameters.get("type", "dc")).upper()
     if kind == "DC":
         return "DC"
@@ -74,14 +74,14 @@ def source_kind(parameters: dict[str, Any]) -> str:
 
 
 def emit_supply(name: str, supply: dict[str, Any]) -> tuple[str | None, str | None]:
-    """Emette una supply manuale come sorgente di tensione."""
+    """Emit a manual supply as a SPICE voltage source."""
     if supply.get("status") != "spice_ready":
-        return None, f"{name}: supply non pronta"
+        return None, f"{name}: supply not ready"
 
     nodes = supply.get("nodes") or []
     parameters = supply.get("parameters") or {}
     if len(nodes) != 2:
-        return None, f"{name}: supply senza due nodi"
+        return None, f"{name}: supply does not have two nodes"
 
     line = (
         f"{element_name('V', str(name))} "
@@ -92,14 +92,14 @@ def emit_supply(name: str, supply: dict[str, Any]) -> tuple[str | None, str | No
 
 
 def emit_direct(component_id: str, rule: dict[str, Any]) -> tuple[str | None, str | None]:
-    """Emette elementi diretti: R, C, L, V, I."""
+    """Emit direct SPICE primitives such as R, C, L, V, I."""
     prefix = rule.get("spice_prefix")
     nodes = rule.get("nodes") or []
     parameters = rule.get("parameters") or {}
     emit_as = rule.get("emit_as")
 
     if not prefix or len(nodes) < 2:
-        return None, f"{component_id}: regola diretta incompleta"
+        return None, f"{component_id}: incomplete direct rule"
 
     if prefix in ("V", "I"):
         value = spice_value(parameters.get("value"), parameters.get("unit"))
@@ -115,11 +115,11 @@ def emit_direct(component_id: str, rule: dict[str, Any]) -> tuple[str | None, st
 
 
 def emit_equivalent(component_id: str, rule: dict[str, Any]) -> tuple[str | None, str | None]:
-    """Emette carichi equivalenti, per ora come resistenze."""
+    """Emit equivalent loads, currently as resistors."""
     nodes = rule.get("nodes") or []
     parameters = rule.get("parameters") or {}
     if len(nodes) != 2:
-        return None, f"{component_id}: equivalente senza due nodi"
+        return None, f"{component_id}: equivalent component does not have two nodes"
 
     value = parameters.get("equivalent_resistance")
     unit = parameters.get("resistance_unit") or parameters.get("unit")
@@ -128,40 +128,40 @@ def emit_equivalent(component_id: str, rule: dict[str, Any]) -> tuple[str | None
 
 
 def emit_model_component(component_id: str, rule: dict[str, Any]) -> tuple[str | None, str | None]:
-    """Emette componenti basati su modello, per ora LED e diodi."""
+    """Emit model-based components, currently LEDs and diodes."""
     prefix = rule.get("spice_prefix")
     nodes = rule.get("nodes") or []
     parameters = rule.get("parameters") or {}
     model = parameters.get("model")
 
     if not prefix or not model or len(nodes) < 2:
-        return None, f"{component_id}: componente a modello incompleto"
+        return None, f"{component_id}: incomplete model-based component"
 
     line = f"{element_name(prefix, component_id)} {' '.join(nodes)} {model}"
     return line, None
 
 
 def emit_simplified(component_id: str, rule: dict[str, Any]) -> tuple[str | None, str | None]:
-    """Emette componenti semplificati come switch open/closed."""
+    """Emit simplified components such as open or closed switches."""
     nodes = rule.get("nodes") or []
     strategy = rule.get("strategy")
     if len(nodes) != 2:
-        return None, f"{component_id}: switch senza due nodi"
+        return None, f"{component_id}: switch does not have two nodes"
 
     if strategy == "open_circuit":
-        return f"* {component_id} open: not emitted", f"{component_id}: switch open non emesso"
+        return f"* {component_id} open: not emitted", f"{component_id}: open switch not emitted"
     if strategy == "short_circuit":
         return f"{element_name('R', component_id)} {nodes[0]} {nodes[1]} 1m", None
-    return None, f"{component_id}: strategia switch non gestita"
+    return None, f"{component_id}: unsupported switch strategy"
 
 
 def emit_component(component_id: str, rule: dict[str, Any]) -> tuple[str | None, str | None, str | None]:
-    """Emette una singola riga SPICE o un commento."""
+    """Emit a single SPICE line or comment."""
     status = rule.get("status")
     support = rule.get("spice_support")
 
     if status != "spice_ready":
-        return None, None, f"{component_id}: saltato ({status})"
+        return None, None, None
 
     if support == "direct":
         line, warning = emit_direct(component_id, rule)
@@ -172,7 +172,7 @@ def emit_component(component_id: str, rule: dict[str, Any]) -> tuple[str | None,
     elif support == "simplified":
         line, warning = emit_simplified(component_id, rule)
     else:
-        line, warning = None, f"{component_id}: supporto non gestito ({support})"
+        line, warning = None, f"{component_id}: unsupported SPICE support type ({support})"
 
     model = None
     parameters = rule.get("parameters") or {}
@@ -183,7 +183,7 @@ def emit_component(component_id: str, rule: dict[str, Any]) -> tuple[str | None,
 
 
 def build_spice_netlist(component_rules: dict[str, Any]) -> dict[str, Any]:
-    """Costruisce testo netlist e report di emissione."""
+    """Build netlist text and a compact emission report."""
     circuit_id = component_rules.get("circuit_id") or "unknown"
     lines = [
         f"* pipeline2.0 netlist",
@@ -191,6 +191,7 @@ def build_spice_netlist(component_rules: dict[str, Any]) -> dict[str, Any]:
         "",
     ]
     warnings: list[str] = []
+    informational_skips: list[str] = []
     skipped: list[str] = []
     models: set[str] = set()
     emitted_elements = 0
@@ -211,6 +212,16 @@ def build_spice_netlist(component_rules: dict[str, Any]) -> dict[str, Any]:
                 emitted_elements += 1
         else:
             skipped.append(str(component_id))
+            if rule.get("status") == "not_emitted":
+                informational_skips.append(f"{component_id}: structural component not emitted")
+            elif rule.get("status") == "pin_aware":
+                warnings.append(f"{component_id}: requires a device profile or dedicated model")
+            elif rule.get("status") == "unsupported_for_now":
+                warnings.append(f"{component_id}: class not yet supported by SPICE emit")
+            elif rule.get("status") == "missing_parameters":
+                warnings.append(f"{component_id}: missing parameters for SPICE emission")
+            elif rule.get("status") == "invalid_node_order":
+                warnings.append(f"{component_id}: incomplete nodes or invalid terminal order")
         if model:
             models.add(str(model))
         if warning:
@@ -229,6 +240,7 @@ def build_spice_netlist(component_rules: dict[str, Any]) -> dict[str, Any]:
         "emitted_elements": emitted_elements,
         "skipped_elements": len(skipped),
         "skipped_components": skipped,
+        "informational_skips": informational_skips,
         "models": sorted(models),
         "warnings": warnings,
     }
@@ -243,7 +255,7 @@ def write_spice_outputs(
     output_dir: str | Path,
     component_rules: dict[str, Any],
 ) -> tuple[Path, dict[str, Any]]:
-    """Scrive 07_netlist.cir e restituisce il report."""
+    """Write 07_netlist.cir and return the emission report."""
     output_path = Path(output_dir)
     result = build_spice_netlist(component_rules)
     netlist_path = output_path / "07_netlist.cir"

@@ -53,9 +53,15 @@ node_map = load_step_module("03_node_map.py", "pipeline2_node_map")
 values = load_step_module("04_values.py", "pipeline2_values")
 component_rules = load_step_module("06_component_rules.py", "pipeline2_component_rules")
 spice_emit = load_step_module("07_spice_emit.py", "pipeline2_spice_emit")
+spice_run = load_step_module("08_spice_run.py", "pipeline2_spice_run")
 
 
-def run_one_circuit(batch_name: str, circuit_id: str) -> Path:
+def run_one_circuit(
+    batch_name: str,
+    circuit_id: str,
+    run_spice: bool = False,
+    ngspice_executable: str | None = None,
+) -> Path:
     """Esegue gli step disponibili della pipeline 2.0 su un circuito."""
     input_json = io.resolve_pipeline1_graph_json(batch_name, circuit_id)
     output_dir = io.prepare_circuit_output(batch_name, circuit_id)
@@ -95,12 +101,30 @@ def run_one_circuit(batch_name: str, circuit_id: str) -> Path:
         output_dir / "07_spice_emit_report.json",
         spice_emit_report,
     )
+    spice_run_report_path = None
+    spice_run_report = None
+    if run_spice:
+        spice_run_report = spice_run.run_ngspice(
+            output_dir=output_dir,
+            executable=ngspice_executable,
+        )
+        spice_run_report_path = io.write_json(
+            output_dir / "08_spice_run.json",
+            spice_run_report,
+        )
 
     stats = normalized.get("stats", {})
     node_stats = node_map_data.get("stats", {})
     values_stats = values_bound.get("stats", {})
     rules_stats = component_rules_data.get("stats", {})
     emit_warnings = spice_emit_report.get("warnings") or []
+    spice_run_summary = ""
+    if spice_run_report:
+        spice_run_summary = (
+            f"; run -> {spice_run_report_path} "
+            f"(status={spice_run_report.get('status')}, "
+            f"exit_code={spice_run_report.get('exit_code')})"
+        )
     print(
         f"{batch_name}/{circuit_id}: normalized -> {normalized_path} "
         f"(components={stats.get('components_count')}, "
@@ -123,6 +147,7 @@ def run_one_circuit(batch_name: str, circuit_id: str) -> Path:
         f"skipped={spice_emit_report.get('skipped_elements')}, "
         f"warnings={len(emit_warnings)}, "
         f"report={spice_emit_report_path})"
+        f"{spice_run_summary}"
     )
 
     return output_dir
@@ -144,6 +169,16 @@ def parse_args() -> argparse.Namespace:
         required=True,
         help="Lista circuiti da processare, per esempio a01 a02 a10.",
     )
+    parser.add_argument(
+        "--run-spice",
+        action="store_true",
+        help="Esegue anche lo step 08 con ngspice dopo la generazione della netlist.",
+    )
+    parser.add_argument(
+        "--ngspice-executable",
+        default=None,
+        help="Path o nome dell'eseguibile ngspice da usare, per esempio ngspice_con.",
+    )
     return parser.parse_args()
 
 
@@ -151,7 +186,12 @@ def main() -> None:
     """Entry point da terminale."""
     args = parse_args()
     for circuit_id in args.circuits:
-        run_one_circuit(args.batch, circuit_id)
+        run_one_circuit(
+            batch_name=args.batch,
+            circuit_id=circuit_id,
+            run_spice=args.run_spice,
+            ngspice_executable=args.ngspice_executable,
+        )
 
 
 if __name__ == "__main__":
