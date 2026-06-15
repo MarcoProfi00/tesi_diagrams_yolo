@@ -1,0 +1,62 @@
+circuit_id: a07
+
+simulation:
+  analyses: [op, tran]
+  tran:
+    step: 0.1ms
+    stop: 40ms
+
+components:
+  transformer28.1:
+    model: equivalent_ac_source
+    secondary_voltage_rms: 12
+    unit: V
+    frequency: 50
+    frequency_unit: Hz
+    source: manual_from_image_label
+    label_text: "T1 12 V AC"
+
+  resistor22.1:
+    value: 680
+    unit: ohm
+    source: manual_from_image_label
+    label_text: "680R"
+
+  led12.1:
+    model: LED_RED
+    source: manual_assumption
+    label_text: "PWR"
+
+  switch25.1:
+    state: open
+    source: graph_json_state
+    label_text: "RESET"
+
+  analog_meter0.1:
+    kind: voltmeter
+    measured_quantity: voltage_ac
+    input_resistance: 10000000
+    resistance_unit: ohm
+    label: VAC
+    source: manual_from_image_label
+    label_text: "VAC"
+
+nodes:
+  connector5.1_pin1:
+    label: TRANSFORMER_INPUT
+    source: inferred_from_transformer_branch
+
+  connector5.1_pin2:
+    label: PWR
+    source: manual_from_image_label
+    label_text: "PWR"
+
+  connector5.1_pin3:
+    label: RESET
+    source: manual_from_image_label
+    label_text: "RESET"
+
+  connector5.1_pin4:
+    label: GND
+    spice_node: 0
+    source: graph_json_gnd

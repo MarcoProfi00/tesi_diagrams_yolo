@@ -417,7 +417,7 @@ L'idea non e sostituire la pipeline, ma guidarla:
 ```text
 utente: esegui spice
 pipeline: ngspice fallisce
-checks: probabile switch aperto o nodo flottante
+summary: probabile switch aperto o nodo flottante
 utente: chiudi lo switch e riesegui
 pipeline: crea scenario simulativo, rigenera netlist, rilancia spice
 ```
@@ -450,6 +450,10 @@ SPICE eseguibile.
 
 I prossimi step saranno:
 
-- `09_checks.py`: interpreta errori, nodi flottanti, switch aperti e problemi
-  di simulazione;
-- `10_report.py`: produce un report finale leggibile.
+- `09_summarize_spice.py`: riassume stdout/stderr, stato ngspice e componenti
+  non emessi;
+- `10_build_diagnostic_context.py`: costruisce il pacchetto tecnico per
+  l'agente;
+- `11_agent_readonly.py`: prima versione dell'agente, solo lettura;
+- `12_controlled_scenarios.py`: scenari SPICE controllati per verificare
+  ipotesi.

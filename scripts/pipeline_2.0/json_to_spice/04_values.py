@@ -32,13 +32,18 @@ VALUE_REQUIRED = {
     "Signal_Source": ("value",),
     "LED": ("model",),
     "Diode": ("model",),
+    "NPN_Transistor": ("model",),
     "Lamp": ("equivalent_resistance", "value"),
     "Switch": ("state",),
+    "Fuse": ("state",),
+    "Transformer": ("model",),
 }
 
 NOT_REQUIRED = {
+    "Analog_Meter",
     "GND",
     "Connector",
+    "Meter",
     "Terminal",
 }
 
@@ -194,6 +199,7 @@ def build_values_bound(
     yaml_components = values_data.get("components") or {}
     yaml_supplies = values_data.get("supplies") or {}
     yaml_nodes = values_data.get("nodes") or {}
+    yaml_simulation = values_data.get("simulation") or {}
     terminal_to_node = node_map.get("terminal_to_node") or {}
     component_terminal_nodes = node_map.get("component_terminal_nodes") or {}
 
@@ -257,6 +263,7 @@ def build_values_bound(
         "supplies": bound_supplies,
         "components": dict(sorted(bound_components.items())),
         "nodes": bound_nodes,
+        "simulation": yaml_simulation if isinstance(yaml_simulation, dict) else {},
         "missing": missing,
         "stats": stats,
     }

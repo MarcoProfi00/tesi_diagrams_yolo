@@ -9,13 +9,18 @@
 # - model: richiede un modello .model o simile.
 # - equivalent: emettibile usando un equivalente dichiarato.
 # - simplified: gestito con una strategia semplificata.
+# - measurement: punto di misura, non emesso come componente fisico.
 # - structural: utile per nodi/topologia ma non emesso in netlist.
 # - pin_aware: analizzato tramite profilo pin/datasheet, non simulato ora.
 # - unsupported_for_now: classe riconosciuta ma non ancora convertita.
 
 Analog_Meter:
-  spice_support: unsupported_for_now
-  reason: "Graphical measurement tool; in the future it may become a probe/measure, not an emitted physical component."
+  spice_support: measurement
+  emit: false
+  emit_as: voltage_probe
+  measurement_kind: voltage
+  node_order: [t1, t2]
+  reason: "Voltmeter/probe only: not emitted as a physical SPICE component; read the voltage between its nodes."
 
 Antenna:
   spice_support: unsupported_for_now
@@ -106,8 +111,12 @@ Memristor:
   spice_support: unsupported_for_now
 
 Meter:
-  spice_support: unsupported_for_now
-  reason: "Graphical measurement tool; in the future it may become a probe/measure."
+  spice_support: measurement
+  emit: false
+  emit_as: voltage_probe
+  measurement_kind: voltage
+  node_order: [t1, t2]
+  reason: "Generic meter treated as voltage probe for now; not emitted as a physical SPICE component."
 
 Mosfet:
   spice_support: model
@@ -132,7 +141,7 @@ NPN_Transistor:
   required_fields: [model]
   node_order: [C, B, E]
   emit_as: bjt_npn
-  status: future_batch_b
+  reason: "Emitted as a BJT when a model name is declared in values.yaml."
 
 Operational_Amplifier:
   spice_support: pin_aware
@@ -168,7 +177,9 @@ Signal_Source:
   required_fields: [type, value]
   node_order: [t1, t2]
   emit_as: independent_voltage_source
-  note: "AC/tran signals will require additional fields."
+  supported_waveforms: [dc, sin, pulse, square]
+  note: "Square wave sources are emitted as SPICE PULSE sources when timing fields are available."
+  square_fields: [low_value, high_value, delay, rise_time, fall_time, pulse_width, period]
 
 Speaker:
   spice_support: equivalent
@@ -198,8 +209,12 @@ Thermistor:
   emit_as: resistive_load
 
 Transformer:
-  spice_support: unsupported_for_now
-  reason: "Requires inductive coupling/model support; not handled in the first version."
+  spice_support: direct
+  spice_prefix: V
+  required_fields: [model, secondary_voltage_rms, frequency]
+  node_order: [t3, t4]
+  emit_as: equivalent_ac_source
+  reason: "Transformer modeled as an equivalent sinusoidal voltage source on the declared secondary/output terminals."
 
 Trim_Capacitor:
   spice_support: direct

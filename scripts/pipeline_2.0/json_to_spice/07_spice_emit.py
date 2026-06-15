@@ -22,12 +22,15 @@ Responsabilita previste:
 from __future__ import annotations
 
 import re
+import math
 from pathlib import Path
 from typing import Any
 
 
 MODEL_LINES = {
     "LED_RED": ".model LED_RED D",
+    "2N3904": ".model 2N3904 NPN(IS=6.734f BF=416.4 VAF=74.03 IKF=66.78m ISE=6.734f NE=1.259 BR=0.7371 VAR=12.11 IKR=0.0 ISC=0.0 NC=2 RB=10 RC=1 RE=0.1 CJE=4.493p VJE=0.75 MJE=0.2593 CJC=3.638p VJC=0.75 MJC=0.3085 TF=301.2p TR=239.5n)",
+    "2N2222": ".model 2N2222 NPN(IS=14.34f BF=255.9 VAF=74.03 IKF=0.2847 ISE=14.34f NE=1.307 BR=6.092 NR=1.005 VAR=11.96 IKR=0.0 ISC=0.0 NC=2 RB=10 RC=1 RE=0.1 CJE=22.01p VJE=0.75 MJE=0.377 CJC=7.306p VJC=0.75 MJC=0.3416 TF=411.1p TR=46.91n)",
 }
 
 
@@ -53,6 +56,9 @@ def spice_value(value: Any, unit: str | None = None) -> str:
 
     unit_text = (unit or "").strip().lower()
     suffix_by_unit = {
+        "ohm": "",
+        "kohm": "k",
+        "mohm": "meg",
         "pf": "p",
         "nf": "n",
         "uf": "u",
@@ -71,6 +77,58 @@ def source_kind(parameters: dict[str, Any]) -> str:
     if kind == "DC":
         return "DC"
     return kind
+
+
+def voltage_source_expression(parameters: dict[str, Any]) -> str:
+    """Costruisce l'espressione SPICE per una sorgente di tensione."""
+    source_type = str(parameters.get("type", "dc")).lower()
+    waveform = str(parameters.get("waveform", "")).lower()
+
+    if source_type == "pulse" or waveform == "square":
+        low_value = parameters.get("low_value", 0)
+        high_value = parameters.get("high_value", parameters.get("value"))
+        delay = parameters.get("delay", 0)
+        rise_time = parameters.get("rise_time", 0)
+        fall_time = parameters.get("fall_time", 0)
+        pulse_width = parameters.get("pulse_width")
+        period = parameters.get("period")
+        if high_value in (None, "") or pulse_width in (None, "") or period in (None, ""):
+            return f"DC {spice_value(parameters.get('value'), parameters.get('unit'))}"
+        return f"PULSE({low_value} {high_value} {delay} {rise_time} {fall_time} {pulse_width} {period})"
+
+    if source_type == "sin" or waveform == "sin":
+        offset = parameters.get("offset", 0)
+        amplitude = parameters.get("amplitude", parameters.get("value"))
+        frequency = parameters.get("frequency")
+        if amplitude in (None, "") or frequency in (None, ""):
+            return f"DC {spice_value(parameters.get('value'), parameters.get('unit'))}"
+        return f"SIN({offset} {amplitude} {frequency})"
+
+    return f"{source_kind(parameters)} {spice_value(parameters.get('value'), parameters.get('unit'))}"
+
+
+def emit_equivalent_ac_source(component_id: str, rule: dict[str, Any]) -> tuple[str | None, str | None]:
+    """Emit a transformer equivalent as a sinusoidal voltage source."""
+    nodes = rule.get("nodes") or []
+    parameters = rule.get("parameters") or {}
+    if len(nodes) != 2:
+        return None, f"{component_id}: equivalent AC source does not have two nodes"
+
+    rms_value = parameters.get("secondary_voltage_rms")
+    frequency = parameters.get("frequency")
+    if rms_value in (None, "") or frequency in (None, ""):
+        return None, f"{component_id}: missing RMS voltage or frequency"
+
+    peak_value = parameters.get("secondary_voltage_peak")
+    if peak_value in (None, ""):
+        peak_value = float(rms_value) * math.sqrt(2)
+
+    offset = parameters.get("offset", 0)
+    line = (
+        f"{element_name('V', component_id)} {nodes[0]} {nodes[1]} "
+        f"SIN({offset} {peak_value:.6g} {frequency})"
+    )
+    return line, None
 
 
 def emit_supply(name: str, supply: dict[str, Any]) -> tuple[str | None, str | None]:
@@ -98,12 +156,17 @@ def emit_direct(component_id: str, rule: dict[str, Any]) -> tuple[str | None, st
     parameters = rule.get("parameters") or {}
     emit_as = rule.get("emit_as")
 
+    if emit_as == "equivalent_ac_source":
+        return emit_equivalent_ac_source(component_id, rule)
+
     if not prefix or len(nodes) < 2:
         return None, f"{component_id}: incomplete direct rule"
 
     if prefix in ("V", "I"):
-        value = spice_value(parameters.get("value"), parameters.get("unit"))
-        line = f"{element_name(prefix, component_id)} {nodes[0]} {nodes[1]} {source_kind(parameters)} {value}"
+        expression = voltage_source_expression(parameters) if prefix == "V" else (
+            f"{source_kind(parameters)} {spice_value(parameters.get('value'), parameters.get('unit'))}"
+        )
+        line = f"{element_name(prefix, component_id)} {nodes[0]} {nodes[1]} {expression}"
         return line, None
 
     value = parameters.get("value")
@@ -159,9 +222,22 @@ def emit_component(component_id: str, rule: dict[str, Any]) -> tuple[str | None,
     """Emit a single SPICE line or comment."""
     status = rule.get("status")
     support = rule.get("spice_support")
+    nodes = [str(node) for node in (rule.get("nodes") or [])]
+
+    if status == "measurement_only":
+        parameters = rule.get("parameters") or {}
+        input_resistance = parameters.get("input_resistance")
+        if input_resistance not in (None, "") and len(nodes) == 2:
+            unit = parameters.get("resistance_unit") or "ohm"
+            line = f"{element_name('Rmeter_', component_id)} {nodes[0]} {nodes[1]} {spice_value(input_resistance, unit)}"
+            return line, None, None
+        return None, None, None
 
     if status != "spice_ready":
         return None, None, None
+
+    if len(nodes) >= 2 and len(set(nodes)) == 1:
+        return None, None, f"{component_id}: terminals collapse to the same SPICE node; not emitted"
 
     if support == "direct":
         line, warning = emit_direct(component_id, rule)
@@ -182,6 +258,45 @@ def emit_component(component_id: str, rule: dict[str, Any]) -> tuple[str | None,
     return line, model, warning
 
 
+def build_analysis_lines(simulation: dict[str, Any]) -> tuple[list[str], list[str]]:
+    """Costruisce le direttive di analisi SPICE richieste dal values.yaml."""
+    analyses = simulation.get("analyses") or ["op"]
+    if not isinstance(analyses, list):
+        analyses = [analyses]
+
+    lines: list[str] = []
+    enabled = {str(item).lower() for item in analyses}
+
+    if "op" in enabled:
+        lines.append(".op")
+
+    if "tran" in enabled:
+        lines.append(".save all")
+        tran = simulation.get("tran") or {}
+        step = tran.get("step", "0.1ms") if isinstance(tran, dict) else "0.1ms"
+        stop = tran.get("stop", "40ms") if isinstance(tran, dict) else "40ms"
+        lines.append(f".tran {step} {stop}")
+
+    return lines, sorted(enabled)
+
+
+def build_control_lines(analyses: list[str], probe_nodes: list[str]) -> list[str]:
+    """Aggiunge comandi ngspice per esportare dati transitori plottabili."""
+    if "tran" not in analyses or not probe_nodes:
+        return []
+
+    voltage_vectors = " ".join(f"v({node})" for node in probe_nodes)
+    return [
+        "",
+        ".control",
+        "set wr_singlescale",
+        "set wr_vecnames",
+        "run",
+        f"wrdata 08_tran.csv time {voltage_vectors}",
+        ".endc",
+    ]
+
+
 def build_spice_netlist(component_rules: dict[str, Any]) -> dict[str, Any]:
     """Build netlist text and a compact emission report."""
     circuit_id = component_rules.get("circuit_id") or "unknown"
@@ -192,8 +307,10 @@ def build_spice_netlist(component_rules: dict[str, Any]) -> dict[str, Any]:
     ]
     warnings: list[str] = []
     informational_skips: list[str] = []
+    measurement_points: list[dict[str, Any]] = []
     skipped: list[str] = []
     models: set[str] = set()
+    transient_nodes: set[str] = set()
     emitted_elements = 0
 
     for supply_name, supply in (component_rules.get("supplies") or {}).items():
@@ -201,19 +318,35 @@ def build_spice_netlist(component_rules: dict[str, Any]) -> dict[str, Any]:
         if line:
             lines.append(line)
             emitted_elements += 1
+            for node in supply.get("nodes") or []:
+                if str(node) != "0":
+                    transient_nodes.add(str(node))
         if warning:
             warnings.append(warning)
 
     for component_id, rule in (component_rules.get("components") or {}).items():
         line, model, warning = emit_component(str(component_id), rule)
+        if rule.get("status") == "measurement_only":
+            measurement_points.append({
+                "component_id": str(component_id),
+                "kind": rule.get("measurement_kind", "voltage"),
+                "nodes": rule.get("nodes") or [],
+                "emit_as": rule.get("emit_as"),
+                "reason": rule.get("reason"),
+            })
         if line:
             lines.append(line)
             if not line.startswith("*"):
                 emitted_elements += 1
+                for node in rule.get("nodes") or []:
+                    if str(node) != "0":
+                        transient_nodes.add(str(node))
         else:
             skipped.append(str(component_id))
             if rule.get("status") == "not_emitted":
                 informational_skips.append(f"{component_id}: structural component not emitted")
+            elif rule.get("status") == "measurement_only":
+                informational_skips.append(f"{component_id}: voltage probe not emitted; read voltage between its nodes")
             elif rule.get("status") == "pin_aware":
                 warnings.append(f"{component_id}: requires a device profile or dedicated model")
             elif rule.get("status") == "unsupported_for_now":
@@ -232,7 +365,10 @@ def build_spice_netlist(component_rules: dict[str, Any]) -> dict[str, Any]:
         for model in sorted(models):
             lines.append(MODEL_LINES.get(model, f".model {model} D"))
 
-    lines.extend(["", ".op", ".end"])
+    analysis_lines, analyses = build_analysis_lines(component_rules.get("simulation") or {})
+    probe_nodes = sorted(transient_nodes)
+    control_lines = build_control_lines(analyses, probe_nodes)
+    lines.extend(["", *analysis_lines, *control_lines, ".end"])
 
     report = {
         "circuit_id": circuit_id,
@@ -241,6 +377,12 @@ def build_spice_netlist(component_rules: dict[str, Any]) -> dict[str, Any]:
         "skipped_elements": len(skipped),
         "skipped_components": skipped,
         "informational_skips": informational_skips,
+        "measurement_points": measurement_points,
+        "analyses": analyses,
+        "transient_export": {
+            "path": "08_tran.csv" if "tran" in analyses and probe_nodes else None,
+            "nodes": probe_nodes if "tran" in analyses else [],
+        },
         "models": sorted(models),
         "warnings": warnings,
     }

@@ -1,0 +1,171 @@
+{
+  "circuit_id": "a07",
+  "source_format": "pipeline2.0_component_rules",
+  "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\pipeline2_manual_values\\batchA\\a07_values.yaml",
+  "spice_classes_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\pipeline2_spice_classes.yaml",
+  "supplies": {},
+  "components": {
+    "analog_meter0.1": {
+      "class_name": "Analog_Meter",
+      "status": "measurement_only",
+      "spice_support": "measurement",
+      "emit_as": "voltage_probe",
+      "measurement_kind": "voltage",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N001",
+        "0"
+      ],
+      "parameters": {
+        "kind": "voltmeter",
+        "measured_quantity": "voltage_ac",
+        "input_resistance": 10000000,
+        "resistance_unit": "ohm",
+        "label": "VAC",
+        "source": "manual_from_image_label",
+        "label_text": "VAC"
+      },
+      "reason": "Voltmeter/probe only: not emitted as a physical SPICE component; read the voltage between its nodes."
+    },
+    "connector5.1": {
+      "class_name": "Connector",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "Connector used for nodes, labels, and external interfaces."
+    },
+    "gnd9.1": {
+      "class_name": "GND",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    "gnd9.2": {
+      "class_name": "GND",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    "gnd9.3": {
+      "class_name": "GND",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    "gnd9.4": {
+      "class_name": "GND",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    "led12.1": {
+      "class_name": "LED",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "D",
+      "emit_as": "diode",
+      "node_order": [
+        "anode",
+        "cathode"
+      ],
+      "nodes": [
+        "0",
+        "0"
+      ],
+      "parameters": {
+        "model": "LED_RED",
+        "source": "manual_assumption",
+        "label_text": "PWR"
+      }
+    },
+    "resistor22.1": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N003",
+        "0"
+      ],
+      "parameters": {
+        "value": 680,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "680R"
+      }
+    },
+    "switch25.1": {
+      "class_name": "Switch",
+      "status": "spice_ready",
+      "spice_support": "simplified",
+      "spice_prefix": null,
+      "emit_as": null,
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "0",
+        "N004"
+      ],
+      "parameters": {
+        "state": "open",
+        "source": "graph_json_state",
+        "label_text": "RESET"
+      },
+      "strategy": "open_circuit"
+    },
+    "transformer28.1": {
+      "class_name": "Transformer",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "V",
+      "emit_as": "equivalent_ac_source",
+      "node_order": [
+        "t3",
+        "t4"
+      ],
+      "nodes": [
+        "N002",
+        "N001"
+      ],
+      "parameters": {
+        "model": "equivalent_ac_source",
+        "secondary_voltage_rms": 12,
+        "unit": "V",
+        "frequency": 50,
+        "frequency_unit": "Hz",
+        "source": "manual_from_image_label",
+        "label_text": "T1 12 V AC"
+      }
+    }
+  },
+  "simulation": {
+    "analyses": [
+      "op",
+      "tran"
+    ],
+    "tran": {
+      "step": "0.1ms",
+      "stop": "40ms"
+    }
+  },
+  "stats": {
+    "components_total": 10,
+    "spice_ready_components": 4,
+    "not_emitted_components": 5,
+    "measurement_components": 1,
+    "missing_components": 0,
+    "unsupported_components": 0,
+    "pin_aware_components": 0,
+    "invalid_components": 0,
+    "supplies_ready_count": 0
+  }
+}

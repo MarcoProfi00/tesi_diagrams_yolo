@@ -1,0 +1,104 @@
+circuit_id: a04
+
+simulation:
+  analyses: [op, tran]
+  tran:
+    step: 0.1ms
+    stop: 50ms
+
+components:
+  battery2.1:
+    type: dc
+    value: 5
+    unit: V
+    source: manual_from_image_label
+    label_text: "V1 5 V"
+
+  signal_source23.1:
+    type: sin
+    waveform: sin
+    value: 0.01
+    unit: V
+    offset: 0
+    amplitude: 0.01
+    frequency: 100
+    frequency_unit: Hz
+    source: manual_from_image_label
+    label_text: "SINE(0 10m 100 0.0 0.0)"
+
+  capacitor4.1:
+    value: 100
+    unit: nf
+    source: manual_from_image_label
+    label_text: "C1 100 nF"
+
+  capacitor4.2:
+    value: 10
+    unit: uf
+    source: manual_from_image_label
+    label_text: "C3 10 uF"
+
+  capacitor4.3:
+    value: 1
+    unit: uf
+    source: manual_from_image_label
+    label_text: "C2 1 uF"
+
+  resistor22.1:
+    value: 10
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R4 10 kOhm"
+
+  resistor22.2:
+    value: 22
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R3 22 kOhm"
+
+  resistor22.3:
+    value: 2.2
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R1 2.2 kOhm"
+
+  resistor22.4:
+    value: 1
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R2 1 kOhm"
+
+  resistor22.5:
+    value: 33
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R5 33 kOhm"
+
+  npn_transistor18.1:
+    model: 2N2222
+    source: manual_from_image_label
+    label_text: "Q1 2N2222"
+
+nodes:
+  battery2.1_positive:
+    label: VCC
+    source: manual_from_image_label
+    label_text: "V1 +5 V"
+
+  signal_source23.1_t1:
+    label: VIN
+    source: manual_from_image_label
+    label_text: "V2"
+
+  capacitor4.1_t2:
+    label: BASE_BIAS
+    source: inferred_from_image
+
+  capacitor4.3_t2:
+    label: VOUT
+    source: inferred_from_image
+
+  gnd9.1_t1:
+    label: GND
+    spice_node: 0
+    source: graph_json_gnd

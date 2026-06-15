@@ -28,6 +28,7 @@ from typing import Any
 
 READY_SUPPORT = {"direct", "model", "equivalent", "simplified"}
 STRUCTURAL_SUPPORT = {"structural"}
+MEASUREMENT_SUPPORT = {"measurement"}
 DEFERRED_SUPPORT = {"pin_aware", "unsupported_for_now"}
 
 
@@ -125,6 +126,29 @@ def classify_component_rule(
             "reason": class_rule.get("reason", "Structural component used for topology and not emitted."),
         }
 
+    if spice_support in MEASUREMENT_SUPPORT:
+        node_order = [str(node) for node in as_list(class_rule.get("node_order"))]
+        nodes, terminals_missing = ordered_nodes(terminal_nodes, node_order)
+        if terminals_missing:
+            return {
+                "class_name": class_name,
+                "status": "invalid_node_order",
+                "spice_support": spice_support,
+                "missing_terminals": terminals_missing,
+            }
+
+        return {
+            "class_name": class_name,
+            "status": "measurement_only",
+            "spice_support": spice_support,
+            "emit_as": class_rule.get("emit_as"),
+            "measurement_kind": class_rule.get("measurement_kind", "voltage"),
+            "node_order": node_order,
+            "nodes": nodes,
+            "parameters": value_data,
+            "reason": class_rule.get("reason", "Measurement point only; not emitted as a physical component."),
+        }
+
     if spice_support in DEFERRED_SUPPORT:
         return {
             "class_name": class_name,
@@ -207,6 +231,7 @@ def build_component_rules(
         "components_total": 0,
         "spice_ready_components": 0,
         "not_emitted_components": 0,
+        "measurement_components": 0,
         "missing_components": 0,
         "unsupported_components": 0,
         "pin_aware_components": 0,
@@ -229,6 +254,8 @@ def build_component_rules(
             stats["spice_ready_components"] += 1
         elif status == "not_emitted":
             stats["not_emitted_components"] += 1
+        elif status == "measurement_only":
+            stats["measurement_components"] += 1
         elif status == "missing_parameters":
             stats["missing_components"] += 1
         elif status == "pin_aware":
@@ -250,5 +277,6 @@ def build_component_rules(
         "spice_classes_source": str(spice_classes_source) if spice_classes_source else None,
         "supplies": supply_rules,
         "components": dict(sorted(component_rules.items())),
+        "simulation": values_bound.get("simulation") or {},
         "stats": stats,
     }
