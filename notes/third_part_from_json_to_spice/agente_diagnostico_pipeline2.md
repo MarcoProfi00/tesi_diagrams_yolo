@@ -60,7 +60,6 @@ La sequenza di riferimento e:
 -> 06_component_rules
 -> 07_spice_emit
 -> 08_spice_run
--> 09_summarize_spice
 -> 10_build_diagnostic_context
 -> 11_agent_readonly
 -> agente AI
@@ -69,6 +68,23 @@ La sequenza di riferimento e:
 Il punto minimo per attivare l'agente e dopo `08_spice_run.py`, perche prima di
 quello esiste solo una netlist generata, mentre dopo `08` esiste anche il
 risultato reale di ngspice.
+
+Per ora lo step `09_summarize_spice.py` viene lasciato come placeholder o
+saltato. La scelta corrente e non creare un riassunto intermedio troppo
+filtrato: l'agente deve poter ricevere gli output reali della pipeline, raccolti
+e ordinati dallo step `10_build_diagnostic_context.py`.
+
+Lo step `10` non deve essere trattato come una sintesi interpretativa che
+sostituisce i file originali. Deve essere un contenitore di evidenze:
+
+```text
+10_diagnostic_context.json = output 01-08 raccolti e ordinati
+```
+
+L'agente deve usare il contenuto grezzo incorporato nel context e i path ai file
+originali come fonte di verita. Se una conclusione dipende da un dettaglio
+specifico, deve riferirsi alla sezione/file originale: node map, component
+rules, netlist, stdout, stderr o report SPICE.
 
 Lo step `08` produce fatti grezzi come:
 
@@ -90,7 +106,6 @@ Input principali:
 
 ```text
 problema utente
-immagine originale
 01_graph.json
 02_normalized_circuit.json
 03_node_map.json
@@ -110,6 +125,62 @@ datasheet_extract.txt, se disponibile
 
 Non tutti gli input sono sempre disponibili. La pipeline deve produrre il
 massimo livello possibile di analisi per ogni circuito.
+
+### Uso dell'immagine originale
+
+L'immagine originale non deve essere passata sempre all'agente.
+
+La regola corrente e:
+
+```text
+Default: agente senza immagine.
+Fallback: agente puo richiedere l'immagine se gli output strutturati indicano
+un possibile errore del Graph JSON.
+```
+
+Questo e importante per non vanificare il lavoro della Pipeline 1.0. L'agente
+deve prima ragionare sui dati strutturati prodotti dalla pipeline:
+
+```text
+Graph JSON
+node map
+values bound
+component rules
+netlist
+risultati ngspice
+stdout/stderr
+```
+
+Solo se questi dati mostrano incoerenze forti, l'agente puo chiedere accesso
+all'immagine originale come supporto diagnostico.
+
+Esempi di condizioni in cui l'agente puo richiedere l'immagine:
+
+- terminali importanti scollegati;
+- nodi singleton su sorgenti, carichi o switch;
+- assenza di nodo di riferimento;
+- SPICE fallito per matrice singolare o nodi flottanti;
+- componenti importanti saltati per topologia o valori mancanti;
+- differenza sospetta tra graph, netlist e risultato SPICE;
+- componenti complessi rappresentati in modo parziale, come rele o
+  trasformatore.
+
+Nel caso `a03`, per esempio, l'agente dovrebbe prima leggere graph, node map,
+netlist e stderr. Solo dopo aver rilevato batteria spezzata, nodi singleton,
+ramo AC non chiuso e rele rappresentato come `Inductor` + `Switch`, puo
+richiedere l'immagine per proporre scenari correttivi piu affidabili.
+
+Questa distinzione crea due modalita:
+
+```text
+graph-grounded agent
+image-assisted agent
+```
+
+La modalita base e `graph-grounded`: l'agente si fida della pipeline e lavora
+sui suoi output. La modalita `image-assisted` e un fallback diagnostico, usato
+solo quando ci sono evidenze che il graph potrebbe non rappresentare
+correttamente il circuito.
 
 ## Cosa deve fare l'agente
 
@@ -391,6 +462,60 @@ Ipotesi: il ramo LED non e alimentato o un terminale e collegato al nodo errato.
 Scenario proposto dall'agente: applicare una tensione al nodo di ingresso del
 ramo LED e rieseguire .op.
 ```
+
+### Scenari multipli e ciclo iterativo
+
+L'agente non deve essere pensato come un sistema che propone un solo scenario e
+si ferma.
+
+In molti circuiti il problema non dipende da una sola causa. Un fallimento SPICE
+puo derivare da piu livelli:
+
+- valori mancanti;
+- nodi flottanti;
+- componenti saltati;
+- modello SPICE assente;
+- topologia sospetta;
+- componente complesso rappresentato in modo parziale;
+- differenza tra graph riconosciuto e circuito visibile nell'immagine.
+
+Per questo l'agente deve poter lavorare in modo iterativo:
+
+```text
+diagnosi iniziale
+-> scenario candidato
+-> netlist scenario
+-> esecuzione ngspice
+-> lettura stdout/stderr/risultati
+-> confronto con il run precedente
+-> nuova diagnosi
+-> scenario successivo, se necessario
+```
+
+Questa logica e importante per casi come `a03`. Un singolo scenario potrebbe non
+bastare: prima si puo dover introdurre un riferimento di massa, poi interpretare
+la batteria come unica sorgente, poi modellare il rele, poi provare contatto
+aperto/chiuso, poi confrontare luce/buio per la LDR.
+
+Quindi l'agente dovrebbe mantenere una lista ordinata di scenari, eseguirli uno
+alla volta e aggiornare la diagnosi dopo ogni run. Ogni scenario deve dichiarare:
+
+- quale problema prova a verificare;
+- quali assunzioni introduce;
+- quali primitive usa;
+- quale risultato atteso ha;
+- quale risultato SPICE ha prodotto;
+- se risolve, peggiora o lascia invariato il problema.
+
+Il ciclo deve fermarsi quando:
+
+- viene trovato uno scenario coerente con il sintomo utente;
+- gli scenari ragionevoli sono esauriti;
+- manca un dato essenziale che richiede input dell'utente;
+- una modifica proposta non e validabile automaticamente.
+
+In questo modo l'agente non e solo uno spiegatore del primo output SPICE, ma un
+assistente diagnostico che esplora ipotesi controllate e confronta risultati.
 
 Esempio scenario:
 

@@ -54,6 +54,7 @@ values = load_step_module("04_values.py", "pipeline2_values")
 component_rules = load_step_module("06_component_rules.py", "pipeline2_component_rules")
 spice_emit = load_step_module("07_spice_emit.py", "pipeline2_spice_emit")
 spice_run = load_step_module("08_spice_run.py", "pipeline2_spice_run")
+diagnostic_context = load_step_module("10_build_diagnostic_context.py", "pipeline2_diagnostic_context")
 
 
 def run_one_circuit(
@@ -84,6 +85,8 @@ def run_one_circuit(
     values_bound_path = io.write_json(output_dir / "04_values_bound.json", values_bound)
     spice_classes_path = io.PROJECT_ROOT / "metadata" / "pipeline2_spice_classes.yaml"
     spice_classes = values.load_simple_yaml(spice_classes_path)
+    spice_models_path = io.PROJECT_ROOT / "metadata" / "pipeline2_spice_models.yaml"
+    spice_models = values.load_simple_yaml(spice_models_path)
     component_rules_data = component_rules.build_component_rules(
         values_bound=values_bound,
         spice_classes=spice_classes,
@@ -96,6 +99,7 @@ def run_one_circuit(
     netlist_path, spice_emit_report = spice_emit.write_spice_outputs(
         output_dir=output_dir,
         component_rules=component_rules_data,
+        spice_models=spice_models,
     )
     spice_emit_report_path = io.write_json(
         output_dir / "07_spice_emit_report.json",
@@ -112,6 +116,17 @@ def run_one_circuit(
             output_dir / "08_spice_run.json",
             spice_run_report,
         )
+
+    diagnostic_context_data = diagnostic_context.build_diagnostic_context(
+        output_dir=output_dir,
+        batch_name=batch_name,
+        circuit_id=circuit_id,
+        project_root=io.PROJECT_ROOT,
+    )
+    diagnostic_context_path = io.write_json(
+        output_dir / "10_diagnostic_context.json",
+        diagnostic_context_data,
+    )
 
     stats = normalized.get("stats", {})
     node_stats = node_map_data.get("stats", {})
@@ -147,7 +162,8 @@ def run_one_circuit(
         f"skipped={spice_emit_report.get('skipped_elements')}, "
         f"warnings={len(emit_warnings)}, "
         f"report={spice_emit_report_path})"
-        f"{spice_run_summary}"
+        f"{spice_run_summary}; "
+        f"context -> {diagnostic_context_path}"
     )
 
     return output_dir

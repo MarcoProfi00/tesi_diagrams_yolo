@@ -27,11 +27,22 @@ from pathlib import Path
 from typing import Any
 
 
-MODEL_LINES = {
-    "LED_RED": ".model LED_RED D",
-    "2N3904": ".model 2N3904 NPN(IS=6.734f BF=416.4 VAF=74.03 IKF=66.78m ISE=6.734f NE=1.259 BR=0.7371 VAR=12.11 IKR=0.0 ISC=0.0 NC=2 RB=10 RC=1 RE=0.1 CJE=4.493p VJE=0.75 MJE=0.2593 CJC=3.638p VJC=0.75 MJC=0.3085 TF=301.2p TR=239.5n)",
-    "2N2222": ".model 2N2222 NPN(IS=14.34f BF=255.9 VAF=74.03 IKF=0.2847 ISE=14.34f NE=1.307 BR=6.092 NR=1.005 VAR=11.96 IKR=0.0 ISC=0.0 NC=2 RB=10 RC=1 RE=0.1 CJE=22.01p VJE=0.75 MJE=0.377 CJC=7.306p VJC=0.75 MJC=0.3416 TF=411.1p TR=46.91n)",
-}
+def build_model_lines(spice_models: dict[str, Any] | None = None) -> dict[str, str]:
+    """Costruisce il dizionario dei modelli SPICE letti dai metadata."""
+    model_lines: dict[str, str] = {}
+    yaml_models = (spice_models or {}).get("models") or {}
+
+    # I modelli SPICE non vengono definiti nel codice: lo step 07 legge solo il
+    # file metadata/pipeline2_spice_models.yaml e usa le righe richieste.
+    for model_name, model_data in yaml_models.items():
+        if isinstance(model_data, dict):
+            line = model_data.get("line")
+        else:
+            line = model_data
+        if line:
+            model_lines[str(model_name)] = str(line)
+
+    return model_lines
 
 
 def safe_name(raw_name: str) -> str:
@@ -297,9 +308,13 @@ def build_control_lines(analyses: list[str], probe_nodes: list[str]) -> list[str
     ]
 
 
-def build_spice_netlist(component_rules: dict[str, Any]) -> dict[str, Any]:
+def build_spice_netlist(
+    component_rules: dict[str, Any],
+    spice_models: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Build netlist text and a compact emission report."""
     circuit_id = component_rules.get("circuit_id") or "unknown"
+    model_lines = build_model_lines(spice_models)
     lines = [
         f"* pipeline2.0 netlist",
         f"* circuit: {circuit_id}",
@@ -363,7 +378,12 @@ def build_spice_netlist(component_rules: dict[str, Any]) -> dict[str, Any]:
     if models:
         lines.append("")
         for model in sorted(models):
-            lines.append(MODEL_LINES.get(model, f".model {model} D"))
+            model_line = model_lines.get(model)
+            if model_line:
+                lines.append(model_line)
+            else:
+                warnings.append(f"{model}: SPICE model not found in pipeline2_spice_models.yaml")
+                lines.append(f"* missing model: {model}")
 
     analysis_lines, analyses = build_analysis_lines(component_rules.get("simulation") or {})
     probe_nodes = sorted(transient_nodes)
@@ -396,10 +416,11 @@ def build_spice_netlist(component_rules: dict[str, Any]) -> dict[str, Any]:
 def write_spice_outputs(
     output_dir: str | Path,
     component_rules: dict[str, Any],
+    spice_models: dict[str, Any] | None = None,
 ) -> tuple[Path, dict[str, Any]]:
     """Write 07_netlist.cir and return the emission report."""
     output_path = Path(output_dir)
-    result = build_spice_netlist(component_rules)
+    result = build_spice_netlist(component_rules, spice_models=spice_models)
     netlist_path = output_path / "07_netlist.cir"
     netlist_path.write_text(result["netlist_text"], encoding="utf-8")
     return netlist_path, result["report"]

@@ -151,6 +151,24 @@ def classify_component(class_name: str, value_data: dict[str, Any] | None) -> st
     return "unsupported_for_now"
 
 
+def graph_value_data(component: dict[str, Any]) -> dict[str, Any]:
+    """
+    Estrae valori elettrici gia presenti nel Graph JSON.
+
+    Il Graph JSON ha priorita per campi prodotti dalla pipeline 1.0, come lo
+    stato degli switch. Il values.yaml puo poi sovrascriverli quando serve.
+    """
+    data: dict[str, Any] = {}
+
+    if component.get("state") not in (None, ""):
+        data["state"] = component.get("state")
+        data["state_source"] = "graph_json_state"
+    if component.get("state_confidence") not in (None, ""):
+        data["state_confidence"] = component.get("state_confidence")
+
+    return data
+
+
 def bind_supplies(
     supplies: dict[str, Any],
     terminal_to_node: dict[str, str],
@@ -221,9 +239,15 @@ def build_values_bound(
         if not component_id:
             continue
 
-        value_data = yaml_components.get(component_id)
-        if value_data is not None and not isinstance(value_data, dict):
-            value_data = {"value": value_data}
+        yaml_value_data = yaml_components.get(component_id)
+        if yaml_value_data is not None and not isinstance(yaml_value_data, dict):
+            yaml_value_data = {"value": yaml_value_data}
+
+        value_data = graph_value_data(component)
+        if isinstance(yaml_value_data, dict):
+            value_data.update(yaml_value_data)
+        if not value_data:
+            value_data = None
 
         status = classify_component(class_name, value_data)
         terminal_nodes = component_terminal_nodes.get(component_id, {})
