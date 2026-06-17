@@ -1,0 +1,113 @@
+PROMPT AGENTE READ-ONLY - VERSIONE CORRENTE
+===========================================
+
+Questo file documenta lo snapshot corrente del prompt dell'agente read-only.
+
+Le regole qui descritte sono generali: devono valere per tutti i batch e per
+tutti i circuiti, non solo per `a01`.
+
+Il prompt operativo viene generato dal codice in:
+
+```text
+scripts/pipeline_2.0/json_to_spice/agent_readonly/prompt_builder.py
+scripts/pipeline_2.0/json_to_spice/agent_readonly/scenario_prompt.py
+```
+
+La versione corrente evita scenari topologici prematuri come:
+
+  - connect_nodes
+  - disconnect_terminal
+  - move_terminal
+
+quando ngspice riesce e graph/node_map sono coerenti.
+
+Inoltre applica due regole fondamentali:
+
+  1. naturalezza dello scenario;
+  2. autosufficienza dello scenario.
+
+
+REGOLA DI NATURALEZZA
+=====================
+
+Quando un ramo di carico e alimentato attraverso un ingresso a monte, l'agente
+deve preferire l'ingresso a monte invece di forzare direttamente il nodo interno
+del carico.
+
+Esempio:
+
+```text
+connector pin -> resistor -> lamp -> ground
+```
+
+Scenario naturale:
+
+```json
+{
+  "type": "drive_node_voltage",
+  "target": "N002",
+  "value": "5V"
+}
+```
+
+Scenario meno naturale, da usare solo come test successivo di isolamento:
+
+```json
+{
+  "type": "drive_node_voltage",
+  "target": "N004",
+  "value": "5V"
+}
+```
+
+Se esiste uno switch gia riconosciuto, aprire o chiudere quello switch e spesso
+piu naturale che inventare un nuovo punto interno di alimentazione.
+
+
+REGOLA DI AUTOSUFFICIENZA
+=========================
+
+I primi tre scenari devono poter essere eseguiti da soli.
+
+Non va bene proporre:
+
+```text
+dopo lo scenario 1, esegui .tran
+```
+
+se lo scenario non include anche le azioni necessarie ad alimentare il ramo.
+
+La forma corretta e includere tutto nello stesso JSON:
+
+```json
+{
+  "scenario_id": "scenario_3",
+  "title": "Alimentare il ramo della lampada e osservarlo nel tempo",
+  "actions": [
+    {
+      "type": "drive_node_voltage",
+      "target": "N002",
+      "value": "5V"
+    },
+    {
+      "type": "run_tran"
+    }
+  ],
+  "analysis": "tran",
+  "compare": ["v(N002)", "v(N004)", "i(Rlamp13_1)", "tran_csv"]
+}
+```
+
+
+EFFETTO ATTESO SU A01
+=====================
+
+Per `a01`, gli scenari piu naturali dovrebbero essere:
+
+  1. alimentare `N002`, cioe l'ingresso del ramo lampada;
+  2. chiudere `switch25.1`, per verificare l'effetto dello switch gia presente;
+  3. combinare alimentazione di `N002` e switch chiuso, oppure alimentare `N002`
+     e aggiungere `.tran`, ma includendo tutte le azioni nello stesso scenario.
+
+Pilotare direttamente `N004` dovrebbe essere considerato un test di isolamento
+successivo, non uno dei primi scenari se esiste gia `N002` a monte della lampada.

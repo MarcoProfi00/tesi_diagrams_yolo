@@ -75,16 +75,21 @@ filtrato: l'agente deve poter ricevere gli output reali della pipeline, raccolti
 e ordinati dallo step `10_build_diagnostic_context.py`.
 
 Lo step `10` non deve essere trattato come una sintesi interpretativa che
-sostituisce i file originali. Deve essere un contenitore di evidenze:
+sostituisce i file originali. La decisione corrente e ancora piu semplice:
+`10_diagnostic_context.json` e un manifest leggero.
 
 ```text
-10_diagnostic_context.json = output 01-08 raccolti e ordinati
+10_diagnostic_context.json = indice dei file 01-08 + mini-summary tecnico + regole agente
 ```
 
-L'agente deve usare il contenuto grezzo incorporato nel context e i path ai file
-originali come fonte di verita. Se una conclusione dipende da un dettaglio
-specifico, deve riferirsi alla sezione/file originale: node map, component
-rules, netlist, stdout, stderr o report SPICE.
+Il manifest non duplica Graph JSON, node map, netlist, stdout o stderr. Indica
+solo dove si trovano i file reali e quale ruolo hanno. Lo step
+`11_agent_readonly.py` deve leggere il manifest, caricare i file necessari e
+costruire il prompt usando quegli output originali come fonte di verita.
+
+Se una conclusione dipende da un dettaglio specifico, l'agente deve riferirsi al
+file originale: node map, component rules, netlist, stdout, stderr o report
+SPICE.
 
 Lo step `08` produce fatti grezzi come:
 
@@ -99,32 +104,123 @@ confrontare il circuito riconosciuto con il comportamento simulato.
 
 ## Input dell'agente
 
-Per ogni circuito, l'agente dovrebbe ricevere un pacchetto diagnostico costruito
-dalla pipeline.
+Per ogni circuito, l'agente non deve ricevere file sparsi in modo confuso. Deve
+partire da un solo ingresso principale:
 
-Input principali:
+```text
+10_diagnostic_context.json + problema utente
+```
+
+Il file `10_diagnostic_context.json` non contiene tutta la diagnosi, ma indica
+dove si trovano gli output reali della pipeline. L'agente deve usarlo come
+manifest, poi aprire i file originali necessari.
+
+Input principali della prima versione:
 
 ```text
 problema utente
+10_diagnostic_context.json
 01_graph.json
 02_normalized_circuit.json
 03_node_map.json
 04_values_bound.json
-05_device_profiles.json / device_profiles.yaml
 06_component_rules.json
 07_netlist.cir
 07_spice_emit_report.json
 08_spice_run.json
 08_ngspice_stdout.txt
 08_ngspice_stderr.txt
-09_spice_summary.json
-10_diagnostic_context.json
-11_agent_response.md, quando l'agente viene eseguito
-datasheet_extract.txt, se disponibile
+08_tran.csv, se disponibile
+08_tran_plot.png, se disponibile
 ```
 
-Non tutti gli input sono sempre disponibili. La pipeline deve produrre il
-massimo livello possibile di analisi per ogni circuito.
+Il file piu importante per la struttura del circuito e `01_graph.json`, cioe il
+Graph JSON originale prodotto dalla Pipeline 1.0 e portato nella Pipeline 2.0.
+Questo file rappresenta cio che la prima pipeline ha riconosciuto: componenti,
+terminali e connessioni topologiche.
+
+Il secondo file fondamentale e `03_node_map.json`, perche traduce i terminali
+del graph in nodi elettrici utilizzabili da SPICE.
+
+`04_values_bound.json` serve invece a distinguere tra:
+
+- valori letti o inseriti manualmente;
+- stati dei componenti, per esempio switch aperto o chiuso;
+- modelli assegnati, per esempio BJT o LED;
+- valori mancanti.
+
+`06_component_rules.json` e `07_spice_emit_report.json` aiutano l'agente a non
+confondersi: spiegano quali componenti erano supportati, quali sono stati
+emessi in netlist e quali sono stati saltati.
+
+`07_netlist.cir` e cio che e stato realmente mandato a ngspice.
+
+`08_spice_run.json`, `08_ngspice_stdout.txt` e `08_ngspice_stderr.txt`
+rappresentano il risultato vero della simulazione.
+
+Non tutti gli input sono sempre disponibili. La pipeline deve comunque produrre
+il massimo livello possibile di analisi per ogni circuito.
+
+## Prima versione dell'agente
+
+La prima versione deve essere volutamente semplice e solo lettura.
+
+Obiettivo:
+
+```text
+spiegare il risultato della pipeline e di ngspice rispetto al problema scritto
+dall'utente, senza modificare il circuito e senza eseguire scenari.
+```
+
+Flusso operativo:
+
+```text
+1. l'utente sceglie batch e circuito;
+2. l'utente scrive il problema;
+3. lo script 11 legge 10_diagnostic_context.json;
+4. lo script 11 carica gli artefatti indicati nel manifest;
+5. l'agente analizza graph, node map, valori, netlist e risultato ngspice;
+6. l'agente produce una diagnosi testuale;
+7. l'agente salva la risposta in un file di output.
+```
+
+Nella prima versione l'agente deve fare:
+
+- dire se ngspice e stato eseguito correttamente;
+- spiegare stdout e stderr in modo comprensibile;
+- collegare i risultati SPICE al problema utente;
+- indicare quali componenti sono entrati davvero nella netlist;
+- indicare quali componenti sono stati saltati e perche;
+- distinguere tra dato certo, risultato simulato e ipotesi;
+- proporre possibili scenari futuri, ma senza eseguirli.
+
+Nella prima versione l'agente non deve fare:
+
+- modificare la netlist;
+- cambiare valori;
+- aggiungere collegamenti;
+- correggere automaticamente il Graph JSON;
+- usare l'immagine originale di default;
+- eseguire ngspice;
+- applicare scenari.
+
+La risposta dell'agente dovrebbe avere sempre una struttura stabile:
+
+```text
+1. Stato della simulazione
+2. Evidenze principali
+3. Diagnosi rispetto al problema utente
+4. Limiti della diagnosi
+5. Scenari diagnostici proposti
+```
+
+Gli scenari della prima versione sono solo proposte. Lo step `11` non deve
+creare cartelle scenario, non deve copiare file, non deve modificare netlist e
+non deve rieseguire ngspice. Deve solo descrivere al massimo tre scenari
+candidati, ordinati dal piu semplice al piu utile.
+
+Questa struttura aiuta il modello a non perdersi e rende piu semplice valutare
+le risposte nella tesi.
 
 ### Uso dell'immagine originale
 
@@ -314,35 +410,73 @@ Esempi:
 - controlla se lo switch e realmente aperto o chiuso;
 - misura corrente nel ramo del carico.
 
-## Contesto diagnostico
+## Manifest diagnostico
 
-Prima di chiamare il modello AI, conviene costruire un file strutturato:
+Prima di chiamare il modello AI, conviene costruire un manifest strutturato:
 
 ```text
 10_diagnostic_context.json
 ```
 
-Questo file deve raccogliere e sintetizzare gli output della pipeline.
+Questo file non deve contenere tutti gli output duplicati. Deve essere un indice
+leggero dei file prodotti dalla pipeline.
 
-Struttura logica possibile:
+Struttura logica corrente:
 
 ```text
-[CIRCUIT STATUS]
+[SOURCE FORMAT]
+[BATCH NAME]
+[CIRCUIT ID]
 [USER PROBLEM]
-[IMAGE PATH]
-[GRAPH SUMMARY]
-[NODE MAP]
-[VALUES AND ASSUMPTIONS]
-[COMPONENT RULES]
-[SPICE NETLIST]
-[SPICE RUN REPORT]
-[NGSPICE STDOUT]
-[NGSPICE STDERR]
-[ELECTRICAL CHECKS]
-[DEVICE PROFILES]
-[DATASHEET EXTRACTS]
-[WARNINGS AND LIMITS]
-[TASK]
+[PIPELINE2 OUTPUT DIR]
+[MINI SUMMARY]
+[ARTIFACT PATHS]
+[IMAGE ACCESS POLICY]
+[AGENT MODE]
+[AGENT RULES]
+```
+
+Il mini-summary serve solo a orientare lo step 11:
+
+```text
+spice_status
+spice_exit_code
+emitted_elements
+skipped_elements
+emit_warnings_count
+node_count
+ground_groups_count
+singleton_nodes_count
+has_tran_csv
+has_tran_plot
+```
+
+Gli artefatti puntano ai file reali:
+
+```text
+01_graph.json
+02_normalized_circuit.json
+03_node_map.json
+04_values_bound.json
+06_component_rules.json
+07_netlist.cir
+07_spice_emit_report.json
+08_spice_run.json
+08_ngspice_stdout.txt
+08_ngspice_stderr.txt
+08_tran.csv, se disponibile
+08_tran_plot.png, se disponibile
+```
+
+Lo step `11_agent_readonly.py` deve quindi:
+
+```text
+1. leggere 10_diagnostic_context.json;
+2. scegliere quali artefatti caricare;
+3. leggere i file originali;
+4. costruire il prompt;
+5. chiamare il modello;
+6. salvare la risposta.
 ```
 
 Gli output tecnici e i prompt verso il modello possono essere in inglese. La
@@ -381,6 +515,24 @@ applicati 5 V a connector5.1_pin2.
 In una fase successiva, l'agente puo proporre scenari simulativi. Gli scenari
 servono a verificare ipotesi diagnostiche, non a modificare il circuito base.
 
+Uno scenario non e un consiglio generico. E una ipotesi diagnostica controllata
+che puo essere trasformata in una nuova simulazione SPICE.
+
+Schema concettuale:
+
+```text
+problema utente
+-> diagnosi sulla run base
+-> scenario candidato proposto dall'agente
+-> scelta esplicita dell'utente
+-> copia degli output base in una cartella scenario
+-> modifica controllata solo sulle copie
+-> rigenerazione degli step necessari
+-> nuova esecuzione ngspice
+-> confronto base vs scenario
+-> diagnosi aggiornata
+```
+
 Regola fondamentale:
 
 ```text
@@ -390,8 +542,216 @@ base circuit != scenario circuit
 Il circuito base resta quello riconosciuto e valorizzato dalla pipeline. Lo
 scenario e una modifica simulativa controllata.
 
+Gli output originali non devono mai essere sovrascritti.
+
+Per esempio:
+
+```text
+outputs/pipeline2.0/batchA/a01/
+|-- 01_graph.json
+|-- 03_node_map.json
+|-- 04_values_bound.json
+|-- 07_netlist.cir
+`-- 08_spice_run.json
+
+outputs/pipeline2.0/batchA/a01/scenarios/scenario_001/
+|-- copied_base_artifacts/
+|-- modified_artifacts/
+|-- 07_netlist.cir
+|-- 08_spice_run.json
+`-- scenario_report.json
+```
+
+La cartella scenario deve nascere solo dopo che l'utente ha scelto
+esplicitamente uno degli scenari proposti, per esempio scenario 1, 2 o 3. La
+fase read-only dell'agente non deve creare nulla.
+
 L'agente puo decidere cosa provare e perche, ma la pipeline deve decidere come
 applicare lo scenario in SPICE.
+
+Ogni scenario proposto dovrebbe avere due livelli:
+
+```text
+1. livello user-friendly, leggibile dall'utente;
+2. livello tecnico, utile alla futura pipeline per costruire la run scenario.
+```
+
+Il livello user-friendly deve spiegare:
+
+- titolo naturale dello scenario;
+- perche lo scenario viene proposto;
+- cosa si proverebbe a modificare;
+- cosa ci si aspetta da SPICE;
+- come si verifica il risultato;
+- quale sarebbe il prossimo passo se lo scenario non conferma l'ipotesi.
+
+Il livello tecnico deve essere breve e controllato. Non deve sostituire la
+spiegazione per l'utente, ma deve dare alla pipeline informazioni traducibili in
+azioni future.
+
+Esempio:
+
+```json
+{
+  "scenario_id": "scenario_1",
+  "title": "Alimentare il ramo della lampada",
+  "hypothesis": "Il ramo della lampada non conduce perche il nodo di ingresso non e alimentato.",
+  "actions": [
+    {
+      "type": "drive_node_voltage",
+      "target": "N002",
+      "value": "5V"
+    }
+  ],
+  "rerun_from": "04",
+  "analysis": "op",
+  "compare": ["v(N002)", "v(N004)", "i(Rlamp13_1)"]
+}
+```
+
+Questa forma e piu adatta alla chat: l'utente capisce cosa sta scegliendo, ma
+la pipeline mantiene una rappresentazione abbastanza strutturata per poter
+validare ed eseguire lo scenario in una fase successiva.
+
+Regola di priorita:
+
+```text
+se ngspice riesce e graph/node_map sono internamente coerenti,
+i primi scenari devono essere test elettrici, di valore, di analisi o di stato;
+non devono essere subito correzioni topologiche.
+```
+
+Quindi azioni come:
+
+```text
+connect_nodes
+disconnect_terminal
+move_terminal
+```
+
+devono comparire tra i primi scenari solo quando ci sono prove strutturate di
+errore topologico, per esempio:
+
+- ngspice fallisce per topologia non valida;
+- ci sono nodi singleton o flottanti importanti;
+- mancano componenti critici;
+- il Graph JSON contiene warning significativi;
+- la pipeline produce una netlist non diagnostica;
+- l'immagine viene richiesta perche gli output strutturati fanno sospettare un
+  errore di riconoscimento.
+
+Se invece il circuito base e simulabile e coerente, queste azioni possono essere
+citate come possibile passo successivo, ma non devono sostituire scenari piu
+naturali come alimentare un nodo di ingresso, cambiare il valore di una sorgente,
+chiudere uno switch gia riconosciuto o rieseguire una analisi diversa.
+
+Regola di naturalezza:
+
+```text
+prima si agisce su ingressi, connettori, sorgenti, label di alimentazione e
+stati di componenti riconosciuti; solo dopo si forzano nodi interni del carico.
+```
+
+Per esempio, se una lampada e alimentata attraverso:
+
+```text
+connector pin -> resistor -> lamp -> ground
+```
+
+lo scenario piu naturale e pilotare il pin o il nodo di ingresso del ramo, non
+applicare subito una sorgente direttamente sul terminale della lampada. Pilotare
+direttamente il terminale del carico puo avere senso come test di isolamento del
+modello, ma non dovrebbe essere uno dei primi scenari se esiste un ingresso a
+monte piu naturale.
+
+Regola di autosufficienza:
+
+```text
+ogni scenario proposto nei primi tre deve poter essere eseguito da solo.
+```
+
+Quindi uno scenario non dovrebbe dire soltanto "dopo lo scenario 1 esegui
+`.tran`". Se la transitoria serve, lo scenario deve includere anche le azioni
+necessarie per rendere il ramo elettricamente significativo, per esempio:
+
+```json
+{
+  "actions": [
+    {"type": "drive_node_voltage", "target": "N002", "value": "5V"},
+    {"type": "run_tran"}
+  ]
+}
+```
+
+In questo modo la futura pipeline puo trasformare lo scenario in una run
+separata senza dover interpretare dipendenze implicite tra scenari.
+
+Se dai dati disponibili non serve uno scenario, l'agente puo dichiararlo.
+
+### Da quale step ripartire
+
+La scelta dello step da rigenerare dipende dal tipo di scenario.
+
+Scenario sui valori o sui parametri:
+
+```text
+esempi:
+- cambiare valore di una sorgente;
+- cambiare resistenza equivalente;
+- cambiare modello SPICE;
+- aggiungere o rimuovere una analisi .tran.
+```
+
+In questo caso si possono riusare graph, normalizzazione e node map:
+
+```text
+01_graph.json
+02_normalized_circuit.json
+03_node_map.json
+-> rigenerare 04/06/07/08
+```
+
+Scenario su stato o topologia elettrica:
+
+```text
+esempi:
+- chiudere uno switch;
+- aprire uno switch;
+- connettere due nodi;
+- scollegare un terminale;
+- spostare un terminale su un altro nodo.
+```
+
+Qui puo cambiare la mappa dei nodi, quindi bisogna ripartire dal primo livello
+topologico interessato:
+
+```text
+graph base
+-> scenario layer
+-> 03_node_map
+-> 04_values
+-> 06_component_rules
+-> 07_spice_emit
+-> 08_spice_run
+```
+
+Scenario di correzione del Graph JSON:
+
+```text
+esempi:
+- componente riconosciuto male;
+- batteria letta come due batterie;
+- rele o switch non rappresentato correttamente;
+- connessione importante mancante nel graph.
+```
+
+Questo non e uno scenario elettrico normale. E uno scenario di correzione del
+graph. In questo caso non si modifica `01_graph.json` originale: si crea una
+copia scenario del graph e si riparte da `01_io.py` o da un input graph
+specifico dello scenario.
+
+Se il graph sembra solo sospetto ma non ci sono prove sufficienti, l'agente deve
+chiedere accesso all'immagine invece di correggere il graph in modo implicito.
 
 ### Scenari specifici vs primitive generali
 
@@ -468,6 +828,9 @@ ramo LED e rieseguire .op.
 L'agente non deve essere pensato come un sistema che propone un solo scenario e
 si ferma.
 
+Nella prima risposta read-only l'agente dovrebbe proporre al massimo tre
+scenari candidati. L'esecuzione avviene solo dopo scelta dell'utente.
+
 In molti circuiti il problema non dipende da una sola causa. Un fallimento SPICE
 puo derivare da piu livelli:
 
@@ -483,7 +846,10 @@ Per questo l'agente deve poter lavorare in modo iterativo:
 
 ```text
 diagnosi iniziale
--> scenario candidato
+-> proposta di scenario 1/2/3
+-> utente sceglie uno scenario
+-> copia output base in cartella scenario
+-> modifica controllata delle copie
 -> netlist scenario
 -> esecuzione ngspice
 -> lettura stdout/stderr/risultati
@@ -498,13 +864,16 @@ la batteria come unica sorgente, poi modellare il rele, poi provare contatto
 aperto/chiuso, poi confrontare luce/buio per la LDR.
 
 Quindi l'agente dovrebbe mantenere una lista ordinata di scenari, eseguirli uno
-alla volta e aggiornare la diagnosi dopo ogni run. Ogni scenario deve dichiarare:
+alla volta solo dopo scelta o conferma dell'utente e aggiornare la diagnosi dopo
+ogni run. Ogni scenario deve dichiarare:
 
 - quale problema prova a verificare;
 - quali assunzioni introduce;
 - quali primitive usa;
+- quale primo step pipeline va rigenerato;
 - quale risultato atteso ha;
 - quale risultato SPICE ha prodotto;
+- quali grandezze sono state confrontate con la run base;
 - se risolve, peggiora o lascia invariato il problema.
 
 Il ciclo deve fermarsi quando:
@@ -580,12 +949,15 @@ L'agente:
 - legge il contesto;
 - interpreta il problema utente;
 - propone spiegazioni;
-- propone scenari controllati;
+- propone al massimo tre scenari controllati nella fase read-only;
+- aspetta la scelta dell'utente prima di far partire uno scenario;
 - confronta risultati base e risultati scenario.
 
 La pipeline:
 
+- non sovrascrive mai gli output originali;
 - valida gli scenari;
+- copia gli output base in una cartella scenario;
 - traduce azioni generiche in SPICE;
 - genera netlist scenario;
 - esegue ngspice;
@@ -596,8 +968,11 @@ Flusso completo:
 ```text
 utente descrive problema
 -> agente legge output 08 e contesto tecnico
--> agente propone scenario JSON
+-> agente propone massimo 3 scenari candidati
+-> utente sceglie uno scenario
+-> pipeline copia gli output base in una cartella scenario
 -> pipeline valida lo scenario
+-> pipeline modifica solo le copie
 -> pipeline genera netlist scenario
 -> ngspice esegue lo scenario
 -> agente confronta base vs scenario
@@ -691,9 +1066,9 @@ Carica tutti i file disponibili per un circuito e costruisce un oggetto
 
 Deve verificare quali file esistono e quali mancano.
 
-### Context builder
+### Manifest/context builder
 
-Costruisce una sintesi ordinata per il modello AI.
+Costruisce il manifest ordinato per il modello AI.
 
 Questo modulo dovrebbe corrispondere allo step:
 
@@ -701,9 +1076,13 @@ Questo modulo dovrebbe corrispondere allo step:
 10_build_diagnostic_context.py
 ```
 
+Nella versione corrente non deve duplicare i contenuti dei file 01-08. Deve
+produrre un manifest leggero con path, ruoli, mini-summary tecnico e regole
+operative.
+
 ### Prompt builder
 
-Trasforma il contesto diagnostico in un prompt controllato.
+Trasforma manifest e artefatti originali in un prompt controllato.
 
 Regole principali:
 
@@ -802,9 +1181,10 @@ OPENAI_API_KEY
 
 La prima implementazione puo essere uno script Python semplice che:
 
-- legge i file del circuito;
+- legge `10_diagnostic_context.json`;
+- carica i file reali indicati dal manifest;
 - legge la domanda utente;
-- costruisce il contesto;
+- costruisce il prompt;
 - chiama il modello;
 - salva risposta e chat history.
 
@@ -824,7 +1204,6 @@ outputs/pipeline2.0/batchA/a10/
 |-- 08_spice_run.json
 |-- 08_ngspice_stdout.txt
 |-- 08_ngspice_stderr.txt
-|-- 09_spice_summary.json
 |-- 10_diagnostic_context.json
 |-- 11_agent_response.md
 |-- proposed_scenarios.json
@@ -858,7 +1237,8 @@ Questo livello e sufficiente per una prima demo.
 
 ### Livello 2: agente che propone scenari
 
-L'agente non esegue ancora nulla, ma produce scenari JSON.
+L'agente non esegue ancora nulla, ma produce scenari candidati. Questi scenari
+sono proposte diagnostiche: diventano run SPICE solo se l'utente ne sceglie uno.
 
 Output possibile:
 
@@ -871,6 +1251,7 @@ proposed_scenarios.json
 L'agente puo chiedere alla pipeline di:
 
 - creare uno scenario;
+- copiare gli output originali in una cartella scenario;
 - rigenerare la netlist;
 - eseguire ngspice;
 - confrontare base e scenario;
@@ -950,10 +1331,10 @@ Questa valutazione si collega agli esperimenti GPT gia presenti nel progetto.
 
 ### Fase 2: contesto diagnostico
 
-- implementare `09_summarize_spice.py`;
-- implementare `10_build_diagnostic_context.py`;
+- lasciare `09_summarize_spice.py` come placeholder per ora;
+- implementare `10_build_diagnostic_context.py` come manifest leggero;
 - implementare `11_agent_readonly.py`;
-- produrre un contesto unico per circuito.
+- produrre un manifest unico per circuito.
 
 ### Fase 3: agente statico
 
@@ -966,8 +1347,12 @@ Questa valutazione si collega agli esperimenti GPT gia presenti nel progetto.
 
 - definire poche azioni scenario generali;
 - far produrre all'agente `proposed_scenarios.json`;
+- richiedere scelta esplicita dell'utente prima di eseguire uno scenario;
 - validare gli scenari nella pipeline;
+- copiare gli output originali in una cartella scenario;
+- modificare solo le copie;
 - generare netlist scenario;
+- rieseguire gli step necessari a partire dal primo step interessato;
 - confrontare base vs scenario.
 
 ### Fase 5: chat e web

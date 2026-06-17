@@ -137,6 +137,57 @@ Quando viene eseguito, produce:
 
 Gli output tecnici dello step 08 sono in inglese.
 
+### 09 - SPICE Summary
+
+Per ora e uno step placeholder.
+
+La scelta corrente e non creare una sintesi intermedia obbligatoria: l'agente
+deve leggere gli output reali della pipeline tramite il manifest dello step 10.
+
+### 10 - Diagnostic Context
+
+Costruisce il manifest diagnostico leggero per l'agente.
+
+Lo step 10 viene eseguito da `run_pipeline2.py` dopo la generazione della
+netlist e, se richiesto, dopo lo step 08. Non duplica tutti gli output dentro un
+file enorme: salva un indice dei file disponibili, una mini-summary tecnica e
+le regole operative per l'agente.
+
+Output:
+
+```text
+10_diagnostic_context.json
+```
+
+### 11 - Agent Readonly
+
+Prima base dell'agente diagnostico.
+
+Di default non chiama OpenAI. Legge `10_diagnostic_context.json`, carica gli
+artefatti indicati nel manifest e genera due file di controllo:
+
+```text
+11_agent_input_preview.md
+11_agent_prompt.md
+```
+
+Il preview serve a noi per controllare cosa viene caricato. Il prompt e il testo
+che verra mandato al modello AI quando collegheremo OpenAI.
+
+Se viene passato `--run-agent`, lo step chiama OpenAI e salva:
+
+```text
+11_agent_response.md
+```
+
+Lo step 11 e read-only:
+
+- non modifica i file originali;
+- non crea scenari;
+- non copia output;
+- non esegue ngspice;
+- propone solo eventuali scenari diagnostici futuri nel prompt.
+
 ## Comando principale
 
 Da terminale, nella root del progetto:
@@ -177,6 +228,128 @@ Per forzare esplicitamente l'eseguibile console di ngspice:
 ```powershell
 python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 --run-spice --ngspice-executable ngspice_con
 ```
+
+Nel nostro ambiente, se `ngspice_con` non e nel PATH, si puo usare direttamente
+il path completo:
+
+```powershell
+python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 --run-spice --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+```
+
+Per rigenerare tutta la pipeline 2.0 su Batch A, includendo lo step 10 ma senza
+rilanciare SPICE:
+
+```powershell
+python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 a02 a03 a04 a05 a06 a07 a08 a09 a10
+```
+
+Per rigenerare anche SPICE su tutto Batch A:
+
+```powershell
+python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 a02 a03 a04 a05 a06 a07 a08 a09 a10 --run-spice --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+```
+
+## Comandi agente read-only
+
+Lo step 11 si esegue separatamente dal comando principale della pipeline.
+
+Prima di eseguire l'agente, il circuito deve avere gia gli output della
+Pipeline 2.0, in particolare:
+
+```text
+10_diagnostic_context.json
+```
+
+Se vuoi partire da zero su `a01`, esegui prima:
+
+```powershell
+python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 --run-spice --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+```
+
+### Solo prompt, senza OpenAI
+
+Per generare preview e prompt dell'agente su `a01`, senza chiamare OpenAI:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\11_agent_readonly.py --batch batchA --circuit a01 --question "Perche la lampada non si accende?"
+```
+
+Output:
+
+```text
+outputs/pipeline2.0/batchA/a01/11_agent_input_preview.md
+outputs/pipeline2.0/batchA/a01/11_agent_prompt.md
+```
+
+Questa modalita serve per controllare cosa verra mandato al modello.
+
+Si puo anche passare direttamente il manifest:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\11_agent_readonly.py --context outputs\pipeline2.0\batchA\a01\10_diagnostic_context.json --question "Perche la lampada non si accende?"
+```
+
+### Agente con OpenAI
+
+Per chiamare OpenAI bisogna aggiungere `--run-agent`.
+
+Comando consigliato con modello default `gpt-5.4`:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\11_agent_readonly.py --batch batchA --circuit a01 --question "Perche la lampada non si accende?" --run-agent
+```
+
+Output aggiuntivo:
+
+```text
+outputs/pipeline2.0/batchA/a01/11_agent_response.md
+```
+
+Per scegliere esplicitamente il modello default:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\11_agent_readonly.py --batch batchA --circuit a01 --question "Perche la lampada non si accende?" --run-agent --model gpt-5.4
+```
+
+Per usare il modello piu forte come confronto:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\11_agent_readonly.py --batch batchA --circuit a01 --question "Perche la lampada non si accende?" --run-agent --model gpt-5.5
+```
+
+Per test piu rapidi/economici:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\11_agent_readonly.py --batch batchA --circuit a01 --question "Perche la lampada non si accende?" --run-agent --model gpt-5.4-mini
+```
+
+Modello default:
+
+```text
+gpt-5.4
+```
+
+Modelli consigliati:
+
+```text
+gpt-5.4       default operativo dell'agente
+gpt-5.5       confronto di qualita / modello piu forte
+gpt-5.4-mini  test piu rapidi ed economici
+gpt-5-mini    baseline veloce/economica
+```
+
+La scelta del modello riguarda solo l'agente. La pipeline tecnica fino a SPICE
+resta indipendente dal modello AI.
+
+La API key viene cercata in questo ordine:
+
+```text
+OPENAI_API_KEY gia presente nell'ambiente
+.env nella root del progetto
+scripts/GPT/.env
+```
+
+Il valore della chiave non viene mai stampato.
 
 ## Ngspice su Windows e VS Code
 
@@ -294,6 +467,7 @@ Per ogni circuito, al momento, vengono prodotti:
 06_component_rules.json
 07_netlist.cir
 07_spice_emit_report.json
+10_diagnostic_context.json
 ```
 
 Se viene passato `--run-spice`, vengono prodotti anche:
@@ -302,6 +476,19 @@ Se viene passato `--run-spice`, vengono prodotti anche:
 08_spice_run.json
 08_ngspice_stdout.txt
 08_ngspice_stderr.txt
+```
+
+Se viene eseguito lo step 11, vengono prodotti anche:
+
+```text
+11_agent_input_preview.md
+11_agent_prompt.md
+```
+
+Se viene passato anche `--run-agent`, viene prodotto:
+
+```text
+11_agent_response.md
 ```
 
 ## Come leggere gli output principali
@@ -407,39 +594,45 @@ Rswitch25_1 N001 N002 1m
 
 cioe un collegamento quasi ideale.
 
-## Nota futura su chat/agente
+## Nota su chat/agente
 
-Quando la pipeline verra estesa a tutti i batch e a molte immagini, puo diventare
-utile aggiungere una chat o un agente sopra la pipeline.
+Quando la pipeline verra estesa a tutti i batch e a molte immagini, la chat o
+l'agente diventeranno il livello interattivo sopra gli output tecnici.
 
 L'idea non e sostituire la pipeline, ma guidarla:
 
 ```text
-utente: esegui spice
-pipeline: ngspice fallisce
-summary: probabile switch aperto o nodo flottante
-utente: chiudi lo switch e riesegui
-pipeline: crea scenario simulativo, rigenera netlist, rilancia spice
+utente: Perche la lampada non si accende?
+agente: legge 10_diagnostic_context.json e gli output 01-08
+agente: spiega il risultato SPICE
+agente: propone massimo 3 scenari diagnostici candidati
+utente: scegli scenario 2
+pipeline: crea una cartella scenario separata
+pipeline: copia gli output originali
+pipeline: modifica solo le copie
+pipeline: rigenera gli step necessari e rilancia SPICE
+agente: confronta run base e run scenario
 ```
 
-Prima versione possibile:
+Prima versione attuale:
 
-- comandi preimpostati;
-- azioni semplici come `esegui spice`, `mostra errori`, `mostra netlist`,
-  `chiudi switch25.1`, `riesegui`;
-- scenari simulativi separati dalla versione originale del circuito.
+- `10_build_diagnostic_context.py` crea il manifest;
+- `11_agent_readonly.py` crea preview e prompt;
+- OpenAI e collegato solo dietro flag `--run-agent`;
+- `12_controlled_scenarios.py` resta placeholder.
 
-Versione piu avanzata:
+Regole sugli scenari:
 
-- agente vero e proprio;
-- lettura automatica dei report `08` e `09`;
-- proposta di correzioni o scenari;
-- confronto tra circuito originale e circuito modificato per simulazione.
+- `11` propone soltanto scenari;
+- uno scenario parte solo se l'utente lo sceglie esplicitamente;
+- gli output originali non vanno mai sovrascritti;
+- lo scenario deve lavorare su copie degli output base;
+- la cartella scenario deve essere separata dalla cartella base del circuito.
 
-Questa parte va implementata solo dopo aver validato bene:
+Flusso tecnico corrente:
 
 ```text
-01 -> 02 -> 03 -> 04 -> 06 -> 07 -> 08 -> 09
+01 -> 02 -> 03 -> 04 -> 06 -> 07 -> 08 -> 10 -> 11
 ```
 
 Per la tesi e una direzione interessante per descrivere un sistema interattivo
@@ -450,10 +643,9 @@ SPICE eseguibile.
 
 I prossimi step saranno:
 
-- `09_summarize_spice.py`: riassume stdout/stderr, stato ngspice e componenti
-  non emessi;
-- `10_build_diagnostic_context.py`: costruisce il pacchetto tecnico per
-  l'agente;
-- `11_agent_readonly.py`: prima versione dell'agente, solo lettura;
+- `09_summarize_spice.py`: placeholder, per ora saltato;
+- `10_build_diagnostic_context.py`: implementato come manifest leggero;
+- `11_agent_readonly.py`: implementato fino a preview, prompt e chiamata
+  OpenAI opzionale con `--run-agent`;
 - `12_controlled_scenarios.py`: scenari SPICE controllati per verificare
   ipotesi.
