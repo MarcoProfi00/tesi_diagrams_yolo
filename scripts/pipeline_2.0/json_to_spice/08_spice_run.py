@@ -304,7 +304,10 @@ def run_ngspice(
             message="ngspice executable not found in PATH.",
         )
 
-    command = [ngspice_path, "-b", str(netlist_path)]
+    # ngspice viene eseguito con cwd nella cartella del circuito, quindi gli
+    # passiamo solo il nome della netlist. In questo modo funziona sia con
+    # output_dir assoluti sia con output_dir relativi.
+    command = [ngspice_path, "-b", netlist_path.name]
 
     try:
         # Lo step 08 registra il risultato grezzo, senza correggere il circuito.

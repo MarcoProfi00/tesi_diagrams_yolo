@@ -60,8 +60,10 @@ La sequenza di riferimento e:
 -> 06_component_rules
 -> 07_spice_emit
 -> 08_spice_run
+-> 09_web_chat
 -> 10_build_diagnostic_context
 -> 11_agent_readonly
+-> 12_controlled_scenarios
 -> agente AI
 ```
 
@@ -69,10 +71,29 @@ Il punto minimo per attivare l'agente e dopo `08_spice_run.py`, perche prima di
 quello esiste solo una netlist generata, mentre dopo `08` esiste anche il
 risultato reale di ngspice.
 
-Per ora lo step `09_summarize_spice.py` viene lasciato come placeholder o
-saltato. La scelta corrente e non creare un riassunto intermedio troppo
-filtrato: l'agente deve poter ricevere gli output reali della pipeline, raccolti
-e ordinati dallo step `10_build_diagnostic_context.py`.
+La decisione corrente e usare lo step `09` come punto di ingresso
+dell'interfaccia utente:
+
+```text
+09_web_chat.py = avvia una chat locale, inizialmente web o anche CLI, collegata
+agli output gia prodotti dagli step 01-08.
+```
+
+Lo step `09` non deve diventare un riassunto SPICE intermedio. Non deve filtrare
+troppo i dati e non deve sostituire `10` o `11`. Il suo ruolo e orchestrare
+l'interazione:
+
+```text
+utente sceglie batch/circuito
+-> utente scrive il problema
+-> 09 chiama 10 per costruire/aggiornare il manifest
+-> 09 chiama 11 per ottenere la risposta diagnostica
+-> 09 mostra la risposta in chat
+-> se l'utente sceglie uno scenario, 09 chiama 12
+```
+
+In questo modo la pipeline tecnica resta separata dall'interfaccia. `09` e il
+ponte operativo tra utente, agente e strumenti controllati.
 
 Lo step `10` non deve essere trattato come una sintesi interpretativa che
 sostituisce i file originali. La decisione corrente e ancora piu semplice:
@@ -221,6 +242,80 @@ candidati, ordinati dal piu semplice al piu utile.
 
 Questa struttura aiuta il modello a non perdersi e rende piu semplice valutare
 le risposte nella tesi.
+
+### Chat naturale e scelta degli scenari
+
+La forma finale desiderata non deve obbligare l'utente a cliccare bottoni o a
+conoscere gli script interni. L'interazione puo restare una chat naturale.
+
+Esempio:
+
+```text
+Utente:
+La lampada non si accende, quale potrebbe essere il problema?
+
+Agente:
+La simulazione mostra che la batteria e presente, ma il ramo lampada non e
+alimentato. Propongo tre scenari:
+
+Scenario 1 - Chiudere lo switch.
+Scenario 2 - Alimentare il ramo lampada.
+Scenario 3 - Alimentare il ramo LED.
+
+Utente:
+Esegui lo scenario 1.
+```
+
+A questo punto l'agente non deve modificare file direttamente. Il sistema deve:
+
+```text
+1. riconoscere che l'utente ha scelto scenario_1;
+2. recuperare il JSON tecnico dello scenario_1 generato nella risposta
+   precedente;
+3. passarlo allo step 12;
+4. creare una cartella scenario separata;
+5. rieseguire gli step necessari;
+6. confrontare base run e scenario run;
+7. far spiegare all'agente il nuovo risultato.
+```
+
+Quindi l'interfaccia puo essere completamente conversazionale:
+
+```text
+utente parla in linguaggio naturale
+-> agente risponde in linguaggio naturale
+-> pipeline esegue solo azioni strutturate e validate
+```
+
+Per la prima implementazione non serve un interprete complesso. Basta accettare
+frasi semplici:
+
+```text
+esegui scenario 1
+prova lo scenario 2
+facciamo il terzo
+esegui il primo
+```
+
+Queste frasi possono essere tradotte con regole semplici:
+
+```text
+"scenario 1" oppure "primo"  -> scenario_1
+"scenario 2" oppure "secondo" -> scenario_2
+"scenario 3" oppure "terzo"   -> scenario_3
+```
+
+Solo in una fase successiva si puo usare il modello AI anche come
+`scenario_selector`, cioe per capire richieste meno esplicite come:
+
+```text
+proviamo quello dello switch
+esegui l'ipotesi sul ramo LED
+rifai la simulazione alimentando il pin del connettore
+```
+
+Anche in quel caso, la scelta deve sempre essere trasformata in un comando
+strutturato e validato prima di arrivare a `12_controlled_scenarios.py`.
 
 ### Uso dell'immagine originale
 
@@ -566,6 +661,87 @@ La cartella scenario deve nascere solo dopo che l'utente ha scelto
 esplicitamente uno degli scenari proposti, per esempio scenario 1, 2 o 3. La
 fase read-only dell'agente non deve creare nulla.
 
+### Stato implementativo attuale degli scenari
+
+La prima versione degli scenari controllati e stata implementata in modo
+minimale ma generale.
+
+Flusso attuale:
+
+```text
+utente scrive un sintomo nella web chat
+-> 09_web_chat.py chiama 10 e 11
+-> l'agente read-only propone scenari diagnostici
+-> utente scrive "esegui scenario 1"
+-> 09 riconosce la scelta
+-> 09 estrae il JSON tecnico dello scenario dalla risposta agente
+-> 09 crea la cartella scenario
+-> 09 copia la base run in base_snapshot/ e run/
+-> 09 chiama 12_controlled_scenarios.py
+-> 12 applica le azioni supportate alla netlist in run/
+```
+
+Struttura attuale:
+
+```text
+outputs/pipeline2.0/<batch>/<circuit>/scenarios/<scenario_id>/
+|-- scenario.json
+|-- scenario_status.json
+|-- scenario_copy_manifest.json
+|-- 12_controlled_scenarios.json
+|-- scenario_comparison.json, se SPICE scenario e stato eseguito
+|-- base_snapshot/
+`-- run/
+```
+
+`base_snapshot/` conserva una copia degli output base originali. `run/` e la
+copia modificabile usata per lo scenario.
+
+La base run originale non viene modificata.
+
+Per ora la primitiva supportata e:
+
+```text
+drive_node_voltage
+```
+
+Esempio:
+
+```json
+{
+  "type": "drive_node_voltage",
+  "target": "N002",
+  "value": "5V"
+}
+```
+
+Questa azione viene tradotta nella netlist scenario in:
+
+```spice
+VSCENARIO_N002 N002 0 DC 5
+```
+
+Lo step `12_controlled_scenarios.py` puo essere eseguito anche da terminale con
+`--run-spice`. In quel caso:
+
+```text
+1. applica lo scenario alla netlist in run/;
+2. esegue ngspice sulla netlist scenario;
+3. salva 08_spice_run.json, stdout e stderr dentro run/;
+4. crea scenario_comparison.json confrontando base run e scenario run.
+```
+
+Esempio validato su `a01/scenario_1`:
+
+```text
+v(N002):       0 -> 5 V
+v(N004):       0 -> 0.2380952 V
+i(Rlamp13_1):  0 -> 0.0047619 A
+```
+
+Questo conferma l'ipotesi proposta dall'agente: alimentando `N002`, il ramo
+della lampada riceve corrente.
+
 L'agente puo decidere cosa provare e perche, ma la pipeline deve decidere come
 applicare lo scenario in SPICE.
 
@@ -886,6 +1062,46 @@ Il ciclo deve fermarsi quando:
 In questo modo l'agente non e solo uno spiegatore del primo output SPICE, ma un
 assistente diagnostico che esplora ipotesi controllate e confronta risultati.
 
+### Dopo l'esecuzione di uno scenario
+
+Quando l'utente sceglie uno scenario in chat, la risposta successiva
+dell'agente non deve limitarsi a dire che la simulazione e stata eseguita.
+Deve confrontare il risultato dello scenario con la run base.
+
+Domande che l'agente deve porsi dopo ogni scenario:
+
+- SPICE prima falliva e ora riesce?
+- `stderr` e migliorato, peggiorato o invariato?
+- il nodo o ramo legato al problema utente e cambiato?
+- la corrente nel carico interessato e diventata significativa?
+- lo scenario conferma l'ipotesi, la smentisce o resta inconclusivo?
+- conviene eseguire un altro scenario tra quelli gia proposti?
+- serve proporre un nuovo scenario?
+- serve chiedere un dato all'utente, per esempio valore mancante o immagine?
+
+La risposta dopo uno scenario dovrebbe avere una forma semplice:
+
+```text
+1. Scenario eseguito
+2. Cosa e cambiato rispetto alla run base
+3. Il problema sembra risolto?
+4. Interpretazione
+5. Prossimo passo consigliato
+```
+
+Esempio:
+
+```text
+Ho eseguito lo scenario 1, cioe la chiusura dello switch.
+Rispetto alla run base, N002 ora sale a 5 V, ma N003 e N004 restano a 0 V.
+Quindi lo switch aperto era una parte del problema, ma non basta a far
+accendere LED e lampada.
+Il prossimo scenario piu utile e alimentare il ramo LED o il ramo lampada.
+```
+
+Questo rende l'agente iterativo: non produce una diagnosi unica e definitiva,
+ma guida l'utente attraverso esperimenti SPICE controllati.
+
 Esempio scenario:
 
 ```json
@@ -1010,6 +1226,24 @@ Questa versione:
 ### Versione 2: sito web diagnostico
 
 La versione piu completa puo essere una piccola applicazione web.
+
+Nella prima versione web non servono bottoni per gli scenari. Il sito puo
+funzionare come una chat:
+
+```text
+1. selezione batch/circuito;
+2. campo testo per il problema utente;
+3. risposta dell'agente;
+4. utente scrive "esegui scenario 1";
+5. backend interpreta la scelta;
+6. backend chiama 12_controlled_scenarios.py;
+7. agente spiega il confronto base vs scenario.
+```
+
+I bottoni potranno essere aggiunti piu avanti come comodita grafica, ma non sono
+necessari per dimostrare il comportamento agentico. La parte importante e che
+la conversazione mantenga memoria degli scenari proposti e che ogni scenario sia
+eseguito solo dopo una richiesta esplicita dell'utente.
 
 Struttura possibile:
 
@@ -1331,23 +1565,28 @@ Questa valutazione si collega agli esperimenti GPT gia presenti nel progetto.
 
 ### Fase 2: contesto diagnostico
 
-- lasciare `09_summarize_spice.py` come placeholder per ora;
+- trasformare `09` nel punto di ingresso della chat/web locale;
 - implementare `10_build_diagnostic_context.py` come manifest leggero;
 - implementare `11_agent_readonly.py`;
 - produrre un manifest unico per circuito.
 
-### Fase 3: agente statico
+### Fase 3: chat diagnostica read-only
 
+- scegliere batch e circuito;
+- scrivere un problema in chat;
 - leggere file gia generati;
-- rispondere a domande;
+- chiamare `10` e `11`;
+- mostrare la risposta dell'agente;
 - salvare `agent_response.md`;
-- salvare `chat_history.json`.
+- salvare `chat_history.json`;
+- proporre scenari, ma senza eseguirli.
 
 ### Fase 4: scenari controllati
 
 - definire poche azioni scenario generali;
 - far produrre all'agente `proposed_scenarios.json`;
-- richiedere scelta esplicita dell'utente prima di eseguire uno scenario;
+- richiedere scelta esplicita dell'utente in chat prima di eseguire uno scenario;
+- interpretare frasi semplici come "esegui scenario 1" o "prova il secondo";
 - validare gli scenari nella pipeline;
 - copiare gli output originali in una cartella scenario;
 - modificare solo le copie;
@@ -1355,12 +1594,29 @@ Questa valutazione si collega agli esperimenti GPT gia presenti nel progetto.
 - rieseguire gli step necessari a partire dal primo step interessato;
 - confrontare base vs scenario.
 
-### Fase 5: chat e web
+Stato attuale:
 
-- chat CLI su un circuito;
-- storico conversazione;
-- eventuale sito web diagnostico;
-- pannelli per immagine, report, netlist, log ngspice e chat.
+```text
+implementato il primo ciclo tecnico per drive_node_voltage:
+scelta scenario -> copia base/run -> modifica netlist scenario -> ngspice scenario
+-> scenario_comparison.json.
+```
+
+Prossimo passo:
+
+```text
+usare scenario_comparison.json come nuovo input dell'agente,
+cosi la chat puo spiegare se lo scenario conferma o smentisce l'ipotesi.
+```
+
+### Fase 5: chat iterativa e web completa
+
+- mantenere storico conversazione;
+- permettere piu scenari nella stessa chat;
+- far spiegare all'agente il risultato di ogni scenario;
+- proporre scenario successivo se il problema non e risolto;
+- aggiungere pannelli per immagine, report, netlist, log ngspice e chat;
+- aggiungere eventuali bottoni solo come scorciatoia, non come requisito.
 
 ## Limiti da dichiarare
 

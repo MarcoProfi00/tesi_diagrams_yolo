@@ -137,12 +137,40 @@ Quando viene eseguito, produce:
 
 Gli output tecnici dello step 08 sono in inglese.
 
-### 09 - SPICE Summary
+### 09 - Web Chat
 
-Per ora e uno step placeholder.
+Avvia una piccola interfaccia web locale temporanea per guardare gli output del
+circuito e parlare con l'agente diagnostico.
 
-La scelta corrente e non creare una sintesi intermedia obbligatoria: l'agente
-deve leggere gli output reali della pipeline tramite il manifest dello step 10.
+Lo step 09 non e un backend permanente:
+
+- non usa database;
+- non salva obbligatoriamente lo storico chat;
+- non espone API pubbliche;
+- vive solo finche il comando resta in esecuzione nel terminale.
+
+Per ora mostra:
+
+- run principale `Base run`;
+- immagine originale del circuito;
+- artefatti `01-08`;
+- stato SPICE;
+- netlist;
+- stdout/stderr;
+- eventuale plot `.tran`;
+- chat diagnostica collegata agli step `10` e `11`.
+
+La chat salva file separati per non sovrascrivere gli esperimenti da terminale:
+
+```text
+11_agent_input_preview_chat.md
+11_agent_prompt_chat.md
+11_agent_response_chat.md
+```
+
+Quando l'utente scrive frasi come `esegui scenario 1`, lo step `09` riconosce
+la scelta, recupera lo scenario JSON dall'ultima risposta agente e chiama lo
+step `12`.
 
 ### 10 - Diagnostic Context
 
@@ -187,6 +215,51 @@ Lo step 11 e read-only:
 - non copia output;
 - non esegue ngspice;
 - propone solo eventuali scenari diagnostici futuri nel prompt.
+
+### 12 - Controlled Scenarios
+
+Applica scenari diagnostici controllati scelti dall'utente.
+
+Lo step 12 non modifica mai la base run originale. Lavora solo dentro:
+
+```text
+outputs/pipeline2.0/<batch>/<circuit>/scenarios/<scenario_id>/
+```
+
+Struttura attuale:
+
+```text
+scenario.json
+scenario_status.json
+scenario_copy_manifest.json
+12_controlled_scenarios.json
+scenario_comparison.json
+base_snapshot/
+run/
+```
+
+`base_snapshot/` contiene una copia degli output originali. `run/` contiene la
+copia modificabile dello scenario.
+
+Per ora e supportata una sola primitiva generale:
+
+```json
+{
+  "type": "drive_node_voltage",
+  "target": "N002",
+  "value": "5V"
+}
+```
+
+Questa azione aggiunge nella netlist scenario una sorgente del tipo:
+
+```spice
+VSCENARIO_N002 N002 0 DC 5
+```
+
+Lo step 12 puo anche eseguire ngspice sulla run scenario con `--run-spice` e
+creare un confronto automatico base vs scenario usando le grandezze elencate in
+`scenario.json -> compare`.
 
 ## Comando principale
 
@@ -248,6 +321,194 @@ Per rigenerare anche SPICE su tutto Batch A:
 ```powershell
 python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 a02 a03 a04 a05 a06 a07 a08 a09 a10 --run-spice --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
 ```
+
+## Web chat locale
+
+La web chat si avvia separatamente dalla pipeline principale.
+
+Quindi, se vuoi solo eseguire la pipeline tecnica `01-08`, non devi fare nulla
+di speciale: basta usare `run_pipeline2.py` come nei comandi precedenti.
+
+Per aprire il sito su un circuito gia generato, per esempio `a01`:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --circuit a01
+```
+
+Lo script avvia un server locale temporaneo e apre il browser su:
+
+```text
+http://127.0.0.1:8765/
+```
+
+Quando non vuoi usare il sito, semplicemente non eseguire `09_web_chat.py`.
+
+Per chiudere il sito:
+
+```text
+Ctrl+C nel terminale dove sta girando 09_web_chat.py
+```
+
+Se la porta `8765` e gia occupata:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --circuit a01 --port 8766
+```
+
+Se non vuoi aprire automaticamente il browser:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --circuit a01 --no-browser
+```
+
+In quel caso puoi aprire manualmente:
+
+```text
+http://127.0.0.1:8765/
+```
+
+Per ora il sito non rilancia la pipeline tecnica `01-08`. Legge gli output gia
+presenti in:
+
+```text
+outputs/pipeline2.0/<batch>/<circuit>/
+```
+
+Esempio:
+
+```text
+outputs/pipeline2.0/batchA/a01/
+```
+
+Se quella cartella non esiste, prima bisogna eseguire la pipeline:
+
+```powershell
+python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 --run-spice --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+```
+
+Quando scrivi un sintomo nella chat, il sito esegue il flusso agente read-only:
+
+```text
+/api/chat
+-> aggiorna 10_diagnostic_context.json con user_problem
+-> genera 11_agent_input_preview_chat.md
+-> genera 11_agent_prompt_chat.md
+-> chiama OpenAI tramite 11_agent_readonly
+-> salva 11_agent_response_chat.md
+-> mostra la risposta nella chat
+```
+
+Per esempio, su `a01` puoi scrivere:
+
+```text
+Perche la lampada non si accende?
+```
+
+La risposta viene mostrata nel sito e salvata anche in:
+
+```text
+outputs/pipeline2.0/batchA/a01/11_agent_response_chat.md
+```
+
+Flusso corrente:
+
+```text
+run_pipeline2.py -> genera output 01-08/10
+09_web_chat.py  -> apre sito locale, mostra gli output e chiama 10/11 dalla chat
+```
+
+Flusso futuro:
+
+```text
+run_pipeline2.py -> genera output 01-08/10
+09_web_chat.py  -> chat utente
+chat            -> chiama 10 e 11
+utente          -> sceglie scenario in chat
+chat            -> chiama 12
+```
+
+## Scenari controllati
+
+Gli scenari controllati partono dalla risposta dell'agente.
+
+Flusso attuale dalla web chat:
+
+```text
+utente scrive un sintomo
+-> 09 chiama 10 e 11
+-> agente propone scenari con blocchi JSON
+-> utente scrive "esegui scenario 1"
+-> 09 recupera lo scenario JSON scelto
+-> 09 crea outputs/pipeline2.0/<batch>/<circuit>/scenarios/scenario_1/
+-> 09 copia la base run in base_snapshot/ e run/
+-> 09 chiama 12
+-> 12 applica le azioni supportate alla netlist in run/
+```
+
+La base run originale resta invariata.
+
+Esempio per `a01`:
+
+```text
+outputs/pipeline2.0/batchA/a01/scenarios/scenario_1/
+```
+
+File principali:
+
+```text
+scenario.json                       scenario scelto dall'utente
+scenario_status.json                stato corrente dello scenario
+scenario_copy_manifest.json         file copiati dalla base run
+12_controlled_scenarios.json        report dello step 12
+scenario_comparison.json            confronto base vs scenario, se SPICE e stato eseguito
+base_snapshot/                      copia non modificata della base run
+run/                                copia scenario modificabile
+```
+
+### Applicare uno scenario senza SPICE
+
+Se la cartella scenario esiste gia, si puo applicare lo scenario da terminale:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\12_controlled_scenarios.py --scenario-dir outputs\pipeline2.0\batchA\a01\scenarios\scenario_1
+```
+
+Questo comando:
+
+```text
+legge scenario.json
+modifica solo run/07_netlist.cir
+salva 12_controlled_scenarios.json
+non esegue ngspice
+```
+
+### Applicare ed eseguire SPICE
+
+Per eseguire anche ngspice sulla run dello scenario:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\12_controlled_scenarios.py --scenario-dir outputs\pipeline2.0\batchA\a01\scenarios\scenario_1 --run-spice --ngspice "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+```
+
+Output in:
+
+```text
+outputs/pipeline2.0/batchA/a01/scenarios/scenario_1/run/08_spice_run.json
+outputs/pipeline2.0/batchA/a01/scenarios/scenario_1/run/08_ngspice_stdout.txt
+outputs/pipeline2.0/batchA/a01/scenarios/scenario_1/run/08_ngspice_stderr.txt
+outputs/pipeline2.0/batchA/a01/scenarios/scenario_1/scenario_comparison.json
+```
+
+Per `a01/scenario_1`, il confronto atteso e:
+
+```text
+v(N002):        0 -> 5 V
+v(N004):        0 -> 0.2380952 V
+i(Rlamp13_1):   0 -> 0.0047619 A
+```
+
+Quindi lo scenario conferma che alimentando `N002` il ramo della lampada riceve
+corrente.
 
 ## Comandi agente read-only
 
@@ -491,6 +752,32 @@ Se viene passato anche `--run-agent`, viene prodotto:
 11_agent_response.md
 ```
 
+Se viene usata la web chat, possono essere prodotti anche:
+
+```text
+11_agent_input_preview_chat.md
+11_agent_prompt_chat.md
+11_agent_response_chat.md
+```
+
+Se viene scelto uno scenario dalla chat, viene creata una cartella:
+
+```text
+scenarios/<scenario_id>/
+```
+
+con:
+
+```text
+scenario.json
+scenario_status.json
+scenario_copy_manifest.json
+12_controlled_scenarios.json
+scenario_comparison.json, se SPICE scenario e stato eseguito
+base_snapshot/
+run/
+```
+
 ## Come leggere gli output principali
 
 ### 03_node_map.json
@@ -616,10 +903,12 @@ agente: confronta run base e run scenario
 
 Prima versione attuale:
 
+- `09_web_chat.py` avvia un sito locale temporaneo per leggere gli output;
 - `10_build_diagnostic_context.py` crea il manifest;
-- `11_agent_readonly.py` crea preview e prompt;
-- OpenAI e collegato solo dietro flag `--run-agent`;
-- `12_controlled_scenarios.py` resta placeholder.
+- `11_agent_readonly.py` crea preview, prompt e risposta agente;
+- OpenAI e collegato alla web chat tramite modello default `gpt-5.4`;
+- `12_controlled_scenarios.py` applica il primo tipo di scenario generale,
+  `drive_node_voltage`, puo eseguire ngspice e crea un confronto base/scenario.
 
 Regole sugli scenari:
 
@@ -632,7 +921,10 @@ Regole sugli scenari:
 Flusso tecnico corrente:
 
 ```text
-01 -> 02 -> 03 -> 04 -> 06 -> 07 -> 08 -> 10 -> 11
+01 -> 02 -> 03 -> 04 -> 06 -> 07 -> 08 -> 10
+09 -> sito locale temporaneo + chat
+11 -> agente read-only chiamato da terminale o dalla chat
+12 -> scenario controllato su copia separata
 ```
 
 Per la tesi e una direzione interessante per descrivere un sistema interattivo
@@ -643,9 +935,12 @@ SPICE eseguibile.
 
 I prossimi step saranno:
 
-- `09_summarize_spice.py`: placeholder, per ora saltato;
+- `09_web_chat.py`: migliorare sidebar scenari e scelta modello;
 - `10_build_diagnostic_context.py`: implementato come manifest leggero;
 - `11_agent_readonly.py`: implementato fino a preview, prompt e chiamata
   OpenAI opzionale con `--run-agent`;
-- `12_controlled_scenarios.py`: scenari SPICE controllati per verificare
-  ipotesi.
+- `12_controlled_scenarios.py`: estendere le primitive oltre
+  `drive_node_voltage`;
+- aggiungere la risposta agente dopo lo scenario, basata su
+  `scenario_comparison.json`;
+- in seguito, aggiungere il viewer SPICE animato.

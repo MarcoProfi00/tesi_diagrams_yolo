@@ -1,156 +1,231 @@
 ## 1. **Stato della simulazione**
 
-ngspice è stato eseguito correttamente.
+La simulazione **e stata eseguita correttamente**.
 
-Le evidenze sono coerenti:
 - `spice_status: "success"`
 - `spice_exit_code: 0`
 - `spice_message: "ngspice completed successfully."`
-- `outputs\pipeline2.0\batchA\a01\08_ngspice_stderr.txt` è vuoto
-- il netlist `outputs\pipeline2.0\batchA\a01\07_netlist.cir` contiene una sola analisi `.op`, che infatti produce `No. of Data Rows : 1` in `08_ngspice_stdout.txt`
-
-Quindi la simulazione base è tecnicamente valida come esecuzione SPICE del netlist generato.
+- In `08_ngspice_stderr.txt` non ci sono errori.
+- La netlist `outputs\pipeline2.0\batchA\a01\07_netlist.cir` contiene una sola analisi `.op`, quindi e stata calcolata la condizione continua di regime, non un transitorio.
 
 ## 2. **Evidenze principali**
 
-- In `01_graph.json` il componente `switch25.1` ha `state: "open"` con `state_confidence: 0.95`.
-- In `06_component_rules.json`, `switch25.1` ha strategia `open_circuit`.
-- Nel netlist `07_netlist.cir` compare esplicitamente:
-  ```spice
-  * switch25.1 open: not emitted
-  ```
-  quindi l'interruttore aperto non crea alcun collegamento elettrico.
+- **La lampada `lamp13.1` esiste nel modello SPICE** ed e stata emessa come resistenza equivalente:
+  - in `06_component_rules.json`: `emit_as: "resistive_load"`
+  - in `07_netlist.cir`: `Rlamp13_1 N004 0 50`
 
-- L’unica alimentazione definita in `04_values_bound.json` è:
-  - `VCC` su `connector5.1_pin1`
-  - valore `5 V`
-  - nodo `N001`
-- Nel netlist:
-  ```spice
-  VVCC N001 0 DC 5
-  ```
+- **Il ramo della lampada non e alimentato da nessuna sorgente nel netlist attuale**:
+  - `Rlamp13_1` e tra `N004` e `0`
+  - `Rresistor22_1` collega `N002` a `N004`
+  - ma **`N002` non e collegato ad alcuna sorgente** nel netlist
+  - l’unica sorgente presente e `VVCC N001 0 DC 5`
 
-- La lampada `lamp13.1` è modellata come carico resistivo:
-  ```spice
-  Rlamp13_1 N004 0 50
-  ```
-  come dichiarato in `04_values_bound.json` e `06_component_rules.json`.
+- **Il nodo della lampada resta a 0 V** nella simulazione:
+  - da `08_ngspice_stdout.txt`: `n004 0.000000e+00`
+  - anche `n002 0.000000e+00`
 
-- Il ramo della lampada è:
-  - `resistor22.1` tra `N002` e `N004`
-  - `lamp13.1` tra `N004` e `0`
-- Però `N002` è collegato solo a `connector5.1_pin2` e `resistor22.1_t1` (`03_node_map.json`), senza alcuna sorgente o collegamento ad altri nodi attivi nel netlist.
+- **La corrente nella lampada e nulla**:
+  - da `08_ngspice_stdout.txt`, tabella resistori:
+    - `rlamp13_1 ... i 0`
+    - `rresistor22_1 ... i 0`
 
-- Da `08_ngspice_stdout.txt`:
-  - `n001 = 5.000000e+00`
-  - `n004 = 0.000000e+00`
-  - `n002 = 0.000000e+00`
-  - corrente in `rresistor22_1 = 0`
-  - corrente in `rlamp13_1 = 0`
-
-- Invece il ramo LED è effettivamente alimentato:
+- **La corrente assorbita dalla sorgente `VVCC` va solo nel ramo LED**:
   - `Rresistor22_2 N001 N005 220`
   - `Dled12_1 N005 0 LED_RED`
-  - `n005 = 7.318156e-01`
-  - corrente del diodo `id = 0.0194009`
-  - corrente in `rresistor22_2 = 0.0194008`
+  - da `stdout`:
+    - `n001 5.000000e+00`
+    - `n005 7.318156e-01`
+    - `dled12_1 id 0.0194009`
+    - `rresistor22_2 i 0.0194008`
+    - `vvcc#branch -1.94008e-02`
 
-- `03_node_map.json` segnala:
-  - `ground_groups_count: 3`
-  - `multiple_ground_groups_merged_as_node_0: true`
-  
-  Questo indica che ci sono tre simboli di massa distinti nel grafo, poi fusi nel nodo SPICE `0`. Non è di per sé un errore, ma è una caratteristica da tenere presente.
+- **Lo switch `switch25.1` e riconosciuto aperto e non viene emesso**:
+  - in `01_graph.json`: `state: "open"`
+  - in `06_component_rules.json`: `strategy: "open_circuit"`
+  - in `07_netlist.cir`: `* switch25.1 open: not emitted`
+  - quindi `N003` non influenza il circuito simulato corrente.
+
+- **Il grafo strutturato appare coerente**:
+  - nessun `singleton_nodes`
+  - nessun `unconnected_terminals`
+  - nessun `suspicious_matches`
+  - ngspice converge senza problemi
 
 ## 3. **Diagnosi rispetto al problema utente**
 
-Alla domanda **“Perché la lampada non si accende?”**, la simulazione base supporta questa spiegazione:
+Alla domanda **“Perche la lampada non si accende?”**, le evidenze SPICE supportano questa spiegazione:
 
-**la lampada `lamp13.1` non riceve alcuna alimentazione nel circuito effettivamente simulato.**
+**Nel modello simulato, la lampada `lamp13.1` non si accende perche il suo ramo non e pilotato/alimentato.**
 
-Motivo, basato solo sulle evidenze:
-- `lamp13.1` è tra `N004` e `0`
-- `N004` è collegato solo a `resistor22.1`
-- l’altro capo di `resistor22.1` è `N002`
-- `N002` non è collegato a `VCC` nel netlist e non è collegato allo switch
-- lo switch `switch25.1` è aperto e inoltre collega `N003` a massa, non il ramo della lampada
-- il risultato `.op` mostra infatti:
-  - `n004 = 0 V`
-  - corrente nella lampada `rlamp13_1 = 0`
-  - corrente in `rresistor22_1 = 0`
+Più precisamente:
 
-Quindi, **nel modello attuale della Pipeline 2.0, il ramo della lampada è elettricamente spento/flottante e si assesta senza differenza di potenziale utile sulla lampada**. Per questo la lampada non si accende.
+- `lamp13.1` e collegata tra `N004` e massa `0`.
+- `N004` arriva a `resistor22.1`, che a sua volta arriva a `N002`.
+- Pero `N002` **non riceve alcuna tensione o corrente da una sorgente** nella netlist generata.
+- Infatti in simulazione:
+  - `v(N002)=0 V`
+  - `v(N004)=0 V`
+  - `i(Rlamp13_1)=0`
 
-In parallelo, il ramo LED è l’unico chiaramente chiuso e alimentato:
-- `VCC -> resistor22.2 -> led12.1 -> ground`
-- infatti scorre corrente nel LED.
+Quindi, nel circuito attualmente modellato da Pipeline 2.0 + ngspice, **la lampada non e guasta “secondo la simulazione”**, ma semplicemente **non e alimentata**.
 
-In sintesi:
-- **la lampada non si accende non per un errore di simulazione**
-- **ma perché nel netlist generato non esiste un percorso alimentato che faccia circolare corrente in `lamp13.1`**
+In parallelo, il ramo LED invece **e alimentato direttamente da `VCC`**:
+- `N001` e a `5 V`
+- `resistor22.2` porta corrente verso `led12.1`
+- infatti il LED conduce in `.op`
+
+Questa differenza tra i due rami spiega bene perche **il LED ha corrente mentre la lampada no** nel modello attuale.
 
 ## 4. **Limiti della diagnosi**
 
-Non si può concludere, dai soli dati disponibili, se:
-- il circuito reale nell’immagine sia davvero progettato così, oppure
-- il `01_graph.json` abbia interpretato male alcuni collegamenti.
+Non si puo concludere dai dati disponibili:
 
-In particolare manca una prova strutturata che:
-- `connector5.1_pin2` o `connector5.1_pin3` debbano essere collegati a `VCC` o ad altri nodi attivi
-- `switch25.1` debba controllare il ramo della lampada invece di risultare isolato su `N003`
-- la topologia del grafo corrisponda perfettamente al disegno originale
+- **perche `N002` non sia alimentato nel circuito reale**:
+  - potrebbe essere normale
+  - potrebbe dipendere da un ingresso esterno non attivato
+  - potrebbe dipendere da un uso previsto del `connector5.1`
+  - potrebbe dipendere dallo stato dello `switch25.1`
+  - ma nessuna di queste ipotesi e verificata nei dati base
 
-Altri limiti:
-- non c’è analisi transitoria: `tran_csv` e grafici transienti sono assenti
-- è presente solo una `.op`, quindi abbiamo solo il punto di lavoro statico
-- la lampada è rappresentata come `resistive_load` equivalente (`Rlamp13_1`), non come modello fisico di lampada reale
-- il modello LED è minimale: `.model LED_RED D`
-- il merge di tre gruppi di massa in `node 0` è documentato, ma senza immagine non si può verificare se sia intenzionale nel disegno
+- **che la lampada reale sia certamente sana o guasta**:
+  - qui `lamp13.1` e modellata come `Rlamp13_1 N004 0 50`
+  - quindi la simulazione usa un equivalente resistivo annotato manualmente, non una misura reale del componente
 
-Quindi la diagnosi è affidabile **per il netlist simulato**, ma non basta da sola a provare che il riconoscimento topologico del circuito sia corretto rispetto all’immagine.
+- **che ci sia un errore di topologia nel `Graph JSON`**:
+  - al contrario, gli output strutturati sono coerenti
+  - ngspice riesce
+  - non ci sono warning di connessioni sospette
+  - quindi non c’e una forte ragione strutturata per richiedere l’immagine
+
+- **cosa accade nel tempo**:
+  - manca un’analisi transitoria
+  - `tran_csv` e `tran_plot` non sono disponibili
+  - pero questo limite non cambia la conclusione principale, perche gia in `.op` il ramo lampada risulta non alimentato
 
 ## 5. **Scenari diagnostici proposti**
 
-### Scenario 1
-- **Ipotesi diagnostica:** la lampada non si accende perché il ramo `resistor22.1`–`lamp13.1` non è collegato alla sorgente, e in particolare `connector5.1_pin2`/`N002` dovrebbe essere alimentato.
-- **Modifica controllata:** `drive_node_voltage` su `connector5.1_pin2` / `N002` a `5 V` rispetto a `0`, mantenendo invariato il resto del circuito.
-- **Step pipeline da rieseguire:** dal primo step che gestisce i valori/alimentazioni, quindi rigenerare da `04` in poi (`04_values_bound`/scenario equivalente, poi `06`, `07`, `08`).
-- **Simulazione da rieseguire:** `run_op`
-- **Risultato SPICE atteso:** se l’ipotesi è corretta, `N004` sale sopra `0 V` e compare corrente non nulla in `Rresistor22_1` e `Rlamp13_1`.
-- **Confronto da fare:** confrontare tra run base e scenario:
-  - tensione `N004`
-  - corrente in `Rlamp13_1`
-  - corrente in `Rresistor22_1`
-  - corrente totale della sorgente
-- **Interpretazione:** se compare corrente nella lampada, il problema della mancata accensione è compatibile con una mancata alimentazione del ramo lampada nel circuito base.
-- **Prossimo passo:** se la lampada resta ancora spenta, verificare una possibile correzione topologica del grafo.
+### Scenario 1 — Alimentare l’ingresso del ramo della lampada
 
-### Scenario 2
-- **Ipotesi diagnostica:** lo switch `switch25.1` dovrebbe chiudere un collegamento utile alla lampada, ma nel grafo attuale è aperto e comunque posto su un ramo che non alimenta `lamp13.1`.
-- **Modifica controllata:** `close_switch` su `switch25.1`, senza cambiare altro.
-- **Step pipeline da rieseguire:** dal primo step che dipende dallo stato/topologia del componente; in pratica da una run scenario che rigeneri almeno da `03` a `08`, perché cambia la connettività elettrica effettiva.
-- **Simulazione da rieseguire:** `run_op`
-- **Risultato SPICE atteso:** se la chiusura dello switch è davvero la causa, dovrebbe comparire un nuovo percorso elettrico e cambiare almeno uno tra `N003`, correnti di ramo, o corrente totale della sorgente. Se invece il ramo lampada resta scollegato dall’alimentazione, `Rlamp13_1` resterà a corrente zero.
-- **Confronto da fare:** confrontare:
-  - presenza/assenza dello switch nel netlist scenario
-  - tensione `N003`
-  - tensione `N004`
-  - corrente in `Rlamp13_1`
-  - corrente della sorgente `VVCC`
-- **Interpretazione:** se chiudere `switch25.1` non produce corrente nella lampada, allora lo switch aperto da solo non spiega il problema nel grafo attuale.
-- **Prossimo passo:** passare a uno scenario di correzione del grafo, perché il problema potrebbe essere nella topologia riconosciuta.
+**Perche lo propongo:**  
+Il ramo della lampada passa da `N002 -> resistor22.1 -> N004 -> lamp13.1 -> 0`, ma in simulazione `N002` e a `0 V` e non ha una sorgente associata nel netlist. Questo e il test piu diretto per verificare se la lampada non si accende solo per mancanza di alimentazione su quel ramo.
 
-### Scenario 3
-- **Ipotesi diagnostica:** il `01_graph.json` potrebbe non rappresentare correttamente i collegamenti reali del circuito, specialmente nel ramo lampada/interruttore/connettore.
-- **Modifica controllata:** scenario di correzione topologica del grafo, ad esempio `move_terminal` o `connect_nodes` sui terminali del ramo lampada e dello switch, ma solo dopo verifica visiva dell’immagine originale.
-- **Step pipeline da rieseguire:** scenario di graph-correction da una copia di `01_graph.json`, poi rigenerare `03` through `08`.
-- **Simulazione da rieseguire:** `run_op`, ed eventualmente `run_tran` se dopo la correzione si vuole osservare l’accensione nel tempo.
-- **Risultato SPICE atteso:** se il grafo corretto ricostruisce un percorso alimentato verso `lamp13.1`, dovrebbero apparire tensione non nulla su `N004` e corrente nella lampada.
-- **Confronto da fare:** confrontare:
-  - differenze tra `01_graph.json` base e scenario
-  - differenze nel `03_node_map.json`
-  - differenze nel netlist emesso
-  - tensione `N004` e corrente `Rlamp13_1`
-- **Interpretazione:** se solo una correzione del grafo fa accendere la lampada in SPICE, allora il problema non è nel solver ma nel riconoscimento/trascrizione topologica.
-- **Prossimo passo:** validare quale collegamento corretto corrisponde davvero al circuito originale osservando l’immagine.
+**Cosa proverei:**  
+Aggiungere in una run separata una tensione di prova su `N002`, lasciando invariato il resto del circuito.
 
-`Richiede immagine: si`
+**Cosa mi aspetto:**  
+Se l’ipotesi e corretta, `N004` salira sopra `0 V` e comparira corrente sia in `Rresistor22_1` sia in `Rlamp13_1`. Se invece la corrente restasse nulla, la causa non sarebbe solo l’assenza di pilotaggio su `N002`.
+
+**Come lo verifichiamo:**  
+Confrontare base vs scenario su:
+- `v(N002)`
+- `v(N004)`
+- `i(Rresistor22_1)`
+- `i(Rlamp13_1)`
+- corrente della sorgente aggiunta
+
+**Prossimo passo:**  
+Se questo scenario conferma l’ipotesi, il passo successivo naturale e capire quale ingresso o comando reale dovrebbe alimentare `N002`.
+
+```json
+{
+  "scenario_id": "scenario_1",
+  "title": "Alimentare l’ingresso del ramo della lampada",
+  "hypothesis": "Il ramo della lampada e spento perche N002 non e pilotato.",
+  "actions": [
+    {
+      "type": "drive_node_voltage",
+      "target": "N002",
+      "value": "5V"
+    }
+  ],
+  "rerun_from": "04",
+  "analysis": "op",
+  "compare": ["v(N002)", "v(N004)", "i(Rresistor22_1)", "i(Rlamp13_1)"]
+}
+```
+
+---
+
+### Scenario 2 — Chiudere lo `switch25.1` per verificare se il comando previsto spegne il ramo
+
+**Perche lo propongo:**  
+`switch25.1` e riconosciuto come `open` e quindi non viene emesso nel netlist. Dal `node_map`, lo switch collega `N003` a massa `0` quando chiuso. Questo test serve a capire se il circuito previsto usa davvero quel comando e se la condizione “switch aperto” e parte del motivo per cui la lampada resta spenta.
+
+**Cosa proverei:**  
+Eseguire una run separata in cui `switch25.1` venga impostato chiuso.
+
+**Cosa mi aspetto:**  
+Se chiudere `switch25.1` non cambia nulla nel ramo lampada (`N004`, `Rlamp13_1`), allora lo switch, almeno nel modello attuale, non e il motivo diretto del mancato accendersi. Se invece cambia qualcosa su `N003` o su altri nodi collegati in future emissioni, questo aiuterebbe a capire la logica del comando.
+
+**Come lo verifichiamo:**  
+Confrontare base vs scenario su:
+- emissione del componente `switch25.1`
+- `v(N003)`
+- eventuali variazioni di `v(N004)` e `i(Rlamp13_1)`
+- differenze in `07_spice_emit_report.json` e `08_ngspice_stdout.txt`
+
+**Prossimo passo:**  
+Se non cambia nulla sul ramo lampada, conviene testare direttamente l’alimentazione di `N002` o una combinazione di ingresso + stato.
+
+```json
+{
+  "scenario_id": "scenario_2",
+  "title": "Chiudere lo switch riconosciuto",
+  "hypothesis": "Lo stato aperto di switch25.1 potrebbe contribuire alla mancata attivazione del circuito previsto.",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    }
+  ],
+  "rerun_from": "04",
+  "analysis": "op",
+  "compare": ["emitted_elements", "v(N003)", "v(N004)", "i(Rlamp13_1)"]
+}
+```
+
+---
+
+### Scenario 3 — Alimentare il ramo della lampada e osservare anche il transitorio
+
+**Perche lo propongo:**  
+La `.op` base mostra gia che il ramo lampada non e alimentato. Se si vuole una verifica piu informativa per un utente non-SPICE, ha senso combinare l’alimentazione di prova del ramo con una `run_tran`, cosi da osservare l’andamento temporale della tensione e della corrente.
+
+**Cosa proverei:**  
+In una run separata, applicare una tensione a `N002` e aggiungere analisi transitoria.
+
+**Cosa mi aspetto:**  
+Se il problema e solo la mancanza di alimentazione del ramo, il transitorio mostrera che `N004` si porta a un valore non nullo e che `Rlamp13_1` assorbe corrente appena il ramo viene alimentato.
+
+**Come lo verifichiamo:**  
+Confrontare:
+- `v(N002)`
+- `v(N004)`
+- `i(Rlamp13_1)`
+- eventuale `tran_csv` / grafico transitorio nello scenario
+
+**Prossimo passo:**  
+Se anche con alimentazione di prova la lampada non risultasse attiva come atteso, allora si potrebbe passare a un test di isolamento del modello della lampada o a una verifica piu mirata degli ingressi del `connector5.1`.
+
+```json
+{
+  "scenario_id": "scenario_3",
+  "title": "Alimentare il ramo della lampada e osservarne il comportamento nel tempo",
+  "hypothesis": "La lampada resta spenta solo per assenza di pilotaggio; alimentando N002 dovrebbe comparire corrente nel ramo anche in analisi transitoria.",
+  "actions": [
+    {
+      "type": "drive_node_voltage",
+      "target": "N002",
+      "value": "5V"
+    },
+    {
+      "type": "run_tran"
+    }
+  ],
+  "rerun_from": "04",
+  "analysis": "tran",
+  "compare": ["v(N002)", "v(N004)", "i(Rlamp13_1)", "tran_csv"]
+}
+```
+
+Richiede immagine: no
