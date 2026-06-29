@@ -487,6 +487,8 @@ implementato parzialmente.
 
 12:
 - supporta drive_node_voltage;
+- supporta change_source_value su sorgenti SPICE esistenti;
+- supporta close_switch su switch gia riconosciuti;
 - modifica solo run/07_netlist.cir;
 - salva 12_controlled_scenarios.json;
 - puo eseguire ngspice con --run-spice;
@@ -714,7 +716,7 @@ Ordine consigliato:
 
 ```text
 1. completare scelta scenario dalla chat;                    fatto per casi semplici
-2. implementare 12_controlled_scenarios.py;                  fatto per drive_node_voltage
+2. implementare 12_controlled_scenarios.py;                  fatto per drive_node_voltage e change_source_value
 3. rieseguire ngspice su scenario separato;                  fatto da terminale con --run-spice
 4. creare confronto base run vs scenario run;                fatto con scenario_comparison.json
 5. far commentare il confronto all'agente in chat;           prossimo step

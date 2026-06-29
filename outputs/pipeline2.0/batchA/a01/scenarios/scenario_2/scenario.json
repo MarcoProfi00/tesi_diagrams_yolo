@@ -1,0 +1,22 @@
+{
+  "scenario_id": "scenario_2",
+  "title": "Verificare se il problema e solo l'assenza di alimentazione sul pin2",
+  "hypothesis": "La sorgente VVCC alimenta solo il ramo LED e non il ramo della lampada.",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "VVCC",
+      "value": "10V"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N001)",
+    "v(N005)",
+    "i(vvcc#branch)",
+    "v(N002)",
+    "v(N004)",
+    "i(Rlamp13_1)"
+  ]
+}

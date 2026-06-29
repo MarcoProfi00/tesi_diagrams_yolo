@@ -118,6 +118,8 @@ def build_agent_input_preview(
     lines: list[str] = []
     summary = manifest.get("summary") or {}
     artifacts = manifest.get("artifacts") or {}
+    executed_scenarios = manifest.get("executed_scenarios") or []
+    scenario_outcome_summary = manifest.get("scenario_outcome_summary") or {}
     image_access = manifest.get("image_access") or {}
 
     lines.extend(
@@ -125,7 +127,7 @@ def build_agent_input_preview(
             "# Agent input preview",
             "",
             "This file is a local preview of the evidence that will be provided to the read-only diagnostic agent.",
-            "No scenario has been executed and no netlist has been modified.",
+            "The agent remains read-only: it can inspect base outputs and existing scenario artifacts, but it does not modify files.",
             "",
             "## User problem",
             "",
@@ -157,6 +159,70 @@ def build_agent_input_preview(
 
     for rule in manifest.get("agent_rules") or []:
         lines.append(f"- {rule}")
+
+    lines.extend(
+        [
+            "",
+            "## Scenario outcome summary",
+            "",
+            "```json",
+            json.dumps(scenario_outcome_summary, indent=2, ensure_ascii=False),
+            "```",
+            "",
+        ]
+    )
+
+    lines.extend(["", "## Executed scenarios", ""])
+    if not executed_scenarios:
+        lines.extend(["No executed scenarios are available in this manifest.", ""])
+    else:
+        for scenario in executed_scenarios:
+            outcome = scenario.get("diagnostic_outcome") or {}
+            summary_data = scenario.get("comparison_summary") or {}
+            lines.extend(
+                [
+                    f"### {scenario.get('scenario_id')}",
+                    "",
+                    f"- Title: `{scenario.get('title')}`",
+                    f"- Status: `{scenario.get('status')}`",
+                    f"- SPICE status: `{scenario.get('spice_status')}`",
+                    f"- Outcome: `{outcome.get('status')}`",
+                    f"- Stop automation: `{outcome.get('stop_automation')}`",
+                    f"- Comparison: `{summary_data.get('changed_count')}/{summary_data.get('requested_count')}` changed",
+                    "",
+                ]
+            )
+
+            for artifact_name, metadata in (scenario.get("artifacts") or {}).items():
+                if not metadata.get("available"):
+                    continue
+                path = resolve_artifact_path(metadata.get("path"))
+                if path is None or not path.exists():
+                    continue
+
+                text = read_artifact_text(path)
+                text, truncated = limit_text(text)
+                language = artifact_language(path)
+                lines.extend(
+                    [
+                        f"#### {artifact_name}",
+                        "",
+                        f"- Role: {metadata.get('role')}",
+                        f"- Path: `{metadata.get('path')}`",
+                        "",
+                        f"```{language}",
+                        text,
+                        "```",
+                        "",
+                    ]
+                )
+                if truncated:
+                    lines.extend(
+                        [
+                            "> Scenario artifact truncated in this preview.",
+                            "",
+                        ]
+                    )
 
     lines.extend(["", "## Loaded artifacts", ""])
 

@@ -9,7 +9,8 @@
 - Do not invent component values, electrical connections, SPICE models, node voltages, currents or simulation results.
 - Do not assume that a component exists if it is not present in the Graph JSON or in the generated netlist.
 - Do not modify the netlist, do not execute SPICE and do not apply scenarios.
-- Diagnostic scenarios may be suggested only as future SPICE-verifiable hypotheses, not as already verified facts.
+- New diagnostic scenarios may be suggested only as future SPICE-verifiable hypotheses, not as already verified facts.
+- Already executed scenarios must be interpreted from the executed scenario evidence, not re-imagined.
 - Use general electronics and SPICE knowledge only to interpret the provided evidence, not to create missing evidence.
 - If the evidence is insufficient, say exactly what is missing.
 - Do not describe a branch as floating unless the evidence shows a floating or singleton node with no DC reference path.
@@ -21,6 +22,11 @@
 - When useful, cite component IDs, node IDs, file names or artifact sections.
 - Use the original artifact paths only as traceability references.
 - If an artifact is missing or truncated, mention the limitation before drawing conclusions from it.
+- If executed scenario evidence is available, use it to answer questions about which scenario explains or resolves the problem.
+- When discussing executed scenarios, distinguish the controlled action from the diagnostic outcome.
+- For questions about which scenario resolves the problem, do not merely list scenarios: identify the strongest scenario and justify it from scenario_comparison.json.
+- Treat `resolved_candidate` with `stop_automation=true` as the strongest executed-scenario outcome.
+- Treat `partially_resolved` as supporting diagnostic evidence, not as the main resolving scenario when a resolved_candidate exists.
 - Do not use the original image unless the structured evidence suggests that the Graph JSON may be wrong.
 - If image access is needed, explain which structured evidence justifies it.
 - Request image access only for strong structured reasons: Graph JSON warnings, suspicious or missing connections, important singleton nodes, missing critical components, unsupported critical topology, or ngspice failure caused by topology/convergence issues.
@@ -34,6 +40,9 @@
 - Each scenario must be readable by a non-SPICE user first, and machine-oriented only in a short technical block after the explanation.
 - The user-facing scenario title should describe the diagnostic idea naturally, for example `Alimentare il ramo della lampada`, not only `drive_node_voltage`.
 - The technical block should be concise and should not replace the human explanation.
+- For executable scenario JSON, use only action types currently supported by the scenario runner unless clearly marked as future/not executable.
+- Currently executable action types are `drive_node_voltage` and `change_source_value`.
+- Never put `unknown` in `actions[].value`; use a concrete SPICE value such as `5V`, `10V`, `DC 3.3`, or `SIN(0 1 100)`.
 - Prefer natural scenarios that directly test the user's symptom using existing nodes, states and values before proposing graph-correction scenarios.
 - Prefer acting on existing external inputs, supply labels, connector pins and recognized component states before directly forcing internal load nodes.
 - If an upstream input node feeds a load, drive the upstream input first; direct forcing of the load node is a later model-isolation test, not an early natural scenario.
@@ -47,7 +56,7 @@
 
 ## User problem
 
-Perchè la lampada non si accende?
+quale scenario risolve il problema?
 
 ## Circuit metadata
 
@@ -94,6 +103,115 @@ Perchè la lampada non si accende?
 - `tran_csv`: missing, path=`None`
 - `tran_plot_png`: missing, path=`None`
 - `tran_plot_svg`: missing, path=`None`
+
+## Executed scenarios index
+
+- `scenario_1`: title=`Alimentare il ramo della lampada dal suo ingresso riconosciuto`, status=`spice_success`, spice=`success`, outcome=`resolved_candidate`, stop_automation=`True`, changed=`4/4`
+- `scenario_2`: title=`Verificare se il problema e solo l'assenza di alimentazione sul pin2`, status=`spice_success`, spice=`success`, outcome=`partially_resolved`, stop_automation=`False`, changed=`3/6`
+- `scenario_3`: title=`Isolare la lampada forzando il nodo immediatamente a monte`, status=`spice_success`, spice=`success`, outcome=`partially_resolved`, stop_automation=`False`, changed=`2/3`
+
+## Scenario outcome summary
+
+```json
+{
+  "available": true,
+  "best_scenario_id": "scenario_1",
+  "best_outcome_status": "resolved_candidate",
+  "best_stop_automation": true,
+  "interpretation_rule": "If a user asks which scenario resolves the problem, prefer the scenario with outcome_status='resolved_candidate' and stop_automation=true. Partially resolved scenarios are supporting diagnostics, not the main solution.",
+  "scenarios": [
+    {
+      "scenario_id": "scenario_1",
+      "title": "Alimentare il ramo della lampada dal suo ingresso riconosciuto",
+      "status": "spice_success",
+      "spice_status": "success",
+      "outcome_status": "resolved_candidate",
+      "outcome_label": "Candidate resolved",
+      "outcome_reason": "All requested quantities changed and at least one inactive quantity became active.",
+      "stop_automation": true,
+      "comparison_summary": {
+        "requested_count": 4,
+        "changed_count": 4,
+        "activated_count": 4,
+        "missing_count": 0
+      },
+      "quantity_summary": {
+        "changed": [
+          "v(N002)",
+          "v(N004)",
+          "i(Rresistor22_1)",
+          "i(Rlamp13_1)"
+        ],
+        "unchanged": [],
+        "missing": []
+      },
+      "score": 184
+    },
+    {
+      "scenario_id": "scenario_2",
+      "title": "Verificare se il problema e solo l'assenza di alimentazione sul pin2",
+      "status": "spice_success",
+      "spice_status": "success",
+      "outcome_status": "partially_resolved",
+      "outcome_label": "Partially resolved",
+      "outcome_reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+      "stop_automation": false,
+      "comparison_summary": {
+        "requested_count": 6,
+        "changed_count": 3,
+        "activated_count": 0,
+        "missing_count": 0
+      },
+      "quantity_summary": {
+        "changed": [
+          "v(N001)",
+          "v(N005)",
+          "i(vvcc#branch)"
+        ],
+        "unchanged": [
+          "v(N002)",
+          "v(N004)",
+          "i(Rlamp13_1)"
+        ],
+        "missing": []
+      },
+      "score": 23
+    },
+    {
+      "scenario_id": "scenario_3",
+      "title": "Isolare la lampada forzando il nodo immediatamente a monte",
+      "status": "spice_success",
+      "spice_status": "success",
+      "outcome_status": "partially_resolved",
+      "outcome_label": "Partially resolved",
+      "outcome_reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+      "stop_automation": false,
+      "comparison_summary": {
+        "requested_count": 3,
+        "changed_count": 2,
+        "activated_count": 2,
+        "missing_count": 0
+      },
+      "quantity_summary": {
+        "changed": [
+          "v(N004)",
+          "i(Rlamp13_1)"
+        ],
+        "unchanged": [
+          "i(Rresistor22_1)"
+        ],
+        "missing": []
+      },
+      "score": 22
+    }
+  ]
+}
+```
+
+Interpretation rule for scenario questions:
+- The best scenario is the one indicated by `best_scenario_id`, unless direct evidence contradicts it.
+- A `resolved_candidate` with `stop_automation=true` is the main resolving candidate.
+- `partially_resolved` scenarios can confirm supporting hypotheses but should not be presented as the scenario that solved the problem when a resolved candidate exists.
 
 ## Image access policy
 
@@ -159,6 +277,9 @@ Scenario presentation format:
 - Explain what SPICE result would confirm or reject the hypothesis.
 - End the scenario with a short technical JSON block for the future pipeline.
 - Keep the technical block small: it is a controlled hint for automation, not the main answer.
+- The executable technical JSON should currently use only `drive_node_voltage` or `change_source_value`.
+- For `change_source_value`, choose a concrete value that makes the diagnostic comparison meaningful; do not write `unknown`.
+- If no concrete source value is justified, describe the idea in the prose and do not include it as an executable JSON action.
 
 Example technical block shape:
 
@@ -177,6 +298,26 @@ Example technical block shape:
   "rerun_from": "04",
   "analysis": "op",
   "compare": ["v(N002)", "v(N004)", "i(Rlamp13_1)"]
+}
+```
+
+Example source-value scenario action:
+
+```json
+{
+  "scenario_id": "scenario_2",
+  "title": "Variare la sorgente principale",
+  "hypothesis": "Changing the existing supply should affect only the branches connected to that supply.",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "VVCC",
+      "value": "10V"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": ["v(N001)", "i(vvcc#branch)"]
 }
 ```
 
@@ -1202,59 +1343,608 @@ Current ngspice program size =   15.273 MB.
 Evidence not available.
 
 
+## Executed scenario evidence
+
+### scenario_1
+
+- Title: `Alimentare il ramo della lampada dal suo ingresso riconosciuto`
+- Scenario dir: `outputs\pipeline2.0\batchA\a01\scenarios\scenario_1`
+- Status: `spice_success`
+- SPICE status: `success`
+
+#### scenario_definition
+
+- Role: Scenario selected by the user and saved before execution.
+- Path: `outputs\pipeline2.0\batchA\a01\scenarios\scenario_1\scenario.json`
+
+```json
+{
+  "scenario_id": "scenario_1",
+  "title": "Alimentare il ramo della lampada dal suo ingresso riconosciuto",
+  "hypothesis": "La lampada e spenta perche il nodo N002 non e pilotato.",
+  "actions": [
+    {
+      "type": "drive_node_voltage",
+      "target": "N002",
+      "value": "5V"
+    }
+  ],
+  "rerun_from": "04",
+  "analysis": "op",
+  "compare": [
+    "v(N002)",
+    "v(N004)",
+    "i(Rresistor22_1)",
+    "i(Rlamp13_1)"
+  ]
+}
+```
+
+#### scenario_status
+
+- Role: Current scenario status, SPICE status and diagnostic outcome.
+- Path: `outputs\pipeline2.0\batchA\a01\scenarios\scenario_1\scenario_status.json`
+
+```json
+{
+  "status": "spice_success",
+  "stage": "scenario_spice_executed",
+  "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
+  "scenario_id": "scenario_1",
+  "requested_index": 1,
+  "base_output_dir": "outputs\\pipeline2.0\\batchA\\a01",
+  "source_agent_response": "outputs\\pipeline2.0\\batchA\\a01\\11_agent_response_chat.md",
+  "scenario_file": "outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_1\\scenario.json",
+  "created_or_updated_at": "2026-06-29T15:52:05",
+  "next_step": "Stop automatic scenario execution and ask the agent to explain the confirmed hypothesis.",
+  "spice_executed": true,
+  "spice_status": "success",
+  "spice_exit_code": 0,
+  "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_1\\run\\08_spice_run.json",
+  "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_1\\scenario_comparison.json",
+  "comparison_summary": {
+    "requested_count": 4,
+    "changed_count": 4,
+    "activated_count": 4,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "resolved_candidate",
+    "label": "Candidate resolved",
+    "reason": "All requested quantities changed and at least one inactive quantity became active.",
+    "stop_automation": true,
+    "confidence": "medium",
+    "next_step": "Stop automatic scenario execution and ask the agent to explain the confirmed hypothesis."
+  },
+  "controlled_scenario_report": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_1\\12_controlled_scenarios.json"
+}
+```
+
+#### controlled_scenario_report
+
+- Role: Report produced by the controlled scenario runner.
+- Path: `outputs\pipeline2.0\batchA\a01\scenarios\scenario_1\12_controlled_scenarios.json`
+
+```json
+{
+  "source_format": "pipeline2.0_controlled_scenario_report",
+  "status": "spice_success",
+  "scenario_id": "scenario_1",
+  "scenario_title": "Alimentare il ramo della lampada dal suo ingresso riconosciuto",
+  "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_1",
+  "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_1\\run",
+  "netlist": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_1\\run\\07_netlist.cir",
+  "applied_actions": [
+    {
+      "status": "applied",
+      "type": "drive_node_voltage",
+      "target": "N002",
+      "value": "5V",
+      "normalized_dc_value": "5",
+      "inserted_line": "VSCENARIO_N002 N002 0 DC 5",
+      "operation": "inserted",
+      "spice_executed": false,
+      "index": 1
+    }
+  ],
+  "unsupported_actions": [],
+  "failed_actions": [],
+  "spice_executed": true,
+  "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_1\\run\\08_spice_run.json",
+  "spice_status": "success",
+  "spice_exit_code": 0,
+  "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_1\\scenario_comparison.json",
+  "comparison_summary": {
+    "requested_count": 4,
+    "changed_count": 4,
+    "activated_count": 4,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "resolved_candidate",
+    "label": "Candidate resolved",
+    "reason": "All requested quantities changed and at least one inactive quantity became active.",
+    "stop_automation": true,
+    "confidence": "medium",
+    "next_step": "Stop automatic scenario execution and ask the agent to explain the confirmed hypothesis."
+  },
+  "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
+  "created_or_updated_at": "2026-06-29T15:52:05"
+}
+```
+
+#### scenario_comparison
+
+- Role: Base-vs-scenario comparison used to evaluate the scenario.
+- Path: `outputs\pipeline2.0\batchA\a01\scenarios\scenario_1\scenario_comparison.json`
+
+```json
+{
+  "source_format": "pipeline2.0_scenario_comparison",
+  "scenario_id": "scenario_1",
+  "scenario_title": "Alimentare il ramo della lampada dal suo ingresso riconosciuto",
+  "base_output_dir": "outputs\\pipeline2.0\\batchA\\a01",
+  "scenario_run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_1\\run",
+  "base_stdout": "outputs\\pipeline2.0\\batchA\\a01\\08_ngspice_stdout.txt",
+  "scenario_stdout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_1\\run\\08_ngspice_stdout.txt",
+  "quantities": [
+    {
+      "quantity": "v(N002)",
+      "base_value": 0.0,
+      "scenario_value": 5.0,
+      "delta": 5.0,
+      "change": "activated"
+    },
+    {
+      "quantity": "v(N004)",
+      "base_value": 0.0,
+      "scenario_value": 0.2380952,
+      "delta": 0.2380952,
+      "change": "activated"
+    },
+    {
+      "quantity": "i(Rresistor22_1)",
+      "base_value": 0.0,
+      "scenario_value": 0.0047619,
+      "delta": 0.0047619,
+      "change": "activated"
+    },
+    {
+      "quantity": "i(Rlamp13_1)",
+      "base_value": 0.0,
+      "scenario_value": 0.0047619,
+      "delta": 0.0047619,
+      "change": "activated"
+    }
+  ],
+  "summary": {
+    "requested_count": 4,
+    "changed_count": 4,
+    "activated_count": 4,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "resolved_candidate",
+    "label": "Candidate resolved",
+    "reason": "All requested quantities changed and at least one inactive quantity became active.",
+    "stop_automation": true,
+    "confidence": "medium",
+    "next_step": "Stop automatic scenario execution and ask the agent to explain the confirmed hypothesis."
+  },
+  "created_or_updated_at": "2026-06-29T15:52:05"
+}
+```
+
+### scenario_2
+
+- Title: `Verificare se il problema e solo l'assenza di alimentazione sul pin2`
+- Scenario dir: `outputs\pipeline2.0\batchA\a01\scenarios\scenario_2`
+- Status: `spice_success`
+- SPICE status: `success`
+
+#### scenario_definition
+
+- Role: Scenario selected by the user and saved before execution.
+- Path: `outputs\pipeline2.0\batchA\a01\scenarios\scenario_2\scenario.json`
+
+```json
+{
+  "scenario_id": "scenario_2",
+  "title": "Verificare se il problema e solo l'assenza di alimentazione sul pin2",
+  "hypothesis": "La sorgente VVCC alimenta solo il ramo LED e non il ramo della lampada.",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "VVCC",
+      "value": "10V"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N001)",
+    "v(N005)",
+    "i(vvcc#branch)",
+    "v(N002)",
+    "v(N004)",
+    "i(Rlamp13_1)"
+  ]
+}
+```
+
+#### scenario_status
+
+- Role: Current scenario status, SPICE status and diagnostic outcome.
+- Path: `outputs\pipeline2.0\batchA\a01\scenarios\scenario_2\scenario_status.json`
+
+```json
+{
+  "status": "spice_success",
+  "stage": "scenario_spice_executed",
+  "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
+  "scenario_id": "scenario_2",
+  "requested_index": 2,
+  "base_output_dir": "outputs\\pipeline2.0\\batchA\\a01",
+  "source_agent_response": "outputs\\pipeline2.0\\batchA\\a01\\11_agent_response_chat.md",
+  "scenario_file": "outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_2\\scenario.json",
+  "created_or_updated_at": "2026-06-29T15:56:31",
+  "next_step": "Continue with another scenario or ask the agent for a refined hypothesis.",
+  "spice_executed": true,
+  "spice_status": "success",
+  "spice_exit_code": 0,
+  "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_2\\run\\08_spice_run.json",
+  "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_2\\scenario_comparison.json",
+  "comparison_summary": {
+    "requested_count": 6,
+    "changed_count": 3,
+    "activated_count": 0,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "controlled_scenario_report": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_2\\12_controlled_scenarios.json"
+}
+```
+
+#### controlled_scenario_report
+
+- Role: Report produced by the controlled scenario runner.
+- Path: `outputs\pipeline2.0\batchA\a01\scenarios\scenario_2\12_controlled_scenarios.json`
+
+```json
+{
+  "source_format": "pipeline2.0_controlled_scenario_report",
+  "status": "spice_success",
+  "scenario_id": "scenario_2",
+  "scenario_title": "Verificare se il problema e solo l'assenza di alimentazione sul pin2",
+  "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_2",
+  "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_2\\run",
+  "netlist": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_2\\run\\07_netlist.cir",
+  "applied_actions": [
+    {
+      "status": "applied",
+      "type": "change_source_value",
+      "target": "VVCC",
+      "value": "10V",
+      "normalized_source_definition": "DC 10",
+      "old_line": "VVCC N001 0 DC 5",
+      "new_line": "VVCC N001 0 DC 10",
+      "operation": "updated",
+      "spice_executed": false,
+      "index": 1
+    }
+  ],
+  "unsupported_actions": [],
+  "failed_actions": [],
+  "spice_executed": true,
+  "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_2\\run\\08_spice_run.json",
+  "spice_status": "success",
+  "spice_exit_code": 0,
+  "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_2\\scenario_comparison.json",
+  "comparison_summary": {
+    "requested_count": 6,
+    "changed_count": 3,
+    "activated_count": 0,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
+  "created_or_updated_at": "2026-06-29T15:56:31"
+}
+```
+
+#### scenario_comparison
+
+- Role: Base-vs-scenario comparison used to evaluate the scenario.
+- Path: `outputs\pipeline2.0\batchA\a01\scenarios\scenario_2\scenario_comparison.json`
+
+```json
+{
+  "source_format": "pipeline2.0_scenario_comparison",
+  "scenario_id": "scenario_2",
+  "scenario_title": "Verificare se il problema e solo l'assenza di alimentazione sul pin2",
+  "base_output_dir": "outputs\\pipeline2.0\\batchA\\a01",
+  "scenario_run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_2\\run",
+  "base_stdout": "outputs\\pipeline2.0\\batchA\\a01\\08_ngspice_stdout.txt",
+  "scenario_stdout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_2\\run\\08_ngspice_stdout.txt",
+  "quantities": [
+    {
+      "quantity": "v(N001)",
+      "base_value": 5.0,
+      "scenario_value": 10.0,
+      "delta": 5.0,
+      "change": "changed"
+    },
+    {
+      "quantity": "v(N005)",
+      "base_value": 0.7318156,
+      "scenario_value": 0.7518155,
+      "delta": 0.01999989999999996,
+      "change": "changed"
+    },
+    {
+      "quantity": "i(vvcc#branch)",
+      "base_value": -0.0194008,
+      "scenario_value": -0.0420372,
+      "delta": -0.022636399999999997,
+      "change": "changed"
+    },
+    {
+      "quantity": "v(N002)",
+      "base_value": 0.0,
+      "scenario_value": 0.0,
+      "delta": 0.0,
+      "change": "unchanged"
+    },
+    {
+      "quantity": "v(N004)",
+      "base_value": 0.0,
+      "scenario_value": 0.0,
+      "delta": 0.0,
+      "change": "unchanged"
+    },
+    {
+      "quantity": "i(Rlamp13_1)",
+      "base_value": 0.0,
+      "scenario_value": 0.0,
+      "delta": 0.0,
+      "change": "unchanged"
+    }
+  ],
+  "summary": {
+    "requested_count": 6,
+    "changed_count": 3,
+    "activated_count": 0,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "created_or_updated_at": "2026-06-29T15:56:31"
+}
+```
+
+### scenario_3
+
+- Title: `Isolare la lampada forzando il nodo immediatamente a monte`
+- Scenario dir: `outputs\pipeline2.0\batchA\a01\scenarios\scenario_3`
+- Status: `spice_success`
+- SPICE status: `success`
+
+#### scenario_definition
+
+- Role: Scenario selected by the user and saved before execution.
+- Path: `outputs\pipeline2.0\batchA\a01\scenarios\scenario_3\scenario.json`
+
+```json
+{
+  "scenario_id": "scenario_3",
+  "title": "Isolare la lampada forzando il nodo immediatamente a monte",
+  "hypothesis": "La lampada funziona nel modello SPICE, ma il suo nodo N004 non riceve tensione dal ramo a monte.",
+  "actions": [
+    {
+      "type": "drive_node_voltage",
+      "target": "N004",
+      "value": "5V"
+    }
+  ],
+  "rerun_from": "04",
+  "analysis": "op",
+  "compare": [
+    "v(N004)",
+    "i(Rlamp13_1)",
+    "i(Rresistor22_1)"
+  ]
+}
+```
+
+#### scenario_status
+
+- Role: Current scenario status, SPICE status and diagnostic outcome.
+- Path: `outputs\pipeline2.0\batchA\a01\scenarios\scenario_3\scenario_status.json`
+
+```json
+{
+  "status": "spice_success",
+  "stage": "scenario_spice_executed",
+  "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
+  "scenario_id": "scenario_3",
+  "requested_index": 3,
+  "base_output_dir": "outputs\\pipeline2.0\\batchA\\a01",
+  "source_agent_response": "outputs\\pipeline2.0\\batchA\\a01\\11_agent_response_chat.md",
+  "scenario_file": "outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_3\\scenario.json",
+  "created_or_updated_at": "2026-06-29T15:58:55",
+  "next_step": "Continue with another scenario or ask the agent for a refined hypothesis.",
+  "spice_executed": true,
+  "spice_status": "success",
+  "spice_exit_code": 0,
+  "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_3\\run\\08_spice_run.json",
+  "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_3\\scenario_comparison.json",
+  "comparison_summary": {
+    "requested_count": 3,
+    "changed_count": 2,
+    "activated_count": 2,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "controlled_scenario_report": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_3\\12_controlled_scenarios.json"
+}
+```
+
+#### controlled_scenario_report
+
+- Role: Report produced by the controlled scenario runner.
+- Path: `outputs\pipeline2.0\batchA\a01\scenarios\scenario_3\12_controlled_scenarios.json`
+
+```json
+{
+  "source_format": "pipeline2.0_controlled_scenario_report",
+  "status": "spice_success",
+  "scenario_id": "scenario_3",
+  "scenario_title": "Isolare la lampada forzando il nodo immediatamente a monte",
+  "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_3",
+  "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_3\\run",
+  "netlist": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_3\\run\\07_netlist.cir",
+  "applied_actions": [
+    {
+      "status": "applied",
+      "type": "drive_node_voltage",
+      "target": "N004",
+      "value": "5V",
+      "normalized_dc_value": "5",
+      "inserted_line": "VSCENARIO_N004 N004 0 DC 5",
+      "operation": "inserted",
+      "spice_executed": false,
+      "index": 1
+    }
+  ],
+  "unsupported_actions": [],
+  "failed_actions": [],
+  "spice_executed": true,
+  "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_3\\run\\08_spice_run.json",
+  "spice_status": "success",
+  "spice_exit_code": 0,
+  "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_3\\scenario_comparison.json",
+  "comparison_summary": {
+    "requested_count": 3,
+    "changed_count": 2,
+    "activated_count": 2,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
+  "created_or_updated_at": "2026-06-29T15:58:55"
+}
+```
+
+#### scenario_comparison
+
+- Role: Base-vs-scenario comparison used to evaluate the scenario.
+- Path: `outputs\pipeline2.0\batchA\a01\scenarios\scenario_3\scenario_comparison.json`
+
+```json
+{
+  "source_format": "pipeline2.0_scenario_comparison",
+  "scenario_id": "scenario_3",
+  "scenario_title": "Isolare la lampada forzando il nodo immediatamente a monte",
+  "base_output_dir": "outputs\\pipeline2.0\\batchA\\a01",
+  "scenario_run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_3\\run",
+  "base_stdout": "outputs\\pipeline2.0\\batchA\\a01\\08_ngspice_stdout.txt",
+  "scenario_stdout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a01\\scenarios\\scenario_3\\run\\08_ngspice_stdout.txt",
+  "quantities": [
+    {
+      "quantity": "v(N004)",
+      "base_value": 0.0,
+      "scenario_value": 5.0,
+      "delta": 5.0,
+      "change": "activated"
+    },
+    {
+      "quantity": "i(Rlamp13_1)",
+      "base_value": 0.0,
+      "scenario_value": 0.1,
+      "delta": 0.1,
+      "change": "activated"
+    },
+    {
+      "quantity": "i(Rresistor22_1)",
+      "base_value": 0.0,
+      "scenario_value": 0.0,
+      "delta": 0.0,
+      "change": "unchanged"
+    }
+  ],
+  "summary": {
+    "requested_count": 3,
+    "changed_count": 2,
+    "activated_count": 2,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "created_or_updated_at": "2026-06-29T15:58:55"
+}
+```
+
+
 ## Required answer format
 
+La domanda riguarda scenari gia eseguiti.
+Non proporre nuovi scenari in questa risposta, a meno che l'utente lo chieda esplicitamente.
 Rispondi in Markdown usando esattamente queste sezioni:
 
-1. **Stato della simulazione**
-   Spiega se ngspice e stato eseguito correttamente oppure no.
+1. **Risposta diretta**
+   Indica subito quale scenario ha l'outcome piu forte.
+   Se esiste uno scenario con `diagnostic_outcome.status = resolved_candidate` e `stop_automation = true`, dillo chiaramente.
 
-2. **Evidenze principali**
-   Elenca le prove piu importanti, citando componenti, nodi, netlist, stdout/stderr o report.
+2. **Perche quello scenario risolve meglio**
+   Usa `scenario_comparison.json`: cita le grandezze cambiate, valori base, valori scenario e delta quando sono rilevanti.
 
-3. **Diagnosi rispetto al problema utente**
-   Collega le evidenze al problema scritto dall'utente.
+3. **Perche gli altri scenari non bastano**
+   Spiega per ogni altro scenario perche e solo parziale, diagnostico o di isolamento.
 
-4. **Limiti della diagnosi**
-   Dichiara cosa non si puo concludere dai dati disponibili.
-
-5. **Scenari diagnostici proposti**
-   Proponi al massimo 3 scenari diagnostici candidati, pensati per essere trasformati in una nuova simulazione SPICE.
-   Non proporre semplici consigli generici: ogni scenario deve essere una ipotesi verificabile.
-   Non presentarli come certamente risolutivi: sono candidati da testare.
-   Se servono piu scenari, ordinali dal piu semplice al piu utile.
-   Se dai dati disponibili non serve uno scenario, scrivi: `Nessuno scenario necessario dai dati disponibili.`
-
-   Per ogni scenario usa una forma a due livelli: prima una spiegazione user-friendly, poi un blocco tecnico breve.
-
-   Livello user-friendly:
-   - Titolo naturale: descrivi cosa si vuole provare, non solo la primitiva tecnica.
-   - Perche lo propongo: collega lo scenario alle evidenze SPICE e al problema utente.
-   - Cosa proverei: spiega in parole semplici la modifica simulativa.
-   - Cosa mi aspetto: indica cosa dovrebbe cambiare se l'ipotesi e corretta.
-   - Come lo verifichiamo: indica quali tensioni, correnti, log o grafici confrontare.
-   - Prossimo passo: cosa provare se lo scenario non conferma l'ipotesi.
-
-   Blocco tecnico per pipeline:
-   Usa un blocco JSON breve e non inventare campi non deducibili dalle evidenze.
-   Il blocco deve aiutare una futura pipeline a trasformare lo scenario in una run separata.
-   Campi consigliati: `scenario_id`, `title`, `hypothesis`, `actions`, `rerun_from`, `analysis`, `compare`.
-   Se un campo non e deducibile, usa `unknown` oppure omettilo.
-
-   Quando possibile, esprimi la modifica controllata usando primitive generali come:
-   `close_switch`, `open_switch`, `drive_node_voltage`, `change_source_value`,
-   `connect_nodes`, `disconnect_terminal`, `move_terminal`, `replace_with_equivalent`,
-   `run_op`, `run_tran`.
-
-   Ricorda che nella versione read-only questi scenari NON sono eseguiti.
-   Sono solo proposte per una fase successiva della pipeline.
-
-Alla fine aggiungi una riga:
+4. **Conclusione operativa**
+   Spiega se l'automazione dovrebbe fermarsi o continuare, usando `stop_automation`.
 
 `Richiede immagine: si/no`
-
-Metti `si` solo se gli output strutturati indicano una probabile incoerenza del Graph JSON oppure se SPICE non e eseguibile in modo utile.
-Se l'immagine sarebbe solo una verifica opzionale, metti comunque `no` e cita la verifica opzionale nei limiti.
 
 ## Final task
 
@@ -1262,5 +1952,6 @@ Analyze the user problem using the evidence above.
 Explain what the simulation result means, whether it supports the user problem, and what can or cannot be concluded.
 If ngspice failed, focus on the error evidence and explain why the current circuit is not diagnostically reliable.
 If ngspice succeeded, connect the simulated node voltages, currents, skipped components and warnings to the user problem.
-Suggest future diagnostic scenarios only as controlled SPICE-verifiable hypotheses; do not claim that they have already been executed.
+If the question is about already executed scenarios, use the executed scenario evidence and clearly identify the strongest outcome.
+When suggesting new future diagnostic scenarios, present them only as controlled SPICE-verifiable hypotheses.
 Keep scenarios natural and minimally invasive before proposing topology or Graph JSON corrections.

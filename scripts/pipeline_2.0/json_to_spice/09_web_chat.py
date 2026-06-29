@@ -95,6 +95,14 @@ ARTIFACTS = [
     ("Transient CSV", "08_tran.csv", "csv"),
 ]
 
+SCENARIO_ROOT_ARTIFACTS = [
+    ("Scenario Definition", "scenario.json", "json"),
+    ("Scenario Status", "scenario_status.json", "json"),
+    ("Scenario Copy Manifest", "scenario_copy_manifest.json", "json"),
+    ("Controlled Scenario Report", "12_controlled_scenarios.json", "json"),
+    ("Base vs Scenario Comparison", "scenario_comparison.json", "json"),
+]
+
 
 IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg"]
 
@@ -179,6 +187,44 @@ def build_status(output_dir: Path) -> dict[str, Any]:
     }
 
 
+def read_scenario_status(scenario_dir: Path) -> dict[str, Any]:
+    """Legge lo stato sintetico di uno scenario."""
+    status = read_json_safe(scenario_dir / "scenario_status.json")
+    if not status:
+        report = read_json_safe(scenario_dir / "12_controlled_scenarios.json")
+        status = report if report else {}
+    return status
+
+
+def list_scenario_runs(output_dir: Path) -> list[dict[str, str]]:
+    """Elenca gli scenari disponibili per il circuito corrente."""
+    scenarios_dir = output_dir / "scenarios"
+    if not scenarios_dir.exists():
+        return []
+
+    runs: list[dict[str, str]] = []
+    for scenario_dir in sorted(path for path in scenarios_dir.iterdir() if path.is_dir()):
+        status = read_scenario_status(scenario_dir)
+        scenario = read_json_safe(scenario_dir / "scenario.json")
+        outcome = status.get("diagnostic_outcome") or {}
+        if not isinstance(outcome, dict):
+            outcome = {}
+        scenario_id = str(status.get("scenario_id") or scenario.get("scenario_id") or scenario_dir.name)
+        title = str(scenario.get("title") or scenario_id)
+        state = str(status.get("status") or "prepared")
+        runs.append(
+            {
+                "id": scenario_dir.name,
+                "scenario_id": scenario_id,
+                "title": title,
+                "status": state,
+                "outcome_status": str(outcome.get("status") or ""),
+                "outcome_label": str(outcome.get("label") or ""),
+            }
+        )
+    return runs
+
+
 def status_class(status: str) -> str:
     """Converte lo stato SPICE in una classe CSS semplice."""
     if status == "success":
@@ -186,6 +232,76 @@ def status_class(status: str) -> str:
     if status in {"failed", "error"}:
         return "bad"
     return "warn"
+
+
+def run_status_class(status: str) -> str:
+    """Converte lo stato di una run/scenario in una classe CSS."""
+    if status in {"success", "spice_success"}:
+        return "ok"
+    if status in {"failed", "error", "spice_failed", "partial_or_failed"}:
+        return "bad"
+    return "warn"
+
+
+def outcome_status_class(status: str) -> str:
+    """Converte l'esito diagnostico dello scenario in una classe CSS."""
+    if status == "resolved_candidate":
+        return "ok"
+    if status == "not_resolved":
+        return "bad"
+    if status in {"partially_resolved", "unknown"}:
+        return "warn"
+    return "neutral"
+
+
+def render_run_selector(output_dir: Path, active_run: str) -> str:
+    """Crea la sidebar con base run e scenari disponibili."""
+    base_status = build_status(output_dir)
+    base_active = " active" if active_run == "base" else ""
+    sections = [
+        f"""
+        <a class="run-item{base_active}" href="/">
+          <strong>Base run</strong>
+          <span>{html.escape(str(base_status["spice_status"]))}</span>
+        </a>
+        """
+    ]
+
+    scenarios = list_scenario_runs(output_dir)
+    if not scenarios:
+        sections.append(
+            """
+            <div class="run-item muted-run">
+              <strong>Scenario runs</strong>
+              <span>No scenarios yet</span>
+            </div>
+            """
+        )
+        return "\n".join(sections)
+
+    for scenario in scenarios:
+        scenario_active = " active" if active_run == scenario["id"] else ""
+        state_class = run_status_class(scenario["status"])
+        outcome_label = scenario.get("outcome_label") or ""
+        outcome_status = scenario.get("outcome_status") or ""
+        outcome_html = ""
+        if outcome_label:
+            outcome_html = (
+                f'<small class="{outcome_status_class(outcome_status)}">'
+                f'{html.escape(outcome_label)}</small>'
+            )
+        sections.append(
+            f"""
+            <a class="run-item scenario-run{scenario_active}" href="/?run={html.escape(scenario["id"])}">
+              <strong>{html.escape(scenario["scenario_id"])}</strong>
+              <span class="{state_class}">{html.escape(scenario["status"])}</span>
+              <small>{html.escape(scenario["title"])}</small>
+              {outcome_html}
+            </a>
+            """
+        )
+
+    return "\n".join(sections)
 
 
 def render_status_cards(status: dict[str, Any]) -> str:
@@ -206,14 +322,14 @@ def render_status_cards(status: dict[str, Any]) -> str:
     )
 
 
-def render_artifacts(output_dir: Path) -> str:
+def render_artifact_sections(artifact_dir: Path, artifacts: list[tuple[str, str, str]]) -> str:
     """Crea i pannelli richiudibili con gli artefatti della pipeline."""
     sections: list[str] = []
 
-    for title, filename, kind in ARTIFACTS:
-        path = output_dir / filename
+    for title, filename, kind in artifacts:
+        path = artifact_dir / filename
         text = read_text_safe(path)
-        open_attr = " open" if filename in {"08_spice_run.json", "07_netlist.cir"} else ""
+        open_attr = " open" if filename in {"08_spice_run.json", "07_netlist.cir", "scenario_comparison.json"} else ""
         language_class = f"language-{kind}"
 
         sections.append(
@@ -228,6 +344,13 @@ def render_artifacts(output_dir: Path) -> str:
             """
         )
 
+    return "\n".join(sections)
+
+
+def render_artifacts(output_dir: Path, plot_url: str = "/artifact/08_tran_plot.png") -> str:
+    """Crea i pannelli richiudibili con gli artefatti della pipeline."""
+    sections: list[str] = [render_artifact_sections(output_dir, ARTIFACTS)]
+
     plot_path = output_dir / "08_tran_plot.png"
     if plot_path.exists():
         sections.append(
@@ -238,13 +361,120 @@ def render_artifacts(output_dir: Path) -> str:
                 <small>08_tran_plot.png</small>
               </summary>
               <div class="plot-wrap">
-                <img src="/artifact/08_tran_plot.png" alt="Transient plot">
+                <img src="{html.escape(plot_url)}" alt="Transient plot">
               </div>
             </details>
             """
         )
 
     return "\n".join(sections)
+
+
+def render_comparison_summary(scenario_dir: Path) -> str:
+    """Mostra un riepilogo leggibile del confronto base/scenario."""
+    comparison = read_json_safe(scenario_dir / "scenario_comparison.json")
+    quantities = comparison.get("quantities")
+    if not isinstance(quantities, list) or not quantities:
+        return ""
+
+    outcome = comparison.get("diagnostic_outcome") or {}
+    if not isinstance(outcome, dict):
+        outcome = {}
+    outcome_status = str(outcome.get("status") or "unknown")
+    outcome_label = str(outcome.get("label") or "Outcome unknown")
+    outcome_reason = str(outcome.get("reason") or "No diagnostic outcome available.")
+    outcome_next_step = str(outcome.get("next_step") or "")
+    outcome_class = outcome_status_class(outcome_status)
+
+    rows: list[str] = []
+    for item in quantities:
+        if not isinstance(item, dict):
+            continue
+        rows.append(
+            f"""
+            <tr>
+              <td>{html.escape(str(item.get("quantity")))}</td>
+              <td>{html.escape(str(item.get("base_value")))}</td>
+              <td>{html.escape(str(item.get("scenario_value")))}</td>
+              <td>{html.escape(str(item.get("delta")))}</td>
+              <td>{html.escape(str(item.get("change")))}</td>
+            </tr>
+            """
+        )
+
+    if not rows:
+        return ""
+
+    return f"""
+    <details class="artifact" open>
+      <summary>
+        <span>Base vs Scenario</span>
+        <small>scenario_comparison.json</small>
+      </summary>
+      <div class="comparison-wrap">
+        <div class="outcome-banner {outcome_class}">
+          <strong>{html.escape(outcome_label)}</strong>
+          <span>{html.escape(outcome_reason)}</span>
+          <small>{html.escape(outcome_next_step)}</small>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Quantity</th>
+              <th>Base</th>
+              <th>Scenario</th>
+              <th>Delta</th>
+              <th>Change</th>
+            </tr>
+          </thead>
+          <tbody>
+            {''.join(rows)}
+          </tbody>
+        </table>
+      </div>
+    </details>
+    """
+
+
+def render_scenario_content(output_dir: Path, scenario_name: str) -> dict[str, str]:
+    """Renderizza titolo, stato e artefatti per una scenario run."""
+    if not is_safe_scenario_name(scenario_name):
+        return {
+            "title": "Scenario not found",
+            "output_dir": html.escape(scenario_name),
+            "status_cards": "",
+            "artifacts": "<p>Invalid scenario name.</p>",
+        }
+
+    scenario_dir = output_dir / "scenarios" / scenario_name
+    run_dir = scenario_dir / "run"
+
+    if not scenario_dir.exists() or not scenario_dir.is_dir():
+        return {
+            "title": "Scenario not found",
+            "output_dir": project_relative(scenario_dir),
+            "status_cards": "",
+            "image_section": "",
+            "artifacts": "<p>Scenario directory not found.</p>",
+        }
+
+    status = build_status(run_dir)
+    scenario_status = read_scenario_status(scenario_dir)
+    scenario = read_json_safe(scenario_dir / "scenario.json")
+    title = str(scenario.get("title") or scenario_status.get("scenario_id") or scenario_name)
+    root_artifacts = render_artifact_sections(scenario_dir, SCENARIO_ROOT_ARTIFACTS)
+    run_artifacts = render_artifacts(
+        run_dir,
+        plot_url=f"/scenario-artifact/{html.escape(scenario_name)}/run/08_tran_plot.png",
+    )
+
+    return {
+        "title": f"Scenario - {html.escape(str(scenario_status.get('scenario_id') or scenario_name))}",
+        "output_dir": html.escape(project_relative(scenario_dir)),
+        "status_cards": render_status_cards(status),
+        "artifacts": "\n".join([render_comparison_summary(scenario_dir), root_artifacts, run_artifacts]),
+        "subtitle": html.escape(title),
+    }
 
 
 def render_image_section(batch: str, circuit: str, output_dir: Path) -> str:
@@ -284,25 +514,45 @@ def fill_template(template: str, values: dict[str, str]) -> str:
     return rendered
 
 
-def render_page(batch: str, circuit: str, output_dir: Path) -> str:
+def render_page(batch: str, circuit: str, output_dir: Path, active_run: str = "base") -> str:
     """Renderizza la pagina HTML principale usando il template esterno."""
-    status = build_status(output_dir)
-    output_dir_text = project_relative(output_dir)
-    spice_status = str(status["spice_status"])
-
     template = read_text_safe(INDEX_TEMPLATE)
-    header_meta = f"{batch} / {circuit} - Base run - {spice_status}"
+    active_run = active_run if active_run else "base"
+
+    if active_run == "base":
+        status = build_status(output_dir)
+        spice_status = str(status["spice_status"])
+        header_meta = f"{batch} / {circuit} - Base run - {spice_status}"
+        title = "Base run"
+        subtitle = project_relative(output_dir)
+        status_cards = render_status_cards(status)
+        image_section = render_image_section(batch, circuit, output_dir)
+        artifacts = render_artifacts(output_dir)
+    else:
+        available_scenarios = {scenario["id"] for scenario in list_scenario_runs(output_dir)}
+        if active_run not in available_scenarios:
+            return render_page(batch, circuit, output_dir, active_run="base")
+        scenario_content = render_scenario_content(output_dir, active_run)
+        scenario_state = read_scenario_status(output_dir / "scenarios" / active_run).get("status") or "not available"
+        header_meta = f"{batch} / {circuit} - {active_run} - {scenario_state}"
+        title = scenario_content["title"]
+        subtitle = scenario_content.get("subtitle") or scenario_content["output_dir"]
+        status_cards = scenario_content["status_cards"]
+        image_section = render_image_section(batch, circuit, output_dir)
+        artifacts = scenario_content["artifacts"]
 
     return fill_template(
         template,
         {
             "PAGE_TITLE": html.escape(f"Pipeline 2.0 Diagnostic Chat - {circuit}"),
             "HEADER_META": html.escape(header_meta),
-            "SPICE_STATUS": html.escape(spice_status),
-            "OUTPUT_DIR": html.escape(output_dir_text),
-            "STATUS_CARDS": render_status_cards(status),
-            "IMAGE_SECTION": render_image_section(batch, circuit, output_dir),
-            "ARTIFACTS": render_artifacts(output_dir),
+            "CHAT_STORAGE_KEY": html.escape(f"pipeline2_chat_{batch}_{circuit}"),
+            "RUN_SELECTOR": render_run_selector(output_dir, active_run),
+            "ACTIVE_RUN_TITLE": title,
+            "OUTPUT_DIR": html.escape(subtitle),
+            "STATUS_CARDS": status_cards,
+            "IMAGE_SECTION": image_section,
+            "ARTIFACTS": artifacts,
         },
     )
 
@@ -457,6 +707,11 @@ def safe_scenario_dir_name(scenario_id: str) -> str:
     return cleaned or "scenario"
 
 
+def is_safe_scenario_name(name: str) -> bool:
+    """Accetta solo nomi scenario semplici usabili come directory locali."""
+    return bool(re.fullmatch(r"[A-Za-z0-9_.-]+", name)) and name not in {".", ".."}
+
+
 def prepare_scenario_folder(
     output_dir: Path,
     selected: dict[str, Any],
@@ -546,19 +801,31 @@ def copy_base_run_for_scenario(output_dir: Path, scenario_dir: Path) -> dict[str
     }
 
 
-def apply_controlled_scenario(scenario_dir: Path) -> dict[str, Any]:
-    """Chiama lo step 12 per applicare le azioni supportate senza eseguire SPICE."""
+def apply_controlled_scenario(
+    scenario_dir: Path,
+    run_spice: bool = True,
+    ngspice_executable: str | None = None,
+) -> dict[str, Any]:
+    """Chiama lo step 12 per applicare le azioni supportate ed eseguire SPICE."""
     step12 = load_step12_module()
-    report = step12.apply_scenario(scenario_dir)
+    report = step12.apply_scenario(
+        scenario_dir,
+        run_spice=run_spice,
+        ngspice_executable=ngspice_executable,
+    )
     return report if isinstance(report, dict) else {}
 
 
-def handle_scenario_request(output_dir: Path, user_message: str) -> dict[str, Any] | None:
+def handle_scenario_request(
+    output_dir: Path,
+    user_message: str,
+    ngspice_executable: str | None = None,
+) -> dict[str, Any] | None:
     """
     Gestisce gli step iniziali degli scenari.
 
     Per ora riconosce la scelta, recupera il JSON tecnico e prepara una cartella
-    scenario separata. Non modifica la base run e non esegue SPICE.
+    scenario separata. Non modifica la base run originale.
     """
     requested_index = detect_scenario_request(user_message)
     if requested_index is None:
@@ -601,18 +868,32 @@ def handle_scenario_request(output_dir: Path, user_message: str) -> dict[str, An
         output_dir=output_dir,
         scenario_dir=scenario_paths["scenario_dir"],
     )
-    apply_report = apply_controlled_scenario(scenario_paths["scenario_dir"])
+    apply_report = apply_controlled_scenario(
+        scenario_paths["scenario_dir"],
+        run_spice=True,
+        ngspice_executable=ngspice_executable,
+    )
     applied_actions = apply_report.get("applied_actions") or []
     failed_actions = apply_report.get("failed_actions") or []
     unsupported_actions = apply_report.get("unsupported_actions") or []
+    spice_status = apply_report.get("spice_status") or "not executed"
+    comparison_summary = apply_report.get("comparison_summary") or {}
+    diagnostic_outcome = apply_report.get("diagnostic_outcome") or {}
+    if not isinstance(diagnostic_outcome, dict):
+        diagnostic_outcome = {}
+    outcome_label = diagnostic_outcome.get("label") or "Outcome unknown"
+    outcome_status = diagnostic_outcome.get("status") or "unknown"
+    outcome_reason = diagnostic_outcome.get("reason") or "No diagnostic outcome available."
+    outcome_next_step = diagnostic_outcome.get("next_step") or "Continue with the diagnostic workflow."
+    stop_automation = bool(diagnostic_outcome.get("stop_automation"))
 
     return {
         "reply": (
             f"Ho riconosciuto la richiesta di eseguire **scenario {requested_index}**.\n\n"
             f"Scenario selezionato: **{title}**.\n\n"
-            "Per ora siamo nello **step 5**: ho creato una cartella scenario separata, "
-            "ho copiato la base run e ho applicato le azioni supportate solo alla netlist in `run/`.\n\n"
-            "Non ho modificato la base run originale e non ho ancora rieseguito SPICE.\n\n"
+            "Ho creato una cartella scenario separata, ho copiato la base run, "
+            "ho applicato le azioni supportate alla netlist in `run/` e ho eseguito ngspice sulla run scenario.\n\n"
+            "La base run originale non e stata modificata.\n\n"
             f"Cartella scenario:\n\n`{project_relative(scenario_paths['scenario_dir'])}`\n\n"
             f"Snapshot base:\n\n`{project_relative(copy_result['base_snapshot_dir'])}`\n\n"
             f"Run scenario modificata:\n\n`{project_relative(copy_result['run_dir'])}`\n\n"
@@ -620,9 +901,18 @@ def handle_scenario_request(output_dir: Path, user_message: str) -> dict[str, An
             f"Azioni applicate: **{len(applied_actions)}**. "
             f"Azioni non supportate: **{len(unsupported_actions)}**. "
             f"Azioni fallite: **{len(failed_actions)}**.\n\n"
+            f"Stato SPICE scenario: **{spice_status}**.\n\n"
+            f"Confronti attivati: **{comparison_summary.get('activated_count', 0)}** / "
+            f"{comparison_summary.get('requested_count', 0)}.\n\n"
+            f"Esito diagnostico scenario: **{outcome_label}** (`{outcome_status}`).\n\n"
+            f"Motivo: {outcome_reason}\n\n"
+            f"Decisione automatica: **{'stop' if stop_automation else 'continue'}**.\n\n"
+            f"Prossimo passo: {outcome_next_step}\n\n"
+            "Lo scenario ora e disponibile nella barra sinistra.\n\n"
             "Scenario tecnico recuperato:\n\n"
             f"```json\n{selected_json}\n```"
         ),
+        "active_run": scenario_paths["scenario_dir"].name,
         "debug": [
             f"Read: {project_relative(response_path)}",
             f"Scenarios found: {len(scenarios)}",
@@ -635,7 +925,11 @@ def handle_scenario_request(output_dir: Path, user_message: str) -> dict[str, An
             f"Applied actions: {len(applied_actions)}",
             f"Unsupported actions: {len(unsupported_actions)}",
             f"Failed actions: {len(failed_actions)}",
-            "Action: scenario applied without SPICE execution",
+            f"SPICE status: {spice_status}",
+            f"Diagnostic outcome: {outcome_status}",
+            f"Stop automation: {stop_automation}",
+            f"Comparison: {project_relative(scenario_paths['scenario_dir'] / 'scenario_comparison.json')}",
+            "Action: scenario applied and SPICE executed",
         ],
     }
 
@@ -672,7 +966,13 @@ class WebChatHandler(BaseHTTPRequestHandler):
         path = parsed.path
 
         if path == "/":
-            page = render_page(self.server.batch, self.server.circuit, self.server.output_dir)
+            query = parsed.query
+            active_run = "base"
+            for part in query.split("&"):
+                if part.startswith("run="):
+                    active_run = unquote(part.removeprefix("run=")) or "base"
+                    break
+            page = render_page(self.server.batch, self.server.circuit, self.server.output_dir, active_run=active_run)
             self.send_text(200, page, "text/html; charset=utf-8")
             return
 
@@ -699,6 +999,38 @@ class WebChatHandler(BaseHTTPRequestHandler):
             self.send_bytes(200, image_path.read_bytes(), content_type)
             return
 
+        if path.startswith("/scenario-artifact/"):
+            relative = unquote(path.removeprefix("/scenario-artifact/"))
+            parts = relative.split("/", 2)
+            if len(parts) != 3:
+                self.send_text(404, "Scenario artifact not found")
+                return
+
+            scenario_name, area, filename = parts
+            if not is_safe_scenario_name(scenario_name):
+                self.send_text(403, "Forbidden")
+                return
+            if area not in {"run", "base_snapshot", "root"}:
+                self.send_text(403, "Forbidden")
+                return
+
+            scenarios_root = (self.server.output_dir / "scenarios").resolve()
+            scenario_dir = (scenarios_root / scenario_name).resolve()
+            if scenarios_root not in scenario_dir.parents and scenario_dir != scenarios_root:
+                self.send_text(403, "Forbidden")
+                return
+            base_dir = scenario_dir if area == "root" else (scenario_dir / area).resolve()
+            artifact_path = (base_dir / filename).resolve()
+            if base_dir not in artifact_path.parents and artifact_path != base_dir:
+                self.send_text(403, "Forbidden")
+                return
+            if not artifact_path.exists() or not artifact_path.is_file():
+                self.send_text(404, "Scenario artifact not found")
+                return
+            content_type = mimetypes.guess_type(str(artifact_path))[0] or "application/octet-stream"
+            self.send_bytes(200, artifact_path.read_bytes(), content_type)
+            return
+
         self.send_text(404, "Not found")
 
     def do_POST(self) -> None:
@@ -721,7 +1053,11 @@ class WebChatHandler(BaseHTTPRequestHandler):
             self.send_text(200, body, "application/json; charset=utf-8")
             return
 
-        scenario_result = handle_scenario_request(self.server.output_dir, user_message)
+        scenario_result = handle_scenario_request(
+            self.server.output_dir,
+            user_message,
+            ngspice_executable=self.server.ngspice_executable,
+        )
         if scenario_result is not None:
             body = json.dumps(scenario_result, ensure_ascii=False)
             self.send_text(200, body, "application/json; charset=utf-8")
@@ -762,11 +1098,13 @@ class WebChatServer(ThreadingHTTPServer):
         batch: str,
         circuit: str,
         output_dir: Path,
+        ngspice_executable: str | None = None,
     ) -> None:
         super().__init__(server_address, handler_class)
         self.batch = batch
         self.circuit = circuit
         self.output_dir = output_dir
+        self.ngspice_executable = ngspice_executable
 
 
 def parse_args() -> argparse.Namespace:
@@ -777,6 +1115,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--host", default="127.0.0.1", help="Local host to bind.")
     parser.add_argument("--port", type=int, default=8765, help="Local port to use.")
     parser.add_argument("--no-browser", action="store_true", help="Do not open the browser automatically.")
+    parser.add_argument("--ngspice-executable", default=None, help="Optional ngspice executable path for scenario runs.")
     return parser.parse_args()
 
 
@@ -796,6 +1135,7 @@ def main() -> None:
         batch=args.batch,
         circuit=args.circuit,
         output_dir=output_dir,
+        ngspice_executable=args.ngspice_executable,
     )
 
     url = f"http://{args.host}:{args.port}/"

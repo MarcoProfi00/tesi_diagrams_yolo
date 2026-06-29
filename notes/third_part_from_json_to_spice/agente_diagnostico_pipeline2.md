@@ -985,9 +985,96 @@ run_op
 run_tran
 ```
 
+Primitive attualmente implementate nella Pipeline 2.0:
+
+```text
+drive_node_voltage
+change_source_value
+close_switch
+```
+
+Questa e la lista controllata corrente. Per adesso l'agente puo proporre uno
+scenario eseguibile solo se usa queste primitive.
+
+`drive_node_voltage` serve a inserire una sorgente di test su un nodo gia
+presente nella node map della run scenario.
+
+Esempio:
+
+```json
+{
+  "type": "drive_node_voltage",
+  "target": "N002",
+  "value": "5V"
+}
+```
+
+`change_source_value` serve a modificare il valore di una sorgente SPICE gia
+presente nella netlist copiata dello scenario.
+
+Esempio:
+
+```json
+{
+  "type": "change_source_value",
+  "target": "VVCC",
+  "value": "10V"
+}
+```
+
+`close_switch` serve a chiudere uno switch gia riconosciuto dalla pipeline. Non
+inventa un nuovo collegamento: legge lo switch da `06_component_rules.json` e
+inserisce nella netlist scenario una piccola resistenza tra i due nodi dello
+switch.
+
+Esempio:
+
+```json
+{
+  "type": "close_switch",
+  "target": "switch25.1"
+}
+```
+
+I valori devono essere concreti. Uno scenario con `value: "unknown"` non deve
+essere considerato eseguibile.
+
+Questa lista non e definitiva: verra incrementata solo quando, analizzando nuove
+immagini o nuovi batch, emergera davvero la necessita di una nuova primitiva.
+In questo modo la complessita cresce per casi reali, non per ipotesi astratte.
+
 L'agente non deve generare liberamente una netlist SPICE completa. Deve invece
 proporre uno scenario strutturato usando queste primitive. La pipeline controlla
 che lo scenario sia valido, applicabile e riproducibile.
+
+Importante: le primitive controllate non vanno confuse con gli esiti
+diagnostici.
+
+Le primitive descrivono cosa viene modificato nello scenario:
+
+```text
+drive_node_voltage
+change_source_value
+close_switch
+```
+
+Gli esiti diagnostici descrivono cosa e successo dopo l'esecuzione e il
+confronto base/scenario:
+
+```text
+resolved_candidate
+partially_resolved
+not_resolved
+unknown
+```
+
+Esempio su `a01`:
+
+```text
+scenario 1 -> drive_node_voltage su N002 -> resolved_candidate
+scenario 2 -> change_source_value su VVCC -> partially_resolved
+scenario 3 -> drive_node_voltage su N004 -> partially_resolved
+```
 
 Esempio concettuale:
 
@@ -1597,7 +1684,7 @@ Questa valutazione si collega agli esperimenti GPT gia presenti nel progetto.
 Stato attuale:
 
 ```text
-implementato il primo ciclo tecnico per drive_node_voltage:
+implementato il primo ciclo tecnico per drive_node_voltage, change_source_value e close_switch:
 scelta scenario -> copia base/run -> modifica netlist scenario -> ngspice scenario
 -> scenario_comparison.json.
 ```
@@ -1608,6 +1695,45 @@ Prossimo passo:
 usare scenario_comparison.json come nuovo input dell'agente,
 cosi la chat puo spiegare se lo scenario conferma o smentisce l'ipotesi.
 ```
+
+Aggiornamento implementativo:
+
+```text
+10_diagnostic_context.json ora include executed_scenarios.
+11_agent_prompt include scenario.json, scenario_status.json,
+12_controlled_scenarios.json e scenario_comparison.json per ogni scenario
+gia presente nella cartella scenarios/.
+```
+
+Questo permette alla chat di rispondere anche a domande successive, per esempio:
+
+```text
+Quale scenario risolve il problema?
+Perche scenario 2 e solo parziale?
+Che cosa ha confermato scenario 3?
+```
+
+La chat non deve limitarsi a elencare gli scenari. Quando la domanda riguarda
+gli scenari gia eseguiti, il prompt passa a una modalita di confronto:
+
+```text
+1. identifica lo scenario con outcome piu forte;
+2. usa scenario_comparison.json per motivare la scelta;
+3. distingue lo scenario risolutivo dagli scenari solo parziali;
+4. usa stop_automation per decidere se l'automazione puo fermarsi.
+```
+
+Per `a01`, il riepilogo corretto e:
+
+```text
+scenario_1 -> resolved_candidate, stop_automation=true
+scenario_2 -> partially_resolved, stop_automation=false
+scenario_3 -> partially_resolved, stop_automation=false
+```
+
+Quindi, alla domanda "Quale scenario risolve il problema?", la risposta attesa
+e che `scenario_1` e il candidato risolutivo principale, mentre `scenario_2` e
+`scenario_3` sono scenari diagnostici di supporto.
 
 ### Fase 5: chat iterativa e web completa
 

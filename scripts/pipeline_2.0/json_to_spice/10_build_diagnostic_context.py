@@ -94,6 +94,25 @@ ARTIFACTS = {
     },
 }
 
+SCENARIO_ARTIFACTS = {
+    "scenario_definition": {
+        "filename": "scenario.json",
+        "role": "Scenario selected by the user and saved before execution.",
+    },
+    "scenario_status": {
+        "filename": "scenario_status.json",
+        "role": "Current scenario status, SPICE status and diagnostic outcome.",
+    },
+    "controlled_scenario_report": {
+        "filename": "12_controlled_scenarios.json",
+        "role": "Report produced by the controlled scenario runner.",
+    },
+    "scenario_comparison": {
+        "filename": "scenario_comparison.json",
+        "role": "Base-vs-scenario comparison used to evaluate the scenario.",
+    },
+}
+
 
 def read_json_safe(path: Path) -> dict[str, Any]:
     """Legge un JSON se esiste e se e valido, altrimenti restituisce {}."""
@@ -205,11 +224,155 @@ def build_agent_rules() -> list[str]:
         "Treat this file as a manifest, not as the full diagnostic evidence.",
         "Load the referenced artifacts needed for the answer.",
         "Use graph, node map, component rules, netlist, stdout and stderr as evidence.",
+        "If executed_scenarios are available, use them as evidence for questions about scenario outcomes.",
         "Do not invent values, connections, models or simulation results.",
         "Do not use the image unless image_access is explicitly requested.",
         "If Graph JSON inconsistency is suspected, explain which structured outputs suggest it.",
         "In read-only mode, do not modify netlists and do not execute scenarios.",
     ]
+
+
+def build_executed_scenarios(
+    output_dir: Path,
+    project_root: Path | None = None,
+) -> list[dict[str, Any]]:
+    """Indicizza gli scenari gia creati/eseguiti per renderli visibili all'agente."""
+    scenarios_dir = output_dir / "scenarios"
+    if not scenarios_dir.exists() or not scenarios_dir.is_dir():
+        return []
+
+    scenarios: list[dict[str, Any]] = []
+
+    for scenario_dir in sorted(path for path in scenarios_dir.iterdir() if path.is_dir()):
+        scenario = read_json_safe(scenario_dir / "scenario.json")
+        status = read_json_safe(scenario_dir / "scenario_status.json")
+        comparison = read_json_safe(scenario_dir / "scenario_comparison.json")
+        report = read_json_safe(scenario_dir / "12_controlled_scenarios.json")
+        outcome = status.get("diagnostic_outcome") or comparison.get("diagnostic_outcome") or {}
+        summary = status.get("comparison_summary") or comparison.get("summary") or {}
+
+        artifacts: dict[str, Any] = {}
+        for artifact_name, metadata in SCENARIO_ARTIFACTS.items():
+            path = scenario_dir / str(metadata["filename"])
+            artifacts[artifact_name] = {
+                "available": path.exists(),
+                "path": relative_or_absolute(path, project_root) if path.exists() else None,
+                "role": metadata["role"],
+            }
+
+        scenarios.append(
+            {
+                "scenario_dir": relative_or_absolute(scenario_dir, project_root),
+                "scenario_id": status.get("scenario_id") or scenario.get("scenario_id") or scenario_dir.name,
+                "title": scenario.get("title") or status.get("scenario_id") or scenario_dir.name,
+                "status": status.get("status") or report.get("status") or "unknown",
+                "spice_status": status.get("spice_status") or report.get("spice_status"),
+                "diagnostic_outcome": outcome,
+                "comparison_summary": summary,
+                "artifacts": artifacts,
+            }
+        )
+
+    return scenarios
+
+
+def summarize_changed_quantities(comparison: dict[str, Any]) -> dict[str, list[str]]:
+    """Riassume le grandezze cambiate e non cambiate in uno scenario."""
+    changed: list[str] = []
+    unchanged: list[str] = []
+    missing: list[str] = []
+
+    for item in comparison.get("quantities") or []:
+        if not isinstance(item, dict):
+            continue
+        quantity = str(item.get("quantity") or "")
+        change = item.get("change")
+        if change in {"activated", "deactivated", "changed"}:
+            changed.append(quantity)
+        elif change == "unchanged":
+            unchanged.append(quantity)
+        elif change == "missing":
+            missing.append(quantity)
+
+    return {
+        "changed": changed,
+        "unchanged": unchanged,
+        "missing": missing,
+    }
+
+
+def resolve_manifest_artifact(path_value: str | None, project_root: Path | None) -> Path | None:
+    """Risolve un path salvato nel manifest, relativo al progetto quando serve."""
+    if not path_value:
+        return None
+    path = Path(path_value)
+    if path.is_absolute():
+        return path
+    return (project_root / path) if project_root is not None else path
+
+
+def build_scenario_outcome_summary(
+    executed_scenarios: list[dict[str, Any]],
+    project_root: Path | None = None,
+) -> dict[str, Any]:
+    """
+    Crea una sintesi semplice per aiutare l'agente a capire quale scenario pesa di piu.
+
+    La decisione resta motivata dagli artefatti scenario, ma questa sintesi evita
+    che il modello tratti tutti gli scenari come un semplice elenco equivalente.
+    """
+    best: dict[str, Any] | None = None
+    scenarios: list[dict[str, Any]] = []
+
+    for scenario in executed_scenarios:
+        artifacts = scenario.get("artifacts") or {}
+        comparison_path = artifacts.get("scenario_comparison", {}).get("path")
+        resolved_comparison_path = resolve_manifest_artifact(comparison_path, project_root)
+        comparison = read_json_safe(resolved_comparison_path) if resolved_comparison_path else {}
+        outcome = scenario.get("diagnostic_outcome") or {}
+        comparison_summary = scenario.get("comparison_summary") or {}
+        stop_automation = bool(outcome.get("stop_automation"))
+        outcome_status = outcome.get("status")
+
+        score = 0
+        if stop_automation:
+            score += 100
+        if outcome_status == "resolved_candidate":
+            score += 80
+        elif outcome_status == "partially_resolved":
+            score += 20
+        score += int(comparison_summary.get("changed_count") or 0)
+
+        compact = {
+            "scenario_id": scenario.get("scenario_id"),
+            "title": scenario.get("title"),
+            "status": scenario.get("status"),
+            "spice_status": scenario.get("spice_status"),
+            "outcome_status": outcome_status,
+            "outcome_label": outcome.get("label"),
+            "outcome_reason": outcome.get("reason"),
+            "stop_automation": stop_automation,
+            "comparison_summary": comparison_summary,
+            "quantity_summary": summarize_changed_quantities(comparison),
+            "score": score,
+        }
+        scenarios.append(compact)
+
+        if best is None or score > int(best.get("score") or 0):
+            best = compact
+
+    return {
+        "available": bool(scenarios),
+        "best_scenario_id": best.get("scenario_id") if best else None,
+        "best_outcome_status": best.get("outcome_status") if best else None,
+        "best_stop_automation": best.get("stop_automation") if best else None,
+        "interpretation_rule": (
+            "If a user asks which scenario resolves the problem, prefer the scenario "
+            "with outcome_status='resolved_candidate' and stop_automation=true. "
+            "Partially resolved scenarios are supporting diagnostics, not the main solution."
+        ),
+        "scenarios": scenarios,
+    }
 
 
 def build_diagnostic_context(
@@ -228,6 +391,8 @@ def build_diagnostic_context(
     circuit_dir = Path(output_dir)
     root = Path(project_root) if project_root is not None else None
 
+    executed_scenarios = build_executed_scenarios(circuit_dir, root)
+
     return {
         "source_format": "pipeline2.0_diagnostic_context_manifest",
         "batch_name": batch_name,
@@ -236,6 +401,8 @@ def build_diagnostic_context(
         "pipeline2_output_dir": relative_or_absolute(circuit_dir, root),
         "summary": build_summary(circuit_dir),
         "artifacts": build_artifact_manifest(circuit_dir, root),
+        "executed_scenarios": executed_scenarios,
+        "scenario_outcome_summary": build_scenario_outcome_summary(executed_scenarios, root),
         "image_access": build_image_access(root, batch_name, circuit_id),
         "agent_mode": "graph_grounded_readonly",
         "agent_rules": build_agent_rules(),

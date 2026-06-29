@@ -8,8 +8,10 @@ Versione attuale minimale:
 
 - legge `scenario.json`;
 - lavora sulla netlist copiata in `run/07_netlist.cir`;
-- supporta solo l'azione generale `drive_node_voltage`;
+- supporta le azioni generali `drive_node_voltage`, `change_source_value` e `close_switch`;
 - aggiunge o aggiorna una sorgente SPICE di scenario;
+- modifica il valore di una sorgente SPICE esistente;
+- chiude uno switch riconosciuto inserendo una piccola resistenza nella netlist scenario;
 - salva `12_controlled_scenarios.json`;
 - aggiorna `scenario_status.json`;
 - esegue ngspice solo se richiesto con `--run-spice`.
@@ -85,8 +87,45 @@ def normalize_spice_dc_value(value: Any) -> str:
     text = str(value).strip()
     text = re.sub(r"\s+", "", text)
     text = re.sub(r"(?i)v$", "", text)
-    if not text:
+    if not text or text.lower() in {"unknown", "none", "null", "n/a", "na"}:
         raise ValueError("Empty voltage value")
+    return text
+
+
+def normalize_spice_source_value(value: Any) -> str:
+    """
+    Normalizza il nuovo valore di una sorgente SPICE.
+
+    Per valori scalari come `10V` o `2.5` produce una definizione `DC`.
+    Per forme gia SPICE-like come `SIN(...)`, `PULSE(...)` o `DC 10` conserva
+    la forma dichiarata dallo scenario.
+    """
+    text = str(value).strip()
+    if not text or text.lower() in {"unknown", "none", "null", "n/a", "na"}:
+        raise ValueError("Source value must be concrete, not unknown")
+
+    compact = re.sub(r"\s+", " ", text)
+    if re.match(r"(?i)^dc\s+", compact):
+        dc_value = normalize_spice_dc_value(compact.split(maxsplit=1)[1])
+        return f"DC {dc_value}"
+    if re.match(r"(?i)^(sin|pulse|pwl|exp|sffm|am)\s*\(", compact):
+        return compact
+
+    return f"DC {normalize_spice_dc_value(compact)}"
+
+
+def normalize_spice_resistance_value(value: Any) -> str:
+    """
+    Normalizza una resistenza semplice per SPICE.
+
+    Per `close_switch` usiamo di default `1m`, cioe 1 milliohm. Questo modella
+    uno switch chiuso senza introdurre un corto ideale troppo aggressivo.
+    """
+    text = str(value).strip() if value is not None else "1m"
+    text = re.sub(r"\s+", "", text)
+    text = re.sub(r"(?i)ohms?$", "", text)
+    if not text or text.lower() in {"unknown", "none", "null", "n/a", "na"}:
+        raise ValueError("Switch resistance must be concrete, not unknown")
     return text
 
 
@@ -164,6 +203,127 @@ def apply_drive_node_voltage(
     return updated_netlist, result
 
 
+def normalize_source_target(target: Any) -> str:
+    """Normalizza il nome sorgente richiesto dallo scenario."""
+    source_name = str(target).strip()
+    if not source_name:
+        raise ValueError("Missing target source")
+    source_name = re.sub(r"(?i)#branch$", "", source_name)
+    return source_name
+
+
+def replace_source_value(
+    netlist_text: str,
+    source_name: str,
+    source_definition: str,
+) -> tuple[str, dict[str, Any]]:
+    """
+    Sostituisce il valore di una sorgente gia presente nella netlist.
+
+    La sostituzione e volutamente semplice: preserva nome sorgente e due nodi,
+    poi rimpiazza la definizione elettrica rimanente con il nuovo valore.
+    """
+    lines = netlist_text.splitlines()
+    source_pattern = re.compile(rf"^\s*{re.escape(source_name)}\s+", flags=re.IGNORECASE)
+
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped or stripped.startswith(("*", ".")):
+            continue
+        if not source_pattern.match(line):
+            continue
+
+        parts = stripped.split(maxsplit=3)
+        if len(parts) < 4:
+            raise ValueError(f"Source {source_name} does not have a replaceable value")
+
+        old_line = line
+        new_line = f"{parts[0]} {parts[1]} {parts[2]} {source_definition}"
+        lines[index] = new_line
+        return "\n".join(lines) + "\n", {
+            "old_line": old_line,
+            "new_line": new_line,
+            "operation": "updated",
+        }
+
+    raise ValueError(f"Source {source_name} not found in 07_netlist.cir")
+
+
+def apply_change_source_value(
+    action: dict[str, Any],
+    netlist_text: str,
+) -> tuple[str, dict[str, Any]]:
+    """Applica l'azione `change_source_value` a una sorgente SPICE esistente."""
+    source_name = normalize_source_target(action.get("target"))
+    source_definition = normalize_spice_source_value(action.get("value"))
+    updated_netlist, operation = replace_source_value(netlist_text, source_name, source_definition)
+
+    result = {
+        "status": "applied",
+        "type": "change_source_value",
+        "target": source_name,
+        "value": action.get("value"),
+        "normalized_source_definition": source_definition,
+        "old_line": operation["old_line"],
+        "new_line": operation["new_line"],
+        "operation": operation["operation"],
+        "spice_executed": False,
+    }
+    return updated_netlist, result
+
+
+def find_switch_rule(component_id: Any, run_dir: Path) -> tuple[str, dict[str, Any]]:
+    """Recupera uno switch gia riconosciuto dalle regole componenti dello scenario."""
+    target = str(component_id).strip()
+    if not target:
+        raise ValueError("Missing target switch")
+
+    rules = read_json(run_dir / "06_component_rules.json")
+    components = rules.get("components") or {}
+    component = components.get(target)
+    if not isinstance(component, dict):
+        raise ValueError(f"Switch {target} not found in 06_component_rules.json")
+
+    class_name = str(component.get("class_name") or "").lower()
+    if class_name != "switch":
+        raise ValueError(f"Target {target} is not a Switch component")
+
+    nodes = component.get("nodes") or []
+    if len(nodes) != 2:
+        raise ValueError(f"Switch {target} must have exactly two SPICE nodes")
+
+    return target, component
+
+
+def apply_close_switch(
+    action: dict[str, Any],
+    run_dir: Path,
+    netlist_text: str,
+) -> tuple[str, dict[str, Any]]:
+    """Applica `close_switch` inserendo una piccola resistenza tra i nodi dello switch."""
+    switch_id, component = find_switch_rule(action.get("target"), run_dir)
+    node_a, node_b = [str(node).strip() for node in component.get("nodes", [])]
+    if not node_a or not node_b:
+        raise ValueError(f"Switch {switch_id} has empty nodes")
+
+    resistance = normalize_spice_resistance_value(action.get("resistance"))
+    resistor_name = f"RSCENARIO_{sanitize_spice_name(switch_id)}"
+    resistor_line = f"{resistor_name} {node_a} {node_b} {resistance}"
+    updated_netlist, operation = insert_or_replace_source(netlist_text, resistor_name, resistor_line)
+
+    result = {
+        "status": "applied",
+        "type": "close_switch",
+        "target": switch_id,
+        "nodes": [node_a, node_b],
+        "resistance": resistance,
+        "inserted_line": resistor_line,
+        "operation": operation,
+        "spice_executed": False,
+    }
+    return updated_netlist, result
+
+
 def run_spice_for_scenario(
     run_dir: Path,
     executable: str | None = None,
@@ -184,6 +344,8 @@ def run_spice_for_scenario(
 def normalize_quantity_name(name: str) -> str:
     """Normalizza una grandezza richiesta dallo scenario, ad esempio v(N002)."""
     text = str(name).strip()
+    if re.search(r"(?i)#branch$", text) and "(" not in text:
+        return f"i({text})"
     match = re.match(r"(?i)^([vip])\(([^)]+)\)$", text)
     if not match:
         return text
@@ -230,9 +392,8 @@ def parse_ngspice_stdout(stdout_path: Path) -> dict[str, float]:
         lower = line.lower()
 
         if not line:
-            in_node_table = False
-            in_source_table = False
-            current_devices = []
+            # ngspice spesso lascia una riga vuota tra l'intestazione e i dati
+            # delle tabelle, quindi non chiudiamo la sezione su una riga vuota.
             continue
 
         if lower.startswith("node") and "voltage" in lower:
@@ -254,6 +415,12 @@ def parse_ngspice_stdout(stdout_path: Path) -> dict[str, float]:
         if len(parts) < 2:
             continue
 
+        if parts[0].lower() == "device":
+            current_devices = parts[1:]
+            in_node_table = False
+            in_source_table = False
+            continue
+
         if in_node_table:
             value = parse_float(parts[-1])
             if value is not None:
@@ -265,10 +432,6 @@ def parse_ngspice_stdout(stdout_path: Path) -> dict[str, float]:
             if value is not None:
                 source_name = parts[0]
                 values[quantity_lookup_key(f"i({source_name})")] = value
-            continue
-
-        if parts[0].lower() == "device":
-            current_devices = parts[1:]
             continue
 
         if current_devices and len(parts) == len(current_devices) + 1:
@@ -285,6 +448,30 @@ def parse_ngspice_stdout(stdout_path: Path) -> dict[str, float]:
     return values
 
 
+def count_ngspice_stderr_warnings(stderr_path: Path) -> float | None:
+    """
+    Conta i warning nello stderr ngspice.
+
+    Serve per scenari che vogliono verificare se una modifica riduce problemi
+    numerici, per esempio `singular matrix`. Restituiamo un numero per riusare
+    lo stesso confronto base/scenario gia usato per tensioni e correnti.
+    """
+    if not stderr_path.exists():
+        return None
+
+    lines = stderr_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    warning_count = 0
+    for line in lines:
+        if line.strip().lower().startswith("warning:"):
+            warning_count += 1
+    return float(warning_count)
+
+
+def is_stderr_quantity(quantity: str) -> bool:
+    """Riconosce richieste di confronto sui warning stderr."""
+    return quantity.strip().lower() in {"stderr", "ngspice_stderr", "stderr_warnings", "warning_count"}
+
+
 def classify_change(base_value: float | None, scenario_value: float | None) -> str:
     """Classifica una variazione semplice tra base e scenario."""
     if base_value is None or scenario_value is None:
@@ -298,6 +485,64 @@ def classify_change(base_value: float | None, scenario_value: float | None) -> s
     return "changed"
 
 
+def evaluate_diagnostic_outcome(summary: dict[str, int]) -> dict[str, Any]:
+    """
+    Valuta in modo prudente se uno scenario sembra risolvere il problema.
+
+    Questa non e una diagnosi semantica definitiva: e un criterio automatico
+    semplice basato sui confronti SPICE richiesti dallo scenario. Serve per
+    capire se l'automazione puo fermarsi o se conviene provare un altro scenario.
+    """
+    requested = int(summary.get("requested_count") or 0)
+    changed = int(summary.get("changed_count") or 0)
+    activated = int(summary.get("activated_count") or 0)
+    missing = int(summary.get("missing_count") or 0)
+
+    if requested == 0:
+        status = "unknown"
+        label = "Outcome unknown"
+        reason = "The scenario did not define quantities to compare."
+        stop_automation = False
+    elif missing == requested:
+        status = "unknown"
+        label = "Outcome unknown"
+        reason = "None of the requested comparison quantities were found in the SPICE outputs."
+        stop_automation = False
+    elif changed == 0:
+        status = "not_resolved"
+        label = "Not resolved"
+        reason = "The requested quantities did not change compared with the base run."
+        stop_automation = False
+    elif missing > 0:
+        status = "partially_resolved"
+        label = "Partially resolved"
+        reason = "Some requested quantities changed, but at least one comparison quantity is missing."
+        stop_automation = False
+    elif changed == requested and activated > 0:
+        status = "resolved_candidate"
+        label = "Candidate resolved"
+        reason = "All requested quantities changed and at least one inactive quantity became active."
+        stop_automation = True
+    else:
+        status = "partially_resolved"
+        label = "Partially resolved"
+        reason = "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically."
+        stop_automation = False
+
+    return {
+        "status": status,
+        "label": label,
+        "reason": reason,
+        "stop_automation": stop_automation,
+        "confidence": "medium" if status == "resolved_candidate" else "low",
+        "next_step": (
+            "Stop automatic scenario execution and ask the agent to explain the confirmed hypothesis."
+            if stop_automation
+            else "Continue with another scenario or ask the agent for a refined hypothesis."
+        ),
+    }
+
+
 def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> dict[str, Any]:
     """Confronta le grandezze richieste tra base run e scenario run."""
     status = read_json(scenario_dir / STATUS_NAME) if (scenario_dir / STATUS_NAME).exists() else {}
@@ -306,6 +551,8 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
 
     base_values = parse_ngspice_stdout(base_output_dir / "08_ngspice_stdout.txt")
     scenario_values = parse_ngspice_stdout(run_dir / "08_ngspice_stdout.txt")
+    base_stderr_warning_count = count_ngspice_stderr_warnings(base_output_dir / "08_ngspice_stderr.txt")
+    scenario_stderr_warning_count = count_ngspice_stderr_warnings(run_dir / "08_ngspice_stderr.txt")
 
     requested = scenario.get("compare") or []
     if not isinstance(requested, list):
@@ -318,9 +565,14 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
 
     for item in requested:
         quantity = normalize_quantity_name(str(item))
-        lookup_key = quantity_lookup_key(quantity)
-        base_value = base_values.get(lookup_key)
-        scenario_value = scenario_values.get(lookup_key)
+        if is_stderr_quantity(quantity):
+            lookup_key = "stderr.warning_count"
+            base_value = base_stderr_warning_count
+            scenario_value = scenario_stderr_warning_count
+        else:
+            lookup_key = quantity_lookup_key(quantity)
+            base_value = base_values.get(lookup_key)
+            scenario_value = scenario_values.get(lookup_key)
         delta = None
         if base_value is not None and scenario_value is not None:
             delta = scenario_value - base_value
@@ -340,8 +592,17 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
                 "scenario_value": scenario_value,
                 "delta": delta,
                 "change": change,
+                "metric": lookup_key,
             }
         )
+
+    summary = {
+        "requested_count": len(quantities),
+        "changed_count": changed,
+        "activated_count": activated,
+        "missing_count": missing,
+    }
+    diagnostic_outcome = evaluate_diagnostic_outcome(summary)
 
     comparison = {
         "source_format": "pipeline2.0_scenario_comparison",
@@ -351,13 +612,11 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
         "scenario_run_dir": str(run_dir),
         "base_stdout": str(base_output_dir / "08_ngspice_stdout.txt"),
         "scenario_stdout": str(run_dir / "08_ngspice_stdout.txt"),
+        "base_stderr": str(base_output_dir / "08_ngspice_stderr.txt"),
+        "scenario_stderr": str(run_dir / "08_ngspice_stderr.txt"),
         "quantities": quantities,
-        "summary": {
-            "requested_count": len(quantities),
-            "changed_count": changed,
-            "activated_count": activated,
-            "missing_count": missing,
-        },
+        "summary": summary,
+        "diagnostic_outcome": diagnostic_outcome,
         "created_or_updated_at": datetime.now().isoformat(timespec="seconds"),
     }
     write_json(scenario_dir / COMPARISON_NAME, comparison)
@@ -403,6 +662,14 @@ def apply_scenario(
                 netlist_text, result = apply_drive_node_voltage(action, run_dir, netlist_text)
                 result["index"] = index
                 applied_actions.append(result)
+            elif action_type == "change_source_value":
+                netlist_text, result = apply_change_source_value(action, netlist_text)
+                result["index"] = index
+                applied_actions.append(result)
+            elif action_type == "close_switch":
+                netlist_text, result = apply_close_switch(action, run_dir, netlist_text)
+                result["index"] = index
+                applied_actions.append(result)
             else:
                 unsupported_actions.append({
                     "index": index,
@@ -421,13 +688,13 @@ def apply_scenario(
     if applied_actions:
         netlist_path.write_text(netlist_text, encoding="utf-8")
 
-    status = "applied_not_run" if applied_actions and not failed_actions else "not_applied"
-    if failed_actions:
+    status = "applied_not_run" if applied_actions and not failed_actions and not unsupported_actions else "not_applied"
+    if failed_actions or unsupported_actions:
         status = "partial_or_failed" if applied_actions else "failed"
 
     spice_report: dict[str, Any] | None = None
     comparison_report: dict[str, Any] | None = None
-    if run_spice and applied_actions and not failed_actions:
+    if run_spice and applied_actions and not failed_actions and not unsupported_actions:
         spice_report = run_spice_for_scenario(
             run_dir=run_dir,
             executable=ngspice_executable,
@@ -454,11 +721,8 @@ def apply_scenario(
         "spice_exit_code": spice_report.get("exit_code") if spice_report else None,
         "comparison_report_path": str(scenario_dir / COMPARISON_NAME) if comparison_report is not None else None,
         "comparison_summary": comparison_report.get("summary") if comparison_report else None,
-        "message": (
-            "Scenario actions were applied and ngspice was executed on the scenario run."
-            if spice_report is not None
-            else "Scenario actions were applied to the scenario run only. ngspice was not executed."
-        ),
+        "diagnostic_outcome": comparison_report.get("diagnostic_outcome") if comparison_report else None,
+        "message": build_report_message(applied_actions, failed_actions, unsupported_actions, spice_report),
         "created_or_updated_at": datetime.now().isoformat(timespec="seconds"),
     }
 
@@ -467,10 +731,36 @@ def apply_scenario(
     return report
 
 
+def build_report_message(
+    applied_actions: list[dict[str, Any]],
+    failed_actions: list[dict[str, Any]],
+    unsupported_actions: list[dict[str, Any]],
+    spice_report: dict[str, Any] | None,
+) -> str:
+    """Costruisce un messaggio sintetico coerente con l'esito dello scenario."""
+    if spice_report is not None:
+        return "Scenario actions were applied and ngspice was executed on the scenario run."
+    if failed_actions or unsupported_actions:
+        return "Scenario execution stopped because at least one action failed or is not supported."
+    if applied_actions:
+        return "Scenario actions were applied to the scenario run only. ngspice was not executed."
+    return "No scenario action was applied."
+
+
 def update_status_file(scenario_dir: Path, report: dict[str, Any]) -> None:
     """Aggiorna lo status dello scenario con lo stato dello step 12."""
     status_path = scenario_dir / STATUS_NAME
     status = read_json(status_path) if status_path.exists() else {}
+    diagnostic_outcome = report.get("diagnostic_outcome")
+    if not isinstance(diagnostic_outcome, dict):
+        diagnostic_outcome = {}
+    next_step = diagnostic_outcome.get("next_step")
+    if not next_step:
+        next_step = (
+            "Compare base vs scenario."
+            if report["spice_executed"]
+            else "Run ngspice on the scenario netlist and compare base vs scenario."
+        )
     status.update(
         {
             "status": report["status"],
@@ -482,13 +772,10 @@ def update_status_file(scenario_dir: Path, report: dict[str, Any]) -> None:
             "spice_report_path": report.get("spice_report_path"),
             "comparison_report_path": report.get("comparison_report_path"),
             "comparison_summary": report.get("comparison_summary"),
+            "diagnostic_outcome": report.get("diagnostic_outcome"),
             "controlled_scenario_report": str(scenario_dir / REPORT_NAME),
             "created_or_updated_at": report["created_or_updated_at"],
-            "next_step": (
-                "Compare base vs scenario."
-                if report["spice_executed"]
-                else "Run ngspice on the scenario netlist and compare base vs scenario."
-            ),
+            "next_step": next_step,
         }
     )
     write_json(status_path, status)

@@ -187,6 +187,24 @@ Output:
 10_diagnostic_context.json
 ```
 
+Se esistono scenari gia creati in:
+
+```text
+outputs/pipeline2.0/<batch>/<circuit>/scenarios/
+```
+
+lo step 10 li indicizza in `executed_scenarios`, includendo path e riepilogo di:
+
+```text
+scenario.json
+scenario_status.json
+12_controlled_scenarios.json
+scenario_comparison.json
+```
+
+In questo modo la chat puo rispondere anche a domande sugli scenari gia
+eseguiti, per esempio quale scenario ha l'outcome piu forte.
+
 ### 11 - Agent Readonly
 
 Prima base dell'agente diagnostico.
@@ -238,10 +256,31 @@ base_snapshot/
 run/
 ```
 
+Azioni scenario supportate per ora:
+
+```text
+drive_node_voltage
+change_source_value
+close_switch
+```
+
+`drive_node_voltage` aggiunge o aggiorna una sorgente di test su un nodo della
+run scenario, per esempio `VSCENARIO_N002 N002 0 DC 5`.
+
+`change_source_value` modifica il valore di una sorgente SPICE gia presente
+nella netlist copiata dello scenario, per esempio `VVCC N001 0 DC 10`.
+
+`close_switch` chiude uno switch gia riconosciuto in `06_component_rules.json`
+inserendo nella netlist scenario una piccola resistenza tra i suoi due nodi, per
+esempio `RSCENARIO_switch25_1 N001 0 1m`.
+
+I valori devono essere concreti: uno scenario con `value: "unknown"` viene
+fermato e marcato come non eseguibile.
+
 `base_snapshot/` contiene una copia degli output originali. `run/` contiene la
 copia modificabile dello scenario.
 
-Per ora e supportata una sola primitiva generale:
+Esempio di primitiva `drive_node_voltage`:
 
 ```json
 {
@@ -335,6 +374,13 @@ Per aprire il sito su un circuito gia generato, per esempio `a01`:
 python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --circuit a01
 ```
 
+Se vuoi eseguire anche gli scenari direttamente dalla chat, conviene passare
+anche il path di ngspice:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --circuit a01 --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+```
+
 Lo script avvia un server locale temporaneo e apre il browser su:
 
 ```text
@@ -408,6 +454,23 @@ La risposta viene mostrata nel sito e salvata anche in:
 
 ```text
 outputs/pipeline2.0/batchA/a01/11_agent_response_chat.md
+```
+
+Quando scrivi:
+
+```text
+esegui scenario 1
+```
+
+il sito ora:
+
+```text
+crea la cartella scenario
+copia base_snapshot/ e run/
+applica lo scenario alla netlist in run/
+esegue ngspice sulla run scenario
+crea scenario_comparison.json
+ricarica la pagina su ?run=scenario_1
 ```
 
 Flusso corrente:
@@ -907,8 +970,9 @@ Prima versione attuale:
 - `10_build_diagnostic_context.py` crea il manifest;
 - `11_agent_readonly.py` crea preview, prompt e risposta agente;
 - OpenAI e collegato alla web chat tramite modello default `gpt-5.4`;
-- `12_controlled_scenarios.py` applica il primo tipo di scenario generale,
-  `drive_node_voltage`, puo eseguire ngspice e crea un confronto base/scenario.
+- `12_controlled_scenarios.py` applica scenari generali semplici
+  (`drive_node_voltage`, `change_source_value`, `close_switch`), puo eseguire
+  ngspice e crea un confronto base/scenario.
 
 Regole sugli scenari:
 
@@ -939,8 +1003,8 @@ I prossimi step saranno:
 - `10_build_diagnostic_context.py`: implementato come manifest leggero;
 - `11_agent_readonly.py`: implementato fino a preview, prompt e chiamata
   OpenAI opzionale con `--run-agent`;
-- `12_controlled_scenarios.py`: estendere le primitive oltre
-  `drive_node_voltage`;
+- `12_controlled_scenarios.py`: estendere in futuro le primitive oltre
+  `drive_node_voltage`, `change_source_value` e `close_switch`;
 - aggiungere la risposta agente dopo lo scenario, basata su
   `scenario_comparison.json`;
 - in seguito, aggiungere il viewer SPICE animato.
