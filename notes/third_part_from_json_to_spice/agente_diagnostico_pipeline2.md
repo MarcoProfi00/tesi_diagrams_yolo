@@ -350,7 +350,8 @@ Esempi di condizioni in cui l'agente puo richiedere l'immagine:
 - terminali importanti scollegati;
 - nodi singleton su sorgenti, carichi o switch;
 - assenza di nodo di riferimento;
-- SPICE fallito per matrice singolare o nodi flottanti;
+- SPICE fallito in modo non utile per matrice singolare o nodi flottanti;
+- warning numerici forti insieme a graph/node map incoerenti o incompleti;
 - componenti importanti saltati per topologia o valori mancanti;
 - differenza sospetta tra graph, netlist e risultato SPICE;
 - componenti complessi rappresentati in modo parziale, come rele o
@@ -360,6 +361,12 @@ Nel caso `a03`, per esempio, l'agente dovrebbe prima leggere graph, node map,
 netlist e stderr. Solo dopo aver rilevato batteria spezzata, nodi singleton,
 ramo AC non chiuso e rele rappresentato come `Inductor` + `Switch`, puo
 richiedere l'immagine per proporre scenari correttivi piu affidabili.
+
+Nel caso `a02`, invece, ngspice produce warning `singular matrix` su `N001`, ma
+il graph e la node map sono coerenti e lo switch aperto e gia riconosciuto. In
+quel caso l'agente non deve chiedere subito l'immagine: deve prima proporre
+scenari elettrici controllati, per esempio `close_switch` su `switch25.1` o
+pilotaggio dei nodi del connettore.
 
 Questa distinzione crea due modalita:
 
@@ -699,11 +706,16 @@ copia modificabile usata per lo scenario.
 
 La base run originale non viene modificata.
 
-Per ora la primitiva supportata e:
+Primitive attualmente supportate da `12_controlled_scenarios.py`:
 
 ```text
 drive_node_voltage
+change_source_value
+close_switch
 ```
+
+`drive_node_voltage` aggiunge una sorgente di test su un nodo gia presente
+nella node map della run scenario.
 
 Esempio:
 
@@ -720,6 +732,38 @@ Questa azione viene tradotta nella netlist scenario in:
 ```spice
 VSCENARIO_N002 N002 0 DC 5
 ```
+
+`change_source_value` modifica il valore di una sorgente SPICE gia presente
+nella netlist copiata dello scenario.
+
+Esempio:
+
+```json
+{
+  "type": "change_source_value",
+  "target": "VVCC",
+  "value": "10V"
+}
+```
+
+`close_switch` chiude uno switch gia riconosciuto dalla pipeline inserendo una
+piccola resistenza tra i due nodi dello switch nella netlist scenario. Non
+modifica il Graph JSON originale e, nella versione attuale, non rigenera la
+node map: e una modifica controllata della netlist copiata in `run/`.
+
+Esempio:
+
+```json
+{
+  "type": "close_switch",
+  "target": "switch25.1"
+}
+```
+
+Il confronto automatico supporta grandezze SPICE numeriche come `v(N001)` e
+`i(vbattery2_1#branch)`. Se nel campo `compare` compare `stderr`, lo step `12`
+lo interpreta come conteggio dei warning ngspice, utile per capire se uno
+scenario riduce problemi numerici come `singular matrix`.
 
 Lo step `12_controlled_scenarios.py` puo essere eseguito anche da terminale con
 `--run-spice`. In quel caso:
@@ -891,8 +935,6 @@ Scenario su stato o topologia elettrica:
 
 ```text
 esempi:
-- chiudere uno switch;
-- aprire uno switch;
 - connettere due nodi;
 - scollegare un terminale;
 - spostare un terminale su un altro nodo.
@@ -910,6 +952,14 @@ graph base
 -> 07_spice_emit
 -> 08_spice_run
 ```
+
+Nota sullo stato degli switch: nella versione attuale `close_switch` e gia
+implementato come modifica netlist semplice nella cartella scenario. Non
+rigenera la node map e non cambia il Graph JSON originale: inserisce una
+resistenza piccola tra i due nodi dello switch gia presenti in
+`06_component_rules.json`. In futuro, se serviranno scenari piu strutturali
+come `open_switch` o cambi di topologia piu profondi, si potra usare il flusso
+con scenario layer e rigenerazione da `03_node_map`.
 
 Scenario di correzione del Graph JSON:
 
@@ -1146,6 +1196,58 @@ Il ciclo deve fermarsi quando:
 - manca un dato essenziale che richiede input dell'utente;
 - una modifica proposta non e validabile automaticamente.
 
+Se gli scenari iniziali sono stati tutti eseguiti e nessuno risulta
+`resolved_candidate`, l'agente non deve fermarsi automaticamente. Deve usare i
+risultati gia ottenuti per decidere il prossimo scenario piu informativo.
+
+Il prossimo scenario puo essere combinato, ma non deve essere una somma cieca di
+tutto. L'agente deve combinare solo le azioni che hanno prodotto evidenze
+complementari.
+
+Importante: `not_resolved` non significa automaticamente "scenario inutile".
+Significa solo che quello scenario non e sufficiente da solo. Prima di
+scartarlo, l'agente deve capire se e:
+
+- `not_resolved` e irrilevante: non cambia grandezze utili e non prepara
+  nessuna condizione elettrica;
+- `not_resolved` ma abilitante: non risolve da solo, pero chiude uno switch,
+  crea un riferimento, completa un percorso di corrente o prepara una
+  condizione necessaria per un altro scenario.
+
+Gli scenari `not_resolved` ma abilitanti possono entrare in uno scenario
+combinato. Gli scenari `not_resolved` irrilevanti vanno invece lasciati fuori.
+
+Esempio su `a02`:
+
+```text
+scenario_1 close_switch:
+  non risolve da solo, ma puo essere abilitante per creare un percorso verso massa.
+
+scenario_2 drive_node_voltage N004:
+  attiva N004 e N001, ma non crea ancora una soluzione completa.
+
+scenario_3 drive_node_voltage N003:
+  attiva solo il ramo del condensatore, poco utile in .op per il problema principale.
+
+prossimo scenario ragionevole:
+  close_switch + drive_node_voltage N004
+
+scenario da evitare come primo passo:
+  close_switch + drive_node_voltage N004 + drive_node_voltage N003
+  perche combina anche un ramo che non ha mostrato evidenza centrale rispetto al sintomo.
+```
+
+Quindi l'utente puo chiedere in chat:
+
+```text
+Gli scenari non hanno risolto. Quale scenario provo adesso?
+Possiamo combinarne alcuni?
+```
+
+L'agente deve rispondere proponendo un nuovo scenario tecnico self-contained,
+usando solo primitive supportate e spiegando perche include o esclude certe
+azioni.
+
 In questo modo l'agente non e solo uno spiegatore del primo output SPICE, ma un
 assistente diagnostico che esplora ipotesi controllate e confronta risultati.
 
@@ -1290,7 +1392,7 @@ L'agente puo essere implementato in modo progressivo.
 
 ### Versione 1: chat CLI
 
-Prima versione semplice da terminale:
+Possibile versione futura o alternativa da terminale:
 
 ```powershell
 python scripts\pipeline_2.0\agent\diagnostic_agent.py --batch batchA --circuit a10
@@ -1302,7 +1404,10 @@ Oppure con domanda diretta:
 python scripts\pipeline_2.0\agent\diagnostic_agent.py --batch batchA --circuit a10 --question "Perche il LED non si accende?"
 ```
 
-Questa versione:
+Questa versione non e quella scelta come percorso principale attuale. Potrebbe
+essere utile piu avanti per test rapidi senza aprire il sito.
+
+Farebbe:
 
 - carica gli output gia prodotti;
 - costruisce il contesto diagnostico;
@@ -1312,10 +1417,11 @@ Questa versione:
 
 ### Versione 2: sito web diagnostico
 
-La versione piu completa puo essere una piccola applicazione web.
+La versione scelta come percorso principale attuale e una piccola applicazione
+web locale.
 
-Nella prima versione web non servono bottoni per gli scenari. Il sito puo
-funzionare come una chat:
+Nella prima versione web non servono bottoni per gli scenari. Il sito funziona
+come una chat:
 
 ```text
 1. selezione batch/circuito;
@@ -1511,7 +1617,8 @@ La prima implementazione puo essere uno script Python semplice che:
 
 ## Possibile struttura degli output
 
-Una cartella circuito potrebbe contenere:
+Nella versione attuale una cartella circuito contiene soprattutto output
+tecnici della Pipeline 2.0 e file agent/chat generati su richiesta:
 
 ```text
 outputs/pipeline2.0/batchA/a10/
@@ -1526,10 +1633,23 @@ outputs/pipeline2.0/batchA/a10/
 |-- 08_ngspice_stdout.txt
 |-- 08_ngspice_stderr.txt
 |-- 10_diagnostic_context.json
-|-- 11_agent_response.md
-|-- proposed_scenarios.json
-`-- chat_history.json
+|-- 11_agent_input_preview_chat.md
+|-- 11_agent_prompt_chat.md
+|-- 11_agent_response_chat.md
+`-- scenarios/
+    `-- scenario_1/
+        |-- scenario.json
+        |-- scenario_status.json
+        |-- scenario_copy_manifest.json
+        |-- 12_controlled_scenarios.json
+        |-- scenario_comparison.json
+        |-- base_snapshot/
+        `-- run/
 ```
+
+`proposed_scenarios.json` e `chat_history.json` restano possibili output futuri.
+Per ora gli scenari proposti vivono nella risposta chat dell'agente, mentre lo
+storico conversazione e mantenuto dal sito per batch/circuito.
 
 Per circuiti con IC o componenti complessi possono comparire anche:
 
@@ -1659,19 +1779,21 @@ Questa valutazione si collega agli esperimenti GPT gia presenti nel progetto.
 
 ### Fase 3: chat diagnostica read-only
 
-- scegliere batch e circuito;
-- scrivere un problema in chat;
-- leggere file gia generati;
-- chiamare `10` e `11`;
-- mostrare la risposta dell'agente;
-- salvare `agent_response.md`;
-- salvare `chat_history.json`;
-- proporre scenari, ma senza eseguirli.
+Stato attuale: implementata nella web chat locale.
+
+- `09_web_chat.py` apre il sito locale sul circuito scelto;
+- l'utente scrive un problema in chat;
+- `09` chiama `10_build_diagnostic_context.py`;
+- `09` chiama `11_agent_readonly.py`;
+- la risposta viene mostrata nel sito;
+- la risposta viene salvata come `11_agent_response_chat.md`;
+- lo storico chat e mantenuto nel browser per batch/circuito;
+- l'agente propone scenari, ma lo step `11` resta read-only.
 
 ### Fase 4: scenari controllati
 
 - definire poche azioni scenario generali;
-- far produrre all'agente `proposed_scenarios.json`;
+- far produrre all'agente scenari tecnici nella risposta chat;
 - richiedere scelta esplicita dell'utente in chat prima di eseguire uno scenario;
 - interpretare frasi semplici come "esegui scenario 1" o "prova il secondo";
 - validare gli scenari nella pipeline;
@@ -1689,14 +1811,7 @@ scelta scenario -> copia base/run -> modifica netlist scenario -> ngspice scenar
 -> scenario_comparison.json.
 ```
 
-Prossimo passo:
-
-```text
-usare scenario_comparison.json come nuovo input dell'agente,
-cosi la chat puo spiegare se lo scenario conferma o smentisce l'ipotesi.
-```
-
-Aggiornamento implementativo:
+Implementato anche il rientro dei risultati scenario nell'agente:
 
 ```text
 10_diagnostic_context.json ora include executed_scenarios.
@@ -1704,6 +1819,19 @@ Aggiornamento implementativo:
 12_controlled_scenarios.json e scenario_comparison.json per ogni scenario
 gia presente nella cartella scenarios/.
 ```
+
+`scenario_comparison.json` include anche `diagnostic_outcome`, cioe una prima
+classificazione automatica dell'esito:
+
+```text
+resolved_candidate
+partially_resolved
+not_resolved
+unknown
+```
+
+Se nel campo `compare` dello scenario compare `stderr`, lo step `12` confronta
+il numero di warning ngspice tra base run e scenario run.
 
 Questo permette alla chat di rispondere anche a domande successive, per esempio:
 
@@ -1737,12 +1865,26 @@ e che `scenario_1` e il candidato risolutivo principale, mentre `scenario_2` e
 
 ### Fase 5: chat iterativa e web completa
 
-- mantenere storico conversazione;
-- permettere piu scenari nella stessa chat;
-- far spiegare all'agente il risultato di ogni scenario;
-- proporre scenario successivo se il problema non e risolto;
-- aggiungere pannelli per immagine, report, netlist, log ngspice e chat;
-- aggiungere eventuali bottoni solo come scorciatoia, non come requisito.
+Stato attuale: avviata, ma non completa.
+
+Gia presente:
+
+- storico chat per batch/circuito nel browser;
+- sidebar con base run e scenari creati;
+- esecuzione scenario dalla frase "esegui scenario 1/2/3";
+- confronto base/scenario;
+- domande successive sugli scenari gia eseguiti.
+
+Prossimi passi pratici:
+
+- testare `a02` con `close_switch`, `drive_node_voltage` su `N004` e
+  `drive_node_voltage` su `N003`;
+- verificare se l'agente capisce quale scenario risolve, migliora o non basta;
+- ripetere il ciclo sugli altri circuiti del Batch A;
+- solo dopo, valutare automazione multi-scenario;
+- aggiungere pannelli migliori per immagine, report, netlist, log ngspice e
+  risultati scenario;
+- aggiungere il viewer/animazione della corrente come sviluppo successivo.
 
 ## Limiti da dichiarare
 

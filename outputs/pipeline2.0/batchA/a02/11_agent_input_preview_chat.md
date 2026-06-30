@@ -5,7 +5,7 @@ The agent remains read-only: it can inspect base outputs and existing scenario a
 
 ## User problem
 
-Il circuito non produce l'uscita attesa, quale potrebbe essere il problema?
+Anche lo scenario combinato non ha risolto il problema e la batteria resta a 0 A. Qual è il prossimo scenario più promettente per arrivare davvero alla soluzione? Se pensi che con questa netlist non sia più possibile arrivarci, dimmelo chiaramente e spiegami cosa manca.
 
 ## Circuit
 
@@ -59,19 +59,937 @@ Il circuito non produce l'uscita attesa, quale potrebbe essere il problema?
 
 ```json
 {
-  "available": false,
-  "best_scenario_id": null,
-  "best_outcome_status": null,
-  "best_stop_automation": null,
+  "available": true,
+  "best_scenario_id": "scenario_2",
+  "best_outcome_status": "partially_resolved",
+  "best_stop_automation": false,
   "interpretation_rule": "If a user asks which scenario resolves the problem, prefer the scenario with outcome_status='resolved_candidate' and stop_automation=true. Partially resolved scenarios are supporting diagnostics, not the main solution.",
-  "scenarios": []
+  "scenarios": [
+    {
+      "scenario_id": "scenario_1",
+      "title": "Chiudere il ramo SENSE verso massa",
+      "status": "spice_success",
+      "spice_status": "success",
+      "outcome_status": "not_resolved",
+      "outcome_label": "Not resolved",
+      "outcome_reason": "The requested quantities did not change compared with the base run.",
+      "stop_automation": false,
+      "comparison_summary": {
+        "requested_count": 4,
+        "changed_count": 0,
+        "activated_count": 0,
+        "missing_count": 0
+      },
+      "quantity_summary": {
+        "changed": [],
+        "unchanged": [
+          "v(N001)",
+          "v(N002)",
+          "v(N004)",
+          "i(vbattery2_1#branch)"
+        ],
+        "missing": []
+      },
+      "score": 0
+    },
+    {
+      "scenario_id": "scenario_2",
+      "title": "Pilotare l'ingresso del ramo resistivo dal lato connettore",
+      "status": "spice_success",
+      "spice_status": "success",
+      "outcome_status": "partially_resolved",
+      "outcome_label": "Partially resolved",
+      "outcome_reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+      "stop_automation": false,
+      "comparison_summary": {
+        "requested_count": 3,
+        "changed_count": 2,
+        "activated_count": 2,
+        "missing_count": 0
+      },
+      "quantity_summary": {
+        "changed": [
+          "v(N004)",
+          "v(N001)"
+        ],
+        "unchanged": [
+          "i(vbattery2_1#branch)"
+        ],
+        "missing": []
+      },
+      "score": 22
+    },
+    {
+      "scenario_id": "scenario_3",
+      "title": "Pilotare il nodo del condensatore per verificare il ruolo del pin 3",
+      "status": "spice_success",
+      "spice_status": "success",
+      "outcome_status": "partially_resolved",
+      "outcome_label": "Partially resolved",
+      "outcome_reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+      "stop_automation": false,
+      "comparison_summary": {
+        "requested_count": 2,
+        "changed_count": 1,
+        "activated_count": 1,
+        "missing_count": 0
+      },
+      "quantity_summary": {
+        "changed": [
+          "v(N003)"
+        ],
+        "unchanged": [
+          "i(vbattery2_1#branch)"
+        ],
+        "missing": []
+      },
+      "score": 21
+    },
+    {
+      "scenario_id": "scenario_4",
+      "title": "Pilotare il ramo resistivo e chiudere insieme SENSE verso massa",
+      "status": "spice_success",
+      "spice_status": "success",
+      "outcome_status": "partially_resolved",
+      "outcome_label": "Partially resolved",
+      "outcome_reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+      "stop_automation": false,
+      "comparison_summary": {
+        "requested_count": 4,
+        "changed_count": 2,
+        "activated_count": 2,
+        "missing_count": 0
+      },
+      "quantity_summary": {
+        "changed": [
+          "v(N004)",
+          "v(N001)"
+        ],
+        "unchanged": [
+          "v(N002)",
+          "i(vbattery2_1#branch)"
+        ],
+        "missing": []
+      },
+      "score": 22
+    }
+  ]
 }
 ```
 
 
 ## Executed scenarios
 
-No executed scenarios are available in this manifest.
+### scenario_1
+
+- Title: `Chiudere il ramo SENSE verso massa`
+- Status: `spice_success`
+- SPICE status: `success`
+- Outcome: `not_resolved`
+- Stop automation: `False`
+- Comparison: `0/4` changed
+
+#### scenario_definition
+
+- Role: Scenario selected by the user and saved before execution.
+- Path: `outputs\pipeline2.0\batchA\a02\scenarios\scenario_1\scenario.json`
+
+```json
+{
+  "scenario_id": "scenario_1",
+  "title": "Chiudere il ramo SENSE verso massa",
+  "hypothesis": "Lo switch25.1 aperto impedisce un riferimento o un percorso di corrente utile, causando il mancato funzionamento del circuito.",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    }
+  ],
+  "rerun_from": "06",
+  "analysis": "op",
+  "compare": [
+    "v(N001)",
+    "v(N002)",
+    "v(N004)",
+    "i(vbattery2_1#branch)"
+  ]
+}
+```
+
+#### scenario_status
+
+- Role: Current scenario status, SPICE status and diagnostic outcome.
+- Path: `outputs\pipeline2.0\batchA\a02\scenarios\scenario_1\scenario_status.json`
+
+```json
+{
+  "status": "spice_success",
+  "stage": "scenario_spice_executed",
+  "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
+  "scenario_id": "scenario_1",
+  "requested_index": 1,
+  "base_output_dir": "outputs\\pipeline2.0\\batchA\\a02",
+  "source_agent_response": "outputs\\pipeline2.0\\batchA\\a02\\11_agent_response_chat.md",
+  "scenario_file": "outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_1\\scenario.json",
+  "created_or_updated_at": "2026-06-30T16:54:20",
+  "next_step": "Continue with another scenario or ask the agent for a refined hypothesis.",
+  "spice_executed": true,
+  "spice_status": "success",
+  "spice_exit_code": 0,
+  "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_1\\run\\08_spice_run.json",
+  "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_1\\scenario_comparison.json",
+  "comparison_summary": {
+    "requested_count": 4,
+    "changed_count": 0,
+    "activated_count": 0,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "not_resolved",
+    "label": "Not resolved",
+    "reason": "The requested quantities did not change compared with the base run.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "controlled_scenario_report": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_1\\12_controlled_scenarios.json"
+}
+```
+
+#### controlled_scenario_report
+
+- Role: Report produced by the controlled scenario runner.
+- Path: `outputs\pipeline2.0\batchA\a02\scenarios\scenario_1\12_controlled_scenarios.json`
+
+```json
+{
+  "source_format": "pipeline2.0_controlled_scenario_report",
+  "status": "spice_success",
+  "scenario_id": "scenario_1",
+  "scenario_title": "Chiudere il ramo SENSE verso massa",
+  "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_1",
+  "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_1\\run",
+  "netlist": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_1\\run\\07_netlist.cir",
+  "applied_actions": [
+    {
+      "status": "applied",
+      "type": "close_switch",
+      "target": "switch25.1",
+      "nodes": [
+        "N001",
+        "0"
+      ],
+      "resistance": "1m",
+      "inserted_line": "RSCENARIO_switch25_1 N001 0 1m",
+      "operation": "inserted",
+      "spice_executed": false,
+      "index": 1
+    }
+  ],
+  "unsupported_actions": [],
+  "failed_actions": [],
+  "spice_executed": true,
+  "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_1\\run\\08_spice_run.json",
+  "spice_status": "success",
+  "spice_exit_code": 0,
+  "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_1\\scenario_comparison.json",
+  "comparison_summary": {
+    "requested_count": 4,
+    "changed_count": 0,
+    "activated_count": 0,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "not_resolved",
+    "label": "Not resolved",
+    "reason": "The requested quantities did not change compared with the base run.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
+  "created_or_updated_at": "2026-06-30T16:54:20"
+}
+```
+
+#### scenario_comparison
+
+- Role: Base-vs-scenario comparison used to evaluate the scenario.
+- Path: `outputs\pipeline2.0\batchA\a02\scenarios\scenario_1\scenario_comparison.json`
+
+```json
+{
+  "source_format": "pipeline2.0_scenario_comparison",
+  "scenario_id": "scenario_1",
+  "scenario_title": "Chiudere il ramo SENSE verso massa",
+  "base_output_dir": "outputs\\pipeline2.0\\batchA\\a02",
+  "scenario_run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_1\\run",
+  "base_stdout": "outputs\\pipeline2.0\\batchA\\a02\\08_ngspice_stdout.txt",
+  "scenario_stdout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_1\\run\\08_ngspice_stdout.txt",
+  "base_stderr": "outputs\\pipeline2.0\\batchA\\a02\\08_ngspice_stderr.txt",
+  "scenario_stderr": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_1\\run\\08_ngspice_stderr.txt",
+  "quantities": [
+    {
+      "quantity": "v(N001)",
+      "base_value": 0.0,
+      "scenario_value": 0.0,
+      "delta": 0.0,
+      "change": "unchanged",
+      "metric": "v(n001)",
+      "base_details": {},
+      "scenario_details": {}
+    },
+    {
+      "quantity": "v(N002)",
+      "base_value": 5.0,
+      "scenario_value": 5.0,
+      "delta": 0.0,
+      "change": "unchanged",
+      "metric": "v(n002)",
+      "base_details": {},
+      "scenario_details": {}
+    },
+    {
+      "quantity": "v(N004)",
+      "base_value": 0.0,
+      "scenario_value": 0.0,
+      "delta": 0.0,
+      "change": "unchanged",
+      "metric": "v(n004)",
+      "base_details": {},
+      "scenario_details": {}
+    },
+    {
+      "quantity": "i(vbattery2_1#branch)",
+      "base_value": 0.0,
+      "scenario_value": 0.0,
+      "delta": 0.0,
+      "change": "unchanged",
+      "metric": "i(vbattery2_1#branch)",
+      "base_details": {},
+      "scenario_details": {}
+    }
+  ],
+  "summary": {
+    "requested_count": 4,
+    "changed_count": 0,
+    "activated_count": 0,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "not_resolved",
+    "label": "Not resolved",
+    "reason": "The requested quantities did not change compared with the base run.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "created_or_updated_at": "2026-06-30T16:54:20"
+}
+```
+
+### scenario_2
+
+- Title: `Pilotare l'ingresso del ramo resistivo dal lato connettore`
+- Status: `spice_success`
+- SPICE status: `success`
+- Outcome: `partially_resolved`
+- Stop automation: `False`
+- Comparison: `2/3` changed
+
+#### scenario_definition
+
+- Role: Scenario selected by the user and saved before execution.
+- Path: `outputs\pipeline2.0\batchA\a02\scenarios\scenario_2\scenario.json`
+
+```json
+{
+  "scenario_id": "scenario_2",
+  "title": "Pilotare l'ingresso del ramo resistivo dal lato connettore",
+  "hypothesis": "Il ramo con resistor22.1 è inattivo perché connector5.1_pin2/N004 non è pilotato da alcuna sorgente esterna nel circuito estratto.",
+  "actions": [
+    {
+      "type": "drive_node_voltage",
+      "target": "N004",
+      "value": "5V"
+    }
+  ],
+  "rerun_from": "04",
+  "analysis": "op",
+  "compare": [
+    "v(N004)",
+    "v(N001)",
+    "i(vbattery2_1#branch)"
+  ]
+}
+```
+
+#### scenario_status
+
+- Role: Current scenario status, SPICE status and diagnostic outcome.
+- Path: `outputs\pipeline2.0\batchA\a02\scenarios\scenario_2\scenario_status.json`
+
+```json
+{
+  "status": "spice_success",
+  "stage": "scenario_spice_executed",
+  "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
+  "scenario_id": "scenario_2",
+  "requested_index": 2,
+  "base_output_dir": "outputs\\pipeline2.0\\batchA\\a02",
+  "source_agent_response": "outputs\\pipeline2.0\\batchA\\a02\\11_agent_response_chat.md",
+  "scenario_file": "outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_2\\scenario.json",
+  "created_or_updated_at": "2026-06-30T16:54:27",
+  "next_step": "Continue with another scenario or ask the agent for a refined hypothesis.",
+  "spice_executed": true,
+  "spice_status": "success",
+  "spice_exit_code": 0,
+  "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_2\\run\\08_spice_run.json",
+  "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_2\\scenario_comparison.json",
+  "comparison_summary": {
+    "requested_count": 3,
+    "changed_count": 2,
+    "activated_count": 2,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "controlled_scenario_report": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_2\\12_controlled_scenarios.json"
+}
+```
+
+#### controlled_scenario_report
+
+- Role: Report produced by the controlled scenario runner.
+- Path: `outputs\pipeline2.0\batchA\a02\scenarios\scenario_2\12_controlled_scenarios.json`
+
+```json
+{
+  "source_format": "pipeline2.0_controlled_scenario_report",
+  "status": "spice_success",
+  "scenario_id": "scenario_2",
+  "scenario_title": "Pilotare l'ingresso del ramo resistivo dal lato connettore",
+  "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_2",
+  "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_2\\run",
+  "netlist": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_2\\run\\07_netlist.cir",
+  "applied_actions": [
+    {
+      "status": "applied",
+      "type": "drive_node_voltage",
+      "target": "N004",
+      "value": "5V",
+      "normalized_dc_value": "5",
+      "inserted_line": "VSCENARIO_N004 N004 0 DC 5",
+      "operation": "inserted",
+      "spice_executed": false,
+      "index": 1
+    }
+  ],
+  "unsupported_actions": [],
+  "failed_actions": [],
+  "spice_executed": true,
+  "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_2\\run\\08_spice_run.json",
+  "spice_status": "success",
+  "spice_exit_code": 0,
+  "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_2\\scenario_comparison.json",
+  "comparison_summary": {
+    "requested_count": 3,
+    "changed_count": 2,
+    "activated_count": 2,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
+  "created_or_updated_at": "2026-06-30T16:54:27"
+}
+```
+
+#### scenario_comparison
+
+- Role: Base-vs-scenario comparison used to evaluate the scenario.
+- Path: `outputs\pipeline2.0\batchA\a02\scenarios\scenario_2\scenario_comparison.json`
+
+```json
+{
+  "source_format": "pipeline2.0_scenario_comparison",
+  "scenario_id": "scenario_2",
+  "scenario_title": "Pilotare l'ingresso del ramo resistivo dal lato connettore",
+  "base_output_dir": "outputs\\pipeline2.0\\batchA\\a02",
+  "scenario_run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_2\\run",
+  "base_stdout": "outputs\\pipeline2.0\\batchA\\a02\\08_ngspice_stdout.txt",
+  "scenario_stdout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_2\\run\\08_ngspice_stdout.txt",
+  "base_stderr": "outputs\\pipeline2.0\\batchA\\a02\\08_ngspice_stderr.txt",
+  "scenario_stderr": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_2\\run\\08_ngspice_stderr.txt",
+  "quantities": [
+    {
+      "quantity": "v(N004)",
+      "base_value": 0.0,
+      "scenario_value": 5.0,
+      "delta": 5.0,
+      "change": "activated",
+      "metric": "v(n004)",
+      "base_details": {},
+      "scenario_details": {}
+    },
+    {
+      "quantity": "v(N001)",
+      "base_value": 0.0,
+      "scenario_value": 5.0,
+      "delta": 5.0,
+      "change": "activated",
+      "metric": "v(n001)",
+      "base_details": {},
+      "scenario_details": {}
+    },
+    {
+      "quantity": "i(vbattery2_1#branch)",
+      "base_value": 0.0,
+      "scenario_value": 0.0,
+      "delta": 0.0,
+      "change": "unchanged",
+      "metric": "i(vbattery2_1#branch)",
+      "base_details": {},
+      "scenario_details": {}
+    }
+  ],
+  "summary": {
+    "requested_count": 3,
+    "changed_count": 2,
+    "activated_count": 2,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "created_or_updated_at": "2026-06-30T16:54:27"
+}
+```
+
+### scenario_3
+
+- Title: `Pilotare il nodo del condensatore per verificare il ruolo del pin 3`
+- Status: `spice_success`
+- SPICE status: `success`
+- Outcome: `partially_resolved`
+- Stop automation: `False`
+- Comparison: `1/2` changed
+
+#### scenario_definition
+
+- Role: Scenario selected by the user and saved before execution.
+- Path: `outputs\pipeline2.0\batchA\a02\scenarios\scenario_3\scenario.json`
+
+```json
+{
+  "scenario_id": "scenario_3",
+  "title": "Pilotare il nodo del condensatore per verificare il ruolo del pin 3",
+  "hypothesis": "Il nodo N003 potrebbe dipendere da un segnale esterno assente; senza quel pilotaggio il ramo con capacitor4.1 resta inattivo nel punto operativo.",
+  "actions": [
+    {
+      "type": "drive_node_voltage",
+      "target": "N003",
+      "value": "5V"
+    }
+  ],
+  "rerun_from": "04",
+  "analysis": "op",
+  "compare": [
+    "v(N003)",
+    "i(vbattery2_1#branch)"
+  ]
+}
+```
+
+#### scenario_status
+
+- Role: Current scenario status, SPICE status and diagnostic outcome.
+- Path: `outputs\pipeline2.0\batchA\a02\scenarios\scenario_3\scenario_status.json`
+
+```json
+{
+  "status": "spice_success",
+  "stage": "scenario_spice_executed",
+  "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
+  "scenario_id": "scenario_3",
+  "requested_index": 3,
+  "base_output_dir": "outputs\\pipeline2.0\\batchA\\a02",
+  "source_agent_response": "outputs\\pipeline2.0\\batchA\\a02\\11_agent_response_chat.md",
+  "scenario_file": "outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_3\\scenario.json",
+  "created_or_updated_at": "2026-06-30T16:54:34",
+  "next_step": "Continue with another scenario or ask the agent for a refined hypothesis.",
+  "spice_executed": true,
+  "spice_status": "success",
+  "spice_exit_code": 0,
+  "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_3\\run\\08_spice_run.json",
+  "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_3\\scenario_comparison.json",
+  "comparison_summary": {
+    "requested_count": 2,
+    "changed_count": 1,
+    "activated_count": 1,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "controlled_scenario_report": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_3\\12_controlled_scenarios.json"
+}
+```
+
+#### controlled_scenario_report
+
+- Role: Report produced by the controlled scenario runner.
+- Path: `outputs\pipeline2.0\batchA\a02\scenarios\scenario_3\12_controlled_scenarios.json`
+
+```json
+{
+  "source_format": "pipeline2.0_controlled_scenario_report",
+  "status": "spice_success",
+  "scenario_id": "scenario_3",
+  "scenario_title": "Pilotare il nodo del condensatore per verificare il ruolo del pin 3",
+  "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_3",
+  "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_3\\run",
+  "netlist": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_3\\run\\07_netlist.cir",
+  "applied_actions": [
+    {
+      "status": "applied",
+      "type": "drive_node_voltage",
+      "target": "N003",
+      "value": "5V",
+      "normalized_dc_value": "5",
+      "inserted_line": "VSCENARIO_N003 N003 0 DC 5",
+      "operation": "inserted",
+      "spice_executed": false,
+      "index": 1
+    }
+  ],
+  "unsupported_actions": [],
+  "failed_actions": [],
+  "spice_executed": true,
+  "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_3\\run\\08_spice_run.json",
+  "spice_status": "success",
+  "spice_exit_code": 0,
+  "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_3\\scenario_comparison.json",
+  "comparison_summary": {
+    "requested_count": 2,
+    "changed_count": 1,
+    "activated_count": 1,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
+  "created_or_updated_at": "2026-06-30T16:54:34"
+}
+```
+
+#### scenario_comparison
+
+- Role: Base-vs-scenario comparison used to evaluate the scenario.
+- Path: `outputs\pipeline2.0\batchA\a02\scenarios\scenario_3\scenario_comparison.json`
+
+```json
+{
+  "source_format": "pipeline2.0_scenario_comparison",
+  "scenario_id": "scenario_3",
+  "scenario_title": "Pilotare il nodo del condensatore per verificare il ruolo del pin 3",
+  "base_output_dir": "outputs\\pipeline2.0\\batchA\\a02",
+  "scenario_run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_3\\run",
+  "base_stdout": "outputs\\pipeline2.0\\batchA\\a02\\08_ngspice_stdout.txt",
+  "scenario_stdout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_3\\run\\08_ngspice_stdout.txt",
+  "base_stderr": "outputs\\pipeline2.0\\batchA\\a02\\08_ngspice_stderr.txt",
+  "scenario_stderr": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_3\\run\\08_ngspice_stderr.txt",
+  "quantities": [
+    {
+      "quantity": "v(N003)",
+      "base_value": 0.0,
+      "scenario_value": 5.0,
+      "delta": 5.0,
+      "change": "activated",
+      "metric": "v(n003)",
+      "base_details": {},
+      "scenario_details": {}
+    },
+    {
+      "quantity": "i(vbattery2_1#branch)",
+      "base_value": 0.0,
+      "scenario_value": 0.0,
+      "delta": 0.0,
+      "change": "unchanged",
+      "metric": "i(vbattery2_1#branch)",
+      "base_details": {},
+      "scenario_details": {}
+    }
+  ],
+  "summary": {
+    "requested_count": 2,
+    "changed_count": 1,
+    "activated_count": 1,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "created_or_updated_at": "2026-06-30T16:54:34"
+}
+```
+
+### scenario_4
+
+- Title: `Pilotare il ramo resistivo e chiudere insieme SENSE verso massa`
+- Status: `spice_success`
+- SPICE status: `success`
+- Outcome: `partially_resolved`
+- Stop automation: `False`
+- Comparison: `2/4` changed
+
+#### scenario_definition
+
+- Role: Scenario selected by the user and saved before execution.
+- Path: `outputs\pipeline2.0\batchA\a02\scenarios\scenario_4\scenario.json`
+
+```json
+{
+  "scenario_id": "scenario_4",
+  "title": "Pilotare il ramo resistivo e chiudere insieme SENSE verso massa",
+  "hypothesis": "Il pilotaggio di N004 ha gia mostrato effetto su N004 e N001; chiudere contemporaneamente switch25.1 puo aggiungere il riferimento o percorso mancante e far emergere un cambiamento anche nel comportamento della sorgente Vbattery2_1.",
+  "actions": [
+    {
+      "type": "drive_node_voltage",
+      "target": "N004",
+      "value": "5V"
+    },
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    }
+  ],
+  "rerun_from": "06",
+  "analysis": "op",
+  "compare": [
+    "v(N004)",
+    "v(N001)",
+    "v(N002)",
+    "i(vbattery2_1#branch)"
+  ]
+}
+```
+
+#### scenario_status
+
+- Role: Current scenario status, SPICE status and diagnostic outcome.
+- Path: `outputs\pipeline2.0\batchA\a02\scenarios\scenario_4\scenario_status.json`
+
+```json
+{
+  "status": "spice_success",
+  "stage": "scenario_spice_executed",
+  "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
+  "scenario_id": "scenario_4",
+  "requested_index": "latest",
+  "base_output_dir": "outputs\\pipeline2.0\\batchA\\a02",
+  "source_agent_response": "outputs\\pipeline2.0\\batchA\\a02\\11_agent_response_chat.md",
+  "scenario_file": "outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_4\\scenario.json",
+  "created_or_updated_at": "2026-06-30T16:59:54",
+  "next_step": "Continue with another scenario or ask the agent for a refined hypothesis.",
+  "spice_executed": true,
+  "spice_status": "success",
+  "spice_exit_code": 0,
+  "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_4\\run\\08_spice_run.json",
+  "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_4\\scenario_comparison.json",
+  "comparison_summary": {
+    "requested_count": 4,
+    "changed_count": 2,
+    "activated_count": 2,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "controlled_scenario_report": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_4\\12_controlled_scenarios.json"
+}
+```
+
+#### controlled_scenario_report
+
+- Role: Report produced by the controlled scenario runner.
+- Path: `outputs\pipeline2.0\batchA\a02\scenarios\scenario_4\12_controlled_scenarios.json`
+
+```json
+{
+  "source_format": "pipeline2.0_controlled_scenario_report",
+  "status": "spice_success",
+  "scenario_id": "scenario_4",
+  "scenario_title": "Pilotare il ramo resistivo e chiudere insieme SENSE verso massa",
+  "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_4",
+  "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_4\\run",
+  "netlist": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_4\\run\\07_netlist.cir",
+  "applied_actions": [
+    {
+      "status": "applied",
+      "type": "drive_node_voltage",
+      "target": "N004",
+      "value": "5V",
+      "normalized_dc_value": "5",
+      "inserted_line": "VSCENARIO_N004 N004 0 DC 5",
+      "operation": "inserted",
+      "spice_executed": false,
+      "index": 1
+    },
+    {
+      "status": "applied",
+      "type": "close_switch",
+      "target": "switch25.1",
+      "nodes": [
+        "N001",
+        "0"
+      ],
+      "resistance": "1m",
+      "inserted_line": "RSCENARIO_switch25_1 N001 0 1m",
+      "operation": "inserted",
+      "spice_executed": false,
+      "index": 2
+    }
+  ],
+  "unsupported_actions": [],
+  "failed_actions": [],
+  "spice_executed": true,
+  "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_4\\run\\08_spice_run.json",
+  "spice_status": "success",
+  "spice_exit_code": 0,
+  "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_4\\scenario_comparison.json",
+  "comparison_summary": {
+    "requested_count": 4,
+    "changed_count": 2,
+    "activated_count": 2,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
+  "created_or_updated_at": "2026-06-30T16:59:54"
+}
+```
+
+#### scenario_comparison
+
+- Role: Base-vs-scenario comparison used to evaluate the scenario.
+- Path: `outputs\pipeline2.0\batchA\a02\scenarios\scenario_4\scenario_comparison.json`
+
+```json
+{
+  "source_format": "pipeline2.0_scenario_comparison",
+  "scenario_id": "scenario_4",
+  "scenario_title": "Pilotare il ramo resistivo e chiudere insieme SENSE verso massa",
+  "base_output_dir": "outputs\\pipeline2.0\\batchA\\a02",
+  "scenario_run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_4\\run",
+  "base_stdout": "outputs\\pipeline2.0\\batchA\\a02\\08_ngspice_stdout.txt",
+  "scenario_stdout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_4\\run\\08_ngspice_stdout.txt",
+  "base_stderr": "outputs\\pipeline2.0\\batchA\\a02\\08_ngspice_stderr.txt",
+  "scenario_stderr": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a02\\scenarios\\scenario_4\\run\\08_ngspice_stderr.txt",
+  "quantities": [
+    {
+      "quantity": "v(N004)",
+      "base_value": 0.0,
+      "scenario_value": 5.0,
+      "delta": 5.0,
+      "change": "activated",
+      "metric": "v(n004)",
+      "base_details": {},
+      "scenario_details": {}
+    },
+    {
+      "quantity": "v(N001)",
+      "base_value": 0.0,
+      "scenario_value": 4.999999e-07,
+      "delta": 4.999999e-07,
+      "change": "activated",
+      "metric": "v(n001)",
+      "base_details": {},
+      "scenario_details": {}
+    },
+    {
+      "quantity": "v(N002)",
+      "base_value": 5.0,
+      "scenario_value": 5.0,
+      "delta": 0.0,
+      "change": "unchanged",
+      "metric": "v(n002)",
+      "base_details": {},
+      "scenario_details": {}
+    },
+    {
+      "quantity": "i(vbattery2_1#branch)",
+      "base_value": 0.0,
+      "scenario_value": 0.0,
+      "delta": 0.0,
+      "change": "unchanged",
+      "metric": "i(vbattery2_1#branch)",
+      "base_details": {},
+      "scenario_details": {}
+    }
+  ],
+  "summary": {
+    "requested_count": 4,
+    "changed_count": 2,
+    "activated_count": 2,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "created_or_updated_at": "2026-06-30T16:59:54"
+}
+```
 
 
 ## Loaded artifacts

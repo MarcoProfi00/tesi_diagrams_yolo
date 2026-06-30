@@ -404,6 +404,23 @@
       display: grid;
       gap: 8px;
     }
+    .chat-actions {
+      display: grid;
+      grid-template-columns: 132px minmax(0, 1fr);
+      gap: 8px;
+      align-items: center;
+    }
+    .chat-actions select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: white;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+      white-space: nowrap;
+    }
     textarea {
       width: 100%;
       min-height: 86px;
@@ -458,6 +475,9 @@
         border-left: 0;
         border-top: 1px solid var(--line);
       }
+      .chat-actions {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -499,7 +519,12 @@
       </div>
       <form class="chat-form" id="chatForm">
         <textarea id="chatInput" placeholder="Example: Perche il LED non si accende?"></textarea>
-        <button type="submit">Send</button>
+        <div class="chat-actions">
+          <select id="modelSelect">
+            {{MODEL_OPTIONS}}
+          </select>
+          <button type="submit">Send</button>
+        </div>
       </form>
     </section>
   </div>
@@ -507,9 +532,12 @@
     const form = document.getElementById("chatForm");
     const input = document.getElementById("chatInput");
     const messages = document.getElementById("messages");
+    const modelSelect = document.getElementById("modelSelect");
     const submitButton = form.querySelector("button");
     const clearChatButton = document.getElementById("clearChatButton");
     const chatStorageKey = "{{CHAT_STORAGE_KEY}}";
+    const modelStorageKey = "{{MODEL_STORAGE_KEY}}";
+    const defaultChatModel = "{{DEFAULT_CHAT_MODEL}}";
     const welcomeMessage = "Describe the circuit symptom and I will analyze the current pipeline outputs.";
     let chatHistory = [];
 
@@ -630,6 +658,24 @@
       }
     }
 
+    function loadChatModel() {
+      try {
+        const savedModel = localStorage.getItem(modelStorageKey);
+        const hasOption = Array.from(modelSelect.options).some((option) => option.value === savedModel);
+        if (savedModel && hasOption) {
+          modelSelect.value = savedModel;
+        } else {
+          modelSelect.value = defaultChatModel;
+        }
+      } catch (error) {
+        modelSelect.value = defaultChatModel;
+      }
+    }
+
+    function saveChatModel() {
+      localStorage.setItem(modelStorageKey, modelSelect.value);
+    }
+
     function addMessage(kind, text, options = {}) {
       const node = document.createElement("div");
       node.className = "message " + kind;
@@ -688,12 +734,25 @@
 
     function setLoading(isLoading) {
       input.disabled = isLoading;
+      modelSelect.disabled = isLoading;
       submitButton.disabled = isLoading;
       submitButton.textContent = isLoading ? "Running..." : "Send";
     }
 
     function isScenarioRequest(text) {
-      return /\bscenario\s*\d+\b/i.test(text) || /\b(primo|secondo|terzo)\b/i.test(text);
+      const normalized = text.toLowerCase().replace(/_/g, " ");
+      const executionPattern = /\b(?:esegui|eseguire|lancia|avvia|run|execute|testa|applica|facciamo)\b(?:\s+(?:pure|per favore|lo|la|il|uno|un|questo|questa|please))*\s+scenario\s*\d+\b/i;
+      if (executionPattern.test(normalized)) {
+        return true;
+      }
+
+      const latestScenarioPattern = /\b(?:esegui|eseguire|lancia|avvia|run|execute|testa|applica|facciamo)\b(?:\s+(?:pure|per favore|lo|la|il|uno|un|questo|questa|please))*\s+(?:scenario\s+appena\s+proposto|scenario\s+proposto|ultimo\s+scenario|scenario\s+piu\s+recente|questo\s+scenario)\b/i;
+      if (latestScenarioPattern.test(normalized)) {
+        return true;
+      }
+
+      const ordinalPattern = /\b(?:esegui|eseguire|lancia|avvia|run|execute|testa|applica|facciamo)\b(?:\s+(?:pure|per favore|lo|la|il|uno|un|questo|questa|please))*\s+\b(?:primo|prima|secondo|seconda|terzo|terza)\b/i;
+      return ordinalPattern.test(normalized);
     }
 
     form.addEventListener("submit", async (event) => {
@@ -710,7 +769,7 @@
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({message: text})
+          body: JSON.stringify({message: text, model: modelSelect.value})
         });
         const data = await response.json();
         typingNode.remove();
@@ -738,6 +797,8 @@
       input.focus();
     });
 
+    modelSelect.addEventListener("change", saveChatModel);
+
     input.addEventListener("keydown", (event) => {
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();
@@ -745,6 +806,7 @@
       }
     });
 
+    loadChatModel();
     restoreMessages();
   </script>
 </body>

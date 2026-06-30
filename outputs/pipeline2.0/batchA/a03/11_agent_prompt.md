@@ -9,7 +9,8 @@
 - Do not invent component values, electrical connections, SPICE models, node voltages, currents or simulation results.
 - Do not assume that a component exists if it is not present in the Graph JSON or in the generated netlist.
 - Do not modify the netlist, do not execute SPICE and do not apply scenarios.
-- Diagnostic scenarios may be suggested only as future SPICE-verifiable hypotheses, not as already verified facts.
+- New diagnostic scenarios may be suggested only as future SPICE-verifiable hypotheses, not as already verified facts.
+- Already executed scenarios must be interpreted from the executed scenario evidence, not re-imagined.
 - Use general electronics and SPICE knowledge only to interpret the provided evidence, not to create missing evidence.
 - If the evidence is insufficient, say exactly what is missing.
 - Do not describe a branch as floating unless the evidence shows a floating or singleton node with no DC reference path.
@@ -21,25 +22,62 @@
 - When useful, cite component IDs, node IDs, file names or artifact sections.
 - Use the original artifact paths only as traceability references.
 - If an artifact is missing or truncated, mention the limitation before drawing conclusions from it.
+- If executed scenario evidence is available, use it to answer questions about which scenario explains or resolves the problem.
+- When discussing executed scenarios, distinguish the controlled action from the diagnostic outcome.
+- For questions about which scenario resolves the problem, do not merely list scenarios: identify the strongest scenario and justify it from scenario_comparison.json.
+- Treat `resolved_candidate` with `stop_automation=true` as the strongest executed-scenario outcome.
+- Treat `partially_resolved` as supporting diagnostic evidence, not as the main resolving scenario when a resolved_candidate exists.
+- Treat `not_resolved` as not sufficient by itself, not automatically useless.
+- A `not_resolved` scenario may still be an enabling condition for a combined scenario when it closes a switch, creates a reference path, completes a current path, or supplies a precondition missing in another scenario.
+- In the initial answer for a circuit, propose only first-pass scenarios and do not propose combined scenarios.
+- Combined scenarios are allowed only after scenario evidence exists and the user explicitly asks what to try next.
+- If the user asks what to try next after executed scenarios, propose the next most informative scenario based on scenario_comparison.json.
+- If one executed scenario already changed the nodes, branches or currents most closely tied to the user symptom, prefer extending that proven direction before proposing a weaker exploratory source-value change.
+- Prefer a minimal combined scenario built around the strongest symptom-linked evidence before proposing a generic source-value variation, unless the source itself is the strongest evidence-backed hypothesis.
+- If no executed scenario resolved the problem, consider combined scenarios when previous outcomes provide complementary evidence, including `not_resolved` actions that are electrically enabling.
+- Do not combine every previous scenario blindly; explain why each included action is useful and why excluded actions are not included.
+- A next combined scenario must be self-contained and use only supported action types.
+- If ngspice failed and the structured evidence shows strong topology problems, do not remain in simple electrical-scenario mode.
+- Strong topology problems include signals such as no ground/reference, critical singleton nodes, skipped critical components, isolated branches, split sources, or Graph JSON warnings that make the extracted circuit untrustworthy.
+- In that case, explain the failure first, request the real image, and prefer topology-correction or graph-correction scenarios over simple node-driving or source-value scenarios.
 - Do not use the original image unless the structured evidence suggests that the Graph JSON may be wrong.
 - If image access is needed, explain which structured evidence justifies it.
 - Request image access only for strong structured reasons: Graph JSON warnings, suspicious or missing connections, important singleton nodes, missing critical components, unsupported critical topology, or ngspice failure caused by topology/convergence issues.
+- When ngspice failed and multiple strong topology signals are present, `Richiede immagine: si` should normally be the expected outcome.
 - If ngspice succeeds and graph/node-map evidence is internally coherent, do not request the image by default.
+- If ngspice failed with strong topology signals, the initial scenarios may be graph-correction or topology-correction proposals, and they may be marked as future/not yet executable when appropriate.
+- In topology-failure mode, do not force every scenario into the current executable primitive set if the real bottleneck is an untrustworthy graph.
 - In read-only mode, do not modify netlists, do not change values and do not execute scenarios.
 - A diagnostic scenario is a controlled hypothesis that can be verified by generating a scenario-specific Pipeline 2.0 run and rerunning ngspice.
 - A scenario must never overwrite the original Pipeline 2.0 outputs.
 - A scenario must start from copied base artifacts, modify only the scenario copies, and save separate scenario artifacts for comparison.
 - Scenario artifacts must be created only after the user explicitly chooses one proposed scenario to execute.
 - Suggest at most 3 candidate scenarios, ordered from simplest to most informative.
+- In the initial diagnostic answer, the first set of up to 3 scenarios must be simple first-pass candidates, not combined scenarios.
 - Each scenario must be readable by a non-SPICE user first, and machine-oriented only in a short technical block after the explanation.
 - The user-facing scenario title should describe the diagnostic idea naturally, for example `Alimentare il ramo della lampada`, not only `drive_node_voltage`.
 - The technical block should be concise and should not replace the human explanation.
+- For executable scenario JSON, use only action types currently supported by the scenario runner unless clearly marked as future/not executable.
+- Currently executable action types are `drive_node_voltage`, `change_source_value` and `close_switch`.
+- Never put `unknown` in `actions[].value`; use a concrete SPICE value such as `5V`, `10V`, `DC 3.3`, or `SIN(0 1 100)`.
 - Prefer natural scenarios that directly test the user's symptom using existing nodes, states and values before proposing graph-correction scenarios.
+- If ngspice failed and the evidence shows strong topology problems, do not stay in simple electrical-test mode: switch to image-guided topology-correction reasoning.
 - Prefer acting on existing external inputs, supply labels, connector pins and recognized component states before directly forcing internal load nodes.
 - If an upstream input node feeds a load, drive the upstream input first; direct forcing of the load node is a later model-isolation test, not an early natural scenario.
 - The top 3 scenarios should be independently executable: if a scenario needs another action first, include that action in the same scenario JSON or present it only as a later follow-up.
+- Do not propose combined scenarios in the initial top 3. Combined scenarios are allowed only after earlier scenarios have been executed and the user asks what to try next.
 - Do not propose `run_tran` alone when the base operating point does not power the relevant branch; include the required drive/source/state actions in the same scenario.
+- If all initially proposed scenarios have been executed and none is a resolved candidate, propose the next most informative scenario instead of stopping.
+- The next scenario may combine actions, but only combine assumptions that were supported by previous scenario evidence; do not combine all scenarios blindly.
+- `not_resolved` means that a scenario was not sufficient by itself; it does not automatically mean the action is useless.
+- A `not_resolved` scenario can still be an enabling action in a combined scenario if it closes a switch, creates a reference path, completes a current path, or supplies a missing precondition for another useful action.
+- When one executed scenario has already changed the symptom-linked nodes or branches, prefer extending that proven direction before proposing a weaker exploratory source-change scenario.
+- Prefer combining the strongest symptom-linked scenario with an enabling action before proposing a generic source-value variation, unless the source itself is the strongest evidence-backed hypothesis.
+- When proposing a combined scenario, explain why each included action is justified and why excluded actions are not included yet.
 - If ngspice succeeds and graph/node-map evidence is internally coherent, the first scenarios should be value, source, analysis or state tests, not topology rewrites.
+- If ngspice failed and the evidence shows no ground/reference, critical singleton nodes, skipped critical components, or isolated branches, prefer topology-correction scenarios over simple drive/source scenarios.
+- In topology-correction mode, the first 3 scenarios may include future graph-correction or image-guided reconstruction scenarios even if the current runner cannot execute them yet.
+- When a topology-correction scenario is not executable yet, clearly mark it as future/not executable instead of pretending it can already be run by the current pipeline.
 - Avoid `connect_nodes`, `disconnect_terminal` and `move_terminal` in the top 3 scenarios unless structured evidence strongly suggests a graph/topology error.
 - If topology repair is only a later possibility, mention it as a next step instead of making it one of the first 3 scenarios.
 - Do not propose graph-correction scenarios in the top 3 unless there is strong structured evidence that the Graph JSON is wrong.
@@ -47,7 +85,7 @@
 
 ## User problem
 
-Quando alimento il circuito, il sistema non commuta correttamente e la lampada resta spenta. Quale potrebbe essere il problema?
+La lampada non si accende e il relè sembra non commutare. Quale potrebbe essere il problema?
 
 ## Circuit metadata
 
@@ -95,6 +133,14 @@ Quando alimento il circuito, il sistema non commuta correttamente e la lampada r
 - `tran_plot_png`: missing, path=`None`
 - `tran_plot_svg`: missing, path=`None`
 
+## Executed scenarios index
+
+No executed scenarios are available in the manifest.
+
+## Scenario outcome summary
+
+No scenario outcome summary available.
+
 ## Image access policy
 
 - Included by default: `False`
@@ -131,9 +177,24 @@ Scenario priority:
 1. Prefer the least invasive scenario that directly tests the observed symptom.
 2. Prefer actions on existing connector pins, supply labels, source values and recognized switch states before forcing internal load nodes.
 3. Prefer value/source/analysis/state scenarios before topology repair when the graph is coherent.
-4. Test individual hypotheses before proposing combined scenarios.
-5. Use combined scenarios only after the individual assumptions are meaningful, and include every required action in the same JSON block.
-6. Use graph-correction or topology-rewrite scenarios only when graph or SPICE evidence strongly supports a recognition/topology error.
+3b. If ngspice failed with strong topology evidence, request the image and move early to topology-correction reasoning instead of staying in simple electrical-test mode.
+4. In the first response, propose only single-hypothesis scenarios, not combined scenarios.
+5. Test individual hypotheses before proposing combined scenarios.
+6. Use combined scenarios only after the individual assumptions are meaningful, and include every required action in the same JSON block.
+7. Use graph-correction or topology-rewrite scenarios only when graph or SPICE evidence strongly supports a recognition/topology error.
+8. After executed scenarios are available, use their outcomes to decide whether the next scenario should be single-action, combined, or a request for missing evidence.
+
+After executed scenarios:
+
+- If at least one scenario is `resolved_candidate` with `stop_automation=true`, do not propose a new scenario unless the user explicitly asks for further exploration.
+- If no scenario is resolved and at least one scenario is `partially_resolved`, propose a next scenario that combines only the useful partial assumptions.
+- Do not exclude a scenario only because its outcome is `not_resolved`: first decide whether it is irrelevant, or whether it is an enabling condition that may become useful together with another action.
+- Treat `not_resolved` but enabling actions as candidates for combined scenarios when they close a switch, create a DC reference, complete a path, or provide a precondition that another scenario lacked.
+- If one scenario already changed the nodes or currents most closely tied to the user's symptom, treat that scenario as the main direction for the next step.
+- In that case, prefer adding only the minimum enabling action needed around that main direction before testing broader source-value variations.
+- If all scenarios are `not_resolved`, explain that the current hypotheses did not work and propose a different minimal hypothesis, or request missing evidence if needed.
+- Do not combine all previously proposed scenarios automatically. Combining actions is useful only when the previous results show complementary evidence.
+- A combined scenario must be self-contained: include every required action in the same `actions` array.
 
 Naturalness caution:
 
@@ -150,6 +211,10 @@ Topology caution:
 - In that case, propose electrical tests first, for example driving an input node, changing a source value, closing an existing switch or running another analysis.
 - If topology may still be relevant, mention it as a possible later step after simpler scenarios are tested.
 - If ngspice fails, nodes are floating/singleton, critical components are missing, or Graph JSON warnings indicate recognition problems, topology-rewrite scenarios can be proposed earlier.
+- If ngspice fails and there is strong structured evidence of topology error, do not keep proposing only `drive_node_voltage` or `change_source_value` as if the extracted graph were already trustworthy.
+- In that case, the agent should switch to topology-correction mode: explain the failure, request the real image, and propose correction scenarios for graph structure or missing interpreted components.
+- In topology-correction mode, it is acceptable that a proposed scenario is not immediately executable by the current scenario runner, as long as this is stated clearly.
+- In topology-correction mode, prefer scenarios such as reconstructing a split source, restoring a missing reference, reconnecting singleton terminals, or reinterpreting a relay/transformer/contact structure from the image.
 
 Scenario presentation format:
 
@@ -159,6 +224,14 @@ Scenario presentation format:
 - Explain what SPICE result would confirm or reject the hypothesis.
 - End the scenario with a short technical JSON block for the future pipeline.
 - Keep the technical block small: it is a controlled hint for automation, not the main answer.
+- The executable technical JSON should currently use only `drive_node_voltage`, `change_source_value` or `close_switch`.
+- If the scenario is not executable yet, say so explicitly and use future-oriented actions only as a structured proposal.
+- For `change_source_value`, choose a concrete value that makes the diagnostic comparison meaningful; do not write `unknown`.
+- Use `change_source_value` as the next scenario only when varying the existing source is more evidence-backed than extending an already successful symptom-linked node or state test.
+- For `change_source_value`, prefer the SPICE source name visible in the netlist, for example `Vbattery2_1`; component ids such as `battery2.1` are accepted only if the runner can resolve them.
+- For `close_switch`, target an existing recognized switch component such as `switch25.1`; do not invent a switch.
+- If no concrete source value is justified, describe the idea in the prose and do not include it as an executable JSON action.
+- In `compare`, use SPICE quantities such as `v(N001)` or `i(vbattery2_1#branch)`. You may also use `stderr` only when the scenario is expected to reduce ngspice warning count.
 
 Example technical block shape:
 
@@ -180,6 +253,45 @@ Example technical block shape:
 }
 ```
 
+Example source-value scenario action:
+
+```json
+{
+  "scenario_id": "scenario_2",
+  "title": "Variare la sorgente principale",
+  "hypothesis": "Changing the existing supply should affect only the branches connected to that supply.",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "VVCC",
+      "value": "10V"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": ["v(N001)", "i(vvcc#branch)"]
+}
+```
+
+Example close-switch scenario action:
+
+```json
+{
+  "scenario_id": "scenario_1",
+  "title": "Chiudere lo switch riconosciuto",
+  "hypothesis": "The open switch may be preventing a useful reference or current path.",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    }
+  ],
+  "rerun_from": "06",
+  "analysis": "op",
+  "compare": ["v(N001)", "i(vbattery2_1#branch)"]
+}
+```
+
 When proposing a scenario, reason about which part of the pipeline would need to be rerun.
 
 Pipeline rerun guidance:
@@ -190,11 +302,13 @@ Pipeline rerun guidance:
 - If the scenario adds `.tran`, include the required electrical setup actions in the same scenario when the base circuit does not already energize the branch of interest.
 - If the scenario changes electrical topology, for example connecting/disconnecting nodes, it should be treated as topology-rewrite and used only when justified by the evidence.
 - If the scenario requires correcting the recognized Graph JSON itself, it is not just a normal electrical scenario. It should be treated as a graph-correction scenario, saved as a copied/modified scenario graph, and may need to restart from `01_io.py` or an equivalent scenario-specific graph input.
+- If the scenario depends on image-guided graph correction, state that it is a future scenario run that would start from a copied graph artifact before regenerating the downstream steps.
 - If the evidence only suggests a possible Graph JSON error but does not prove it, request image access instead of silently changing the graph.
 
 Image request policy:
 
 - Request the image when ngspice fails because the generated circuit is not electrically meaningful, for example singular matrix, floating nodes or topology-related convergence failure.
+- When ngspice fails together with strong topology evidence such as `ground_groups_count = 0`, critical singleton nodes, skipped critical components, isolated branches or split power sources, image request should normally be `Richiede immagine: si`.
 - Request the image when Graph JSON warnings or node-map evidence indicate likely recognition errors.
 - Do not request the image just because a circuit branch is inactive in a successful and coherent SPICE run.
 - If image inspection would merely be useful for human confirmation, say so in the limitations but keep `Richiede immagine: no`.
@@ -1426,28 +1540,34 @@ run simulation(s) aborted
 Evidence not available.
 
 
+## Executed scenario evidence
+
+No executed scenario evidence available.
+
+
 ## Required answer format
 
+Il circuito e in modalita di fallimento topologico: le evidenze strutturate indicano che il Graph JSON o la topologia estratta non sono ancora abbastanza affidabili.
 Rispondi in Markdown usando esattamente queste sezioni:
 
 1. **Stato della simulazione**
-   Spiega se ngspice e stato eseguito correttamente oppure no.
+   Spiega che ngspice non ha prodotto una simulazione affidabile e riassumi il tipo di fallimento.
 
-2. **Evidenze principali**
-   Elenca le prove piu importanti, citando componenti, nodi, netlist, stdout/stderr o report.
+2. **Evidenze di errore topologico**
+   Elenca le prove strutturate piu forti: mancanza di ground, nodi singleton, componenti critici saltati, sorgenti spezzate, rami isolati o warning che rendono il graph poco affidabile.
 
 3. **Diagnosi rispetto al problema utente**
-   Collega le evidenze al problema scritto dall'utente.
+   Collega il fallimento topologico al sintomo utente e spiega perche il problema non puo essere attribuito con fiducia a una sola causa elettrica.
 
-4. **Limiti della diagnosi**
-   Dichiara cosa non si puo concludere dai dati disponibili.
+4. **Scenari di correzione proposti**
+   Proponi al massimo 3 scenari candidati.
+   In questa modalita gli scenari possono essere anche di correzione topologica o graph-correction.
+   Ogni scenario deve dire chiaramente se e `eseguibile ora` oppure `futuro / non ancora eseguibile`.
+   Se non e eseguibile ora, spiega quale informazione o quale correzione del graph servirebbe prima di rieseguire SPICE.
+   Non proporre solo prove elettriche semplici se le evidenze dicono che la topologia di base non e affidabile.
 
-5. **Scenari diagnostici proposti**
-   Proponi al massimo 3 scenari diagnostici candidati, pensati per essere trasformati in una nuova simulazione SPICE.
-   Non proporre semplici consigli generici: ogni scenario deve essere una ipotesi verificabile.
-   Non presentarli come certamente risolutivi: sono candidati da testare.
-   Se servono piu scenari, ordinali dal piu semplice al piu utile.
-   Se dai dati disponibili non serve uno scenario, scrivi: `Nessuno scenario necessario dai dati disponibili.`
+5. **Limiti e dato mancante**
+   Spiega qual e il dato mancante piu importante per sbloccare la diagnosi, per esempio l'immagine reale o una correzione della topologia riconosciuta.
 
    Per ogni scenario usa una forma a due livelli: prima una spiegazione user-friendly, poi un blocco tecnico breve.
 
@@ -1463,11 +1583,14 @@ Rispondi in Markdown usando esattamente queste sezioni:
    Usa un blocco JSON breve e non inventare campi non deducibili dalle evidenze.
    Il blocco deve aiutare una futura pipeline a trasformare lo scenario in una run separata.
    Campi consigliati: `scenario_id`, `title`, `hypothesis`, `actions`, `rerun_from`, `analysis`, `compare`.
-   Se un campo non e deducibile, usa `unknown` oppure omettilo.
+   Per scenari di correzione topologica non ancora eseguibili puoi aggiungere anche `execution_mode` e `required_evidence`.
+   Non usare `unknown` dentro `actions[].value`: uno scenario eseguibile deve avere valori concreti.
+   Se un valore concreto non e deducibile, ometti l'azione eseguibile e descrivi lo scenario solo come follow-up non ancora eseguibile.
 
-   Quando possibile, esprimi la modifica controllata usando primitive generali come:
-   `close_switch`, `open_switch`, `drive_node_voltage`, `change_source_value`,
-   `connect_nodes`, `disconnect_terminal`, `move_terminal`, `replace_with_equivalent`,
+   Per ora, nel blocco JSON eseguibile preferisci le primitive supportate dalla pipeline:
+   `drive_node_voltage`, `change_source_value`, `close_switch`.
+   Primitive future, da citare solo se ben giustificate e non ancora eseguibili:
+   `open_switch`, `connect_nodes`, `disconnect_terminal`, `move_terminal`, `replace_with_equivalent`,
    `run_op`, `run_tran`.
 
    Ricorda che nella versione read-only questi scenari NON sono eseguiti.
@@ -1477,14 +1600,15 @@ Alla fine aggiungi una riga:
 
 `Richiede immagine: si/no`
 
-Metti `si` solo se gli output strutturati indicano una probabile incoerenza del Graph JSON oppure se SPICE non e eseguibile in modo utile.
-Se l'immagine sarebbe solo una verifica opzionale, metti comunque `no` e cita la verifica opzionale nei limiti.
+In questa modalita, se la correzione topologica dipende davvero dall'immagine, usa normalmente `si`.
 
 ## Final task
 
 Analyze the user problem using the evidence above.
 Explain what the simulation result means, whether it supports the user problem, and what can or cannot be concluded.
 If ngspice failed, focus on the error evidence and explain why the current circuit is not diagnostically reliable.
+If ngspice failed with strong topology evidence, switch to topology-correction reasoning and make it explicit when a proposed scenario is future/not yet executable.
 If ngspice succeeded, connect the simulated node voltages, currents, skipped components and warnings to the user problem.
-Suggest future diagnostic scenarios only as controlled SPICE-verifiable hypotheses; do not claim that they have already been executed.
+If the question is about already executed scenarios, use the executed scenario evidence and clearly identify the strongest outcome.
+When suggesting new future diagnostic scenarios, present them only as controlled SPICE-verifiable hypotheses.
 Keep scenarios natural and minimally invasive before proposing topology or Graph JSON corrections.

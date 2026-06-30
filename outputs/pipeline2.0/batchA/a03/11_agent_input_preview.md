@@ -1,11 +1,11 @@
 # Agent input preview
 
 This file is a local preview of the evidence that will be provided to the read-only diagnostic agent.
-No scenario has been executed and no netlist has been modified.
+The agent remains read-only: it can inspect base outputs and existing scenario artifacts, but it does not modify files.
 
 ## User problem
 
-Quando alimento il circuito, il sistema non commuta correttamente e la lampada resta spenta. Quale potrebbe essere il problema?
+La lampada non si accende e il relè sembra non commutare. Quale potrebbe essere il problema?
 
 ## Circuit
 
@@ -49,10 +49,30 @@ Quando alimento il circuito, il sistema non commuta correttamente e la lampada r
 - Treat this file as a manifest, not as the full diagnostic evidence.
 - Load the referenced artifacts needed for the answer.
 - Use graph, node map, component rules, netlist, stdout and stderr as evidence.
+- If executed_scenarios are available, use them as evidence for questions about scenario outcomes.
 - Do not invent values, connections, models or simulation results.
 - Do not use the image unless image_access is explicitly requested.
 - If Graph JSON inconsistency is suspected, explain which structured outputs suggest it.
 - In read-only mode, do not modify netlists and do not execute scenarios.
+
+## Scenario outcome summary
+
+```json
+{
+  "available": false,
+  "best_scenario_id": null,
+  "best_outcome_status": null,
+  "best_stop_automation": null,
+  "interpretation_rule": "If a user asks which scenario resolves the problem, prefer the scenario with outcome_status='resolved_candidate' and stop_automation=true. Partially resolved scenarios are supporting diagnostics, not the main solution.",
+  "scenarios": []
+}
+```
+
+
+## Executed scenarios
+
+No executed scenarios are available in this manifest.
+
 
 ## Loaded artifacts
 

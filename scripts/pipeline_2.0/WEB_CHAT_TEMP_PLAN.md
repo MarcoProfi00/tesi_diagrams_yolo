@@ -1,8 +1,9 @@
 # Pipeline 2.0 - Temporary Web Chat Plan
 
-Questa e una nota temporanea di lavoro. Serve solo a ricordare la scaletta per
-la futura interfaccia chat/web della Pipeline 2.0. Potra essere eliminata quando
-la struttura sara implementata o spostata nella documentazione definitiva.
+Questa e una nota temporanea di lavoro. Serve a ricordare lo stato attuale e i
+prossimi passi della interfaccia chat/web della Pipeline 2.0. Potra essere
+eliminata quando la struttura sara consolidata o spostata nella documentazione
+definitiva.
 
 ## Idea generale
 
@@ -16,19 +17,20 @@ La Pipeline 2.0 resta divisa in due parti:
 12    = scenari controllati
 ```
 
-Lo step `09` non deve diventare un backend permanente. Deve avviare una
-interfaccia locale temporanea, senza database e senza stato persistente
-obbligatorio.
+Lo step `09` non deve diventare un backend applicativo permanente. Deve avviare
+un server locale temporaneo, senza database, login, deploy o API pubbliche.
 
-Quando il server locale viene chiuso, la chat in memoria si perde. Gli output
-tecnici della pipeline restano invece salvati nelle cartelle `outputs/`.
+Gli output tecnici della pipeline restano salvati nelle cartelle `outputs/`.
+La conversazione della web chat e mantenuta dal browser per batch/circuito, per
+esempio tramite localStorage. Quindi puo sopravvivere alla chiusura del server
+locale, ma non va trattata come archivio permanente o riproducibile.
 
-## Flusso desiderato
+## Flusso attuale
 
 ```text
 run_pipeline2
 -> esegue 01-08
--> opzionalmente avvia 09_web_chat
+-> opzionalmente si avvia 09_web_chat come script separato
 -> apre una pagina locale nel browser
 -> utente sceglie o conferma batch/circuito
 -> utente scrive il problema
@@ -37,7 +39,7 @@ run_pipeline2
 -> la risposta dell'agente viene mostrata nella chat
 ```
 
-In futuro:
+Scenari dalla chat:
 
 ```text
 utente scrive "esegui scenario 1"
@@ -46,9 +48,11 @@ utente scrive "esegui scenario 1"
 -> 09 chiama 12_controlled_scenarios.py
 -> 12 crea una cartella scenario separata
 -> 12 modifica solo copie degli output originali
--> 12 riesegue gli step necessari e ngspice
--> agente confronta base run e scenario run
--> agente dice se il problema sembra risolto o quale scenario provare dopo
+-> 12 applica la modifica alla netlist scenario
+-> 12 esegue ngspice se 09 e stato avviato con ngspice disponibile
+-> 12 crea scenario_comparison.json
+-> 10 indicizza gli scenari eseguiti
+-> 11 puo confrontare base run e scenario run nelle risposte successive
 ```
 
 ## Prima versione minima
@@ -65,8 +69,9 @@ La prima implementazione di `09` dovrebbe fare solo questo:
 7. mostrare la risposta dell'agente.
 ```
 
-Questa prima versione e stata superata: ora la web chat esegue gia la parte
-read-only e prepara/applica il primo tipo di scenario controllato.
+Questa prima versione e stata superata: ora la web chat esegue la parte
+read-only, crea scenari controllati, puo eseguire ngspice sugli scenari e
+mostra gli scenari nella sidebar.
 
 ## Layout grafico
 
@@ -101,6 +106,10 @@ web_chat/static/app.js
 
 Layout base:
 
+Nota: il primo schema e uno schema storico rimasto con caratteri non
+correttamente renderizzati. Il layout da usare e quello ASCII aggiornato subito
+dopo, nella sezione `Colonna sinistra: run selector`.
+
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │ Header: Pipeline 2.0 Diagnostic Web Chat                    │
@@ -123,6 +132,23 @@ Layout base:
 
 ### Colonna sinistra: run selector
 
+Layout aggiornato in ASCII:
+
+```text
++----------------------------------------------------------------+
+| Header: Pipeline 2.0 Diagnostic Web Chat                       |
+| batch / circuit | active run | SPICE status                    |
++----------------+--------------------------------+--------------+
+| Run selector   | Evidence panel                 | Agent chat   |
+|                |                                |              |
+| Base run       | Main run title                 | messages     |
+| scenario_1     | Image / status summary         |              |
+| scenario_2     | Graph / values / node map      | input        |
+| ...            | Netlist / stdout / stderr      |              |
+|                | Tran CSV / plot                |              |
++----------------+--------------------------------+--------------+
+```
+
 La colonna sinistra serve a scegliere quale run guardare:
 
 ```text
@@ -132,8 +158,9 @@ Scenario 2
 Scenario N
 ```
 
-Nella prima versione ci sara solo `Base run`. La sidebar va comunque disegnata
-subito, cosi l'aggiunta degli scenari sara naturale.
+Stato attuale: la sidebar mostra `Base run` e gli scenari gia creati, per
+esempio `scenario_1`, `scenario_2` e `scenario_3`. Quando uno scenario viene
+creato dalla chat, la pagina viene ricaricata sulla run scenario selezionata.
 
 Ogni run dovrebbe mostrare uno stato sintetico:
 
@@ -207,7 +234,7 @@ il pannello centrale mostra anche l'immagine originale del circuito
 Quindi, al momento, `09_web_chat.py` e:
 
 ```text
-visualizzazione output pipeline + chat agente read-only
+visualizzazione output pipeline + chat agente read-only + orchestrazione scenari controllati
 ```
 
 La chat salva file separati per non sovrascrivere gli esperimenti:
@@ -229,14 +256,19 @@ utente scrive "esegui scenario 1"
 -> 09 copia la base run in base_snapshot/ e run/
 -> 09 chiama 12_controlled_scenarios.py
 -> 12 applica le azioni supportate solo alla netlist in run/
+-> 12 esegue ngspice se 09 e stato avviato con --ngspice-executable
+-> 12 crea scenario_comparison.json
+-> la sidebar mostra la nuova run scenario
 ```
 
-Per ora la chat non esegue automaticamente ngspice sullo scenario. Lo step 12
-puo pero farlo da terminale con `--run-spice`.
+Lo scenario viene sempre creato in una cartella separata e la base run originale
+non viene modificata. Se `09_web_chat.py` non riceve un eseguibile ngspice, la
+chat puo comunque creare/applicare lo scenario, ma non puo completare la parte
+di simulazione e confronto.
 
-### Controlli chat futuri
+### Controlli chat
 
-La chat dovra avere controlli minimi ma chiari:
+La chat dovrebbe avere controlli minimi ma chiari:
 
 ```text
 model selector
@@ -255,6 +287,10 @@ gpt-5.4
 
 Altri modelli potranno essere disponibili come opzione, ma senza rifare per ora
 tutta la griglia sperimentale.
+
+Stato attuale: il modello puo essere passato al comando/script e la chat usa lo
+stesso meccanismo dello step `11`. Un selettore grafico completo resta un
+miglioramento di interfaccia.
 
 La gestione immagine deve seguire la policy gia decisa:
 
@@ -285,14 +321,15 @@ Use image in next agent call
 Il tasto non deve caricare sempre l'immagine. Deve solo abilitarla quando serve,
 in modo da mantenere la modalita base `graph-grounded`.
 
-Versione successiva:
+Gia implementato per casi semplici:
 
 ```text
 utente scrive "esegui scenario 1"
 -> 09 interpreta la scelta
 -> 09 chiama 12
 -> scenario compare nella sidebar
--> agente confronta Base run e Scenario run
+-> 10 indicizza lo scenario eseguito
+-> agente puo confrontare Base run e Scenario run nelle risposte successive
 ```
 
 ### Termini tecnici usati nel sito
@@ -325,8 +362,8 @@ La seconda forma e comoda, ma conviene implementarla solo dopo aver testato bene
 
 ## Nota sul backend
 
-Tecnicamente una pagina web che chiama Python, OpenAI, 10, 11 e in futuro 12 ha
-bisogno di un piccolo server locale.
+Tecnicamente una pagina web che chiama Python, OpenAI, 10, 11 e 12 ha bisogno
+di un piccolo server locale.
 
 Pero questo non deve essere inteso come backend applicativo completo:
 
@@ -353,9 +390,10 @@ utente = sceglie esplicitamente quale scenario eseguire
 Questa separazione serve a mantenere la Pipeline 2.0 riproducibile e difendibile
 nella tesi.
 
-## TODO operativo
+## Stato operativo e TODO
 
-Questa e la scaletta da implementare nelle prossime iterazioni.
+Questa e la scaletta aggiornata. Alcuni punti sono gia implementati, altri
+restano da completare.
 
 ### TODO 1 - Collegare la chat a 10 e 11
 
@@ -384,7 +422,7 @@ separati.
 Stato:
 
 ```text
-implementato nella forma minima con modello fisso gpt-5.4.
+implementato nella forma minima.
 ```
 
 ### TODO 2 - Mostrare cosa viene eseguito
@@ -415,6 +453,12 @@ gpt-5.4
 ```
 
 Il modello scelto deve essere passato a `11_agent_readonly.py`.
+
+Stato:
+
+```text
+parzialmente implementato lato comando/script; selettore grafico ancora da completare.
+```
 
 ### TODO 4 - Immagine su richiesta
 
@@ -467,8 +511,8 @@ Quando l'utente sceglie uno scenario:
 -> 12 crea una cartella scenario separata
 -> 12 copia gli output originali
 -> 12 modifica solo le copie
--> 12 rigenera gli step necessari
--> 12 riesegue ngspice
+-> 12 applica la modifica alla netlist copiata in run/
+-> 12 riesegue ngspice se richiesto/disponibile
 -> 12 salva risultato scenario
 ```
 
@@ -477,13 +521,16 @@ Gli output originali non devono mai essere sovrascritti.
 Stato:
 
 ```text
-implementato parzialmente.
+implementato per primitive semplici e scenario run separata.
 
 09:
 - crea cartella scenario;
 - salva scenario.json;
 - copia base_snapshot/ e run/;
-- chiama 12.
+- chiama 12;
+- passa ngspice a 12 se disponibile;
+- ricarica la pagina sulla run scenario;
+- mantiene una chat unica per il circuito.
 
 12:
 - supporta drive_node_voltage;
@@ -492,7 +539,8 @@ implementato parzialmente.
 - modifica solo run/07_netlist.cir;
 - salva 12_controlled_scenarios.json;
 - puo eseguire ngspice con --run-spice;
-- crea scenario_comparison.json dopo SPICE.
+- crea scenario_comparison.json dopo SPICE;
+- confronta anche stderr come warning count quando compare nel campo compare.
 ```
 
 Esempio attuale `a01/scenario_1`:
@@ -534,6 +582,25 @@ sintomo utente
 -> confronto
 -> nuova diagnosi
 -> eventuali altri scenari
+```
+
+Stato attuale:
+
+```text
+parzialmente implementato.
+
+Gia presente:
+- scenario creato dalla chat;
+- scenario visibile nella sidebar;
+- scenario_comparison.json creato dopo ngspice;
+- 10 indicizza executed_scenarios;
+- 11 puo rispondere a domande sugli scenari gia eseguiti.
+
+Da validare ora:
+- a02 scenario_1 con close_switch;
+- a02 scenario_2 con drive_node_voltage su N004;
+- a02 scenario_3 con drive_node_voltage su N003;
+- risposta agente alla domanda "quale scenario risolve o migliora il problema?".
 ```
 
 Estensione futura importante:
@@ -716,9 +783,11 @@ Ordine consigliato:
 
 ```text
 1. completare scelta scenario dalla chat;                    fatto per casi semplici
-2. implementare 12_controlled_scenarios.py;                  fatto per drive_node_voltage e change_source_value
-3. rieseguire ngspice su scenario separato;                  fatto da terminale con --run-spice
+2. implementare 12_controlled_scenarios.py;                  fatto per drive_node_voltage, change_source_value, close_switch
+3. rieseguire ngspice su scenario separato;                  fatto da web chat se ngspice e configurato
 4. creare confronto base run vs scenario run;                fatto con scenario_comparison.json
-5. far commentare il confronto all'agente in chat;           prossimo step
-6. solo dopo aggiungere Animated SPICE Viewer.
+5. far commentare il confronto all'agente in chat;           parzialmente fatto tramite executed_scenarios
+6. validare a02 scenario 1/2/3;                              prossimo step pratico
+7. ripetere il ciclo sui circuiti Batch A;                   dopo a02
+8. solo dopo aggiungere Animated SPICE Viewer.
 ```

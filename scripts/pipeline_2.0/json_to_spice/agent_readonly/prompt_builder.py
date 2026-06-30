@@ -90,6 +90,52 @@ def is_executed_scenario_question(user_problem: str) -> bool:
     return any(word in text for word in scenario_words) and any(word in text for word in outcome_words)
 
 
+def is_next_scenario_request(user_problem: str) -> bool:
+    """Riconosce domande che chiedono cosa provare dopo gli scenari eseguiti."""
+    text = user_problem.lower()
+    scenario_words = ("scenario", "scenari")
+    next_words = (
+        "adesso",
+        "ora",
+        "dopo",
+        "prossimo",
+        "successivo",
+        "combin",
+        "insieme",
+        "provare",
+        "proviamo",
+        "fare",
+        "risolvere",
+        "non hanno risolto",
+        "non risolve",
+        "non basta",
+    )
+    return any(word in text for word in scenario_words) and any(word in text for word in next_words)
+
+
+def has_strong_topology_failure(summary: dict[str, Any] | None) -> bool:
+    """Rileva i casi in cui il graph estratto non sembra affidabile per scenari solo elettrici."""
+    if not summary:
+        return False
+
+    if summary.get("spice_status") != "failed":
+        return False
+
+    signals = 0
+    if int(summary.get("ground_groups_count") or 0) == 0:
+        signals += 1
+    if int(summary.get("singleton_nodes_count") or 0) >= 2:
+        signals += 1
+    if int(summary.get("skipped_components_count") or 0) >= 2:
+        signals += 1
+    if int(summary.get("unsupported_components") or 0) >= 1:
+        signals += 1
+    if int(summary.get("rules_missing_components") or 0) >= 2:
+        signals += 1
+
+    return signals >= 2
+
+
 def build_executed_scenario_answer_format() -> list[str]:
     """Formato speciale quando l'utente chiede degli scenari gia eseguiti."""
     return [
@@ -114,10 +160,83 @@ def build_executed_scenario_answer_format() -> list[str]:
     ]
 
 
-def build_answer_format(user_problem: str = "") -> list[str]:
+def build_next_scenario_answer_format() -> list[str]:
+    """Formato speciale quando l'utente chiede quale scenario provare dopo."""
+    return [
+        "La domanda chiede cosa provare dopo gli scenari gia eseguiti.",
+        "Usa gli executed scenario evidence: non ripartire dalla sola base run.",
+        "Rispondi in Markdown usando esattamente queste sezioni:",
+        "",
+        "1. **Stato degli scenari eseguiti**",
+        "   Riassumi scenario per scenario: outcome, cosa ha cambiato, cosa non ha risolto.",
+        "",
+        "2. **Ragionamento sul prossimo scenario**",
+        "   Spiega quali ipotesi precedenti sono utili e quali no.",
+        "   Non scartare uno scenario solo perche e `not_resolved`: valuta se e irrilevante oppure se e una condizione abilitante.",
+        "   Uno scenario `not_resolved` puo essere abilitante se chiude uno switch, crea un riferimento, completa un percorso di corrente o prepara un'altra azione.",
+        "   Non combinare tutti gli scenari automaticamente.",
+        "   Combina solo azioni supportate da evidenze complementari.",
+        "",
+        "3. **Scenario successivo proposto**",
+        "   Proponi un solo prossimo scenario, oppure dichiara che serve un dato mancante.",
+        "   Lo scenario deve essere eseguibile e self-contained.",
+        "   Se e combinato, ogni azione necessaria deve comparire nello stesso array `actions`.",
+        "",
+        "4. **Cosa mi aspetto di verificare**",
+        "   Indica quali grandezze o warning devono cambiare per considerarlo utile.",
+        "",
+        "5. **Blocco tecnico per pipeline**",
+        "   Includi un blocco JSON breve con `scenario_id`, `title`, `hypothesis`, `actions`, `rerun_from`, `analysis`, `compare`.",
+        "   Usa solo primitive supportate: `drive_node_voltage`, `change_source_value`, `close_switch`.",
+        "   Non usare `unknown` nei valori.",
+        "",
+        "`Richiede immagine: si/no`",
+    ]
+
+
+def build_topology_failure_answer_format() -> list[str]:
+    """Formato speciale per circuiti falliti con forti segnali di errore topologico."""
+    return [
+        "Il circuito e in modalita di fallimento topologico: le evidenze strutturate indicano che il Graph JSON o la topologia estratta non sono ancora abbastanza affidabili.",
+        "Rispondi in Markdown usando esattamente queste sezioni:",
+        "",
+        "1. **Stato della simulazione**",
+        "   Spiega che ngspice non ha prodotto una simulazione affidabile e riassumi il tipo di fallimento.",
+        "",
+        "2. **Evidenze di errore topologico**",
+        "   Elenca le prove strutturate piu forti: mancanza di ground, nodi singleton, componenti critici saltati, sorgenti spezzate, rami isolati o warning che rendono il graph poco affidabile.",
+        "",
+        "3. **Diagnosi rispetto al problema utente**",
+        "   Collega il fallimento topologico al sintomo utente e spiega perche il problema non puo essere attribuito con fiducia a una sola causa elettrica.",
+        "",
+        "4. **Scenari di correzione proposti**",
+        "   Proponi al massimo 3 scenari candidati.",
+        "   In questa modalita gli scenari possono essere anche di correzione topologica o graph-correction.",
+        "   Ogni scenario deve dire chiaramente se e `eseguibile ora` oppure `futuro / non ancora eseguibile`.",
+        "   Se non e eseguibile ora, spiega quale informazione o quale correzione del graph servirebbe prima di rieseguire SPICE.",
+        "   Non proporre solo prove elettriche semplici se le evidenze dicono che la topologia di base non e affidabile.",
+        "",
+        "5. **Limiti e dato mancante**",
+        "   Spiega qual e il dato mancante piu importante per sbloccare la diagnosi, per esempio l'immagine reale o una correzione della topologia riconosciuta.",
+        "",
+        *build_scenario_answer_format(),
+        "",
+        "Alla fine aggiungi una riga:",
+        "",
+        "`Richiede immagine: si/no`",
+        "",
+        "In questa modalita, se la correzione topologica dipende davvero dall'immagine, usa normalmente `si`.",
+    ]
+
+
+def build_answer_format(user_problem: str = "", summary: dict[str, Any] | None = None) -> list[str]:
     """Definisce la struttura obbligatoria della risposta finale."""
+    if is_next_scenario_request(user_problem):
+        return build_next_scenario_answer_format()
     if is_executed_scenario_question(user_problem):
         return build_executed_scenario_answer_format()
+    if has_strong_topology_failure(summary):
+        return build_topology_failure_answer_format()
 
     return [
         "Rispondi in Markdown usando esattamente queste sezioni:",
@@ -136,8 +255,10 @@ def build_answer_format(user_problem: str = "") -> list[str]:
         "",
         "5. **Scenari diagnostici proposti**",
         "   Proponi al massimo 3 scenari diagnostici candidati, pensati per essere trasformati in una nuova simulazione SPICE.",
+        "   In questa prima risposta proponi solo scenari semplici di primo passaggio, non scenari combinati.",
         "   Non proporre semplici consigli generici: ogni scenario deve essere una ipotesi verificabile.",
         "   Non presentarli come certamente risolutivi: sono candidati da testare.",
+        "   Ogni scenario iniziale deve testare una singola ipotesi principale ed essere leggibile da solo.",
         "   Se servono piu scenari, ordinali dal piu semplice al piu utile.",
         "   Se la domanda dell'utente riguarda scenari gia eseguiti, usa questa sezione per riassumere gli scenari eseguiti e indicare quale outcome e piu forte.",
         "   Se dai dati disponibili non serve uno scenario, scrivi: `Nessuno scenario necessario dai dati disponibili.`",
@@ -165,10 +286,26 @@ def build_prompt_operating_rules() -> list[str]:
         "For questions about which scenario resolves the problem, do not merely list scenarios: identify the strongest scenario and justify it from scenario_comparison.json.",
         "Treat `resolved_candidate` with `stop_automation=true` as the strongest executed-scenario outcome.",
         "Treat `partially_resolved` as supporting diagnostic evidence, not as the main resolving scenario when a resolved_candidate exists.",
+        "Treat `not_resolved` as not sufficient by itself, not automatically useless.",
+        "A `not_resolved` scenario may still be an enabling condition for a combined scenario when it closes a switch, creates a reference path, completes a current path, or supplies a precondition missing in another scenario.",
+        "In the initial answer for a circuit, propose only first-pass scenarios and do not propose combined scenarios.",
+        "Combined scenarios are allowed only after scenario evidence exists and the user explicitly asks what to try next.",
+        "If the user asks what to try next after executed scenarios, propose the next most informative scenario based on scenario_comparison.json.",
+        "If one executed scenario already changed the nodes, branches or currents most closely tied to the user symptom, prefer extending that proven direction before proposing a weaker exploratory source-value change.",
+        "Prefer a minimal combined scenario built around the strongest symptom-linked evidence before proposing a generic source-value variation, unless the source itself is the strongest evidence-backed hypothesis.",
+        "If no executed scenario resolved the problem, consider combined scenarios when previous outcomes provide complementary evidence, including `not_resolved` actions that are electrically enabling.",
+        "Do not combine every previous scenario blindly; explain why each included action is useful and why excluded actions are not included.",
+        "A next combined scenario must be self-contained and use only supported action types.",
+        "If ngspice failed and the structured evidence shows strong topology problems, do not remain in simple electrical-scenario mode.",
+        "Strong topology problems include signals such as no ground/reference, critical singleton nodes, skipped critical components, isolated branches, split sources, or Graph JSON warnings that make the extracted circuit untrustworthy.",
+        "In that case, explain the failure first, request the real image, and prefer topology-correction or graph-correction scenarios over simple node-driving or source-value scenarios.",
         "Do not use the original image unless the structured evidence suggests that the Graph JSON may be wrong.",
         "If image access is needed, explain which structured evidence justifies it.",
         "Request image access only for strong structured reasons: Graph JSON warnings, suspicious or missing connections, important singleton nodes, missing critical components, unsupported critical topology, or ngspice failure caused by topology/convergence issues.",
+        "When ngspice failed and multiple strong topology signals are present, `Richiede immagine: si` should normally be the expected outcome.",
         "If ngspice succeeds and graph/node-map evidence is internally coherent, do not request the image by default.",
+        "If ngspice failed with strong topology signals, the initial scenarios may be graph-correction or topology-correction proposals, and they may be marked as future/not yet executable when appropriate.",
+        "In topology-failure mode, do not force every scenario into the current executable primitive set if the real bottleneck is an untrustworthy graph.",
         "In read-only mode, do not modify netlists, do not change values and do not execute scenarios.",
         *build_scenario_operating_rules(),
     ]
@@ -411,13 +548,14 @@ def build_agent_prompt(
             "",
             "## Required answer format",
             "",
-            *build_answer_format(user_problem),
+            *build_answer_format(user_problem, summary),
             "",
             "## Final task",
             "",
             "Analyze the user problem using the evidence above.",
             "Explain what the simulation result means, whether it supports the user problem, and what can or cannot be concluded.",
             "If ngspice failed, focus on the error evidence and explain why the current circuit is not diagnostically reliable.",
+            "If ngspice failed with strong topology evidence, switch to topology-correction reasoning and make it explicit when a proposed scenario is future/not yet executable.",
             "If ngspice succeeded, connect the simulated node voltages, currents, skipped components and warnings to the user problem.",
             "If the question is about already executed scenarios, use the executed scenario evidence and clearly identify the strongest outcome.",
             "When suggesting new future diagnostic scenarios, present them only as controlled SPICE-verifiable hypotheses.",

@@ -36,6 +36,7 @@ VSCENARIO_N002 N002 0 DC 5
 from __future__ import annotations
 
 import argparse
+import csv
 from datetime import datetime
 import importlib.util
 import json
@@ -212,9 +213,36 @@ def normalize_source_target(target: Any) -> str:
     return source_name
 
 
+def source_target_candidates(target: Any) -> list[str]:
+    """
+    Crea possibili nomi sorgente a partire dal target dello scenario.
+
+    L'agente puo indicare sia il nome SPICE (`Vbattery2_1`) sia l'id componente
+    (`battery2.1`). Per rendere lo scenario piu robusto proviamo entrambe le
+    forme, senza inventare sorgenti nuove.
+    """
+    source_name = normalize_source_target(target)
+    candidates = [source_name]
+
+    if "." in source_name and not re.match(r"(?i)^[vi]", source_name):
+        candidates.append(f"V{sanitize_spice_name(source_name)}")
+
+    sanitized = sanitize_spice_name(source_name)
+    if sanitized != source_name:
+        candidates.append(sanitized)
+        if not re.match(r"(?i)^[vi]", sanitized):
+            candidates.append(f"V{sanitized}")
+
+    unique_candidates: list[str] = []
+    for candidate in candidates:
+        if candidate and candidate not in unique_candidates:
+            unique_candidates.append(candidate)
+    return unique_candidates
+
+
 def replace_source_value(
     netlist_text: str,
-    source_name: str,
+    source_names: list[str],
     source_definition: str,
 ) -> tuple[str, dict[str, Any]]:
     """
@@ -224,29 +252,32 @@ def replace_source_value(
     poi rimpiazza la definizione elettrica rimanente con il nuovo valore.
     """
     lines = netlist_text.splitlines()
-    source_pattern = re.compile(rf"^\s*{re.escape(source_name)}\s+", flags=re.IGNORECASE)
 
-    for index, line in enumerate(lines):
-        stripped = line.strip()
-        if not stripped or stripped.startswith(("*", ".")):
-            continue
-        if not source_pattern.match(line):
-            continue
+    for source_name in source_names:
+        source_pattern = re.compile(rf"^\s*{re.escape(source_name)}\s+", flags=re.IGNORECASE)
 
-        parts = stripped.split(maxsplit=3)
-        if len(parts) < 4:
-            raise ValueError(f"Source {source_name} does not have a replaceable value")
+        for index, line in enumerate(lines):
+            stripped = line.strip()
+            if not stripped or stripped.startswith(("*", ".")):
+                continue
+            if not source_pattern.match(line):
+                continue
 
-        old_line = line
-        new_line = f"{parts[0]} {parts[1]} {parts[2]} {source_definition}"
-        lines[index] = new_line
-        return "\n".join(lines) + "\n", {
-            "old_line": old_line,
-            "new_line": new_line,
-            "operation": "updated",
-        }
+            parts = stripped.split(maxsplit=3)
+            if len(parts) < 4:
+                raise ValueError(f"Source {source_name} does not have a replaceable value")
 
-    raise ValueError(f"Source {source_name} not found in 07_netlist.cir")
+            old_line = line
+            new_line = f"{parts[0]} {parts[1]} {parts[2]} {source_definition}"
+            lines[index] = new_line
+            return "\n".join(lines) + "\n", {
+                "source_name": parts[0],
+                "old_line": old_line,
+                "new_line": new_line,
+                "operation": "updated",
+            }
+
+    raise ValueError(f"Source not found in 07_netlist.cir. Tried: {', '.join(source_names)}")
 
 
 def apply_change_source_value(
@@ -254,14 +285,16 @@ def apply_change_source_value(
     netlist_text: str,
 ) -> tuple[str, dict[str, Any]]:
     """Applica l'azione `change_source_value` a una sorgente SPICE esistente."""
-    source_name = normalize_source_target(action.get("target"))
+    source_names = source_target_candidates(action.get("target"))
     source_definition = normalize_spice_source_value(action.get("value"))
-    updated_netlist, operation = replace_source_value(netlist_text, source_name, source_definition)
+    updated_netlist, operation = replace_source_value(netlist_text, source_names, source_definition)
 
     result = {
         "status": "applied",
         "type": "change_source_value",
-        "target": source_name,
+        "target": action.get("target"),
+        "resolved_source_name": operation["source_name"],
+        "tried_source_names": source_names,
         "value": action.get("value"),
         "normalized_source_definition": source_definition,
         "old_line": operation["old_line"],
@@ -310,6 +343,7 @@ def apply_close_switch(
     resistor_name = f"RSCENARIO_{sanitize_spice_name(switch_id)}"
     resistor_line = f"{resistor_name} {node_a} {node_b} {resistance}"
     updated_netlist, operation = insert_or_replace_source(netlist_text, resistor_name, resistor_line)
+    updated_netlist = annotate_closed_switch_netlist(updated_netlist, switch_id, resistor_line)
 
     result = {
         "status": "applied",
@@ -322,6 +356,37 @@ def apply_close_switch(
         "spice_executed": False,
     }
     return updated_netlist, result
+
+
+def annotate_closed_switch_netlist(netlist_text: str, switch_id: str, resistor_line: str) -> str:
+    """
+    Rende leggibile nella netlist scenario che uno switch open della base e stato chiuso.
+
+    La netlist scenario parte dalla netlist base copiata, quindi puo contenere un
+    commento tipo `* switch25.1 open: not emitted`. Quando applichiamo
+    `close_switch`, quel commento resta storicamente vero per la base run ma e
+    ambiguo nella run scenario. Lo trasformiamo in una nota esplicita.
+    """
+    lines = netlist_text.splitlines()
+    base_note = f"* {switch_id} open in base run; closed by scenario close_switch"
+    scenario_note = f"* scenario close_switch: {switch_id} modeled as {resistor_line}"
+    open_comment_pattern = re.compile(
+        rf"^\s*\*\s*{re.escape(switch_id)}\s+open:\s+not emitted\b.*$",
+        flags=re.IGNORECASE,
+    )
+
+    for index, line in enumerate(lines):
+        if open_comment_pattern.match(line):
+            lines[index] = base_note
+            break
+
+    if scenario_note not in lines:
+        for index, line in enumerate(lines):
+            if line.strip().lower() == resistor_line.lower():
+                lines.insert(index, scenario_note)
+                break
+
+    return "\n".join(lines) + "\n"
 
 
 def run_spice_for_scenario(
@@ -467,9 +532,70 @@ def count_ngspice_stderr_warnings(stderr_path: Path) -> float | None:
     return float(warning_count)
 
 
+def is_voltage_quantity(quantity: str) -> bool:
+    """Riconosce una grandezza di tensione del tipo `v(N001)`."""
+    return bool(re.match(r"(?i)^v\([^)]+\)$", quantity.strip()))
+
+
 def is_stderr_quantity(quantity: str) -> bool:
     """Riconosce richieste di confronto sui warning stderr."""
     return quantity.strip().lower() in {"stderr", "ngspice_stderr", "stderr_warnings", "warning_count"}
+
+
+def parse_tran_csv_metrics(csv_path: Path) -> dict[str, dict[str, float]]:
+    """
+    Estrae metriche semplici dal CSV transitorio pulito.
+
+    Per ogni colonna tensione calcoliamo:
+    - min
+    - max
+    - mean
+    - vpp
+
+    Questa prima versione resta volutamente semplice: per gli scenari `.tran`
+    usiamo `vpp` come metrica principale da confrontare.
+    """
+    if not csv_path.exists():
+        return {}
+
+    try:
+        with csv_path.open(encoding="utf-8", newline="") as handle:
+            reader = csv.DictReader(handle)
+            rows = list(reader)
+    except (OSError, csv.Error):
+        return {}
+
+    if not rows:
+        return {}
+
+    values_by_column: dict[str, list[float]] = {}
+    for row in rows:
+        for column_name, value_text in row.items():
+            if column_name is None:
+                continue
+            column_key = column_name.strip().lower()
+            if not column_key or column_key == "time":
+                continue
+            value = parse_float(str(value_text).strip())
+            if value is None:
+                continue
+            values_by_column.setdefault(column_key, []).append(value)
+
+    metrics: dict[str, dict[str, float]] = {}
+    for column_key, values in values_by_column.items():
+        if not values:
+            continue
+        minimum = min(values)
+        maximum = max(values)
+        mean = sum(values) / len(values)
+        metrics[column_key] = {
+            "min": minimum,
+            "max": maximum,
+            "mean": mean,
+            "vpp": maximum - minimum,
+        }
+
+    return metrics
 
 
 def classify_change(base_value: float | None, scenario_value: float | None) -> str:
@@ -485,7 +611,42 @@ def classify_change(base_value: float | None, scenario_value: float | None) -> s
     return "changed"
 
 
-def evaluate_diagnostic_outcome(summary: dict[str, int]) -> dict[str, Any]:
+def has_strong_tran_gain_signal(quantities: list[dict[str, Any]]) -> bool:
+    """
+    Decide se un confronto `.tran` mostra una crescita forte e coerente.
+
+    Regola semplice:
+    - consideriamo solo grandezze con metrica `.vpp`
+    - lo scenario e forte se almeno una grandezza cresce di almeno 2x
+      con un incremento assoluto non trascurabile
+    """
+    for item in quantities:
+        if not isinstance(item, dict):
+            continue
+        metric = str(item.get("metric") or "").lower()
+        if not metric.endswith(".vpp"):
+            continue
+
+        base_value = item.get("base_value")
+        scenario_value = item.get("scenario_value")
+        if not isinstance(base_value, (int, float)) or not isinstance(scenario_value, (int, float)):
+            continue
+        if base_value <= 1e-12:
+            continue
+
+        gain_ratio = scenario_value / base_value
+        delta = scenario_value - base_value
+        if gain_ratio >= 2.0 and delta >= 0.02:
+            return True
+
+    return False
+
+
+def evaluate_diagnostic_outcome(
+    summary: dict[str, int],
+    analysis: str = "op",
+    quantities: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     """
     Valuta in modo prudente se uno scenario sembra risolvere il problema.
 
@@ -518,6 +679,18 @@ def evaluate_diagnostic_outcome(summary: dict[str, int]) -> dict[str, Any]:
         label = "Partially resolved"
         reason = "Some requested quantities changed, but at least one comparison quantity is missing."
         stop_automation = False
+    elif (
+        analysis == "tran"
+        and changed == requested
+        and has_strong_tran_gain_signal(quantities or [])
+    ):
+        status = "resolved_candidate"
+        label = "Candidate resolved"
+        reason = (
+            "All requested transient quantities changed and at least one key Vpp "
+            "increased strongly, which is consistent with the tested hypothesis."
+        )
+        stop_automation = True
     elif changed == requested and activated > 0:
         status = "resolved_candidate"
         label = "Candidate resolved"
@@ -548,9 +721,12 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
     status = read_json(scenario_dir / STATUS_NAME) if (scenario_dir / STATUS_NAME).exists() else {}
     base_output_dir = Path(status.get("base_output_dir") or scenario_dir.parent.parent)
     run_dir = scenario_dir / "run"
+    analysis = str(scenario.get("analysis") or "op").strip().lower()
 
     base_values = parse_ngspice_stdout(base_output_dir / "08_ngspice_stdout.txt")
     scenario_values = parse_ngspice_stdout(run_dir / "08_ngspice_stdout.txt")
+    base_tran_metrics = parse_tran_csv_metrics(base_output_dir / "08_tran.csv")
+    scenario_tran_metrics = parse_tran_csv_metrics(run_dir / "08_tran.csv")
     base_stderr_warning_count = count_ngspice_stderr_warnings(base_output_dir / "08_ngspice_stderr.txt")
     scenario_stderr_warning_count = count_ngspice_stderr_warnings(run_dir / "08_ngspice_stderr.txt")
 
@@ -569,10 +745,23 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
             lookup_key = "stderr.warning_count"
             base_value = base_stderr_warning_count
             scenario_value = scenario_stderr_warning_count
+            base_details: dict[str, Any] = {}
+            scenario_details: dict[str, Any] = {}
+        elif analysis == "tran" and is_voltage_quantity(quantity):
+            lookup_key = quantity_lookup_key(quantity)
+            base_metric_set = base_tran_metrics.get(lookup_key) or {}
+            scenario_metric_set = scenario_tran_metrics.get(lookup_key) or {}
+            base_value = base_metric_set.get("vpp")
+            scenario_value = scenario_metric_set.get("vpp")
+            lookup_key = f"{lookup_key}.vpp"
+            base_details = base_metric_set
+            scenario_details = scenario_metric_set
         else:
             lookup_key = quantity_lookup_key(quantity)
             base_value = base_values.get(lookup_key)
             scenario_value = scenario_values.get(lookup_key)
+            base_details = {}
+            scenario_details = {}
         delta = None
         if base_value is not None and scenario_value is not None:
             delta = scenario_value - base_value
@@ -593,6 +782,8 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
                 "delta": delta,
                 "change": change,
                 "metric": lookup_key,
+                "base_details": base_details,
+                "scenario_details": scenario_details,
             }
         )
 
@@ -602,7 +793,7 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
         "activated_count": activated,
         "missing_count": missing,
     }
-    diagnostic_outcome = evaluate_diagnostic_outcome(summary)
+    diagnostic_outcome = evaluate_diagnostic_outcome(summary, analysis=analysis, quantities=quantities)
 
     comparison = {
         "source_format": "pipeline2.0_scenario_comparison",

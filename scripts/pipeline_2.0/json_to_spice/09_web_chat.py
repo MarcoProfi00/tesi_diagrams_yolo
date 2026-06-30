@@ -50,6 +50,18 @@ INDEX_TEMPLATE = TEMPLATE_DIR / "index.html"
 STEP10_PATH = Path(__file__).resolve().parent / "10_build_diagnostic_context.py"
 STEP12_PATH = Path(__file__).resolve().parent / "12_controlled_scenarios.py"
 CHAT_MODEL = "gpt-5.4"
+CHAT_MODELS = [
+    "gpt-5.4",
+    "gpt-5.5",
+    "gpt-5.4-mini",
+    "gpt-5-mini",
+]
+CHAT_MODEL_LABELS = {
+    "gpt-5.4": "GPT 5.4",
+    "gpt-5.5": "GPT 5.5",
+    "gpt-5.4-mini": "GPT 5.4 mini",
+    "gpt-5-mini": "GPT 5 mini",
+}
 CHAT_CONTEXT_NAME = "10_diagnostic_context.json"
 CHAT_PREVIEW_NAME = "11_agent_input_preview_chat.md"
 CHAT_PROMPT_NAME = "11_agent_prompt_chat.md"
@@ -254,6 +266,19 @@ def outcome_status_class(status: str) -> str:
     return "neutral"
 
 
+def user_friendly_outcome_label(status: str) -> str:
+    """Converte l'esito tecnico in una frase piu leggibile per l'utente."""
+    if status == "resolved_candidate":
+        return "Problem explained"
+    if status == "partially_resolved":
+        return "Useful clue"
+    if status == "not_resolved":
+        return "Not the cause"
+    if status == "unknown":
+        return "Still unclear"
+    return "Scenario result"
+
+
 def render_run_selector(output_dir: Path, active_run: str) -> str:
     """Crea la sidebar con base run e scenari disponibili."""
     base_status = build_status(output_dir)
@@ -282,8 +307,8 @@ def render_run_selector(output_dir: Path, active_run: str) -> str:
     for scenario in scenarios:
         scenario_active = " active" if active_run == scenario["id"] else ""
         state_class = run_status_class(scenario["status"])
-        outcome_label = scenario.get("outcome_label") or ""
         outcome_status = scenario.get("outcome_status") or ""
+        outcome_label = user_friendly_outcome_label(outcome_status) if outcome_status else ""
         outcome_html = ""
         if outcome_label:
             outcome_html = (
@@ -354,7 +379,7 @@ def render_artifacts(output_dir: Path, plot_url: str = "/artifact/08_tran_plot.p
     plot_path = output_dir / "08_tran_plot.png"
     if plot_path.exists():
         sections.append(
-            """
+            f"""
             <details class="artifact" open>
               <summary>
                 <span>Transient Plot</span>
@@ -506,6 +531,18 @@ def render_image_section(batch: str, circuit: str, output_dir: Path) -> str:
     """
 
 
+def render_model_options(selected_model: str) -> str:
+    """Crea le option del selettore modello nella chat."""
+    options: list[str] = []
+    for model in CHAT_MODELS:
+        selected_attr = " selected" if model == selected_model else ""
+        label = CHAT_MODEL_LABELS.get(model, model)
+        options.append(
+            f'<option value="{html.escape(model)}"{selected_attr}>{html.escape(label)}</option>'
+        )
+    return "\n".join(options)
+
+
 def fill_template(template: str, values: dict[str, str]) -> str:
     """Sostituisce placeholder semplici nel template HTML."""
     rendered = template
@@ -547,6 +584,9 @@ def render_page(batch: str, circuit: str, output_dir: Path, active_run: str = "b
             "PAGE_TITLE": html.escape(f"Pipeline 2.0 Diagnostic Chat - {circuit}"),
             "HEADER_META": html.escape(header_meta),
             "CHAT_STORAGE_KEY": html.escape(f"pipeline2_chat_{batch}_{circuit}"),
+            "MODEL_STORAGE_KEY": html.escape(f"pipeline2_chat_model_{batch}_{circuit}"),
+            "DEFAULT_CHAT_MODEL": html.escape(CHAT_MODEL),
+            "MODEL_OPTIONS": render_model_options(CHAT_MODEL),
             "RUN_SELECTOR": render_run_selector(output_dir, active_run),
             "ACTIVE_RUN_TITLE": title,
             "OUTPUT_DIR": html.escape(subtitle),
@@ -599,6 +639,52 @@ def write_chat_context(
     return context_path
 
 
+def count_critical_skipped_components(output_dir: Path) -> int:
+    """Conta componenti saltati che possono indicare un problema topologico forte."""
+    report = read_json_safe(output_dir / "07_spice_emit_report.json")
+    skipped = report.get("skipped_components")
+    if not isinstance(skipped, list):
+        return 0
+
+    critical_prefixes = (
+        "battery",
+        "lamp",
+        "inductor",
+        "switch",
+        "signal_source",
+        "transformer",
+    )
+    count = 0
+    for item in skipped:
+        if not isinstance(item, dict):
+            continue
+        component_id = str(item.get("component_id") or "")
+        if component_id.startswith(critical_prefixes):
+            count += 1
+    return count
+
+
+def detect_topology_failure_mode(context: dict[str, Any], output_dir: Path) -> tuple[bool, list[str]]:
+    """Decide se l'agente deve ricevere automaticamente anche l'immagine."""
+    summary = context.get("summary") or {}
+    if str(summary.get("spice_status")) != "failed":
+        return False, []
+
+    reasons: list[str] = []
+    if int(summary.get("ground_groups_count") or 0) == 0:
+        reasons.append("ground_groups_count=0")
+    if int(summary.get("singleton_nodes_count") or 0) >= 2:
+        reasons.append(f"singleton_nodes_count={summary.get('singleton_nodes_count')}")
+    if int(summary.get("skipped_components_count") or 0) >= 2:
+        reasons.append(f"skipped_components_count={summary.get('skipped_components_count')}")
+
+    critical_skipped = count_critical_skipped_components(output_dir)
+    if critical_skipped >= 1:
+        reasons.append(f"critical_skipped_components={critical_skipped}")
+
+    return len(reasons) >= 2, reasons
+
+
 def run_readonly_agent_from_chat(
     batch: str,
     circuit: str,
@@ -617,9 +703,12 @@ def run_readonly_agent_from_chat(
         output_dir=output_dir,
         user_problem=user_problem,
     )
+    context = read_json_safe(context_path)
     preview_path = output_dir / CHAT_PREVIEW_NAME
     prompt_path = output_dir / CHAT_PROMPT_NAME
     response_path = output_dir / CHAT_RESPONSE_NAME
+    auto_use_image, auto_image_reasons = detect_topology_failure_mode(context, output_dir)
+    image_path = find_input_image_path(batch, circuit, output_dir) if auto_use_image else None
 
     write_agent_input_preview(
         context_path=context_path,
@@ -635,37 +724,69 @@ def run_readonly_agent_from_chat(
         prompt_path=prompt_path,
         model=model,
         output_path=response_path,
+        image_path=image_path,
     )
+
+    debug_lines = [
+        f"Updated: {project_relative(context_path)}",
+        f"Generated: {project_relative(preview_path)}",
+        f"Generated: {project_relative(prompt_path)}",
+        f"Generated: {project_relative(response_path)}",
+        f"Model: {model}",
+    ]
+    if auto_use_image and image_path is not None:
+        debug_lines.append(f"Auto image: {project_relative(image_path)}")
+        debug_lines.append(f"Auto image reasons: {', '.join(auto_image_reasons)}")
+    elif auto_use_image:
+        debug_lines.append("Auto image requested, but local input image was not found.")
+        debug_lines.append(f"Auto image reasons: {', '.join(auto_image_reasons)}")
+    else:
+        debug_lines.append("Auto image: not used")
 
     return {
         "reply": read_text_safe(response_path),
-        "debug": [
-            f"Updated: {project_relative(context_path)}",
-            f"Generated: {project_relative(preview_path)}",
-            f"Generated: {project_relative(prompt_path)}",
-            f"Generated: {project_relative(response_path)}",
-            f"Model: {model}",
-        ],
+        "debug": debug_lines,
     }
 
 
-def detect_scenario_request(user_message: str) -> int | None:
-    """Riconosce richieste semplici tipo 'esegui scenario 1'."""
-    normalized = user_message.lower().replace("_", " ")
+def normalize_chat_model(requested_model: str | None) -> str:
+    """Valida il modello scelto nella chat e applica il default se serve."""
+    if requested_model in CHAT_MODELS:
+        return str(requested_model)
+    return CHAT_MODEL
 
-    match = re.search(r"\bscenario\s*(\d+)\b", normalized)
+
+def detect_scenario_request(user_message: str) -> int | str | None:
+    """Riconosce richieste semplici di esecuzione scenario."""
+    normalized = user_message.lower().replace("_", " ")
+    execution_verbs = r"(?:esegui|eseguire|lancia|avvia|run|execute|testa|applica|facciamo)"
+    filler = r"(?:\s+(?:pure|per\s+favore|lo|la|il|uno|un|questo|questa|please))*"
+
+    # La run parte solo se il verbo di esecuzione e legato allo scenario stesso.
+    match = re.search(
+        rf"\b{execution_verbs}\b{filler}\s+scenario\s*(\d+)\b",
+        normalized,
+    )
     if match:
         return int(match.group(1))
 
-    has_execution_intent = any(
-        token in normalized
-        for token in ["esegui", "prova", "facciamo", "lancia", "testa", "run", "execute"]
+    # Supporta richieste naturali come "esegui lo scenario appena proposto".
+    latest_markers = (
+        r"scenario\s+appena\s+proposto",
+        r"scenario\s+proposto",
+        r"ultimo\s+scenario",
+        r"scenario\s+piu\s+recente",
+        r"questo\s+scenario",
     )
-    if not has_execution_intent:
-        return None
+    for marker in latest_markers:
+        if re.search(rf"\b{execution_verbs}\b{filler}\s+{marker}\b", normalized):
+            return "latest"
 
     for word, index in SCENARIO_WORD_TO_INDEX.items():
-        if re.search(rf"\b{re.escape(word)}\b", normalized):
+        if re.search(
+            rf"\b{execution_verbs}\b{filler}\s+\b{re.escape(word)}\b",
+            normalized,
+        ):
             return index
 
     return None
@@ -687,8 +808,11 @@ def extract_scenarios_from_response(response_text: str) -> list[dict[str, Any]]:
     return scenarios
 
 
-def select_scenario(scenarios: list[dict[str, Any]], requested_index: int) -> dict[str, Any] | None:
-    """Seleziona uno scenario per id tecnico o per posizione nella risposta."""
+def select_scenario(scenarios: list[dict[str, Any]], requested_index: int | str) -> dict[str, Any] | None:
+    """Seleziona uno scenario per id tecnico, posizione o ultimo scenario proposto."""
+    if requested_index == "latest":
+        return scenarios[-1] if scenarios else None
+
     requested_id = f"scenario_{requested_index}"
     for scenario in scenarios:
         if str(scenario.get("scenario_id")) == requested_id:
@@ -715,7 +839,7 @@ def is_safe_scenario_name(name: str) -> bool:
 def prepare_scenario_folder(
     output_dir: Path,
     selected: dict[str, Any],
-    requested_index: int,
+    requested_index: int | str,
     response_path: Path,
 ) -> dict[str, Path]:
     """
@@ -724,7 +848,8 @@ def prepare_scenario_folder(
     Questo e lo step 2: salviamo solo i metadati necessari alla futura
     esecuzione controllata, senza modificare la base run e senza chiamare SPICE.
     """
-    scenario_id = str(selected.get("scenario_id") or f"scenario_{requested_index}")
+    fallback_id = "scenario_latest" if requested_index == "latest" else f"scenario_{requested_index}"
+    scenario_id = str(selected.get("scenario_id") or fallback_id)
     scenario_dir = output_dir / "scenarios" / safe_scenario_dir_name(scenario_id)
     scenario_dir.mkdir(parents=True, exist_ok=True)
 
@@ -816,6 +941,92 @@ def apply_controlled_scenario(
     return report if isinstance(report, dict) else {}
 
 
+def build_scenario_result_explanation(
+    scenario_dir: Path,
+    selected: dict[str, Any],
+    diagnostic_outcome: dict[str, Any],
+) -> str:
+    """
+    Costruisce una spiegazione automatica sintetica del risultato scenario.
+
+    La usiamo sempre, cosi la chat non lascia l'utente solo con un'etichetta
+    tecnica tipo `partially_resolved`.
+    """
+    comparison = read_json_safe(scenario_dir / "scenario_comparison.json")
+    quantities = comparison.get("quantities")
+    if not isinstance(quantities, list):
+        quantities = []
+
+    changed_lines: list[str] = []
+    for item in quantities[:3]:
+        if not isinstance(item, dict):
+            continue
+        quantity = str(item.get("quantity") or "")
+        base_value = item.get("base_value")
+        scenario_value = item.get("scenario_value")
+        change = str(item.get("change") or "")
+        if not quantity or base_value is None or scenario_value is None:
+            continue
+        changed_lines.append(
+            f"- `{quantity}`: da **{base_value}** a **{scenario_value}** (`{change}`)"
+        )
+
+    hypothesis = str(selected.get("hypothesis") or "").strip()
+    title = str(selected.get("title") or selected.get("scenario_id") or "scenario").strip()
+    outcome_status = str(diagnostic_outcome.get("status") or "unknown")
+    stop_automation = bool(diagnostic_outcome.get("stop_automation"))
+
+    outcome_sentence = {
+        "resolved_candidate": (
+            f"Questo scenario spiega bene il sintomo osservato e puo fermare l'automazione: "
+            f"l'ipotesi testata da **{title}** risulta fortemente confermata."
+        ),
+        "partially_resolved": (
+            f"Questo scenario ha dato un indizio utile ma non basta ancora da solo: "
+            f"l'ipotesi testata da **{title}** e supportata solo in parte."
+        ),
+        "not_resolved": (
+            f"Questo scenario non ha spiegato il sintomo: "
+            f"l'ipotesi testata da **{title}** non e confermata dai risultati."
+        ),
+        "unknown": (
+            f"Questo scenario resta inconcludente: "
+            f"i risultati non bastano ancora per confermare o escludere l'ipotesi testata da **{title}**."
+        ),
+    }.get(
+        outcome_status,
+        f"Questo scenario ha prodotto un risultato tecnico da interpretare rispetto all'ipotesi testata da **{title}**.",
+    )
+
+    lines = [
+        "**Spiegazione automatica**",
+        "",
+        outcome_sentence,
+    ]
+    if hypothesis:
+        lines.append("")
+        lines.append(f"Ipotesi confermata: {hypothesis}")
+    if changed_lines:
+        lines.extend(
+            [
+                "",
+                "Le grandezze piu importanti sono cambiate cosi:",
+                *changed_lines,
+            ]
+        )
+    lines.extend(
+        [
+            "",
+            (
+                "Interpretazione pratica: il comportamento osservato nello scenario spiega il sintomo meglio della run base, quindi per ora non serve continuare automaticamente con altri scenari."
+                if stop_automation
+                else "Interpretazione pratica: il comportamento osservato nello scenario aggiunge evidenza utile rispetto alla run base, ma non chiude ancora da solo la diagnosi."
+            ),
+        ]
+    )
+    return "\n".join(lines)
+
+
 def handle_scenario_request(
     output_dir: Path,
     user_message: str,
@@ -831,11 +1042,13 @@ def handle_scenario_request(
     if requested_index is None:
         return None
 
+    requested_label = "latest" if requested_index == "latest" else str(requested_index)
+
     response_path = output_dir / CHAT_RESPONSE_NAME
     if not response_path.exists():
         return {
             "reply": (
-                f"Ho capito che vuoi eseguire lo scenario {requested_index}, "
+                f"Ho capito che vuoi eseguire lo scenario {requested_label}, "
                 "ma non trovo ancora una risposta agente con scenari.\n\n"
                 "Prima scrivi un sintomo, aspetta la diagnosi e poi chiedi di eseguire uno scenario."
             ),
@@ -849,7 +1062,7 @@ def handle_scenario_request(
     if selected is None:
         return {
             "reply": (
-                f"Ho riconosciuto la richiesta per lo scenario {requested_index}, "
+                f"Ho riconosciuto la richiesta per lo scenario {requested_label}, "
                 "ma non ho trovato uno scenario JSON corrispondente nell'ultima risposta agente.\n\n"
                 f"Scenari JSON trovati: {len(scenarios)}"
             ),
@@ -857,7 +1070,7 @@ def handle_scenario_request(
         }
 
     selected_json = json.dumps(selected, indent=2, ensure_ascii=False)
-    title = selected.get("title") or selected.get("scenario_id") or f"scenario {requested_index}"
+    title = selected.get("title") or selected.get("scenario_id") or f"scenario {requested_label}"
     scenario_paths = prepare_scenario_folder(
         output_dir=output_dir,
         selected=selected,
@@ -886,10 +1099,22 @@ def handle_scenario_request(
     outcome_reason = diagnostic_outcome.get("reason") or "No diagnostic outcome available."
     outcome_next_step = diagnostic_outcome.get("next_step") or "Continue with the diagnostic workflow."
     stop_automation = bool(diagnostic_outcome.get("stop_automation"))
+    scenario_explanation = build_scenario_result_explanation(
+        scenario_paths["scenario_dir"],
+        selected,
+        diagnostic_outcome,
+    )
 
     return {
         "reply": (
-            f"Ho riconosciuto la richiesta di eseguire **scenario {requested_index}**.\n\n"
+            "Ho riconosciuto la richiesta di eseguire **lo scenario appena proposto**.\n\n"
+            if requested_index == "latest"
+            else f"Ho riconosciuto la richiesta di eseguire **scenario {requested_index}**.\n\n"
+        ) + (
+            "Ho selezionato l'ultimo scenario proposto dall'agente.\n\n"
+            if requested_index == "latest"
+            else ""
+        ) + (
             f"Scenario selezionato: **{title}**.\n\n"
             "Ho creato una cartella scenario separata, ho copiato la base run, "
             "ho applicato le azioni supportate alla netlist in `run/` e ho eseguito ngspice sulla run scenario.\n\n"
@@ -908,6 +1133,12 @@ def handle_scenario_request(
             f"Motivo: {outcome_reason}\n\n"
             f"Decisione automatica: **{'stop' if stop_automation else 'continue'}**.\n\n"
             f"Prossimo passo: {outcome_next_step}\n\n"
+            + (
+                f"{scenario_explanation}\n\n"
+                if scenario_explanation
+                else ""
+            )
+            +
             "Lo scenario ora e disponibile nella barra sinistra.\n\n"
             "Scenario tecnico recuperato:\n\n"
             f"```json\n{selected_json}\n```"
@@ -916,6 +1147,7 @@ def handle_scenario_request(
         "debug": [
             f"Read: {project_relative(response_path)}",
             f"Scenarios found: {len(scenarios)}",
+            f"Requested: {requested_label}",
             f"Selected: {selected.get('scenario_id')}",
             f"Written: {project_relative(scenario_paths['scenario_path'])}",
             f"Written: {project_relative(scenario_paths['status_path'])}",
@@ -1048,6 +1280,7 @@ class WebChatHandler(BaseHTTPRequestHandler):
             payload = {}
 
         user_message = str(payload.get("message") or "").strip()
+        requested_model = normalize_chat_model(str(payload.get("model") or "").strip() or None)
         if not user_message:
             body = json.dumps({"reply": "Write a symptom before sending the message.", "debug": []}, ensure_ascii=False)
             self.send_text(200, body, "application/json; charset=utf-8")
@@ -1069,7 +1302,7 @@ class WebChatHandler(BaseHTTPRequestHandler):
                 circuit=self.server.circuit,
                 output_dir=self.server.output_dir,
                 user_problem=user_message,
-                model=CHAT_MODEL,
+                model=requested_model,
             )
         except Exception as exc:
             result = {
@@ -1079,7 +1312,7 @@ class WebChatHandler(BaseHTTPRequestHandler):
                     "Check the terminal and the generated chat files, if any."
                 ),
                 "debug": [
-                    f"Attempted model: {CHAT_MODEL}",
+                    f"Attempted model: {requested_model}",
                     f"Circuit: {self.server.batch}/{self.server.circuit}",
                 ],
             }

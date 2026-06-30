@@ -16,6 +16,8 @@ La logica resta volutamente semplice:
 
 from __future__ import annotations
 
+import base64
+import mimetypes
 import os
 from pathlib import Path
 
@@ -78,6 +80,15 @@ def read_prompt(prompt_path: str | Path) -> str:
     return Path(prompt_path).read_text(encoding="utf-8")
 
 
+def image_path_to_data_url(image_path: str | Path) -> str:
+    """Converte un'immagine locale in data URL per la Responses API."""
+    path = Path(image_path)
+    mime_type = mimetypes.guess_type(str(path))[0] or "application/octet-stream"
+    image_bytes = path.read_bytes()
+    encoded = base64.b64encode(image_bytes).decode("ascii")
+    return f"data:{mime_type};base64,{encoded}"
+
+
 def extract_response_text(response: object) -> str:
     """
     Estrae il testo dalla risposta OpenAI.
@@ -92,7 +103,7 @@ def extract_response_text(response: object) -> str:
     raise RuntimeError("OpenAI response did not contain output_text.")
 
 
-def call_openai(prompt: str, model: str) -> str:
+def call_openai(prompt: str, model: str, image_path: str | Path | None = None) -> str:
     """Chiama OpenAI con il prompt completo e restituisce il testo generato."""
     try:
         from openai import OpenAI
@@ -107,9 +118,29 @@ def call_openai(prompt: str, model: str) -> str:
         )
 
     client = OpenAI()
+    content: list[dict[str, str]] = [
+        {
+            "type": "input_text",
+            "text": prompt,
+        }
+    ]
+    if image_path:
+        content.append(
+            {
+                "type": "input_image",
+                "image_url": image_path_to_data_url(image_path),
+                "detail": "high",
+            }
+        )
+
     response = client.responses.create(
         model=model,
-        input=prompt,
+        input=[
+            {
+                "role": "user",
+                "content": content,
+            }
+        ],
     )
     return extract_response_text(response)
 
@@ -118,6 +149,7 @@ def write_agent_response(
     prompt_path: str | Path,
     model: str | None = None,
     output_path: str | Path | None = None,
+    image_path: str | Path | None = None,
 ) -> Path:
     """
     Esegue la chiamata OpenAI e salva la risposta Markdown.
@@ -135,6 +167,6 @@ def write_agent_response(
     )
 
     prompt = read_prompt(prompt_file)
-    response_text = call_openai(prompt=prompt, model=selected_model)
+    response_text = call_openai(prompt=prompt, model=selected_model, image_path=image_path)
     destination.write_text(response_text.rstrip() + "\n", encoding="utf-8")
     return destination

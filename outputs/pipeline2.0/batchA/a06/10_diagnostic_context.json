@@ -2,7 +2,7 @@
   "source_format": "pipeline2.0_diagnostic_context_manifest",
   "batch_name": "batchA",
   "circuit_id": "a06",
-  "user_problem": null,
+  "user_problem": "Ho ridotto sia l'ingresso sia VVCC e l'uscita cambia davvero, ma resta ancora non pulita. Quale elemento del punto di lavoro o della rete di bias è adesso il più sospetto?",
   "pipeline2_output_dir": "outputs\\pipeline2.0\\batchA\\a06",
   "summary": {
     "spice_status": "success",
@@ -103,6 +103,155 @@
       "role": "Transient plot SVG fallback, when generated."
     }
   },
+  "executed_scenarios": [
+    {
+      "scenario_dir": "outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_1",
+      "scenario_id": "scenario_1",
+      "title": "Ridurre l'ampiezza del segnale di ingresso",
+      "status": "spice_success",
+      "spice_status": "success",
+      "diagnostic_outcome": {
+        "status": "partially_resolved",
+        "label": "Partially resolved",
+        "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+        "stop_automation": false,
+        "confidence": "low",
+        "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+      },
+      "comparison_summary": {
+        "requested_count": 3,
+        "changed_count": 3,
+        "activated_count": 0,
+        "missing_count": 0
+      },
+      "artifacts": {
+        "scenario_definition": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_1\\scenario.json",
+          "role": "Scenario selected by the user and saved before execution."
+        },
+        "scenario_status": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_1\\scenario_status.json",
+          "role": "Current scenario status, SPICE status and diagnostic outcome."
+        },
+        "controlled_scenario_report": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_1\\12_controlled_scenarios.json",
+          "role": "Report produced by the controlled scenario runner."
+        },
+        "scenario_comparison": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_1\\scenario_comparison.json",
+          "role": "Base-vs-scenario comparison used to evaluate the scenario."
+        }
+      }
+    },
+    {
+      "scenario_dir": "outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_2",
+      "scenario_id": "scenario_2",
+      "title": "Ridurre l'alimentazione VVCC",
+      "status": "spice_success",
+      "spice_status": "success",
+      "diagnostic_outcome": {
+        "status": "partially_resolved",
+        "label": "Partially resolved",
+        "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+        "stop_automation": false,
+        "confidence": "low",
+        "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+      },
+      "comparison_summary": {
+        "requested_count": 3,
+        "changed_count": 3,
+        "activated_count": 0,
+        "missing_count": 0
+      },
+      "artifacts": {
+        "scenario_definition": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_2\\scenario.json",
+          "role": "Scenario selected by the user and saved before execution."
+        },
+        "scenario_status": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_2\\scenario_status.json",
+          "role": "Current scenario status, SPICE status and diagnostic outcome."
+        },
+        "controlled_scenario_report": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_2\\12_controlled_scenarios.json",
+          "role": "Report produced by the controlled scenario runner."
+        },
+        "scenario_comparison": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_2\\scenario_comparison.json",
+          "role": "Base-vs-scenario comparison used to evaluate the scenario."
+        }
+      }
+    }
+  ],
+  "scenario_outcome_summary": {
+    "available": true,
+    "best_scenario_id": "scenario_1",
+    "best_outcome_status": "partially_resolved",
+    "best_stop_automation": false,
+    "interpretation_rule": "If a user asks which scenario resolves the problem, prefer the scenario with outcome_status='resolved_candidate' and stop_automation=true. Partially resolved scenarios are supporting diagnostics, not the main solution.",
+    "scenarios": [
+      {
+        "scenario_id": "scenario_1",
+        "title": "Ridurre l'ampiezza del segnale di ingresso",
+        "status": "spice_success",
+        "spice_status": "success",
+        "outcome_status": "partially_resolved",
+        "outcome_label": "Partially resolved",
+        "outcome_reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+        "stop_automation": false,
+        "comparison_summary": {
+          "requested_count": 3,
+          "changed_count": 3,
+          "activated_count": 0,
+          "missing_count": 0
+        },
+        "quantity_summary": {
+          "changed": [
+            "v(N006)",
+            "v(N004)",
+            "v(N005)"
+          ],
+          "unchanged": [],
+          "missing": []
+        },
+        "score": 23
+      },
+      {
+        "scenario_id": "scenario_2",
+        "title": "Ridurre l'alimentazione VVCC",
+        "status": "spice_success",
+        "spice_status": "success",
+        "outcome_status": "partially_resolved",
+        "outcome_label": "Partially resolved",
+        "outcome_reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+        "stop_automation": false,
+        "comparison_summary": {
+          "requested_count": 3,
+          "changed_count": 3,
+          "activated_count": 0,
+          "missing_count": 0
+        },
+        "quantity_summary": {
+          "changed": [
+            "v(N004)",
+            "v(N005)",
+            "i(vvcc#branch)"
+          ],
+          "unchanged": [],
+          "missing": []
+        },
+        "score": 23
+      }
+    ]
+  },
   "image_access": {
     "included_by_default": false,
     "can_be_requested": true,
@@ -114,6 +263,7 @@
     "Treat this file as a manifest, not as the full diagnostic evidence.",
     "Load the referenced artifacts needed for the answer.",
     "Use graph, node map, component rules, netlist, stdout and stderr as evidence.",
+    "If executed_scenarios are available, use them as evidence for questions about scenario outcomes.",
     "Do not invent values, connections, models or simulation results.",
     "Do not use the image unless image_access is explicitly requested.",
     "If Graph JSON inconsistency is suspected, explain which structured outputs suggest it.",
