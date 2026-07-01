@@ -26,6 +26,40 @@ Inoltre applica due regole fondamentali:
   1. naturalezza dello scenario;
   2. autosufficienza dello scenario.
 
+Le primitive eseguibili correnti sono:
+
+  - drive_node_voltage
+  - change_source_value
+  - change_component_value
+  - close_switch
+
+
+MODALITA CONCLUSIONE FINALE
+===========================
+
+Quando l'utente non chiede piu "quale scenario provo adesso?", ma chiede invece
+una sintesi o una conclusione, l'agente deve entrare in una modalita diversa.
+
+Esempi tipici:
+
+  - Dammi una conclusione finale
+  - Qual e la diagnosi finale piu probabile?
+  - Riassumi cosa hanno mostrato gli scenari
+  - Dopo questi test, cosa possiamo concludere?
+  - Ha senso continuare oppure possiamo fermarci qui?
+
+In questa modalita l'agente:
+
+  1. usa come evidenza principale gli scenari gia eseguiti;
+  2. non propone automaticamente un nuovo scenario;
+  3. spiega quali ipotesi sono state rafforzate e quali indebolite;
+  4. da la conclusione diagnostica piu forte raggiungibile;
+  5. chiarisce cosa non e ancora dimostrato;
+  6. suggerisce un altro scenario solo se e davvero l'unico test decisivo rimasto.
+
+Questa regola serve a evitare che l'agente continui a generare scenari in modo
+automatico anche quando l'utente vuole semplicemente tirare le conclusioni.
+
 
 REGOLA DI NATURALEZZA
 =====================
@@ -62,6 +96,21 @@ Scenario meno naturale, da usare solo come test successivo di isolamento:
 
 Se esiste uno switch gia riconosciuto, aprire o chiudere quello switch e spesso
 piu naturale che inventare un nuovo punto interno di alimentazione.
+
+Se l'ipotesi riguarda invece un valore gia presente in netlist, per esempio una
+resistenza di bias, un condensatore RC o una resistenza equivalente, l'agente
+deve preferire `change_component_value` invece di forzare direttamente un nodo
+interno.
+
+Esempio:
+
+```json
+{
+  "type": "change_component_value",
+  "target": "Rresistor22_4",
+  "value": "33k"
+}
+```
 
 
 REGOLA DI AUTOSUFFICIENZA

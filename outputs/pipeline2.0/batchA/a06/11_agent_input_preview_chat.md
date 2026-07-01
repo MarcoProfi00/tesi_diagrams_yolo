@@ -5,7 +5,7 @@ The agent remains read-only: it can inspect base outputs and existing scenario a
 
 ## User problem
 
-Ho ridotto sia l'ingresso sia VVCC e l'uscita cambia davvero, ma resta ancora non pulita. Quale elemento del punto di lavoro o della rete di bias è adesso il più sospetto?
+Abbiamo esaurito i 5 scenari. Fornisci ora la conclusione diagnostica finale completa del caso a06, spiegando chiaramente se il problema è risolto, localizzato oppure ancora inconclusivo.
 
 ## Circuit
 
@@ -54,6 +54,8 @@ Ho ridotto sia l'ingresso sia VVCC e l'uscita cambia davvero, ma resta ancora no
 - Do not use the image unless image_access is explicitly requested.
 - If Graph JSON inconsistency is suspected, explain which structured outputs suggest it.
 - In read-only mode, do not modify netlists and do not execute scenarios.
+- Never exceed 5 executed scenarios for the same circuit.
+- When the scenario budget is exhausted, stop proposing new scenarios and provide a final diagnostic conclusion.
 
 ## Scenario outcome summary
 
@@ -111,6 +113,84 @@ Ho ridotto sia l'ingresso sia VVCC e l'uscita cambia davvero, ma resta ancora no
           "v(N004)",
           "v(N005)",
           "i(vvcc#branch)"
+        ],
+        "unchanged": [],
+        "missing": []
+      },
+      "score": 23
+    },
+    {
+      "scenario_id": "scenario_3",
+      "title": "Forzare la base del transistor per isolare la rete di bias",
+      "status": "spice_success",
+      "spice_status": "success",
+      "outcome_status": "partially_resolved",
+      "outcome_label": "Partially resolved",
+      "outcome_reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+      "stop_automation": false,
+      "comparison_summary": {
+        "requested_count": 3,
+        "changed_count": 3,
+        "activated_count": 0,
+        "missing_count": 0
+      },
+      "quantity_summary": {
+        "changed": [
+          "v(N002)",
+          "v(N004)",
+          "v(N005)"
+        ],
+        "unchanged": [],
+        "missing": []
+      },
+      "score": 23
+    },
+    {
+      "scenario_id": "scenario_4",
+      "title": "Forzare l'emettitore per isolare il ramo di emettitore",
+      "status": "spice_success",
+      "spice_status": "success",
+      "outcome_status": "partially_resolved",
+      "outcome_label": "Partially resolved",
+      "outcome_reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+      "stop_automation": false,
+      "comparison_summary": {
+        "requested_count": 3,
+        "changed_count": 3,
+        "activated_count": 0,
+        "missing_count": 0
+      },
+      "quantity_summary": {
+        "changed": [
+          "v(N003)",
+          "v(N004)",
+          "v(N005)"
+        ],
+        "unchanged": [],
+        "missing": []
+      },
+      "score": 23
+    },
+    {
+      "scenario_id": "scenario_5",
+      "title": "Bloccare la base al suo livello DC nominale per verificare il partitore di bias",
+      "status": "spice_success",
+      "spice_status": "success",
+      "outcome_status": "partially_resolved",
+      "outcome_label": "Partially resolved",
+      "outcome_reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+      "stop_automation": false,
+      "comparison_summary": {
+        "requested_count": 3,
+        "changed_count": 3,
+        "activated_count": 0,
+        "missing_count": 0
+      },
+      "quantity_summary": {
+        "changed": [
+          "v(N002)",
+          "v(N004)",
+          "v(N005)"
         ],
         "unchanged": [],
         "missing": []
@@ -571,6 +651,681 @@ Ho ridotto sia l'ingresso sia VVCC e l'uscita cambia davvero, ma resta ancora no
     "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
   },
   "created_or_updated_at": "2026-06-30T18:51:09"
+}
+```
+
+### scenario_3
+
+- Title: `Forzare la base del transistor per isolare la rete di bias`
+- Status: `spice_success`
+- SPICE status: `success`
+- Outcome: `partially_resolved`
+- Stop automation: `False`
+- Comparison: `3/3` changed
+
+#### scenario_definition
+
+- Role: Scenario selected by the user and saved before execution.
+- Path: `outputs\pipeline2.0\batchA\a06\scenarios\scenario_3\scenario.json`
+
+```json
+{
+  "scenario_id": "scenario_3",
+  "title": "Forzare la base del transistor per isolare la rete di bias",
+  "hypothesis": "Se la distorsione dipende principalmente dalla rete di bias su N002, forzando direttamente la tensione di base deve cambiare in modo significativo il comportamento di v(N004) e v(N005).",
+  "actions": [
+    {
+      "type": "drive_node_voltage",
+      "target": "N002",
+      "value": "2V"
+    }
+  ],
+  "rerun_from": "04",
+  "analysis": "tran",
+  "compare": [
+    "v(N002)",
+    "v(N004)",
+    "v(N005)"
+  ]
+}
+```
+
+#### scenario_status
+
+- Role: Current scenario status, SPICE status and diagnostic outcome.
+- Path: `outputs\pipeline2.0\batchA\a06\scenarios\scenario_3\scenario_status.json`
+
+```json
+{
+  "status": "spice_success",
+  "stage": "scenario_spice_executed",
+  "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
+  "scenario_id": "scenario_3",
+  "requested_index": 3,
+  "base_output_dir": "outputs\\pipeline2.0\\batchA\\a06",
+  "source_agent_response": "outputs\\pipeline2.0\\batchA\\a06\\11_agent_response_chat.md",
+  "scenario_file": "outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_3\\scenario.json",
+  "created_or_updated_at": "2026-07-01T09:08:50",
+  "next_step": "Continue with another scenario or ask the agent for a refined hypothesis.",
+  "spice_executed": true,
+  "spice_status": "success",
+  "spice_exit_code": 0,
+  "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_3\\run\\08_spice_run.json",
+  "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_3\\scenario_comparison.json",
+  "comparison_summary": {
+    "requested_count": 3,
+    "changed_count": 3,
+    "activated_count": 0,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "controlled_scenario_report": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_3\\12_controlled_scenarios.json"
+}
+```
+
+#### controlled_scenario_report
+
+- Role: Report produced by the controlled scenario runner.
+- Path: `outputs\pipeline2.0\batchA\a06\scenarios\scenario_3\12_controlled_scenarios.json`
+
+```json
+{
+  "source_format": "pipeline2.0_controlled_scenario_report",
+  "status": "spice_success",
+  "scenario_id": "scenario_3",
+  "scenario_title": "Forzare la base del transistor per isolare la rete di bias",
+  "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_3",
+  "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_3\\run",
+  "netlist": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_3\\run\\07_netlist.cir",
+  "applied_actions": [
+    {
+      "status": "applied",
+      "type": "drive_node_voltage",
+      "target": "N002",
+      "value": "2V",
+      "normalized_dc_value": "2",
+      "inserted_line": "VSCENARIO_N002 N002 0 DC 2",
+      "operation": "inserted",
+      "spice_executed": false,
+      "index": 1
+    }
+  ],
+  "unsupported_actions": [],
+  "failed_actions": [],
+  "spice_executed": true,
+  "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_3\\run\\08_spice_run.json",
+  "spice_status": "success",
+  "spice_exit_code": 0,
+  "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_3\\scenario_comparison.json",
+  "comparison_summary": {
+    "requested_count": 3,
+    "changed_count": 3,
+    "activated_count": 0,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
+  "created_or_updated_at": "2026-07-01T09:08:50"
+}
+```
+
+#### scenario_comparison
+
+- Role: Base-vs-scenario comparison used to evaluate the scenario.
+- Path: `outputs\pipeline2.0\batchA\a06\scenarios\scenario_3\scenario_comparison.json`
+
+```json
+{
+  "source_format": "pipeline2.0_scenario_comparison",
+  "scenario_id": "scenario_3",
+  "scenario_title": "Forzare la base del transistor per isolare la rete di bias",
+  "base_output_dir": "outputs\\pipeline2.0\\batchA\\a06",
+  "scenario_run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_3\\run",
+  "base_stdout": "outputs\\pipeline2.0\\batchA\\a06\\08_ngspice_stdout.txt",
+  "scenario_stdout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_3\\run\\08_ngspice_stdout.txt",
+  "base_stderr": "outputs\\pipeline2.0\\batchA\\a06\\08_ngspice_stderr.txt",
+  "scenario_stderr": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_3\\run\\08_ngspice_stderr.txt",
+  "quantities": [
+    {
+      "quantity": "v(N002)",
+      "base_value": 1.8158849900000003,
+      "scenario_value": 0.0,
+      "delta": -1.8158849900000003,
+      "change": "deactivated",
+      "metric": "v(n002).vpp",
+      "base_details": {
+        "min": 1.918094,
+        "max": 3.73397899,
+        "mean": 2.927536640038986,
+        "vpp": 1.8158849900000003
+      },
+      "scenario_details": {
+        "min": 2.0,
+        "max": 2.0,
+        "mean": 2.0,
+        "vpp": 0.0
+      }
+    },
+    {
+      "quantity": "v(N004)",
+      "base_value": 7.170986879999999,
+      "scenario_value": 0.0010370200000000551,
+      "delta": -7.169949859999999,
+      "change": "changed",
+      "metric": "v(n004).vpp",
+      "base_details": {
+        "min": 2.94564482,
+        "max": 10.1166317,
+        "mean": 8.084793870409356,
+        "vpp": 7.170986879999999
+      },
+      "scenario_details": {
+        "min": 9.60590071,
+        "max": 9.60693773,
+        "mean": 9.606734459507873,
+        "vpp": 0.0010370200000000551
+      }
+    },
+    {
+      "quantity": "v(N005)",
+      "base_value": 7.47417467,
+      "scenario_value": 0.0010554680892999998,
+      "delta": -7.4731192019107,
+      "change": "changed",
+      "metric": "v(n005).vpp",
+      "base_details": {
+        "min": -4.2926905,
+        "max": 3.18148417,
+        "mean": 1.09695133535731,
+        "vpp": 7.47417467
+      },
+      "scenario_details": {
+        "min": -0.00103698616,
+        "max": 1.84819293e-05,
+        "mean": -0.00014354616864830537,
+        "vpp": 0.0010554680892999998
+      }
+    }
+  ],
+  "summary": {
+    "requested_count": 3,
+    "changed_count": 3,
+    "activated_count": 0,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "created_or_updated_at": "2026-07-01T09:08:50"
+}
+```
+
+### scenario_4
+
+- Title: `Forzare l'emettitore per isolare il ramo di emettitore`
+- Status: `spice_success`
+- SPICE status: `success`
+- Outcome: `partially_resolved`
+- Stop automation: `False`
+- Comparison: `3/3` changed
+
+#### scenario_definition
+
+- Role: Scenario selected by the user and saved before execution.
+- Path: `outputs\pipeline2.0\batchA\a06\scenarios\scenario_4\scenario.json`
+
+```json
+{
+  "scenario_id": "scenario_4",
+  "title": "Forzare l'emettitore per isolare il ramo di emettitore",
+  "hypothesis": "Se il problema dipende soprattutto dal ramo di emettitore su N003, forzando direttamente la tensione di emettitore devono cambiare in modo significativo v(N004) e v(N005).",
+  "actions": [
+    {
+      "type": "drive_node_voltage",
+      "target": "N003",
+      "value": "3V"
+    }
+  ],
+  "rerun_from": "04",
+  "analysis": "tran",
+  "compare": [
+    "v(N003)",
+    "v(N004)",
+    "v(N005)"
+  ]
+}
+```
+
+#### scenario_status
+
+- Role: Current scenario status, SPICE status and diagnostic outcome.
+- Path: `outputs\pipeline2.0\batchA\a06\scenarios\scenario_4\scenario_status.json`
+
+```json
+{
+  "status": "spice_success",
+  "stage": "scenario_spice_executed",
+  "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
+  "scenario_id": "scenario_4",
+  "requested_index": 4,
+  "base_output_dir": "outputs\\pipeline2.0\\batchA\\a06",
+  "source_agent_response": "outputs\\pipeline2.0\\batchA\\a06\\11_agent_response_chat.md",
+  "scenario_file": "outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_4\\scenario.json",
+  "created_or_updated_at": "2026-07-01T09:12:12",
+  "next_step": "Continue with another scenario or ask the agent for a refined hypothesis.",
+  "spice_executed": true,
+  "spice_status": "success",
+  "spice_exit_code": 0,
+  "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_4\\run\\08_spice_run.json",
+  "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_4\\scenario_comparison.json",
+  "comparison_summary": {
+    "requested_count": 3,
+    "changed_count": 3,
+    "activated_count": 0,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "controlled_scenario_report": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_4\\12_controlled_scenarios.json"
+}
+```
+
+#### controlled_scenario_report
+
+- Role: Report produced by the controlled scenario runner.
+- Path: `outputs\pipeline2.0\batchA\a06\scenarios\scenario_4\12_controlled_scenarios.json`
+
+```json
+{
+  "source_format": "pipeline2.0_controlled_scenario_report",
+  "status": "spice_success",
+  "scenario_id": "scenario_4",
+  "scenario_title": "Forzare l'emettitore per isolare il ramo di emettitore",
+  "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_4",
+  "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_4\\run",
+  "netlist": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_4\\run\\07_netlist.cir",
+  "applied_actions": [
+    {
+      "status": "applied",
+      "type": "drive_node_voltage",
+      "target": "N003",
+      "value": "3V",
+      "normalized_dc_value": "3",
+      "inserted_line": "VSCENARIO_N003 N003 0 DC 3",
+      "operation": "inserted",
+      "spice_executed": false,
+      "index": 1
+    }
+  ],
+  "unsupported_actions": [],
+  "failed_actions": [],
+  "spice_executed": true,
+  "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_4\\run\\08_spice_run.json",
+  "spice_status": "success",
+  "spice_exit_code": 0,
+  "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_4\\scenario_comparison.json",
+  "comparison_summary": {
+    "requested_count": 3,
+    "changed_count": 3,
+    "activated_count": 0,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
+  "created_or_updated_at": "2026-07-01T09:12:12"
+}
+```
+
+#### scenario_comparison
+
+- Role: Base-vs-scenario comparison used to evaluate the scenario.
+- Path: `outputs\pipeline2.0\batchA\a06\scenarios\scenario_4\scenario_comparison.json`
+
+```json
+{
+  "source_format": "pipeline2.0_scenario_comparison",
+  "scenario_id": "scenario_4",
+  "scenario_title": "Forzare l'emettitore per isolare il ramo di emettitore",
+  "base_output_dir": "outputs\\pipeline2.0\\batchA\\a06",
+  "scenario_run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_4\\run",
+  "base_stdout": "outputs\\pipeline2.0\\batchA\\a06\\08_ngspice_stdout.txt",
+  "scenario_stdout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_4\\run\\08_ngspice_stdout.txt",
+  "base_stderr": "outputs\\pipeline2.0\\batchA\\a06\\08_ngspice_stderr.txt",
+  "scenario_stderr": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_4\\run\\08_ngspice_stderr.txt",
+  "quantities": [
+    {
+      "quantity": "v(N003)",
+      "base_value": 0.17341612999999967,
+      "scenario_value": 0.0,
+      "delta": -0.17341612999999967,
+      "change": "deactivated",
+      "metric": "v(n003).vpp",
+      "base_details": {
+        "min": 2.88909114,
+        "max": 3.06250727,
+        "mean": 2.9782764049317736,
+        "vpp": 0.17341612999999967
+      },
+      "scenario_details": {
+        "min": 3.0,
+        "max": 3.0,
+        "mean": 3.0,
+        "vpp": 0.0
+      }
+    },
+    {
+      "quantity": "v(N004)",
+      "base_value": 7.170986879999999,
+      "scenario_value": 6.91887726,
+      "delta": -0.2521096199999988,
+      "change": "changed",
+      "metric": "v(n004).vpp",
+      "base_details": {
+        "min": 2.94564482,
+        "max": 10.1166317,
+        "mean": 8.084793870409356,
+        "vpp": 7.170986879999999
+      },
+      "scenario_details": {
+        "min": 3.01626087,
+        "max": 9.93513813,
+        "mean": 7.936654948601942,
+        "vpp": 6.91887726
+      }
+    },
+    {
+      "quantity": "v(N005)",
+      "base_value": 7.47417467,
+      "scenario_value": 7.2868564199999994,
+      "delta": -0.18731825000000057,
+      "change": "changed",
+      "metric": "v(n005).vpp",
+      "base_details": {
+        "min": -4.2926905,
+        "max": 3.18148417,
+        "mean": 1.09695133535731,
+        "vpp": 7.47417467
+      },
+      "scenario_details": {
+        "min": -3.7264808,
+        "max": 3.56037562,
+        "mean": 1.5015758980616893,
+        "vpp": 7.2868564199999994
+      }
+    }
+  ],
+  "summary": {
+    "requested_count": 3,
+    "changed_count": 3,
+    "activated_count": 0,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "created_or_updated_at": "2026-07-01T09:12:12"
+}
+```
+
+### scenario_5
+
+- Title: `Bloccare la base al suo livello DC nominale per verificare il partitore di bias`
+- Status: `spice_success`
+- SPICE status: `success`
+- Outcome: `partially_resolved`
+- Stop automation: `False`
+- Comparison: `3/3` changed
+
+#### scenario_definition
+
+- Role: Scenario selected by the user and saved before execution.
+- Path: `outputs\pipeline2.0\batchA\a06\scenarios\scenario_5\scenario.json`
+
+```json
+{
+  "scenario_id": "scenario_5",
+  "title": "Bloccare la base al suo livello DC nominale per verificare il partitore di bias",
+  "hypothesis": "Se la causa principale del problema è il partitore di bias della base su N002, forzare N002 al livello DC osservato nel run base deve ridurre in modo marcato la variazione di v(N004) e v(N005).",
+  "actions": [
+    {
+      "type": "drive_node_voltage",
+      "target": "N002",
+      "value": "3.664V"
+    }
+  ],
+  "rerun_from": "04",
+  "analysis": "tran",
+  "compare": [
+    "v(N002)",
+    "v(N004)",
+    "v(N005)"
+  ]
+}
+```
+
+#### scenario_status
+
+- Role: Current scenario status, SPICE status and diagnostic outcome.
+- Path: `outputs\pipeline2.0\batchA\a06\scenarios\scenario_5\scenario_status.json`
+
+```json
+{
+  "status": "spice_success",
+  "stage": "scenario_spice_executed",
+  "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
+  "scenario_id": "scenario_5",
+  "requested_index": "latest",
+  "base_output_dir": "outputs\\pipeline2.0\\batchA\\a06",
+  "source_agent_response": "outputs\\pipeline2.0\\batchA\\a06\\11_agent_response_chat.md",
+  "scenario_file": "outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_5\\scenario.json",
+  "created_or_updated_at": "2026-07-01T09:24:49",
+  "next_step": "Continue with another scenario or ask the agent for a refined hypothesis.",
+  "spice_executed": true,
+  "spice_status": "success",
+  "spice_exit_code": 0,
+  "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_5\\run\\08_spice_run.json",
+  "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_5\\scenario_comparison.json",
+  "comparison_summary": {
+    "requested_count": 3,
+    "changed_count": 3,
+    "activated_count": 0,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "controlled_scenario_report": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_5\\12_controlled_scenarios.json"
+}
+```
+
+#### controlled_scenario_report
+
+- Role: Report produced by the controlled scenario runner.
+- Path: `outputs\pipeline2.0\batchA\a06\scenarios\scenario_5\12_controlled_scenarios.json`
+
+```json
+{
+  "source_format": "pipeline2.0_controlled_scenario_report",
+  "status": "spice_success",
+  "scenario_id": "scenario_5",
+  "scenario_title": "Bloccare la base al suo livello DC nominale per verificare il partitore di bias",
+  "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_5",
+  "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_5\\run",
+  "netlist": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_5\\run\\07_netlist.cir",
+  "applied_actions": [
+    {
+      "status": "applied",
+      "type": "drive_node_voltage",
+      "target": "N002",
+      "value": "3.664V",
+      "normalized_dc_value": "3.664",
+      "inserted_line": "VSCENARIO_N002 N002 0 DC 3.664",
+      "operation": "inserted",
+      "spice_executed": false,
+      "index": 1
+    }
+  ],
+  "unsupported_actions": [],
+  "failed_actions": [],
+  "spice_executed": true,
+  "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_5\\run\\08_spice_run.json",
+  "spice_status": "success",
+  "spice_exit_code": 0,
+  "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_5\\scenario_comparison.json",
+  "comparison_summary": {
+    "requested_count": 3,
+    "changed_count": 3,
+    "activated_count": 0,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
+  "created_or_updated_at": "2026-07-01T09:24:49"
+}
+```
+
+#### scenario_comparison
+
+- Role: Base-vs-scenario comparison used to evaluate the scenario.
+- Path: `outputs\pipeline2.0\batchA\a06\scenarios\scenario_5\scenario_comparison.json`
+
+```json
+{
+  "source_format": "pipeline2.0_scenario_comparison",
+  "scenario_id": "scenario_5",
+  "scenario_title": "Bloccare la base al suo livello DC nominale per verificare il partitore di bias",
+  "base_output_dir": "outputs\\pipeline2.0\\batchA\\a06",
+  "scenario_run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_5\\run",
+  "base_stdout": "outputs\\pipeline2.0\\batchA\\a06\\08_ngspice_stdout.txt",
+  "scenario_stdout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_5\\run\\08_ngspice_stdout.txt",
+  "base_stderr": "outputs\\pipeline2.0\\batchA\\a06\\08_ngspice_stderr.txt",
+  "scenario_stderr": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\a06\\scenarios\\scenario_5\\run\\08_ngspice_stderr.txt",
+  "quantities": [
+    {
+      "quantity": "v(N002)",
+      "base_value": 1.8158849900000003,
+      "scenario_value": 0.0,
+      "delta": -1.8158849900000003,
+      "change": "deactivated",
+      "metric": "v(n002).vpp",
+      "base_details": {
+        "min": 1.918094,
+        "max": 3.73397899,
+        "mean": 2.927536640038986,
+        "vpp": 1.8158849900000003
+      },
+      "scenario_details": {
+        "min": 3.664,
+        "max": 3.664,
+        "mean": 3.664,
+        "vpp": 0.0
+      }
+    },
+    {
+      "quantity": "v(N004)",
+      "base_value": 7.170986879999999,
+      "scenario_value": 0.0,
+      "delta": -7.170986879999999,
+      "change": "deactivated",
+      "metric": "v(n004).vpp",
+      "base_details": {
+        "min": 2.94564482,
+        "max": 10.1166317,
+        "mean": 8.084793870409356,
+        "vpp": 7.170986879999999
+      },
+      "scenario_details": {
+        "min": 6.76332296,
+        "max": 6.76332296,
+        "mean": 6.76332296,
+        "vpp": 0.0
+      }
+    },
+    {
+      "quantity": "v(N005)",
+      "base_value": 7.47417467,
+      "scenario_value": 4.0757619499999996e-11,
+      "delta": -7.474174669959242,
+      "change": "changed",
+      "metric": "v(n005).vpp",
+      "base_details": {
+        "min": -4.2926905,
+        "max": 3.18148417,
+        "mean": 1.09695133535731,
+        "vpp": 7.47417467
+      },
+      "scenario_details": {
+        "min": -1.48379087e-11,
+        "max": 2.59197108e-11,
+        "mean": -1.0044633538692125e-12,
+        "vpp": 4.0757619499999996e-11
+      }
+    }
+  ],
+  "summary": {
+    "requested_count": 3,
+    "changed_count": 3,
+    "activated_count": 0,
+    "missing_count": 0
+  },
+  "diagnostic_outcome": {
+    "status": "partially_resolved",
+    "label": "Partially resolved",
+    "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+  },
+  "created_or_updated_at": "2026-07-01T09:24:49"
 }
 ```
 

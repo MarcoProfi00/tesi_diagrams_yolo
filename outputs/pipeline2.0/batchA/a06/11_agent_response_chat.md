@@ -1,249 +1,172 @@
-## 1. **Stato della simulazione**
-ngspice è stato eseguito correttamente.
+## 1. **Stato finale degli scenari eseguiti**
 
-Le evidenze sono coerenti:
-- `spice_status: success`
-- `spice_exit_code: 0`
-- `spice_message: "ngspice completed successfully."`
-- `outputs\pipeline2.0\batchA\a06\08_ngspice_stderr.txt` è vuoto
+Sono stati eseguiti tutti i 5 scenari consentiti e **nessuno** ha prodotto un esito `resolved_candidate`. Tutti risultano `partially_resolved`, quindi utili come evidenza diagnostica ma **non sufficienti** a dichiarare il problema risolto.
 
-Quindi il circuito estratto è simulabile e, per questa diagnosi, non emerge un guasto topologico forte che richieda subito correzioni del grafo.
+Sintesi degli esiti:
 
----
+- **scenario_1 — `Ridurre l'ampiezza del segnale di ingresso`**  
+  È lo scenario migliore secondo `scenario_outcome_summary.best_scenario_id = "scenario_1"`, ma resta solo `partially_resolved`.  
+  Ha modificato `v(N006)`, `v(N004)`, `v(N005)`. In particolare, riducendo l’ampiezza di `Vsignal_source23_1`, si riduce anche l’escursione di uscita.
 
-## 2. **Evidenze principali**
-Le prove più rilevanti, rispetto alla tua domanda sulla rete di bias e sul punto di lavoro, sono queste:
+- **scenario_2 — `Ridurre l'alimentazione VVCC`**  
+  Ha modificato `v(N004)`, `v(N005)` e `i(vvcc#branch)`.  
+  Quindi l’uscita dipende anche in modo marcato dall’alimentazione `VVCC`.
 
-- **Lo stadio è un NPN a emettitore comune con rete di bias resistiva**:
-  - `Qnpn_transistor18_1 N004 N002 N003 2N2222`
-  - base su `N002`
-  - collettore su `N004`
-  - emettitore su `N003`
-  - da netlist `outputs\pipeline2.0\batchA\a06\07_netlist.cir`
+- **scenario_3 — `Forzare la base del transistor per isolare la rete di bias`**  
+  Ha reso costante `v(N002)` e ha quasi annullato la variazione di `v(N004)` e `v(N005)`.  
+  Questo è un forte indizio che il comportamento anomalo è fortemente legato a ciò che accade al nodo base `N002`.
 
-- **La polarizzazione della base dipende direttamente dal partitore `Rresistor22_2` / `Rresistor22_3`**:
-  - `Rresistor22_2 N007 N002 100k`
-  - `Rresistor22_3 N002 0 47k`
-  - con `VVCC N007 0 DC 12`
+- **scenario_4 — `Forzare l'emettitore per isolare il ramo di emettitore`**  
+  Ha reso costante `v(N003)`, ma ha ridotto solo poco l’escursione di `v(N004)` e `v(N005)`.  
+  Quindi il ramo di emettitore influisce, ma non appare come la causa dominante.
 
-- **Il punto di lavoro mostrato da ngspice mette la base a circa 3.664 V e l’emettitore a circa 3.024 V**:
-  - `n002 3.664`
-  - `n003 3.02446`
-  - `n004 6.76332`
-  - da `outputs\pipeline2.0\batchA\a06\08_ngspice_stdout.txt`
+- **scenario_5 — `Bloccare la base al suo livello DC nominale per verificare il partitore di bias`**  
+  Ha reso costante `v(N002)` al livello DC base e ha praticamente azzerato la variazione di `v(N004)` e `v(N005)`.  
+  È una conferma molto forte che la dinamica del problema passa soprattutto dalla base/bias/accoppiamento in ingresso.
 
-- **La tensione di uscita osservata `N005` è accoppiata in AC tramite `Ccapacitor4_3`, mentre in DC sta a 0 V perché caricata da `Rresistor22_6` verso massa**:
-  - `Ccapacitor4_3 N004 N005 10u`
-  - `Rresistor22_6 N005 0 10k`
-  - in stdout iniziale: `n005 0`
-
-- **L’ingresso e l’alimentazione influenzano davvero il comportamento**, ma nessuno dei due scenari ha “risolto”:
-  - `scenario_1` = ridurre `Vsignal_source23_1` a `SIN(0 0.1 100)` → `partially_resolved`
-  - `scenario_2` = ridurre `VVCC` a `6V` → `partially_resolved`
-
-- **Il confronto degli scenari mostra che la riduzione di `VVCC` ha modificato più pesantemente i nodi d’uscita rispetto alla sola riduzione del segnale d’ingresso**:
-  - `scenario_1`:
-    - `v(N004).vpp` da `7.170986879999999` a `6.843207230000001`
-    - `v(N005).vpp` da `7.47417467` a `6.9551392100000005`
-  - `scenario_2`:
-    - `v(N004).vpp` da `7.170986879999999` a `3.9618966199999996`
-    - `v(N005).vpp` da `7.47417467` a `4.05584567`
-    - cambia anche `i(vvcc#branch)` da `-0.00085346` a `-0.000353063`
-
-- **Tra gli scenari eseguiti, il più forte secondo `scenario_outcome_summary` è `scenario_1`, ma solo per regola di scoring interna; non esiste alcun `resolved_candidate`**:
-  - `best_scenario_id: "scenario_1"`
-  - `best_outcome_status: "partially_resolved"`
-  - nessuno scenario ha `stop_automation=true`
-
-Quindi, dal punto di vista fisico, l’evidenza più utile non è “quale ha vinto”, ma **quale azione ha mostrato maggiore dipendenza dell’uscita dalla polarizzazione**: qui è chiaramente la variazione di `VVCC`.
+Il budget è esaurito (`remaining_executable_scenarios = 0`, `budget_exhausted = true`), quindi **non si possono proporre nuovi scenari eseguibili**.
 
 ---
 
-## 3. **Diagnosi rispetto al problema utente**
-La tua osservazione (“riducendo sia l’ingresso sia `VVCC` l’uscita cambia davvero, ma resta ancora non pulita”) è **supportata dalle simulazioni già eseguite**.
+## 2. **Diagnosi finale**
 
-La conclusione più solida, usando solo le evidenze disponibili, è questa:
+La conclusione più forte supportata dalle evidenze è questa:
 
-### Elemento più sospetto adesso: **la rete di bias della base, in particolare `resistor22.2` e `resistor22.3`**
-Perché:
-- `N002` è il nodo base del transistor `npn_transistor18.1`
-- `N002` è fissato dalla rete:
-  - `Rresistor22_2` verso `VCC`
-  - `Rresistor22_3` verso massa
-- ridurre solo l’ingresso (`scenario_1`) cambia l’uscita, ma **non abbastanza**
-- ridurre `VVCC` (`scenario_2`) cambia molto di più sia `v(N004)` sia `v(N005)`
+**Il problema non risulta formalmente risolto, ma è stato localizzato con buona forza nel percorso che governa la base del transistor `npn_transistor18.1`, cioè il nodo `N002` e la sua eccitazione tramite `signal_source23.1` / `resistor22.1` / `capacitor4.1` e la rete di bias `resistor22.2`–`resistor22.3`.**
 
-Questo indica che **la forma d’onda sporca non dipende solo dall’ampiezza del segnale applicato a `N006`, ma anche in modo marcato dalla polarizzazione DC dello stadio**.
+In altre parole:
 
-### Sospetto secondario: **il nodo emettitore `N003` con `resistor22.5` e `capacitor4.2`**
-Perché:
-- `N003` è l’emettitore del transistor
-- `Rresistor22_5 N003 N008 3.9k`, con `VVEE = 0 V`, quindi di fatto è una resistenza verso massa
-- `Ccapacitor4_2 N003 0 100u` bypassa l’emettitore in AC
+- la simulazione base è **valida e coerente** dal punto di vista SPICE (`spice_status: success`);
+- non emergono, dai file strutturati, errori topologici gravi tali da invalidare il circuito estratto;
+- il comportamento dell’uscita `VOUT` su `N005` cambia sensibilmente quando si agisce sull’ingresso o sulla base;
+- invece il solo blocco dell’emettitore `N003` non spiega il fenomeno con la stessa forza.
 
-Questa parte della rete influenza molto il guadagno AC e la linearità dinamica. Però, con le evidenze già eseguite, **la prova più diretta punta ancora prima alla bias di base**, perché è la riduzione di `VVCC` a modificare nettamente l’escursione d’uscita.
-
-### Cosa NON supportano i dati come primo sospetto
-- **`Rresistor22_6` (RL)** non è il primo sospetto della bias: è il carico d’uscita, non la rete che fissa direttamente il punto di lavoro del transistor.
-- **`signal_source23.1`** non è più il sospetto principale: `scenario_1` conferma che il suo livello conta, ma non basta a spiegare da solo la non pulizia residua.
-- **Errore topologico del grafo**: non ci sono warning forti, ngspice converge, non ci sono singleton node, quindi non è la prima ipotesi.
-
-In sintesi: **il sospetto principale ora è la polarizzazione del transistor attorno a `N002`, cioè il partitore `resistor22.2` / `resistor22.3`, con possibile contributo della degenerazione/bypass di emettitore `resistor22.5` / `capacitor4.2`.**
+Quindi il caso **non è risolto**, ma è **diagnosticamente localizzato**.
 
 ---
 
-## 4. **Limiti della diagnosi**
-Non si può concludere con certezza, dai dati visibili nel prompt, quale singolo componente sia “guasto” o “sbagliato” nel circuito reale.
+## 3. **Cosa e stato risolto e cosa no**
 
-Mancano infatti alcune evidenze decisive:
+### Risolto
+- **Non è stato risolto il problema utente in senso definitivo**, perché nessuno scenario ha prodotto `resolved_candidate` con `stop_automation=true`.
 
-- **Non abbiamo il confronto numerico del punto di lavoro DC dei nuovi scenari su `N002` e `N003`**: gli scenari eseguiti confrontano soprattutto `v(N004)`, `v(N005)`, `v(N006)` e `i(vvcc#branch)`.
-- **Il file `08_tran.csv` è troncato nel prompt**, quindi non si può misurare qui con precisione la forma completa della distorsione o la simmetria su tutto il periodo.
-- **`ngspice_stdout` è troncato**, quindi non abbiamo tutte le righe dei dispositivi/resistori e non possiamo fare una lettura completa delle correnti di ogni ramo.
-- **Il modello del transistor `2N2222` è una `manual_assumption`**, come indicato in `04_values_bound.json`; quindi le conclusioni valgono per il circuito simulato estratto, non dimostrano da sole il comportamento esatto del circuito fisico.
-- Non è possibile affermare dai dati disponibili se la “non pulizia” residua derivi soprattutto da:
-  - bias base troppo alta o troppo bassa,
-  - bypass di emettitore troppo efficace,
-  - carico `Rresistor22_6`,
-  - oppure combinazione di questi fattori.
+### Causa localizzata
+- È stata però **localizzata la zona più sospetta**:
+  - `N002` (base di `npn_transistor18.1`)
+  - rete di ingresso `Vsignal_source23_1` → `Rresistor22_1` → `Ccapacitor4_1`
+  - rete di bias `Rresistor22_2` e `Rresistor22_3`
 
----
+### Non localizzato con la stessa forza
+- Il ramo emettitore su `N003` con `Rresistor22_5` e `Ccapacitor4_2` **non appare la causa principale**, perché `scenario_4` modifica l’uscita molto meno di quanto facciano gli interventi sulla base.
+- L’alimentazione `VVCC` influisce chiaramente sul comportamento, ma dai dati non si può dire che sia **la** causa primaria; è più corretto dire che è un fattore che determina l’escursione disponibile dello stadio.
 
-## 5. **Scenari diagnostici proposti**
-
-### Scenario eseguito più informativo finora: **Ridurre l’alimentazione VVCC**
-**Perché lo considero il più indicativo adesso:** anche se `scenario_outcome_summary` segnala `scenario_1` come `best_scenario_id`, nessuno scenario è risolutivo e, guardando le quantità confrontate, **`scenario_2` è quello che lega più chiaramente il difetto residuo alla polarizzazione dello stadio**. Ha ridotto molto di più l’escursione di `v(N004)` e `v(N005)` e ha modificato anche `i(vvcc#branch)`.
-
-**Cosa è stato provato:** `VVCC` è stata cambiata da `DC 12` a `DC 6`.
-
-**Cosa ci dice:** l’uscita dipende fortemente dalla rete alimentata da `VVCC`, quindi il sospetto si sposta dalla sola ampiezza di ingresso alla **rete di bias e al punto di lavoro del transistor**.
-
-**Come lo verifichiamo:** il confronto già disponibile in `scenario_2\scenario_comparison.json` mostra cambi marcati su:
-- `v(N004)`
-- `v(N005)`
-- `i(vvcc#branch)`
-
-**Prossimo passo:** misurare direttamente la sensibilità del nodo base `N002` e del nodo emettitore `N003` con una nuova variazione semplice e mirata.
-
-```json
-{
-  "scenario_id": "scenario_2",
-  "title": "Ridurre l'alimentazione VVCC",
-  "hypothesis": "L'uscita resta non pulita soprattutto per la polarizzazione resa possibile da VVCC e dalla rete di bias del transistor.",
-  "actions": [
-    {
-      "type": "change_source_value",
-      "target": "VVCC",
-      "value": "6V"
-    }
-  ],
-  "rerun_from": "07",
-  "analysis": "tran",
-  "compare": ["v(N004)", "v(N005)", "i(vvcc#branch)"]
-}
-```
+### Non conclusivo
+- Non si può concludere, solo da queste evidenze, **quale componente fisico sia guasto o errato**.
+- Non si può distinguere con certezza se il problema reale sia:
+  - segnale di ingresso troppo grande,
+  - bias della base non appropriato,
+  - combinazione fra bias e accoppiamento d’ingresso,
+  - oppure una discrepanza tra circuito reale e modello SPICE.
+- Inoltre `ngspice_stdout` e `tran_csv` sono **troncati nel prompt**, quindi manca una parte del dettaglio numerico completo.
 
 ---
 
-### Scenario candidato 1: **Ridurre ancora il segnale di ingresso per separare sovraguida da bias**
-**Perché lo propongo:** `scenario_1` ha già mostrato che l’ingresso contribuisce, ma non ha ripulito abbastanza l’uscita. Un’ulteriore riduzione semplice aiuterebbe a capire se la distorsione residua resta anche con pilotaggio molto più piccolo; se sì, il sospetto sulla bias diventa ancora più forte.
+## 4. **Motivazione tecnica**
 
-**Cosa proverei:** abbassare `Vsignal_source23_1` sotto il livello già testato, mantenendo invariata la topologia.
+### Coerenza del run base
+Dai file base:
+- `outputs\pipeline2.0\batchA\a06\08_spice_run.json`: ngspice ha completato con successo.
+- `outputs\pipeline2.0\batchA\a06\08_ngspice_stderr.txt`: nessun errore.
+- `outputs\pipeline2.0\batchA\a06\03_node_map.json`: nessun `singleton_nodes`; i ground sono stati fusi in `0`.
+- `outputs\pipeline2.0\batchA\a06\07_spice_emit_report.json`: nessun warning di emissione.
 
-**Cosa mi aspetto:**  
-- se l’uscita resta ancora visibilmente non pulita, il problema è sempre meno attribuibile al solo overdrive di ingresso;
-- se invece migliora molto, l’ingresso è ancora un fattore dominante.
+Quindi il circuito generato è abbastanza affidabile come base diagnostica.
 
-**Come lo verifichiamo:** confrontando:
-- `v(N006)` per confermare la nuova riduzione
-- `v(N004)` e `v(N005)` per vedere se la distorsione cala in proporzione
+### Cosa mostra il circuito base
+Dal netlist `outputs\pipeline2.0\batchA\a06\07_netlist.cir`:
 
-**Prossimo passo:** se non conferma, passare a una prova che osservi direttamente la sensibilità della polarizzazione, non solo dell’eccitazione.
+- `VVCC N007 0 DC 12`
+- `VVEE N008 0 DC 0`
+- `Vsignal_source23_1 N006 0 SIN(0 1 100)`
+- `Qnpn_transistor18_1 N004 N002 N003 2N2222`
 
-```json
-{
-  "scenario_id": "scenario_3",
-  "title": "Ridurre ulteriormente il segnale di ingresso",
-  "hypothesis": "Se la non linearita residua persiste anche con un ingresso molto piu piccolo, il sospetto principale resta la rete di bias piu che l'ampiezza di pilotaggio.",
-  "actions": [
-    {
-      "type": "change_source_value",
-      "target": "Vsignal_source23_1",
-      "value": "SIN(0 0.05 100)"
-    }
-  ],
-  "rerun_from": "07",
-  "analysis": "tran",
-  "compare": ["v(N006)", "v(N004)", "v(N005)"]
-}
-```
+Questa è una topologia coerente con uno stadio a transistor con:
+- ingresso su `N006`,
+- accoppiamento tramite `Ccapacitor4_1` verso `N002`,
+- bias di base con `Rresistor22_2` e `Rresistor22_3`,
+- collettore su `N004`,
+- uscita accoppiata via `Ccapacitor4_3` verso `N005`,
+- carico `Rresistor22_6` verso massa.
+
+Nel run base, da `08_ngspice_stdout.txt`:
+- `n002 = 3.664`
+- `n003 = 3.02446`
+- `n004 = 6.76332`
+- `n005 = 0`
+- `n006 = 0`
+
+e nel transitorio `08_tran.csv` si vede che:
+- `v(N006)` oscilla,
+- `v(N002)` segue con variazione significativa,
+- `v(N004)` e `v(N005)` hanno una forte escursione.
+
+### Perché la base `N002` è il punto più sospetto
+Le evidenze più forti vengono da `scenario_3` e `scenario_5`.
+
+#### `scenario_3`
+File:  
+`outputs\pipeline2.0\batchA\a06\scenarios\scenario_3\scenario_comparison.json`
+
+Con `drive_node_voltage` su `N002 = 2V`:
+- `v(N002)` passa da `vpp = 1.8158849900000003` a `vpp = 0.0`
+- `v(N004)` passa da `vpp = 7.170986879999999` a `vpp = 0.0010370200000000551`
+- `v(N005)` passa da `vpp = 7.47417467` a `vpp = 0.0010554680892999998`
+
+Questa non è una variazione piccola: è praticamente la soppressione della dinamica d’uscita quando la base viene bloccata.
+
+#### `scenario_5`
+File:  
+`outputs\pipeline2.0\batchA\a06\scenarios\scenario_5\scenario_comparison.json`
+
+Con `drive_node_voltage` su `N002 = 3.664V`:
+- `v(N002)` diventa costante (`vpp = 0.0`)
+- `v(N004)` diventa costante (`vpp = 0.0`)
+- `v(N005)` diventa praticamente nullo come variazione (`vpp = 4.0757619499999996e-11`)
+
+Questa è la conferma più pulita che:
+- il collettore `N004` e l’uscita `N005` dipendono direttamente dalla modulazione presente su `N002`;
+- quindi la causa diagnostica più forte è **a monte dell’uscita**, nella rete di base e nel modo in cui l’ingresso la pilota.
+
+### Perché il ramo emettitore non è la causa dominante
+Da `scenario_4`:
+`outputs\pipeline2.0\batchA\a06\scenarios\scenario_4\scenario_comparison.json`
+
+Bloccando `N003 = 3V`:
+- `v(N003)` diventa costante,
+- ma `v(N004)` passa solo da `7.170986879999999` a `6.91887726`
+- e `v(N005)` da `7.47417467` a `7.2868564199999994`
+
+Quindi il ramo di emettitore incide, ma non spiega da solo il comportamento osservato.
+
+### Perché ingresso e alimentazione contano, ma come fattori secondari rispetto alla localizzazione
+Da `scenario_1`:
+- riducendo `Vsignal_source23_1`, `v(N004)` e `v(N005)` si riducono, quindi l’ingresso è parte del problema.
+
+Da `scenario_2`:
+- riducendo `VVCC`, `v(N004)`, `v(N005)` e `i(vvcc#branch)` cambiano, quindi anche l’alimentazione impatta l’escursione del circuito.
+
+Ma nessuno di questi due scenari isola il problema con la stessa forza di `scenario_3` e `scenario_5`, che agiscono direttamente sul nodo `N002`.
 
 ---
 
-### Scenario candidato 2: **Ridurre VVCC in modo intermedio per vedere quanto la base segue la polarizzazione**
-**Perché lo propongo:** `scenario_2` ha dato l’indizio più forte verso la bias. Un secondo punto di prova su `VVCC`, meno drastico di `6V`, può aiutare a capire se l’uscita segue la polarizzazione in modo regolare oppure se il transistor entra in una zona di lavoro critica già con piccoli cambiamenti.
+## 5. **Prossimo passo fuori budget**
 
-**Cosa proverei:** impostare `VVCC` a un valore intermedio, senza toccare l’ingresso.
+Fuori budget, il passo successivo più utile non sarebbe un altro scenario eseguibile, ma una **verifica mirata del sottocircuito di base nel circuito reale o nell’acquisizione originale**:
 
-**Cosa mi aspetto:** se `v(N004)` e `v(N005)` cambiano in modo netto anche con una riduzione meno estrema di `VVCC`, il legame con la rete `Rresistor22_2` / `Rresistor22_3` diventa ancora più sospetto.
+- controllare che la rete `signal_source23.1` → `resistor22.1` → `capacitor4.1` → `N002` corrisponda davvero allo schema atteso;
+- verificare che i valori associati a `resistor22.2`, `resistor22.3`, `capacitor4.1` e al livello del segnale di ingresso siano quelli reali;
+- confrontare il comportamento reale della base `N002` con quello simulato, perché le evidenze SPICE indicano che è lì che si origina quasi tutta la variazione d’uscita.
 
-**Come lo verifichiamo:** confrontando:
-- `v(N004)`
-- `v(N005)`
-- `i(vvcc#branch)`
+Se si volesse proseguire in futuro, la direzione più promettente sarebbe quindi una **verifica della rete di bias e accoppiamento della base**, non un’indagine prioritaria sul solo emettitore.
 
-**Prossimo passo:** se anche questo conferma forte sensibilità all’alimentazione, il test successivo più utile sarà uno scenario mirato a osservare direttamente i nodi di bias `N002` e `N003`.
-
-```json
-{
-  "scenario_id": "scenario_4",
-  "title": "Variare VVCC in modo intermedio",
-  "hypothesis": "La forma d'onda di uscita dipende sensibilmente dalla polarizzazione imposta da VVCC attraverso la rete di bias della base.",
-  "actions": [
-    {
-      "type": "change_source_value",
-      "target": "VVCC",
-      "value": "9V"
-    }
-  ],
-  "rerun_from": "07",
-  "analysis": "tran",
-  "compare": ["v(N004)", "v(N005)", "i(vvcc#branch)"]
-}
-```
-
----
-
-### Scenario candidato 3: **Alzare leggermente VVEE per testare il ruolo del ramo di emettitore**
-**Perché lo propongo:** `resistor22.5` collega `N003` a `N008`, e `VVEE` nel netlist è `0 V`. Quindi il ramo di emettitore è attualmente riferito a massa attraverso `Rresistor22_5`, con `Ccapacitor4_2` come bypass AC. Una piccola variazione controllata di `VVEE` può dire se la linearità residua è fortemente legata all’emettitore più che alla sola base.
-
-**Cosa proverei:** cambiare `VVEE` da `0V` a un piccolo valore DC positivo nel modello simulato.
-
-**Cosa mi aspetto:** se l’uscita cambia in modo marcato, il sospetto sale sul ramo `Rresistor22_5` / `Ccapacitor4_2` e sulla posizione del punto di lavoro dell’emettitore.
-
-**Come lo verifichiamo:** confrontando:
-- `v(N003)` se la pipeline lo include nel confronto futuro
-- `v(N004)`
-- `v(N005)`
-
-**Prossimo passo:** se questo scenario è molto sensibile, il ramo di emettitore diventa il secondo sospetto forte accanto al partitore di base.
-
-```json
-{
-  "scenario_id": "scenario_5",
-  "title": "Variare leggermente VVEE per testare il ramo di emettitore",
-  "hypothesis": "La non pulizia residua puo dipendere in modo importante dalla polarizzazione dell'emettitore e dal ramo Rresistor22_5-Ccapacitor4_2.",
-  "actions": [
-    {
-      "type": "change_source_value",
-      "target": "VVEE",
-      "value": "1V"
-    }
-  ],
-  "rerun_from": "07",
-  "analysis": "tran",
-  "compare": ["v(N003)", "v(N004)", "v(N005)"]
-}
-```
-
-`Richiede immagine: no`
+**Richiede immagine: no**

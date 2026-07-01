@@ -8,12 +8,15 @@ Versione attuale minimale:
 
 - legge `scenario.json`;
 - lavora sulla netlist copiata in `run/07_netlist.cir`;
-- supporta le azioni generali `drive_node_voltage`, `change_source_value` e `close_switch`;
+- supporta le azioni generali `drive_node_voltage`, `change_source_value`,
+  `change_component_value` e `close_switch`;
 - aggiunge o aggiorna una sorgente SPICE di scenario;
 - modifica il valore di una sorgente SPICE esistente;
+- modifica il valore di un componente semplice gia emesso in netlist;
 - chiude uno switch riconosciuto inserendo una piccola resistenza nella netlist scenario;
 - salva `12_controlled_scenarios.json`;
 - aggiorna `scenario_status.json`;
+- crea `scenario_comparison.json` quando esistono i dati per il confronto;
 - esegue ngspice solo se richiesto con `--run-spice`.
 
 Esempio di azione supportata:
@@ -52,6 +55,7 @@ REPORT_NAME = "12_controlled_scenarios.json"
 COMPARISON_NAME = "scenario_comparison.json"
 SPICE_RUN_NAME = "08_spice_run.json"
 STEP08_PATH = Path(__file__).resolve().parent / "08_spice_run.py"
+MAX_EXECUTABLE_SCENARIOS = 5
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -65,6 +69,14 @@ def read_json(path: Path) -> dict[str, Any]:
 def write_json(path: Path, data: dict[str, Any]) -> None:
     """Scrive un JSON leggibile e stabile."""
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def count_scenarios_for_circuit(scenario_dir: Path) -> int:
+    """Conta quante cartelle scenario esistono per il circuito corrente."""
+    scenarios_root = scenario_dir.parent
+    if not scenarios_root.exists() or not scenarios_root.is_dir():
+        return 0
+    return sum(1 for path in scenarios_root.iterdir() if path.is_dir())
 
 
 def load_step08_module() -> Any:
@@ -240,6 +252,42 @@ def source_target_candidates(target: Any) -> list[str]:
     return unique_candidates
 
 
+def component_target_candidates(target: Any) -> list[str]:
+    """
+    Crea possibili nomi componente a partire dal target dello scenario.
+
+    L'agente puo indicare sia il nome SPICE emesso (`Rresistor22_4`) sia l'id
+    componente originario (`resistor22.4`). Proviamo poche varianti semplici,
+    senza inventare nuovi componenti.
+    """
+    component_name = str(target).strip()
+    if not component_name:
+        raise ValueError("Missing target component")
+
+    sanitized = sanitize_spice_name(component_name)
+    candidates = [component_name]
+
+    if sanitized != component_name:
+        candidates.append(sanitized)
+
+    lower_target = component_name.lower()
+    lower_sanitized = sanitized.lower()
+    prefixed_candidates: list[str] = []
+
+    if ("resistor" in lower_target or "resistor" in lower_sanitized) and not lower_sanitized.startswith("rresistor"):
+        prefixed_candidates.append(f"R{sanitized}")
+    if ("capacitor" in lower_target or "capacitor" in lower_sanitized) and not lower_sanitized.startswith("ccapacitor"):
+        prefixed_candidates.append(f"C{sanitized}")
+    if ("inductor" in lower_target or "inductor" in lower_sanitized) and not lower_sanitized.startswith("linductor"):
+        prefixed_candidates.append(f"L{sanitized}")
+
+    for candidate in prefixed_candidates:
+        if candidate not in candidates:
+            candidates.append(candidate)
+
+    return candidates
+
+
 def replace_source_value(
     netlist_text: str,
     source_names: list[str],
@@ -297,6 +345,99 @@ def apply_change_source_value(
         "tried_source_names": source_names,
         "value": action.get("value"),
         "normalized_source_definition": source_definition,
+        "old_line": operation["old_line"],
+        "new_line": operation["new_line"],
+        "operation": operation["operation"],
+        "spice_executed": False,
+    }
+    return updated_netlist, result
+
+
+def normalize_component_value(value: Any) -> str:
+    """
+    Normalizza un valore semplice per componenti R, C e L.
+
+    Questa versione minimale accetta il testo quasi cosi come arriva, togliendo
+    solo spazi superflui. In questo modo supportiamo suffissi SPICE come `k`,
+    `u`, `m`, `meg` senza reinterpretarli a mano.
+    """
+    text = str(value).strip()
+    text = re.sub(r"\s+", "", text)
+    if not text or text.lower() in {"unknown", "none", "null", "n/a", "na"}:
+        raise ValueError("Component value must be concrete, not unknown")
+    return text
+
+
+def replace_component_value(
+    netlist_text: str,
+    component_names: list[str],
+    new_value: str,
+) -> tuple[str, dict[str, Any]]:
+    """
+    Sostituisce il valore di un componente semplice gia presente nella netlist.
+
+    Per ora supportiamo solo righe SPICE standard di resistori, condensatori e
+    induttanze: nome, nodo1, nodo2, valore, eventuali parametri aggiuntivi.
+    """
+    lines = netlist_text.splitlines()
+
+    for component_name in component_names:
+        component_pattern = re.compile(rf"^\s*{re.escape(component_name)}\s+", flags=re.IGNORECASE)
+
+        for index, line in enumerate(lines):
+            stripped = line.strip()
+            if not stripped or stripped.startswith(("*", ".")):
+                continue
+            if not component_pattern.match(line):
+                continue
+
+            parts = stripped.split()
+            if len(parts) < 4:
+                raise ValueError(f"Component {component_name} does not have a replaceable value")
+
+            prefix = parts[0][:1].upper()
+            if prefix not in {"R", "C", "L"}:
+                raise ValueError(
+                    f"Component {parts[0]} is not supported by change_component_value. "
+                    "Supported prefixes: R, C, L."
+                )
+
+            old_line = line
+            old_value = parts[3]
+            parts[3] = new_value
+            new_line = " ".join(parts)
+            lines[index] = new_line
+            return "\n".join(lines) + "\n", {
+                "component_name": parts[0],
+                "old_line": old_line,
+                "new_line": new_line,
+                "old_value": old_value,
+                "new_value": new_value,
+                "operation": "updated",
+            }
+
+    raise ValueError(f"Component not found in 07_netlist.cir. Tried: {', '.join(component_names)}")
+
+
+def apply_change_component_value(
+    action: dict[str, Any],
+    netlist_text: str,
+) -> tuple[str, dict[str, Any]]:
+    """Applica `change_component_value` a un componente semplice gia emesso."""
+    component_names = component_target_candidates(action.get("target"))
+    new_value = normalize_component_value(action.get("value"))
+    updated_netlist, operation = replace_component_value(netlist_text, component_names, new_value)
+
+    result = {
+        "status": "applied",
+        "type": "change_component_value",
+        "target": action.get("target"),
+        "resolved_component_name": operation["component_name"],
+        "tried_component_names": component_names,
+        "value": action.get("value"),
+        "normalized_component_value": new_value,
+        "old_value": operation["old_value"],
+        "new_value": operation["new_value"],
         "old_line": operation["old_line"],
         "new_line": operation["new_line"],
         "operation": operation["operation"],
@@ -611,37 +752,6 @@ def classify_change(base_value: float | None, scenario_value: float | None) -> s
     return "changed"
 
 
-def has_strong_tran_gain_signal(quantities: list[dict[str, Any]]) -> bool:
-    """
-    Decide se un confronto `.tran` mostra una crescita forte e coerente.
-
-    Regola semplice:
-    - consideriamo solo grandezze con metrica `.vpp`
-    - lo scenario e forte se almeno una grandezza cresce di almeno 2x
-      con un incremento assoluto non trascurabile
-    """
-    for item in quantities:
-        if not isinstance(item, dict):
-            continue
-        metric = str(item.get("metric") or "").lower()
-        if not metric.endswith(".vpp"):
-            continue
-
-        base_value = item.get("base_value")
-        scenario_value = item.get("scenario_value")
-        if not isinstance(base_value, (int, float)) or not isinstance(scenario_value, (int, float)):
-            continue
-        if base_value <= 1e-12:
-            continue
-
-        gain_ratio = scenario_value / base_value
-        delta = scenario_value - base_value
-        if gain_ratio >= 2.0 and delta >= 0.02:
-            return True
-
-    return False
-
-
 def evaluate_diagnostic_outcome(
     summary: dict[str, int],
     analysis: str = "op",
@@ -679,18 +789,14 @@ def evaluate_diagnostic_outcome(
         label = "Partially resolved"
         reason = "Some requested quantities changed, but at least one comparison quantity is missing."
         stop_automation = False
-    elif (
-        analysis == "tran"
-        and changed == requested
-        and has_strong_tran_gain_signal(quantities or [])
-    ):
-        status = "resolved_candidate"
-        label = "Candidate resolved"
+    elif analysis == "tran" and changed == requested:
+        status = "partially_resolved"
+        label = "Partially resolved"
         reason = (
-            "All requested transient quantities changed and at least one key Vpp "
-            "increased strongly, which is consistent with the tested hypothesis."
+            "The transient waveforms changed in all requested quantities, which supports "
+            "the hypothesis, but waveform changes alone are not enough to mark the problem as resolved automatically."
         )
-        stop_automation = True
+        stop_automation = False
     elif changed == requested and activated > 0:
         status = "resolved_candidate"
         label = "Candidate resolved"
@@ -857,6 +963,10 @@ def apply_scenario(
                 netlist_text, result = apply_change_source_value(action, netlist_text)
                 result["index"] = index
                 applied_actions.append(result)
+            elif action_type == "change_component_value":
+                netlist_text, result = apply_change_component_value(action, netlist_text)
+                result["index"] = index
+                applied_actions.append(result)
             elif action_type == "close_switch":
                 netlist_text, result = apply_close_switch(action, run_dir, netlist_text)
                 result["index"] = index
@@ -945,6 +1055,8 @@ def update_status_file(scenario_dir: Path, report: dict[str, Any]) -> None:
     diagnostic_outcome = report.get("diagnostic_outcome")
     if not isinstance(diagnostic_outcome, dict):
         diagnostic_outcome = {}
+    executed_scenarios_count = count_scenarios_for_circuit(scenario_dir)
+    budget_exhausted = executed_scenarios_count >= MAX_EXECUTABLE_SCENARIOS
     next_step = diagnostic_outcome.get("next_step")
     if not next_step:
         next_step = (
@@ -952,6 +1064,8 @@ def update_status_file(scenario_dir: Path, report: dict[str, Any]) -> None:
             if report["spice_executed"]
             else "Run ngspice on the scenario netlist and compare base vs scenario."
         )
+    if budget_exhausted:
+        next_step = "Scenario budget exhausted. Ask the agent for a final diagnostic conclusion."
     status.update(
         {
             "status": report["status"],
@@ -966,6 +1080,8 @@ def update_status_file(scenario_dir: Path, report: dict[str, Any]) -> None:
             "diagnostic_outcome": report.get("diagnostic_outcome"),
             "controlled_scenario_report": str(scenario_dir / REPORT_NAME),
             "created_or_updated_at": report["created_or_updated_at"],
+            "executed_scenarios_count": executed_scenarios_count,
+            "scenario_budget_exhausted": budget_exhausted,
             "next_step": next_step,
         }
     )

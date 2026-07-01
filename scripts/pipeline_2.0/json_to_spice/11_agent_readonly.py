@@ -17,8 +17,9 @@ Responsabilita della versione corrente:
 - leggere una domanda o un sintomo dell'utente;
 - risolvere i path degli artefatti indicati dal manifest;
 - caricare graph, node map, valori, regole, netlist e output ngspice;
+- leggere anche gli eventuali scenari gia eseguiti indicizzati dal manifest;
 - costruire un preview ordinato dell'input per il futuro modello AI;
-- costruire il prompt controllato che verra poi mandato al modello AI;
+- costruire il prompt controllato da mandare al modello AI;
 - chiamare OpenAI solo se viene passato esplicitamente --run-agent;
 - non eseguire scenari e non modificare la netlist.
 

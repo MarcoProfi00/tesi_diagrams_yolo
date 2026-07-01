@@ -1,23 +1,28 @@
 # Pipeline 2.0 - Graph JSON to SPICE
 
-Questo documento riassume, in modo breve, cosa fa per ora la pipeline 2.0 e
-come eseguirla da terminale.
+Questo documento riassume cosa fa oggi la Pipeline 2.0, quali file usa e come
+eseguirla da terminale.
 
-La pipeline 2.0 parte dai Graph JSON prodotti dalla pipeline 1.0 e prepara i
-primi artefatti elettrici utili alla conversione SPICE.
+La Pipeline 2.0 parte dai Graph JSON prodotti dalla Pipeline 1.0 e costruisce
+una catena che porta a:
+
+```text
+graph json -> nodi elettrici -> valori -> regole SPICE -> netlist -> ngspice
+-> contesto diagnostico -> agente -> scenari controllati
+```
 
 ## Input principali
 
 Per ogni circuito servono:
 
-- Graph JSON della pipeline 1.0:
+- Graph JSON della Pipeline 1.0:
   `outputs/pipeline1.0/<batch>/06_graph_report/<circuit>/<circuit>.json`
 - valori manuali:
   `metadata/pipeline2_manual_values/<batch>/<circuit>_values.yaml`
 - mapping classi SPICE:
   `metadata/pipeline2_spice_classes.yaml`
 
-Esempio per `a01`:
+Esempio:
 
 ```text
 outputs/pipeline1.0/batchA/06_graph_report/a01/a01.json
@@ -29,8 +34,8 @@ metadata/pipeline2_spice_classes.yaml
 
 ### 01 - IO
 
-Legge il Graph JSON della pipeline 1.0 e crea la cartella output della pipeline
-2.0.
+Legge il Graph JSON della Pipeline 1.0 e crea la cartella output della
+Pipeline 2.0.
 
 Output:
 
@@ -42,11 +47,11 @@ Output:
 
 Normalizza il Graph JSON:
 
-- componenti;
-- terminali;
-- connessioni;
-- statistiche;
-- warning di normalizzazione.
+- componenti
+- terminali
+- connessioni
+- statistiche
+- warning di normalizzazione
 
 Output:
 
@@ -70,8 +75,8 @@ Output:
 
 Legge i valori manuali dal file YAML e li associa ai componenti e ai nodi.
 
-Questo step non genera SPICE. Controlla solo se i componenti hanno i valori
-necessari.
+Questo step non genera ancora SPICE. Controlla solo se i componenti hanno i
+valori necessari.
 
 Output:
 
@@ -83,8 +88,8 @@ Output:
 
 Per ora non e implementato.
 
-Servira piu avanti per componenti complessi, per esempio integrati, transistor,
-opamp o componenti con pin-map specifico.
+Servira piu avanti per componenti complessi, per esempio integrati,
+transistor, opamp o componenti con pin-map specifico.
 
 ### 06 - Component Rules
 
@@ -103,15 +108,19 @@ Output:
 
 Genera una prima netlist SPICE leggibile.
 
-Per ora:
+Attualmente emette, tra gli altri:
 
-- resistenze -> `R`;
-- lampade -> resistenza equivalente `R`;
-- batterie/supply -> sorgente `V`;
-- condensatori -> `C`;
-- LED/diodi -> `D` + `.model`;
-- switch aperti -> commento, non emessi;
-- GND e connector -> non emessi, perche strutturali.
+- resistenze -> `R`
+- lampade -> resistenza equivalente `R`
+- batterie/supply -> `V`
+- condensatori -> `C`
+- LED/diodi -> `D` + `.model`
+
+Alcuni componenti strutturali non vengono emessi direttamente, per esempio:
+
+- GND
+- connector
+- switch aperti, che restano come commento
 
 Output:
 
@@ -124,10 +133,9 @@ Output:
 
 Esegue opzionalmente ngspice sulla netlist prodotta dallo step 07.
 
-Lo step 08 non parte automaticamente: viene eseguito solo passando il flag
-`--run-spice` a `run_pipeline2.py`.
+Lo step 08 parte solo se si usa `--run-spice`.
 
-Quando viene eseguito, produce:
+Output:
 
 ```text
 08_spice_run.json
@@ -135,32 +143,38 @@ Quando viene eseguito, produce:
 08_ngspice_stderr.txt
 ```
 
+Se la netlist contiene una `.tran`, possono comparire anche:
+
+```text
+08_tran.csv
+08_tran_plot.png
+08_tran_plot.svg
+```
+
 Gli output tecnici dello step 08 sono in inglese.
 
 ### 09 - Web Chat
 
-Avvia una piccola interfaccia web locale temporanea per guardare gli output del
-circuito e parlare con l'agente diagnostico.
+Avvia una piccola interfaccia web locale temporanea per:
+
+- guardare gli output del circuito
+- vedere l'immagine originale
+- leggere netlist, stdout, stderr e plot
+- parlare con l'agente diagnostico
+- eseguire scenari controllati
+
+L'immagine viene mostrata nel sito, ma non viene passata di default al modello:
+la chat resta graph-grounded e usa l'immagine solo come fallback nei casi
+topologicamente sospetti o quando serve davvero.
 
 Lo step 09 non e un backend permanente:
 
-- non usa database;
-- non salva obbligatoriamente lo storico chat;
-- non espone API pubbliche;
-- vive solo finche il comando resta in esecuzione nel terminale.
+- non usa database
+- non espone API pubbliche
+- non richiede login
+- vive solo finche il comando resta in esecuzione
 
-Per ora mostra:
-
-- run principale `Base run`;
-- immagine originale del circuito;
-- artefatti `01-08`;
-- stato SPICE;
-- netlist;
-- stdout/stderr;
-- eventuale plot `.tran`;
-- chat diagnostica collegata agli step `10` e `11`.
-
-La chat salva file separati per non sovrascrivere gli esperimenti da terminale:
+La chat salva file separati per non sovrascrivere altri output:
 
 ```text
 11_agent_input_preview_chat.md
@@ -168,18 +182,31 @@ La chat salva file separati per non sovrascrivere gli esperimenti da terminale:
 11_agent_response_chat.md
 ```
 
-Quando l'utente scrive frasi come `esegui scenario 1`, lo step `09` riconosce
-la scelta, recupera lo scenario JSON dall'ultima risposta agente e chiama lo
-step `12`.
+Quando l'utente scrive frasi come:
+
+```text
+esegui scenario 1
+esegui questo scenario
+esegui lo scenario appena proposto
+```
+
+lo step `09` riconosce la scelta, recupera lo scenario JSON dall'ultima risposta
+agente e chiama lo step `12`.
+
+La chat mantiene una conversazione unica per circuito nel browser e supporta
+anche un selettore modello.
 
 ### 10 - Diagnostic Context
 
 Costruisce il manifest diagnostico leggero per l'agente.
 
-Lo step 10 viene eseguito da `run_pipeline2.py` dopo la generazione della
-netlist e, se richiesto, dopo lo step 08. Non duplica tutti gli output dentro un
-file enorme: salva un indice dei file disponibili, una mini-summary tecnica e
-le regole operative per l'agente.
+Non duplica tutti gli output in un file enorme. Salva:
+
+- path degli artefatti
+- mini-summary tecnica
+- regole operative per l'agente
+- scenari gia eseguiti, se presenti
+- budget scenari per il circuito
 
 Output:
 
@@ -187,7 +214,7 @@ Output:
 10_diagnostic_context.json
 ```
 
-Se esistono scenari gia creati in:
+Se esistono scenari in:
 
 ```text
 outputs/pipeline2.0/<batch>/<circuit>/scenarios/
@@ -202,23 +229,23 @@ scenario_status.json
 scenario_comparison.json
 ```
 
-In questo modo la chat puo rispondere anche a domande sugli scenari gia
-eseguiti, per esempio quale scenario ha l'outcome piu forte.
+Lo step 10 include anche `scenario_budget`, con limite massimo di `5` scenari
+eseguibili per circuito.
 
 ### 11 - Agent Readonly
 
 Prima base dell'agente diagnostico.
 
 Di default non chiama OpenAI. Legge `10_diagnostic_context.json`, carica gli
-artefatti indicati nel manifest e genera due file di controllo:
+artefatti indicati nel manifest e genera:
 
 ```text
 11_agent_input_preview.md
 11_agent_prompt.md
 ```
 
-Il preview serve a noi per controllare cosa viene caricato. Il prompt e il testo
-che verra mandato al modello AI quando collegheremo OpenAI.
+Il preview serve a controllare cosa viene caricato. Il prompt e il testo che
+viene mandato al modello quando si usa `--run-agent`.
 
 Se viene passato `--run-agent`, lo step chiama OpenAI e salva:
 
@@ -228,11 +255,11 @@ Se viene passato `--run-agent`, lo step chiama OpenAI e salva:
 
 Lo step 11 e read-only:
 
-- non modifica i file originali;
-- non crea scenari;
-- non copia output;
-- non esegue ngspice;
-- propone solo eventuali scenari diagnostici futuri nel prompt.
+- non modifica i file originali
+- non crea scenari
+- non copia output
+- non esegue ngspice
+- interpreta la base run e gli eventuali scenari gia eseguiti
 
 ### 12 - Controlled Scenarios
 
@@ -265,36 +292,16 @@ close_switch
 ```
 
 `drive_node_voltage` aggiunge o aggiorna una sorgente di test su un nodo della
-run scenario, per esempio `VSCENARIO_N002 N002 0 DC 5`.
+run scenario.
 
 `change_source_value` modifica il valore di una sorgente SPICE gia presente
-nella netlist copiata dello scenario, per esempio `VVCC N001 0 DC 10`.
+nella netlist copiata dello scenario.
 
-`close_switch` chiude uno switch gia riconosciuto in `06_component_rules.json`
-inserendo nella netlist scenario una piccola resistenza tra i suoi due nodi, per
-esempio `RSCENARIO_switch25_1 N001 0 1m`.
+`close_switch` chiude uno switch gia riconosciuto inserendo una piccola
+resistenza tra i suoi due nodi.
 
 I valori devono essere concreti: uno scenario con `value: "unknown"` viene
 fermato e marcato come non eseguibile.
-
-`base_snapshot/` contiene una copia degli output originali. `run/` contiene la
-copia modificabile dello scenario.
-
-Esempio di primitiva `drive_node_voltage`:
-
-```json
-{
-  "type": "drive_node_voltage",
-  "target": "N002",
-  "value": "5V"
-}
-```
-
-Questa azione aggiunge nella netlist scenario una sorgente del tipo:
-
-```spice
-VSCENARIO_N002 N002 0 DC 5
-```
 
 Lo step 12 puo anche eseguire ngspice sulla run scenario con `--run-spice` e
 creare un confronto automatico base vs scenario usando le grandezze elencate in
@@ -305,22 +312,16 @@ creare un confronto automatico base vs scenario usando le grandezze elencate in
 Da terminale, nella root del progetto:
 
 ```powershell
-python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 a02 a10
+python scripts\pipeline_2.0\run_pipeline2.py --batch <batch> --circuits <circuit_1> <circuit_2>
 ```
 
-Questo comando esegue gli step disponibili fino alla generazione della netlist
-SPICE, senza lanciare ngspice.
-
-```text
-a01
-a02
-a10
-```
+Questo comando esegue la pipeline fino alla generazione della netlist SPICE,
+senza lanciare ngspice.
 
 Gli output vengono creati in:
 
 ```text
-outputs/pipeline2.0/batchA/<circuit>/
+outputs/pipeline2.0/<batch>/<circuit>/
 ```
 
 Esempio:
@@ -332,53 +333,52 @@ outputs/pipeline2.0/batchA/a01/
 Per eseguire anche ngspice su un circuito:
 
 ```powershell
-python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 --run-spice
+python scripts\pipeline_2.0\run_pipeline2.py --batch <batch> --circuits <circuit> --run-spice
 ```
 
 Per forzare esplicitamente l'eseguibile console di ngspice:
 
 ```powershell
-python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 --run-spice --ngspice-executable ngspice_con
+python scripts\pipeline_2.0\run_pipeline2.py --batch <batch> --circuits <circuit> --run-spice --ngspice-executable ngspice_con
 ```
 
 Nel nostro ambiente, se `ngspice_con` non e nel PATH, si puo usare direttamente
 il path completo:
 
 ```powershell
-python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 --run-spice --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+python scripts\pipeline_2.0\run_pipeline2.py --batch <batch> --circuits <circuit> --run-spice --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
 ```
 
-Per rigenerare tutta la pipeline 2.0 su Batch A, includendo lo step 10 ma senza
-rilanciare SPICE:
+Per rigenerare la pipeline su piu circuiti:
 
 ```powershell
-python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 a02 a03 a04 a05 a06 a07 a08 a09 a10
+python scripts\pipeline_2.0\run_pipeline2.py --batch <batch> --circuits <circuit_1> <circuit_2> <circuit_3>
 ```
 
-Per rigenerare anche SPICE su tutto Batch A:
+Per rigenerare anche SPICE sugli stessi circuiti:
 
 ```powershell
-python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 a02 a03 a04 a05 a06 a07 a08 a09 a10 --run-spice --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+python scripts\pipeline_2.0\run_pipeline2.py --batch <batch> --circuits <circuit_1> <circuit_2> <circuit_3> --run-spice --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
 ```
 
 ## Web chat locale
 
 La web chat si avvia separatamente dalla pipeline principale.
 
-Quindi, se vuoi solo eseguire la pipeline tecnica `01-08`, non devi fare nulla
-di speciale: basta usare `run_pipeline2.py` come nei comandi precedenti.
+Se vuoi solo eseguire la pipeline tecnica `01-08`, basta usare
+`run_pipeline2.py`.
 
-Per aprire il sito su un circuito gia generato, per esempio `a01`:
+Per aprire il sito su un circuito gia generato:
 
 ```powershell
-python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --circuit a01
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch <batch> --circuit <circuit>
 ```
 
 Se vuoi eseguire anche gli scenari direttamente dalla chat, conviene passare
 anche il path di ngspice:
 
 ```powershell
-python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --circuit a01 --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch <batch> --circuit <circuit> --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
 ```
 
 Lo script avvia un server locale temporaneo e apre il browser su:
@@ -386,8 +386,6 @@ Lo script avvia un server locale temporaneo e apre il browser su:
 ```text
 http://127.0.0.1:8765/
 ```
-
-Quando non vuoi usare il sito, semplicemente non eseguire `09_web_chat.py`.
 
 Per chiudere il sito:
 
@@ -398,13 +396,13 @@ Ctrl+C nel terminale dove sta girando 09_web_chat.py
 Se la porta `8765` e gia occupata:
 
 ```powershell
-python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --circuit a01 --port 8766
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch <batch> --circuit <circuit> --port 8766
 ```
 
 Se non vuoi aprire automaticamente il browser:
 
 ```powershell
-python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --circuit a01 --no-browser
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch <batch> --circuit <circuit> --no-browser
 ```
 
 In quel caso puoi aprire manualmente:
@@ -420,16 +418,10 @@ presenti in:
 outputs/pipeline2.0/<batch>/<circuit>/
 ```
 
-Esempio:
-
-```text
-outputs/pipeline2.0/batchA/a01/
-```
-
 Se quella cartella non esiste, prima bisogna eseguire la pipeline:
 
 ```powershell
-python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 --run-spice --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+python scripts\pipeline_2.0\run_pipeline2.py --batch <batch> --circuits <circuit> --run-spice --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
 ```
 
 Quando scrivi un sintomo nella chat, il sito esegue il flusso agente read-only:
@@ -444,51 +436,28 @@ Quando scrivi un sintomo nella chat, il sito esegue il flusso agente read-only:
 -> mostra la risposta nella chat
 ```
 
-Per esempio, su `a01` puoi scrivere:
-
-```text
-Perche la lampada non si accende?
-```
-
-La risposta viene mostrata nel sito e salvata anche in:
-
-```text
-outputs/pipeline2.0/batchA/a01/11_agent_response_chat.md
-```
-
-Quando scrivi:
+La chat riconosce anche richieste di esecuzione scenario:
 
 ```text
 esegui scenario 1
+esegui questo scenario
+esegui lo scenario appena proposto
 ```
 
-il sito ora:
+Quando scrivi una richiesta di questo tipo, il sito:
 
 ```text
 crea la cartella scenario
 copia base_snapshot/ e run/
 applica lo scenario alla netlist in run/
-esegue ngspice sulla run scenario
+esegue ngspice sulla run scenario, se disponibile
 crea scenario_comparison.json
-ricarica la pagina su ?run=scenario_1
+ricarica la pagina sulla run scenario
 ```
 
-Flusso corrente:
-
-```text
-run_pipeline2.py -> genera output 01-08/10
-09_web_chat.py  -> apre sito locale, mostra gli output e chiama 10/11 dalla chat
-```
-
-Flusso futuro:
-
-```text
-run_pipeline2.py -> genera output 01-08/10
-09_web_chat.py  -> chat utente
-chat            -> chiama 10 e 11
-utente          -> sceglie scenario in chat
-chat            -> chiama 12
-```
+Il circuito mantiene un budget massimo di `5` scenari eseguibili. Raggiunto il
+limite, la chat non crea un sesto scenario e l'agente deve chiudere con una
+conclusione diagnostica finale.
 
 ## Scenari controllati
 
@@ -500,9 +469,9 @@ Flusso attuale dalla web chat:
 utente scrive un sintomo
 -> 09 chiama 10 e 11
 -> agente propone scenari con blocchi JSON
--> utente scrive "esegui scenario 1"
+-> utente sceglie uno scenario
 -> 09 recupera lo scenario JSON scelto
--> 09 crea outputs/pipeline2.0/<batch>/<circuit>/scenarios/scenario_1/
+-> 09 crea outputs/pipeline2.0/<batch>/<circuit>/scenarios/<scenario_id>/
 -> 09 copia la base run in base_snapshot/ e run/
 -> 09 chiama 12
 -> 12 applica le azioni supportate alla netlist in run/
@@ -510,22 +479,16 @@ utente scrive un sintomo
 
 La base run originale resta invariata.
 
-Esempio per `a01`:
+File principali di una scenario run:
 
 ```text
-outputs/pipeline2.0/batchA/a01/scenarios/scenario_1/
-```
-
-File principali:
-
-```text
-scenario.json                       scenario scelto dall'utente
-scenario_status.json                stato corrente dello scenario
-scenario_copy_manifest.json         file copiati dalla base run
-12_controlled_scenarios.json        report dello step 12
-scenario_comparison.json            confronto base vs scenario, se SPICE e stato eseguito
-base_snapshot/                      copia non modificata della base run
-run/                                copia scenario modificabile
+scenario.json
+scenario_status.json
+scenario_copy_manifest.json
+12_controlled_scenarios.json
+scenario_comparison.json
+base_snapshot/
+run/
 ```
 
 ### Applicare uno scenario senza SPICE
@@ -533,7 +496,7 @@ run/                                copia scenario modificabile
 Se la cartella scenario esiste gia, si puo applicare lo scenario da terminale:
 
 ```powershell
-python scripts\pipeline_2.0\json_to_spice\12_controlled_scenarios.py --scenario-dir outputs\pipeline2.0\batchA\a01\scenarios\scenario_1
+python scripts\pipeline_2.0\json_to_spice\12_controlled_scenarios.py --scenario-dir outputs\pipeline2.0\<batch>\<circuit>\scenarios\<scenario_id>
 ```
 
 Questo comando:
@@ -550,28 +513,16 @@ non esegue ngspice
 Per eseguire anche ngspice sulla run dello scenario:
 
 ```powershell
-python scripts\pipeline_2.0\json_to_spice\12_controlled_scenarios.py --scenario-dir outputs\pipeline2.0\batchA\a01\scenarios\scenario_1 --run-spice --ngspice "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+python scripts\pipeline_2.0\json_to_spice\12_controlled_scenarios.py --scenario-dir outputs\pipeline2.0\<batch>\<circuit>\scenarios\<scenario_id> --run-spice --ngspice "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
 ```
 
-Output in:
+Esempio di confronto atteso:
 
 ```text
-outputs/pipeline2.0/batchA/a01/scenarios/scenario_1/run/08_spice_run.json
-outputs/pipeline2.0/batchA/a01/scenarios/scenario_1/run/08_ngspice_stdout.txt
-outputs/pipeline2.0/batchA/a01/scenarios/scenario_1/run/08_ngspice_stderr.txt
-outputs/pipeline2.0/batchA/a01/scenarios/scenario_1/scenario_comparison.json
+v(<NODE>): cambia rispetto alla base run
+v(<LOAD_NODE>): si attiva oppure resta invariato
+i(<LOAD>): cresce, resta nulla oppure cambia solo parzialmente
 ```
-
-Per `a01/scenario_1`, il confronto atteso e:
-
-```text
-v(N002):        0 -> 5 V
-v(N004):        0 -> 0.2380952 V
-i(Rlamp13_1):   0 -> 0.0047619 A
-```
-
-Quindi lo scenario conferma che alimentando `N002` il ramo della lampada riceve
-corrente.
 
 ## Comandi agente read-only
 
@@ -584,82 +535,69 @@ Pipeline 2.0, in particolare:
 10_diagnostic_context.json
 ```
 
-Se vuoi partire da zero su `a01`, esegui prima:
+Se vuoi partire da zero su un circuito, esegui prima:
 
 ```powershell
-python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 --run-spice --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+python scripts\pipeline_2.0\run_pipeline2.py --batch <batch> --circuits <circuit> --run-spice --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
 ```
 
 ### Solo prompt, senza OpenAI
 
-Per generare preview e prompt dell'agente su `a01`, senza chiamare OpenAI:
+Per generare preview e prompt dell'agente su un circuito, senza chiamare
+OpenAI:
 
 ```powershell
-python scripts\pipeline_2.0\json_to_spice\11_agent_readonly.py --batch batchA --circuit a01 --question "Perche la lampada non si accende?"
+python scripts\pipeline_2.0\json_to_spice\11_agent_readonly.py --batch <batch> --circuit <circuit> --question "Perche la lampada non si accende?"
 ```
 
 Output:
 
 ```text
-outputs/pipeline2.0/batchA/a01/11_agent_input_preview.md
-outputs/pipeline2.0/batchA/a01/11_agent_prompt.md
+outputs/pipeline2.0/<batch>/<circuit>/11_agent_input_preview.md
+outputs/pipeline2.0/<batch>/<circuit>/11_agent_prompt.md
 ```
-
-Questa modalita serve per controllare cosa verra mandato al modello.
 
 Si puo anche passare direttamente il manifest:
 
 ```powershell
-python scripts\pipeline_2.0\json_to_spice\11_agent_readonly.py --context outputs\pipeline2.0\batchA\a01\10_diagnostic_context.json --question "Perche la lampada non si accende?"
+python scripts\pipeline_2.0\json_to_spice\11_agent_readonly.py --context outputs\pipeline2.0\<batch>\<circuit>\10_diagnostic_context.json --question "Perche la lampada non si accende?"
 ```
 
 ### Agente con OpenAI
 
 Per chiamare OpenAI bisogna aggiungere `--run-agent`.
 
-Comando consigliato con modello default `gpt-5.4`:
+Comando consigliato con il modello default corrente:
 
 ```powershell
-python scripts\pipeline_2.0\json_to_spice\11_agent_readonly.py --batch batchA --circuit a01 --question "Perche la lampada non si accende?" --run-agent
+python scripts\pipeline_2.0\json_to_spice\11_agent_readonly.py --batch <batch> --circuit <circuit> --question "Perche la lampada non si accende?" --run-agent
 ```
 
 Output aggiuntivo:
 
 ```text
-outputs/pipeline2.0/batchA/a01/11_agent_response.md
+outputs/pipeline2.0/<batch>/<circuit>/11_agent_response.md
 ```
 
-Per scegliere esplicitamente il modello default:
+Per scegliere esplicitamente un modello:
 
 ```powershell
-python scripts\pipeline_2.0\json_to_spice\11_agent_readonly.py --batch batchA --circuit a01 --question "Perche la lampada non si accende?" --run-agent --model gpt-5.4
+python scripts\pipeline_2.0\json_to_spice\11_agent_readonly.py --batch <batch> --circuit <circuit> --question "Perche la lampada non si accende?" --run-agent --model gpt-5.4
 ```
 
-Per usare il modello piu forte come confronto:
-
-```powershell
-python scripts\pipeline_2.0\json_to_spice\11_agent_readonly.py --batch batchA --circuit a01 --question "Perche la lampada non si accende?" --run-agent --model gpt-5.5
-```
-
-Per test piu rapidi/economici:
-
-```powershell
-python scripts\pipeline_2.0\json_to_spice\11_agent_readonly.py --batch batchA --circuit a01 --question "Perche la lampada non si accende?" --run-agent --model gpt-5.4-mini
-```
-
-Modello default:
+Modello default attuale nel codice:
 
 ```text
 gpt-5.4
 ```
 
-Modelli consigliati:
+Modelli supportati attualmente:
 
 ```text
-gpt-5.4       default operativo dell'agente
-gpt-5.5       confronto di qualita / modello piu forte
-gpt-5.4-mini  test piu rapidi ed economici
-gpt-5-mini    baseline veloce/economica
+gpt-5.4
+gpt-5.5
+gpt-5.4-mini
+gpt-5-mini
 ```
 
 La scelta del modello riguarda solo l'agente. La pipeline tecnica fino a SPICE
@@ -704,19 +642,19 @@ Da terminale PowerShell in VS Code:
 & "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe" -v
 ```
 
-Per eseguire manualmente la netlist di `a01`:
+Per eseguire manualmente una netlist:
 
 ```powershell
-& "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe" -b outputs\pipeline2.0\batchA\a01\07_netlist.cir
+& "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe" -b outputs\pipeline2.0\<batch>\<circuit>\07_netlist.cir
 ```
 
-Questo comando usa:
+Il flag:
 
 ```text
 -b
 ```
 
-cioe batch mode: ngspice esegue la netlist senza aprire l'interfaccia
+indica batch mode: ngspice esegue la netlist senza aprire l'interfaccia
 interattiva.
 
 ### Comando veloce temporaneo
@@ -737,7 +675,7 @@ ngspice_con -v
 e:
 
 ```powershell
-ngspice_con -b outputs\pipeline2.0\batchA\a01\07_netlist.cir
+ngspice_con -b outputs\pipeline2.0\<batch>\<circuit>\07_netlist.cir
 ```
 
 Questa modifica temporanea vale solo per il terminale corrente.
@@ -767,16 +705,16 @@ Dopo il riavvio di VS Code, questo comando dovrebbe funzionare:
 ngspice_con -v
 ```
 
-E questo comando esegue manualmente la netlist di `a01`:
+E questo comando esegue manualmente una netlist:
 
 ```powershell
-ngspice_con -b outputs\pipeline2.0\batchA\a01\07_netlist.cir
+ngspice_con -b outputs\pipeline2.0\<batch>\<circuit>\07_netlist.cir
 ```
 
 La pipeline puo fare la stessa cosa tramite lo step 08:
 
 ```powershell
-python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 --run-spice --ngspice-executable ngspice_con
+python scripts\pipeline_2.0\run_pipeline2.py --batch <batch> --circuits <circuit> --run-spice --ngspice-executable ngspice_con
 ```
 
 ## File prodotti per ogni circuito
@@ -836,7 +774,7 @@ scenario.json
 scenario_status.json
 scenario_copy_manifest.json
 12_controlled_scenarios.json
-scenario_comparison.json, se SPICE scenario e stato eseguito
+scenario_comparison.json
 base_snapshot/
 run/
 ```
@@ -929,82 +867,52 @@ Per ora, se uno switch e aperto, viene scritto solo come commento nella netlist:
 * switch25.1 open: not emitted
 ```
 
-Piu avanti potremo aggiungere scenari simulativi, per esempio:
+Piu avanti si possono usare scenari simulativi per chiudere temporaneamente uno
+switch riconosciuto.
 
-```text
-base: switch aperto come riconosciuto dal grafo
-switch_closed: stesso circuito, ma con switch chiuso per simulazione
-```
-
-In quel caso lo switch chiuso potra diventare:
-
-```spice
-Rswitch25_1 N001 N002 1m
-```
-
-cioe un collegamento quasi ideale.
-
-## Nota su chat/agente
-
-Quando la pipeline verra estesa a tutti i batch e a molte immagini, la chat o
-l'agente diventeranno il livello interattivo sopra gli output tecnici.
+## Nota su chat e agente
 
 L'idea non e sostituire la pipeline, ma guidarla:
 
 ```text
-utente: Perche la lampada non si accende?
+utente: descrive il sintomo
 agente: legge 10_diagnostic_context.json e gli output 01-08
 agente: spiega il risultato SPICE
-agente: propone massimo 3 scenari diagnostici candidati
-utente: scegli scenario 2
+agente: propone scenari diagnostici candidati
+utente: sceglie uno scenario
 pipeline: crea una cartella scenario separata
 pipeline: copia gli output originali
 pipeline: modifica solo le copie
-pipeline: rigenera gli step necessari e rilancia SPICE
+pipeline: rilancia SPICE sullo scenario
 agente: confronta run base e run scenario
 ```
 
-Prima versione attuale:
+Versione attuale:
 
-- `09_web_chat.py` avvia un sito locale temporaneo per leggere gli output;
-- `10_build_diagnostic_context.py` crea il manifest;
-- `11_agent_readonly.py` crea preview, prompt e risposta agente;
-- OpenAI e collegato alla web chat tramite modello default `gpt-5.4`;
+- `09_web_chat.py` avvia un sito locale temporaneo per leggere gli output
+- `10_build_diagnostic_context.py` crea il manifest
+- `11_agent_readonly.py` crea preview, prompt e risposta agente
+- OpenAI e collegato sia da CLI sia dalla web chat
 - `12_controlled_scenarios.py` applica scenari generali semplici
   (`drive_node_voltage`, `change_source_value`, `close_switch`), puo eseguire
-  ngspice e crea un confronto base/scenario.
+  ngspice e crea un confronto base/scenario
 
 Regole sugli scenari:
 
-- `11` propone soltanto scenari;
-- uno scenario parte solo se l'utente lo sceglie esplicitamente;
-- gli output originali non vanno mai sovrascritti;
-- lo scenario deve lavorare su copie degli output base;
-- la cartella scenario deve essere separata dalla cartella base del circuito.
-
-Flusso tecnico corrente:
-
-```text
-01 -> 02 -> 03 -> 04 -> 06 -> 07 -> 08 -> 10
-09 -> sito locale temporaneo + chat
-11 -> agente read-only chiamato da terminale o dalla chat
-12 -> scenario controllato su copia separata
-```
-
-Per la tesi e una direzione interessante per descrivere un sistema interattivo
-che aiuta l'utente a trasformare il circuito riconosciuto in una simulazione
-SPICE eseguibile.
+- `11` propone soltanto scenari
+- uno scenario parte solo se l'utente lo sceglie esplicitamente
+- gli output originali non vanno mai sovrascritti
+- lo scenario lavora su copie degli output base
+- la cartella scenario e separata dalla cartella base del circuito
+- il budget massimo attuale e `5` scenari eseguibili per circuito
 
 ## Step futuri
 
 I prossimi step saranno:
 
-- `09_web_chat.py`: migliorare sidebar scenari e scelta modello;
-- `10_build_diagnostic_context.py`: implementato come manifest leggero;
-- `11_agent_readonly.py`: implementato fino a preview, prompt e chiamata
-  OpenAI opzionale con `--run-agent`;
-- `12_controlled_scenarios.py`: estendere in futuro le primitive oltre
-  `drive_node_voltage`, `change_source_value` e `close_switch`;
-- aggiungere la risposta agente dopo lo scenario, basata su
-  `scenario_comparison.json`;
-- in seguito, aggiungere il viewer SPICE animato.
+- migliorare ulteriormente la UI di `09_web_chat.py`
+- estendere in futuro le primitive di `12_controlled_scenarios.py`
+- consolidare la risposta agente dopo lo scenario, basata su
+  `scenario_comparison.json`
+- consolidare la chiusura finale dell'agente quando il budget scenari e esaurito
+- aggiungere in seguito il viewer SPICE animato

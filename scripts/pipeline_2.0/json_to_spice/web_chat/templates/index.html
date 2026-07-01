@@ -558,6 +558,22 @@
       return safe;
     }
 
+    function cleanupAgentText(text) {
+      let cleaned = String(text || "").replace(/\r\n/g, "\n");
+      const patterns = [
+        /\n*Scenario tecnico recuperato:\s*\n\s*```json\s*[\s\S]*?```/gi,
+        /\n*#{0,6}\s*\d+\.\s*\*?Blocco tecnico per pipeline\*?\s*\n\s*```json\s*[\s\S]*?```/gi,
+        /\n*#{0,6}\s*Blocco tecnico per pipeline\s*\n\s*```json\s*[\s\S]*?```/gi,
+      ];
+
+      for (const pattern of patterns) {
+        cleaned = cleaned.replace(pattern, "");
+      }
+
+      cleaned = cleaned.replace(/\n{3,}/g, "\n\n").trim();
+      return cleaned;
+    }
+
     function flushParagraph(lines, htmlParts) {
       if (!lines.length) return;
       htmlParts.push("<p>" + renderInlineMarkdown(lines.join(" ")) + "</p>");
@@ -679,20 +695,21 @@
     function addMessage(kind, text, options = {}) {
       const node = document.createElement("div");
       node.className = "message " + kind;
+      const normalizedText = kind === "agent" && !options.html ? cleanupAgentText(text) : text;
       if (options.html) {
         node.innerHTML = text;
       } else if (kind === "agent") {
         const content = document.createElement("div");
         content.className = "message-content";
-        content.innerHTML = renderMarkdown(text);
+        content.innerHTML = renderMarkdown(normalizedText);
         node.appendChild(content);
       } else {
-        node.textContent = text;
+        node.textContent = normalizedText;
       }
       messages.appendChild(node);
       messages.scrollTop = messages.scrollHeight;
       if (!options.temporary && kind !== "debug") {
-        chatHistory.push({kind, text});
+        chatHistory.push({kind, text: normalizedText});
         saveChatHistory();
       }
       return node;

@@ -16,6 +16,7 @@ verificabile, con istruzioni stabili ed evidenze caricate dagli output 01-08.
 from __future__ import annotations
 
 import json
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -71,9 +72,17 @@ def build_system_instructions() -> list[str]:
     ]
 
 
+def normalize_matching_text(text: str) -> str:
+    """Normalizza testo libero per match robusti su input utente italiani."""
+    lowered = text.lower()
+    normalized = unicodedata.normalize("NFKD", lowered)
+    without_accents = "".join(char for char in normalized if not unicodedata.combining(char))
+    return without_accents
+
+
 def is_executed_scenario_question(user_problem: str) -> bool:
     """Riconosce domande che chiedono di interpretare scenari gia eseguiti."""
-    text = user_problem.lower()
+    text = normalize_matching_text(user_problem)
     scenario_words = ("scenario", "scenari")
     outcome_words = (
         "risolve",
@@ -92,7 +101,7 @@ def is_executed_scenario_question(user_problem: str) -> bool:
 
 def is_next_scenario_request(user_problem: str) -> bool:
     """Riconosce domande che chiedono cosa provare dopo gli scenari eseguiti."""
-    text = user_problem.lower()
+    text = normalize_matching_text(user_problem)
     scenario_words = ("scenario", "scenari")
     next_words = (
         "adesso",
@@ -111,6 +120,43 @@ def is_next_scenario_request(user_problem: str) -> bool:
         "non basta",
     )
     return any(word in text for word in scenario_words) and any(word in text for word in next_words)
+
+
+def is_final_conclusion_request(user_problem: str) -> bool:
+    """Riconosce domande che chiedono una sintesi o conclusione finale."""
+    text = normalize_matching_text(user_problem)
+
+    direct_phrases = (
+        "dammi una conclusione finale",
+        "qual e la conclusione finale piu probabile",
+        "qual e la diagnosi finale piu probabile",
+        "che cosa abbiamo capito finora",
+        "riassumi cosa hanno mostrato gli scenari",
+        "con questi scenari, qual e la conclusione",
+        "a questo punto, qual e la conclusione piu probabile",
+        "alla luce degli scenari eseguiti, cosa sembra piu probabile",
+        "dopo questi test, cosa possiamo concludere",
+        "ha senso continuare con altri scenari oppure possiamo gia concludere",
+        "conviene fermarsi qui e tirare le conclusioni",
+        "siamo arrivati a una conclusione oppure serve ancora altro",
+    )
+    if any(phrase in text for phrase in direct_phrases):
+        return True
+
+    final_words = (
+        "conclusione finale",
+        "diagnosi finale",
+        "tirare le conclusioni",
+        "cosa possiamo concludere",
+        "cosa abbiamo capito",
+        "riassumi",
+        "serve ancora altro",
+        "possiamo gia concludere",
+    )
+    scenario_context_words = ("scenario", "scenari", "test")
+    return any(word in text for word in final_words) and any(word in text for word in scenario_context_words)
+
+
 
 
 def has_strong_topology_failure(summary: dict[str, Any] | None) -> bool:
@@ -187,8 +233,62 @@ def build_next_scenario_answer_format() -> list[str]:
         "",
         "5. **Blocco tecnico per pipeline**",
         "   Includi un blocco JSON breve con `scenario_id`, `title`, `hypothesis`, `actions`, `rerun_from`, `analysis`, `compare`.",
-        "   Usa solo primitive supportate: `drive_node_voltage`, `change_source_value`, `close_switch`.",
+        "   Usa solo primitive supportate: `drive_node_voltage`, `change_source_value`, `change_component_value`, `close_switch`.",
         "   Non usare `unknown` nei valori.",
+        "",
+        "`Richiede immagine: si/no`",
+    ]
+
+
+def build_final_conclusion_after_budget_answer_format() -> list[str]:
+    """Formato usato quando il budget scenari e terminato."""
+    return [
+        "Il budget scenari e esaurito: non proporre nuovi scenari.",
+        "Rispondi in Markdown usando esattamente queste sezioni:",
+        "",
+        "1. **Stato finale degli scenari eseguiti**",
+        "   Riassumi in breve gli scenari eseguiti e quale evidenza hanno prodotto.",
+        "",
+        "2. **Diagnosi finale**",
+        "   Indica la conclusione diagnostica piu forte raggiunta finora.",
+        "",
+        "3. **Cosa e stato risolto e cosa no**",
+        "   Distingui tra problema risolto, causa localizzata, limite topologico o risultato inconclusivo.",
+        "",
+        "4. **Motivazione tecnica**",
+        "   Giustifica la conclusione con i file scenario e base piu importanti.",
+        "",
+        "5. **Prossimo passo fuori budget**",
+        "   Spiega quale sarebbe il passo successivo solo come sviluppo futuro, senza proporre un nuovo scenario eseguibile.",
+        "",
+        "`Richiede immagine: si/no`",
+    ]
+
+
+def build_final_conclusion_on_request_answer_format() -> list[str]:
+    """Formato usato quando l'utente chiede una conclusione finale prima del budget finale."""
+    return [
+        "L'utente chiede una conclusione finale o una sintesi dei test eseguiti.",
+        "Usa come evidenza principale gli scenari gia eseguiti e la base run.",
+        "Non proporre automaticamente un nuovo scenario in questa risposta.",
+        "Proponi un ulteriore scenario solo se e davvero l'unico test decisivo rimasto e dichiaralo esplicitamente come ultimo possibile passo utile.",
+        "Rispondi in Markdown usando esattamente queste sezioni:",
+        "",
+        "1. **Stato degli scenari eseguiti**",
+        "   Riassumi in breve che cosa ha mostrato ogni scenario eseguito.",
+        "",
+        "2. **Ipotesi rafforzate e ipotesi indebolite**",
+        "   Spiega quali ipotesi sono state supportate dai test e quali invece hanno perso forza.",
+        "",
+        "3. **Conclusione diagnostica finale piu probabile**",
+        "   Dai la conclusione piu forte raggiungibile con le evidenze attuali.",
+        "",
+        "4. **Cosa non e stato dimostrato**",
+        "   Dichiara cosa resta non verificato o non concludibile dai dati attuali.",
+        "",
+        "5. **Conviene continuare?**",
+        "   Spiega se ha senso fare un altro scenario oppure se e piu corretto fermarsi qui.",
+        "   Se suggerisci un altro scenario, deve essere chiaramente motivato come ultimo test davvero informativo.",
         "",
         "`Richiede immagine: si/no`",
     ]
@@ -231,6 +331,11 @@ def build_topology_failure_answer_format() -> list[str]:
 
 def build_answer_format(user_problem: str = "", summary: dict[str, Any] | None = None) -> list[str]:
     """Definisce la struttura obbligatoria della risposta finale."""
+    scenario_budget = summary.get("_scenario_budget") if isinstance(summary, dict) else None
+    if isinstance(scenario_budget, dict) and scenario_budget.get("budget_exhausted"):
+        return build_final_conclusion_after_budget_answer_format()
+    if is_final_conclusion_request(user_problem):
+        return build_final_conclusion_on_request_answer_format()
     if is_next_scenario_request(user_problem):
         return build_next_scenario_answer_format()
     if is_executed_scenario_question(user_problem):
@@ -291,8 +396,19 @@ def build_prompt_operating_rules() -> list[str]:
         "In the initial answer for a circuit, propose only first-pass scenarios and do not propose combined scenarios.",
         "Combined scenarios are allowed only after scenario evidence exists and the user explicitly asks what to try next.",
         "If the user asks what to try next after executed scenarios, propose the next most informative scenario based on scenario_comparison.json.",
+        "If the user explicitly asks for a final conclusion, a final diagnosis, a summary of executed scenarios, or whether it makes sense to stop, switch to final-conclusion mode instead of default next-scenario mode.",
+        "In final-conclusion mode, use the executed scenarios and their comparisons as the primary evidence, together with the base run.",
+        "In final-conclusion mode, do not automatically generate another scenario just because the budget is not exhausted.",
+        "In final-conclusion mode, suggest one more scenario only if it is clearly the single remaining decisive test and explain why the already executed scenarios are not enough without it.",
+        "In final-conclusion mode, if the executed evidence already points to a structural limit, a topological ambiguity, or an inconclusive but bounded diagnosis, say that clearly instead of forcing another electrical scenario.",
         "If one executed scenario already changed the nodes, branches or currents most closely tied to the user symptom, prefer extending that proven direction before proposing a weaker exploratory source-value change.",
         "Prefer a minimal combined scenario built around the strongest symptom-linked evidence before proposing a generic source-value variation, unless the source itself is the strongest evidence-backed hypothesis.",
+        "Prefer `change_component_value` when the hypothesis can be tested by varying the value of an already emitted resistor, capacitor, inductor or equivalent simple component.",
+        "Use `change_source_value` only for existing SPICE sources, not for passive components.",
+        "Use `drive_node_voltage` mainly for controlled isolation tests or when no more natural value/source/state action is available.",
+        "Never exceed the scenario budget declared in the manifest.",
+        "If `scenario_budget.last_scenario_available` is true, propose only one final executable scenario.",
+        "If `scenario_budget.budget_exhausted` is true, do not propose any new scenario and provide a final diagnostic conclusion.",
         "If no executed scenario resolved the problem, consider combined scenarios when previous outcomes provide complementary evidence, including `not_resolved` actions that are electrically enabling.",
         "Do not combine every previous scenario blindly; explain why each included action is useful and why excluded actions are not included.",
         "A next combined scenario must be self-contained and use only supported action types.",
@@ -482,7 +598,10 @@ def build_agent_prompt(
     artifacts = manifest.get("artifacts") or {}
     executed_scenarios = manifest.get("executed_scenarios") or []
     scenario_outcome_summary = manifest.get("scenario_outcome_summary") or {}
+    scenario_budget = manifest.get("scenario_budget") or {}
     image_access = manifest.get("image_access") or {}
+    answer_summary = dict(summary)
+    answer_summary["_scenario_budget"] = scenario_budget
 
     lines = [
         "# Diagnostic agent prompt",
@@ -527,6 +646,12 @@ def build_agent_prompt(
             "",
             *build_scenario_outcome_summary_section(scenario_outcome_summary),
             "",
+            "## Scenario budget",
+            "",
+            "```json",
+            json.dumps(scenario_budget, indent=2, ensure_ascii=False),
+            "```",
+            "",
             "## Image access policy",
             "",
             f"- Included by default: `{image_access.get('included_by_default')}`",
@@ -548,7 +673,7 @@ def build_agent_prompt(
             "",
             "## Required answer format",
             "",
-            *build_answer_format(user_problem, summary),
+            *build_answer_format(user_problem, answer_summary),
             "",
             "## Final task",
             "",

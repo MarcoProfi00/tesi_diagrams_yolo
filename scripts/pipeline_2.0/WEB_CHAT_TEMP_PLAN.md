@@ -1,13 +1,12 @@
 # Pipeline 2.0 - Temporary Web Chat Plan
 
-Questa e una nota temporanea di lavoro. Serve a ricordare lo stato attuale e i
-prossimi passi della interfaccia chat/web della Pipeline 2.0. Potra essere
-eliminata quando la struttura sara consolidata o spostata nella documentazione
-definitiva.
+Questa e una nota temporanea di lavoro. Serve a fissare il ruolo della web
+chat, il suo stato attuale e i prossimi passi. Non descrive singoli circuiti:
+deve restare un promemoria generale sull'interfaccia di `09_web_chat.py`.
 
 ## Idea generale
 
-La Pipeline 2.0 resta divisa in due parti:
+La Pipeline 2.0 resta divisa in due blocchi:
 
 ```text
 01-08 = pipeline tecnica fino a ngspice
@@ -23,15 +22,16 @@ un server locale temporaneo, senza database, login, deploy o API pubbliche.
 Gli output tecnici della pipeline restano salvati nelle cartelle `outputs/`.
 La conversazione della web chat e mantenuta dal browser per batch/circuito, per
 esempio tramite localStorage. Quindi puo sopravvivere alla chiusura del server
-locale, ma non va trattata come archivio permanente o riproducibile.
+locale nella stessa macchina, ma non va trattata come archivio permanente o
+riproducibile.
 
-## Flusso attuale
+## Flusso generale
 
 ```text
 run_pipeline2
 -> esegue 01-08
 -> opzionalmente si avvia 09_web_chat come script separato
--> apre una pagina locale nel browser
+-> si apre una pagina locale nel browser
 -> utente sceglie o conferma batch/circuito
 -> utente scrive il problema
 -> 09 chiama 10_build_diagnostic_context.py
@@ -42,7 +42,7 @@ run_pipeline2
 Scenari dalla chat:
 
 ```text
-utente scrive "esegui scenario 1"
+utente scrive "esegui scenario 1" oppure "esegui questo scenario"
 -> 09 interpreta la scelta
 -> 09 recupera lo scenario proposto da 11
 -> 09 chiama 12_controlled_scenarios.py
@@ -55,23 +55,28 @@ utente scrive "esegui scenario 1"
 -> 11 puo confrontare base run e scenario run nelle risposte successive
 ```
 
-## Prima versione minima
+## Ruolo di 09_web_chat
 
-La prima implementazione di `09` dovrebbe fare solo questo:
+Lo step `09` deve restare un orchestratore leggero.
+
+Deve occuparsi di:
 
 ```text
-1. avviare una pagina locale;
-2. ricevere batch e circuito;
-3. mostrare lo stato minimo del circuito;
-4. ricevere una domanda utente;
-5. eseguire 10;
-6. eseguire 11;
-7. mostrare la risposta dell'agente.
+server locale
+lettura degli output pipeline
+render dei frammenti dinamici
+API temporanee della chat
+aggancio a 10, 11 e 12
 ```
 
-Questa prima versione e stata superata: ora la web chat esegue la parte
-read-only, crea scenari controllati, puo eseguire ngspice sugli scenari e
-mostra gli scenari nella sidebar.
+Non deve:
+
+```text
+sostituire la pipeline tecnica
+duplicare la logica di 10, 11 o 12
+diventare un backend persistente
+salvare uno stato applicativo complesso
+```
 
 ## Layout grafico
 
@@ -84,55 +89,17 @@ dedicata:
 
 ```text
 scripts/pipeline_2.0/json_to_spice/web_chat/
-`-- templates/
-    `-- index.html
+|-- templates/
+|   `-- index.html
+`-- static/
+    |-- app.css
+    `-- app.js
 ```
 
-Lo script `09_web_chat.py` deve occuparsi solo di:
+Questa cartella puo crescere gradualmente; nella prima versione puo esistere
+anche solo `templates/index.html`.
 
-```text
-server locale
-lettura degli output pipeline
-render dei frammenti dinamici
-API temporanee della chat
-```
-
-Se il frontend cresce, potremo aggiungere:
-
-```text
-web_chat/static/app.css
-web_chat/static/app.js
-```
-
-Layout base:
-
-Nota: il primo schema e uno schema storico rimasto con caratteri non
-correttamente renderizzati. Il layout da usare e quello ASCII aggiornato subito
-dopo, nella sezione `Colonna sinistra: run selector`.
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ Header: Pipeline 2.0 Diagnostic Web Chat                    │
-│ batch / circuit | active run | SPICE status                 │
-├───────────────┬───────────────────────────────┬─────────────┤
-│ Run selector  │ Evidence panel                │ Agent chat  │
-│               │                               │             │
-│ Base run      │ Main run title                │ messages    │
-│ Scenario 1    │ Status summary                │             │
-│ Scenario 2    │                               │ input       │
-│ ...           │ Graph JSON                    │             │
-│               │ Values                        │             │
-│               │ Node Map                      │             │
-│               │ Component Rules               │             │
-│               │ SPICE Netlist                 │             │
-│               │ SPICE stdout/stderr           │             │
-│               │ Tran CSV / plot               │             │
-└───────────────┴───────────────────────────────┴─────────────┘
-```
-
-### Colonna sinistra: run selector
-
-Layout aggiornato in ASCII:
+Schema logico del layout:
 
 ```text
 +----------------------------------------------------------------+
@@ -142,12 +109,14 @@ Layout aggiornato in ASCII:
 | Run selector   | Evidence panel                 | Agent chat   |
 |                |                                |              |
 | Base run       | Main run title                 | messages     |
-| scenario_1     | Image / status summary         |              |
-| scenario_2     | Graph / values / node map      | input        |
-| ...            | Netlist / stdout / stderr      |              |
+| scenario_N     | Image / status summary         |              |
+| ...            | Graph / values / node map      | input        |
+|                | Netlist / stdout / stderr      | controls     |
 |                | Tran CSV / plot                |              |
 +----------------+--------------------------------+--------------+
 ```
+
+## Colonna sinistra: run selector
 
 La colonna sinistra serve a scegliere quale run guardare:
 
@@ -158,9 +127,13 @@ Scenario 2
 Scenario N
 ```
 
-Stato attuale: la sidebar mostra `Base run` e gli scenari gia creati, per
-esempio `scenario_1`, `scenario_2` e `scenario_3`. Quando uno scenario viene
-creato dalla chat, la pagina viene ricaricata sulla run scenario selezionata.
+Stato attuale:
+
+```text
+la sidebar mostra Base run e gli scenari gia creati
+quando uno scenario viene creato, la pagina si ricarica sulla run selezionata
+la chat resta unica per il circuito
+```
 
 Ogni run dovrebbe mostrare uno stato sintetico:
 
@@ -173,10 +146,10 @@ not run
 
 La sidebar potra diventare richiudibile piu avanti.
 
-### Parte centrale: evidence panel
+## Parte centrale: evidence panel
 
-La parte centrale contiene gli artefatti tecnici. Non devono essere tutti aperti
-di default, altrimenti la vista diventa sporca.
+La parte centrale contiene gli artefatti tecnici. Non devono essere tutti
+aperti di default, altrimenti la vista diventa sporca.
 
 Usare pannelli richiudibili:
 
@@ -191,6 +164,9 @@ stdout
 stderr
 Transient CSV
 Transient Plot
+Scenario Definition
+Scenario Status
+Scenario Comparison
 ```
 
 Di default conviene tenere aperti solo:
@@ -204,11 +180,14 @@ Transient Plot, se esiste
 
 Gli altri file restano disponibili ma chiusi.
 
-### Colonna destra: diagnostic chat
+Il pannello centrale deve mostrare anche l'immagine originale del circuito,
+quando disponibile.
+
+## Colonna destra: diagnostic chat
 
 La chat deve restare visibile anche quando l'utente cambia run nella sidebar.
 
-Prima versione:
+Flusso base:
 
 ```text
 utente scrive problema
@@ -228,13 +207,14 @@ il messaggio utente viene inviato a /api/chat
 /api/chat mostra la risposta nella chat
 la risposta viene renderizzata come Markdown
 la UI mostra un indicatore di attesa mentre l'agente lavora
-il pannello centrale mostra anche l'immagine originale del circuito
 ```
 
 Quindi, al momento, `09_web_chat.py` e:
 
 ```text
-visualizzazione output pipeline + chat agente read-only + orchestrazione scenari controllati
+visualizzazione output pipeline
++ chat agente read-only
++ orchestrazione scenari controllati
 ```
 
 La chat salva file separati per non sovrascrivere gli esperimenti:
@@ -245,13 +225,15 @@ La chat salva file separati per non sovrascrivere gli esperimenti:
 11_agent_response_chat.md
 ```
 
-Stato scenari dalla chat:
+## Scenari dalla chat
+
+Flusso attuale:
 
 ```text
 utente scrive "esegui scenario 1"
 -> 09 riconosce la scelta
 -> 09 estrae il JSON scenario dall'ultima risposta agente
--> 09 crea scenarios/scenario_1/
+-> 09 crea scenarios/<scenario_id>/
 -> 09 salva scenario.json e scenario_status.json
 -> 09 copia la base run in base_snapshot/ e run/
 -> 09 chiama 12_controlled_scenarios.py
@@ -266,81 +248,58 @@ non viene modificata. Se `09_web_chat.py` non riceve un eseguibile ngspice, la
 chat puo comunque creare/applicare lo scenario, ma non puo completare la parte
 di simulazione e confronto.
 
-### Controlli chat
+## Controlli chat
 
 La chat dovrebbe avere controlli minimi ma chiari:
 
 ```text
 model selector
-image enable button / command
 send message
+clear chat
+image enable button / command
 ```
+
+### Selettore modello
 
 Il selettore modello deve permettere all'utente di scegliere quale modello usare
 per la risposta dell'agente.
 
-Modello default previsto:
+Stato attuale:
 
 ```text
-gpt-5.4
+implementato
+la scelta viene passata a 11_agent_readonly.py
+la preferenza puo essere mantenuta lato browser
 ```
 
-Altri modelli potranno essere disponibili come opzione, ma senza rifare per ora
-tutta la griglia sperimentale.
-
-Stato attuale: il modello puo essere passato al comando/script e la chat usa lo
-stesso meccanismo dello step `11`. Un selettore grafico completo resta un
-miglioramento di interfaccia.
+### Gestione immagine
 
 La gestione immagine deve seguire la policy gia decisa:
 
 ```text
 default = immagine non inclusa
-se l'agente la richiede = l'utente puo abilitarla
+fallback = immagine usata solo se serve davvero
 ```
 
-Interazione futura possibile:
+Due modalita utili:
 
 ```text
-Agente:
-Per questa diagnosi potrebbe servire l'immagine originale.
-
-Utente:
-usa immagine
-
-Sistema:
-la prossima chiamata agente include l'immagine disponibile in data/<batch>/<circuit>.
+1. richiesta esplicita dell'utente, per esempio "usa immagine"
+2. fallback automatico se ngspice fallisce e il contesto mostra forti segnali
+   di problema topologico
 ```
 
-Nella UI questo puo essere supportato anche da un tasto:
+In entrambi i casi l'immagine non deve diventare input predefinito.
+
+## Termini tecnici usati nel sito
 
 ```text
-Use image in next agent call
-```
-
-Il tasto non deve caricare sempre l'immagine. Deve solo abilitarla quando serve,
-in modo da mantenere la modalita base `graph-grounded`.
-
-Gia implementato per casi semplici:
-
-```text
-utente scrive "esegui scenario 1"
--> 09 interpreta la scelta
--> 09 chiama 12
--> scenario compare nella sidebar
--> 10 indicizza lo scenario eseguito
--> agente puo confrontare Base run e Scenario run nelle risposte successive
-```
-
-### Termini tecnici usati nel sito
-
-```text
-Base run       = esecuzione principale prodotta dagli step 01-08
-Scenario run   = esecuzione derivata da uno scenario scelto dall'utente
-Artifact       = file prodotto dalla pipeline
-Evidence panel = pannello centrale con graph, values, netlist e risultati
+Base run        = esecuzione principale prodotta dagli step 01-08
+Scenario run    = esecuzione derivata da uno scenario scelto dall'utente
+Artifact        = file prodotto dalla pipeline
+Evidence panel  = pannello centrale con graph, values, netlist e risultati
 Diagnostic chat = chat con l'agente
-SPICE status   = stato dell'esecuzione ngspice
+SPICE status    = stato dell'esecuzione ngspice
 ```
 
 ## Comandi possibili
@@ -348,13 +307,13 @@ SPICE status   = stato dell'esecuzione ngspice
 Uso separato:
 
 ```powershell
-python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --circuit a10
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch <batch> --circuit <circuit>
 ```
 
 Uso futuro integrato nella pipeline:
 
 ```powershell
-python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a10 --run-spice --open-web
+python scripts\pipeline_2.0\run_pipeline2.py --batch <batch> --circuits <circuit> --run-spice --open-web
 ```
 
 La seconda forma e comoda, ma conviene implementarla solo dopo aver testato bene
@@ -395,7 +354,7 @@ nella tesi.
 Questa e la scaletta aggiornata. Alcuni punti sono gia implementati, altri
 restano da completare.
 
-### TODO 1 - Collegare la chat a 10 e 11
+### TODO 1 - Chat collegata a 10 e 11
 
 Quando l'utente scrive un sintomo nella chat:
 
@@ -409,20 +368,17 @@ utente scrive problema/sintomo
 -> 09 la mostra nella chat
 ```
 
-Per non sovrascrivere gli esperimenti gia fatti, la risposta prodotta dalla chat
-dovrebbe andare in un file dedicato:
+Per non sovrascrivere altri output, la risposta prodotta dalla chat va in un
+file dedicato:
 
 ```text
 11_agent_response_chat.md
 ```
 
-In questo modo gli output usati per la valutazione del Batch A restano
-separati.
-
 Stato:
 
 ```text
-implementato nella forma minima.
+implementato
 ```
 
 ### TODO 2 - Mostrare cosa viene eseguito
@@ -432,32 +388,23 @@ Durante lo sviluppo, la chat dovrebbe mostrare o salvare un piccolo log tecnico:
 ```text
 Executed:
 - 10_build_diagnostic_context.py
-- 11_agent_readonly.py --run-agent --model gpt-5.4
+- 11_agent_readonly.py --run-agent --model <selected_model>
 
 Output:
 - 10_diagnostic_context.json
 - 11_agent_response_chat.md
 ```
 
-Questo serve a validare insieme che il sito stia davvero chiamando gli step
-giusti.
+Questo serve a validare che il sito stia davvero chiamando gli step giusti.
 
 ### TODO 3 - Scelta modello
-
-Aggiungere nella chat un selettore modello.
-
-Default:
-
-```text
-gpt-5.4
-```
 
 Il modello scelto deve essere passato a `11_agent_readonly.py`.
 
 Stato:
 
 ```text
-parzialmente implementato lato comando/script; selettore grafico ancora da completare.
+implementato
 ```
 
 ### TODO 4 - Immagine su richiesta
@@ -470,10 +417,20 @@ Quando l'agente la richiede o l'utente scrive un comando tipo:
 usa immagine
 ```
 
-la chat deve abilitare una futura chiamata image-assisted.
+la chat deve abilitare una chiamata image-assisted solo per il caso corrente.
 
-Per ora basta ricordare la logica; l'implementazione concreta verra fatta piu
-avanti.
+Stato:
+
+```text
+parzialmente implementato
+```
+
+Nota:
+
+```text
+il fallback automatico con immagine nei casi di forte sospetto topologico e gia presente
+la richiesta esplicita "usa immagine" come controllo conversazionale dedicato resta da consolidare meglio
+```
 
 ### TODO 5 - Parsing scelta scenario
 
@@ -483,6 +440,8 @@ Dopo che l'agente propone scenari, l'utente puo scrivere:
 esegui scenario 1
 prova lo scenario 2
 facciamo il terzo
+esegui questo scenario
+esegui lo scenario appena proposto
 ```
 
 La chat deve riconoscere la scelta e recuperare il JSON tecnico dello scenario
@@ -491,15 +450,17 @@ proposto nella risposta precedente.
 Prima versione semplice:
 
 ```text
-"scenario 1" / "primo"  -> scenario_1
+"scenario 1" / "primo" -> scenario_1
 "scenario 2" / "secondo" -> scenario_2
-"scenario 3" / "terzo"   -> scenario_3
+"scenario 3" / "terzo" -> scenario_3
+"questo scenario" -> ultimo scenario proposto
+"scenario appena proposto" -> ultimo scenario proposto
 ```
 
 Stato:
 
 ```text
-implementato nella web chat per richieste semplici.
+implementato per richieste semplici
 ```
 
 ### TODO 6 - Collegare 12 controlled scenarios
@@ -521,41 +482,41 @@ Gli output originali non devono mai essere sovrascritti.
 Stato:
 
 ```text
-implementato per primitive semplici e scenario run separata.
+implementato per primitive semplici e scenario run separata
 
 09:
-- crea cartella scenario;
-- salva scenario.json;
-- copia base_snapshot/ e run/;
-- chiama 12;
-- passa ngspice a 12 se disponibile;
-- ricarica la pagina sulla run scenario;
-- mantiene una chat unica per il circuito.
+- crea cartella scenario
+- salva scenario.json
+- copia base_snapshot/ e run/
+- chiama 12
+- passa ngspice a 12 se disponibile
+- ricarica la pagina sulla run scenario
+- mantiene una chat unica per il circuito
 
 12:
-- supporta drive_node_voltage;
-- supporta change_source_value su sorgenti SPICE esistenti;
-- supporta close_switch su switch gia riconosciuti;
-- modifica solo run/07_netlist.cir;
-- salva 12_controlled_scenarios.json;
-- puo eseguire ngspice con --run-spice;
-- crea scenario_comparison.json dopo SPICE;
-- confronta anche stderr come warning count quando compare nel campo compare.
+- supporta drive_node_voltage
+- supporta change_source_value su sorgenti SPICE esistenti
+- supporta close_switch su switch gia riconosciuti
+- modifica solo run/07_netlist.cir
+- salva 12_controlled_scenarios.json
+- puo eseguire ngspice con --run-spice
+- crea scenario_comparison.json dopo SPICE
+- confronta anche stderr come warning count quando compare nel campo compare
 ```
 
-Esempio attuale `a01/scenario_1`:
+Esempio generale:
 
 ```text
 azione:
-drive_node_voltage N002 5V
+drive_node_voltage su un nodo di ingresso
 
 netlist scenario:
-VSCENARIO_N002 N002 0 DC 5
+VSCENARIO_<NODE> <NODE> 0 DC <value>
 
 confronto:
-v(N002):       0 -> 5
-v(N004):       0 -> 0.2380952
-i(Rlamp13_1):  0 -> 0.0047619
+v(<NODE>): cambia rispetto alla base run
+v(<LOAD_NODE>): si attiva oppure resta invariato
+i(<LOAD>): cresce, resta nulla oppure cambia solo parzialmente
 ```
 
 ### TODO 7 - Ciclo ricorsivo agente/scenario
@@ -571,7 +532,7 @@ Dopo l'esecuzione dello scenario:
 -> utente puo continuare a parlare con l'agente
 ```
 
-Questo e il comportamento finale desiderato:
+Comportamento desiderato:
 
 ```text
 sintomo utente
@@ -587,82 +548,49 @@ sintomo utente
 Stato attuale:
 
 ```text
-parzialmente implementato.
+parzialmente implementato
 
-Gia presente:
-- scenario creato dalla chat;
-- scenario visibile nella sidebar;
-- scenario_comparison.json creato dopo ngspice;
-- 10 indicizza executed_scenarios;
-- 11 puo rispondere a domande sugli scenari gia eseguiti.
-
-Da validare ora:
-- a02 scenario_1 con close_switch;
-- a02 scenario_2 con drive_node_voltage su N004;
-- a02 scenario_3 con drive_node_voltage su N003;
-- risposta agente alla domanda "quale scenario risolve o migliora il problema?".
+gia presente:
+- scenario creato dalla chat
+- scenario visibile nella sidebar
+- scenario_comparison.json creato dopo ngspice
+- 10 indicizza executed_scenarios
+- 11 puo rispondere a domande sugli scenari gia eseguiti
 ```
 
 Estensione futura importante:
 
 ```text
 modalita manuale:
-utente sceglie esplicitamente "esegui scenario 1"
+utente sceglie esplicitamente quale scenario eseguire
 
 modalita semi-automatica:
-utente autorizza "prova gli scenari finche trovi una soluzione"
+utente autorizza la chat a provare piu scenari fino a un limite
 ```
 
-Nella modalita semi-automatica l'agente/controller non deve fermarsi al primo
-scenario proposto. Deve poter eseguire piu scenari in sequenza:
-
-```text
-1. esegue scenario 1;
-2. confronta base run e scenario 1;
-3. valuta se il sintomo sembra risolto;
-4. se non e risolto, sceglie/prova scenario 2;
-5. ripete il ciclo finche trova una spiegazione convincente o raggiunge un limite.
-```
-
-Esempio:
-
-```text
-problema utente:
-"la lampada non si accende"
-
-scenario 1:
-alimentare il nodo di ingresso della lampada
-
-risultato:
-la lampada riceve corrente -> problema probabilmente risolto
-
-oppure:
-la lampada resta senza corrente -> provare scenario 2
-```
+Nella modalita semi-automatica il controller non deve fermarsi al primo
+scenario proposto. Deve poter eseguire piu scenari in sequenza, ma sempre entro
+un limite controllato.
 
 Regole di sicurezza:
 
 ```text
-- nessuno scenario deve modificare la base run originale;
-- ogni scenario deve creare una nuova cartella separata;
-- il numero massimo di scenari automatici deve essere limitato;
-- ogni scenario deve salvare cosa ha cambiato e da quale step e ripartito;
-- l'agente deve spiegare perche passa allo scenario successivo;
-- se i risultati sono ambigui, deve fermarsi e chiedere conferma all'utente;
-- se serve correggere il graph, deve dichiararlo esplicitamente.
+- nessuno scenario deve modificare la base run originale
+- ogni scenario deve creare una nuova cartella separata
+- il numero massimo di scenari automatici deve essere limitato
+- ogni scenario deve salvare cosa ha cambiato e da quale step e ripartito
+- l'agente deve spiegare perche passa allo scenario successivo
+- se i risultati sono ambigui, deve fermarsi e chiedere conferma all'utente
+- se serve correggere il graph, deve dichiararlo esplicitamente
 ```
 
-Possibile limite iniziale:
+Limite iniziale consigliato:
 
 ```text
-max_auto_scenarios = 3
+max_auto_scenarios = 5
 ```
 
-Questa modalita non sostituisce la scelta utente. La prima versione resta
-manuale, perche e piu semplice da validare. Dopo aver validato `12`, potremo
-aggiungere il ciclo semi-automatico.
-
-### TODO 8 - Animated SPICE Viewer
+## Animated SPICE Viewer
 
 Questo punto e uno sviluppo futuro, da affrontare dopo la prima versione degli
 scenari controllati.
@@ -681,20 +609,20 @@ immagine originale del circuito
 + nodi SPICE
 + tensioni calcolate da ngspice
 + correnti calcolate da ngspice
-+ puntini/indicatori animati sui rami attraversati da corrente
++ indicatori animati sui rami attraversati da corrente
 ```
 
 La finalita non e sostituire ngspice. ngspice resta il motore di simulazione.
 Il viewer serve solo a rendere visibile il risultato della simulazione.
 
-Esempio su `a01`:
+Esempio generale:
 
 ```text
-ramo LED       -> animato, perche passa corrente
-ramo lampada   -> spento/grigio, perche la corrente e zero
-N001           -> evidenziato come nodo alimentato
-N004           -> evidenziato come nodo a 0 V
-switch aperto  -> mostrato come ramo non conduttivo
+ramo attivo     -> animato, perche passa corrente
+ramo spento     -> grigio o disattivato
+nodo attivo     -> evidenziato come nodo alimentato
+nodo spento     -> evidenziato come nodo a 0 V
+switch aperto   -> mostrato come ramo non conduttivo
 ```
 
 ## Dati necessari per il viewer
@@ -703,7 +631,7 @@ Le coordinate geometriche non sono nel `01_graph.json` usato da Pipeline 2.0.
 Sono pero disponibili negli output intermedi della Pipeline 1.0, ad esempio:
 
 ```text
-outputs/pipeline1.0/batchA/03_estimate_terminals/a01.json
+outputs/pipeline1.0/<batch>/03_estimate_terminals/<circuit>.json
 ```
 
 Quel file contiene:
@@ -741,23 +669,23 @@ coordinate Pipeline 1.0
 Prima versione semplice:
 
 ```text
-1. mostrare l'immagine originale nel pannello centrale;
-2. disegnare un canvas trasparente sopra l'immagine;
-3. disegnare box o marker sui componenti riconosciuti;
-4. associare ogni terminale al nodo SPICE tramite 03_node_map.json;
-5. colorare i terminali/nodi in base alla tensione;
-6. animare puntini tra i terminali dei componenti con corrente non nulla;
-7. lasciare grigi i componenti con corrente zero;
-8. mostrare tooltip o label con V/I principali.
+1. mostrare l'immagine originale nel pannello centrale
+2. disegnare un canvas trasparente sopra l'immagine
+3. disegnare box o marker sui componenti riconosciuti
+4. associare ogni terminale al nodo SPICE tramite 03_node_map.json
+5. colorare i terminali/nodi in base alla tensione
+6. animare indicatori tra i terminali dei componenti con corrente non nulla
+7. lasciare grigi i componenti con corrente zero
+8. mostrare tooltip o label con V/I principali
 ```
 
 Questa versione non richiede ancora di ricostruire perfettamente tutti i fili
 disegnati nell'immagine. L'animazione puo partire dai componenti:
 
 ```text
-resistenza: puntini tra t1 e t2
-lampada: puntini tra t1 e t2 se i != 0
-LED: puntini tra anodo e catodo se i != 0
+resistenza: animazione tra t1 e t2
+lampada: animazione tra t1 e t2 se i != 0
+LED: animazione tra anodo e catodo se i != 0
 sorgente: marker di alimentazione
 switch aperto: nessuna animazione
 ```
@@ -767,27 +695,27 @@ switch aperto: nessuna animazione
 Dopo la versione minima:
 
 ```text
-- disegnare collegamenti approssimati tra terminali dello stesso nodo;
-- animare anche i tratti di collegamento, non solo i componenti;
-- modulare velocita/spessore/colore in base alla corrente;
-- supportare anche risultati transienti da 08_tran.csv;
-- permettere il confronto visuale Base run vs Scenario run;
-- aggiornare la visualizzazione quando l'utente seleziona uno scenario nella sidebar.
+- disegnare collegamenti approssimati tra terminali dello stesso nodo
+- animare anche i tratti di collegamento, non solo i componenti
+- modulare velocita, spessore o colore in base alla corrente
+- supportare anche risultati transienti da 08_tran.csv
+- permettere il confronto visuale Base run vs Scenario run
+- aggiornare la visualizzazione quando l'utente seleziona uno scenario nella sidebar
 ```
 
-## Regola di priorita
+## Ordine di priorita
 
 Questo viewer non deve bloccare il lavoro sugli scenari.
 
 Ordine consigliato:
 
 ```text
-1. completare scelta scenario dalla chat;                    fatto per casi semplici
-2. implementare 12_controlled_scenarios.py;                  fatto per drive_node_voltage, change_source_value, close_switch
-3. rieseguire ngspice su scenario separato;                  fatto da web chat se ngspice e configurato
-4. creare confronto base run vs scenario run;                fatto con scenario_comparison.json
-5. far commentare il confronto all'agente in chat;           parzialmente fatto tramite executed_scenarios
-6. validare a02 scenario 1/2/3;                              prossimo step pratico
-7. ripetere il ciclo sui circuiti Batch A;                   dopo a02
-8. solo dopo aggiungere Animated SPICE Viewer.
+1. completare scelta scenario dalla chat
+2. consolidare 12_controlled_scenarios.py
+3. rieseguire ngspice su scenario separato quando disponibile
+4. creare confronto base run vs scenario run
+5. far commentare il confronto all'agente in chat
+6. validare il ciclo su piu circuiti e piu tipologie di scenario
+7. estendere i test ai casi simulabili e ai casi con forte problema topologico
+8. solo dopo aggiungere Animated SPICE Viewer
 ```

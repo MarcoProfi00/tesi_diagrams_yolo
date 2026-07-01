@@ -14,6 +14,8 @@ Responsabilita:
 - indicare il ruolo di ogni file nella diagnosi;
 - salvare uno stato minimo di SPICE e della netlist;
 - dichiarare la policy sull'immagine originale;
+- indicizzare gli scenari gia eseguiti, se presenti;
+- dichiarare il budget massimo di scenari per il circuito;
 - preparare un manifest semplice per lo step 11/agente read-only.
 
 L'output principale e 10_diagnostic_context.json.
@@ -24,6 +26,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any
+
+MAX_EXECUTABLE_SCENARIOS = 5
 
 
 ARTIFACTS = {
@@ -229,6 +233,8 @@ def build_agent_rules() -> list[str]:
         "Do not use the image unless image_access is explicitly requested.",
         "If Graph JSON inconsistency is suspected, explain which structured outputs suggest it.",
         "In read-only mode, do not modify netlists and do not execute scenarios.",
+        f"Never exceed {MAX_EXECUTABLE_SCENARIOS} executed scenarios for the same circuit.",
+        "When the scenario budget is exhausted, stop proposing new scenarios and provide a final diagnostic conclusion.",
     ]
 
 
@@ -375,6 +381,24 @@ def build_scenario_outcome_summary(
     }
 
 
+def build_scenario_budget(executed_scenarios: list[dict[str, Any]]) -> dict[str, Any]:
+    """Costruisce una politica semplice sul numero massimo di scenari eseguibili."""
+    executed_count = len(executed_scenarios)
+    remaining = max(0, MAX_EXECUTABLE_SCENARIOS - executed_count)
+    return {
+        "max_executable_scenarios": MAX_EXECUTABLE_SCENARIOS,
+        "executed_scenarios_count": executed_count,
+        "remaining_executable_scenarios": remaining,
+        "budget_exhausted": remaining == 0,
+        "last_scenario_available": remaining == 1,
+        "policy": (
+            "At most 5 scenarios can be executed for the same circuit. "
+            "When only one scenario remains, the agent should propose a single final scenario. "
+            "When no scenario remains, the agent must stop proposing new scenarios and provide a final diagnostic conclusion."
+        ),
+    }
+
+
 def build_diagnostic_context(
     output_dir: str | Path,
     batch_name: str,
@@ -403,6 +427,7 @@ def build_diagnostic_context(
         "artifacts": build_artifact_manifest(circuit_dir, root),
         "executed_scenarios": executed_scenarios,
         "scenario_outcome_summary": build_scenario_outcome_summary(executed_scenarios, root),
+        "scenario_budget": build_scenario_budget(executed_scenarios),
         "image_access": build_image_access(root, batch_name, circuit_id),
         "agent_mode": "graph_grounded_readonly",
         "agent_rules": build_agent_rules(),

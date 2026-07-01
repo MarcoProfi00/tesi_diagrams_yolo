@@ -2,23 +2,27 @@
 Interfaccia web locale temporanea per la chat diagnostica.
 
 Questo script avvia un piccolo server locale, senza database e senza stato
-persistente obbligatorio. Serve come primo scheletro del futuro step 09 della
-Pipeline 2.0.
+persistente obbligatorio. Serve come step 09 della Pipeline 2.0 per
+visualizzare gli output del circuito, parlare con l'agente e orchestrare gli
+scenari controllati.
 
 La parte HTML vive in `web_chat/templates/`, cosi il layout puo crescere senza
 trasformare questo script in un file troppo grande.
 
-Responsabilita previste:
+Responsabilita della versione corrente:
 
 - aprire una pagina locale nel browser;
-- mostrare la run principale del circuito selezionato;
+- mostrare la base run e le eventuali scenario run del circuito selezionato;
 - visualizzare gli artefatti prodotti dagli step 01-08;
 - lasciare una chat sempre visibile a destra;
-- preparare il punto di aggancio futuro verso 10, 11 e 12.
+- chiamare lo step 10 per aggiornare il contesto diagnostico;
+- chiamare lo step 11 per ottenere la risposta dell'agente;
+- riconoscere richieste semplici di esecuzione scenario;
+- chiamare lo step 12 per applicare uno scenario su copia separata;
+- mostrare il confronto base/scenario quando disponibile.
 
-Per ora la chat non chiama ancora l'agente. Risponde con un placeholder, cosi
-possiamo validare layout, navigazione e lettura dei file senza aggiungere
-complessita.
+La chat resta locale e leggera: non sostituisce la pipeline tecnica, non usa
+database e non salva uno stato applicativo complesso lato server.
 """
 
 from __future__ import annotations
@@ -66,6 +70,7 @@ CHAT_CONTEXT_NAME = "10_diagnostic_context.json"
 CHAT_PREVIEW_NAME = "11_agent_input_preview_chat.md"
 CHAT_PROMPT_NAME = "11_agent_prompt_chat.md"
 CHAT_RESPONSE_NAME = "11_agent_response_chat.md"
+MAX_EXECUTABLE_SCENARIOS = 5
 
 SCENARIO_BASE_FILES = [
     "01_graph.json",
@@ -139,9 +144,48 @@ def read_json_safe(path: Path) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
+def unescape_html_entities(value: Any) -> Any:
+    """
+    Decodifica entita HTML dentro stringhe, liste e dizionari semplici.
+
+    Ci serve per evitare che testi come `dell&#x27;emettitore` finiscano visibili
+    nella UI quando uno scenario e stato salvato con caratteri gia escapati.
+    """
+    if isinstance(value, str):
+        return html.unescape(value)
+    if isinstance(value, list):
+        return [unescape_html_entities(item) for item in value]
+    if isinstance(value, dict):
+        return {key: unescape_html_entities(item) for key, item in value.items()}
+    return value
+
+
 def escape_block(text: str) -> str:
     """Prepara testo tecnico da mostrare dentro un blocco pre."""
     return html.escape(text, quote=False)
+
+
+def cleanup_chat_reply(text: str) -> str:
+    """
+    Rimuove dalla chat i blocchi tecnici troppo grezzi.
+
+    La risposta completa dell'agente resta salvata su file, ma nella UI chat
+    vogliamo un'interazione piu naturale, senza mostrare JSON di servizio come
+    scenario tecnico o blocco tecnico finale per pipeline.
+    """
+    cleaned = text.replace("\r\n", "\n")
+
+    patterns = [
+        r"\n*Scenario tecnico recuperato:\s*\n\s*```json\s*.*?```",
+        r"\n*#{0,6}\s*\d+\.\s*\*?Blocco tecnico per pipeline\*?\s*\n\s*```json\s*.*?```",
+        r"\n*#{0,6}\s*Blocco tecnico per pipeline\s*\n\s*```json\s*.*?```",
+    ]
+
+    for pattern in patterns:
+        cleaned = re.sub(pattern, "", cleaned, flags=re.DOTALL | re.IGNORECASE)
+
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
+    return cleaned
 
 
 def project_relative(path: Path) -> str:
@@ -217,7 +261,7 @@ def list_scenario_runs(output_dir: Path) -> list[dict[str, str]]:
     runs: list[dict[str, str]] = []
     for scenario_dir in sorted(path for path in scenarios_dir.iterdir() if path.is_dir()):
         status = read_scenario_status(scenario_dir)
-        scenario = read_json_safe(scenario_dir / "scenario.json")
+        scenario = unescape_html_entities(read_json_safe(scenario_dir / "scenario.json"))
         outcome = status.get("diagnostic_outcome") or {}
         if not isinstance(outcome, dict):
             outcome = {}
@@ -266,19 +310,6 @@ def outcome_status_class(status: str) -> str:
     return "neutral"
 
 
-def user_friendly_outcome_label(status: str) -> str:
-    """Converte l'esito tecnico in una frase piu leggibile per l'utente."""
-    if status == "resolved_candidate":
-        return "Problem explained"
-    if status == "partially_resolved":
-        return "Useful clue"
-    if status == "not_resolved":
-        return "Not the cause"
-    if status == "unknown":
-        return "Still unclear"
-    return "Scenario result"
-
-
 def render_run_selector(output_dir: Path, active_run: str) -> str:
     """Crea la sidebar con base run e scenari disponibili."""
     base_status = build_status(output_dir)
@@ -307,21 +338,12 @@ def render_run_selector(output_dir: Path, active_run: str) -> str:
     for scenario in scenarios:
         scenario_active = " active" if active_run == scenario["id"] else ""
         state_class = run_status_class(scenario["status"])
-        outcome_status = scenario.get("outcome_status") or ""
-        outcome_label = user_friendly_outcome_label(outcome_status) if outcome_status else ""
-        outcome_html = ""
-        if outcome_label:
-            outcome_html = (
-                f'<small class="{outcome_status_class(outcome_status)}">'
-                f'{html.escape(outcome_label)}</small>'
-            )
         sections.append(
             f"""
             <a class="run-item scenario-run{scenario_active}" href="/?run={html.escape(scenario["id"])}">
               <strong>{html.escape(scenario["scenario_id"])}</strong>
               <span class="{state_class}">{html.escape(scenario["status"])}</span>
               <small>{html.escape(scenario["title"])}</small>
-              {outcome_html}
             </a>
             """
         )
@@ -466,7 +488,7 @@ def render_scenario_content(output_dir: Path, scenario_name: str) -> dict[str, s
     if not is_safe_scenario_name(scenario_name):
         return {
             "title": "Scenario not found",
-            "output_dir": html.escape(scenario_name),
+            "output_dir": scenario_name,
             "status_cards": "",
             "artifacts": "<p>Invalid scenario name.</p>",
         }
@@ -485,7 +507,7 @@ def render_scenario_content(output_dir: Path, scenario_name: str) -> dict[str, s
 
     status = build_status(run_dir)
     scenario_status = read_scenario_status(scenario_dir)
-    scenario = read_json_safe(scenario_dir / "scenario.json")
+    scenario = unescape_html_entities(read_json_safe(scenario_dir / "scenario.json"))
     title = str(scenario.get("title") or scenario_status.get("scenario_id") or scenario_name)
     root_artifacts = render_artifact_sections(scenario_dir, SCENARIO_ROOT_ARTIFACTS)
     run_artifacts = render_artifacts(
@@ -494,11 +516,11 @@ def render_scenario_content(output_dir: Path, scenario_name: str) -> dict[str, s
     )
 
     return {
-        "title": f"Scenario - {html.escape(str(scenario_status.get('scenario_id') or scenario_name))}",
-        "output_dir": html.escape(project_relative(scenario_dir)),
+        "title": f"Scenario - {str(scenario_status.get('scenario_id') or scenario_name)}",
+        "output_dir": project_relative(scenario_dir),
         "status_cards": render_status_cards(status),
         "artifacts": "\n".join([render_comparison_summary(scenario_dir), root_artifacts, run_artifacts]),
-        "subtitle": html.escape(title),
+        "subtitle": title,
     }
 
 
@@ -588,7 +610,7 @@ def render_page(batch: str, circuit: str, output_dir: Path, active_run: str = "b
             "DEFAULT_CHAT_MODEL": html.escape(CHAT_MODEL),
             "MODEL_OPTIONS": render_model_options(CHAT_MODEL),
             "RUN_SELECTOR": render_run_selector(output_dir, active_run),
-            "ACTIVE_RUN_TITLE": title,
+            "ACTIVE_RUN_TITLE": html.escape(title),
             "OUTPUT_DIR": html.escape(subtitle),
             "STATUS_CARDS": status_cards,
             "IMAGE_SECTION": image_section,
@@ -744,7 +766,7 @@ def run_readonly_agent_from_chat(
         debug_lines.append("Auto image: not used")
 
     return {
-        "reply": read_text_safe(response_path),
+        "reply": cleanup_chat_reply(read_text_safe(response_path)),
         "debug": debug_lines,
     }
 
@@ -803,7 +825,7 @@ def extract_scenarios_from_response(response_text: str) -> list[dict[str, Any]]:
         except json.JSONDecodeError:
             continue
         if isinstance(data, dict) and data.get("scenario_id"):
-            scenarios.append(data)
+            scenarios.append(unescape_html_entities(data))
 
     return scenarios
 
@@ -829,6 +851,14 @@ def safe_scenario_dir_name(scenario_id: str) -> str:
     """Normalizza il nome cartella dello scenario evitando caratteri strani."""
     cleaned = re.sub(r"[^a-zA-Z0-9_.-]+", "_", scenario_id.strip())
     return cleaned or "scenario"
+
+
+def count_existing_scenario_dirs(output_dir: Path) -> int:
+    """Conta quante cartelle scenario esistono gia per il circuito."""
+    scenarios_root = output_dir / "scenarios"
+    if not scenarios_root.exists() or not scenarios_root.is_dir():
+        return 0
+    return sum(1 for path in scenarios_root.iterdir() if path.is_dir())
 
 
 def is_safe_scenario_name(name: str) -> bool:
@@ -1069,8 +1099,25 @@ def handle_scenario_request(
             "debug": [f"Read: {project_relative(response_path)}"],
         }
 
-    selected_json = json.dumps(selected, indent=2, ensure_ascii=False)
+    selected = unescape_html_entities(selected)
     title = selected.get("title") or selected.get("scenario_id") or f"scenario {requested_label}"
+    selected_scenario_id = str(selected.get("scenario_id") or "")
+    selected_scenario_dir = output_dir / "scenarios" / safe_scenario_dir_name(selected_scenario_id or f"scenario_{requested_label}")
+    existing_scenarios = count_existing_scenario_dirs(output_dir)
+
+    if not selected_scenario_dir.exists() and existing_scenarios >= MAX_EXECUTABLE_SCENARIOS:
+        return {
+            "reply": (
+                "Hai raggiunto il limite massimo di **5 scenari eseguibili** per questo circuito.\n\n"
+                "Da questo punto in poi l'agente non dovrebbe piu proporre o lanciare nuovi scenari, "
+                "ma deve fornire una conclusione diagnostica finale basata su tutte le evidenze raccolte."
+            ),
+            "debug": [
+                f"Scenario budget reached: {existing_scenarios}/{MAX_EXECUTABLE_SCENARIOS}",
+                f"Blocked new scenario id: {selected_scenario_id or requested_label}",
+            ],
+        }
+
     scenario_paths = prepare_scenario_folder(
         output_dir=output_dir,
         selected=selected,
@@ -1104,6 +1151,11 @@ def handle_scenario_request(
         selected,
         diagnostic_outcome,
     )
+    executed_scenarios_count = count_existing_scenario_dirs(output_dir)
+    budget_exhausted = executed_scenarios_count >= MAX_EXECUTABLE_SCENARIOS
+    if budget_exhausted:
+        stop_automation = True
+        outcome_next_step = "Scenario budget exhausted. Ask the agent for a final diagnostic conclusion."
 
     return {
         "reply": (
@@ -1138,10 +1190,15 @@ def handle_scenario_request(
                 if scenario_explanation
                 else ""
             )
-            +
-            "Lo scenario ora e disponibile nella barra sinistra.\n\n"
-            "Scenario tecnico recuperato:\n\n"
-            f"```json\n{selected_json}\n```"
+            + (
+                "Hai raggiunto il limite massimo di **5 scenari eseguibili** per questo circuito.\n\n"
+                "Da questo punto in poi non vanno proposti o eseguiti nuovi scenari: "
+                "il prossimo messaggio deve essere una **conclusione diagnostica finale completa**.\n\n"
+                if budget_exhausted
+                else ""
+            )
+            + "Lo scenario ora e disponibile nella barra sinistra.\n\n"
+            + "I dettagli tecnici restano disponibili nella pagina centrale, dentro gli artefatti dello scenario."
         ),
         "active_run": scenario_paths["scenario_dir"].name,
         "debug": [
@@ -1160,6 +1217,7 @@ def handle_scenario_request(
             f"SPICE status: {spice_status}",
             f"Diagnostic outcome: {outcome_status}",
             f"Stop automation: {stop_automation}",
+            f"Scenario budget exhausted: {budget_exhausted}",
             f"Comparison: {project_relative(scenario_paths['scenario_dir'] / 'scenario_comparison.json')}",
             "Action: scenario applied and SPICE executed",
         ],
