@@ -12,7 +12,7 @@
     "skipped_elements": 6,
     "emit_warnings_count": 1,
     "skipped_components_count": 6,
-    "node_count": 7,
+    "node_count": 8,
     "ground_groups_count": 5,
     "singleton_nodes_count": 0,
     "bound_components": 7,
@@ -103,6 +103,23 @@
       "role": "Transient plot SVG fallback, when generated."
     }
   },
+  "executed_scenarios": [],
+  "scenario_outcome_summary": {
+    "available": false,
+    "best_scenario_id": null,
+    "best_outcome_status": null,
+    "best_stop_automation": null,
+    "interpretation_rule": "If a user asks which scenario resolves the problem, prefer the scenario with outcome_status='resolved_candidate' and stop_automation=true. Partially resolved scenarios are supporting diagnostics, not the main solution.",
+    "scenarios": []
+  },
+  "scenario_budget": {
+    "max_executable_scenarios": 5,
+    "executed_scenarios_count": 0,
+    "remaining_executable_scenarios": 5,
+    "budget_exhausted": false,
+    "last_scenario_available": false,
+    "policy": "At most 5 scenarios can be executed for the same circuit. When only one scenario remains, the agent should propose a single final scenario. When no scenario remains, the agent must stop proposing new scenarios and provide a final diagnostic conclusion."
+  },
   "image_access": {
     "included_by_default": false,
     "can_be_requested": true,
@@ -114,9 +131,12 @@
     "Treat this file as a manifest, not as the full diagnostic evidence.",
     "Load the referenced artifacts needed for the answer.",
     "Use graph, node map, component rules, netlist, stdout and stderr as evidence.",
+    "If executed_scenarios are available, use them as evidence for questions about scenario outcomes.",
     "Do not invent values, connections, models or simulation results.",
     "Do not use the image unless image_access is explicitly requested.",
     "If Graph JSON inconsistency is suspected, explain which structured outputs suggest it.",
-    "In read-only mode, do not modify netlists and do not execute scenarios."
+    "In read-only mode, do not modify netlists and do not execute scenarios.",
+    "Never exceed 5 executed scenarios for the same circuit.",
+    "When the scenario budget is exhausted, stop proposing new scenarios and provide a final diagnostic conclusion."
   ]
 }

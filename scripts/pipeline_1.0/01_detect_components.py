@@ -32,9 +32,9 @@ from estimate_terminals.probes import (
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PIPELINE_DATASET = os.environ.get(
     "PIPELINE_DATASET",
-    "pipeline1.0/batchA"
+    "pipeline1.0/batchA_07_09"
 )
-PIPELINE_INPUT_BATCH = os.environ.get("PIPELINE_INPUT_BATCH", "batchA")
+PIPELINE_INPUT_BATCH = os.environ.get("PIPELINE_INPUT_BATCH", "batchA_07_09")
 
 # === MODELLO ===
 MODEL_PATH = (

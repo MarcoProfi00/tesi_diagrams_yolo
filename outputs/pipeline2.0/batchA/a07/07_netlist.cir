@@ -2,9 +2,11 @@
 * circuit: a07
 
 Rmeter_analog_meter0_1 N001 0 10000000
-Rresistor22_1 N003 0 680
+Dled12_1 N004 0 LED_RED
+Rresistor22_1 N002 N004 680
 * switch25.1 open: not emitted
-Vtransformer28_1 N002 N001 SIN(0 16.9706 50)
+
+.model LED_RED D
 
 .op
 .save all
@@ -14,6 +16,6 @@ Vtransformer28_1 N002 N001 SIN(0 16.9706 50)
 set wr_singlescale
 set wr_vecnames
 run
-wrdata 08_tran.csv time v(N001) v(N002) v(N003)
+wrdata 08_tran.csv time v(N001) v(N002) v(N004)
 .endc
 .end

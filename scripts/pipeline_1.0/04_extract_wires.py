@@ -40,7 +40,7 @@ from skimage.morphology import skeletonize
 # PIPELINE_DATASET e PIPELINE_IMAGE_IDS permettono di usare lo stesso script
 # su batch diversi o su un sottoinsieme di immagini, senza modificare il codice.
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline1.0/batchC/batchC1")
+PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline1.0/batchA_07_09")
 PIPELINE_IMAGE_IDS = [
     image_id.strip()
     for image_id in os.environ.get("PIPELINE_IMAGE_IDS", "").split(",")

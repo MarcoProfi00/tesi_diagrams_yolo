@@ -49,7 +49,7 @@ from build_terminal_graph.processor import build_terminal_graph_for_image
 # Come negli altri step, il dataset puo' essere cambiato via variabile
 # ambiente. Lo script legge l'output di 04 e scrive il JSON canonico di 05.
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline1.0/batchC/batchC1")
+PIPELINE_DATASET = os.environ.get("PIPELINE_DATASET", "pipeline1.0/batchA_07_09")
 PIPELINE_IMAGE_IDS = [
     image_id.strip()
     for image_id in os.environ.get("PIPELINE_IMAGE_IDS", "").split(",")
