@@ -346,22 +346,28 @@ Quindi l'agente puo ragionare sia su successi sia su fallimenti.
 
 ## Ruolo dei markdown circuito
 
-I file:
+I file del primo esperimento sono stati spostati in:
 
 ```text
-a01.md
-a02.md
-a03.md
-a04.md
-a05.md
-a06.md
-a07.md
-a08.md
-a09.md
-a10.md
+experiment1/
 ```
 
-sono note manuali per noi. Non fanno parte della pipeline automatica.
+Contenuto:
+
+```text
+experiment1/a01.md
+experiment1/a02.md
+experiment1/a03.md
+experiment1/a04.md
+experiment1/a05.md
+experiment1/a06.md
+experiment1/a07.md
+experiment1/a08.md
+experiment1/a09.md
+experiment1/a10.md
+```
+
+Sono note manuali per noi. Non fanno parte della pipeline automatica.
 
 Servono a:
 
@@ -411,7 +417,8 @@ la valutazione.
 
 Ordine consigliato:
 
-1. Congelare i markdown `a01.md`-`a10.md` come report del primo esperimento.
+1. Congelare i markdown `experiment1/a01.md`-`experiment1/a10.md` come report
+   del primo esperimento.
 2. Aggiornare una tabella sintetica con esito base, scenari eseguiti e diagnosi
    finale per ogni circuito.
 3. Definire metriche semplici per la tesi, per esempio success/fail SPICE,

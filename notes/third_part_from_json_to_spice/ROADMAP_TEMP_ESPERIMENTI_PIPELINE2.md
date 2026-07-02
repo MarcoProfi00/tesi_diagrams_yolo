@@ -69,28 +69,170 @@ change_component_value
 close_switch
 ```
 
-Primitive candidate future:
+Primitive candidate per Esperimento 2:
 
 ```text
 connect_nodes
-disconnect_nodes
-bridge_connector_pins
-add_voltage_source
-add_current_source
-add_resistor
-add_equivalent_load
-add_ground_reference
-replace_or_add_component_model
+feed_nodes_from_source_node
+add_voltage_source_between_nodes
 ```
 
-Esempi di scenari desiderati:
+Queste tre primitive sono volutamente poche. L'obiettivo e aumentare la
+capacita diagnostica senza far esplodere la complessita del runner.
+
+### Primitive da implementare per prime
+
+#### 1. connect_nodes
+
+Collega due nodi gia esistenti con una resistenza molto piccola, come se nella
+run scenario aggiungessimo un filo, un jumper, un ponte o un contatto chiuso.
+
+Esempio:
+
+```json
+{
+  "type": "connect_nodes",
+  "from": "N002",
+  "to": "N004",
+  "resistance": "1m"
+}
+```
+
+Serve per:
+
+- `a02`: verificare se manca un percorso elettrico utile tra i nodi gia
+  presenti;
+- `a07`: eventualmente testare una continuita mancante tra ingresso e ramo;
+- `a09`: combinare alimentazione e continuita nel ramo lampada;
+- `a10`: testare collegamenti mancanti tra connector e rami finali.
+
+#### 2. feed_nodes_from_source_node
+
+Propaga una tensione da un nodo sorgente gia presente verso uno o piu nodi
+target. Internamente puo essere implementata come una lista controllata di
+`connect_nodes`.
+
+Esempio:
+
+```json
+{
+  "type": "feed_nodes_from_source_node",
+  "source_node": "N002",
+  "target_nodes": ["N003", "N004"],
+  "resistance": "1m"
+}
+```
+
+Serve per:
+
+- `a01`: testare se il 5 V del pin 1 puo alimentare anche il ramo lampada sul
+  pin 2;
+- `a02`: testare se VCC deve propagarsi verso ramo resistivo o condensatore;
+- `a09`: testare il mancato trasferimento della 9 V dal ramo batteria/fusibile
+  verso LED e lampada;
+- `a10`: dopo la chiusura dello switch, testare se l'alimentazione arrivata a
+  valle deve essere trasferita verso `N003` e `N004`.
+
+#### 3. add_voltage_source_between_nodes
+
+Aggiunge una sorgente di tensione tra due nodi gia esistenti. E piu generale di
+`drive_node_voltage`, perche non obbliga sempre a riferire la sorgente a massa.
+
+Esempio:
+
+```json
+{
+  "type": "add_voltage_source_between_nodes",
+  "positive": "N001",
+  "negative": "0",
+  "value": "DC 5"
+}
+```
+
+Serve per:
+
+- `a02`: simulare una sorgente esterna tra pin del connector;
+- `a05`: alimentare il ramo VMON in modo piu esplicito, se necessario;
+- `a07`: aggiungere una vera sorgente PWR o VAC, dato che la netlist base non
+  contiene eccitazione reale;
+- `a09` e `a10`: provare alimentazioni esterne sui rami finali quando non si
+  vuole usare una sorgente gia presente.
+
+### Casi esclusi per ora
+
+`a03` resta fuori dall'Esperimento 2 iniziale.
+
+Motivo:
+
+- e un caso speciale con graph/topologia fortemente sbagliati;
+- richiede ragionamento image-assisted piu profondo;
+- include batteria letta come due batterie, rele, bobina/contatto e ramo AC;
+- rischia di far crescere troppo la complessita prima di consolidare le
+  primitive semplici.
+
+`a03` verra ripreso in una fase successiva dedicata alla correzione del graph o
+alla ricostruzione guidata dall'immagine.
+
+### Chat history dell'Esperimento 2
+
+Per l'Esperimento 1 non serve recuperare la chat grezza, perche i report
+`experiment1/a01.md`-`experiment1/a10.md` contengono gia domande, risposte,
+scenari, risultati e conclusioni.
+
+Per l'Esperimento 2, invece, vogliamo ripartire da conversazioni pulite e
+salvare direttamente ogni interazione.
+
+Scelta attuale:
+
+```text
+opzione 2 = file locali per circuito
+```
+
+Non usiamo ancora un database vero. Per ora salviamo file locali tracciabili,
+semplici da leggere e facili da trasformare in markdown, CSV o JSON aggregati.
+
+Struttura proposta:
+
+```text
+outputs/pipeline2.0/<batch>/<circuit>/experiment2_chat/
+  chat_history.json
+  chat_history.md
+```
+
+Contenuto minimo di `chat_history.json`:
+
+```text
+turn_id
+timestamp
+role: user | assistant | system
+content
+model
+selected_run
+used_image
+generated_files
+scenario_id
+scenario_outcome
+scenario_path
+```
+
+Regole:
+
+- ogni domanda utente viene salvata;
+- ogni risposta agente viene salvata;
+- ogni scenario eseguito viene salvato come evento `system`;
+- la chat history e separata dagli output originali della base run;
+- la base run continua a non essere modificata;
+- in futuro questi file potranno essere letti da uno script di valutazione per
+  produrre CSV, metriche e grafici.
+
+Esempi di scenari desiderati nel perimetro iniziale:
 
 - chiudere uno switch e alimentare i pin collegati del connector;
-- aggiungere una batteria se il circuito non ha una sorgente utile;
-- aggiungere una sorgente di corrente;
-- aggiungere una resistenza equivalente o un carico minimo;
+- propagare la tensione di un nodo sorgente verso piu nodi target;
+- aggiungere una sorgente di tensione tra due nodi gia presenti;
 - collegare due nodi solo nella run scenario;
-- aggiungere un riferimento a massa quando manca una reference SPICE utile.
+- distinguere se un carico e guasto oppure se semplicemente non riceve
+  alimentazione nella netlist base.
 
 Regola fondamentale:
 
