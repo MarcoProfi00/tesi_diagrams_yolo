@@ -1990,21 +1990,73 @@ Gia presente:
 - singola conversazione persistente per batch/circuito anche quando si cambia
   vista tra base run e scenari gia creati.
 
-Prossimi passi pratici:
+Prossimi esperimenti:
 
-- congelare i report `a01.md`-`a10.md` come primo esperimento Batch A;
-- costruire una tabella sintetica con esito SPICE, scenari eseguiti e diagnosi
-  finale per ogni circuito;
-- definire metriche semplici per la tesi: successo SPICE, numero scenari,
-  scenario risolutivo, caso topologico, caso inconclusivo;
-- verificare se l'agente capisce quale scenario risolve, migliora, localizza la
-  causa o non basta;
-- estendere il ciclo a nuovi circuiti, distinguendo i casi elettricamente
-  simulabili dai casi con forte problema topologico;
-- solo dopo, valutare automazione multi-scenario;
-- aggiungere pannelli migliori per immagine, report, netlist, log ngspice e
-  risultati scenario;
-- aggiungere il viewer/animazione della corrente come sviluppo successivo.
+1. **Esperimento 2 - scenari piu potenti e modifiche netlist/topologia**
+
+   Obiettivo: ampliare la libreria di primitive scenario in modo generale,
+   senza legarla al solo Batch A.
+
+   Direzioni previste:
+
+   - creare un piccolo file di supporto, probabilmente YAML, che documenti le
+     primitive scenario disponibili;
+   - aggiungere scenari che modificano la netlist in modo piu strutturale;
+   - supportare azioni come collegare nodi, alimentare gruppi di pin,
+     aggiungere una batteria, aggiungere una sorgente, aggiungere una
+     resistenza o un ramo equivalente;
+   - mantenere sempre separata la base run dagli scenari;
+   - salvare in modo esplicito cosa lo scenario ha cambiato.
+
+   Esempi di scenario futuri:
+
+   ```text
+   chiudi lo switch e alimenta i pin collegati del connector
+   aggiungi una batteria se il circuito non ha una sorgente utile
+   aggiungi una sorgente di corrente controllata
+   aggiungi una resistenza equivalente o un carico minimo
+   collega due nodi solo nella run scenario
+   ```
+
+2. **Esperimento 3 - automazione agentica degli scenari**
+
+   Obiettivo: far eseguire all'agente piu scenari in sequenza, entro un limite
+   controllato, per provare a risolvere o localizzare il problema.
+
+   Flusso desiderato:
+
+   ```text
+   sintomo utente
+   -> agente propone scenario
+   -> pipeline esegue scenario
+   -> agente legge scenario_comparison.json
+   -> agente decide se fermarsi o provare un altro scenario
+   -> massimo 5 scenari
+   -> conclusione finale
+   ```
+
+   Questa fase deve partire solo dopo aver reso solide le primitive
+   dell'Esperimento 2.
+
+3. **Esperimento 4 - visualizzatore/simulatore del circuito**
+
+   Obiettivo: costruire una visualizzazione stile simulatore, non un nuovo
+   motore SPICE.
+
+   La regola centrale e:
+
+   ```text
+   il viewer parte dalla netlist della run selezionata
+   ```
+
+   Quindi:
+
+   - base run e scenario run possono avere netlist diverse;
+   - se uno scenario cambia topologia, il viewer deve visualizzare quella
+     topologia scenario;
+   - ngspice resta il motore di simulazione;
+   - il viewer usa netlist, node map, coordinate immagine e risultati SPICE per
+     mostrare nodi, tensioni, correnti e rami attivi.
 
 ## Stato dopo il primo esperimento Batch A
 

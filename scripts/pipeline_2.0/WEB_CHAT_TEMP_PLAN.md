@@ -751,6 +751,21 @@ coordinate Pipeline 1.0
 = visualizzazione animata
 ```
 
+Regola importante per gli scenari:
+
+```text
+il viewer deve partire dalla netlist della run selezionata
+```
+
+Questo significa che:
+
+- la base run usa `outputs/pipeline2.0/<batch>/<circuit>/07_netlist.cir`;
+- uno scenario usa `outputs/pipeline2.0/<batch>/<circuit>/scenarios/<scenario_id>/run/07_netlist.cir`;
+- se uno scenario modifica la topologia, il viewer deve rappresentare la
+  topologia dello scenario, non quella della base run;
+- il confronto visuale Base run vs Scenario run dovra quindi trattare le due
+  netlist come due circuiti potenzialmente diversi.
+
 ## Versione minima proposta
 
 Prima versione semplice:
@@ -798,10 +813,8 @@ Ordine consigliato:
 
 ```text
 1. congelare i risultati del primo esperimento Batch A
-2. creare una tabella sintetica con esito base, scenari e diagnosi finale
-3. consolidare le metriche per la tesi
-4. migliorare i pannelli UI piu usati
-5. estendere i test ai casi simulabili e ai casi con forte problema topologico
-6. valutare solo dopo una modalita semi-automatica multi-scenario
-7. aggiungere Animated SPICE Viewer come sviluppo successivo
+2. Esperimento 2: ampliare le primitive scenario e le modifiche netlist/topologia
+3. Esperimento 3: automatizzare il ciclo agente -> scenario -> confronto
+4. Esperimento 4: aggiungere Animated SPICE Viewer basato sulla netlist della run selezionata
+5. estendere poi i test agli altri batch
 ```
