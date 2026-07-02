@@ -1,8 +1,8 @@
-# Pipeline 2.0 - Temporary Web Chat Plan
+# Pipeline 2.0 - Web Chat Plan
 
-Questa e una nota temporanea di lavoro. Serve a fissare il ruolo della web
-chat, il suo stato attuale e i prossimi passi. Non descrive singoli circuiti:
-deve restare un promemoria generale sull'interfaccia di `09_web_chat.py`.
+Questa nota fissa il ruolo della web chat, il suo stato attuale e i prossimi
+passi. Non descrive singoli circuiti: deve restare un promemoria generale
+sull'interfaccia di `09_web_chat.py`.
 
 ## Idea generale
 
@@ -24,6 +24,16 @@ La conversazione della web chat e mantenuta dal browser per batch/circuito, per
 esempio tramite localStorage. Quindi puo sopravvivere alla chiusura del server
 locale nella stessa macchina, ma non va trattata come archivio permanente o
 riproducibile.
+
+Gli output riproducibili restano invece nei file della pipeline:
+
+```text
+10_diagnostic_context.json
+11_agent_input_preview_chat.md
+11_agent_prompt_chat.md
+11_agent_response_chat.md
+scenarios/<scenario_id>/
+```
 
 ## Flusso generale
 
@@ -99,6 +109,14 @@ scripts/pipeline_2.0/json_to_spice/web_chat/
 Questa cartella puo crescere gradualmente; nella prima versione puo esistere
 anche solo `templates/index.html`.
 
+Stato attuale:
+
+```text
+esiste templates/index.html
+CSS e JS sono ancora inline nel template
+static/app.css e static/app.js restano una possibile rifinitura futura
+```
+
 Schema logico del layout:
 
 ```text
@@ -133,6 +151,7 @@ Stato attuale:
 la sidebar mostra Base run e gli scenari gia creati
 quando uno scenario viene creato, la pagina si ricarica sulla run selezionata
 la chat resta unica per il circuito
+la sidebar mostra anche un'etichetta sintetica dell'esito scenario
 ```
 
 Ogni run dovrebbe mostrare uno stato sintetico:
@@ -225,6 +244,19 @@ La chat salva file separati per non sovrascrivere gli esperimenti:
 11_agent_response_chat.md
 ```
 
+La risposta in chat e pensata per essere leggibile dall'utente. I blocchi JSON
+tecnici degli scenari non vengono mostrati come contenuto principale della chat:
+restano accessibili negli artefatti centrali dello scenario.
+
+La UI mostra anche un messaggio di attesa:
+
+```text
+Agent is thinking
+Executing scenario
+```
+
+e un blocco tecnico richiudibile `Execution details`, utile durante lo sviluppo.
+
 ## Scenari dalla chat
 
 Flusso attuale:
@@ -270,6 +302,21 @@ Stato attuale:
 implementato
 la scelta viene passata a 11_agent_readonly.py
 la preferenza puo essere mantenuta lato browser
+```
+
+Modelli disponibili:
+
+```text
+GPT 5.4
+GPT 5.5
+GPT 5.4 mini
+GPT 5 mini
+```
+
+Default corrente:
+
+```text
+GPT 5.4
 ```
 
 ### Gestione immagine
@@ -352,7 +399,8 @@ nella tesi.
 ## Stato operativo e TODO
 
 Questa e la scaletta aggiornata. Alcuni punti sono gia implementati, altri
-restano da completare.
+restano da completare. La parola `TODO` qui indica una checklist di progetto,
+non necessariamente una funzione totalmente assente.
 
 ### TODO 1 - Chat collegata a 10 e 11
 
@@ -496,6 +544,7 @@ implementato per primitive semplici e scenario run separata
 12:
 - supporta drive_node_voltage
 - supporta change_source_value su sorgenti SPICE esistenti
+- supporta change_component_value su componenti semplici gia emessi
 - supporta close_switch su switch gia riconosciuti
 - modifica solo run/07_netlist.cir
 - salva 12_controlled_scenarios.json
@@ -548,7 +597,7 @@ sintomo utente
 Stato attuale:
 
 ```text
-parzialmente implementato
+implementato in modalita manuale guidata dall'utente
 
 gia presente:
 - scenario creato dalla chat
@@ -556,6 +605,8 @@ gia presente:
 - scenario_comparison.json creato dopo ngspice
 - 10 indicizza executed_scenarios
 - 11 puo rispondere a domande sugli scenari gia eseguiti
+- 09 blocca la creazione di un sesto scenario nuovo
+- 11 puo passare a conclusione finale quando l'utente la chiede o quando il budget e esaurito
 ```
 
 Estensione futura importante:
@@ -588,6 +639,42 @@ Limite iniziale consigliato:
 
 ```text
 max_auto_scenarios = 5
+```
+
+Stato attuale:
+
+```text
+max scenari eseguibili per circuito = 5
+modalita automatica multi-scenario non ancora implementata
+```
+
+## Stato dopo il primo esperimento Batch A
+
+La web chat e stata usata nel primo esperimento completo su Batch A.
+
+Sono stati verificati:
+
+- apertura della pagina per i circuiti `a01`-`a10`;
+- visualizzazione base run e scenari dalla sidebar;
+- chat unica per circuito anche cambiando vista tra base run e scenario;
+- selettore modello;
+- invio sintomo utente;
+- risposta agente renderizzata come Markdown;
+- esecuzione scenario da frasi semplici come `esegui scenario 1`;
+- esecuzione dell'ultimo scenario proposto con frasi come `esegui questo scenario`;
+- creazione cartelle scenario separate;
+- esecuzione ngspice sugli scenari quando `--ngspice-executable` e disponibile;
+- confronto base/scenario;
+- domande successive sugli scenari gia eseguiti;
+- conclusione finale su richiesta dell'utente;
+- fallback automatico image-assisted nei casi topologici forti.
+
+Questa verifica non rende la web app un prodotto finito, ma conferma che il
+flusso principale e dimostrabile:
+
+```text
+base run -> domanda utente -> agente -> scenario scelto -> SPICE scenario
+-> confronto -> nuova diagnosi o conclusione finale
 ```
 
 ## Animated SPICE Viewer
@@ -710,12 +797,11 @@ Questo viewer non deve bloccare il lavoro sugli scenari.
 Ordine consigliato:
 
 ```text
-1. completare scelta scenario dalla chat
-2. consolidare 12_controlled_scenarios.py
-3. rieseguire ngspice su scenario separato quando disponibile
-4. creare confronto base run vs scenario run
-5. far commentare il confronto all'agente in chat
-6. validare il ciclo su piu circuiti e piu tipologie di scenario
-7. estendere i test ai casi simulabili e ai casi con forte problema topologico
-8. solo dopo aggiungere Animated SPICE Viewer
+1. congelare i risultati del primo esperimento Batch A
+2. creare una tabella sintetica con esito base, scenari e diagnosi finale
+3. consolidare le metriche per la tesi
+4. migliorare i pannelli UI piu usati
+5. estendere i test ai casi simulabili e ai casi con forte problema topologico
+6. valutare solo dopo una modalita semi-automatica multi-scenario
+7. aggiungere Animated SPICE Viewer come sviluppo successivo
 ```

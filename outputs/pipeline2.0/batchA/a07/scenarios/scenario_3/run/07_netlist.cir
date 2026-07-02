@@ -1,0 +1,23 @@
+* pipeline2.0 netlist
+* circuit: a07
+
+Rmeter_analog_meter0_1 N001 0 10000000
+Dled12_1 N004 0 LED_RED
+Rresistor22_1 N002 N004 680
+* switch25.1 open in base run; closed by scenario close_switch
+
+.model LED_RED D
+
+* scenario close_switch: switch25.1 modeled as RSCENARIO_switch25_1 0 N003 1m
+RSCENARIO_switch25_1 0 N003 1m
+.op
+.save all
+.tran 0.1ms 40ms
+
+.control
+set wr_singlescale
+set wr_vecnames
+run
+wrdata 08_tran.csv time v(N001) v(N002) v(N004)
+.endc
+.end

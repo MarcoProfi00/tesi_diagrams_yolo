@@ -2,7 +2,7 @@
   "source_format": "pipeline2.0_diagnostic_context_manifest",
   "batch_name": "batchA",
   "circuit_id": "a09",
-  "user_problem": null,
+  "user_problem": "Ho eseguito anche scenario 4: il ramo lampada reagisce correttamente quando N004 viene alimentato e lo switch è chiuso. Possiamo concludere che i carichi finali sono corretti e che il problema della netlist base è il mancato trasferimento di alimentazione verso i rami finali?",
   "pipeline2_output_dir": "outputs\\pipeline2.0\\batchA\\a09",
   "summary": {
     "spice_status": "success",
@@ -103,21 +103,304 @@
       "role": "Transient plot SVG fallback, when generated."
     }
   },
-  "executed_scenarios": [],
+  "executed_scenarios": [
+    {
+      "scenario_dir": "outputs\\pipeline2.0\\batchA\\a09\\scenarios\\scenario_1",
+      "scenario_id": "scenario_1",
+      "title": "Alimentare il ramo del LED",
+      "status": "spice_success",
+      "spice_status": "success",
+      "diagnostic_outcome": {
+        "status": "partially_resolved",
+        "label": "Partially resolved",
+        "reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+        "stop_automation": false,
+        "confidence": "low",
+        "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+      },
+      "comparison_summary": {
+        "requested_count": 3,
+        "changed_count": 2,
+        "activated_count": 2,
+        "missing_count": 0
+      },
+      "artifacts": {
+        "scenario_definition": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a09\\scenarios\\scenario_1\\scenario.json",
+          "role": "Scenario selected by the user and saved before execution."
+        },
+        "scenario_status": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a09\\scenarios\\scenario_1\\scenario_status.json",
+          "role": "Current scenario status, SPICE status and diagnostic outcome."
+        },
+        "controlled_scenario_report": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a09\\scenarios\\scenario_1\\12_controlled_scenarios.json",
+          "role": "Report produced by the controlled scenario runner."
+        },
+        "scenario_comparison": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a09\\scenarios\\scenario_1\\scenario_comparison.json",
+          "role": "Base-vs-scenario comparison used to evaluate the scenario."
+        }
+      }
+    },
+    {
+      "scenario_dir": "outputs\\pipeline2.0\\batchA\\a09\\scenarios\\scenario_2",
+      "scenario_id": "scenario_2",
+      "title": "Chiudere lo switch della lampada",
+      "status": "spice_success",
+      "spice_status": "success",
+      "diagnostic_outcome": {
+        "status": "not_resolved",
+        "label": "Not resolved",
+        "reason": "The requested quantities did not change compared with the base run.",
+        "stop_automation": false,
+        "confidence": "low",
+        "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+      },
+      "comparison_summary": {
+        "requested_count": 3,
+        "changed_count": 0,
+        "activated_count": 0,
+        "missing_count": 1
+      },
+      "artifacts": {
+        "scenario_definition": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a09\\scenarios\\scenario_2\\scenario.json",
+          "role": "Scenario selected by the user and saved before execution."
+        },
+        "scenario_status": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a09\\scenarios\\scenario_2\\scenario_status.json",
+          "role": "Current scenario status, SPICE status and diagnostic outcome."
+        },
+        "controlled_scenario_report": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a09\\scenarios\\scenario_2\\12_controlled_scenarios.json",
+          "role": "Report produced by the controlled scenario runner."
+        },
+        "scenario_comparison": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a09\\scenarios\\scenario_2\\scenario_comparison.json",
+          "role": "Base-vs-scenario comparison used to evaluate the scenario."
+        }
+      }
+    },
+    {
+      "scenario_dir": "outputs\\pipeline2.0\\batchA\\a09\\scenarios\\scenario_3",
+      "scenario_id": "scenario_3",
+      "title": "Alimentare l'ingresso del ramo lampada",
+      "status": "spice_success",
+      "spice_status": "success",
+      "diagnostic_outcome": {
+        "status": "not_resolved",
+        "label": "Not resolved",
+        "reason": "The requested quantities did not change compared with the base run.",
+        "stop_automation": false,
+        "confidence": "low",
+        "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+      },
+      "comparison_summary": {
+        "requested_count": 3,
+        "changed_count": 0,
+        "activated_count": 0,
+        "missing_count": 1
+      },
+      "artifacts": {
+        "scenario_definition": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a09\\scenarios\\scenario_3\\scenario.json",
+          "role": "Scenario selected by the user and saved before execution."
+        },
+        "scenario_status": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a09\\scenarios\\scenario_3\\scenario_status.json",
+          "role": "Current scenario status, SPICE status and diagnostic outcome."
+        },
+        "controlled_scenario_report": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a09\\scenarios\\scenario_3\\12_controlled_scenarios.json",
+          "role": "Report produced by the controlled scenario runner."
+        },
+        "scenario_comparison": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a09\\scenarios\\scenario_3\\scenario_comparison.json",
+          "role": "Base-vs-scenario comparison used to evaluate the scenario."
+        }
+      }
+    },
+    {
+      "scenario_dir": "outputs\\pipeline2.0\\batchA\\a09\\scenarios\\scenario_4",
+      "scenario_id": "scenario_4",
+      "title": "Alimentare il ramo lampada con switch chiuso",
+      "status": "spice_success",
+      "spice_status": "success",
+      "diagnostic_outcome": {
+        "status": "partially_resolved",
+        "label": "Partially resolved",
+        "reason": "Some requested quantities changed, but at least one comparison quantity is missing.",
+        "stop_automation": false,
+        "confidence": "low",
+        "next_step": "Continue with another scenario or ask the agent for a refined hypothesis."
+      },
+      "comparison_summary": {
+        "requested_count": 3,
+        "changed_count": 1,
+        "activated_count": 1,
+        "missing_count": 1
+      },
+      "artifacts": {
+        "scenario_definition": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a09\\scenarios\\scenario_4\\scenario.json",
+          "role": "Scenario selected by the user and saved before execution."
+        },
+        "scenario_status": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a09\\scenarios\\scenario_4\\scenario_status.json",
+          "role": "Current scenario status, SPICE status and diagnostic outcome."
+        },
+        "controlled_scenario_report": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a09\\scenarios\\scenario_4\\12_controlled_scenarios.json",
+          "role": "Report produced by the controlled scenario runner."
+        },
+        "scenario_comparison": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\a09\\scenarios\\scenario_4\\scenario_comparison.json",
+          "role": "Base-vs-scenario comparison used to evaluate the scenario."
+        }
+      }
+    }
+  ],
   "scenario_outcome_summary": {
-    "available": false,
-    "best_scenario_id": null,
-    "best_outcome_status": null,
-    "best_stop_automation": null,
+    "available": true,
+    "best_scenario_id": "scenario_1",
+    "best_outcome_status": "partially_resolved",
+    "best_stop_automation": false,
     "interpretation_rule": "If a user asks which scenario resolves the problem, prefer the scenario with outcome_status='resolved_candidate' and stop_automation=true. Partially resolved scenarios are supporting diagnostics, not the main solution.",
-    "scenarios": []
+    "scenarios": [
+      {
+        "scenario_id": "scenario_1",
+        "title": "Alimentare il ramo del LED",
+        "status": "spice_success",
+        "spice_status": "success",
+        "outcome_status": "partially_resolved",
+        "outcome_label": "Partially resolved",
+        "outcome_reason": "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically.",
+        "stop_automation": false,
+        "comparison_summary": {
+          "requested_count": 3,
+          "changed_count": 2,
+          "activated_count": 2,
+          "missing_count": 0
+        },
+        "quantity_summary": {
+          "changed": [
+            "v(N005)",
+            "v(N007)"
+          ],
+          "unchanged": [
+            "i(vbattery2_1#branch)"
+          ],
+          "missing": []
+        },
+        "score": 22
+      },
+      {
+        "scenario_id": "scenario_2",
+        "title": "Chiudere lo switch della lampada",
+        "status": "spice_success",
+        "spice_status": "success",
+        "outcome_status": "not_resolved",
+        "outcome_label": "Not resolved",
+        "outcome_reason": "The requested quantities did not change compared with the base run.",
+        "stop_automation": false,
+        "comparison_summary": {
+          "requested_count": 3,
+          "changed_count": 0,
+          "activated_count": 0,
+          "missing_count": 1
+        },
+        "quantity_summary": {
+          "changed": [],
+          "unchanged": [
+            "v(N006)",
+            "i(vbattery2_1#branch)"
+          ],
+          "missing": [
+            "v(N004)"
+          ]
+        },
+        "score": 0
+      },
+      {
+        "scenario_id": "scenario_3",
+        "title": "Alimentare l'ingresso del ramo lampada",
+        "status": "spice_success",
+        "spice_status": "success",
+        "outcome_status": "not_resolved",
+        "outcome_label": "Not resolved",
+        "outcome_reason": "The requested quantities did not change compared with the base run.",
+        "stop_automation": false,
+        "comparison_summary": {
+          "requested_count": 3,
+          "changed_count": 0,
+          "activated_count": 0,
+          "missing_count": 1
+        },
+        "quantity_summary": {
+          "changed": [],
+          "unchanged": [
+            "v(N006)",
+            "i(vbattery2_1#branch)"
+          ],
+          "missing": [
+            "v(N004)"
+          ]
+        },
+        "score": 0
+      },
+      {
+        "scenario_id": "scenario_4",
+        "title": "Alimentare il ramo lampada con switch chiuso",
+        "status": "spice_success",
+        "spice_status": "success",
+        "outcome_status": "partially_resolved",
+        "outcome_label": "Partially resolved",
+        "outcome_reason": "Some requested quantities changed, but at least one comparison quantity is missing.",
+        "stop_automation": false,
+        "comparison_summary": {
+          "requested_count": 3,
+          "changed_count": 1,
+          "activated_count": 1,
+          "missing_count": 1
+        },
+        "quantity_summary": {
+          "changed": [
+            "v(N006)"
+          ],
+          "unchanged": [
+            "i(vbattery2_1#branch)"
+          ],
+          "missing": [
+            "v(N004)"
+          ]
+        },
+        "score": 21
+      }
+    ]
   },
   "scenario_budget": {
     "max_executable_scenarios": 5,
-    "executed_scenarios_count": 0,
-    "remaining_executable_scenarios": 5,
+    "executed_scenarios_count": 4,
+    "remaining_executable_scenarios": 1,
     "budget_exhausted": false,
-    "last_scenario_available": false,
+    "last_scenario_available": true,
     "policy": "At most 5 scenarios can be executed for the same circuit. When only one scenario remains, the agent should propose a single final scenario. When no scenario remains, the agent must stop proposing new scenarios and provide a final diagnostic conclusion."
   },
   "image_access": {

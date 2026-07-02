@@ -165,6 +165,36 @@ def escape_block(text: str) -> str:
     return html.escape(text, quote=False)
 
 
+def repair_common_mojibake(text: str) -> str:
+    """
+    Corregge alcuni artefatti UTF-8/Latin-1 osservati nelle risposte chat.
+
+    La correzione e volutamente conservativa: tocchiamo solo sequenze comuni
+    gia viste nei testi italiani, senza trasformare arbitrariamente tutto il
+    contenuto.
+    """
+    replacements = {
+        "Ã¨": "è",
+        "Ã©": "é",
+        "Ã ": "à",
+        "Ã¹": "ù",
+        "Ã¬": "ì",
+        "Ã²": "ò",
+        "â€™": "’",
+        "â€˜": "‘",
+        "â€œ": "“",
+        "â€": "”",
+        "â€“": "–",
+        "â€”": "—",
+        "Â°": "°",
+        "Â": "",
+    }
+    repaired = text
+    for source, target in replacements.items():
+        repaired = repaired.replace(source, target)
+    return repaired
+
+
 def cleanup_chat_reply(text: str) -> str:
     """
     Rimuove dalla chat i blocchi tecnici troppo grezzi.
@@ -173,7 +203,7 @@ def cleanup_chat_reply(text: str) -> str:
     vogliamo un'interazione piu naturale, senza mostrare JSON di servizio come
     scenario tecnico o blocco tecnico finale per pipeline.
     """
-    cleaned = text.replace("\r\n", "\n")
+    cleaned = repair_common_mojibake(text).replace("\r\n", "\n")
 
     patterns = [
         r"\n*Scenario tecnico recuperato:\s*\n\s*```json\s*.*?```",

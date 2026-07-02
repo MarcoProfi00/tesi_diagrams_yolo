@@ -29,10 +29,17 @@ Esempio di azione supportata:
 }
 ```
 
-Questa azione diventa una riga SPICE del tipo:
+Questa azione, con valore DC, diventa una riga SPICE del tipo:
 
 ```spice
 VSCENARIO_N002 N002 0 DC 5
+```
+
+Se invece il valore e gia una forma sorgente SPICE, per esempio `SIN(...)` o
+`PULSE(...)`, la sorgente scenario viene emessa mantenendo quella forma:
+
+```spice
+VSCENARIO_N001 N001 0 SIN(0 5 50)
 ```
 """
 
@@ -194,13 +201,19 @@ def apply_drive_node_voltage(
     run_dir: Path,
     netlist_text: str,
 ) -> tuple[str, dict[str, Any]]:
-    """Applica l'azione `drive_node_voltage` alla netlist scenario."""
+    """
+    Applica l'azione `drive_node_voltage` alla netlist scenario.
+
+    La stessa azione deve supportare sia valori DC semplici (`5V`, `DC 3.3`)
+    sia forme sorgente SPICE (`SIN(...)`, `PULSE(...)`), senza forzarle sempre
+    dentro una definizione `DC ...`.
+    """
     node_map = read_json(run_dir / "03_node_map.json")
     target_node = validate_node_target(action.get("target"), node_map)
-    dc_value = normalize_spice_dc_value(action.get("value"))
+    source_definition = normalize_spice_source_value(action.get("value"))
 
     source_name = f"VSCENARIO_{sanitize_spice_name(target_node)}"
-    source_line = f"{source_name} {target_node} 0 DC {dc_value}"
+    source_line = f"{source_name} {target_node} 0 {source_definition}"
     updated_netlist, operation = insert_or_replace_source(netlist_text, source_name, source_line)
 
     result = {
@@ -208,7 +221,8 @@ def apply_drive_node_voltage(
         "type": "drive_node_voltage",
         "target": target_node,
         "value": action.get("value"),
-        "normalized_dc_value": dc_value,
+        "normalized_source_definition": source_definition,
+        "normalized_dc_value": source_definition[3:] if source_definition.upper().startswith("DC ") else None,
         "inserted_line": source_line,
         "operation": operation,
         "spice_executed": False,

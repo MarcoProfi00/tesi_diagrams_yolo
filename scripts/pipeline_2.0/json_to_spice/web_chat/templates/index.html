@@ -560,6 +560,27 @@
 
     function cleanupAgentText(text) {
       let cleaned = String(text || "").replace(/\r\n/g, "\n");
+      const mojibakeReplacements = [
+        ["Ã¨", "è"],
+        ["Ã©", "é"],
+        ["Ã ", "à"],
+        ["Ã¹", "ù"],
+        ["Ã¬", "ì"],
+        ["Ã²", "ò"],
+        ["â€™", "’"],
+        ["â€˜", "‘"],
+        ["â€œ", "“"],
+        ["â€", "”"],
+        ["â€“", "–"],
+        ["â€”", "—"],
+        ["Â°", "°"],
+        ["Â", ""],
+      ];
+
+      for (const [source, target] of mojibakeReplacements) {
+        cleaned = cleaned.replaceAll(source, target);
+      }
+
       const patterns = [
         /\n*Scenario tecnico recuperato:\s*\n\s*```json\s*[\s\S]*?```/gi,
         /\n*#{0,6}\s*\d+\.\s*\*?Blocco tecnico per pipeline\*?\s*\n\s*```json\s*[\s\S]*?```/gi,

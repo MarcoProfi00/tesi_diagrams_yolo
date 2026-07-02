@@ -1625,7 +1625,7 @@ Variabile ambiente:
 OPENAI_API_KEY
 ```
 
-La prima implementazione puo essere uno script Python semplice che:
+Il comportamento operativo resta volutamente semplice:
 
 - legge `10_diagnostic_context.json`;
 - carica i file reali indicati dal manifest;
@@ -1633,6 +1633,22 @@ La prima implementazione puo essere uno script Python semplice che:
 - costruisce il prompt;
 - chiama il modello;
 - salva risposta e chat history.
+
+Nella versione attuale questa parte e gia collegata tramite
+`11_agent_readonly.py` e i moduli in `agent_readonly/`. La web chat passa il
+modello scelto dall'utente allo step `11`.
+
+Modelli selezionabili nella web chat:
+
+```text
+gpt-5.4
+gpt-5.5
+gpt-5.4-mini
+gpt-5-mini
+```
+
+Il default corrente e `gpt-5.4`, scelto come compromesso tra qualita della
+diagnosi e controllo del comportamento.
 
 ## Struttura attuale degli output principali
 
@@ -1795,12 +1811,16 @@ Questa valutazione si collega agli esperimenti GPT gia presenti nel progetto.
 
 ### Fase 1: validazione Pipeline 2.0
 
+Stato attuale: completata sul primo esperimento Batch A.
+
 - validare `08_spice_run.py` su piu circuiti;
 - estendere gradualmente il numero di circuiti coperti;
 - poi passare agli altri batch disponibili;
 - osservare quali problemi ricorrono.
 
 ### Fase 2: contesto diagnostico
+
+Stato attuale: implementata.
 
 - trasformare `09` nel punto di ingresso della chat/web locale;
 - implementare `10_build_diagnostic_context.py` come manifest leggero;
@@ -1821,6 +1841,8 @@ Stato attuale: implementata nella web chat locale.
 - l'agente propone scenari, ma lo step `11` resta read-only.
 
 ### Fase 4: scenari controllati
+
+Stato attuale: implementata in versione minimale e generale.
 
 - definire poche azioni scenario generali;
 - far produrre all'agente scenari tecnici nella risposta chat;
@@ -1950,7 +1972,8 @@ scenario nuovo viene bloccata lato codice.
 
 ### Fase 5: chat iterativa e web completa
 
-Stato attuale: avviata, ma non completa.
+Stato attuale: avviata e usata nel primo esperimento Batch A, ma non ancora
+completa come prodotto finale.
 
 Gia presente:
 
@@ -1969,7 +1992,11 @@ Gia presente:
 
 Prossimi passi pratici:
 
-- consolidare i test scenario-driven sui circuiti gia analizzati;
+- congelare i report `a01.md`-`a10.md` come primo esperimento Batch A;
+- costruire una tabella sintetica con esito SPICE, scenari eseguiti e diagnosi
+  finale per ogni circuito;
+- definire metriche semplici per la tesi: successo SPICE, numero scenari,
+  scenario risolutivo, caso topologico, caso inconclusivo;
 - verificare se l'agente capisce quale scenario risolve, migliora, localizza la
   causa o non basta;
 - estendere il ciclo a nuovi circuiti, distinguendo i casi elettricamente
@@ -1978,6 +2005,46 @@ Prossimi passi pratici:
 - aggiungere pannelli migliori per immagine, report, netlist, log ngspice e
   risultati scenario;
 - aggiungere il viewer/animazione della corrente come sviluppo successivo.
+
+## Stato dopo il primo esperimento Batch A
+
+Il primo esperimento completo sul Batch A ha confermato che l'architettura
+descritta in questo documento e praticabile.
+
+Sono stati coperti i circuiti:
+
+```text
+a01, a02, a03, a04, a05, a06, a07, a08, a09, a10
+```
+
+Risultato operativo:
+
+- gli step `01-08` producono output SPICE per tutti i circuiti;
+- `a03` resta un caso di fallimento SPICE/topologia, utile per validare la
+  modalita image-assisted e i limiti del Graph JSON;
+- `09_web_chat.py` permette di interrogare l'agente da sito locale;
+- `10_build_diagnostic_context.py` indicizza output base e scenari gia eseguiti;
+- `11_agent_readonly.py` genera risposte diagnostiche e scenari candidati;
+- `12_controlled_scenarios.py` crea run scenario separate e confronta base vs
+  scenario;
+- i markdown `experiment_ai/pipeline2_spice_analysis/batchA/a01.md` ...
+  `a10.md` documentano il comportamento manuale atteso dall'agente.
+
+Questa fase non dimostra ancora che l'agente sia perfetto. Dimostra pero che il
+flusso e riproducibile:
+
+```text
+sintomo utente
+-> risposta agente grounded
+-> scenario scelto dall'utente
+-> run scenario separata
+-> confronto base/scenario
+-> nuova risposta o conclusione diagnostica
+```
+
+La prossima validazione non deve cambiare continuamente il prompt circuito per
+circuito. Deve invece misurare quanto bene lo stesso schema generale regge su
+piu casi, usando i report Batch A come riferimento.
 
 ## Limiti da dichiarare
 

@@ -1,7 +1,8 @@
 # Batch A - Pipeline 2.0 SPICE analysis
 
-Questo file riassume lo stato finale del Batch A dopo l'esecuzione della
-Pipeline 2.0 fino a SPICE/ngspice.
+Questo file riassume lo stato finale del primo esperimento sul Batch A dopo
+l'esecuzione della Pipeline 2.0 fino a SPICE/ngspice e dopo la prima prova con
+agente diagnostico, web chat e scenari controllati.
 
 Non e un output automatico della pipeline. E un riepilogo di lavoro per noi,
 basato sui file reali prodotti in:
@@ -102,9 +103,9 @@ risultato SPICE va letto come parziale.
 | `a04` | success | `.op`, `.tran 0.1ms 50ms` | 11 / 1 | 0 | Amplificatore BJT riuscito; output transitorio coerente e plot disponibile. |
 | `a05` | success | `.op` | 2 / 6 | 1 | Eseguito in modo minimale; meter trattato come misura/elemento non centrale; switch aperto non emesso. |
 | `a06` | success | `.op`, `.tran 0.1ms 50ms` | 13 / 7 | 0 | Amplificatore BJT con `VCC/VEE`; transitorio riuscito, ma ingresso grande da leggere con cautela. |
-| `a07` | success | `.op`, `.tran 0.1ms 40ms` | 3 / 6 | 2 | Caso con trasformatore equivalente; LED collassato sullo stesso nodo e switch aperto; plot `.tran` disponibile. |
+| `a07` | success | `.op`, `.tran 0.1ms 40ms` | 3 / 6 | 2 | Caso diagnosticamente utile: i rami reagiscono se pilotati, ma la base run manca di una vera sorgente/ingresso reale. |
 | `a08` | success | `.op`, `.tran 0.5ms 300ms` | 8 / 2 | 0 | Circuito con sorgente quadra, transistor e LED; transitorio riuscito e plot disponibile. |
-| `a09` | success | `.op` | 6 / 6 | 1 | SPICE riesce, ma la topologia resta sospetta: ramo LED/resistenza probabilmente non coerente con immagine. |
+| `a09` | success | `.op` | 6 / 6 | 1 | SPICE riesce; scenari controllati mostrano che LED e lampada reagiscono se alimentati, mentre la base run non trasferisce alimentazione ai rami finali. |
 | `a10` | success | `.op` | 4 / 5 | 1 | Circuito eseguito; switch aperto non emesso; caso base con LED/lampada. |
 
 ## Risultato complessivo
@@ -184,8 +185,12 @@ led12.1: terminals collapse to the same SPICE node; not emitted
 switch25.1: open switch not emitted
 ```
 
-Quindi SPICE riesce, ma non sta simulando tutti i componenti visibili. E un caso
-utile per insegnare all'agente a distinguere:
+Gli scenari controllati hanno poi mostrato che il ramo LED e il ramo VAC
+reagiscono quando vengono pilotati separatamente. La conclusione piu utile e
+che la base run manca soprattutto di una vera sorgente/ingresso reale, piu che
+di un guasto dei rami finali.
+
+E un caso utile per insegnare all'agente a distinguere:
 
 ```text
 ngspice success != circuito reale completamente validato
@@ -193,20 +198,23 @@ ngspice success != circuito reale completamente validato
 
 ### a09
 
-`a09` viene eseguito, ma l'analisi manuale indica una topologia sospetta nella
-zona del ramo LED/resistenza. Il graph collega il ramo in un modo che produce
-correnti nulle.
+`a09` viene eseguito e la base run e coerente con la netlist generata, ma i
+rami finali non ricevono alimentazione utile.
 
 Questo e un caso utile per l'agente perche:
 
 - SPICE non fallisce;
 - il risultato e numericamente valido rispetto alla netlist;
-- ma la netlist potrebbe non rappresentare correttamente l'immagine.
+- gli scenari controllati mostrano che il ramo LED reagisce quando `N005` viene
+  alimentato;
+- il ramo lampada reagisce quando `N004` viene alimentato e lo switch e chiuso;
+- il problema principale e il mancato trasferimento di alimentazione verso i
+  rami finali nella base run.
 
 Quindi l'agente deve confrontare:
 
 ```text
-immagine + graph + node map + risultato SPICE
+graph + node map + risultato SPICE + scenari controllati
 ```
 
 prima di concludere.
@@ -372,24 +380,47 @@ distinguere fatti, assunzioni e ipotesi
 proporre scenari controllati
 ```
 
+## Stato dell'agente e della web chat
+
+Nel primo esperimento non ci siamo fermati allo step `08`.
+
+Sono stati provati anche:
+
+```text
+09_web_chat.py
+10_diagnostic_context.py
+11_agent_diagnosis.py
+12_controlled_scenarios.py
+```
+
+La web chat permette di:
+
+- leggere la base run;
+- interrogare l'agente con un sintomo utente;
+- proporre scenari diagnostici;
+- eseguire scenari controllati in cartelle separate;
+- confrontare base run e scenario run senza modificare gli output originali.
+
+Questa parte resta sperimentale, ma e gia sufficiente per validare il flusso
+diagnostico manuale assistito dall'agente.
+
 ## Prossimo passo consigliato
 
-Dopo il completamento del Batch A, il passo piu sensato e consolidare la parte
-agente.
+Dopo questo primo esperimento sul Batch A, il passo piu sensato e consolidare
+la valutazione.
 
 Ordine consigliato:
 
-1. Implementare uno step `09` minimale che riassume l'output di SPICE.
-2. Implementare uno step `10` che costruisce un contesto diagnostico unico.
-3. Implementare uno step `11` read-only che produce una prima risposta agente.
-4. Solo dopo, implementare scenari controllati multipli.
-
-La priorita non e ancora la webapp. Prima serve che il contesto diagnostico sia
-solido e riproducibile.
+1. Congelare i markdown `a01.md`-`a10.md` come report del primo esperimento.
+2. Aggiornare una tabella sintetica con esito base, scenari eseguiti e diagnosi
+   finale per ogni circuito.
+3. Definire metriche semplici per la tesi, per esempio success/fail SPICE,
+   numero scenari, scenario risolutivo, caso topologico, caso inconclusivo.
+4. Solo dopo, migliorare la visualizzazione web e la parte animata del circuito.
 
 ## Sintesi finale
 
-Batch A e completo fino a `08`.
+Batch A e completo per il primo esperimento Pipeline 2.0 + SPICE + agente.
 
 Il risultato complessivo e buono:
 
@@ -397,8 +428,10 @@ Il risultato complessivo e buono:
 - ngspice viene eseguito su tutti i circuiti;
 - i successi sono spiegabili;
 - il fallimento di `a03` e diagnostico e utile;
-- i casi sospetti come `a07` e `a09` mostrano perche serve l'agente;
-- i markdown manuali definiscono il comportamento atteso dell'agente.
+- i casi delicati come `a07`, `a09` e `a10` mostrano perche servono scenari
+  controllati;
+- i markdown manuali documentano il comportamento atteso dell'agente e i limiti
+  della diagnosi.
 
 Questo Batch A e quindi una base solida per passare dalla conversione
-Graph JSON -> SPICE alla parte di diagnosi AI.
+Graph JSON -> SPICE alla valutazione piu sistematica della diagnosi AI.
