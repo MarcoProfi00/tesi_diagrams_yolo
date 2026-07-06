@@ -60,6 +60,14 @@ def parse_args() -> argparse.Namespace:
         help="ID circuito, per esempio a01.",
     )
     parser.add_argument(
+        "--experiment",
+        default=None,
+        help=(
+            "Nome esperimento opzionale. Se indicato, legge il contesto da "
+            "outputs/pipeline2.0/<batch>/<experiment>/<circuit>/."
+        ),
+    )
+    parser.add_argument(
         "--question",
         default="Explain the SPICE result and diagnose the circuit using the available evidence.",
         help="Problema o domanda dell'utente.",
@@ -99,7 +107,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     """Entry point da terminale."""
     args = parse_args()
-    context_path = resolve_manifest_path(args.batch, args.circuit, args.context)
+    context_path = resolve_manifest_path(args.batch, args.circuit, args.context, args.experiment)
     output_path = write_agent_input_preview(
         context_path=context_path,
         user_problem=args.question,

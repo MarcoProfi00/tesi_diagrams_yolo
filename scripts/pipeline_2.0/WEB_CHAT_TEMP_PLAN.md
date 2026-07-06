@@ -20,10 +20,13 @@ Lo step `09` non deve diventare un backend applicativo permanente. Deve avviare
 un server locale temporaneo, senza database, login, deploy o API pubbliche.
 
 Gli output tecnici della pipeline restano salvati nelle cartelle `outputs/`.
-La conversazione della web chat e mantenuta dal browser per batch/circuito, per
-esempio tramite localStorage. Quindi puo sopravvivere alla chiusura del server
-locale nella stessa macchina, ma non va trattata come archivio permanente o
-riproducibile.
+
+Stato attuale della conversazione:
+
+- per la base storica e gli esperimenti non dedicati, la chat puo ancora usare
+  una cache lato browser per batch/circuito;
+- per `experiment2`, la conversazione ufficiale viene salvata lato server in
+  file locali per circuito.
 
 Gli output riproducibili restano invece nei file della pipeline:
 
@@ -34,6 +37,21 @@ Gli output riproducibili restano invece nei file della pipeline:
 11_agent_response_chat.md
 scenarios/<scenario_id>/
 ```
+
+Per Esperimento 2 si aggiunge anche:
+
+```text
+experiment2_chat/
+  chat_history.json
+  chat_history.md
+  scenario_registry.json
+  scenario_registry.md
+```
+
+Questi file diventano la sorgente ufficiale della conversazione per il circuito
+selezionato nell'esperimento. La chat history salva il dialogo; il registry
+salva invece gli scenari proposti ed eseguiti con una numerazione globale
+user-friendly per circuito.
 
 ## Flusso generale
 
@@ -357,6 +375,27 @@ Uso separato:
 python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch <batch> --circuit <circuit>
 ```
 
+Uso su una root esperimento separata:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch <batch> --experiment <experiment> --circuit <circuit>
+```
+
+Esempio per Esperimento 2:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experiment experiment2 --circuit a01 --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+```
+
+Quando `--experiment` e presente, la chat legge e scrive in:
+
+```text
+outputs/pipeline2.0/<batch>/<experiment>/<circuit>/
+```
+
+La memoria browser usa una chiave distinta per batch, esperimento e circuito,
+quindi le conversazioni di Esperimento 1 e Esperimento 2 non si mescolano.
+
 Uso futuro integrato nella pipeline:
 
 ```powershell
@@ -455,6 +494,27 @@ Stato:
 implementato
 ```
 
+### Clear chat in experiment2
+
+Per `experiment2`, il pulsante `Clear` e un reset della sessione sperimentale
+del circuito corrente. Non modifica gli output base 01-08, ma azzera gli
+artefatti prodotti dalla conversazione:
+
+```text
+experiment2_chat/chat_history.json
+experiment2_chat/chat_history.md
+experiment2_chat/scenario_registry.json
+experiment2_chat/scenario_registry.md
+scenarios/
+10_diagnostic_context.json
+11_agent_input_preview_chat.md
+11_agent_prompt_chat.md
+11_agent_response_chat.md
+```
+
+Questo permette di ripartire puliti sullo stesso circuito senza rigenerare gli
+output tecnici iniziali dell'esperimento.
+
 ### TODO 4 - Immagine su richiesta
 
 Non includere l'immagine di default.
@@ -509,7 +569,26 @@ Stato:
 
 ```text
 implementato per richieste semplici
+per experiment2: implementato registry scenari file-based
 ```
+
+Per `experiment2`, la chat registra gli scenari in una lista globale per
+circuito:
+
+```text
+Scenario 1
+Scenario 2
+Scenario 3
+Scenario 4
+Scenario 5
+```
+
+I primi tre scenari vengono normalmente salvati dopo la prima diagnosi. Se
+l'agente propone scenari successivi, anche combinati, questi vengono accodati
+come `Scenario 4` e `Scenario 5`. Le formule ordinali come `il primo`,
+`il secondo`, `il quarto` puntano sempre alla numerazione globale. Le formule
+come `l'ultimo`, `quest'ultimo` o `quello appena proposto` puntano invece
+all'ultimo scenario aggiunto al registry.
 
 ### TODO 6 - Collegare 12 controlled scenarios
 

@@ -49,6 +49,7 @@ def resolve_manifest_path(
     batch_name: str | None,
     circuit_id: str | None,
     context_path: str | Path | None,
+    experiment_name: str | None = None,
 ) -> Path:
     """Trova il manifest 10 partendo da batch/circuito oppure da path diretto."""
     if context_path is not None:
@@ -56,6 +57,17 @@ def resolve_manifest_path(
 
     if not batch_name or not circuit_id:
         raise ValueError("Provide either --context or both --batch and --circuit.")
+
+    if experiment_name:
+        return (
+            PROJECT_ROOT
+            / "outputs"
+            / "pipeline2.0"
+            / batch_name
+            / experiment_name
+            / circuit_id
+            / "10_diagnostic_context.json"
+        )
 
     return (
         PROJECT_ROOT

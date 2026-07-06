@@ -194,9 +194,11 @@ semplici da leggere e facili da trasformare in markdown, CSV o JSON aggregati.
 Struttura proposta:
 
 ```text
-outputs/pipeline2.0/<batch>/<circuit>/experiment2_chat/
+outputs/pipeline2.0/<batch>/experiment2/<circuit>/experiment2_chat/
   chat_history.json
   chat_history.md
+  scenario_registry.json
+  scenario_registry.md
 ```
 
 Contenuto minimo di `chat_history.json`:
@@ -224,6 +226,89 @@ Regole:
 - la base run continua a non essere modificata;
 - in futuro questi file potranno essere letti da uno script di valutazione per
   produrre CSV, metriche e grafici.
+
+### Scenario registry dell'Esperimento 2
+
+Oltre alla chat history, Esperimento 2 salva un registro scenari locale per
+circuito:
+
+```text
+scenario_registry.json
+scenario_registry.md
+```
+
+Il registry non e un database esterno. E un file locale che rende esplicita la
+lista degli scenari proposti ed eseguiti durante la conversazione.
+
+Regola user-friendly:
+
+```text
+Scenario 1
+Scenario 2
+Scenario 3
+Scenario 4
+Scenario 5
+```
+
+La numerazione e globale per circuito. I primi scenari vengono registrati dopo
+la prima risposta dell'agente; eventuali scenari successivi, anche combinati o
+proposti dopo aver letto i risultati, vengono accodati come `Scenario 4` e
+`Scenario 5`.
+
+Semantica dei comandi:
+
+```text
+"scenario 1", "il primo"   -> Scenario 1 globale
+"scenario 2", "il secondo" -> Scenario 2 globale
+"scenario 4", "il quarto"  -> Scenario 4 globale
+"l'ultimo", "quest'ultimo", "quello appena proposto"
+                            -> ultimo scenario aggiunto al registry
+```
+
+Comandi di consultazione:
+
+```text
+mostra scenari
+mostrami gli scenari
+quali scenari restano?
+riepilogo scenari
+```
+
+Regole operative:
+
+- massimo 5 scenari SPICE registrati/eseguibili per circuito;
+- gli scenari nuovi oltre il limite restano nella risposta agente, ma non
+  vengono accodati come nuovi scenari eseguibili;
+- le proposte non eseguite restano disponibili;
+- il registry viene sincronizzato con le cartelle scenario gia presenti su
+  disco quando si chiede la lista o si esegue uno scenario;
+- gli scenari non eseguibili, per esempio verifiche topologiche senza azioni,
+  possono essere conservati come proposta diagnostica ma non devono modificare
+  la base run.
+
+Regola `Clear` per Esperimento 2:
+
+```text
+Clear = reset della sessione interattiva del circuito
+```
+
+Il reset non tocca gli output base 01-08 copiati nell'esperimento. Cancella o
+azzera invece:
+
+```text
+experiment2_chat/chat_history.json
+experiment2_chat/chat_history.md
+experiment2_chat/scenario_registry.json
+experiment2_chat/scenario_registry.md
+scenarios/
+10_diagnostic_context.json
+11_agent_input_preview_chat.md
+11_agent_prompt_chat.md
+11_agent_response_chat.md
+```
+
+In questo modo si puo ripartire puliti con nuovi scenari, senza dover
+rigenerare la parte tecnica fino a SPICE.
 
 Esempi di scenari desiderati nel perimetro iniziale:
 

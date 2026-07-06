@@ -71,6 +71,11 @@ CHAT_PREVIEW_NAME = "11_agent_input_preview_chat.md"
 CHAT_PROMPT_NAME = "11_agent_prompt_chat.md"
 CHAT_RESPONSE_NAME = "11_agent_response_chat.md"
 MAX_EXECUTABLE_SCENARIOS = 5
+EXPERIMENT2_CHAT_DIRNAME = "experiment2_chat"
+CHAT_HISTORY_JSON_NAME = "chat_history.json"
+CHAT_HISTORY_MD_NAME = "chat_history.md"
+SCENARIO_REGISTRY_JSON_NAME = "scenario_registry.json"
+SCENARIO_REGISTRY_MD_NAME = "scenario_registry.md"
 
 SCENARIO_BASE_FILES = [
     "01_graph.json",
@@ -95,6 +100,10 @@ SCENARIO_WORD_TO_INDEX = {
     "seconda": 2,
     "terzo": 3,
     "terza": 3,
+    "quarto": 4,
+    "quarta": 4,
+    "quinto": 5,
+    "quinta": 5,
 }
 
 
@@ -122,6 +131,13 @@ SCENARIO_ROOT_ARTIFACTS = [
 
 
 IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg"]
+
+
+def is_safe_path_name(name: str | None) -> bool:
+    """Accetta solo nomi semplici per segmenti di path controllati da CLI."""
+    if name is None:
+        return True
+    return bool(re.fullmatch(r"[A-Za-z0-9_.-]+", name)) and name not in {".", ".."}
 
 def read_text_safe(path: Path) -> str:
     """Legge un file testuale senza far fallire il server se manca."""
@@ -218,6 +234,16 @@ def cleanup_chat_reply(text: str) -> str:
     return cleaned
 
 
+def json_for_html(value: Any) -> str:
+    """Serializza dati JSON in modo sicuro per embedding dentro uno script."""
+    return (
+        json.dumps(value, ensure_ascii=False)
+        .replace("&", "\\u0026")
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+    )
+
+
 def project_relative(path: Path) -> str:
     """Restituisce un path leggibile relativo alla root del progetto."""
     try:
@@ -226,8 +252,682 @@ def project_relative(path: Path) -> str:
         return str(path)
 
 
-def build_output_dir(batch: str, circuit: str) -> Path:
+def is_experiment2_history_enabled(experiment: str | None) -> bool:
+    """Abilita la chat history server-side solo per Esperimento 2."""
+    return experiment == "experiment2"
+
+
+def build_experiment2_chat_dir(output_dir: Path, experiment: str | None) -> Path | None:
+    """Restituisce la cartella della chat history ufficiale di Esperimento 2."""
+    if not is_experiment2_history_enabled(experiment):
+        return None
+    return output_dir / EXPERIMENT2_CHAT_DIRNAME
+
+
+def empty_experiment2_chat_history(batch: str, circuit: str, experiment: str) -> dict[str, Any]:
+    """Costruisce una history vuota ma gia strutturata."""
+    timestamp = datetime.now().isoformat(timespec="seconds")
+    return {
+        "source_format": "pipeline2.0_experiment_chat_history",
+        "batch_name": batch,
+        "experiment_name": experiment,
+        "circuit_id": circuit,
+        "created_at": timestamp,
+        "updated_at": timestamp,
+        "turns": [],
+    }
+
+
+def read_experiment2_chat_history(
+    output_dir: Path,
+    batch: str,
+    circuit: str,
+    experiment: str | None,
+) -> dict[str, Any] | None:
+    """Legge la chat history ufficiale, se la modalita esperimento la richiede."""
+    chat_dir = build_experiment2_chat_dir(output_dir, experiment)
+    if chat_dir is None:
+        return None
+
+    history_path = chat_dir / CHAT_HISTORY_JSON_NAME
+    if not history_path.exists():
+        return empty_experiment2_chat_history(batch, circuit, str(experiment))
+
+    try:
+        data = json.loads(history_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return empty_experiment2_chat_history(batch, circuit, str(experiment))
+
+    if not isinstance(data, dict):
+        return empty_experiment2_chat_history(batch, circuit, str(experiment))
+
+    turns = data.get("turns")
+    if not isinstance(turns, list):
+        data["turns"] = []
+
+    data.setdefault("source_format", "pipeline2.0_experiment_chat_history")
+    data.setdefault("batch_name", batch)
+    data.setdefault("experiment_name", experiment)
+    data.setdefault("circuit_id", circuit)
+    data.setdefault("created_at", datetime.now().isoformat(timespec="seconds"))
+    data.setdefault("updated_at", datetime.now().isoformat(timespec="seconds"))
+    return data
+
+
+def write_experiment2_chat_history_files(chat_dir: Path, history: dict[str, Any]) -> None:
+    """Salva JSON ufficiale e una vista Markdown leggibile."""
+    chat_dir.mkdir(parents=True, exist_ok=True)
+    history_path = chat_dir / CHAT_HISTORY_JSON_NAME
+    markdown_path = chat_dir / CHAT_HISTORY_MD_NAME
+    history_path.write_text(json.dumps(history, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    markdown_path.write_text(build_experiment2_chat_history_markdown(history), encoding="utf-8")
+
+
+def build_experiment2_chat_history_markdown(history: dict[str, Any]) -> str:
+    """Crea una vista Markdown leggibile della chat history ufficiale."""
+    lines = [
+        "# Experiment 2 chat history",
+        "",
+        f"- Batch: `{history.get('batch_name')}`",
+        f"- Experiment: `{history.get('experiment_name')}`",
+        f"- Circuit: `{history.get('circuit_id')}`",
+        f"- Created at: `{history.get('created_at')}`",
+        f"- Updated at: `{history.get('updated_at')}`",
+        "",
+    ]
+
+    turns = history.get("turns") or []
+    if not turns:
+        lines.extend(["No turns saved yet.", ""])
+        return "\n".join(lines).rstrip() + "\n"
+
+    for turn in turns:
+        role = str(turn.get("role") or "unknown")
+        turn_id = turn.get("turn_id")
+        timestamp = str(turn.get("timestamp") or "")
+        lines.extend(
+            [
+                f"## Turn {turn_id} - {role}",
+                "",
+                f"- Timestamp: `{timestamp}`",
+                f"- Selected run: `{turn.get('selected_run')}`",
+                f"- Model: `{turn.get('model')}`",
+                f"- Used image: `{turn.get('used_image')}`",
+                f"- Scenario id: `{turn.get('scenario_id')}`",
+                f"- Scenario outcome: `{turn.get('scenario_outcome')}`",
+                f"- Scenario path: `{turn.get('scenario_path')}`",
+                "",
+                "### Content",
+                "",
+                str(turn.get("content") or ""),
+                "",
+            ]
+        )
+        generated_files = turn.get("generated_files") or []
+        if isinstance(generated_files, list) and generated_files:
+            lines.extend(["### Generated files", ""])
+            for path in generated_files:
+                lines.append(f"- `{path}`")
+            lines.append("")
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def append_experiment2_chat_event(
+    output_dir: Path,
+    batch: str,
+    circuit: str,
+    experiment: str | None,
+    role: str,
+    content: str,
+    model: str | None,
+    selected_run: str,
+    used_image: bool,
+    generated_files: list[str] | None = None,
+    scenario_id: str | None = None,
+    scenario_outcome: Any = None,
+    scenario_path: str | None = None,
+) -> dict[str, Any] | None:
+    """Aggiunge un evento alla chat history ufficiale di Esperimento 2."""
+    history = read_experiment2_chat_history(output_dir, batch, circuit, experiment)
+    chat_dir = build_experiment2_chat_dir(output_dir, experiment)
+    if history is None or chat_dir is None:
+        return None
+
+    turns = history.get("turns") or []
+    next_turn_id = max((int(item.get("turn_id") or 0) for item in turns if isinstance(item, dict)), default=0) + 1
+    event = {
+        "turn_id": next_turn_id,
+        "timestamp": datetime.now().isoformat(timespec="seconds"),
+        "role": role,
+        "content": content,
+        "model": model,
+        "selected_run": selected_run,
+        "used_image": used_image,
+        "generated_files": generated_files or [],
+        "scenario_id": scenario_id,
+        "scenario_outcome": scenario_outcome,
+        "scenario_path": scenario_path,
+    }
+    turns.append(event)
+    history["turns"] = turns
+    history["updated_at"] = event["timestamp"]
+    write_experiment2_chat_history_files(chat_dir, history)
+    return event
+
+
+def clear_experiment2_chat_history(
+    output_dir: Path,
+    batch: str,
+    circuit: str,
+    experiment: str | None,
+) -> bool:
+    """Azzera la chat history ufficiale di Esperimento 2."""
+    chat_dir = build_experiment2_chat_dir(output_dir, experiment)
+    if chat_dir is None:
+        return False
+    history = empty_experiment2_chat_history(batch, circuit, str(experiment))
+    write_experiment2_chat_history_files(chat_dir, history)
+    return True
+
+
+def clear_experiment2_scenario_registry(
+    output_dir: Path,
+    batch: str,
+    circuit: str,
+    experiment: str | None,
+) -> bool:
+    """Azzera il registry scenari ufficiale di Esperimento 2."""
+    chat_dir = build_experiment2_chat_dir(output_dir, experiment)
+    if chat_dir is None:
+        return False
+    registry = empty_experiment2_scenario_registry(batch, circuit, str(experiment))
+    write_experiment2_scenario_registry_files(chat_dir, registry)
+    return True
+
+
+def remove_directory_inside_output(output_dir: Path, target_dir: Path) -> bool:
+    """Rimuove una directory solo se resta chiaramente dentro output_dir."""
+    if not target_dir.exists():
+        return False
+    resolved_output = output_dir.resolve()
+    resolved_target = target_dir.resolve()
+    if resolved_target == resolved_output or resolved_output not in resolved_target.parents:
+        raise ValueError(f"Refusing to remove path outside output dir: {target_dir}")
+    if not resolved_target.is_dir():
+        return False
+    shutil.rmtree(resolved_target)
+    return True
+
+
+def clear_experiment2_session_state(
+    output_dir: Path,
+    batch: str,
+    circuit: str,
+    experiment: str | None,
+) -> dict[str, Any]:
+    """
+    Reset completo della sessione Experiment 2 per un circuito.
+
+    Non tocca gli output base 01-08 copiati nell'esperimento. Azzera solo la
+    conversazione, il registry, le run scenario e gli artefatti chat 10/11.
+    """
+    if not is_experiment2_history_enabled(experiment):
+        return {
+            "cleared": False,
+            "reason": "Experiment 2 session clear is only enabled for experiment2.",
+            "removed_files": [],
+            "removed_dirs": [],
+        }
+
+    removed_files: list[str] = []
+    removed_dirs: list[str] = []
+    chat_history_cleared = clear_experiment2_chat_history(output_dir, batch, circuit, experiment)
+    scenario_registry_cleared = clear_experiment2_scenario_registry(output_dir, batch, circuit, experiment)
+
+    scenarios_dir = output_dir / "scenarios"
+    if remove_directory_inside_output(output_dir, scenarios_dir):
+        removed_dirs.append(project_relative(scenarios_dir))
+
+    for filename in [CHAT_CONTEXT_NAME, CHAT_PREVIEW_NAME, CHAT_PROMPT_NAME, CHAT_RESPONSE_NAME]:
+        path = output_dir / filename
+        if path.exists() and path.is_file():
+            path.unlink()
+            removed_files.append(project_relative(path))
+
+    return {
+        "cleared": True,
+        "chat_history_cleared": chat_history_cleared,
+        "scenario_registry_cleared": scenario_registry_cleared,
+        "removed_files": removed_files,
+        "removed_dirs": removed_dirs,
+    }
+
+
+def empty_experiment2_scenario_registry(batch: str, circuit: str, experiment: str) -> dict[str, Any]:
+    """Costruisce il registro scenari file-based di Esperimento 2."""
+    timestamp = datetime.now().isoformat(timespec="seconds")
+    return {
+        "source_format": "pipeline2.0_experiment2_scenario_registry",
+        "batch_name": batch,
+        "experiment_name": experiment,
+        "circuit_id": circuit,
+        "created_at": timestamp,
+        "updated_at": timestamp,
+        "max_executable_scenarios": MAX_EXECUTABLE_SCENARIOS,
+        "next_scenario_number": 1,
+        "last_added_scenario_id": None,
+        "proposals": [],
+        "scenarios": [],
+    }
+
+
+def read_experiment2_scenario_registry(
+    output_dir: Path,
+    batch: str,
+    circuit: str,
+    experiment: str | None,
+) -> dict[str, Any] | None:
+    """Legge il registro scenari ufficiale di Esperimento 2."""
+    chat_dir = build_experiment2_chat_dir(output_dir, experiment)
+    if chat_dir is None:
+        return None
+
+    registry_path = chat_dir / SCENARIO_REGISTRY_JSON_NAME
+    if not registry_path.exists():
+        return empty_experiment2_scenario_registry(batch, circuit, str(experiment))
+
+    try:
+        data = json.loads(registry_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return empty_experiment2_scenario_registry(batch, circuit, str(experiment))
+
+    if not isinstance(data, dict):
+        return empty_experiment2_scenario_registry(batch, circuit, str(experiment))
+
+    data.setdefault("source_format", "pipeline2.0_experiment2_scenario_registry")
+    data.setdefault("batch_name", batch)
+    data.setdefault("experiment_name", experiment)
+    data.setdefault("circuit_id", circuit)
+    data.setdefault("created_at", datetime.now().isoformat(timespec="seconds"))
+    data.setdefault("updated_at", datetime.now().isoformat(timespec="seconds"))
+    data.setdefault("max_executable_scenarios", MAX_EXECUTABLE_SCENARIOS)
+    data.setdefault("next_scenario_number", 1)
+    data.setdefault("last_added_scenario_id", None)
+    if not isinstance(data.get("proposals"), list):
+        data["proposals"] = []
+    if not isinstance(data.get("scenarios"), list):
+        data["scenarios"] = []
+    return data
+
+
+def write_experiment2_scenario_registry_files(chat_dir: Path, registry: dict[str, Any]) -> None:
+    """Salva registro scenari JSON e vista Markdown leggibile."""
+    chat_dir.mkdir(parents=True, exist_ok=True)
+    registry_path = chat_dir / SCENARIO_REGISTRY_JSON_NAME
+    markdown_path = chat_dir / SCENARIO_REGISTRY_MD_NAME
+    registry_path.write_text(json.dumps(registry, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    markdown_path.write_text(build_experiment2_scenario_registry_markdown(registry), encoding="utf-8")
+
+
+def build_experiment2_scenario_registry_markdown(registry: dict[str, Any]) -> str:
+    """Crea una vista Markdown del registro scenari."""
+    lines = [
+        "# Experiment 2 scenario registry",
+        "",
+        f"- Batch: `{registry.get('batch_name')}`",
+        f"- Experiment: `{registry.get('experiment_name')}`",
+        f"- Circuit: `{registry.get('circuit_id')}`",
+        f"- Max executable scenarios: `{registry.get('max_executable_scenarios')}`",
+        f"- Created at: `{registry.get('created_at')}`",
+        f"- Updated at: `{registry.get('updated_at')}`",
+        "",
+    ]
+
+    scenarios = registry.get("scenarios") or []
+    if not scenarios:
+        lines.extend(["No scenarios registered yet.", ""])
+        return "\n".join(lines).rstrip() + "\n"
+
+    for scenario in scenarios:
+        if not isinstance(scenario, dict):
+            continue
+        scenario_id = str(scenario.get("scenario_id") or "")
+        title = str(scenario.get("title") or scenario_id)
+        lines.extend(
+            [
+                f"## Scenario {scenario.get('scenario_number')} - {title}",
+                "",
+                f"- Scenario id: `{scenario_id}`",
+                f"- Status: `{scenario.get('status')}`",
+                f"- Outcome: `{scenario.get('outcome')}`",
+                f"- Executable: `{scenario.get('executable')}`",
+                f"- Kind: `{scenario.get('kind')}`",
+                f"- Source proposal: `{scenario.get('source_proposal_id')}`",
+                f"- Source local index: `{scenario.get('source_local_index')}`",
+                f"- Execution path: `{scenario.get('execution_path')}`",
+                "",
+            ]
+        )
+        hypothesis = str(scenario.get("hypothesis") or "").strip()
+        if hypothesis:
+            lines.extend(["### Hypothesis", "", hypothesis, ""])
+        actions = scenario.get("actions") or []
+        if isinstance(actions, list) and actions:
+            lines.extend(["### Actions", "", "```json", json.dumps(actions, indent=2, ensure_ascii=False), "```", ""])
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def next_proposal_id(registry: dict[str, Any]) -> str:
+    """Restituisce il prossimo id proposal_N."""
+    proposals = registry.get("proposals") or []
+    return f"proposal_{len(proposals) + 1}"
+
+
+def registered_scenario_signature(scenario: dict[str, Any]) -> str:
+    """Firma semplice per evitare di registrare duplicati identici."""
+    comparable = {
+        "title": scenario.get("title"),
+        "hypothesis": scenario.get("hypothesis"),
+        "actions": scenario.get("actions") or [],
+        "analysis": scenario.get("analysis"),
+        "compare": scenario.get("compare") or [],
+    }
+    return json.dumps(comparable, sort_keys=True, ensure_ascii=False)
+
+
+def scenario_is_executable(scenario: dict[str, Any]) -> bool:
+    """Uno scenario e eseguibile da step 12 solo se contiene azioni."""
+    actions = scenario.get("actions")
+    return isinstance(actions, list) and bool(actions)
+
+
+def register_experiment2_scenarios_from_response(
+    output_dir: Path,
+    batch: str,
+    circuit: str,
+    experiment: str | None,
+    response_text: str,
+) -> dict[str, Any] | None:
+    """Estrae gli scenari da una risposta agente e li accoda al registry."""
+    registry = read_experiment2_scenario_registry(output_dir, batch, circuit, experiment)
+    chat_dir = build_experiment2_chat_dir(output_dir, experiment)
+    if registry is None or chat_dir is None:
+        return None
+
+    extracted = extract_scenarios_from_response(response_text)
+    if not extracted:
+        return {"added": [], "summary": ""}
+
+    existing_signatures = {
+        str(item.get("signature"))
+        for item in registry.get("scenarios", [])
+        if isinstance(item, dict) and item.get("signature")
+    }
+    proposal_id = next_proposal_id(registry)
+    proposal = {
+        "proposal_id": proposal_id,
+        "created_at": datetime.now().isoformat(timespec="seconds"),
+        "source_agent_response": project_relative(output_dir / CHAT_RESPONSE_NAME),
+        "added_scenario_ids": [],
+    }
+
+    added: list[dict[str, Any]] = []
+    next_number = int(registry.get("next_scenario_number") or 1)
+    for local_index, raw_scenario in enumerate(extracted, start=1):
+        if next_number > MAX_EXECUTABLE_SCENARIOS:
+            break
+        scenario = unescape_html_entities(raw_scenario)
+        signature = registered_scenario_signature(scenario)
+        if signature in existing_signatures:
+            continue
+
+        scenario_number = next_number
+        next_number += 1
+        scenario_id = f"scenario_{scenario_number}"
+        original_scenario_id = str(scenario.get("scenario_id") or "")
+        scenario["scenario_id"] = scenario_id
+
+        entry = {
+            "scenario_number": scenario_number,
+            "scenario_id": scenario_id,
+            "title": scenario.get("title") or scenario_id,
+            "hypothesis": scenario.get("hypothesis"),
+            "actions": scenario.get("actions") or [],
+            "analysis": scenario.get("analysis") or "op",
+            "compare": scenario.get("compare") or [],
+            "rerun_from": scenario.get("rerun_from"),
+            "status": "proposed",
+            "outcome": None,
+            "executable": scenario_is_executable(scenario),
+            "kind": "spice_scenario" if scenario_is_executable(scenario) else "non_executable_proposal",
+            "source_proposal_id": proposal_id,
+            "source_local_index": local_index,
+            "original_scenario_id": original_scenario_id,
+            "execution_path": None,
+            "created_at": proposal["created_at"],
+            "updated_at": proposal["created_at"],
+            "signature": signature,
+            "scenario": scenario,
+        }
+        registry["scenarios"].append(entry)
+        proposal["added_scenario_ids"].append(scenario_id)
+        registry["last_added_scenario_id"] = scenario_id
+        existing_signatures.add(signature)
+        added.append(entry)
+
+    if not added:
+        if next_number > MAX_EXECUTABLE_SCENARIOS:
+            return {
+                "added": [],
+                "summary": (
+                    "\n\n**Scenari registrati**\n\n"
+                    f"Il registry ha gia raggiunto il limite di {MAX_EXECUTABLE_SCENARIOS} scenari. "
+                    "Le nuove proposte restano nella risposta agente, ma non vengono accodate come scenari eseguibili."
+                ),
+            }
+        return {"added": [], "summary": ""}
+
+    registry["next_scenario_number"] = next_number
+    registry["updated_at"] = datetime.now().isoformat(timespec="seconds")
+    registry["proposals"].append(proposal)
+    write_experiment2_scenario_registry_files(chat_dir, registry)
+    return {
+        "added": added,
+        "summary": build_scenario_registration_summary(added),
+        "registry_path": project_relative(chat_dir / SCENARIO_REGISTRY_JSON_NAME),
+    }
+
+
+def build_scenario_registration_summary(added: list[dict[str, Any]]) -> str:
+    """Messaggio breve da aggiungere in chat dopo nuove proposte."""
+    if not added:
+        return ""
+
+    heading = "Ho salvato questi nuovi scenari proposti:"
+    lines = ["", "**Scenari registrati**", "", heading, ""]
+    for item in added:
+        lines.append(f"- Scenario {item.get('scenario_number')} - {item.get('title')}")
+    lines.extend(["", "Puoi scrivere per esempio: `esegui scenario 1` oppure `esegui l'ultimo`."])
+    return "\n".join(lines)
+
+
+def build_scenario_registry_summary(registry: dict[str, Any] | None) -> str:
+    """Riepilogo leggibile degli scenari registrati."""
+    if not registry or not registry.get("scenarios"):
+        return "Non ci sono ancora scenari registrati per questo circuito."
+
+    lines = ["**Scenari disponibili**", ""]
+    for item in registry.get("scenarios") or []:
+        if not isinstance(item, dict):
+            continue
+        title = str(item.get("title") or item.get("scenario_id") or "")
+        status = str(item.get("status") or "unknown")
+        outcome = item.get("outcome") or "not available"
+        executable = "SPICE" if item.get("executable") else "non eseguibile"
+        lines.append(f"- Scenario {item.get('scenario_number')} - {title}")
+        lines.append(f"  Stato: `{status}`, outcome: `{outcome}`, tipo: `{executable}`")
+    lines.append("")
+    lines.append("Per eseguire uno scenario puoi scrivere `esegui scenario N`.")
+    return "\n".join(lines)
+
+
+def detect_scenario_list_request(user_message: str) -> bool:
+    """Riconosce richieste di riepilogo degli scenari senza esecuzione."""
+    normalized = user_message.lower().replace("_", " ")
+    patterns = [
+        r"\bmostra(?:mi)?\s+(?:gli\s+)?scenari\b",
+        r"\blista\s+(?:gli\s+)?scenari\b",
+        r"\briepilogo\s+scenari\b",
+        r"\bstato\s+scenari\b",
+        r"\bquali\s+scenari\s+(?:ci\s+sono|sono\s+disponibili|abbiamo|restano)\b",
+        r"\bquali\s+scenari\s+(?:non\s+ho\s+ancora\s+eseguito|sono\s+stati\s+eseguiti)\b",
+        r"\bfammi\s+vedere\s+(?:gli\s+)?scenari\b",
+    ]
+    return any(re.search(pattern, normalized) for pattern in patterns)
+
+
+def select_scenario_from_registry(registry: dict[str, Any], requested_index: int | str) -> dict[str, Any] | None:
+    """Seleziona uno scenario dalla lista globale user-friendly."""
+    scenarios = [item for item in registry.get("scenarios") or [] if isinstance(item, dict)]
+    if not scenarios:
+        return None
+
+    selected_entry: dict[str, Any] | None = None
+    if requested_index == "latest":
+        last_added = registry.get("last_added_scenario_id")
+        for item in reversed(scenarios):
+            if item.get("scenario_id") == last_added:
+                selected_entry = item
+                break
+        if selected_entry is None:
+            selected_entry = scenarios[-1]
+    else:
+        for item in scenarios:
+            if int(item.get("scenario_number") or 0) == int(requested_index):
+                selected_entry = item
+                break
+
+    if selected_entry is None:
+        return None
+    scenario = dict(selected_entry.get("scenario") or {})
+    scenario["scenario_id"] = selected_entry.get("scenario_id")
+    scenario["_registry_scenario_id"] = selected_entry.get("scenario_id")
+    scenario["_registry_scenario_number"] = selected_entry.get("scenario_number")
+    scenario["_registry_executable"] = bool(selected_entry.get("executable"))
+    return scenario
+
+
+def update_scenario_registry_after_execution(
+    output_dir: Path,
+    batch: str,
+    circuit: str,
+    experiment: str | None,
+    scenario_id: str,
+    outcome: Any,
+    execution_path: str,
+) -> None:
+    """Aggiorna status/outcome dello scenario eseguito nel registry."""
+    registry = read_experiment2_scenario_registry(output_dir, batch, circuit, experiment)
+    chat_dir = build_experiment2_chat_dir(output_dir, experiment)
+    if registry is None or chat_dir is None:
+        return
+
+    timestamp = datetime.now().isoformat(timespec="seconds")
+    for item in registry.get("scenarios") or []:
+        if not isinstance(item, dict):
+            continue
+        if item.get("scenario_id") != scenario_id:
+            continue
+        item["status"] = "executed"
+        item["outcome"] = outcome
+        item["execution_path"] = execution_path
+        item["updated_at"] = timestamp
+        break
+
+    registry["updated_at"] = timestamp
+    write_experiment2_scenario_registry_files(chat_dir, registry)
+
+
+def sync_scenario_registry_with_existing_runs(
+    output_dir: Path,
+    batch: str,
+    circuit: str,
+    experiment: str | None,
+) -> dict[str, Any] | None:
+    """Allinea il registry agli scenari gia presenti su disco."""
+    registry = read_experiment2_scenario_registry(output_dir, batch, circuit, experiment)
+    chat_dir = build_experiment2_chat_dir(output_dir, experiment)
+    if registry is None or chat_dir is None:
+        return None
+
+    changed = False
+    timestamp = datetime.now().isoformat(timespec="seconds")
+    for item in registry.get("scenarios") or []:
+        if not isinstance(item, dict):
+            continue
+        scenario_id = str(item.get("scenario_id") or "")
+        if not scenario_id:
+            continue
+        scenario_dir = output_dir / "scenarios" / safe_scenario_dir_name(scenario_id)
+        status_path = scenario_dir / "scenario_status.json"
+        if not status_path.exists():
+            continue
+
+        status = read_json_safe(status_path)
+        diagnostic_outcome = status.get("diagnostic_outcome")
+        outcome_status = None
+        if isinstance(diagnostic_outcome, dict):
+            outcome_status = diagnostic_outcome.get("status")
+
+        execution_path = project_relative(scenario_dir)
+        new_status = "executed" if status.get("spice_executed") else str(status.get("status") or "prepared")
+        if (
+            item.get("status") != new_status
+            or item.get("outcome") != outcome_status
+            or item.get("execution_path") != execution_path
+        ):
+            item["status"] = new_status
+            item["outcome"] = outcome_status
+            item["execution_path"] = execution_path
+            item["updated_at"] = timestamp
+            changed = True
+
+    if changed:
+        registry["updated_at"] = timestamp
+        write_experiment2_scenario_registry_files(chat_dir, registry)
+    return registry
+
+
+def build_server_chat_history_items(
+    output_dir: Path,
+    batch: str,
+    circuit: str,
+    experiment: str | None,
+) -> list[dict[str, str]]:
+    """Converte la history ufficiale in un formato semplice per la UI."""
+    history = read_experiment2_chat_history(output_dir, batch, circuit, experiment)
+    if not history:
+        return []
+
+    items: list[dict[str, str]] = []
+    for turn in history.get("turns") or []:
+        if not isinstance(turn, dict):
+            continue
+        role = str(turn.get("role") or "")
+        kind = "user" if role == "user" else "agent"
+        text = str(turn.get("content") or "")
+        if not text:
+            continue
+        items.append({"kind": kind, "text": text})
+    return items
+
+
+def build_output_dir(batch: str, circuit: str, experiment: str | None = None) -> Path:
     """Calcola la cartella output della Pipeline 2.0 per un circuito."""
+    if experiment:
+        return PROJECT_ROOT / "outputs" / "pipeline2.0" / batch / experiment / circuit
     return PROJECT_ROOT / "outputs" / "pipeline2.0" / batch / circuit
 
 
@@ -603,15 +1303,34 @@ def fill_template(template: str, values: dict[str, str]) -> str:
     return rendered
 
 
-def render_page(batch: str, circuit: str, output_dir: Path, active_run: str = "base") -> str:
+def render_page(
+    batch: str,
+    circuit: str,
+    output_dir: Path,
+    active_run: str = "base",
+    experiment: str | None = None,
+) -> str:
     """Renderizza la pagina HTML principale usando il template esterno."""
     template = read_text_safe(INDEX_TEMPLATE)
     active_run = active_run if active_run else "base"
+    circuit_label = f"{batch} / {experiment} / {circuit}" if experiment else f"{batch} / {circuit}"
+    chat_storage_key = (
+        f"pipeline2_chat_{batch}_{experiment}_{circuit}"
+        if experiment
+        else f"pipeline2_chat_{batch}_{circuit}"
+    )
+    model_storage_key = (
+        f"pipeline2_chat_model_{batch}_{experiment}_{circuit}"
+        if experiment
+        else f"pipeline2_chat_model_{batch}_{circuit}"
+    )
+    server_chat_history_items = build_server_chat_history_items(output_dir, batch, circuit, experiment)
+    chat_history_enabled = is_experiment2_history_enabled(experiment)
 
     if active_run == "base":
         status = build_status(output_dir)
         spice_status = str(status["spice_status"])
-        header_meta = f"{batch} / {circuit} - Base run - {spice_status}"
+        header_meta = f"{circuit_label} - Base run - {spice_status}"
         title = "Base run"
         subtitle = project_relative(output_dir)
         status_cards = render_status_cards(status)
@@ -620,10 +1339,10 @@ def render_page(batch: str, circuit: str, output_dir: Path, active_run: str = "b
     else:
         available_scenarios = {scenario["id"] for scenario in list_scenario_runs(output_dir)}
         if active_run not in available_scenarios:
-            return render_page(batch, circuit, output_dir, active_run="base")
+            return render_page(batch, circuit, output_dir, active_run="base", experiment=experiment)
         scenario_content = render_scenario_content(output_dir, active_run)
         scenario_state = read_scenario_status(output_dir / "scenarios" / active_run).get("status") or "not available"
-        header_meta = f"{batch} / {circuit} - {active_run} - {scenario_state}"
+        header_meta = f"{circuit_label} - {active_run} - {scenario_state}"
         title = scenario_content["title"]
         subtitle = scenario_content.get("subtitle") or scenario_content["output_dir"]
         status_cards = scenario_content["status_cards"]
@@ -635,9 +1354,12 @@ def render_page(batch: str, circuit: str, output_dir: Path, active_run: str = "b
         {
             "PAGE_TITLE": html.escape(f"Pipeline 2.0 Diagnostic Chat - {circuit}"),
             "HEADER_META": html.escape(header_meta),
-            "CHAT_STORAGE_KEY": html.escape(f"pipeline2_chat_{batch}_{circuit}"),
-            "MODEL_STORAGE_KEY": html.escape(f"pipeline2_chat_model_{batch}_{circuit}"),
+            "CHAT_STORAGE_KEY": html.escape(chat_storage_key),
+            "MODEL_STORAGE_KEY": html.escape(model_storage_key),
             "DEFAULT_CHAT_MODEL": html.escape(CHAT_MODEL),
+            "ACTIVE_RUN_ID": html.escape(active_run),
+            "SERVER_CHAT_HISTORY_JSON": json_for_html(server_chat_history_items),
+            "SERVER_CHAT_HISTORY_ENABLED": "true" if chat_history_enabled else "false",
             "MODEL_OPTIONS": render_model_options(CHAT_MODEL),
             "RUN_SELECTOR": render_run_selector(output_dir, active_run),
             "ACTIVE_RUN_TITLE": html.escape(title),
@@ -676,6 +1398,7 @@ def write_chat_context(
     circuit: str,
     output_dir: Path,
     user_problem: str,
+    experiment: str | None = None,
 ) -> Path:
     """Rigenera il manifest 10 con il problema scritto nella chat."""
     step10 = load_step10_module()
@@ -685,6 +1408,7 @@ def write_chat_context(
         circuit_id=circuit,
         project_root=PROJECT_ROOT,
         user_problem=user_problem,
+        experiment_name=experiment,
     )
     context_path = output_dir / CHAT_CONTEXT_NAME
     context_path.write_text(json.dumps(context, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -743,6 +1467,7 @@ def run_readonly_agent_from_chat(
     output_dir: Path,
     user_problem: str,
     model: str = CHAT_MODEL,
+    experiment: str | None = None,
 ) -> dict[str, Any]:
     """
     Esegue il flusso minimo della chat:
@@ -754,6 +1479,7 @@ def run_readonly_agent_from_chat(
         circuit=circuit,
         output_dir=output_dir,
         user_problem=user_problem,
+        experiment=experiment,
     )
     context = read_json_safe(context_path)
     preview_path = output_dir / CHAT_PREVIEW_NAME
@@ -798,6 +1524,13 @@ def run_readonly_agent_from_chat(
     return {
         "reply": cleanup_chat_reply(read_text_safe(response_path)),
         "debug": debug_lines,
+        "used_image": image_path is not None,
+        "generated_files": [
+            project_relative(context_path),
+            project_relative(preview_path),
+            project_relative(prompt_path),
+            project_relative(response_path),
+        ],
     }
 
 
@@ -811,8 +1544,8 @@ def normalize_chat_model(requested_model: str | None) -> str:
 def detect_scenario_request(user_message: str) -> int | str | None:
     """Riconosce richieste semplici di esecuzione scenario."""
     normalized = user_message.lower().replace("_", " ")
-    execution_verbs = r"(?:esegui|eseguire|lancia|avvia|run|execute|testa|applica|facciamo)"
-    filler = r"(?:\s+(?:pure|per\s+favore|lo|la|il|uno|un|questo|questa|please))*"
+    execution_verbs = r"(?:esegui|esequi|eseguire|lancia|avvia|run|execute|testa|prova|applica|facciamo|vai|procedi)"
+    filler = r"(?:\s+(?:pure|per\s+favore|lo|la|il|uno|un|questo|questa|con|please))*"
 
     # La run parte solo se il verbo di esecuzione e legato allo scenario stesso.
     match = re.search(
@@ -824,11 +1557,17 @@ def detect_scenario_request(user_message: str) -> int | str | None:
 
     # Supporta richieste naturali come "esegui lo scenario appena proposto".
     latest_markers = (
+        r"l['’]?\s*ultimo",
+        r"ultimo",
+        r"quest['’]?\s*ultimo",
+        r"questo\s+ultimo",
+        r"ultimo\s+scenario",
+        r"ultimo\s+proposto",
         r"scenario\s+appena\s+proposto",
         r"scenario\s+proposto",
-        r"ultimo\s+scenario",
         r"scenario\s+piu\s+recente",
         r"questo\s+scenario",
+        r"quello\s+appena\s+proposto",
     )
     for marker in latest_markers:
         if re.search(rf"\b{execution_verbs}\b{filler}\s+{marker}\b", normalized):
@@ -915,6 +1654,11 @@ def prepare_scenario_folder(
 
     scenario_path = scenario_dir / "scenario.json"
     status_path = scenario_dir / "scenario_status.json"
+    scenario_payload = {
+        key: value
+        for key, value in selected.items()
+        if not str(key).startswith("_registry_")
+    }
 
     status = {
         "status": "prepared",
@@ -929,7 +1673,7 @@ def prepare_scenario_folder(
         "next_step": "Implement controlled scenario execution in 12_controlled_scenarios.py.",
     }
 
-    scenario_path.write_text(json.dumps(selected, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    scenario_path.write_text(json.dumps(scenario_payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     status_path.write_text(json.dumps(status, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
     return {
@@ -1090,6 +1834,9 @@ def build_scenario_result_explanation(
 def handle_scenario_request(
     output_dir: Path,
     user_message: str,
+    batch: str,
+    circuit: str,
+    experiment: str | None,
     ngspice_executable: str | None = None,
 ) -> dict[str, Any] | None:
     """
@@ -1105,31 +1852,57 @@ def handle_scenario_request(
     requested_label = "latest" if requested_index == "latest" else str(requested_index)
 
     response_path = output_dir / CHAT_RESPONSE_NAME
-    if not response_path.exists():
-        return {
-            "reply": (
-                f"Ho capito che vuoi eseguire lo scenario {requested_label}, "
-                "ma non trovo ancora una risposta agente con scenari.\n\n"
-                "Prima scrivi un sintomo, aspetta la diagnosi e poi chiedi di eseguire uno scenario."
-            ),
-            "debug": [f"Missing: {project_relative(response_path)}"],
-        }
+    registry = read_experiment2_scenario_registry(output_dir, batch, circuit, experiment)
+    if registry is not None and not registry.get("scenarios") and response_path.exists():
+        register_experiment2_scenarios_from_response(
+            output_dir=output_dir,
+            batch=batch,
+            circuit=circuit,
+            experiment=experiment,
+            response_text=read_text_safe(response_path),
+        )
+        registry = read_experiment2_scenario_registry(output_dir, batch, circuit, experiment)
+    if registry is not None:
+        registry = sync_scenario_registry_with_existing_runs(output_dir, batch, circuit, experiment)
+    selected = select_scenario_from_registry(registry, requested_index) if registry else None
+    scenarios: list[dict[str, Any]] = []
 
-    response_text = read_text_safe(response_path)
-    scenarios = extract_scenarios_from_response(response_text)
-    selected = select_scenario(scenarios, requested_index)
+    if selected is None:
+        if not response_path.exists():
+            return {
+                "reply": (
+                    f"Ho capito che vuoi eseguire lo scenario {requested_label}, "
+                    "ma non trovo ancora scenari registrati o una risposta agente con scenari.\n\n"
+                    "Prima scrivi un sintomo, aspetta la diagnosi e poi chiedi di eseguire uno scenario."
+                ),
+                "debug": [f"Missing: {project_relative(response_path)}"],
+            }
+
+        response_text = read_text_safe(response_path)
+        scenarios = extract_scenarios_from_response(response_text)
+        selected = select_scenario(scenarios, requested_index)
 
     if selected is None:
         return {
             "reply": (
                 f"Ho riconosciuto la richiesta per lo scenario {requested_label}, "
-                "ma non ho trovato uno scenario JSON corrispondente nell'ultima risposta agente.\n\n"
-                f"Scenari JSON trovati: {len(scenarios)}"
+                "ma non ho trovato uno scenario corrispondente.\n\n"
+                "Puoi scrivere `mostra scenari` per vedere la lista disponibile."
             ),
             "debug": [f"Read: {project_relative(response_path)}"],
         }
 
     selected = unescape_html_entities(selected)
+    if selected.get("_registry_executable") is False:
+        return {
+            "reply": (
+                f"Ho trovato **Scenario {selected.get('_registry_scenario_number')}**, "
+                "ma non e uno scenario SPICE eseguibile: non contiene azioni tecniche da applicare.\n\n"
+                "Lo tengo nel registro come proposta diagnostica/topologica, ma non creo una run scenario."
+            ),
+            "debug": [f"Selected non-executable scenario: {selected.get('_registry_scenario_id')}"],
+        }
+
     title = selected.get("title") or selected.get("scenario_id") or f"scenario {requested_label}"
     selected_scenario_id = str(selected.get("scenario_id") or "")
     selected_scenario_dir = output_dir / "scenarios" / safe_scenario_dir_name(selected_scenario_id or f"scenario_{requested_label}")
@@ -1187,11 +1960,21 @@ def handle_scenario_request(
         stop_automation = True
         outcome_next_step = "Scenario budget exhausted. Ask the agent for a final diagnostic conclusion."
 
+    update_scenario_registry_after_execution(
+        output_dir=output_dir,
+        batch=batch,
+        circuit=circuit,
+        experiment=experiment,
+        scenario_id=str(selected.get("scenario_id") or ""),
+        outcome=outcome_status,
+        execution_path=project_relative(scenario_paths["scenario_dir"]),
+    )
+
     return {
         "reply": (
             "Ho riconosciuto la richiesta di eseguire **lo scenario appena proposto**.\n\n"
             if requested_index == "latest"
-            else f"Ho riconosciuto la richiesta di eseguire **scenario {requested_index}**.\n\n"
+            else f"Ho riconosciuto la richiesta di eseguire **scenario {selected.get('_registry_scenario_number') or requested_index}**.\n\n"
         ) + (
             "Ho selezionato l'ultimo scenario proposto dall'agente.\n\n"
             if requested_index == "latest"
@@ -1231,6 +2014,17 @@ def handle_scenario_request(
             + "I dettagli tecnici restano disponibili nella pagina centrale, dentro gli artefatti dello scenario."
         ),
         "active_run": scenario_paths["scenario_dir"].name,
+        "scenario_id": str(selected.get("scenario_id") or ""),
+        "scenario_outcome": outcome_status,
+        "scenario_path": project_relative(scenario_paths["scenario_dir"]),
+        "generated_files": [
+            project_relative(scenario_paths["scenario_path"]),
+            project_relative(scenario_paths["status_path"]),
+            project_relative(copy_result["manifest_path"]),
+            project_relative(scenario_paths["scenario_dir"] / "12_controlled_scenarios.json"),
+            project_relative(scenario_paths["scenario_dir"] / "scenario_comparison.json"),
+        ],
+        "used_image": False,
         "debug": [
             f"Read: {project_relative(response_path)}",
             f"Scenarios found: {len(scenarios)}",
@@ -1292,7 +2086,13 @@ class WebChatHandler(BaseHTTPRequestHandler):
                 if part.startswith("run="):
                     active_run = unquote(part.removeprefix("run=")) or "base"
                     break
-            page = render_page(self.server.batch, self.server.circuit, self.server.output_dir, active_run=active_run)
+            page = render_page(
+                self.server.batch,
+                self.server.circuit,
+                self.server.output_dir,
+                active_run=active_run,
+                experiment=self.server.experiment,
+            )
             self.send_text(200, page, "text/html; charset=utf-8")
             return
 
@@ -1356,6 +2156,17 @@ class WebChatHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         """Riceve messaggi chat e restituisce una risposta placeholder."""
         parsed = urlparse(self.path)
+        if parsed.path == "/api/chat-history/clear":
+            clear_result = clear_experiment2_session_state(
+                output_dir=self.server.output_dir,
+                batch=self.server.batch,
+                circuit=self.server.circuit,
+                experiment=self.server.experiment,
+            )
+            body = json.dumps(clear_result, ensure_ascii=False)
+            self.send_text(200, body, "application/json; charset=utf-8")
+            return
+
         if parsed.path != "/api/chat":
             self.send_text(404, "Not found")
             return
@@ -1369,17 +2180,93 @@ class WebChatHandler(BaseHTTPRequestHandler):
 
         user_message = str(payload.get("message") or "").strip()
         requested_model = normalize_chat_model(str(payload.get("model") or "").strip() or None)
+        active_run = str(payload.get("active_run") or "base").strip() or "base"
         if not user_message:
             body = json.dumps({"reply": "Write a symptom before sending the message.", "debug": []}, ensure_ascii=False)
+            self.send_text(200, body, "application/json; charset=utf-8")
+            return
+
+        append_experiment2_chat_event(
+            output_dir=self.server.output_dir,
+            batch=self.server.batch,
+            circuit=self.server.circuit,
+            experiment=self.server.experiment,
+            role="user",
+            content=user_message,
+            model=None,
+            selected_run=active_run,
+            used_image=False,
+        )
+
+        if detect_scenario_list_request(user_message):
+            registry = read_experiment2_scenario_registry(
+                self.server.output_dir,
+                self.server.batch,
+                self.server.circuit,
+                self.server.experiment,
+            )
+            response_path = self.server.output_dir / CHAT_RESPONSE_NAME
+            if registry is not None and not registry.get("scenarios") and response_path.exists():
+                register_experiment2_scenarios_from_response(
+                    output_dir=self.server.output_dir,
+                    batch=self.server.batch,
+                    circuit=self.server.circuit,
+                    experiment=self.server.experiment,
+                    response_text=read_text_safe(response_path),
+                )
+                registry = read_experiment2_scenario_registry(
+                    self.server.output_dir,
+                    self.server.batch,
+                    self.server.circuit,
+                    self.server.experiment,
+                )
+            if registry is not None:
+                registry = sync_scenario_registry_with_existing_runs(
+                    self.server.output_dir,
+                    self.server.batch,
+                    self.server.circuit,
+                    self.server.experiment,
+                )
+            reply = build_scenario_registry_summary(registry)
+            append_experiment2_chat_event(
+                output_dir=self.server.output_dir,
+                batch=self.server.batch,
+                circuit=self.server.circuit,
+                experiment=self.server.experiment,
+                role="system",
+                content=reply,
+                model=requested_model,
+                selected_run=active_run,
+                used_image=False,
+            )
+            body = json.dumps({"reply": reply, "debug": ["Action: scenario registry listed"]}, ensure_ascii=False)
             self.send_text(200, body, "application/json; charset=utf-8")
             return
 
         scenario_result = handle_scenario_request(
             self.server.output_dir,
             user_message,
+            batch=self.server.batch,
+            circuit=self.server.circuit,
+            experiment=self.server.experiment,
             ngspice_executable=self.server.ngspice_executable,
         )
         if scenario_result is not None:
+            append_experiment2_chat_event(
+                output_dir=self.server.output_dir,
+                batch=self.server.batch,
+                circuit=self.server.circuit,
+                experiment=self.server.experiment,
+                role="system",
+                content=str(scenario_result.get("reply") or ""),
+                model=requested_model,
+                selected_run=str(scenario_result.get("active_run") or active_run),
+                used_image=bool(scenario_result.get("used_image")),
+                generated_files=list(scenario_result.get("generated_files") or []),
+                scenario_id=str(scenario_result.get("scenario_id") or "") or None,
+                scenario_outcome=scenario_result.get("scenario_outcome"),
+                scenario_path=str(scenario_result.get("scenario_path") or "") or None,
+            )
             body = json.dumps(scenario_result, ensure_ascii=False)
             self.send_text(200, body, "application/json; charset=utf-8")
             return
@@ -1391,6 +2278,7 @@ class WebChatHandler(BaseHTTPRequestHandler):
                 output_dir=self.server.output_dir,
                 user_problem=user_message,
                 model=requested_model,
+                experiment=self.server.experiment,
             )
         except Exception as exc:
             result = {
@@ -1401,9 +2289,42 @@ class WebChatHandler(BaseHTTPRequestHandler):
                 ),
                 "debug": [
                     f"Attempted model: {requested_model}",
-                    f"Circuit: {self.server.batch}/{self.server.circuit}",
+                    (
+                        f"Circuit: {self.server.batch}/{self.server.experiment}/{self.server.circuit}"
+                        if self.server.experiment
+                        else f"Circuit: {self.server.batch}/{self.server.circuit}"
+                    ),
                 ],
+                "used_image": False,
+                "generated_files": [],
             }
+
+        registration = register_experiment2_scenarios_from_response(
+            output_dir=self.server.output_dir,
+            batch=self.server.batch,
+            circuit=self.server.circuit,
+            experiment=self.server.experiment,
+            response_text=read_text_safe(self.server.output_dir / CHAT_RESPONSE_NAME),
+        )
+        if registration and registration.get("summary"):
+            result["reply"] = str(result.get("reply") or "") + "\n\n" + str(registration.get("summary") or "")
+            debug_items = list(result.get("debug") or [])
+            debug_items.append(f"Scenario registry: {registration.get('registry_path')}")
+            debug_items.append(f"Registered scenarios: {len(registration.get('added') or [])}")
+            result["debug"] = debug_items
+
+        append_experiment2_chat_event(
+            output_dir=self.server.output_dir,
+            batch=self.server.batch,
+            circuit=self.server.circuit,
+            experiment=self.server.experiment,
+            role="assistant",
+            content=str(result.get("reply") or ""),
+            model=requested_model,
+            selected_run=active_run,
+            used_image=bool(result.get("used_image")),
+            generated_files=list(result.get("generated_files") or []),
+        )
 
         body = json.dumps(result, ensure_ascii=False)
         self.send_text(200, body, "application/json; charset=utf-8")
@@ -1419,11 +2340,13 @@ class WebChatServer(ThreadingHTTPServer):
         batch: str,
         circuit: str,
         output_dir: Path,
+        experiment: str | None = None,
         ngspice_executable: str | None = None,
     ) -> None:
         super().__init__(server_address, handler_class)
         self.batch = batch
         self.circuit = circuit
+        self.experiment = experiment
         self.output_dir = output_dir
         self.ngspice_executable = ngspice_executable
 
@@ -1433,6 +2356,14 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Launch the temporary Pipeline 2.0 diagnostic web chat.")
     parser.add_argument("--batch", required=True, help="Batch name, for example batchA.")
     parser.add_argument("--circuit", required=True, help="Circuit id, for example a10.")
+    parser.add_argument(
+        "--experiment",
+        default=None,
+        help=(
+            "Optional experiment name, for example experiment2. "
+            "When set, reads outputs/pipeline2.0/<batch>/<experiment>/<circuit>."
+        ),
+    )
     parser.add_argument("--host", default="127.0.0.1", help="Local host to bind.")
     parser.add_argument("--port", type=int, default=8765, help="Local port to use.")
     parser.add_argument("--no-browser", action="store_true", help="Do not open the browser automatically.")
@@ -1443,7 +2374,10 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     """Avvia il server locale temporaneo."""
     args = parse_args()
-    output_dir = build_output_dir(args.batch, args.circuit)
+    if not is_safe_path_name(args.experiment):
+        raise SystemExit(f"Invalid experiment name: {args.experiment}")
+
+    output_dir = build_output_dir(args.batch, args.circuit, args.experiment)
 
     if not output_dir.exists():
         raise SystemExit(f"Pipeline 2.0 output directory not found: {output_dir}")
@@ -1455,12 +2389,16 @@ def main() -> None:
         WebChatHandler,
         batch=args.batch,
         circuit=args.circuit,
+        experiment=args.experiment,
         output_dir=output_dir,
         ngspice_executable=args.ngspice_executable,
     )
 
     url = f"http://{args.host}:{args.port}/"
     print(f"Pipeline 2.0 diagnostic web chat: {url}")
+    if args.experiment:
+        print(f"Experiment: {args.experiment}")
+    print(f"Output directory: {output_dir}")
     print("Press Ctrl+C to stop the temporary local server.")
 
     if not args.no_browser and os.environ.get("PIPELINE2_NO_BROWSER") != "1":

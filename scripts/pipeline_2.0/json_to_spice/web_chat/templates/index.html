@@ -538,6 +538,9 @@
     const chatStorageKey = "{{CHAT_STORAGE_KEY}}";
     const modelStorageKey = "{{MODEL_STORAGE_KEY}}";
     const defaultChatModel = "{{DEFAULT_CHAT_MODEL}}";
+    const activeRunId = "{{ACTIVE_RUN_ID}}";
+    const serverChatHistory = {{SERVER_CHAT_HISTORY_JSON}};
+    const serverChatHistoryEnabled = {{SERVER_CHAT_HISTORY_ENABLED}};
     const welcomeMessage = "Describe the circuit symptom and I will analyze the current pipeline outputs.";
     let chatHistory = [];
 
@@ -738,7 +741,15 @@
 
     function restoreMessages() {
       messages.innerHTML = "";
-      loadChatHistory();
+      if (serverChatHistoryEnabled && Array.isArray(serverChatHistory) && serverChatHistory.length) {
+        chatHistory = serverChatHistory.map((item) => ({
+          kind: item && item.kind ? item.kind : "agent",
+          text: item && typeof item.text === "string" ? item.text : ""
+        })).filter((item) => item.text);
+        saveChatHistory();
+      } else {
+        loadChatHistory();
+      }
       if (!chatHistory.length) {
         addMessage("agent", welcomeMessage);
         return;
@@ -779,17 +790,17 @@
 
     function isScenarioRequest(text) {
       const normalized = text.toLowerCase().replace(/_/g, " ");
-      const executionPattern = /\b(?:esegui|eseguire|lancia|avvia|run|execute|testa|applica|facciamo)\b(?:\s+(?:pure|per favore|lo|la|il|uno|un|questo|questa|please))*\s+scenario\s*\d+\b/i;
+      const executionPattern = /\b(?:esegui|eseguire|lancia|avvia|run|execute|testa|prova|applica|facciamo|vai|procedi)\b(?:\s+(?:pure|per favore|lo|la|il|uno|un|questo|questa|please))*\s+scenario\s*\d+\b/i;
       if (executionPattern.test(normalized)) {
         return true;
       }
 
-      const latestScenarioPattern = /\b(?:esegui|eseguire|lancia|avvia|run|execute|testa|applica|facciamo)\b(?:\s+(?:pure|per favore|lo|la|il|uno|un|questo|questa|please))*\s+(?:scenario\s+appena\s+proposto|scenario\s+proposto|ultimo\s+scenario|scenario\s+piu\s+recente|questo\s+scenario)\b/i;
+      const latestScenarioPattern = /\b(?:esegui|eseguire|lancia|avvia|run|execute|testa|prova|applica|facciamo|vai|procedi)\b(?:\s+(?:pure|per favore|lo|la|il|uno|un|questo|questa|please))*\s+(?:l['’]?\s*ultimo|ultimo|quest['’]?\s*ultimo|questo\s+ultimo|ultimo\s+scenario|ultimo\s+proposto|scenario\s+appena\s+proposto|scenario\s+proposto|scenario\s+piu\s+recente|questo\s+scenario|quello\s+appena\s+proposto)\b/i;
       if (latestScenarioPattern.test(normalized)) {
         return true;
       }
 
-      const ordinalPattern = /\b(?:esegui|eseguire|lancia|avvia|run|execute|testa|applica|facciamo)\b(?:\s+(?:pure|per favore|lo|la|il|uno|un|questo|questa|please))*\s+\b(?:primo|prima|secondo|seconda|terzo|terza)\b/i;
+      const ordinalPattern = /\b(?:esegui|eseguire|lancia|avvia|run|execute|testa|prova|applica|facciamo|vai|procedi)\b(?:\s+(?:pure|per favore|lo|la|il|uno|un|questo|questa|please))*\s+\b(?:primo|prima|secondo|seconda|terzo|terza|quarto|quarta|quinto|quinta)\b/i;
       return ordinalPattern.test(normalized);
     }
 
@@ -807,7 +818,7 @@
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({message: text, model: modelSelect.value})
+          body: JSON.stringify({message: text, model: modelSelect.value, active_run: activeRunId})
         });
         const data = await response.json();
         typingNode.remove();
@@ -827,9 +838,16 @@
       }
     });
 
-    clearChatButton.addEventListener("click", () => {
+    clearChatButton.addEventListener("click", async () => {
       chatHistory = [];
       localStorage.removeItem(chatStorageKey);
+      if (serverChatHistoryEnabled) {
+        try {
+          await fetch("/api/chat-history/clear", {method: "POST"});
+        } catch (error) {
+          // Keep the UI responsive even if local clear succeeds but server clear fails.
+        }
+      }
       messages.innerHTML = "";
       addMessage("agent", welcomeMessage);
       input.focus();

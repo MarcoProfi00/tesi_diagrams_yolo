@@ -302,18 +302,54 @@ esegui scenario 1
 prova lo scenario 2
 facciamo il terzo
 esegui il primo
-esegui questo scenario
+esegui l'ultimo
+esegui quest'ultimo scenario
 esegui lo scenario appena proposto
+mostra scenari
 ```
 
-Queste frasi possono essere tradotte con regole semplici:
+Per `experiment2`, queste frasi vengono tradotte usando un registry scenari
+locale, non rileggendo solo l'ultima risposta markdown dell'agente.
+
+Regola user-friendly:
 
 ```text
-"scenario 1" oppure "primo"  -> scenario_1
-"scenario 2" oppure "secondo" -> scenario_2
-"scenario 3" oppure "terzo"   -> scenario_3
-"questo scenario" oppure "scenario appena proposto" -> ultimo scenario proposto
+Scenario 1
+Scenario 2
+Scenario 3
+Scenario 4
+Scenario 5
 ```
+
+La numerazione e globale per circuito. I primi scenari proposti dall'agente
+vengono registrati come `Scenario 1`, `Scenario 2`, `Scenario 3`; eventuali
+scenari successivi, anche proposti dopo aver letto i risultati o combinando
+scenari precedenti, vengono accodati come `Scenario 4` e `Scenario 5`.
+
+Semantica dei comandi:
+
+```text
+"scenario 1" oppure "primo"  -> Scenario 1 globale
+"scenario 2" oppure "secondo" -> Scenario 2 globale
+"scenario 3" oppure "terzo"   -> Scenario 3 globale
+"scenario 4" oppure "quarto"  -> Scenario 4 globale
+"scenario 5" oppure "quinto"  -> Scenario 5 globale
+"ultimo", "quest'ultimo", "quello appena proposto"
+                                 -> ultimo scenario aggiunto al registry
+```
+
+Comandi come `mostra scenari`, `mostrami gli scenari` o `quali scenari
+restano?` non eseguono nulla: mostrano il contenuto del registry con stato,
+outcome e path di esecuzione.
+
+Il limite operativo per `experiment2` e:
+
+```text
+massimo 5 scenari SPICE registrati/eseguibili per circuito
+```
+
+Gli scenari oltre il limite possono restare nella risposta testuale
+dell'agente, ma non vengono accodati come nuovi scenari eseguibili.
 
 Solo in una fase successiva si puo usare il modello AI anche come
 `scenario_selector`, cioe per capire richieste meno esplicite come:
@@ -665,14 +701,14 @@ Gli output originali non devono mai essere sovrascritti.
 Per esempio:
 
 ```text
-outputs/pipeline2.0/<batch>/<circuit>/
+outputs/pipeline2.0/<batch>/<experiment>/<circuit>/
 |-- 01_graph.json
 |-- 03_node_map.json
 |-- 04_values_bound.json
 |-- 07_netlist.cir
 `-- 08_spice_run.json
 
-outputs/pipeline2.0/<batch>/<circuit>/scenarios/<scenario_id>/
+outputs/pipeline2.0/<batch>/<experiment>/<circuit>/scenarios/<scenario_id>/
 |-- scenario.json
 |-- scenario_status.json
 |-- scenario_copy_manifest.json
@@ -683,8 +719,8 @@ outputs/pipeline2.0/<batch>/<circuit>/scenarios/<scenario_id>/
 ```
 
 La cartella scenario deve nascere solo dopo che l'utente ha scelto
-esplicitamente uno degli scenari proposti, per esempio scenario 1, 2 o 3. La
-fase read-only dell'agente non deve creare nulla.
+esplicitamente uno degli scenari proposti, per esempio `scenario 1` o
+`l'ultimo`. La fase read-only dell'agente non deve creare run scenario.
 
 ### Stato implementativo attuale degli scenari
 
@@ -697,9 +733,10 @@ Flusso attuale:
 utente scrive un sintomo nella web chat
 -> 09_web_chat.py chiama 10 e 11
 -> l'agente read-only propone scenari diagnostici
+-> in experiment2, 09 salva gli scenari proposti nel scenario_registry
 -> utente scrive "esegui scenario 1"
 -> 09 riconosce la scelta
--> 09 estrae il JSON tecnico dello scenario dalla risposta agente
+-> 09 recupera il JSON tecnico dallo scenario_registry
 -> 09 crea la cartella scenario
 -> 09 copia la base run in base_snapshot/ e run/
 -> 09 chiama 12_controlled_scenarios.py
@@ -709,7 +746,7 @@ utente scrive un sintomo nella web chat
 Struttura attuale:
 
 ```text
-outputs/pipeline2.0/<batch>/<circuit>/scenarios/<scenario_id>/
+outputs/pipeline2.0/<batch>/<experiment>/<circuit>/scenarios/<scenario_id>/
 |-- scenario.json
 |-- scenario_status.json
 |-- scenario_copy_manifest.json
@@ -723,6 +760,75 @@ outputs/pipeline2.0/<batch>/<circuit>/scenarios/<scenario_id>/
 copia modificabile usata per lo scenario.
 
 La base run originale non viene modificata.
+
+### Stato implementativo di Experiment 2
+
+Experiment 2 usa output separati per esperimento:
+
+```text
+outputs/pipeline2.0/<batch>/experiment2/<circuit>/
+```
+
+Dentro ogni circuito, la sessione interattiva viene salvata in:
+
+```text
+experiment2_chat/
+|-- chat_history.json
+|-- chat_history.md
+|-- scenario_registry.json
+`-- scenario_registry.md
+```
+
+`chat_history.json` e la sorgente ufficiale del dialogo:
+
+- domande dell'utente;
+- risposte dell'agente;
+- eventi `system` prodotti da esecuzioni scenario o riepiloghi;
+- modello usato;
+- run selezionata;
+- file generati;
+- scenario id, outcome e path quando disponibili.
+
+`scenario_registry.json` e la sorgente ufficiale degli scenari proposti ed
+eseguiti:
+
+- numerazione globale `Scenario 1` ... `Scenario 5`;
+- stato `proposed` o `executed`;
+- outcome diagnostico;
+- path della run scenario;
+- JSON tecnico dello scenario;
+- proposal di origine.
+
+Il registry risolve un problema pratico della chat: dopo l'esecuzione di uno
+scenario, l'utente puo chiedere un nuovo consiglio e l'agente puo proporre un
+nuovo scenario, anche combinato. Questo nuovo scenario non riparte da 1 nella
+UI, ma viene accodato alla lista globale.
+
+Esempio:
+
+```text
+prima risposta agente -> Scenario 1, Scenario 2, Scenario 3
+dopo scenario 1/3    -> nuovo scenario proposto = Scenario 4
+ultimo scenario utile -> Scenario 5
+```
+
+Il comando `Clear` in `experiment2` resetta la sessione interattiva del circuito
+senza toccare gli output base 01-08. Cancella o azzera:
+
+```text
+experiment2_chat/chat_history.json
+experiment2_chat/chat_history.md
+experiment2_chat/scenario_registry.json
+experiment2_chat/scenario_registry.md
+scenarios/
+10_diagnostic_context.json
+11_agent_input_preview_chat.md
+11_agent_prompt_chat.md
+11_agent_response_chat.md
+```
+
+Quindi `Clear` permette di ripartire puliti con nuovi scenari, mantenendo la
+base tecnica dell'esperimento gia copiata ed eseguita fino a SPICE.
 
 Primitive attualmente supportate da `12_controlled_scenarios.py`:
 
@@ -1656,7 +1762,7 @@ Nella versione attuale una cartella circuito contiene soprattutto output
 tecnici della Pipeline 2.0 e file agent/chat generati su richiesta:
 
 ```text
-outputs/pipeline2.0/<batch>/<circuit>/
+outputs/pipeline2.0/<batch>/<experiment>/<circuit>/
 |-- 01_graph.json
 |-- 02_normalized_circuit.json
 |-- 03_node_map.json
@@ -1671,6 +1777,11 @@ outputs/pipeline2.0/<batch>/<circuit>/
 |-- 11_agent_input_preview_chat.md
 |-- 11_agent_prompt_chat.md
 |-- 11_agent_response_chat.md
+|-- experiment2_chat/
+|   |-- chat_history.json
+|   |-- chat_history.md
+|   |-- scenario_registry.json
+|   `-- scenario_registry.md
 `-- scenarios/
     `-- scenario_1/
         |-- scenario.json
@@ -1682,9 +1793,11 @@ outputs/pipeline2.0/<batch>/<circuit>/
         `-- run/
 ```
 
-`proposed_scenarios.json` e `chat_history.json` restano possibili output futuri.
-Per ora gli scenari proposti vivono nella risposta chat dell'agente, mentre lo
-storico conversazione e mantenuto dal sito per batch/circuito.
+Per `experiment2`, `chat_history.json` e `scenario_registry.json` non sono piu
+solo output futuri: sono la memoria ufficiale file-based della sessione. La
+risposta chat dell'agente resta comunque la fonte testuale completa, ma gli
+scenari proposti vengono estratti e accodati nel registry con numerazione
+globale.
 
 Per circuiti con IC o componenti complessi possono comparire anche:
 
@@ -1707,6 +1820,7 @@ Output possibile:
 ```text
 11_agent_response.md / 11_agent_response_chat.md
 chat history lato browser o file di supporto
+per experiment2: experiment2_chat/chat_history.json
 ```
 
 Questo livello era gia sufficiente per una prima demo ed e tuttora la base piu
@@ -1727,7 +1841,9 @@ scenari tecnici inclusi nella risposta agente
 ```
 
 Anche questo livello e gia presente nella pratica: gli scenari vengono proposti
-nella risposta chat e poi interpretati da `09_web_chat.py`.
+nella risposta chat e poi interpretati da `09_web_chat.py`. In `experiment2`,
+le proposte vengono anche salvate nel `scenario_registry`, cosi la chat puo
+gestire piu turni di proposta/esecuzione senza ambiguita.
 
 ### Livello 3: agente con strumenti
 
@@ -1742,7 +1858,8 @@ L'agente puo chiedere alla pipeline di:
 
 Questo livello e oggi parzialmente implementato: l'agente non chiama strumenti
 in autonomia generale, ma la web chat traduce richieste controllate come
-"esegui scenario 1" nell'attivazione dello step `12`.
+"esegui scenario 1", "esegui il quarto" o "esegui l'ultimo" nell'attivazione
+dello step `12`.
 
 ### Livello 4: interfaccia web
 
@@ -1837,7 +1954,10 @@ Stato attuale: implementata nella web chat locale.
 - `09` chiama `11_agent_readonly.py`;
 - la risposta viene mostrata nel sito;
 - la risposta viene salvata come `11_agent_response_chat.md`;
-- lo storico chat e mantenuto nel browser per batch/circuito;
+- per `experiment2`, lo storico ufficiale viene salvato in
+  `experiment2_chat/chat_history.json` e `chat_history.md`;
+- per `experiment2`, gli scenari proposti/eseguiti vengono salvati in
+  `experiment2_chat/scenario_registry.json` e `scenario_registry.md`;
 - l'agente propone scenari, ma lo step `11` resta read-only.
 
 ### Fase 4: scenari controllati
@@ -1847,7 +1967,8 @@ Stato attuale: implementata in versione minimale e generale.
 - definire poche azioni scenario generali;
 - far produrre all'agente scenari tecnici nella risposta chat;
 - richiedere scelta esplicita dell'utente in chat prima di eseguire uno scenario;
-- interpretare frasi semplici come "esegui scenario 1" o "prova il secondo";
+- interpretare frasi semplici come "esegui scenario 1", "prova il secondo",
+  "esegui il quarto" o "esegui l'ultimo";
 - validare gli scenari nella pipeline;
 - copiare gli output originali in una cartella scenario;
 - modificare solo le copie;
@@ -1977,12 +2098,15 @@ completa come prodotto finale.
 
 Gia presente:
 
-- storico chat per batch/circuito nel browser;
+- storico chat per batch/circuito nel browser per modalita legacy;
+- per `experiment2`, chat history e scenario registry ufficiali su file locali;
 - selettore modello nella chat web;
 - sidebar con base run e scenari creati;
-- esecuzione scenario dalla frase "esegui scenario 1/2/3";
+- esecuzione scenario dalla frase "esegui scenario 1/2/3/4/5";
 - esecuzione anche dell'ultimo scenario appena proposto con formule come
-  "esegui questo scenario";
+  "esegui l'ultimo" o "esegui quest'ultimo";
+- riepilogo scenari con frasi come "mostra scenari";
+- reset sessione `experiment2` con Clear, senza toccare gli output base 01-08;
 - confronto base/scenario;
 - domande successive sugli scenari gia eseguiti;
 - modalita di risposta finale quando l'utente chiede una conclusione

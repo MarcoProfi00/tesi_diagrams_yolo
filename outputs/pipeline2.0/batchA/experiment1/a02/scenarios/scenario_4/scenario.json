@@ -1,0 +1,24 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Pilotare il ramo resistivo e chiudere insieme SENSE verso massa",
+  "hypothesis": "Il pilotaggio di N004 ha gia mostrato effetto su N004 e N001; chiudere contemporaneamente switch25.1 puo aggiungere il riferimento o percorso mancante e far emergere un cambiamento anche nel comportamento della sorgente Vbattery2_1.",
+  "actions": [
+    {
+      "type": "drive_node_voltage",
+      "target": "N004",
+      "value": "5V"
+    },
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    }
+  ],
+  "rerun_from": "06",
+  "analysis": "op",
+  "compare": [
+    "v(N004)",
+    "v(N001)",
+    "v(N002)",
+    "i(vbattery2_1#branch)"
+  ]
+}

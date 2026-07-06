@@ -182,6 +182,23 @@ La chat salva file separati per non sovrascrivere altri output:
 11_agent_response_chat.md
 ```
 
+Quando la chat viene aperta su `--experiment experiment2`, salva anche una
+history ufficiale locale per circuito in:
+
+```text
+outputs/pipeline2.0/<batch>/<experiment>/<circuit>/experiment2_chat/
+  chat_history.json
+  chat_history.md
+```
+
+In questa modalita:
+
+- `chat_history.json` e la sorgente ufficiale e append-only della conversazione;
+- `chat_history.md` e una vista leggibile rigenerata dal JSON;
+- ogni messaggio utente viene salvato come evento `user`;
+- ogni risposta agente viene salvata come evento `assistant`;
+- ogni scenario eseguito viene salvato come evento `system`.
+
 Quando l'utente scrive frasi come:
 
 ```text
@@ -193,8 +210,11 @@ esegui lo scenario appena proposto
 lo step `09` riconosce la scelta, recupera lo scenario JSON dall'ultima risposta
 agente e chiama lo step `12`.
 
-La chat mantiene una conversazione unica per circuito nel browser e supporta
-anche un selettore modello.
+La chat supporta anche un selettore modello.
+
+Per Esperimento 2 la conversazione ufficiale vive nei file locali sopra. Il
+browser continua a mantenere una cache locale della UI, ma quando riapri la
+pagina il contenuto visibile viene ricostruito dalla history server-side.
 
 ### 10 - Diagnostic Context
 
@@ -330,6 +350,45 @@ Esempio:
 outputs/pipeline2.0/batchA/a01/
 ```
 
+### Output per esperimento
+
+Per mantenere separati esperimenti diversi, la Pipeline 2.0 puo usare anche una
+root sperimentale:
+
+```text
+outputs/pipeline2.0/<batch>/<experiment>/<circuit>/
+```
+
+Esempio:
+
+```text
+outputs/pipeline2.0/batchA/experiment2/a01/
+```
+
+Questa struttura serve quando vogliamo confrontare piu esperimenti partendo
+dalla stessa base tecnica `01-08`, ma con chat, scenari, budget e conclusioni
+separati.
+
+Per inizializzare una root esperimento senza rigenerare la pipeline tecnica si
+usa:
+
+```powershell
+python scripts\pipeline_2.0\prepare_experiment_outputs.py --batch batchA --experiment experiment2 --circuits a01 a02 a03 a04 a05 a06 a07 a08 a09 a10 --mode base-only
+```
+
+`base-only` copia solo gli artefatti top-level `01-08` dalla root storica del
+circuito. Non copia `10`, `11` o `scenarios`, quindi l'esperimento riparte con
+manifest, agente e scenari puliti.
+
+Per congelare invece uno stato sperimentale completo, inclusi `10`, `11` e
+`scenarios`, si usa:
+
+```powershell
+python scripts\pipeline_2.0\prepare_experiment_outputs.py --batch batchA --experiment experiment1 --circuits a01 a02 a03 a04 a05 a06 a07 a08 a09 a10 --mode full
+```
+
+Lo script non sovrascrive file gia presenti nella destinazione.
+
 Per eseguire anche ngspice su un circuito:
 
 ```powershell
@@ -361,6 +420,18 @@ Per rigenerare anche SPICE sugli stessi circuiti:
 python scripts\pipeline_2.0\run_pipeline2.py --batch <batch> --circuits <circuit_1> <circuit_2> <circuit_3> --run-spice --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
 ```
 
+Se si vuole rigenerare deliberatamente una root sperimentale, si puo aggiungere
+`--experiment`:
+
+```powershell
+python scripts\pipeline_2.0\run_pipeline2.py --batch <batch> --experiment <experiment> --circuits <circuit> --run-spice --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+```
+
+Per gli esperimenti di confronto e preferibile usare questa opzione solo quando
+si vuole cambiare anche la baseline tecnica. Se l'obiettivo e confrontare
+agente/scenari sulla stessa base `01-08`, usare prima
+`prepare_experiment_outputs.py --mode base-only`.
+
 ## Web chat locale
 
 La web chat si avvia separatamente dalla pipeline principale.
@@ -374,11 +445,29 @@ Per aprire il sito su un circuito gia generato:
 python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch <batch> --circuit <circuit>
 ```
 
+Per aprire invece una root sperimentale separata:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch <batch> --experiment <experiment> --circuit <circuit>
+```
+
+Esempio:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experiment experiment2 --circuit a01
+```
+
 Se vuoi eseguire anche gli scenari direttamente dalla chat, conviene passare
 anche il path di ngspice:
 
 ```powershell
 python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch <batch> --circuit <circuit> --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+```
+
+Con esperimento:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch <batch> --experiment <experiment> --circuit <circuit> --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
 ```
 
 Lo script avvia un server locale temporaneo e apre il browser su:
@@ -416,6 +505,12 @@ presenti in:
 
 ```text
 outputs/pipeline2.0/<batch>/<circuit>/
+```
+
+oppure, quando si usa `--experiment`:
+
+```text
+outputs/pipeline2.0/<batch>/<experiment>/<circuit>/
 ```
 
 Se quella cartella non esiste, prima bisogna eseguire la pipeline:
@@ -458,6 +553,14 @@ ricarica la pagina sulla run scenario
 Il circuito mantiene un budget massimo di `5` scenari eseguibili. Raggiunto il
 limite, la chat non crea un sesto scenario e l'agente deve chiudere con una
 conclusione diagnostica finale.
+
+Quando si usa `--experiment`, anche la memoria browser della chat viene separata
+per batch, esperimento e circuito. Questo evita di mescolare conversazioni di
+esperimenti diversi.
+
+In particolare, con `--experiment experiment2`, il bottone `Clear` pulisce sia
+la cache locale del browser sia la history ufficiale in
+`experiment2_chat/chat_history.json`.
 
 ## Scenari controllati
 
@@ -555,6 +658,19 @@ Output:
 ```text
 outputs/pipeline2.0/<batch>/<circuit>/11_agent_input_preview.md
 outputs/pipeline2.0/<batch>/<circuit>/11_agent_prompt.md
+```
+
+Con una root sperimentale si puo usare:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\11_agent_readonly.py --batch <batch> --experiment <experiment> --circuit <circuit> --question "Perche la lampada non si accende?"
+```
+
+Output:
+
+```text
+outputs/pipeline2.0/<batch>/<experiment>/<circuit>/11_agent_input_preview.md
+outputs/pipeline2.0/<batch>/<experiment>/<circuit>/11_agent_prompt.md
 ```
 
 Si puo anche passare direttamente il manifest:

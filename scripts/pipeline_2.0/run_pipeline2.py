@@ -62,10 +62,11 @@ def run_one_circuit(
     circuit_id: str,
     run_spice: bool = False,
     ngspice_executable: str | None = None,
+    experiment_name: str | None = None,
 ) -> Path:
     """Esegue gli step disponibili della pipeline 2.0 su un circuito."""
     input_json = io.resolve_pipeline1_graph_json(batch_name, circuit_id)
-    output_dir = io.prepare_circuit_output(batch_name, circuit_id)
+    output_dir = io.prepare_circuit_output(batch_name, circuit_id, experiment_name)
 
     io.copy_source_graph(input_json, output_dir)
 
@@ -122,6 +123,7 @@ def run_one_circuit(
         batch_name=batch_name,
         circuit_id=circuit_id,
         project_root=io.PROJECT_ROOT,
+        experiment_name=experiment_name,
     )
     diagnostic_context_path = io.write_json(
         output_dir / "10_diagnostic_context.json",
@@ -141,7 +143,8 @@ def run_one_circuit(
             f"exit_code={spice_run_report.get('exit_code')})"
         )
     print(
-        f"{batch_name}/{circuit_id}: normalized -> {normalized_path} "
+        f"{batch_name}/{experiment_name + '/' if experiment_name else ''}{circuit_id}: "
+        f"normalized -> {normalized_path} "
         f"(components={stats.get('components_count')}, "
         f"terminals={stats.get('terminals_count')}, "
         f"edges={stats.get('undirected_edges_count')}); "
@@ -195,6 +198,14 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Path o nome dell'eseguibile ngspice da usare, per esempio ngspice_con.",
     )
+    parser.add_argument(
+        "--experiment",
+        default=None,
+        help=(
+            "Nome esperimento opzionale. Se indicato, gli output vengono scritti in "
+            "outputs/pipeline2.0/<batch>/<experiment>/<circuit>/."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -207,6 +218,7 @@ def main() -> None:
             circuit_id=circuit_id,
             run_spice=args.run_spice,
             ngspice_executable=args.ngspice_executable,
+            experiment_name=args.experiment,
         )
 
 

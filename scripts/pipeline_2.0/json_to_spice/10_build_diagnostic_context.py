@@ -405,6 +405,7 @@ def build_diagnostic_context(
     circuit_id: str,
     project_root: str | Path | None = None,
     user_problem: str | None = None,
+    experiment_name: str | None = None,
 ) -> dict[str, Any]:
     """
     Costruisce il manifest diagnostico leggero.
@@ -420,6 +421,7 @@ def build_diagnostic_context(
     return {
         "source_format": "pipeline2.0_diagnostic_context_manifest",
         "batch_name": batch_name,
+        "experiment_name": experiment_name,
         "circuit_id": circuit_id,
         "user_problem": user_problem,
         "pipeline2_output_dir": relative_or_absolute(circuit_dir, root),

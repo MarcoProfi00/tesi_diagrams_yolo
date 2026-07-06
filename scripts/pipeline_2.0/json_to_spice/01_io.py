@@ -76,13 +76,23 @@ def resolve_pipeline1_graph_json(batch_name: str, circuit_id: str) -> Path:
     )
 
 
-def resolve_pipeline2_circuit_dir(batch_name: str, circuit_id: str) -> Path:
+def resolve_pipeline2_circuit_dir(
+    batch_name: str,
+    circuit_id: str,
+    experiment_name: str | None = None,
+) -> Path:
     """
     Restituisce la cartella output della pipeline 2.0 per un circuito.
 
     Esempio:
     outputs/pipeline2.0/batchA/a01
+
+    Se `experiment_name` e valorizzato, restituisce una root sperimentale
+    separata:
+    outputs/pipeline2.0/batchA/experiment2/a01
     """
+    if experiment_name:
+        return PIPELINE2_ROOT / batch_name / experiment_name / circuit_id
     return PIPELINE2_ROOT / batch_name / circuit_id
 
 
@@ -103,6 +113,10 @@ def copy_source_graph(input_path: str | Path, output_dir: str | Path) -> Path:
     return destination
 
 
-def prepare_circuit_output(batch_name: str, circuit_id: str) -> Path:
+def prepare_circuit_output(
+    batch_name: str,
+    circuit_id: str,
+    experiment_name: str | None = None,
+) -> Path:
     """Crea e restituisce la cartella output per un circuito."""
-    return ensure_dir(resolve_pipeline2_circuit_dir(batch_name, circuit_id))
+    return ensure_dir(resolve_pipeline2_circuit_dir(batch_name, circuit_id, experiment_name))
