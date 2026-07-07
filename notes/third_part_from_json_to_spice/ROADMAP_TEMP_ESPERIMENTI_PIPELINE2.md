@@ -34,7 +34,7 @@ Risultato:
 
 ## Esperimento 2 - Scenari piu potenti
 
-Stato: prossimo esperimento.
+Stato: in corso.
 
 Obiettivo:
 
@@ -106,6 +106,14 @@ Serve per:
 - `a09`: combinare alimentazione e continuita nel ramo lampada;
 - `a10`: testare collegamenti mancanti tra connector e rami finali.
 
+Stato attuale della sottofase `connect_nodes`:
+
+- implementata nel runner scenario;
+- integrata nella web chat e nel prompt agente;
+- validata su `a01`, `a02`, `a09`, `a10`;
+- documentata nei markdown `experiment2` del Batch A;
+- considerata sostanzialmente chiusa come prima primitiva di Esperimento 2.
+
 #### 2. feed_nodes_from_source_node
 
 Propaga una tensione da un nodo sorgente gia presente verso uno o piu nodi
@@ -132,6 +140,13 @@ Serve per:
   verso LED e lampada;
 - `a10`: dopo la chiusura dello switch, testare se l'alimentazione arrivata a
   valle deve essere trasferita verso `N003` e `N004`.
+
+Stato attuale della sottofase `feed_nodes_from_source_node`:
+
+- in implementazione come seconda primitiva topologica di Esperimento 2;
+- pensata come wrapper semantico controllato sopra collegamenti tipo
+  `connect_nodes`;
+- `a01` resta il candidato piu pulito per iniziare i primi test.
 
 #### 3. add_voltage_source_between_nodes
 

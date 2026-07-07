@@ -9,7 +9,8 @@ Versione attuale minimale:
 - legge `scenario.json`;
 - lavora sulla netlist copiata in `run/07_netlist.cir`;
 - supporta le azioni generali `drive_node_voltage`, `connect_nodes`,
-  `change_source_value`, `change_component_value` e `close_switch`;
+  `feed_nodes_from_source_node`, `change_source_value`,
+  `change_component_value` e `close_switch`;
 - aggiunge o aggiorna una sorgente SPICE di scenario;
 - modifica il valore di una sorgente SPICE esistente;
 - modifica il valore di un componente semplice gia emesso in netlist;
@@ -275,6 +276,79 @@ def apply_connect_nodes(
         "resistance": resistance,
         "inserted_line": resistor_line,
         "operation": operation,
+        "spice_executed": False,
+    }
+    return updated_netlist, result
+
+
+def apply_feed_nodes_from_source_node(
+    action: dict[str, Any],
+    run_dir: Path,
+    netlist_text: str,
+) -> tuple[str, dict[str, Any]]:
+    """
+    Applica `feed_nodes_from_source_node` come propagazione controllata.
+
+    La primitiva resta semanticamente distinta da `connect_nodes`, ma la
+    traduzione SPICE minimale e una resistenza quasi ideale dal nodo sorgente
+    verso ciascun target dichiarato.
+    """
+    node_map = read_json(run_dir / "03_node_map.json")
+    source_node = validate_existing_node(action.get("source_node"), node_map, field_name="source_node")
+    if source_node == "0":
+        raise ValueError("feed_nodes_from_source_node requires a non-ground source_node")
+
+    raw_targets = action.get("target_nodes")
+    if raw_targets is None:
+        raw_targets = [action.get("target_node")]
+    if not isinstance(raw_targets, list):
+        raise ValueError("feed_nodes_from_source_node requires target_nodes as a list")
+
+    resistance = normalize_spice_resistance_value(action.get("resistance"))
+    updated_netlist = netlist_text
+    inserted_lines: list[str] = []
+    expanded_connections: list[dict[str, Any]] = []
+    seen_targets: set[str] = set()
+
+    for raw_target in raw_targets:
+        target_node = validate_existing_node(raw_target, node_map, field_name="target_nodes")
+        if target_node == "0":
+            raise ValueError("feed_nodes_from_source_node target_nodes cannot include ground node 0")
+        if target_node == source_node:
+            raise ValueError("feed_nodes_from_source_node target_nodes cannot include source_node")
+        if target_node in seen_targets:
+            continue
+        seen_targets.add(target_node)
+
+        resistor_name = (
+            f"RSCENARIO_FEED_{sanitize_spice_name(source_node)}_"
+            f"{sanitize_spice_name(target_node)}"
+        )
+        resistor_line = f"{resistor_name} {source_node} {target_node} {resistance}"
+        updated_netlist, operation = insert_or_replace_source(updated_netlist, resistor_name, resistor_line)
+        inserted_lines.append(resistor_line)
+        expanded_connections.append(
+            {
+                "from": source_node,
+                "to": target_node,
+                "resistance": resistance,
+                "inserted_line": resistor_line,
+                "operation": operation,
+            }
+        )
+
+    if not expanded_connections:
+        raise ValueError("feed_nodes_from_source_node requires at least one valid target node")
+
+    result = {
+        "status": "applied",
+        "type": "feed_nodes_from_source_node",
+        "source_node": source_node,
+        "target_nodes": [item["to"] for item in expanded_connections],
+        "resistance": resistance,
+        "inserted_lines": inserted_lines,
+        "expanded_connections": expanded_connections,
+        "operation": "inserted_or_updated",
         "spice_executed": False,
     }
     return updated_netlist, result
@@ -1025,6 +1099,10 @@ def apply_scenario(
                 applied_actions.append(result)
             elif action_type == "connect_nodes":
                 netlist_text, result = apply_connect_nodes(action, run_dir, netlist_text)
+                result["index"] = index
+                applied_actions.append(result)
+            elif action_type == "feed_nodes_from_source_node":
+                netlist_text, result = apply_feed_nodes_from_source_node(action, run_dir, netlist_text)
                 result["index"] = index
                 applied_actions.append(result)
             elif action_type == "change_source_value":

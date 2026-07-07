@@ -72,7 +72,8 @@ Scenari dalla chat:
 ```text
 utente scrive "esegui scenario 1" oppure "esegui questo scenario"
 -> 09 interpreta la scelta
--> 09 recupera lo scenario proposto da 11
+-> per experiment2, 09 usa il scenario_registry locale del circuito
+-> 09 recupera il JSON tecnico dello scenario selezionato
 -> 09 chiama 12_controlled_scenarios.py
 -> 12 crea una cartella scenario separata
 -> 12 modifica solo copie degli output originali
@@ -282,7 +283,7 @@ Flusso attuale:
 ```text
 utente scrive "esegui scenario 1"
 -> 09 riconosce la scelta
--> 09 estrae il JSON scenario dall'ultima risposta agente
+-> per experiment2, 09 recupera lo scenario dal scenario_registry globale
 -> 09 crea scenarios/<scenario_id>/
 -> 09 salva scenario.json e scenario_status.json
 -> 09 copia la base run in base_snapshot/ e run/
@@ -553,7 +554,8 @@ esegui lo scenario appena proposto
 ```
 
 La chat deve riconoscere la scelta e recuperare il JSON tecnico dello scenario
-proposto nella risposta precedente.
+scelto. In `experiment2` la sorgente ufficiale non e piu solo la risposta
+precedente dell'agente, ma il `scenario_registry.json` locale del circuito.
 
 Prima versione semplice:
 
@@ -590,6 +592,11 @@ come `Scenario 4` e `Scenario 5`. Le formule ordinali come `il primo`,
 come `l'ultimo`, `quest'ultimo` o `quello appena proposto` puntano invece
 all'ultimo scenario aggiunto al registry.
 
+La UI deve anche suggerire comandi coerenti agli scenari correnti. Quindi gli
+esempi finali mostrati in chat non devono restare hardcoded su `scenario 1`, ma
+devono essere costruiti dinamicamente in base agli ID realmente disponibili nel
+registry.
+
 ### TODO 6 - Collegare 12 controlled scenarios
 
 Quando l'utente sceglie uno scenario:
@@ -625,6 +632,9 @@ implementato per primitive semplici e scenario run separata
 - supporta change_source_value su sorgenti SPICE esistenti
 - supporta change_component_value su componenti semplici gia emessi
 - supporta close_switch su switch gia riconosciuti
+- supporta connect_nodes per continuita controllata tra due nodi esistenti
+- supporta feed_nodes_from_source_node per propagare un nodo sorgente gia
+  alimentato verso uno o piu target
 - modifica solo run/07_netlist.cir
 - salva 12_controlled_scenarios.json
 - puo eseguire ngspice con --run-spice

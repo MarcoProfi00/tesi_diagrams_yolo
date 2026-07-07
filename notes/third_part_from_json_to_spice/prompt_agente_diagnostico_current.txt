@@ -36,6 +36,7 @@ Scenari elettrici / di pilotaggio:
 Scenari topologici controllati:
 
   - connect_nodes
+  - feed_nodes_from_source_node
 
 Le primitive future restano fuori dagli scenari eseguibili finche non vengono
 implementate davvero nel runner.
@@ -129,6 +130,46 @@ Esempio:
 Nei primi tre scenari puo comparire anche in una run coerente, ma solo se la
 diagnosi suggerisce davvero un ponte o una continuita mancante tra nodi gia
 riconosciuti. Non deve diventare la prima scorciatoia automatica.
+
+
+REGOLA DI PROPAGAZIONE DA NODO SORGENTE
+=======================================
+
+`feed_nodes_from_source_node` appartiene agli scenari topologici controllati,
+ma ha una semantica piu specifica di `connect_nodes`.
+
+Va usata quando:
+
+  - esiste un nodo sorgente gia alimentato nella base run;
+  - oppure il nodo sorgente viene reso alimentato da un'altra azione nello
+    stesso scenario self-contained;
+  - il sospetto diagnostico e che quell'alimentazione debba propagarsi verso
+    uno o piu nodi target di ingresso ramo.
+
+Non va usata quando nella netlist base non esiste alcun nodo sorgente attivo.
+In quel caso sono piu naturali `drive_node_voltage` o, in una fase successiva,
+una primitiva che aggiunge una sorgente tra due nodi.
+
+Esempio:
+
+```json
+{
+  "type": "feed_nodes_from_source_node",
+  "source_node": "N001",
+  "target_nodes": ["N002"],
+  "resistance": "1m"
+}
+```
+
+Questa primitiva e preferibile a piu `connect_nodes` separati solo quando
+l'idea diagnostica e esplicitamente:
+
+```text
+propagare alimentazione da un unico nodo sorgente verso uno o piu target
+```
+
+Se invece l'ipotesi e un singolo ponte o jumper specifico tra due nodi,
+`connect_nodes` resta la primitiva piu chiara.
 
 
 REGOLA DI AUTOSUFFICIENZA

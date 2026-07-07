@@ -211,6 +211,28 @@ def repair_common_mojibake(text: str) -> str:
     return repaired
 
 
+def normalize_human_text(text: str) -> str:
+    """
+    Normalizza testo umano con una riparazione conservativa del mojibake.
+
+    Prima prova uno o due passaggi UTF-8/Latin-1 solo se il testo contiene
+    marker tipici di corruzione. Poi applica le sostituzioni locali gia note.
+    """
+    normalized = text
+    suspicious_markers = ("Ã", "â", "Â")
+    for _ in range(2):
+        if not any(marker in normalized for marker in suspicious_markers):
+            break
+        try:
+            candidate = normalized.encode("latin-1").decode("utf-8")
+        except UnicodeError:
+            break
+        if candidate == normalized:
+            break
+        normalized = candidate
+    return repair_common_mojibake(normalized)
+
+
 def cleanup_chat_reply(text: str) -> str:
     """
     Rimuove dalla chat i blocchi tecnici troppo grezzi.
@@ -219,7 +241,7 @@ def cleanup_chat_reply(text: str) -> str:
     vogliamo un'interazione piu naturale, senza mostrare JSON di servizio come
     scenario tecnico o blocco tecnico finale per pipeline.
     """
-    cleaned = repair_common_mojibake(text).replace("\r\n", "\n")
+    cleaned = normalize_human_text(text).replace("\r\n", "\n")
 
     patterns = [
         r"\n*Scenario tecnico recuperato:\s*\n\s*```json\s*.*?```",
@@ -253,8 +275,8 @@ def project_relative(path: Path) -> str:
 
 
 def is_experiment2_history_enabled(experiment: str | None) -> bool:
-    """Abilita la chat history server-side solo per Esperimento 2."""
-    return experiment == "experiment2"
+    """Abilita history/registry server-side per Esperimento 2 e sottofasi."""
+    return bool(experiment) and str(experiment).startswith("experiment2")
 
 
 def build_experiment2_chat_dir(output_dir: Path, experiment: str | None) -> Path | None:
@@ -359,7 +381,7 @@ def build_experiment2_chat_history_markdown(history: dict[str, Any]) -> str:
                 "",
                 "### Content",
                 "",
-                str(turn.get("content") or ""),
+                normalize_human_text(str(turn.get("content") or "")),
                 "",
             ]
         )
@@ -400,7 +422,7 @@ def append_experiment2_chat_event(
         "turn_id": next_turn_id,
         "timestamp": datetime.now().isoformat(timespec="seconds"),
         "role": role,
-        "content": content,
+        "content": normalize_human_text(content),
         "model": model,
         "selected_run": selected_run,
         "used_image": used_image,
@@ -593,7 +615,7 @@ def build_experiment2_scenario_registry_markdown(registry: dict[str, Any]) -> st
         if not isinstance(scenario, dict):
             continue
         scenario_id = str(scenario.get("scenario_id") or "")
-        title = str(scenario.get("title") or scenario_id)
+        title = normalize_human_text(str(scenario.get("title") or scenario_id))
         lines.extend(
             [
                 f"## Scenario {scenario.get('scenario_number')} - {title}",
@@ -609,7 +631,7 @@ def build_experiment2_scenario_registry_markdown(registry: dict[str, Any]) -> st
                 "",
             ]
         )
-        hypothesis = str(scenario.get("hypothesis") or "").strip()
+        hypothesis = normalize_human_text(str(scenario.get("hypothesis") or "").strip())
         if hypothesis:
             lines.extend(["### Hypothesis", "", hypothesis, ""])
         actions = scenario.get("actions") or []
@@ -676,7 +698,8 @@ def register_experiment2_scenarios_from_response(
     added: list[dict[str, Any]] = []
     next_number = int(registry.get("next_scenario_number") or 1)
     for local_index, raw_scenario in enumerate(extracted, start=1):
-        scenario = unescape_html_entities(raw_scenario)
+        scenario = normalize_human_text(json.dumps(unescape_html_entities(raw_scenario), ensure_ascii=False))
+        scenario = json.loads(scenario)
         signature = registered_scenario_signature(scenario)
         if signature in existing_signatures:
             continue
@@ -1531,6 +1554,8 @@ def run_readonly_agent_from_chat(
         output_path=response_path,
         image_path=image_path,
     )
+    normalized_response = normalize_human_text(read_text_safe(response_path)).rstrip() + "\n"
+    response_path.write_text(normalized_response, encoding="utf-8")
 
     debug_lines = [
         f"Updated: {project_relative(context_path)}",
@@ -1549,7 +1574,7 @@ def run_readonly_agent_from_chat(
         debug_lines.append("Auto image: not used")
 
     return {
-        "reply": cleanup_chat_reply(read_text_safe(response_path)),
+        "reply": cleanup_chat_reply(normalized_response),
         "debug": debug_lines,
         "used_image": image_path is not None,
         "generated_files": [

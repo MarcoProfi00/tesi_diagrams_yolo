@@ -205,10 +205,15 @@ Quando l'utente scrive frasi come:
 esegui scenario 1
 esegui questo scenario
 esegui lo scenario appena proposto
+esegui l'ultimo
+mostra scenari
 ```
 
-lo step `09` riconosce la scelta, recupera lo scenario JSON dall'ultima risposta
-agente e chiama lo step `12`.
+lo step `09` riconosce la scelta e, in `experiment2`, usa il
+`scenario_registry.json` locale come sorgente ufficiale degli scenari
+proposti/eseguiti. Il JSON tecnico non viene piu recuperato solo dall'ultima
+risposta agente: viene letto dal registry globale del circuito e poi passato
+allo step `12`.
 
 La chat supporta anche un selettore modello.
 
@@ -314,6 +319,7 @@ Scenari elettrici / di pilotaggio:
 
 Scenari topologici controllati:
 - connect_nodes
+- feed_nodes_from_source_node
 ```
 
 `drive_node_voltage` aggiunge o aggiorna una sorgente di test su un nodo della
@@ -332,6 +338,12 @@ resistenza tra i suoi due nodi.
 `connect_nodes` collega due nodi gia esistenti della node map con una piccola
 resistenza di scenario. E la primitiva topologica minima per testare continuita,
 jumper, bridge, wire o collegamenti mancanti tra nodi gia riconosciuti.
+
+`feed_nodes_from_source_node` propaga in modo controllato un nodo sorgente gia
+alimentato verso uno o piu nodi target. Internamente viene tradotta in
+collegamenti resistivi quasi ideali nella netlist scenario, ma resta distinta da
+`connect_nodes` perche rappresenta una ipotesi diagnostica di propagazione
+dell'alimentazione.
 
 I valori devono essere concreti: uno scenario con `value: "unknown"` viene
 fermato e marcato come non eseguibile.
@@ -550,6 +562,8 @@ La chat riconosce anche richieste di esecuzione scenario:
 esegui scenario 1
 esegui questo scenario
 esegui lo scenario appena proposto
+esegui l'ultimo
+mostra scenari
 ```
 
 Quando scrivi una richiesta di questo tipo, il sito:
@@ -593,7 +607,8 @@ esperimenti diversi.
 
 In particolare, con `--experiment experiment2`, il bottone `Clear` pulisce sia
 la cache locale del browser sia la history ufficiale in
-`experiment2_chat/chat_history.json`.
+`experiment2_chat/chat_history.json` e il registry scenari ufficiale in
+`experiment2_chat/scenario_registry.json`.
 
 ## Scenari controllati
 
@@ -1044,8 +1059,9 @@ Versione attuale:
 - OpenAI e collegato sia da CLI sia dalla web chat
 - `12_controlled_scenarios.py` applica scenari controllati
   elettrici/topologici (`drive_node_voltage`, `change_source_value`,
-  `change_component_value`, `close_switch`, `connect_nodes`), puo eseguire
-  ngspice e crea un confronto base/scenario
+  `change_component_value`, `close_switch`, `connect_nodes`,
+  `feed_nodes_from_source_node`), puo eseguire ngspice e crea un confronto
+  base/scenario
 
 Regole sugli scenari:
 

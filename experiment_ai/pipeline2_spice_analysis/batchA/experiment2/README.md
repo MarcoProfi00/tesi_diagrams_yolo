@@ -27,14 +27,15 @@ Primitive di riferimento:
 ```text
 Scenari topologici controllati:
 - connect_nodes
-- feed_nodes_from_source_node (fase successiva)
+- feed_nodes_from_source_node
 - add_voltage_source_between_nodes (fase successiva)
 ```
 
-Per ora il focus operativo iniziale e:
+Il focus operativo si e sviluppato in sottofasi successive:
 
 ```text
-connect_nodes
+1. connect_nodes
+2. feed_nodes_from_source_node
 ```
 
 ## Fonti da considerare autorevoli
@@ -50,6 +51,15 @@ Artefatti grezzi ufficiali:
 outputs/pipeline2.0/<batch>/experiment2/<circuit>/
 outputs/pipeline2.0/<batch>/experiment2/<circuit>/experiment2_chat/
 outputs/pipeline2.0/<batch>/experiment2/<circuit>/scenarios/
+```
+
+Quando una sottofase viene tenuta separata, la stessa struttura puo comparire
+anche in una root dedicata, per esempio:
+
+```text
+outputs/pipeline2.0/<batch>/experiment2_feed_nodes/<circuit>/
+outputs/pipeline2.0/<batch>/experiment2_feed_nodes/<circuit>/experiment2_chat/
+outputs/pipeline2.0/<batch>/experiment2_feed_nodes/<circuit>/scenarios/
 ```
 
 In particolare:
@@ -99,7 +109,7 @@ Per ogni circuito di Experiment 2:
 
 | Circuito | Incluso | Stato | Primitiva focus | Riferimento base | Nota breve |
 | --- | --- | --- | --- | --- | --- |
-| `a01` | si | completed | `connect_nodes` / `feed_nodes_from_source_node` | `../experiment1/a01.md` | Caso chiuso: il ramo LED e gia vivo, e `connect_nodes N001 -> N002` attiva il ramo lampada. |
+| `a01` | si | completed | `connect_nodes` / `feed_nodes_from_source_node` | `../experiment1/a01.md` | Caso chiuso su due sottofasi: `connect_nodes N001 -> N002` valida la continuita mancante, poi `feed_nodes_from_source_node N001 -> N002` riformula la stessa evidenza come propagazione dal nodo sorgente vivo. |
 | `a02` | si | completed | `connect_nodes` | `../experiment1/a02.md` | Caso chiuso: `connect_nodes N002 -> N004` attiva il ramo resistivo e la corrente di batteria. |
 | `a03` | no | excluded_for_now | - | `../experiment1/a03.md` | Caso image-assisted troppo complesso per la fase iniziale di Experiment 2. |
 | `a04` | si | not started | tbd | `../experiment1/a04.md` | Non prioritario per la prima ondata topologica. |
@@ -107,7 +117,7 @@ Per ogni circuito di Experiment 2:
 | `a06` | si | not started | tbd | `../experiment1/a06.md` | Non prioritario per la prima ondata topologica. |
 | `a07` | si | not started | `connect_nodes` / `add_voltage_source_between_nodes` | `../experiment1/a07.md` | Caso da usare dopo `a10` e `a09`, con attenzione alla mancanza di eccitazione reale. |
 | `a08` | si | not started | tbd | `../experiment1/a08.md` | Non prioritario per la prima ondata topologica. |
-| `a09` | si | completed | `connect_nodes` / `feed_nodes_from_source_node` | `../experiment1/a09.md` | Caso forte: lampada e LED si attivano quando il nodo alimentato viene collegato correttamente ai due ingressi di ramo. |
+| `a09` | si | completed | `connect_nodes` / `feed_nodes_from_source_node` | `../experiment1/a09.md` | Caso forte su due sottofasi separate: `connect_nodes` valida i due rami in modo diretto, `feed_nodes_from_source_node` conferma la propagazione da `N003` verso LED e lampada fino allo scenario combinato finale. |
 | `a10` | si | completed | `connect_nodes` | `../experiment1/a10.md` | Primo circuito pilota chiuso: conferma della primitiva su ramo LED e ramo lampada. |
 
 ## Campi stabili per risultati futuri

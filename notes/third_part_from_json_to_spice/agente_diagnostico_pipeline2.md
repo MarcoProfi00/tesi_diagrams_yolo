@@ -2160,6 +2160,7 @@ Gia presente:
 - esecuzione anche dell'ultimo scenario appena proposto con formule come
   "esegui l'ultimo" o "esegui quest'ultimo";
 - riepilogo scenari con frasi come "mostra scenari";
+- suggerimenti finali dinamici allineati agli ID reali del registry scenari;
 - reset sessione `experiment2` con Clear, senza toccare gli output base 01-08;
 - confronto base/scenario;
 - domande successive sugli scenari gia eseguiti;
@@ -2195,6 +2196,14 @@ Prossimi esperimenti:
    aggiungi una resistenza equivalente o un carico minimo
    collega due nodi solo nella run scenario
    ```
+
+   Nota di stato:
+
+   - la prima sottofase `connect_nodes` e gia stata validata sui casi
+     `a01`, `a02`, `a09` e `a10`;
+   - il prossimo passo atteso e `feed_nodes_from_source_node`, da usare solo
+     quando esiste un nodo sorgente gia alimentato o reso alimentato nello
+     stesso scenario self-contained.
 
 2. **Esperimento 3 - automazione agentica degli scenari**
 

@@ -1,0 +1,199 @@
+{
+  "circuit_id": "a09",
+  "source_format": "pipeline2.0_values_bound",
+  "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\pipeline2_manual_values\\batchA\\a09_values.yaml",
+  "supplies": {},
+  "components": {
+    "battery2.1": {
+      "class_name": "Battery",
+      "terminal_nodes": {
+        "positive": "N001",
+        "negative": "0"
+      },
+      "value_data": {
+        "type": "dc",
+        "value": 9,
+        "unit": "V",
+        "source": "manual_from_image_label",
+        "label_text": "BAT2 9 V DC"
+      },
+      "status": "bound"
+    },
+    "capacitor4.1": {
+      "class_name": "Capacitor",
+      "terminal_nodes": {
+        "t1": "N002",
+        "t2": "0"
+      },
+      "value_data": {
+        "value": 100,
+        "unit": "nF",
+        "source": "manual_from_image_label",
+        "label_text": "C1 100 nF"
+      },
+      "status": "bound"
+    },
+    "connector5.1": {
+      "class_name": "Connector",
+      "terminal_nodes": {
+        "pin1": "N003",
+        "pin2": "N002",
+        "pin3": "N004",
+        "pin4": "N005",
+        "pin5": "0"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "fuse8.1": {
+      "class_name": "Fuse",
+      "terminal_nodes": {
+        "t1": "N001",
+        "t2": "N003"
+      },
+      "value_data": {
+        "state": "closed",
+        "current_rating": 500,
+        "current_unit": "mA",
+        "source": "manual_from_image_label",
+        "label_text": "F1 500 mA"
+      },
+      "status": "bound"
+    },
+    "gnd9.1": {
+      "class_name": "GND",
+      "terminal_nodes": {
+        "t1": "0"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "gnd9.2": {
+      "class_name": "GND",
+      "terminal_nodes": {
+        "t1": "0"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "gnd9.3": {
+      "class_name": "GND",
+      "terminal_nodes": {
+        "t1": "0"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "gnd9.4": {
+      "class_name": "GND",
+      "terminal_nodes": {
+        "t1": "0"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "gnd9.5": {
+      "class_name": "GND",
+      "terminal_nodes": {
+        "t1": "0"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "lamp13.1": {
+      "class_name": "Lamp",
+      "terminal_nodes": {
+        "t1": "N006",
+        "t2": "0"
+      },
+      "value_data": {
+        "equivalent_resistance": 90,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "90 ohm",
+        "spice": "resistive_load"
+      },
+      "status": "bound"
+    },
+    "led12.1": {
+      "class_name": "LED",
+      "terminal_nodes": {
+        "anode": "N007",
+        "cathode": "0"
+      },
+      "value_data": {
+        "model": "LED_RED",
+        "source": "manual_assumption"
+      },
+      "status": "bound"
+    },
+    "resistor22.1": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N005",
+        "t2": "N007"
+      },
+      "value_data": {
+        "value": 330,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "R3 330R"
+      },
+      "status": "bound"
+    },
+    "switch25.1": {
+      "class_name": "Switch",
+      "terminal_nodes": {
+        "t1": "N004",
+        "t2": "N006"
+      },
+      "value_data": {
+        "state": "open",
+        "state_source": "graph_json_state",
+        "state_confidence": 0.95,
+        "source": "graph_json_state",
+        "label_text": "SW2"
+      },
+      "status": "bound"
+    }
+  },
+  "nodes": {
+    "connector5.1_pin1": {
+      "label": "BAT_FUSED",
+      "source": "inferred_from_fuse_output",
+      "node": "N003"
+    },
+    "connector5.1_pin2": {
+      "label": "C1_TOP",
+      "source": "inferred_from_capacitor_branch",
+      "node": "N002"
+    },
+    "connector5.1_pin3": {
+      "label": "SW2_INPUT",
+      "source": "inferred_from_switch_branch",
+      "node": "N004"
+    },
+    "connector5.1_pin4": {
+      "label": "PWR_LED_INPUT",
+      "source": "inferred_from_resistor_led_branch",
+      "node": "N005"
+    },
+    "connector5.1_pin5": {
+      "label": "GND",
+      "spice_node": 0,
+      "source": "graph_json_gnd",
+      "node": "0"
+    }
+  },
+  "simulation": {},
+  "missing": [],
+  "stats": {
+    "components_total": 13,
+    "bound_components": 7,
+    "missing_components": 0,
+    "not_required_components": 6,
+    "unsupported_components": 0,
+    "supplies_count": 0,
+    "manual_nodes_count": 5
+  }
+}
