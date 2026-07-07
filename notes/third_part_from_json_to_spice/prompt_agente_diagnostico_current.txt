@@ -1,0 +1,207 @@
+PROMPT AGENTE DIAGNOSTICO - SNAPSHOT CORRENTE
+=============================================
+
+Questo file documenta lo snapshot corrente del prompt dell'agente diagnostico.
+
+Importante:
+
+- questo file NON viene letto a runtime dalla pipeline;
+- e una nota di allineamento e consultazione umana;
+- il prompt operativo viene generato dal codice in:
+
+```text
+scripts/pipeline_2.0/json_to_spice/agent_readonly/prompt_builder.py
+scripts/pipeline_2.0/json_to_spice/agent_readonly/scenario_prompt.py
+```
+
+- in CLI lo step 11 genera `11_agent_prompt.md`;
+- nella web chat lo step 09 genera `11_agent_prompt_chat.md`.
+
+Le regole qui descritte sono generali: devono valere per tutti i batch e per
+tutti i circuiti, non solo per `a01`.
+
+
+FAMIGLIE DI SCENARIO
+====================
+
+Il prompt corrente distingue due famiglie principali di scenario.
+
+Scenari elettrici / di pilotaggio:
+
+  - drive_node_voltage
+  - change_source_value
+  - change_component_value
+  - close_switch
+
+Scenari topologici controllati:
+
+  - connect_nodes
+
+Le primitive future restano fuori dagli scenari eseguibili finche non vengono
+implementate davvero nel runner.
+
+
+REGOLA DI NATURALEZZA
+=====================
+
+Quando un ramo di carico e alimentato attraverso un ingresso a monte, l'agente
+deve preferire l'ingresso a monte invece di forzare direttamente il nodo
+interno del carico.
+
+Esempio:
+
+```text
+connector pin -> resistor -> lamp -> ground
+```
+
+Scenario naturale:
+
+```json
+{
+  "type": "drive_node_voltage",
+  "target": "N002",
+  "value": "5V"
+}
+```
+
+Scenario meno naturale, da usare solo come test successivo di isolamento:
+
+```json
+{
+  "type": "drive_node_voltage",
+  "target": "N004",
+  "value": "5V"
+}
+```
+
+Se esiste uno switch gia riconosciuto, aprire o chiudere quello switch e spesso
+piu naturale che inventare un nuovo punto interno di alimentazione.
+
+Se l'ipotesi riguarda invece un valore gia presente in netlist, per esempio una
+resistenza di bias, un condensatore RC o una resistenza equivalente, l'agente
+deve preferire `change_component_value` invece di forzare direttamente un nodo
+interno.
+
+Esempio:
+
+```json
+{
+  "type": "change_component_value",
+  "target": "Rresistor22_4",
+  "value": "33k"
+}
+```
+
+
+REGOLA TOPOLOGICA
+=================
+
+`connect_nodes` appartiene agli scenari topologici controllati.
+
+Va usata quando l'ipotesi principale e una continuita mancante tra due nodi gia
+riconosciuti dalla pipeline, per esempio:
+
+  - jumper
+  - bridge
+  - wire
+  - collegamento connector-to-branch
+  - percorso di continuita che dovrebbe esistere tra due nodi gia presenti
+
+Non va usata come scorciatoia generica per "accendere qualcosa" quando il caso
+e spiegabile in modo piu naturale con:
+
+  - close_switch
+  - drive_node_voltage su un ingresso reale
+  - change_source_value
+  - change_component_value
+
+Esempio:
+
+```json
+{
+  "type": "connect_nodes",
+  "from": "N002",
+  "to": "N003",
+  "resistance": "1m"
+}
+```
+
+Nei primi tre scenari puo comparire anche in una run coerente, ma solo se la
+diagnosi suggerisce davvero un ponte o una continuita mancante tra nodi gia
+riconosciuti. Non deve diventare la prima scorciatoia automatica.
+
+
+REGOLA DI AUTOSUFFICIENZA
+=========================
+
+I primi tre scenari devono poter essere eseguiti da soli.
+
+Dopo che esistono scenari gia eseguiti, anche ogni nuovo scenario proposto deve
+poter essere eseguito da solo partendo dalla base run. Le modifiche applicate
+in una cartella scenario precedente non restano attive automaticamente.
+
+Non va bene proporre:
+
+```text
+dopo lo scenario 1, esegui .tran
+```
+
+se lo scenario non include anche le azioni necessarie ad alimentare il ramo.
+
+La forma corretta e includere tutto nello stesso JSON.
+
+Regola pratica:
+
+```text
+se il prossimo scenario dipende da una condizione abilitante gia verificata,
+quella condizione va ripetuta nello stesso array actions del nuovo scenario.
+```
+
+Esempio:
+
+```json
+{
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    },
+    {
+      "type": "connect_nodes",
+      "from": "N002",
+      "to": "N003",
+      "resistance": "1m"
+    }
+  ]
+}
+```
+
+Non bisogna pero combinare tutto automaticamente: si reincludono solo le azioni
+abilitanti davvero necessarie alla nuova ipotesi.
+
+
+MODALITA CONCLUSIONE FINALE
+===========================
+
+Quando l'utente non chiede piu "quale scenario provo adesso?", ma chiede invece
+una sintesi o una conclusione, l'agente deve entrare in una modalita diversa.
+
+Esempi tipici:
+
+  - Dammi una conclusione finale
+  - Qual e la diagnosi finale piu probabile?
+  - Riassumi cosa hanno mostrato gli scenari
+  - Dopo questi test, cosa possiamo concludere?
+  - Ha senso continuare oppure possiamo fermarci qui?
+
+In questa modalita l'agente:
+
+  1. usa come evidenza principale gli scenari gia eseguiti;
+  2. non propone automaticamente un nuovo scenario;
+  3. spiega quali ipotesi sono state rafforzate e quali indebolite;
+  4. da la conclusione diagnostica piu forte raggiungibile;
+  5. chiarisce cosa non e ancora dimostrato;
+  6. suggerisce un altro scenario solo se e davvero l'unico test decisivo rimasto.
+
+Questa regola serve a evitare che l'agente continui a generare scenari in modo
+automatico anche quando l'utente vuole semplicemente tirare le conclusioni.

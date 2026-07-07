@@ -1,0 +1,24 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Collegare BAT_FUSED a SW2_INPUT e chiudere lo switch",
+  "hypothesis": "Il ramo della lampada resta spento perché N004 non ha continuità con il nodo alimentato N003; chiudere solo switch25.1 non basta senza alimentazione su N004.",
+  "actions": [
+    {
+      "type": "connect_nodes",
+      "from": "N003",
+      "to": "N004",
+      "resistance": "1m"
+    },
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N004)",
+    "v(N006)",
+    "i(Rlamp13_1)"
+  ]
+}

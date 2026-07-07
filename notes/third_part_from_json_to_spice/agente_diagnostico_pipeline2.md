@@ -345,11 +345,12 @@ outcome e path di esecuzione.
 Il limite operativo per `experiment2` e:
 
 ```text
-massimo 5 scenari SPICE registrati/eseguibili per circuito
+massimo 5 scenari SPICE eseguiti per circuito
 ```
 
-Gli scenari oltre il limite possono restare nella risposta testuale
-dell'agente, ma non vengono accodati come nuovi scenari eseguibili.
+Il limite non riguarda il numero di scenari proposti o registrati nel registry.
+Il registry puo contenere piu proposte; la chat blocca solo la creazione di una
+sesta run scenario.
 
 Solo in una fase successiva si puo usare il modello AI anche come
 `scenario_selector`, cioe per capire richieste meno esplicite come:
@@ -833,10 +834,14 @@ base tecnica dell'esperimento gia copiata ed eseguita fino a SPICE.
 Primitive attualmente supportate da `12_controlled_scenarios.py`:
 
 ```text
-drive_node_voltage
-change_source_value
-change_component_value
-close_switch
+Scenari elettrici / di pilotaggio:
+- drive_node_voltage
+- change_source_value
+- change_component_value
+- close_switch
+
+Scenari topologici controllati:
+- connect_nodes
 ```
 
 `drive_node_voltage` aggiunge una sorgente di test su un nodo gia presente
@@ -909,6 +914,29 @@ Il confronto automatico supporta grandezze SPICE numeriche come `v(N001)` e
 `i(vbattery2_1#branch)`. Se nel campo `compare` compare `stderr`, lo step `12`
 lo interpreta come conteggio dei warning ngspice, utile per capire se uno
 scenario riduce problemi numerici come `singular matrix`.
+
+`connect_nodes` appartiene invece agli scenari topologici controllati: collega
+due nodi gia esistenti nella node map della run scenario usando una piccola
+resistenza, senza cambiare il Graph JSON originale. Serve per testare ipotesi
+di continuita mancante tra nodi gia riconosciuti, per esempio jumper, bridge,
+wire o collegamenti connector-to-branch.
+
+Esempio:
+
+```json
+{
+  "type": "connect_nodes",
+  "from": "N002",
+  "to": "N003",
+  "resistance": "1m"
+}
+```
+
+Traduzione SPICE tipica:
+
+```spice
+RSCENARIO_CONNECT_N002_N003 N002 N003 1m
+```
 
 Lo step `12_controlled_scenarios.py` puo essere eseguito anche da terminale con
 `--run-spice`. In quel caso:
@@ -1187,6 +1215,7 @@ drive_node_voltage
 change_source_value
 change_component_value
 close_switch
+connect_nodes
 ```
 
 Questa e la lista controllata corrente. Per adesso l'agente puo proporre uno
@@ -1380,6 +1409,31 @@ Possiamo combinarne alcuni?
 L'agente deve rispondere proponendo un nuovo scenario tecnico self-contained,
 usando solo primitive supportate e spiegando perche include o esclude certe
 azioni.
+
+Regola importante per gli scenari successivi:
+
+```text
+ogni scenario riparte dalla base run, non dallo scenario precedente.
+```
+
+Quindi, se il prossimo scenario dipende da una condizione abilitante gia
+verificata, per esempio uno switch chiuso o un percorso di alimentazione
+preparato da un test precedente, quella azione deve essere reinserita nello
+stesso JSON del nuovo scenario.
+
+Esempio:
+
+```text
+scenario_1: close_switch
+nuova ipotesi: connect_nodes N002 -> N003
+
+scenario successivo corretto:
+close_switch + connect_nodes N002 -> N003
+```
+
+Non bisogna pero combinare automaticamente tutto quello che e stato proposto o
+eseguito: si reincludono solo le azioni abilitanti davvero necessarie alla nuova
+ipotesi.
 
 In questo modo l'agente non e solo uno spiegatore del primo output SPICE, ma un
 assistente diagnostico che esplora ipotesi controllate e confronta risultati.

@@ -276,15 +276,22 @@ riepilogo scenari
 
 Regole operative:
 
-- massimo 5 scenari SPICE registrati/eseguibili per circuito;
-- gli scenari nuovi oltre il limite restano nella risposta agente, ma non
-  vengono accodati come nuovi scenari eseguibili;
+- massimo 5 scenari SPICE eseguiti per circuito;
+- il limite vale sulle run scenario realmente create/eseguite, non sul numero
+  di proposte presenti nella risposta agente o nel registry;
 - le proposte non eseguite restano disponibili;
 - il registry viene sincronizzato con le cartelle scenario gia presenti su
   disco quando si chiede la lista o si esegue uno scenario;
 - gli scenari non eseguibili, per esempio verifiche topologiche senza azioni,
   possono essere conservati come proposta diagnostica ma non devono modificare
   la base run.
+- dopo scenari gia eseguiti, ogni nuovo scenario proposto deve essere
+  self-contained e ripartire dalla base run;
+- se il nuovo scenario dipende da una condizione abilitante gia dimostrata,
+  per esempio uno switch chiuso, quella azione va reinserita nello stesso
+  JSON del nuovo scenario;
+- non bisogna combinare automaticamente tutti gli scenari precedenti, ma solo
+  le azioni realmente necessarie alla nuova ipotesi.
 
 Regola `Clear` per Esperimento 2:
 

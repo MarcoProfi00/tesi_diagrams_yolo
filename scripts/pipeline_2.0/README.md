@@ -306,9 +306,14 @@ run/
 Azioni scenario supportate per ora:
 
 ```text
-drive_node_voltage
-change_source_value
-close_switch
+Scenari elettrici / di pilotaggio:
+- drive_node_voltage
+- change_source_value
+- change_component_value
+- close_switch
+
+Scenari topologici controllati:
+- connect_nodes
 ```
 
 `drive_node_voltage` aggiunge o aggiorna una sorgente di test su un nodo della
@@ -317,8 +322,16 @@ run scenario.
 `change_source_value` modifica il valore di una sorgente SPICE gia presente
 nella netlist copiata dello scenario.
 
+`change_component_value` modifica il valore di un componente semplice gia
+emesso nella netlist scenario, per esempio una resistenza, un condensatore,
+un'induttanza o un equivalente gia tradotto come `R`, `C` o `L`.
+
 `close_switch` chiude uno switch gia riconosciuto inserendo una piccola
 resistenza tra i suoi due nodi.
+
+`connect_nodes` collega due nodi gia esistenti della node map con una piccola
+resistenza di scenario. E la primitiva topologica minima per testare continuita,
+jumper, bridge, wire o collegamenti mancanti tra nodi gia riconosciuti.
 
 I valori devono essere concreti: uno scenario con `value: "unknown"` viene
 fermato e marcato come non eseguibile.
@@ -550,9 +563,29 @@ crea scenario_comparison.json
 ricarica la pagina sulla run scenario
 ```
 
-Il circuito mantiene un budget massimo di `5` scenari eseguibili. Raggiunto il
-limite, la chat non crea un sesto scenario e l'agente deve chiudere con una
-conclusione diagnostica finale.
+Ogni scenario riparte sempre dalla base run, non dallo scenario precedente.
+Quindi, quando l'agente propone un nuovo scenario dopo aver letto risultati gia
+eseguiti, lo scenario deve essere autosufficiente: se una nuova ipotesi richiede
+una condizione abilitante gia testata prima, quella azione deve essere inclusa
+di nuovo nello stesso JSON dello scenario.
+
+Esempio:
+
+```text
+scenario_1 chiude uno switch e porta alimentazione a N002;
+il test successivo vuole collegare N002 a N003;
+il nuovo scenario corretto e close_switch + connect_nodes N002 -> N003.
+```
+
+Non va trattato come se `scenario_1` restasse attivo automaticamente.
+
+Il circuito mantiene un budget massimo di `5` scenari eseguiti/eseguibili.
+
+Questo limite vale sulle run scenario realmente lanciate, non sul numero di
+proposte che possono comparire nella conversazione o nel registry.
+
+Raggiunto il limite di esecuzione, la chat non crea una sesta run scenario e
+l'agente deve chiudere con una conclusione diagnostica finale.
 
 Quando si usa `--experiment`, anche la memoria browser della chat viene separata
 per batch, esperimento e circuito. Questo evita di mescolare conversazioni di
@@ -1009,8 +1042,9 @@ Versione attuale:
 - `10_build_diagnostic_context.py` crea il manifest
 - `11_agent_readonly.py` crea preview, prompt e risposta agente
 - OpenAI e collegato sia da CLI sia dalla web chat
-- `12_controlled_scenarios.py` applica scenari generali semplici
-  (`drive_node_voltage`, `change_source_value`, `close_switch`), puo eseguire
+- `12_controlled_scenarios.py` applica scenari controllati
+  elettrici/topologici (`drive_node_voltage`, `change_source_value`,
+  `change_component_value`, `close_switch`, `connect_nodes`), puo eseguire
   ngspice e crea un confronto base/scenario
 
 Regole sugli scenari:

@@ -684,7 +684,7 @@ gia presente:
 - scenario_comparison.json creato dopo ngspice
 - 10 indicizza executed_scenarios
 - 11 puo rispondere a domande sugli scenari gia eseguiti
-- 09 blocca la creazione di un sesto scenario nuovo
+- 09 blocca la creazione di una sesta run scenario
 - 11 puo passare a conclusione finale quando l'utente la chiede o quando il budget e esaurito
 ```
 

@@ -8,8 +8,8 @@ Versione attuale minimale:
 
 - legge `scenario.json`;
 - lavora sulla netlist copiata in `run/07_netlist.cir`;
-- supporta le azioni generali `drive_node_voltage`, `change_source_value`,
-  `change_component_value` e `close_switch`;
+- supporta le azioni generali `drive_node_voltage`, `connect_nodes`,
+  `change_source_value`, `change_component_value` e `close_switch`;
 - aggiunge o aggiorna una sorgente SPICE di scenario;
 - modifica il valore di una sorgente SPICE esistente;
 - modifica il valore di un componente semplice gia emesso in netlist;
@@ -170,6 +170,25 @@ def validate_node_target(target: Any, node_map: dict[str, Any]) -> str:
     return node
 
 
+def validate_existing_node(node: Any, node_map: dict[str, Any], *, field_name: str) -> str:
+    """
+    Controlla che un nodo esista nella mappa nodi della run scenario.
+
+    A differenza di `validate_node_target`, questa validazione e generica e non
+    assume che il nodo debba essere pilotabile come sorgente: quindi accetta
+    anche `0` se presente nella mappa nodi.
+    """
+    node_id = str(node).strip()
+    if not node_id:
+        raise ValueError(f"Missing {field_name} node")
+
+    known_nodes = {str(item.get("node_id")) for item in node_map.get("nodes", []) if isinstance(item, dict)}
+    if known_nodes and node_id not in known_nodes:
+        raise ValueError(f"Node {node_id} from field {field_name} not found in 03_node_map.json")
+
+    return node_id
+
+
 def insert_or_replace_source(netlist_text: str, source_name: str, source_line: str) -> tuple[str, str]:
     """
     Inserisce o aggiorna una sorgente di scenario nella netlist.
@@ -224,6 +243,37 @@ def apply_drive_node_voltage(
         "normalized_source_definition": source_definition,
         "normalized_dc_value": source_definition[3:] if source_definition.upper().startswith("DC ") else None,
         "inserted_line": source_line,
+        "operation": operation,
+        "spice_executed": False,
+    }
+    return updated_netlist, result
+
+
+def apply_connect_nodes(
+    action: dict[str, Any],
+    run_dir: Path,
+    netlist_text: str,
+) -> tuple[str, dict[str, Any]]:
+    """Applica `connect_nodes` inserendo una piccola resistenza tra due nodi esistenti."""
+    node_map = read_json(run_dir / "03_node_map.json")
+    from_node = validate_existing_node(action.get("from"), node_map, field_name="from")
+    to_node = validate_existing_node(action.get("to"), node_map, field_name="to")
+    if from_node == to_node:
+        raise ValueError("connect_nodes requires two different nodes")
+
+    resistance = normalize_spice_resistance_value(action.get("resistance"))
+    resistor_name = f"RSCENARIO_CONNECT_{sanitize_spice_name(from_node)}_{sanitize_spice_name(to_node)}"
+    resistor_line = f"{resistor_name} {from_node} {to_node} {resistance}"
+    updated_netlist, operation = insert_or_replace_source(netlist_text, resistor_name, resistor_line)
+
+    result = {
+        "status": "applied",
+        "type": "connect_nodes",
+        "from": from_node,
+        "to": to_node,
+        "nodes": [from_node, to_node],
+        "resistance": resistance,
+        "inserted_line": resistor_line,
         "operation": operation,
         "spice_executed": False,
     }
@@ -971,6 +1021,10 @@ def apply_scenario(
         try:
             if action_type == "drive_node_voltage":
                 netlist_text, result = apply_drive_node_voltage(action, run_dir, netlist_text)
+                result["index"] = index
+                applied_actions.append(result)
+            elif action_type == "connect_nodes":
+                netlist_text, result = apply_connect_nodes(action, run_dir, netlist_text)
                 result["index"] = index
                 applied_actions.append(result)
             elif action_type == "change_source_value":

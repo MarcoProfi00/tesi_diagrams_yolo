@@ -676,8 +676,6 @@ def register_experiment2_scenarios_from_response(
     added: list[dict[str, Any]] = []
     next_number = int(registry.get("next_scenario_number") or 1)
     for local_index, raw_scenario in enumerate(extracted, start=1):
-        if next_number > MAX_EXECUTABLE_SCENARIOS:
-            break
         scenario = unescape_html_entities(raw_scenario)
         signature = registered_scenario_signature(scenario)
         if signature in existing_signatures:
@@ -718,15 +716,6 @@ def register_experiment2_scenarios_from_response(
         added.append(entry)
 
     if not added:
-        if next_number > MAX_EXECUTABLE_SCENARIOS:
-            return {
-                "added": [],
-                "summary": (
-                    "\n\n**Scenari registrati**\n\n"
-                    f"Il registry ha gia raggiunto il limite di {MAX_EXECUTABLE_SCENARIOS} scenari. "
-                    "Le nuove proposte restano nella risposta agente, ma non vengono accodate come scenari eseguibili."
-                ),
-            }
         return {"added": [], "summary": ""}
 
     registry["next_scenario_number"] = next_number
@@ -749,8 +738,46 @@ def build_scenario_registration_summary(added: list[dict[str, Any]]) -> str:
     lines = ["", "**Scenari registrati**", "", heading, ""]
     for item in added:
         lines.append(f"- Scenario {item.get('scenario_number')} - {item.get('title')}")
-    lines.extend(["", "Puoi scrivere per esempio: `esegui scenario 1` oppure `esegui l'ultimo`."])
+    lines.extend(["", build_scenario_command_hint(added)])
     return "\n".join(lines)
+
+
+def build_scenario_command_hint(scenarios: list[dict[str, Any]] | None) -> str:
+    """Crea un suggerimento breve con comandi coerenti agli scenari correnti."""
+    valid_items = [item for item in (scenarios or []) if isinstance(item, dict)]
+    numbers: list[int] = []
+    for item in valid_items:
+        try:
+            number = int(item.get("scenario_number") or 0)
+        except (TypeError, ValueError):
+            continue
+        if number > 0:
+            numbers.append(number)
+
+    if not numbers:
+        return "Puoi scrivere `mostra scenari` per vedere la lista disponibile."
+
+    unique_numbers: list[int] = []
+    seen: set[int] = set()
+    for number in numbers:
+        if number in seen:
+            continue
+        seen.add(number)
+        unique_numbers.append(number)
+
+    if len(unique_numbers) == 1:
+        scenario_number = unique_numbers[0]
+        return (
+            f"Puoi scrivere per esempio: `esegui scenario {scenario_number}`, "
+            "`esegui l'ultimo` oppure `mostra scenari`."
+        )
+
+    example_commands = [f"`esegui scenario {number}`" for number in unique_numbers[:3]]
+    commands_text = ", ".join(example_commands)
+    return (
+        f"Puoi scrivere per esempio: {commands_text}, "
+        "`esegui l'ultimo` oppure `mostra scenari`."
+    )
 
 
 def build_scenario_registry_summary(registry: dict[str, Any] | None) -> str:
@@ -769,7 +796,7 @@ def build_scenario_registry_summary(registry: dict[str, Any] | None) -> str:
         lines.append(f"- Scenario {item.get('scenario_number')} - {title}")
         lines.append(f"  Stato: `{status}`, outcome: `{outcome}`, tipo: `{executable}`")
     lines.append("")
-    lines.append("Per eseguire uno scenario puoi scrivere `esegui scenario N`.")
+    lines.append(build_scenario_command_hint(registry.get("scenarios") or []))
     return "\n".join(lines)
 
 
@@ -1852,6 +1879,14 @@ def handle_scenario_request(
     requested_label = "latest" if requested_index == "latest" else str(requested_index)
 
     response_path = output_dir / CHAT_RESPONSE_NAME
+    if response_path.exists():
+        register_experiment2_scenarios_from_response(
+            output_dir=output_dir,
+            batch=batch,
+            circuit=circuit,
+            experiment=experiment,
+            response_text=read_text_safe(response_path),
+        )
     registry = read_experiment2_scenario_registry(output_dir, batch, circuit, experiment)
     if registry is not None and not registry.get("scenarios") and response_path.exists():
         register_experiment2_scenarios_from_response(
