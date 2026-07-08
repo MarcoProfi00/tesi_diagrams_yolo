@@ -69,7 +69,7 @@ A questo punto possiamo concludere che, nella netlist attuale, il LED resta spen
   "scenarios": [
     {
       "scenario_id": "scenario_1",
-      "title": "Alimentare il nodo PWR dal connettore",
+      "title": "Alimentare il ramo PWR dal connettore",
       "status": "spice_success",
       "spice_status": "success",
       "outcome_status": "resolved_candidate",
@@ -78,20 +78,21 @@ A questo punto possiamo concludere che, nella netlist attuale, il LED resta spen
       "outcome_reason": "Tutte le grandezze richieste cambiano e almeno una grandezza prima inattiva si attiva davvero.",
       "stop_automation": true,
       "comparison_summary": {
-        "requested_count": 2,
-        "changed_count": 2,
-        "activated_count": 2,
+        "requested_count": 3,
+        "changed_count": 3,
+        "activated_count": 3,
         "missing_count": 0
       },
       "quantity_summary": {
         "changed": [
           "v(N002)",
-          "v(N004)"
+          "v(N004)",
+          "i(Rresistor22_1)"
         ],
         "unchanged": [],
         "missing": []
       },
-      "score": 182
+      "score": 183
     },
     {
       "scenario_id": "scenario_4",
@@ -130,12 +131,12 @@ A questo punto possiamo concludere che, nella netlist attuale, il LED resta spen
 
 ### scenario_1
 
-- Title: `Alimentare il nodo PWR dal connettore`
+- Title: `Alimentare il ramo PWR dal connettore`
 - Status: `spice_success`
 - SPICE status: `success`
 - Outcome: `resolved_candidate`
 - Stop automation: `True`
-- Comparison: `2/2` changed
+- Comparison: `3/3` changed
 
 #### scenario_definition
 
@@ -145,8 +146,8 @@ A questo punto possiamo concludere che, nella netlist attuale, il LED resta spen
 ```json
 {
   "scenario_id": "scenario_1",
-  "title": "Alimentare il nodo PWR dal connettore",
-  "hypothesis": "Il LED PWR e spento perche il nodo N002 non e alimentato nel netlist base.",
+  "title": "Alimentare il ramo PWR dal connettore",
+  "hypothesis": "Il LED PWR e inattivo perche il nodo N002 non e alimentato nel run base.",
   "actions": [
     {
       "type": "add_voltage_source_between_nodes",
@@ -159,7 +160,8 @@ A questo punto possiamo concludere che, nella netlist attuale, il LED resta spen
   "analysis": "op",
   "compare": [
     "v(N002)",
-    "v(N004)"
+    "v(N004)",
+    "i(Rresistor22_1)"
   ]
 }
 ```
@@ -179,7 +181,7 @@ A questo punto possiamo concludere che, nella netlist attuale, il LED resta spen
   "base_output_dir": "outputs\\pipeline2.0\\batchA\\experiment2\\a07",
   "source_agent_response": "outputs\\pipeline2.0\\batchA\\experiment2\\a07\\11_agent_response_chat.md",
   "scenario_file": "outputs\\pipeline2.0\\batchA\\experiment2\\a07\\scenarios\\scenario_1\\scenario.json",
-  "created_or_updated_at": "2026-07-08T11:20:23",
+  "created_or_updated_at": "2026-07-08T16:22:56",
   "next_step": "Ci sono gia evidenze forti per fermarsi qui e passare alla conclusione diagnostica.",
   "spice_executed": true,
   "spice_status": "success",
@@ -187,9 +189,9 @@ A questo punto possiamo concludere che, nella netlist attuale, il LED resta spen
   "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment2\\a07\\scenarios\\scenario_1\\run\\08_spice_run.json",
   "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment2\\a07\\scenarios\\scenario_1\\scenario_comparison.json",
   "comparison_summary": {
-    "requested_count": 2,
-    "changed_count": 2,
-    "activated_count": 2,
+    "requested_count": 3,
+    "changed_count": 3,
+    "activated_count": 3,
     "missing_count": 0
   },
   "diagnostic_outcome": {
@@ -218,7 +220,7 @@ A questo punto possiamo concludere che, nella netlist attuale, il LED resta spen
   "source_format": "pipeline2.0_controlled_scenario_report",
   "status": "spice_success",
   "scenario_id": "scenario_1",
-  "scenario_title": "Alimentare il nodo PWR dal connettore",
+  "scenario_title": "Alimentare il ramo PWR dal connettore",
   "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment2\\a07\\scenarios\\scenario_1",
   "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment2\\a07\\scenarios\\scenario_1\\run",
   "netlist": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment2\\a07\\scenarios\\scenario_1\\run\\07_netlist.cir",
@@ -249,9 +251,9 @@ A questo punto possiamo concludere che, nella netlist attuale, il LED resta spen
   "spice_exit_code": 0,
   "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment2\\a07\\scenarios\\scenario_1\\scenario_comparison.json",
   "comparison_summary": {
-    "requested_count": 2,
-    "changed_count": 2,
-    "activated_count": 2,
+    "requested_count": 3,
+    "changed_count": 3,
+    "activated_count": 3,
     "missing_count": 0
   },
   "diagnostic_outcome": {
@@ -265,7 +267,7 @@ A questo punto possiamo concludere che, nella netlist attuale, il LED resta spen
     "next_step": "Ci sono gia evidenze forti per fermarsi qui e passare alla conclusione diagnostica."
   },
   "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
-  "created_or_updated_at": "2026-07-08T11:20:23"
+  "created_or_updated_at": "2026-07-08T16:22:56"
 }
 ```
 
@@ -278,7 +280,7 @@ A questo punto possiamo concludere che, nella netlist attuale, il LED resta spen
 {
   "source_format": "pipeline2.0_scenario_comparison",
   "scenario_id": "scenario_1",
-  "scenario_title": "Alimentare il nodo PWR dal connettore",
+  "scenario_title": "Alimentare il ramo PWR dal connettore",
   "base_output_dir": "outputs\\pipeline2.0\\batchA\\experiment2\\a07",
   "scenario_run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment2\\a07\\scenarios\\scenario_1\\run",
   "base_stdout": "outputs\\pipeline2.0\\batchA\\experiment2\\a07\\08_ngspice_stdout.txt",
@@ -305,12 +307,22 @@ A questo punto possiamo concludere che, nella netlist attuale, il LED resta spen
       "metric": "v(n004)",
       "base_details": {},
       "scenario_details": {}
+    },
+    {
+      "quantity": "i(Rresistor22_1)",
+      "base_value": 0.0,
+      "scenario_value": 0.00631941,
+      "delta": 0.00631941,
+      "change": "activated",
+      "metric": "i(rresistor22_1)",
+      "base_details": {},
+      "scenario_details": {}
     }
   ],
   "summary": {
-    "requested_count": 2,
-    "changed_count": 2,
-    "activated_count": 2,
+    "requested_count": 3,
+    "changed_count": 3,
+    "activated_count": 3,
     "missing_count": 0
   },
   "diagnostic_outcome": {
@@ -323,7 +335,7 @@ A questo punto possiamo concludere che, nella netlist attuale, il LED resta spen
     "confidence": "medium",
     "next_step": "Ci sono gia evidenze forti per fermarsi qui e passare alla conclusione diagnostica."
   },
-  "created_or_updated_at": "2026-07-08T11:20:23"
+  "created_or_updated_at": "2026-07-08T16:22:56"
 }
 ```
 
@@ -345,7 +357,7 @@ A questo punto possiamo concludere che, nella netlist attuale, il LED resta spen
 {
   "scenario_id": "scenario_4",
   "title": "Alimentare l’ingresso misurato da VAC",
-  "hypothesis": "Il voltmetro VAC non mostra nulla nel caso base perché il nodo N001, che misura rispetto a massa, non è alimentato da alcuna sorgente nel netlist base.",
+  "hypothesis": "Il voltmetro VAC non mostra nulla nel caso base perche il nodo N001, etichettato AC_INPUT, non e pilotato da alcuna sorgente nel netlist base.",
   "actions": [
     {
       "type": "add_voltage_source_between_nodes",
@@ -379,7 +391,7 @@ A questo punto possiamo concludere che, nella netlist attuale, il LED resta spen
   "base_output_dir": "outputs\\pipeline2.0\\batchA\\experiment2\\a07",
   "source_agent_response": "outputs\\pipeline2.0\\batchA\\experiment2\\a07\\11_agent_response_chat.md",
   "scenario_file": "outputs\\pipeline2.0\\batchA\\experiment2\\a07\\scenarios\\scenario_4\\scenario.json",
-  "created_or_updated_at": "2026-07-08T11:21:17",
+  "created_or_updated_at": "2026-07-08T16:23:23",
   "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata.",
   "spice_executed": true,
   "spice_status": "success",
@@ -465,7 +477,7 @@ A questo punto possiamo concludere che, nella netlist attuale, il LED resta spen
     "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
   },
   "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
-  "created_or_updated_at": "2026-07-08T11:21:17"
+  "created_or_updated_at": "2026-07-08T16:23:23"
 }
 ```
 
@@ -533,7 +545,7 @@ A questo punto possiamo concludere che, nella netlist attuale, il LED resta spen
     "confidence": "low",
     "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
   },
-  "created_or_updated_at": "2026-07-08T11:21:17"
+  "created_or_updated_at": "2026-07-08T16:23:23"
 }
 ```
 

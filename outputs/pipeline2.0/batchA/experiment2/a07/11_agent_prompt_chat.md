@@ -22,6 +22,8 @@
 - When useful, cite component IDs, node IDs, file names or artifact sections.
 - Use the original artifact paths only as traceability references.
 - If an artifact is missing or truncated, mention the limitation before drawing conclusions from it.
+- Keep the user-facing structure stable across answers: use explicit headings such as `Scenari proposti`, `Conclusione provvisoria` and `Conclusione finale` whenever they are relevant.
+- The ordinary reasoning should stay concise and readable; the scenario list should look operational, not like a long free-form essay.
 - If executed scenario evidence is available, use it to answer questions about which scenario explains or resolves the problem.
 - When discussing executed scenarios, distinguish the controlled action from the diagnostic outcome.
 - For questions about which scenario resolves the problem, do not merely list scenarios: identify the strongest scenario and justify it from scenario_comparison.json.
@@ -177,7 +179,7 @@ A questo punto possiamo concludere che, nella netlist attuale, il LED resta spen
 
 ## Executed scenarios index
 
-- `scenario_1`: title=`Alimentare il nodo PWR dal connettore`, status=`spice_success`, spice=`success`, outcome=`resolved_candidate`, stop_automation=`True`, changed=`2/2`
+- `scenario_1`: title=`Alimentare il ramo PWR dal connettore`, status=`spice_success`, spice=`success`, outcome=`resolved_candidate`, stop_automation=`True`, changed=`3/3`
 - `scenario_4`: title=`Alimentare l’ingresso misurato da VAC`, status=`spice_success`, spice=`success`, outcome=`partially_resolved`, stop_automation=`False`, changed=`1/3`
 
 ## Scenario outcome summary
@@ -192,7 +194,7 @@ A questo punto possiamo concludere che, nella netlist attuale, il LED resta spen
   "scenarios": [
     {
       "scenario_id": "scenario_1",
-      "title": "Alimentare il nodo PWR dal connettore",
+      "title": "Alimentare il ramo PWR dal connettore",
       "status": "spice_success",
       "spice_status": "success",
       "outcome_status": "resolved_candidate",
@@ -201,20 +203,21 @@ A questo punto possiamo concludere che, nella netlist attuale, il LED resta spen
       "outcome_reason": "Tutte le grandezze richieste cambiano e almeno una grandezza prima inattiva si attiva davvero.",
       "stop_automation": true,
       "comparison_summary": {
-        "requested_count": 2,
-        "changed_count": 2,
-        "activated_count": 2,
+        "requested_count": 3,
+        "changed_count": 3,
+        "activated_count": 3,
         "missing_count": 0
       },
       "quantity_summary": {
         "changed": [
           "v(N002)",
-          "v(N004)"
+          "v(N004)",
+          "i(Rresistor22_1)"
         ],
         "unchanged": [],
         "missing": []
       },
-      "score": 182
+      "score": 183
     },
     {
       "scenario_id": "scenario_4",
@@ -1763,7 +1766,7 @@ time,v(N001),v(N002),v(N004)
 
 ### scenario_1
 
-- Title: `Alimentare il nodo PWR dal connettore`
+- Title: `Alimentare il ramo PWR dal connettore`
 - Scenario dir: `outputs\pipeline2.0\batchA\experiment2\a07\scenarios\scenario_1`
 - Status: `spice_success`
 - SPICE status: `success`
@@ -1776,8 +1779,8 @@ time,v(N001),v(N002),v(N004)
 ```json
 {
   "scenario_id": "scenario_1",
-  "title": "Alimentare il nodo PWR dal connettore",
-  "hypothesis": "Il LED PWR e spento perche il nodo N002 non e alimentato nel netlist base.",
+  "title": "Alimentare il ramo PWR dal connettore",
+  "hypothesis": "Il LED PWR e inattivo perche il nodo N002 non e alimentato nel run base.",
   "actions": [
     {
       "type": "add_voltage_source_between_nodes",
@@ -1790,7 +1793,8 @@ time,v(N001),v(N002),v(N004)
   "analysis": "op",
   "compare": [
     "v(N002)",
-    "v(N004)"
+    "v(N004)",
+    "i(Rresistor22_1)"
   ]
 }
 ```
@@ -1810,7 +1814,7 @@ time,v(N001),v(N002),v(N004)
   "base_output_dir": "outputs\\pipeline2.0\\batchA\\experiment2\\a07",
   "source_agent_response": "outputs\\pipeline2.0\\batchA\\experiment2\\a07\\11_agent_response_chat.md",
   "scenario_file": "outputs\\pipeline2.0\\batchA\\experiment2\\a07\\scenarios\\scenario_1\\scenario.json",
-  "created_or_updated_at": "2026-07-08T11:20:23",
+  "created_or_updated_at": "2026-07-08T16:22:56",
   "next_step": "Ci sono gia evidenze forti per fermarsi qui e passare alla conclusione diagnostica.",
   "spice_executed": true,
   "spice_status": "success",
@@ -1818,9 +1822,9 @@ time,v(N001),v(N002),v(N004)
   "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment2\\a07\\scenarios\\scenario_1\\run\\08_spice_run.json",
   "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment2\\a07\\scenarios\\scenario_1\\scenario_comparison.json",
   "comparison_summary": {
-    "requested_count": 2,
-    "changed_count": 2,
-    "activated_count": 2,
+    "requested_count": 3,
+    "changed_count": 3,
+    "activated_count": 3,
     "missing_count": 0
   },
   "diagnostic_outcome": {
@@ -1849,7 +1853,7 @@ time,v(N001),v(N002),v(N004)
   "source_format": "pipeline2.0_controlled_scenario_report",
   "status": "spice_success",
   "scenario_id": "scenario_1",
-  "scenario_title": "Alimentare il nodo PWR dal connettore",
+  "scenario_title": "Alimentare il ramo PWR dal connettore",
   "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment2\\a07\\scenarios\\scenario_1",
   "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment2\\a07\\scenarios\\scenario_1\\run",
   "netlist": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment2\\a07\\scenarios\\scenario_1\\run\\07_netlist.cir",
@@ -1880,9 +1884,9 @@ time,v(N001),v(N002),v(N004)
   "spice_exit_code": 0,
   "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment2\\a07\\scenarios\\scenario_1\\scenario_comparison.json",
   "comparison_summary": {
-    "requested_count": 2,
-    "changed_count": 2,
-    "activated_count": 2,
+    "requested_count": 3,
+    "changed_count": 3,
+    "activated_count": 3,
     "missing_count": 0
   },
   "diagnostic_outcome": {
@@ -1896,7 +1900,7 @@ time,v(N001),v(N002),v(N004)
     "next_step": "Ci sono gia evidenze forti per fermarsi qui e passare alla conclusione diagnostica."
   },
   "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
-  "created_or_updated_at": "2026-07-08T11:20:23"
+  "created_or_updated_at": "2026-07-08T16:22:56"
 }
 ```
 
@@ -1909,7 +1913,7 @@ time,v(N001),v(N002),v(N004)
 {
   "source_format": "pipeline2.0_scenario_comparison",
   "scenario_id": "scenario_1",
-  "scenario_title": "Alimentare il nodo PWR dal connettore",
+  "scenario_title": "Alimentare il ramo PWR dal connettore",
   "base_output_dir": "outputs\\pipeline2.0\\batchA\\experiment2\\a07",
   "scenario_run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment2\\a07\\scenarios\\scenario_1\\run",
   "base_stdout": "outputs\\pipeline2.0\\batchA\\experiment2\\a07\\08_ngspice_stdout.txt",
@@ -1936,12 +1940,22 @@ time,v(N001),v(N002),v(N004)
       "metric": "v(n004)",
       "base_details": {},
       "scenario_details": {}
+    },
+    {
+      "quantity": "i(Rresistor22_1)",
+      "base_value": 0.0,
+      "scenario_value": 0.00631941,
+      "delta": 0.00631941,
+      "change": "activated",
+      "metric": "i(rresistor22_1)",
+      "base_details": {},
+      "scenario_details": {}
     }
   ],
   "summary": {
-    "requested_count": 2,
-    "changed_count": 2,
-    "activated_count": 2,
+    "requested_count": 3,
+    "changed_count": 3,
+    "activated_count": 3,
     "missing_count": 0
   },
   "diagnostic_outcome": {
@@ -1954,7 +1968,7 @@ time,v(N001),v(N002),v(N004)
     "confidence": "medium",
     "next_step": "Ci sono gia evidenze forti per fermarsi qui e passare alla conclusione diagnostica."
   },
-  "created_or_updated_at": "2026-07-08T11:20:23"
+  "created_or_updated_at": "2026-07-08T16:22:56"
 }
 ```
 
@@ -1974,7 +1988,7 @@ time,v(N001),v(N002),v(N004)
 {
   "scenario_id": "scenario_4",
   "title": "Alimentare l’ingresso misurato da VAC",
-  "hypothesis": "Il voltmetro VAC non mostra nulla nel caso base perché il nodo N001, che misura rispetto a massa, non è alimentato da alcuna sorgente nel netlist base.",
+  "hypothesis": "Il voltmetro VAC non mostra nulla nel caso base perche il nodo N001, etichettato AC_INPUT, non e pilotato da alcuna sorgente nel netlist base.",
   "actions": [
     {
       "type": "add_voltage_source_between_nodes",
@@ -2008,7 +2022,7 @@ time,v(N001),v(N002),v(N004)
   "base_output_dir": "outputs\\pipeline2.0\\batchA\\experiment2\\a07",
   "source_agent_response": "outputs\\pipeline2.0\\batchA\\experiment2\\a07\\11_agent_response_chat.md",
   "scenario_file": "outputs\\pipeline2.0\\batchA\\experiment2\\a07\\scenarios\\scenario_4\\scenario.json",
-  "created_or_updated_at": "2026-07-08T11:21:17",
+  "created_or_updated_at": "2026-07-08T16:23:23",
   "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata.",
   "spice_executed": true,
   "spice_status": "success",
@@ -2094,7 +2108,7 @@ time,v(N001),v(N002),v(N004)
     "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
   },
   "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
-  "created_or_updated_at": "2026-07-08T11:21:17"
+  "created_or_updated_at": "2026-07-08T16:23:23"
 }
 ```
 
@@ -2162,70 +2176,36 @@ time,v(N001),v(N002),v(N004)
     "confidence": "low",
     "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
   },
-  "created_or_updated_at": "2026-07-08T11:21:17"
+  "created_or_updated_at": "2026-07-08T16:23:23"
 }
 ```
 
 
 ## Required answer format
 
+L'utente chiede una conclusione finale o una sintesi dei test eseguiti.
+Usa come evidenza principale gli scenari gia eseguiti e la base run.
+Non proporre automaticamente un nuovo scenario in questa risposta.
+Proponi un ulteriore scenario solo se e davvero l'unico test decisivo rimasto e dichiaralo esplicitamente come ultimo possibile passo utile.
 Rispondi in Markdown usando esattamente queste sezioni:
 
-1. **Stato della simulazione**
-   Spiega se ngspice e stato eseguito correttamente oppure no.
+1. **Stato degli scenari eseguiti**
+   Riassumi in breve che cosa ha mostrato ogni scenario eseguito.
 
-2. **Evidenze principali**
-   Elenca le prove piu importanti, citando componenti, nodi, netlist, stdout/stderr o report.
+2. **Ipotesi rafforzate e ipotesi indebolite**
+   Spiega quali ipotesi sono state supportate dai test e quali invece hanno perso forza.
 
-3. **Diagnosi rispetto al problema utente**
-   Collega le evidenze al problema scritto dall'utente.
+3. **Conclusione finale**
+   Dai la conclusione piu forte raggiungibile con le evidenze attuali.
 
-4. **Limiti della diagnosi**
-   Dichiara cosa non si puo concludere dai dati disponibili.
+4. **Cosa non e stato dimostrato**
+   Dichiara cosa resta non verificato o non concludibile dai dati attuali.
 
-5. **Scenari diagnostici proposti**
-   Proponi al massimo 3 scenari diagnostici candidati, pensati per essere trasformati in una nuova simulazione SPICE.
-   In questa prima risposta proponi solo scenari semplici di primo passaggio, non scenari combinati.
-   Non proporre semplici consigli generici: ogni scenario deve essere una ipotesi verificabile.
-   Non presentarli come certamente risolutivi: sono candidati da testare.
-   Ogni scenario iniziale deve testare una singola ipotesi principale ed essere leggibile da solo.
-   Se servono piu scenari, ordinali dal piu semplice al piu utile.
-   Se la domanda dell'utente riguarda scenari gia eseguiti, usa questa sezione per riassumere gli scenari eseguiti e indicare quale outcome e piu forte.
-   Se dai dati disponibili non serve uno scenario, scrivi: `Nessuno scenario necessario dai dati disponibili.`
-
-   Per ogni scenario usa una forma a due livelli: prima una spiegazione user-friendly, poi un blocco tecnico breve.
-
-   Livello user-friendly:
-   - Titolo naturale: descrivi cosa si vuole provare, non solo la primitiva tecnica.
-   - Perche lo propongo: collega lo scenario alle evidenze SPICE e al problema utente.
-   - Cosa proverei: spiega in parole semplici la modifica simulativa.
-   - Cosa mi aspetto: indica cosa dovrebbe cambiare se l'ipotesi e corretta.
-   - Come lo verifichiamo: indica quali tensioni, correnti, log o grafici confrontare.
-   - Prossimo passo: cosa provare se lo scenario non conferma l'ipotesi.
-
-   Blocco tecnico per pipeline:
-   Usa un blocco JSON breve e non inventare campi non deducibili dalle evidenze.
-   Il blocco deve aiutare una futura pipeline a trasformare lo scenario in una run separata.
-   Campi consigliati: `scenario_id`, `title`, `hypothesis`, `actions`, `rerun_from`, `analysis`, `compare`.
-   Per scenari di correzione topologica non ancora eseguibili puoi aggiungere anche `execution_mode` e `required_evidence`.
-   Non usare `unknown` dentro `actions[].value`: uno scenario eseguibile deve avere valori concreti.
-   Se un valore concreto non e deducibile, ometti l'azione eseguibile e descrivi lo scenario solo come follow-up non ancora eseguibile.
-
-   Primitive scenario disponibili:
-   - Scenari elettrici / di pilotaggio: `drive_node_voltage`, `add_voltage_source_between_nodes`, `change_source_value`, `change_component_value`, `close_switch`.
-   - Scenari topologici controllati: `connect_nodes`, `feed_nodes_from_source_node`.
-   Primitive future, da citare solo se ben giustificate e non ancora eseguibili:
-   `open_switch`, `disconnect_terminal`, `move_terminal`, `replace_with_equivalent`, `run_op`, `run_tran`.
-
-   Ricorda che nella versione read-only questi scenari NON sono eseguiti.
-   Sono solo proposte per una fase successiva della pipeline.
-
-Alla fine aggiungi una riga:
+5. **Conviene continuare?**
+   Spiega se ha senso fare un altro scenario oppure se e piu corretto fermarsi qui.
+   Se suggerisci un altro scenario, deve essere chiaramente motivato come ultimo test davvero informativo.
 
 `Richiede immagine: si/no`
-
-Metti `si` solo se gli output strutturati indicano una probabile incoerenza del Graph JSON oppure se SPICE non e eseguibile in modo utile.
-Se l'immagine sarebbe solo una verifica opzionale, metti comunque `no` e cita la verifica opzionale nei limiti.
 
 ## Final task
 

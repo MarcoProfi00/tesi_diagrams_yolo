@@ -4,10 +4,10 @@
 - Experiment: `experiment2`
 - Circuit: `a07`
 - Max executable scenarios: `5`
-- Created at: `2026-07-08T11:19:44`
-- Updated at: `2026-07-08T11:21:17`
+- Created at: `2026-07-08T16:21:56`
+- Updated at: `2026-07-08T16:23:23`
 
-## Scenario 1 - Alimentare il nodo PWR dal connettore
+## Scenario 1 - Alimentare il ramo PWR dal connettore
 
 - Scenario id: `scenario_1`
 - Status: `executed`
@@ -20,7 +20,7 @@
 
 ### Hypothesis
 
-Il LED PWR e spento perche il nodo N002 non e alimentato nel netlist base.
+Il LED PWR e inattivo perche il nodo N002 non e alimentato nel run base.
 
 ### Actions
 
@@ -35,7 +35,7 @@ Il LED PWR e spento perche il nodo N002 non e alimentato nel netlist base.
 ]
 ```
 
-## Scenario 2 - Applicare una tensione di prova all ingresso VAC
+## Scenario 2 - Alimentare il nodo misurato dal VAC
 
 - Scenario id: `scenario_2`
 - Status: `proposed`
@@ -48,7 +48,7 @@ Il LED PWR e spento perche il nodo N002 non e alimentato nel netlist base.
 
 ### Hypothesis
 
-Il voltmetro VAC non mostra nulla perche il nodo N001 non riceve alcuna eccitazione nel netlist base.
+Il voltmetro VAC non legge nulla perche N001 non riceve alcuna eccitazione nel run base.
 
 ### Actions
 
@@ -63,7 +63,7 @@ Il voltmetro VAC non mostra nulla perche il nodo N001 non riceve alcuna eccitazi
 ]
 ```
 
-## Scenario 3 - Chiudere lo switch RESET
+## Scenario 3 - Chiudere il ramo RESET
 
 - Scenario id: `scenario_3`
 - Status: `proposed`
@@ -76,7 +76,7 @@ Il voltmetro VAC non mostra nulla perche il nodo N001 non riceve alcuna eccitazi
 
 ### Hypothesis
 
-Lo stato open di switch25.1 potrebbe impedire una condizione necessaria al funzionamento del circuito.
+Lo switch RESET aperto potrebbe influire sulla condizione del nodo N003, ma potrebbe non essere la causa principale dell'inattivita generale.
 
 ### Actions
 
@@ -102,7 +102,7 @@ Lo stato open di switch25.1 potrebbe impedire una condizione necessaria al funzi
 
 ### Hypothesis
 
-Il voltmetro VAC non mostra nulla nel caso base perché il nodo N001, che misura rispetto a massa, non è alimentato da alcuna sorgente nel netlist base.
+Il voltmetro VAC non mostra nulla nel caso base perche il nodo N001, etichettato AC_INPUT, non e pilotato da alcuna sorgente nel netlist base.
 
 ### Actions
 

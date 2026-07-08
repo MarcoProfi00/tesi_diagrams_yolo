@@ -230,7 +230,48 @@ def normalize_human_text(text: str) -> str:
         if candidate == normalized:
             break
         normalized = candidate
-    return repair_common_mojibake(normalized)
+    if any(marker in normalized for marker in ("Ã", "â€", "Â")):
+        try:
+            fallback_candidate = normalized.encode("latin-1").decode("utf-8")
+        except UnicodeError:
+            fallback_candidate = normalized
+        if fallback_candidate != normalized:
+            normalized = fallback_candidate
+
+    normalized = repair_common_mojibake(normalized)
+    normalized = (
+        normalized
+        .replace("Ã¨", "è")
+        .replace("Ã©", "é")
+        .replace("Ã ", "à")
+        .replace("Ã¹", "ù")
+        .replace("Ã¬", "ì")
+        .replace("Ã²", "ò")
+        .replace("â€™", "'")
+        .replace("â€˜", "'")
+        .replace("â€œ", "\"")
+        .replace("â€", "\"")
+        .replace("â€“", "-")
+        .replace("â€”", "-")
+        .replace("Â°", "°")
+    )
+    normalized = (
+        normalized
+        .replace("Ã¨", "è")
+        .replace("Ã©", "é")
+        .replace("Ã ", "à")
+        .replace("Ã¹", "ù")
+        .replace("Ã¬", "ì")
+        .replace("Ã²", "ò")
+        .replace("â€™", "'")
+        .replace("â€˜", "'")
+        .replace("â€œ", "\"")
+        .replace("â€", "\"")
+        .replace("â€“", "-")
+        .replace("â€”", "-")
+        .replace("Â°", "°")
+    )
+    return normalized
 
 
 def cleanup_chat_reply(text: str) -> str:
