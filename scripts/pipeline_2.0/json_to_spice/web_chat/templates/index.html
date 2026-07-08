@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="it">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,6 +12,13 @@
       --text: #1f2933;
       --muted: #6b7280;
       --accent: #2563eb;
+      --accent-soft: #f8f1e7;
+      --chat-bg: #f7faff;
+      --chat-shell: #fcfdff;
+      --chat-user: #e8f1ff;
+      --chat-system: #fff8ef;
+      --agent-border: #e7d6bf;
+      --user-border: #bfd5f6;
       --ok: #0f766e;
       --warn: #b45309;
       --bad: #b91c1c;
@@ -246,34 +253,62 @@
     }
     .chat {
       border-left: 1px solid var(--line);
-      background: var(--panel);
+      background: linear-gradient(180deg, var(--chat-bg) 0%, #f9fbff 100%);
       display: grid;
       grid-template-rows: auto 1fr auto;
+      padding: 12px;
     }
     .chat-header {
-      padding: 14px;
-      border-bottom: 1px solid var(--line);
+      padding: 14px 14px 12px;
+      border: 1px solid #d7e4fb;
+      border-bottom: 0;
+      border-radius: 14px 14px 0 0;
+      background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
       gap: 12px;
+      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.06);
     }
     .chat-header h2 {
-      margin: 0 0 4px;
-      font-size: 16px;
+      margin: 0 0 6px;
+      font-size: 17px;
+      font-weight: 650;
     }
     .chat-header p {
       margin: 0;
       color: var(--muted);
-      font-size: 13px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .chat-header-copy {
+      display: grid;
+      gap: 8px;
+    }
+    .chat-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .chat-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border: 1px solid #dbe6f8;
+      border-radius: 999px;
+      background: #f3f7ff;
+      color: #35507a;
+      font-size: 11px;
+      font-weight: 600;
     }
     .chat-clear {
       border: 1px solid var(--line);
-      background: #f8fafc;
+      background: rgba(255, 255, 255, 0.88);
       color: var(--muted);
-      padding: 6px 9px;
+      padding: 7px 11px;
       font-size: 12px;
       white-space: nowrap;
+      align-self: flex-start;
     }
     .chat-clear:hover {
       background: #eef2ff;
@@ -283,31 +318,39 @@
       padding: 14px;
       overflow: auto;
       overflow-x: hidden;
+      border-left: 1px solid #d7e4fb;
+      border-right: 1px solid #d7e4fb;
+      background: var(--chat-shell);
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
     }
     .message {
-      border-radius: 8px;
-      padding: 10px;
-      margin-bottom: 10px;
+      border-radius: 12px;
+      padding: 11px 12px;
+      margin-bottom: 12px;
       line-height: 1.45;
       max-width: 100%;
       overflow-wrap: anywhere;
       word-break: break-word;
     }
     .message.agent {
-      background: #eef4ff;
-      border: 1px solid #c7d7fe;
+      background: var(--accent-soft);
+      border: 1px solid var(--agent-border);
+      margin-right: 28px;
     }
     .message.user {
-      background: #f3f4f6;
-      border: 1px solid var(--line);
+      background: var(--chat-user);
+      border: 1px solid var(--user-border);
+      margin-left: 28px;
     }
     .message.debug {
-      background: #fff7ed;
+      background: var(--chat-system);
       border: 1px solid #fed7aa;
       color: #7c2d12;
       font-family: Consolas, "Courier New", monospace;
       font-size: 12px;
       white-space: normal;
+      border-left-width: 4px;
+      margin-right: 16px;
     }
     .message.debug details {
       max-width: 100%;
@@ -399,14 +442,18 @@
       40% { transform: translateY(-5px); opacity: 1; }
     }
     .chat-form {
-      border-top: 1px solid var(--line);
+      border: 1px solid #d7e4fb;
+      border-top: 0;
+      border-radius: 0 0 14px 14px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
       padding: 12px;
       display: grid;
       gap: 8px;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
     }
     .chat-actions {
       display: grid;
-      grid-template-columns: 132px minmax(0, 1fr);
+      grid-template-columns: 118px minmax(0, 1fr);
       gap: 8px;
       align-items: center;
     }
@@ -423,17 +470,25 @@
     }
     textarea {
       width: 100%;
-      min-height: 86px;
+      min-height: 74px;
       resize: vertical;
       border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 10px;
+      border-radius: 10px;
+      padding: 11px 12px;
       font-family: inherit;
       font-size: 14px;
+      background: white;
+      line-height: 1.45;
+    }
+    textarea:focus,
+    .chat-actions select:focus {
+      outline: none;
+      border-color: #93b4f8;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
     }
     button {
       border: 0;
-      border-radius: 8px;
+      border-radius: 10px;
       padding: 10px 12px;
       background: var(--accent);
       color: white;
@@ -474,16 +529,23 @@
         min-height: 520px;
         border-left: 0;
         border-top: 1px solid var(--line);
+        padding: 0;
       }
       .chat-actions {
         grid-template-columns: 1fr;
+      }
+      .message.agent,
+      .message.user,
+      .message.debug {
+        margin-left: 0;
+        margin-right: 0;
       }
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>Pipeline 2.0 Diagnostic Web Chat</h1>
+    <h1>Pipeline 2.0 Chat diagnostica</h1>
     <div class="meta">{{HEADER_META}}</div>
   </header>
   <div class="layout">
@@ -509,21 +571,28 @@
     </main>
     <section class="chat">
       <div class="chat-header">
-        <div>
-          <h2>Diagnostic chat</h2>
-          <p>Write a symptom. The read-only agent will analyze the current SPICE run.</p>
+        <div class="chat-header-copy">
+          <div>
+            <h2>Chat diagnostica</h2>
+            <p>Descrivi il sintomo e l'agente analizzera gli output SPICE e gli scenari gia eseguiti.</p>
+          </div>
+          <div class="chat-badges">
+            <span class="chat-badge">Run: {{ACTIVE_RUN_ID}}</span>
+            <span class="chat-badge">Massimo 5 scenari</span>
+            <span class="chat-badge">Selettore esperimento</span>
+          </div>
         </div>
-        <button class="chat-clear" id="clearChatButton" type="button">Clear</button>
+        <button class="chat-clear" id="clearChatButton" type="button">Pulisci</button>
       </div>
       <div class="messages" id="messages">
       </div>
       <form class="chat-form" id="chatForm">
-        <textarea id="chatInput" placeholder="Example: Perche il LED non si accende?"></textarea>
+        <textarea id="chatInput" placeholder="Esempio: Perche il LED non si accende?"></textarea>
         <div class="chat-actions">
           <select id="modelSelect">
             {{MODEL_OPTIONS}}
           </select>
-          <button type="submit">Send</button>
+          <button type="submit">Invia</button>
         </div>
       </form>
     </section>
@@ -541,7 +610,7 @@
     const activeRunId = "{{ACTIVE_RUN_ID}}";
     const serverChatHistory = {{SERVER_CHAT_HISTORY_JSON}};
     const serverChatHistoryEnabled = {{SERVER_CHAT_HISTORY_ENABLED}};
-    const welcomeMessage = "Describe the circuit symptom and I will analyze the current pipeline outputs.";
+    const welcomeMessage = "Descrivi il sintomo del circuito e analizzero gli output correnti della pipeline.";
     let chatHistory = [];
 
     function escapeHtml(text) {
@@ -763,7 +832,7 @@
       }
     }
 
-    function addTypingMessage(label = "Agent is thinking") {
+    function addTypingMessage(label = "L'agente sta analizzando") {
       return addMessage(
         "agent",
         '<div class="typing-line"><span>' + escapeHtml(label) + '</span><div class="typing" aria-label="' + escapeHtml(label) + '"><span></span><span></span><span></span></div></div>',
@@ -776,7 +845,7 @@
       const debugText = escapeHtml(debugItems.join("\n"));
       addMessage(
         "debug",
-        "<details><summary>Execution details</summary><pre>" + debugText + "</pre></details>",
+        "<details><summary>Dettagli esecuzione</summary><pre>" + debugText + "</pre></details>",
         {html: true, temporary: true}
       );
     }
@@ -785,7 +854,7 @@
       input.disabled = isLoading;
       modelSelect.disabled = isLoading;
       submitButton.disabled = isLoading;
-      submitButton.textContent = isLoading ? "Running..." : "Send";
+      submitButton.textContent = isLoading ? "Invio..." : "Invia";
     }
 
     function isScenarioRequest(text) {
@@ -812,7 +881,7 @@
       input.value = "";
       setLoading(true);
       const scenarioRequest = isScenarioRequest(text);
-      const typingNode = addTypingMessage(scenarioRequest ? "Executing scenario" : "Agent is thinking");
+      const typingNode = addTypingMessage(scenarioRequest ? "Sto eseguendo lo scenario" : "L'agente sta analizzando");
 
       try {
         const response = await fetch("/api/chat", {
@@ -822,7 +891,7 @@
         });
         const data = await response.json();
         typingNode.remove();
-        addMessage("agent", data.reply || "No response returned.");
+        addMessage("agent", data.reply || "Nessuna risposta restituita.");
         addDebugMessage(data.debug);
         if (data.active_run) {
           setTimeout(() => {
@@ -831,7 +900,7 @@
         }
       } catch (error) {
         typingNode.remove();
-        addMessage("agent", "Chat request failed. Check the local server terminal.");
+        addMessage("agent", "Richiesta chat non riuscita. Controlla il terminale del server locale.");
       } finally {
         setLoading(false);
         input.focus();
