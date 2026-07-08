@@ -1208,8 +1208,8 @@ def render_comparison_summary(scenario_dir: Path) -> str:
     if not isinstance(outcome, dict):
         outcome = {}
     outcome_status = str(outcome.get("status") or "unknown")
-    outcome_label = str(outcome.get("label") or "Outcome unknown")
-    outcome_reason = str(outcome.get("reason") or "No diagnostic outcome available.")
+    outcome_label = str(outcome.get("label") or "Esito non determinabile")
+    outcome_reason = str(outcome.get("reason") or "Nessun esito diagnostico disponibile.")
     outcome_next_step = str(outcome.get("next_step") or "")
     outcome_class = outcome_status_class(outcome_status)
 
@@ -1831,23 +1831,22 @@ def build_scenario_result_explanation(
     title = str(selected.get("title") or selected.get("scenario_id") or "scenario").strip()
     outcome_status = str(diagnostic_outcome.get("status") or "unknown")
     stop_automation = bool(diagnostic_outcome.get("stop_automation"))
-
     outcome_sentence = {
         "resolved_candidate": (
-            f"Questo scenario spiega bene il sintomo osservato e puo fermare l'automazione: "
-            f"l'ipotesi testata da **{title}** risulta fortemente confermata."
+            f"Questo scenario fornisce una conferma forte: "
+            f"l'ipotesi testata da **{title}** risulta fortemente supportata dai risultati."
         ),
         "partially_resolved": (
-            f"Questo scenario ha dato un indizio utile ma non basta ancora da solo: "
-            f"l'ipotesi testata da **{title}** e supportata solo in parte."
+            f"Questo scenario aggiunge una conferma utile sul ramo testato: "
+            f"l'ipotesi legata a **{title}** riceve evidenza concreta, anche se non esaurisce da sola tutta la diagnosi."
         ),
         "not_resolved": (
-            f"Questo scenario non ha spiegato il sintomo: "
-            f"l'ipotesi testata da **{title}** non e confermata dai risultati."
+            f"Questo scenario non aggiunge evidenza utile: "
+            f"l'ipotesi testata da **{title}** non e confermata dai risultati osservati."
         ),
         "unknown": (
             f"Questo scenario resta inconcludente: "
-            f"i risultati non bastano ancora per confermare o escludere l'ipotesi testata da **{title}**."
+            f"i dati disponibili non bastano ancora per valutare bene l'ipotesi testata da **{title}**."
         ),
     }.get(
         outcome_status,
@@ -1861,7 +1860,7 @@ def build_scenario_result_explanation(
     ]
     if hypothesis:
         lines.append("")
-        lines.append(f"Ipotesi confermata: {hypothesis}")
+        lines.append(f"Ipotesi testata: {hypothesis}")
     if changed_lines:
         lines.extend(
             [
@@ -2004,10 +2003,10 @@ def handle_scenario_request(
     diagnostic_outcome = apply_report.get("diagnostic_outcome") or {}
     if not isinstance(diagnostic_outcome, dict):
         diagnostic_outcome = {}
-    outcome_label = diagnostic_outcome.get("label") or "Outcome unknown"
+    outcome_label = diagnostic_outcome.get("label") or "Esito non determinabile"
     outcome_status = diagnostic_outcome.get("status") or "unknown"
-    outcome_reason = diagnostic_outcome.get("reason") or "No diagnostic outcome available."
-    outcome_next_step = diagnostic_outcome.get("next_step") or "Continue with the diagnostic workflow."
+    outcome_reason = diagnostic_outcome.get("reason") or "Nessun esito diagnostico disponibile."
+    outcome_next_step = diagnostic_outcome.get("next_step") or "Puo avere senso continuare con il flusso diagnostico."
     stop_automation = bool(diagnostic_outcome.get("stop_automation"))
     scenario_explanation = build_scenario_result_explanation(
         scenario_paths["scenario_dir"],
@@ -2018,7 +2017,7 @@ def handle_scenario_request(
     budget_exhausted = executed_scenarios_count >= MAX_EXECUTABLE_SCENARIOS
     if budget_exhausted:
         stop_automation = True
-        outcome_next_step = "Scenario budget exhausted. Ask the agent for a final diagnostic conclusion."
+        outcome_next_step = "Hai esaurito il budget scenari. Chiedi all'agente una conclusione diagnostica finale."
 
     update_scenario_registry_after_execution(
         output_dir=output_dir,
@@ -2054,10 +2053,10 @@ def handle_scenario_request(
             f"Stato SPICE scenario: **{spice_status}**.\n\n"
             f"Confronti attivati: **{comparison_summary.get('activated_count', 0)}** / "
             f"{comparison_summary.get('requested_count', 0)}.\n\n"
-            f"Esito diagnostico scenario: **{outcome_label}** (`{outcome_status}`).\n\n"
+            f"Esito diagnostico scenario: **{outcome_label}**.\n\n"
             f"Motivo: {outcome_reason}\n\n"
-            f"Decisione automatica: **{'stop' if stop_automation else 'continue'}**.\n\n"
-            f"Prossimo passo: {outcome_next_step}\n\n"
+            f"Suggerimento automatico: **{'fermarsi qui' if stop_automation else 'si puo continuare'}**.\n\n"
+            f"Prossimo passo consigliato: {outcome_next_step}\n\n"
             + (
                 f"{scenario_explanation}\n\n"
                 if scenario_explanation

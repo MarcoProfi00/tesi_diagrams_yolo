@@ -1,0 +1,26 @@
+{
+  "scenario_id": "scenario_5",
+  "title": "Propagare N002 verso il ramo LED",
+  "hypothesis": "Il ramo LED resta inattivo perche il nodo alimentato N002 non raggiunge l'ingresso N003 del ramo formato da Rresistor22_1 e Dled12_1.",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    },
+    {
+      "type": "feed_nodes_from_source_node",
+      "source_node": "N002",
+      "target_nodes": [
+        "N003"
+      ],
+      "resistance": "1m"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N003)",
+    "v(N005)",
+    "i(vbattery2_1#branch)"
+  ]
+}

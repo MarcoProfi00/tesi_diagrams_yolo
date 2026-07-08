@@ -1,0 +1,19 @@
+{
+  "scenario_id": "scenario_1",
+  "title": "Alimentare il nodo PWR dal connettore",
+  "hypothesis": "Il LED PWR e spento perche il nodo N002 non e alimentato nel netlist base.",
+  "actions": [
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N002",
+      "negative": "0",
+      "value": "5V"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N002)",
+    "v(N004)"
+  ]
+}

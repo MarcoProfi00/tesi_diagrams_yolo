@@ -8,7 +8,8 @@ Versione attuale minimale:
 
 - legge `scenario.json`;
 - lavora sulla netlist copiata in `run/07_netlist.cir`;
-- supporta le azioni generali `drive_node_voltage`, `connect_nodes`,
+- supporta le azioni generali `drive_node_voltage`,
+  `add_voltage_source_between_nodes`, `connect_nodes`,
   `feed_nodes_from_source_node`, `change_source_value`,
   `change_component_value` e `close_switch`;
 - aggiunge o aggiorna una sorgente SPICE di scenario;
@@ -190,19 +191,19 @@ def validate_existing_node(node: Any, node_map: dict[str, Any], *, field_name: s
     return node_id
 
 
-def insert_or_replace_source(netlist_text: str, source_name: str, source_line: str) -> tuple[str, str]:
+def insert_or_replace_netlist_element(netlist_text: str, element_name: str, element_line: str) -> tuple[str, str]:
     """
-    Inserisce o aggiorna una sorgente di scenario nella netlist.
+    Inserisce o aggiorna un elemento di scenario nella netlist.
 
     La riga viene messa prima della prima direttiva SPICE principale, cosi resta
     nella parte dichiarativa della netlist.
     """
     lines = netlist_text.splitlines()
-    source_pattern = re.compile(rf"^\s*{re.escape(source_name)}\s+", flags=re.IGNORECASE)
+    element_pattern = re.compile(rf"^\s*{re.escape(element_name)}\s+", flags=re.IGNORECASE)
 
     for index, line in enumerate(lines):
-        if source_pattern.match(line):
-            lines[index] = source_line
+        if element_pattern.match(line):
+            lines[index] = element_line
             return "\n".join(lines) + "\n", "updated"
 
     insert_at = len(lines)
@@ -212,7 +213,7 @@ def insert_or_replace_source(netlist_text: str, source_name: str, source_line: s
             insert_at = index
             break
 
-    lines.insert(insert_at, source_line)
+    lines.insert(insert_at, element_line)
     return "\n".join(lines) + "\n", "inserted"
 
 
@@ -234,12 +235,63 @@ def apply_drive_node_voltage(
 
     source_name = f"VSCENARIO_{sanitize_spice_name(target_node)}"
     source_line = f"{source_name} {target_node} 0 {source_definition}"
-    updated_netlist, operation = insert_or_replace_source(netlist_text, source_name, source_line)
+    updated_netlist, operation = insert_or_replace_netlist_element(netlist_text, source_name, source_line)
 
     result = {
         "status": "applied",
         "type": "drive_node_voltage",
         "target": target_node,
+        "value": action.get("value"),
+        "normalized_source_definition": source_definition,
+        "normalized_dc_value": source_definition[3:] if source_definition.upper().startswith("DC ") else None,
+        "inserted_line": source_line,
+        "operation": operation,
+        "spice_executed": False,
+    }
+    return updated_netlist, result
+
+
+def apply_add_voltage_source_between_nodes(
+    action: dict[str, Any],
+    run_dir: Path,
+    netlist_text: str,
+) -> tuple[str, dict[str, Any]]:
+    """
+    Applica `add_voltage_source_between_nodes` tra due nodi gia esistenti.
+
+    Questa primitiva rappresenta una eccitazione esterna realistica del
+    circuito: aggiunge una nuova sorgente tra due nodi di interfaccia gia
+    presenti nella node map, invece di forzare direttamente un singolo nodo
+    interno rispetto a massa come fa `drive_node_voltage`.
+    """
+    node_map = read_json(run_dir / "03_node_map.json")
+    positive_node = validate_existing_node(
+        action.get("positive", action.get("positive_node")),
+        node_map,
+        field_name="positive",
+    )
+    negative_node = validate_existing_node(
+        action.get("negative", action.get("negative_node")),
+        node_map,
+        field_name="negative",
+    )
+    if positive_node == negative_node:
+        raise ValueError("add_voltage_source_between_nodes requires two different nodes")
+
+    source_definition = normalize_spice_source_value(action.get("value"))
+    source_name = (
+        f"VSCENARIO_SUPPLY_{sanitize_spice_name(positive_node)}_"
+        f"{sanitize_spice_name(negative_node)}"
+    )
+    source_line = f"{source_name} {positive_node} {negative_node} {source_definition}"
+    updated_netlist, operation = insert_or_replace_netlist_element(netlist_text, source_name, source_line)
+
+    result = {
+        "status": "applied",
+        "type": "add_voltage_source_between_nodes",
+        "positive": positive_node,
+        "negative": negative_node,
+        "nodes": [positive_node, negative_node],
         "value": action.get("value"),
         "normalized_source_definition": source_definition,
         "normalized_dc_value": source_definition[3:] if source_definition.upper().startswith("DC ") else None,
@@ -265,7 +317,7 @@ def apply_connect_nodes(
     resistance = normalize_spice_resistance_value(action.get("resistance"))
     resistor_name = f"RSCENARIO_CONNECT_{sanitize_spice_name(from_node)}_{sanitize_spice_name(to_node)}"
     resistor_line = f"{resistor_name} {from_node} {to_node} {resistance}"
-    updated_netlist, operation = insert_or_replace_source(netlist_text, resistor_name, resistor_line)
+    updated_netlist, operation = insert_or_replace_netlist_element(netlist_text, resistor_name, resistor_line)
 
     result = {
         "status": "applied",
@@ -325,7 +377,7 @@ def apply_feed_nodes_from_source_node(
             f"{sanitize_spice_name(target_node)}"
         )
         resistor_line = f"{resistor_name} {source_node} {target_node} {resistance}"
-        updated_netlist, operation = insert_or_replace_source(updated_netlist, resistor_name, resistor_line)
+        updated_netlist, operation = insert_or_replace_netlist_element(updated_netlist, resistor_name, resistor_line)
         inserted_lines.append(resistor_line)
         expanded_connections.append(
             {
@@ -621,7 +673,7 @@ def apply_close_switch(
     resistance = normalize_spice_resistance_value(action.get("resistance"))
     resistor_name = f"RSCENARIO_{sanitize_spice_name(switch_id)}"
     resistor_line = f"{resistor_name} {node_a} {node_b} {resistance}"
-    updated_netlist, operation = insert_or_replace_source(netlist_text, resistor_name, resistor_line)
+    updated_netlist, operation = insert_or_replace_netlist_element(netlist_text, resistor_name, resistor_line)
     updated_netlist = annotate_closed_switch_netlist(updated_netlist, switch_id, resistor_line)
 
     result = {
@@ -635,6 +687,37 @@ def apply_close_switch(
         "spice_executed": False,
     }
     return updated_netlist, result
+
+
+def apply_change_source_value_action(
+    action: dict[str, Any],
+    run_dir: Path,
+    netlist_text: str,
+) -> tuple[str, dict[str, Any]]:
+    """Adapter uniforme per la registry delle action."""
+    del run_dir
+    return apply_change_source_value(action, netlist_text)
+
+
+def apply_change_component_value_action(
+    action: dict[str, Any],
+    run_dir: Path,
+    netlist_text: str,
+) -> tuple[str, dict[str, Any]]:
+    """Adapter uniforme per la registry delle action."""
+    del run_dir
+    return apply_change_component_value(action, netlist_text)
+
+
+ACTION_HANDLERS = {
+    "drive_node_voltage": apply_drive_node_voltage,
+    "add_voltage_source_between_nodes": apply_add_voltage_source_between_nodes,
+    "connect_nodes": apply_connect_nodes,
+    "feed_nodes_from_source_node": apply_feed_nodes_from_source_node,
+    "change_source_value": apply_change_source_value_action,
+    "change_component_value": apply_change_component_value_action,
+    "close_switch": apply_close_switch,
+}
 
 
 def annotate_closed_switch_netlist(netlist_text: str, switch_id: str, resistor_line: str) -> str:
@@ -893,7 +976,6 @@ def classify_change(base_value: float | None, scenario_value: float | None) -> s
 def evaluate_diagnostic_outcome(
     summary: dict[str, int],
     analysis: str = "op",
-    quantities: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """
     Valuta in modo prudente se uno scenario sembra risolvere il problema.
@@ -909,54 +991,78 @@ def evaluate_diagnostic_outcome(
 
     if requested == 0:
         status = "unknown"
-        label = "Outcome unknown"
-        reason = "The scenario did not define quantities to compare."
+        technical_label = "Outcome unknown"
+        label = "Esito non determinabile"
+        reason = "Lo scenario non definisce grandezze di confronto sufficienti per valutarne l'esito."
         stop_automation = False
     elif missing == requested:
         status = "unknown"
-        label = "Outcome unknown"
-        reason = "None of the requested comparison quantities were found in the SPICE outputs."
+        technical_label = "Outcome unknown"
+        label = "Confronto incompleto"
+        reason = "Nessuna delle grandezze richieste e disponibile negli output SPICE dello scenario."
         stop_automation = False
     elif changed == 0:
         status = "not_resolved"
-        label = "Not resolved"
-        reason = "The requested quantities did not change compared with the base run."
+        technical_label = "Not resolved"
+        label = "Scenario non informativo"
+        reason = "Le grandezze richieste non cambiano rispetto alla run base, quindi questo test non aggiunge evidenza utile."
         stop_automation = False
     elif missing > 0:
         status = "partially_resolved"
-        label = "Partially resolved"
-        reason = "Some requested quantities changed, but at least one comparison quantity is missing."
+        technical_label = "Partially resolved"
+        label = "Ipotesi confermata sul ramo testato"
+        reason = (
+            "Lo scenario conferma utilmente l'ipotesi sulle grandezze disponibili, "
+            "anche se almeno un confronto richiesto resta mancante o incompleto."
+        )
         stop_automation = False
     elif analysis == "tran" and changed == requested:
         status = "partially_resolved"
-        label = "Partially resolved"
+        technical_label = "Partially resolved"
+        label = "Ipotesi confermata sul ramo testato"
         reason = (
-            "The transient waveforms changed in all requested quantities, which supports "
-            "the hypothesis, but waveform changes alone are not enough to mark the problem as resolved automatically."
+            "Le forme d'onda richieste cambiano tutte nel transitorio, quindi l'ipotesi e supportata, "
+            "ma questo da solo non basta per fermare automaticamente la diagnosi."
         )
         stop_automation = False
     elif changed == requested and activated > 0:
         status = "resolved_candidate"
-        label = "Candidate resolved"
-        reason = "All requested quantities changed and at least one inactive quantity became active."
+        technical_label = "Candidate resolved"
+        label = "Ipotesi fortemente confermata"
+        reason = "Tutte le grandezze richieste cambiano e almeno una grandezza prima inattiva si attiva davvero."
         stop_automation = True
     else:
         status = "partially_resolved"
-        label = "Partially resolved"
-        reason = "The scenario changed the circuit response, but the evidence is not strong enough to stop automatically."
+        technical_label = "Partially resolved"
+        label = "Ipotesi confermata sul ramo testato"
+        reason = (
+            "Lo scenario modifica il comportamento del circuito in modo utile, "
+            "ma l'evidenza resta locale o non abbastanza forte per fermarsi automaticamente."
+        )
         stop_automation = False
+
+    user_message = {
+        "resolved_candidate": "Lo scenario fornisce una conferma forte dell'ipotesi testata.",
+        "partially_resolved": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+        "not_resolved": "Lo scenario non ha prodotto un cambiamento utile rispetto alla base.",
+        "unknown": "Non ci sono abbastanza dati per valutare con affidabilita l'esito dello scenario.",
+    }.get(status, "Lo scenario produce un risultato tecnico che richiede ancora interpretazione.")
+
+    next_step = (
+        "Ci sono gia evidenze forti per fermarsi qui e passare alla conclusione diagnostica."
+        if stop_automation
+        else "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
+    )
 
     return {
         "status": status,
+        "technical_label": technical_label,
         "label": label,
         "reason": reason,
+        "user_message": user_message,
         "stop_automation": stop_automation,
         "confidence": "medium" if status == "resolved_candidate" else "low",
-        "next_step": (
-            "Stop automatic scenario execution and ask the agent to explain the confirmed hypothesis."
-            if stop_automation
-            else "Continue with another scenario or ask the agent for a refined hypothesis."
-        ),
+        "next_step": next_step,
     }
 
 
@@ -1037,7 +1143,7 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
         "activated_count": activated,
         "missing_count": missing,
     }
-    diagnostic_outcome = evaluate_diagnostic_outcome(summary, analysis=analysis, quantities=quantities)
+    diagnostic_outcome = evaluate_diagnostic_outcome(summary, analysis=analysis)
 
     comparison = {
         "source_format": "pipeline2.0_scenario_comparison",
@@ -1092,38 +1198,20 @@ def apply_scenario(
             continue
 
         action_type = str(action.get("type") or "").strip()
+        handler = ACTION_HANDLERS.get(action_type)
         try:
-            if action_type == "drive_node_voltage":
-                netlist_text, result = apply_drive_node_voltage(action, run_dir, netlist_text)
-                result["index"] = index
-                applied_actions.append(result)
-            elif action_type == "connect_nodes":
-                netlist_text, result = apply_connect_nodes(action, run_dir, netlist_text)
-                result["index"] = index
-                applied_actions.append(result)
-            elif action_type == "feed_nodes_from_source_node":
-                netlist_text, result = apply_feed_nodes_from_source_node(action, run_dir, netlist_text)
-                result["index"] = index
-                applied_actions.append(result)
-            elif action_type == "change_source_value":
-                netlist_text, result = apply_change_source_value(action, netlist_text)
-                result["index"] = index
-                applied_actions.append(result)
-            elif action_type == "change_component_value":
-                netlist_text, result = apply_change_component_value(action, netlist_text)
-                result["index"] = index
-                applied_actions.append(result)
-            elif action_type == "close_switch":
-                netlist_text, result = apply_close_switch(action, run_dir, netlist_text)
-                result["index"] = index
-                applied_actions.append(result)
-            else:
+            if handler is None:
                 unsupported_actions.append({
                     "index": index,
                     "status": "unsupported",
                     "type": action_type or None,
                     "reason": "Action type is not supported in the current minimal version.",
                 })
+                continue
+
+            netlist_text, result = handler(action, run_dir, netlist_text)
+            result["index"] = index
+            applied_actions.append(result)
         except Exception as exc:
             failed_actions.append({
                 "index": index,
@@ -1211,7 +1299,7 @@ def update_status_file(scenario_dir: Path, report: dict[str, Any]) -> None:
             else "Run ngspice on the scenario netlist and compare base vs scenario."
         )
     if budget_exhausted:
-        next_step = "Scenario budget exhausted. Ask the agent for a final diagnostic conclusion."
+        next_step = "Hai esaurito il budget scenari. Chiedi all'agente una conclusione diagnostica finale."
     status.update(
         {
             "status": report["status"],

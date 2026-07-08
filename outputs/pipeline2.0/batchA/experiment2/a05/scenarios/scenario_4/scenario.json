@@ -1,0 +1,24 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Chiudere TEST mentre si alimenta VMON_INPUT",
+  "hypothesis": "Il problema principale è già l'assenza di alimentazione su N003; la chiusura di switch25.1 serve solo a verificare se il ramo TEST modifica ulteriormente la lettura su N001.",
+  "actions": [
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N003",
+      "negative": "0",
+      "value": "5V"
+    },
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    }
+  ],
+  "rerun_from": "06",
+  "analysis": "op",
+  "compare": [
+    "v(N003)",
+    "v(N001)",
+    "v(N004)"
+  ]
+}

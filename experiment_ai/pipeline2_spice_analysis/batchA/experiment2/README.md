@@ -113,12 +113,12 @@ Per ogni circuito di Experiment 2:
 | `a02` | si | completed | `connect_nodes` | `../experiment1/a02.md` | Caso chiuso: `connect_nodes N002 -> N004` attiva il ramo resistivo e la corrente di batteria. |
 | `a03` | no | excluded_for_now | - | `../experiment1/a03.md` | Caso image-assisted troppo complesso per la fase iniziale di Experiment 2. |
 | `a04` | si | not started | tbd | `../experiment1/a04.md` | Non prioritario per la prima ondata topologica. |
-| `a05` | si | not started | `add_voltage_source_between_nodes` | `../experiment1/a05.md` | Utile piu avanti per test espliciti di alimentazione tra nodi. |
+| `a05` | si | completed | `add_voltage_source_between_nodes` | `../experiment1/a05.md` | Caso chiuso: la nuova primitiva alimenta correttamente `VMON_INPUT` (`N003`) verso massa e localizza il sintomo come mancanza di eccitazione del circuito base; la chiusura di `TEST` resta secondaria. |
 | `a06` | si | not started | tbd | `../experiment1/a06.md` | Non prioritario per la prima ondata topologica. |
-| `a07` | si | not started | `connect_nodes` / `add_voltage_source_between_nodes` | `../experiment1/a07.md` | Caso da usare dopo `a10` e `a09`, con attenzione alla mancanza di eccitazione reale. |
+| `a07` | si | completed | `add_voltage_source_between_nodes` | `../experiment1/a07.md` | Caso chiuso: il ramo LED si attiva quando `PWR` (`N002`) viene alimentato, mentre il ramo `VAC` si attiva separatamente quando viene eccitato `AC_INPUT` (`N001`); la netlist base risulta inattiva soprattutto per mancanza di eccitazione sugli ingressi esterni. |
 | `a08` | si | not started | tbd | `../experiment1/a08.md` | Non prioritario per la prima ondata topologica. |
 | `a09` | si | completed | `connect_nodes` / `feed_nodes_from_source_node` | `../experiment1/a09.md` | Caso forte su due sottofasi separate: `connect_nodes` valida i due rami in modo diretto, `feed_nodes_from_source_node` conferma la propagazione da `N003` verso LED e lampada fino allo scenario combinato finale. |
-| `a10` | si | completed | `connect_nodes` | `../experiment1/a10.md` | Primo circuito pilota chiuso: conferma della primitiva su ramo LED e ramo lampada. |
+| `a10` | si | completed | `connect_nodes` / `feed_nodes_from_source_node` | `../experiment1/a10.md` | Primo circuito pilota chiuso su due sottofasi: `connect_nodes` mostra la ricostruzione del percorso verso i due rami, `feed_nodes_from_source_node` rifinisce la stessa logica propagando da `N002` verso lampada e LED. |
 
 ## Campi stabili per risultati futuri
 

@@ -173,6 +173,58 @@ Serve per:
 - `a09` e `a10`: provare alimentazioni esterne sui rami finali quando non si
   vuole usare una sorgente gia presente.
 
+Stato attuale della sottofase `add_voltage_source_between_nodes`:
+
+- non ancora implementata;
+- candidata come terza primitiva topologica di Esperimento 2;
+- da usare soprattutto quando la netlist base non contiene una vera sorgente
+  utile o quando vogliamo simulare in modo esplicito una eccitazione esterna
+  tra pin gia esistenti;
+- concettualmente distinta da:
+  - `connect_nodes`, che aggiunge continuita;
+  - `feed_nodes_from_source_node`, che propaga una sorgente gia presente.
+
+Priorita attuale sui circuiti del Batch A:
+
+- priorita alta:
+  - `a07`, perche la netlist base e simulabile ma non contiene alcuna vera
+    sorgente SPICE;
+  - `a05`, perche il circuito base non ha sorgenti e il ramo VMON va testato
+    come ingresso esterno;
+- priorita media:
+  - `a01`, perche il circuito usa un connector etichettato `+5 V DC` ma non
+    una batteria esplicita nell'immagine; quindi una sorgente esterna sul
+    connector ha ancora senso semantico;
+- priorita bassa o non prioritaria:
+  - `a02`, perche la batteria e gia presente nella netlist e il collo di
+    bottiglia sembra piu topologico che di eccitazione mancante;
+  - `a09` e `a10`, perche hanno gia una sorgente base e i casi esplorati finora
+    sono spiegati meglio da `connect_nodes` e
+    `feed_nodes_from_source_node`;
+  - `a04`, `a06`, `a08`, perche sono casi gia eccitati e piu orientati a
+    comportamento analogico, guadagno o temporizzazione che a sorgente
+    mancante.
+
+Decisione metodologica attuale:
+
+- non introdurre per ora una primitiva separata `add_current_source`;
+- non introdurre per ora una primitiva separata `signal_source`;
+- se servira una sorgente temporale, la stessa
+  `add_voltage_source_between_nodes` potra accettare valori come:
+
+```text
+DC 5
+SIN(0 5 50)
+PULSE(0 5 0 1ms 1ms 50ms 100ms)
+```
+
+In questo modo manteniamo il runner semplice e generale:
+
+- una primitiva per aggiungere una eccitazione esterna;
+- valore SPICE abbastanza flessibile da coprire DC e forme d'onda;
+- eventuali alias semantici futuri demandati al prompt o al catalogo
+  descrittivo, non al moltiplicarsi delle primitive eseguibili.
+
 ### Casi esclusi per ora
 
 `a03` resta fuori dall'Esperimento 2 iniziale.

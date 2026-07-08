@@ -182,7 +182,8 @@ La chat salva file separati per non sovrascrivere altri output:
 11_agent_response_chat.md
 ```
 
-Quando la chat viene aperta su `--experiment experiment2`, salva anche una
+Quando la chat viene aperta su un esperimento che inizia con `experiment2`
+(per esempio `experiment2` o `experiment2_feed_nodes`), salva anche una
 history ufficiale locale per circuito in:
 
 ```text
@@ -209,7 +210,7 @@ esegui l'ultimo
 mostra scenari
 ```
 
-lo step `09` riconosce la scelta e, in `experiment2`, usa il
+lo step `09` riconosce la scelta e, nelle sottofasi `experiment2*`, usa il
 `scenario_registry.json` locale come sorgente ufficiale degli scenari
 proposti/eseguiti. Il JSON tecnico non viene piu recuperato solo dall'ultima
 risposta agente: viene letto dal registry globale del circuito e poi passato
@@ -217,7 +218,7 @@ allo step `12`.
 
 La chat supporta anche un selettore modello.
 
-Per Esperimento 2 la conversazione ufficiale vive nei file locali sopra. Il
+Per le sottofasi `experiment2*` la conversazione ufficiale vive nei file locali sopra. Il
 browser continua a mantenere una cache locale della UI, ma quando riapri la
 pagina il contenuto visibile viene ricostruito dalla history server-side.
 
@@ -243,6 +244,7 @@ Se esistono scenari in:
 
 ```text
 outputs/pipeline2.0/<batch>/<circuit>/scenarios/
+outputs/pipeline2.0/<batch>/<experiment>/<circuit>/scenarios/
 ```
 
 lo step 10 li indicizza in `executed_scenarios`, includendo path e riepilogo di:
@@ -294,6 +296,7 @@ Lo step 12 non modifica mai la base run originale. Lavora solo dentro:
 
 ```text
 outputs/pipeline2.0/<batch>/<circuit>/scenarios/<scenario_id>/
+outputs/pipeline2.0/<batch>/<experiment>/<circuit>/scenarios/<scenario_id>/
 ```
 
 Struttura attuale:
@@ -313,6 +316,7 @@ Azioni scenario supportate per ora:
 ```text
 Scenari elettrici / di pilotaggio:
 - drive_node_voltage
+- add_voltage_source_between_nodes
 - change_source_value
 - change_component_value
 - close_switch
@@ -324,6 +328,11 @@ Scenari topologici controllati:
 
 `drive_node_voltage` aggiunge o aggiorna una sorgente di test su un nodo della
 run scenario.
+
+`add_voltage_source_between_nodes` aggiunge una nuova sorgente tra due nodi gia
+esistenti della node map. E la primitiva giusta quando il circuito base non ha
+una vera eccitazione utile e vogliamo alimentarlo in modo piu realistico dal
+suo ingresso naturale, per esempio tra pin di connettore e ritorno/ground.
 
 `change_source_value` modifica il valore di una sorgente SPICE gia presente
 nella netlist copiata dello scenario.
@@ -344,6 +353,15 @@ alimentato verso uno o piu nodi target. Internamente viene tradotta in
 collegamenti resistivi quasi ideali nella netlist scenario, ma resta distinta da
 `connect_nodes` perche rappresenta una ipotesi diagnostica di propagazione
 dell'alimentazione.
+
+Strategia pratica:
+
+- usare `add_voltage_source_between_nodes` quando manca una eccitazione esterna
+  realistica del circuito;
+- usare `feed_nodes_from_source_node` quando la sorgente esiste gia e deve solo
+  propagarsi verso altri nodi;
+- usare `drive_node_voltage` soprattutto come test locale di isolamento, non
+  come prima scelta per alimentare l'intero circuito.
 
 I valori devono essere concreti: uno scenario con `value: "unknown"` viene
 fermato e marcato come non eseguibile.
@@ -388,6 +406,12 @@ Esempio:
 
 ```text
 outputs/pipeline2.0/batchA/experiment2/a01/
+```
+
+Un'altra root sperimentale valida e, per esempio:
+
+```text
+outputs/pipeline2.0/batchA/experiment2_feed_nodes/a10/
 ```
 
 Questa struttura serve quando vogliamo confrontare piu esperimenti partendo
@@ -480,6 +504,12 @@ Esempio:
 
 ```powershell
 python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experiment experiment2 --circuit a01
+```
+
+Esempio su una sottofase separata:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experiment experiment2_feed_nodes --circuit a10
 ```
 
 Se vuoi eseguire anche gli scenari direttamente dalla chat, conviene passare
@@ -605,10 +635,18 @@ Quando si usa `--experiment`, anche la memoria browser della chat viene separata
 per batch, esperimento e circuito. Questo evita di mescolare conversazioni di
 esperimenti diversi.
 
-In particolare, con `--experiment experiment2`, il bottone `Clear` pulisce sia
-la cache locale del browser sia la history ufficiale in
+In particolare, con `--experiment` che inizia con `experiment2`, il bottone
+`Clear` pulisce sia la cache locale del browser sia la history ufficiale in
 `experiment2_chat/chat_history.json` e il registry scenari ufficiale in
 `experiment2_chat/scenario_registry.json`.
+
+Il reset rimuove anche:
+
+- le cartelle `scenarios/` della sessione corrente
+- gli artefatti chat `10_diagnostic_context.json`,
+  `11_agent_input_preview_chat.md`,
+  `11_agent_prompt_chat.md`,
+  `11_agent_response_chat.md`
 
 ## Scenari controllati
 
@@ -650,6 +688,12 @@ Se la cartella scenario esiste gia, si puo applicare lo scenario da terminale:
 python scripts\pipeline_2.0\json_to_spice\12_controlled_scenarios.py --scenario-dir outputs\pipeline2.0\<batch>\<circuit>\scenarios\<scenario_id>
 ```
 
+Con una root sperimentale:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\12_controlled_scenarios.py --scenario-dir outputs\pipeline2.0\<batch>\<experiment>\<circuit>\scenarios\<scenario_id>
+```
+
 Questo comando:
 
 ```text
@@ -665,6 +709,12 @@ Per eseguire anche ngspice sulla run dello scenario:
 
 ```powershell
 python scripts\pipeline_2.0\json_to_spice\12_controlled_scenarios.py --scenario-dir outputs\pipeline2.0\<batch>\<circuit>\scenarios\<scenario_id> --run-spice --ngspice "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+```
+
+Con una root sperimentale:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\12_controlled_scenarios.py --scenario-dir outputs\pipeline2.0\<batch>\<experiment>\<circuit>\scenarios\<scenario_id> --run-spice --ngspice "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
 ```
 
 Esempio di confronto atteso:
@@ -1059,7 +1109,8 @@ Versione attuale:
 - OpenAI e collegato sia da CLI sia dalla web chat
 - `12_controlled_scenarios.py` applica scenari controllati
   elettrici/topologici (`drive_node_voltage`, `change_source_value`,
-  `change_component_value`, `close_switch`, `connect_nodes`,
+  `add_voltage_source_between_nodes`, `change_component_value`,
+  `close_switch`, `connect_nodes`,
   `feed_nodes_from_source_node`), puo eseguire ngspice e crea un confronto
   base/scenario
 

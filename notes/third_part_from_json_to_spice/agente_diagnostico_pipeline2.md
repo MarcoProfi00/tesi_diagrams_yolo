@@ -836,12 +836,14 @@ Primitive attualmente supportate da `12_controlled_scenarios.py`:
 ```text
 Scenari elettrici / di pilotaggio:
 - drive_node_voltage
+- add_voltage_source_between_nodes
 - change_source_value
 - change_component_value
 - close_switch
 
 Scenari topologici controllati:
 - connect_nodes
+- feed_nodes_from_source_node
 ```
 
 `drive_node_voltage` aggiunge una sorgente di test su un nodo gia presente
@@ -861,6 +863,23 @@ Questa azione viene tradotta nella netlist scenario in:
 
 ```spice
 VSCENARIO_N002 N002 0 DC 5
+```
+
+`add_voltage_source_between_nodes` aggiunge invece una sorgente tra due nodi
+gia esistenti della node map. Questa e la primitiva piu naturale quando il
+circuito base non ha una vera eccitazione utile e il test corretto e
+alimentarlo dal suo ingresso reale, per esempio tra pin di connettore e
+ritorno/ground, invece di forzare solo un nodo interno.
+
+Esempio:
+
+```json
+{
+  "type": "add_voltage_source_between_nodes",
+  "positive": "N003",
+  "negative": "0",
+  "value": "5V"
+}
 ```
 
 `change_source_value` modifica il valore di una sorgente SPICE gia presente
@@ -2182,7 +2201,7 @@ Prossimi esperimenti:
      primitive scenario disponibili;
    - aggiungere scenari che modificano la netlist in modo piu strutturale;
    - supportare azioni come collegare nodi, alimentare gruppi di pin,
-     aggiungere una batteria, aggiungere una sorgente, aggiungere una
+     aggiungere una sorgente esterna tra nodi esistenti, aggiungere una
      resistenza o un ramo equivalente;
    - mantenere sempre separata la base run dagli scenari;
    - salvare in modo esplicito cosa lo scenario ha cambiato.
@@ -2192,7 +2211,7 @@ Prossimi esperimenti:
    ```text
    chiudi lo switch e alimenta i pin collegati del connector
    aggiungi una batteria se il circuito non ha una sorgente utile
-   aggiungi una sorgente di corrente controllata
+   aggiungi una sorgente esterna tra pin di ingresso e ritorno del circuito
    aggiungi una resistenza equivalente o un carico minimo
    collega due nodi solo nella run scenario
    ```
@@ -2201,9 +2220,12 @@ Prossimi esperimenti:
 
    - la prima sottofase `connect_nodes` e gia stata validata sui casi
      `a01`, `a02`, `a09` e `a10`;
-   - il prossimo passo atteso e `feed_nodes_from_source_node`, da usare solo
-     quando esiste un nodo sorgente gia alimentato o reso alimentato nello
-     stesso scenario self-contained.
+   - `feed_nodes_from_source_node` e la seconda primitiva topologica per i casi
+     in cui esiste gia un nodo sorgente alimentato;
+   - il prossimo passo atteso e consolidare
+     `add_voltage_source_between_nodes`, da usare quando la base run non ha una
+     vera eccitazione utile e l'agente deve prima alimentare il circuito dal
+     suo ingresso naturale.
 
 2. **Esperimento 3 - automazione agentica degli scenari**
 

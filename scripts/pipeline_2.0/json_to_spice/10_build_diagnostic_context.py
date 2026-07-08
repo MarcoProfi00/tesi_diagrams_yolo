@@ -356,6 +356,7 @@ def build_scenario_outcome_summary(
             "spice_status": scenario.get("spice_status"),
             "outcome_status": outcome_status,
             "outcome_label": outcome.get("label"),
+            "outcome_technical_label": outcome.get("technical_label"),
             "outcome_reason": outcome.get("reason"),
             "stop_automation": stop_automation,
             "comparison_summary": comparison_summary,

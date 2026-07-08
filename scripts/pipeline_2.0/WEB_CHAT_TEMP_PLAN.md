@@ -629,6 +629,7 @@ implementato per primitive semplici e scenario run separata
 
 12:
 - supporta drive_node_voltage
+- supporta add_voltage_source_between_nodes
 - supporta change_source_value su sorgenti SPICE esistenti
 - supporta change_component_value su componenti semplici gia emessi
 - supporta close_switch su switch gia riconosciuti
@@ -655,6 +656,14 @@ confronto:
 v(<NODE>): cambia rispetto alla base run
 v(<LOAD_NODE>): si attiva oppure resta invariato
 i(<LOAD>): cresce, resta nulla oppure cambia solo parzialmente
+```
+
+Regola pratica aggiornata per Esperimento 2:
+
+```text
+se la base run non ha una vera eccitazione utile, l'agente deve preferire
+add_voltage_source_between_nodes sui nodi di interfaccia del circuito
+(connector/supply/return) prima di proporre drive_node_voltage su nodi interni
 ```
 
 ### TODO 7 - Ciclo ricorsivo agente/scenario
