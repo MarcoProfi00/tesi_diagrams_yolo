@@ -48,6 +48,20 @@ Idea principale:
 ogni scenario produce una netlist alternativa, eseguibile e confrontabile
 ```
 
+Situazione reale raggiunta sul Batch A:
+
+- la web chat experiment-aware e attiva;
+- la chat history file-based di Experiment 2 e attiva;
+- il registry scenari locale per circuito e attivo;
+- le tre primitive candidate principali di questa fase sono tutte implementate
+  nel runner;
+- i casi prioritari del Batch A per queste primitive sono gia stati coperti e
+  documentati nei markdown `experiment2`.
+
+In altre parole, la prima sottofase di Experiment 2 non e piu una fase di sola
+implementazione del runner, ma una fase gia consolidata su tre famiglie di
+scenari che cambiano in modo controllato la netlist SPICE.
+
 Possibili sviluppi:
 
 - creare un piccolo file YAML o simile come catalogo delle primitive scenario;
@@ -143,10 +157,11 @@ Serve per:
 
 Stato attuale della sottofase `feed_nodes_from_source_node`:
 
-- in implementazione come seconda primitiva topologica di Esperimento 2;
-- pensata come wrapper semantico controllato sopra collegamenti tipo
-  `connect_nodes`;
-- `a01` resta il candidato piu pulito per iniziare i primi test.
+- implementata nel runner scenario;
+- integrata nella web chat e nel prompt agente;
+- validata su `a01`, `a09`, `a10`;
+- documentata nei markdown `experiment2` del Batch A;
+- considerata sostanzialmente chiusa come seconda primitiva di Esperimento 2.
 
 #### 3. add_voltage_source_between_nodes
 
@@ -175,8 +190,12 @@ Serve per:
 
 Stato attuale della sottofase `add_voltage_source_between_nodes`:
 
-- non ancora implementata;
-- candidata come terza primitiva topologica di Esperimento 2;
+- implementata nel runner scenario;
+- integrata nella web chat e nel prompt agente;
+- validata su `a05`, `a07`;
+- documentata nei markdown `experiment2` del Batch A;
+- considerata sostanzialmente chiusa come terza primitiva forte di
+  Esperimento 2 sul Batch A;
 - da usare soprattutto quando la netlist base non contiene una vera sorgente
   utile o quando vogliamo simulare in modo esplicito una eccitazione esterna
   tra pin gia esistenti;
@@ -186,24 +205,38 @@ Stato attuale della sottofase `add_voltage_source_between_nodes`:
 
 Priorita attuale sui circuiti del Batch A:
 
-- priorita alta:
-  - `a07`, perche la netlist base e simulabile ma non contiene alcuna vera
-    sorgente SPICE;
-  - `a05`, perche il circuito base non ha sorgenti e il ramo VMON va testato
-    come ingresso esterno;
-- priorita media:
-  - `a01`, perche il circuito usa un connector etichettato `+5 V DC` ma non
-    una batteria esplicita nell'immagine; quindi una sorgente esterna sul
-    connector ha ancora senso semantico;
-- priorita bassa o non prioritaria:
-  - `a02`, perche la batteria e gia presente nella netlist e il collo di
-    bottiglia sembra piu topologico che di eccitazione mancante;
-  - `a09` e `a10`, perche hanno gia una sorgente base e i casi esplorati finora
-    sono spiegati meglio da `connect_nodes` e
-    `feed_nodes_from_source_node`;
+- casi gia chiusi e documentati per questa prima ondata:
+  - `a01`: `connect_nodes` e `feed_nodes_from_source_node`;
+  - `a02`: `connect_nodes`;
+  - `a05`: `add_voltage_source_between_nodes`;
+  - `a07`: `add_voltage_source_between_nodes`;
+  - `a09`: `connect_nodes` e `feed_nodes_from_source_node`;
+  - `a10`: `connect_nodes` e `feed_nodes_from_source_node`.
+- casi non prioritari per nuove primitive topologiche in questa fase:
   - `a04`, `a06`, `a08`, perche sono casi gia eccitati e piu orientati a
-    comportamento analogico, guadagno o temporizzazione che a sorgente
-    mancante.
+    comportamento analogico, bias, guadagno o temporizzazione che a
+    continuita/alimentazione mancante;
+- caso escluso dalla fase semplice:
+  - `a03`, perche richiede una successiva fase di graph correction o
+    ragionamento image-assisted.
+
+Conclusione operativa attuale:
+
+- per il Batch A la triade
+
+```text
+connect_nodes
+feed_nodes_from_source_node
+add_voltage_source_between_nodes
+```
+
+  puo essere considerata sostanzialmente completata come famiglia di scenari
+  che cambia in modo controllato la netlist SPICE;
+- il prossimo blocco di lavoro non e piu "aggiungere una quarta primitiva
+  topologica semplice", ma scegliere se passare a:
+  - scenari analogici/dinamici sui casi `a04`, `a06`, `a08`;
+  - oppure una fase successiva di correzione topologica/image-assisted su
+    `a03`.
 
 Decisione metodologica attuale:
 

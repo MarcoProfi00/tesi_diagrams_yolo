@@ -386,6 +386,44 @@ distinguere fatti, assunzioni e ipotesi
 proporre scenari controllati
 ```
 
+## Struttura comparabile tra Experiment 1 e Experiment 2
+
+Per preparare la fase di confronto, score e grafici, i markdown dei due
+esperimenti devono ormai seguire una ossatura comune.
+
+Il riferimento condiviso e:
+
+```text
+TEMPLATE_COMPARABLE_EXPERIMENTS.md
+```
+
+Da questo derivano i template operativi:
+
+```text
+experiment1/TEMPLATE_CIRCUIT.md
+experiment2/TEMPLATE_CIRCUIT.md
+```
+
+L'idea non e rendere i due esperimenti identici in tutto, ma far si che i
+blocchi confrontabili stiano sempre nello stesso ordine:
+
+1. structured experiment record
+2. riferimenti
+3. obiettivo locale
+4. contesto iniziale
+5. domanda iniziale
+6. valutazione della prima risposta
+7. prima tripletta di scenari
+8. scenari eseguiti
+9. cronologia domanda/risposta
+10. cosa abbiamo imparato
+11. conclusione locale
+12. artefatti
+
+I dettagli piu specifici del singolo esperimento, per esempio netlist completa,
+stdout/stderr commentati o note storiche su sottofasi diverse, possono restare
+in appendice senza rompere la confrontabilita della parte alta del file.
+
 ## Stato dell'agente e della web chat
 
 Nel primo esperimento non ci siamo fermati allo step `08`.

@@ -10,6 +10,8 @@ status: not_started
 included: true
 excluded_reason: null
 base_reference: ../experiment1/<circuit>.md
+runtime_experiment_root: ../../../../outputs/pipeline2.0/batchA/experiment2/<circuit>/
+additional_runtime_roots: []
 primary_primitive: null
 secondary_primitives: []
 first_user_prompt: null
@@ -24,10 +26,12 @@ needs_image: null
 notes_for_results: ""
 ```
 
-## Riferimento base
+## Riferimenti
 
 - Base ufficiale Experiment 1: `../experiment1/<circuit>.md`
 - Output runtime Experiment 2: `../../../../outputs/pipeline2.0/batchA/experiment2/<circuit>/`
+- Eventuali root runtime secondarie:
+  `aggiungere qui solo se esistono davvero`
 
 ## Obiettivo locale di Experiment 2
 
@@ -37,13 +41,22 @@ Descrivere in una frase:
 - perche questo circuito e utile;
 - quale primitiva e il focus principale.
 
-## Prompt iniziale usato in chat
+## Contesto iniziale
+
+- Base run di riferimento:
+- Prompt allineato: si/no
+- History/registry attivi: si/no
+- Note preliminari:
+
+## Domanda iniziale
+
+### Domanda utente
 
 ```text
 <incollare qui il prompt utente iniziale>
 ```
 
-## Prima risposta dell'agente
+## Valutazione della prima risposta
 
 Descrivere in modo sintetico:
 
@@ -52,16 +65,9 @@ Descrivere in modo sintetico:
 - se ha gia introdotto o no una ipotesi topologica;
 - se la prima risposta e convincente oppure no.
 
-## Stato del contesto prima dei test
+## Prima tripletta di scenari proposti
 
-- Base run di riferimento:
-- Prompt allineato: si/no
-- History/registry attivi: si/no
-- Note preliminari:
-
-## Scenari proposti nella prima risposta
-
-| Scenario | Titolo | Action types | Famiglia | Topologico | Eseguibile | Nota |
+| Scenario | Titolo | Action types | Famiglia | Topologico | Eseguibile | Valutazione |
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 |  |  |  |  |  |  |
 | 2 |  |  |  |  |  |  |
@@ -69,14 +75,13 @@ Descrivere in modo sintetico:
 
 ## Scenari eseguiti
 
-| Scenario | Actions | Outcome | Evidenza chiave | Utile per il passo successivo | Note |
-| --- | --- | --- | --- | --- | --- |
-|  |  |  |  |  |  |
+| Scenario | Actions | Outcome | Evidenza chiave | Valutazione |
+| --- | --- | --- | --- | --- |
+|  |  |  |  |  |
 
 ## Cronologia domanda/risposta
 
-Per mantenere lo stile di Experiment 1, conviene documentare i passaggi davvero
-significativi in ordine temporale:
+Documentare solo i passaggi davvero significativi in ordine temporale:
 
 ### Domanda 1
 
@@ -136,6 +141,15 @@ experiment2_chat/chat_history.md
 experiment2_chat/scenario_registry.md
 scenarios/<scenario_id>/
 ```
+
+## Appendice tecnica opzionale
+
+Qui possono vivere i dettagli piu specifici di Experiment 2:
+
+- confronto tra sottofasi diverse;
+- note su root runtime storiche;
+- dump piu verbosi della risposta agente;
+- dettagli tecnici degli scenario artifacts.
 
 ## Prossimo passo
 
