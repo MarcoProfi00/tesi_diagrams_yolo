@@ -1,0 +1,29 @@
+﻿{
+    "experiment":  "experiment3_viewer",
+    "batch":  "batchA",
+    "purpose":  "Workspace for Experiment 3 viewer/simulator development. Active runs are copied from experiment2; experiment2_feed_nodes is preserved separately as source material.",
+    "created_from":  {
+                         "active_workspace_source":  "outputs/pipeline2.0/batchA/experiment2",
+                         "additional_source":  "outputs/pipeline2.0/batchA/experiment2_feed_nodes"
+                     },
+    "active_circuits":  [
+                            "a01",
+                            "a02",
+                            "a04",
+                            "a05",
+                            "a06",
+                            "a07",
+                            "a08",
+                            "a09",
+                            "a10"
+                        ],
+    "excluded_initially":  [
+                               {
+                                   "circuit":  "a03",
+                                   "reason":  "Graph/topology issue; ngspice base run failed; reserved for graph correction or image-assisted phase."
+                               }
+                           ],
+    "viewer_rule":  "Every selectable run, including base run and scenarios, should get a 13_viewer_model.json generated from the netlist actually simulated by ngspice.",
+    "scenario_hook":  "After a scenario is executed by the web chat, generate the viewer model for that scenario run automatically.",
+    "source_collision_policy":  "Do not merge experiment2_feed_nodes scenarios into active scenarios automatically because scenario ids can collide."
+}

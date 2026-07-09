@@ -1,0 +1,26 @@
+{
+  "scenario_id": "scenario_6",
+  "title": "Rinforzare il pilotaggio della base e aumentare insieme l'ingresso",
+  "hypothesis": "A clearer LED blinking may emerge if the trigger-to-base coupling and the input excitation amplitude are strengthened together, since both hypotheses were separately supported by scenario_4 and scenario_5.",
+  "actions": [
+    {
+      "type": "add_resistor_between_nodes",
+      "from": "N001",
+      "to": "N004",
+      "value": "33k"
+    },
+    {
+      "type": "change_source_value",
+      "target": "Vsignal_source23_1",
+      "value": "PULSE(0 10 0 1ms 1ms 50ms 100ms)"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N001)",
+    "v(N004)",
+    "v(N003)",
+    "v(N005)"
+  ]
+}
