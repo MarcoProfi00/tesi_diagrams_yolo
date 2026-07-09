@@ -1,344 +1,329 @@
 # Batch A end-to-end workplan
 
-Questo documento definisce il piano operativo deciso dopo il confronto con il
-tutor.
+Questo file non e piu un piano grezzo di implementazione.
 
-L'obiettivo non e completare subito tutti i batch, ma costruire una demo solida
-e difendibile su tutto Batch A, arrivando dalla Pipeline 2.0 fino a SPICE,
-agente, scenari controllati e webapp.
+Adesso serve come workplan compatto e aggiornato del percorso Batch A dopo la
+chiusura di:
 
-## Obiettivo
+- Esperimento 1;
+- Esperimento 2;
+- riallineamento dei markdown di analisi;
+- riallineamento della roadmap generale Pipeline 2.0.
 
-Portare tutti i circuiti di Batch A attraverso una pipeline unica:
+## Obiettivo del documento
+
+Tenere in una pagina sola il quadro operativo del Batch A:
+
+- cosa e gia stato chiuso;
+- quali artefatti sono il riferimento ufficiale;
+- cosa resta da fare prima di passare davvero all'Esperimento 3;
+- in che ordine conviene muoversi.
+
+## Stato attuale del Batch A
+
+Il Batch A e oggi il banco di prova end-to-end piu completo del progetto.
+
+Abbiamo gia un flusso reale che copre:
 
 ```text
 Graph JSON
 -> Pipeline 2.0
 -> netlist SPICE
 -> ngspice
--> sintesi SPICE
 -> contesto diagnostico
--> agente AI
+-> chat locale
+-> agente diagnostico
 -> scenari controllati
--> webapp
+-> documentazione manuale degli esperimenti
+-> tabella risultati comparabile
 ```
 
-La pipeline deve restare generale. Anche se il lavoro parte da Batch A, gli
-script non devono essere scritti in modo specifico per `a01`, `a02`, `a10` o per
-un singolo circuito.
+In pratica il Batch A non e piu solo "set di test tecnico", ma il riferimento
+principale per:
 
-## Cosa significa "funziona"
+- qualita della pipeline;
+- comportamento dell'agente;
+- comportamento delle primitive scenario;
+- struttura dei report della tesi.
 
-Non tutti i circuiti devono essere simulabili allo stesso livello.
+## Convenzione cartelle output
 
-Per ogni circuito Batch A vogliamo arrivare a uno stato chiaro:
+Sul Batch A manteniamo volutamente sia la root canonica sia le root
+sperimentali.
+
+Struttura attesa:
 
 ```text
-READY
+outputs/pipeline2.0/batchA/
+  a01 ... a10
+  experiment1/
+  experiment2/
+  experiment2_feed_nodes/
 ```
 
-Il circuito ha valori e modelli sufficienti, la netlist viene generata e ngspice
-produce risultati utili.
+Significato:
+
+- `a01 ... a10` = baseline tecnica canonica della Pipeline 2.0;
+- `experiment1/` = copia esplicita dell'Esperimento 1;
+- `experiment2/` e `experiment2_feed_nodes/` = workspace/snapshot separati
+  usati per le varianti dell'Esperimento 2;
+- questa duplicazione e metodologica e voluta, non va letta come disordine da
+  pulire automaticamente.
+
+## Riferimenti ufficiali
+
+### 1. Roadmap generale
+
+File principale:
 
 ```text
-PARTIAL
+notes/third_part_from_json_to_spice/ROADMAP_TEMP_ESPERIMENTI_PIPELINE2.md
 ```
 
-Il circuito attraversa la pipeline, ma alcuni componenti sono semplificati,
-saltati o non supportati. La simulazione puo essere parziale oppure utile solo
-per alcune parti del circuito.
+Qui vive la sequenza ufficiale degli esperimenti:
+
+- Esperimento 1 = baseline Batch A
+- Esperimento 2 = scenari piu potenti / netlist editing controllato
+- Esperimento 3 = viewer / simulatore visuale
+- Esperimento 4 = automazione agentica
+
+### 2. Documento agente
+
+File principale:
 
 ```text
-NOT_READY
+notes/third_part_from_json_to_spice/agente_diagnostico_pipeline2.md
 ```
 
-Il circuito non e ancora simulabile in modo utile, ma la pipeline produce un
-motivo esplicito: valori mancanti, modelli mancanti, componente non supportato,
-topologia incompleta o altro limite.
+Qui vive la descrizione piu completa di:
 
-Quindi "funziona" non significa simulazione perfetta. Significa:
+- ruolo dell'agente;
+- manifest diagnostico;
+- chat locale;
+- scenario registry;
+- primitive scenario;
+- ordine logico degli sviluppi futuri.
+
+### 3. Report circuiti
+
+Directory di riferimento:
 
 ```text
-stessa pipeline per tutti i circuiti
-output sempre prodotti
-stato sempre dichiarato
-limiti sempre espliciti
+experiment_ai/pipeline2_spice_analysis/batchA/
 ```
 
-## Fase 1 - Batch A fino a 08
+Qui vivono:
 
-Prima priorita: completare Batch A fino a SPICE.
+- markdown `experiment1`
+- markdown `experiment2`
+- README locali
+- tabella risultati minima comparabile
 
-Per ogni circuito Batch A:
+File chiave:
 
 ```text
-a01
-a02
-a03
-a04
-a05
-a06
-a07
-a08
-a09
-a10
+experiment_ai/pipeline2_spice_analysis/batchA/RESULTS_TABLE_TEMPLATE.md
 ```
 
-servono:
+## Esperimento 1 - stato
 
-- Graph JSON gia prodotto dalla Pipeline 1.0;
-- file `values.yaml` manuale quando necessario;
-- output da `01_io.py` a `08_spice_run.py`;
-- controllo del risultato ngspice;
-- classificazione provvisoria READY / PARTIAL / NOT_READY.
+Stato: chiuso.
 
-Output attesi:
+Significato:
+
+- Pipeline 2.0 eseguita sul Batch A;
+- web chat locale attiva;
+- agente read-only attivo;
+- scenari controllati semplici eseguiti;
+- documentazione manuale completata circuito per circuito.
+
+Output ufficiali:
 
 ```text
-01_graph.json
-02_normalized_circuit.json
-03_node_map.json
-04_values_bound.json
-06_component_rules.json
-07_netlist.cir
-07_spice_emit_report.json
-08_spice_run.json
-08_ngspice_stdout.txt
-08_ngspice_stderr.txt
+experiment_ai/pipeline2_spice_analysis/batchA/experiment1/
 ```
 
-Questa fase serve a capire quali problemi reali compaiono nel Batch A prima di
-sviluppare agente e webapp.
+Nota importante:
 
-## Fase 2 - 09_summarize_spice.py
+- `a03` resta un caso speciale di fallimento SPICE/topology issue;
+- ma ora anche `a03` e stato riallineato al template strutturato degli altri
+  circuiti.
 
-Implementare uno step minimale che riassume i risultati grezzi di SPICE.
+## Esperimento 2 - stato
 
-Input principali:
+Stato: sostanzialmente chiuso sul Batch A.
 
-```text
-07_spice_emit_report.json
-08_spice_run.json
-08_ngspice_stdout.txt
-08_ngspice_stderr.txt
-06_component_rules.json
-```
+Significato:
 
-Output:
+- i circuiti prioritari del Batch A sono stati provati con primitive piu forti;
+- la chat e experiment-aware;
+- la chat history file-based e attiva;
+- il registry scenari locale e attivo;
+- gli scenari restano sempre separati dalla base run;
+- i risultati sono stati documentati e trasformati in tabella comparabile.
 
-```text
-09_spice_summary.json
-```
-
-Contenuti minimi:
-
-- ngspice eseguito: si/no;
-- stato: success, failed, timeout, ngspice_not_found, netlist_not_found;
-- exit code;
-- stderr presente: si/no;
-- warning principali;
-- componenti non emessi;
-- componenti non supportati;
-- switch aperti;
-- riferimenti ai file stdout/stderr.
-
-Questo step non deve fare diagnosi complessa. Deve solo rendere gli output di
-SPICE piu leggibili e standardizzati.
-
-## Fase 3 - 10_build_diagnostic_context.py
-
-Costruire il pacchetto tecnico che verra dato all'agente.
-
-Input principali:
-
-```text
-01_graph.json
-02_normalized_circuit.json
-03_node_map.json
-04_values_bound.json
-06_component_rules.json
-07_netlist.cir
-07_spice_emit_report.json
-08_spice_run.json
-09_spice_summary.json
-immagine originale
-```
-
-Output:
-
-```text
-10_diagnostic_context.json
-```
-
-Contenuti minimi:
-
-- stato del circuito;
-- path immagine;
-- componenti principali;
-- node map sintetica;
-- valori e assunzioni;
-- componenti emessi, semplificati, saltati o non supportati;
-- netlist SPICE;
-- esito ngspice;
-- sintesi stdout/stderr;
-- limiti noti;
-- possibili domande diagnostiche.
-
-Questo file e il ponte tra pipeline tecnica e agente AI.
-
-## Fase 4 - 11_agent_readonly.py
-
-Implementare la prima versione dell'agente in sola lettura.
-
-Input:
-
-```text
-10_diagnostic_context.json
-domanda utente
-```
-
-Output:
-
-```text
-11_agent_response.md
-```
-
-Responsabilita:
-
-- leggere il contesto diagnostico;
-- leggere il problema o la domanda dell'utente;
-- costruire un prompt controllato;
-- chiamare il modello AI;
-- rispondere distinguendo fatti, risultati SPICE, assunzioni e ipotesi;
-- salvare la risposta.
-
-In questa fase l'agente non deve:
-
-- modificare `values.yaml`;
-- modificare la netlist;
-- rieseguire ngspice;
-- creare scenari;
-- agire in autonomia sui file.
-
-Questa e la prima demo utile dell'agente.
-
-## Fase 5 - 12_controlled_scenarios.py
-
-Aggiungere scenari simulativi controllati.
-
-Gli scenari servono a verificare ipotesi diagnostiche, non a cambiare il
-circuito base.
-
-Regola:
-
-```text
-base circuit != scenario circuit
-```
-
-Azioni iniziali da supportare:
+Primitive consolidate nel runner:
 
 ```text
 drive_node_voltage
-close_switch
-open_switch
 change_source_value
+change_component_value
+close_switch
+connect_nodes
+feed_nodes_from_source_node
+add_voltage_source_between_nodes
+add_resistor_between_nodes
 ```
 
-Azioni successive possibili:
+Varianti realmente validate su Batch A:
+
+- `a01`
+  - `experiment2_connect_nodes`
+  - `experiment2_feed_nodes_from_source_node`
+- `a02`
+  - `experiment2_connect_nodes`
+- `a05`
+  - `experiment2_add_voltage_source_between_nodes`
+- `a07`
+  - `experiment2_add_voltage_source_between_nodes`
+- `a08`
+  - `experiment2_add_resistor_between_nodes`
+- `a09`
+  - `experiment2_connect_nodes`
+  - `experiment2_feed_nodes_from_source_node`
+- `a10`
+  - `experiment2_connect_nodes`
+  - `experiment2_feed_nodes_from_source_node`
+
+Casi non avviati o non prioritari in Experiment 2:
+
+- `a04` = non avviato
+- `a06` = non avviato
+- `a03` = escluso per ora, per complessita topologica/image-assisted
+
+## Struttura risultati consolidata
+
+Oggi il Batch A ha una struttura minima confrontabile.
+
+La tabella risultati usa una riga per:
 
 ```text
-add_pullup
-add_pulldown
-change_load_value
+(circuito, variante sperimentale)
 ```
 
-Output possibili:
+non piu semplicemente:
 
 ```text
-12_controlled_scenarios.json
-scenario_<id>_netlist.cir
-scenario_<id>_spice_run.json
-scenario_<id>_comparison.json
+(circuito, experiment2 generico)
 ```
 
-L'agente puo proporre uno scenario, ma la pipeline deve validarlo e tradurlo in
-SPICE in modo riproducibile.
+Questo permette di distinguere correttamente, per esempio:
 
-## Fase 6 - Webapp
+- `experiment2_connect_nodes`
+- `experiment2_feed_nodes_from_source_node`
+- `experiment2_add_voltage_source_between_nodes`
+- `experiment2_add_resistor_between_nodes`
 
-La webapp deve essere uno strumento operativo, non una landing page.
+Questa scelta e importante per la tesi, perche evita di nascondere primitive o
+varianti riuscite dentro note secondarie.
 
-Prima versione minima:
+## Cosa e gia solido
 
-- lista circuiti Batch A;
-- stato READY / PARTIAL / NOT_READY;
-- immagine originale;
-- netlist SPICE;
-- stdout/stderr ngspice;
-- sintesi SPICE;
-- contesto diagnostico;
-- domanda all'agente;
-- risposta agente;
-- eventuali scenari disponibili.
+Le parti oggi abbastanza stabili sono:
 
-Layout concettuale:
+- output 01-08 della Pipeline 2.0;
+- `10_diagnostic_context.json` come manifest leggero;
+- `11_agent_readonly.py` come agente grounded;
+- `12_controlled_scenarios.py` come runner scenario;
+- chat history locale di Experiment 2;
+- scenario registry locale di Experiment 2;
+- markdown analitici Batch A;
+- tabella minima comparabile dei risultati;
+- roadmap generale degli esperimenti.
+
+In altre parole, prima di passare oltre non serve "reinventare" il Batch A.
+
+Serve usare bene quello che e gia stato consolidato.
+
+## Prossimo blocco di lavoro
+
+Il prossimo blocco non e piu Experiment 2.
+
+Il prossimo blocco e:
 
 ```text
--------------------------------------------------------------
-| Circuiti Batch A | Immagine / Netlist / Report | Chat AI   |
--------------------------------------------------------------
-| Stato circuito   | SPICE stdout/stderr         | Scenari   |
--------------------------------------------------------------
+Esperimento 3 = viewer / simulatore visuale
 ```
 
-La webapp deve leggere gli output prodotti dalla pipeline, non duplicare la
-logica degli script.
-
-## Ordine di lavoro consigliato
-
-Ordine pratico:
+Regola centrale:
 
 ```text
-1. completare Batch A fino a 08
-2. implementare 09_summarize_spice.py
-3. implementare 10_build_diagnostic_context.py
-4. implementare 11_agent_readonly.py
-5. implementare 12_controlled_scenarios.py
-6. creare webapp minima
-7. migliorare scenari e interazione
+il viewer parte dalla netlist della run selezionata
 ```
 
-## Cosa non fare per ora
+Questo implica:
 
-Per mantenere il progetto gestibile:
+- base run e scenario run devono poter essere visualizzate entrambe;
+- se cambia la topologia dello scenario, deve cambiare anche la topologia
+  mostrata;
+- il viewer non deve essere pensato come grafica fissa di un solo circuito.
 
-- non passare subito a tutti i batch;
-- non costruire subito un agente completamente autonomo;
-- non permettere all'agente di modificare liberamente la netlist;
-- non implementare scenari troppo complessi;
-- non costruire una webapp grande prima di avere output stabili;
-- non cercare simulazione perfetta per ogni circuito.
+## Dopo il viewer
 
-## Sintesi
-
-Il lavoro immediato e:
+Solo dopo il viewer conviene passare a:
 
 ```text
-rendere Batch A attraversabile end-to-end
+Esperimento 4 = automazione agentica
 ```
 
-Poi:
+L'idea e:
+
+- prima miglioriamo l'osservabilita umana del sistema;
+- poi aumentiamo l'autonomia decisionale dell'agente.
+
+Questo ordine oggi e considerato piu solido del precedente.
+
+## Cosa non fare adesso
+
+Per non far deragliare il progetto:
+
+- non riaprire artificialmente Experiment 2 sul Batch A senza una nuova
+  domanda sperimentale forte;
+- non introdurre subito automazione agentica completa;
+- non complicare il runner con troppe primitive nuove non ancora motivate;
+- non moltiplicare documenti paralleli con stati diversi;
+- non costruire il viewer assumendo una sola topologia fissa per circuito.
+
+## Checklist pratica
+
+Prima di partire davvero con Experiment 3, il progetto Batch A dovrebbe essere
+considerato pronto se:
+
+- [x] Esperimento 1 documentato
+- [x] Esperimento 2 documentato
+- [x] `a03` riallineato al template
+- [x] tabella risultati compilata
+- [x] roadmap aggiornata
+- [x] documento agente aggiornato
+- [ ] workplan viewer definito in modo operativo
+- [ ] prima specifica concreta del viewer
+
+## Sintesi finale
+
+Il Batch A oggi va letto cosi:
 
 ```text
-usare gli output SPICE per costruire il contesto dell'agente
+baseline chiusa
+-> scenari forti consolidati
+-> risultati documentati e confrontabili
+-> prossimo passo = viewer
+-> passo successivo = automazione agentica
 ```
 
-Infine:
+Frase guida:
 
 ```text
-rendere tutto interrogabile tramite agente e webapp
+Batch A non e piu il luogo in cui capire se la Pipeline 2.0 esiste;
+e il luogo in cui stabilizzare come raccontarla, confrontarla e usarla per
+aprire il viewer e poi l'automazione.
 ```
-
-La tesi diventa cosi piu chiara: non solo riconoscimento topologico, ma una
-pipeline completa che arriva a simulazione, diagnosi assistita e interazione con
-l'utente.

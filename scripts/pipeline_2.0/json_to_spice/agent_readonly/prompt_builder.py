@@ -89,7 +89,6 @@ def is_executed_scenario_question(user_problem: str) -> bool:
         "risolto",
         "risolutivo",
         "migliore",
-        "quale",
         "conferma",
         "parziale",
         "partially",
@@ -103,6 +102,31 @@ def is_next_scenario_request(user_problem: str) -> bool:
     """Riconosce domande che chiedono cosa provare dopo gli scenari eseguiti."""
     text = normalize_matching_text(user_problem)
     scenario_words = ("scenario", "scenari")
+    executed_outcome_words = (
+        "outcome",
+        "resolved",
+        "partially",
+        "parziale",
+        "migliore",
+        "piu forte",
+        "risolve meglio",
+        "ha risolto",
+        "ha spiegato meglio",
+    )
+    if any(word in text for word in scenario_words) and any(word in text for word in executed_outcome_words):
+        return False
+
+    direct_phrases = (
+        "quale scenario self-contained",
+        "che scenario",
+        "proponi uno scenario",
+        "proporresti uno scenario",
+        "quale scenario proporresti",
+        "prossimo scenario",
+    )
+    if any(phrase in text for phrase in direct_phrases):
+        return True
+
     next_words = (
         "adesso",
         "ora",
@@ -113,6 +137,11 @@ def is_next_scenario_request(user_problem: str) -> bool:
         "insieme",
         "provare",
         "proviamo",
+        "proporre",
+        "proponi",
+        "proposta",
+        "proporresti",
+        "self-contained",
         "fare",
         "risolvere",
         "non hanno risolto",
@@ -120,6 +149,19 @@ def is_next_scenario_request(user_problem: str) -> bool:
         "non basta",
     )
     return any(word in text for word in scenario_words) and any(word in text for word in next_words)
+
+
+def has_executed_scenario_evidence(summary: dict[str, Any] | None) -> bool:
+    """Indica se il manifest contiene davvero almeno uno scenario gia eseguito."""
+    if not isinstance(summary, dict):
+        return False
+    scenario_budget = summary.get("_scenario_budget")
+    if isinstance(scenario_budget, dict):
+        try:
+            return int(scenario_budget.get("executed_scenarios_count") or 0) > 0
+        except (TypeError, ValueError):
+            return False
+    return False
 
 
 def is_final_conclusion_request(user_problem: str) -> bool:
@@ -244,7 +286,7 @@ def build_next_scenario_answer_format() -> list[str]:
         "",
         "5. **Blocco tecnico per pipeline**",
         "   Includi un blocco JSON breve con `scenario_id`, `title`, `hypothesis`, `actions`, `rerun_from`, `analysis`, `compare`.",
-        "   Usa solo primitive supportate: scenari elettrici / di pilotaggio (`drive_node_voltage`, `add_voltage_source_between_nodes`, `change_source_value`, `change_component_value`, `close_switch`) e scenari topologici controllati (`connect_nodes`, `feed_nodes_from_source_node`).",
+        "   Usa solo primitive supportate: scenari elettrici / di pilotaggio (`drive_node_voltage`, `add_voltage_source_between_nodes`, `change_source_value`, `change_component_value`, `close_switch`) e scenari topologici controllati (`connect_nodes`, `add_resistor_between_nodes`, `feed_nodes_from_source_node`).",
         "   Non usare `unknown` nei valori.",
         "",
         "6. **Conclusione provvisoria**",
@@ -355,7 +397,7 @@ def build_answer_format(user_problem: str = "", summary: dict[str, Any] | None =
         return build_final_conclusion_on_request_answer_format()
     if is_next_scenario_request(user_problem):
         return build_next_scenario_answer_format()
-    if is_executed_scenario_question(user_problem):
+    if is_executed_scenario_question(user_problem) and has_executed_scenario_evidence(summary):
         return build_executed_scenario_answer_format()
     if has_strong_topology_failure(summary):
         return build_topology_failure_answer_format()
@@ -432,6 +474,9 @@ def build_prompt_operating_rules() -> list[str]:
         "Use `add_voltage_source_between_nodes` when the base netlist lacks a realistic external excitation and the natural diagnostic move is to power the circuit from existing interface nodes such as connector pins, supply labels or input/return nodes.",
         "Prefer `add_voltage_source_between_nodes` over `drive_node_voltage` when the goal is to energize the whole circuit or a whole input path, not only to isolate a single internal branch node.",
         "Use `drive_node_voltage` mainly for controlled isolation tests or when no more natural value/source/state action is available.",
+        "Use `add_resistor_between_nodes` when the hypothesis is not a missing ideal continuity, but a missing or too-weak resistive branch such as a pull-up, pull-down, shunt or additional bias path between two existing nodes.",
+        "For `add_resistor_between_nodes`, provide a concrete resistor value and prefer simple plausible values already present in the circuit scale, for example `1k`, `10k`, `33k`, `47k`, `100k`, rather than arbitrary uncommon numbers.",
+        "Do not use `add_resistor_between_nodes` when the real hypothesis is only to vary the value of an already emitted resistor; in that case prefer `change_component_value`.",
         "Use `feed_nodes_from_source_node` when a node is already powered in the base run, or made powered by another action in the same scenario, and the hypothesis is that this supply should propagate to one or more target branch-input nodes.",
         "Prefer `feed_nodes_from_source_node` over multiple separate `connect_nodes` only when the diagnostic idea is explicitly supply propagation from one source node to one or more targets.",
         "Do not use `feed_nodes_from_source_node` when the base netlist has no active source node; in that case prefer `add_voltage_source_between_nodes` for realistic circuit excitation, or `drive_node_voltage` only for a later isolation test.",

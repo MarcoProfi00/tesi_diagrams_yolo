@@ -34,7 +34,7 @@ Risultato:
 
 ## Esperimento 2 - Scenari piu potenti
 
-Stato: in corso.
+Stato: sostanzialmente concluso sul Batch A.
 
 Obiettivo:
 
@@ -55,12 +55,14 @@ Situazione reale raggiunta sul Batch A:
 - il registry scenari locale per circuito e attivo;
 - le tre primitive candidate principali di questa fase sono tutte implementate
   nel runner;
+- e stata anche validata una quarta primitiva strutturale, utile per casi di
+  bias/accoppiamento analogico;
 - i casi prioritari del Batch A per queste primitive sono gia stati coperti e
   documentati nei markdown `experiment2`.
 
-In altre parole, la prima sottofase di Experiment 2 non e piu una fase di sola
-implementazione del runner, ma una fase gia consolidata su tre famiglie di
-scenari che cambiano in modo controllato la netlist SPICE.
+In altre parole, Experiment 2 non e piu una fase di sola implementazione del
+runner, ma una fase gia consolidata sul Batch A con primitive che cambiano in
+modo controllato la netlist SPICE.
 
 Possibili sviluppi:
 
@@ -83,12 +85,13 @@ change_component_value
 close_switch
 ```
 
-Primitive candidate per Esperimento 2:
+Primitive forti validate in Esperimento 2:
 
 ```text
 connect_nodes
 feed_nodes_from_source_node
 add_voltage_source_between_nodes
+add_resistor_between_nodes
 ```
 
 Queste tre primitive sono volutamente poche. L'obiettivo e aumentare la
@@ -232,11 +235,135 @@ add_voltage_source_between_nodes
 
   puo essere considerata sostanzialmente completata come famiglia di scenari
   che cambia in modo controllato la netlist SPICE;
-- il prossimo blocco di lavoro non e piu "aggiungere una quarta primitiva
-  topologica semplice", ma scegliere se passare a:
-  - scenari analogici/dinamici sui casi `a04`, `a06`, `a08`;
-  - oppure una fase successiva di correzione topologica/image-assisted su
-    `a03`.
+- `add_resistor_between_nodes` e stata inoltre validata come estensione
+  strutturale utile sul caso `a08`, dove la domanda diagnostica riguardava un
+  accoppiamento resistivo troppo debole tra due nodi gia esistenti;
+- `a04` e `a06` non sono stati forzati dentro Experiment 2 con primitive
+  artificiali, perche sul Batch A risultano casi gia ben spiegati da scenari
+  analogici/elettrici di Experiment 1;
+- `a08` non appartiene alla prima ondata di continuita/alimentazione mancante,
+  ma costituisce un caso separato e gia concluso di modifica strutturale utile
+  sul bias/accoppiamento;
+- `a03` resta separato come caso successivo di correzione topologica o
+  image-assisted, non come estensione diretta di questa seconda ondata.
+
+### Seconda ondata candidata di primitive topologiche
+
+Stato: parzialmente esplorata; non necessaria per chiudere Experiment 2 sul
+Batch A.
+
+Obiettivo:
+
+- aggiungere 1-2 primitive nuove che restino generali;
+- evitare primitive cucite su un singolo circuito;
+- coprire casi in cui la domanda diagnostica non e "manca alimentazione?" ma
+  "questo ramo analogico conta davvero come sottorete strutturale?".
+
+Le due primitive candidate attuali erano:
+
+```text
+add_resistor_between_nodes
+open_component
+```
+
+#### 4. add_resistor_between_nodes
+
+Aggiunge una nuova resistenza tra due nodi gia esistenti.
+
+Questa primitiva va letta come estensione naturale di `connect_nodes`:
+
+- `connect_nodes` = collegamento quasi ideale tra due nodi;
+- `add_resistor_between_nodes` = aggiunta di un nuovo ramo resistivo con valore
+  arbitrario.
+
+Esempio:
+
+```json
+{
+  "type": "add_resistor_between_nodes",
+  "from": "N001",
+  "to": "N004",
+  "value": "33k"
+}
+```
+
+Perche e utile:
+
+- permette di aggiungere pull-up, pull-down, shunt o rami di bias
+  supplementari;
+- cambia davvero la topologia della netlist, non solo il valore di un
+  componente gia esistente;
+- resta riusabile su molti batch futuri, non solo sul Batch A.
+
+Primo caso pilota effettivamente validato:
+
+- `a08`: aggiunta di un ramo resistivo supplementare tra nodo trigger e ramo di
+  pilotaggio base, per verificare se il pilotaggio cambia in modo strutturale.
+
+Esito sul Batch A:
+
+- implementata nel runner scenario;
+- integrata nella web chat e nel prompt agente;
+- validata e documentata su `a08`;
+- considerata utile come estensione strutturale generale, ma non necessaria da
+  forzare su `a04` o `a06`.
+
+Nota metodologica:
+
+- questa primitiva ha senso solo se aggiunge una domanda diagnostica nuova;
+- non va usata per duplicare banalmente `change_component_value` con una forma
+  piu complicata.
+
+#### 5. open_component
+
+Rende aperto un componente gia emesso nella netlist di scenario, escludendolo
+dal circuito della scenario run.
+
+Questa primitiva introduce una seconda famiglia topologica molto generale:
+
+- aggiunta di ramo -> `add_resistor_between_nodes`;
+- rimozione/isolamento di ramo -> `open_component`.
+
+Esempio:
+
+```json
+{
+  "type": "open_component",
+  "target": "Ccapacitor4_2"
+}
+```
+
+Perche e utile:
+
+- permette di isolare condensatori di coupling, condensatori di bypass, rami di
+  feedback o elementi sospetti senza toccare la base run;
+- cambia la struttura del circuito in modo leggibile e forte;
+- e una primitiva generale, utile anche su futuri casi analogici.
+
+Primi casi pilota candidati:
+
+- `a06`: aprire `Ccapacitor4_2` (`CE`) per verificare quanto il bypass di
+  emettitore pesi davvero nel comportamento osservato;
+- `a08`: aprire `Ccapacitor4_1` (`C1`) per testare se il ramo RC e
+  strutturalmente decisivo o solo una leva tra le altre.
+
+Nota metodologica:
+
+- questa primitiva e interessante solo quando l'isolamento di un ramo apre una
+  distinzione diagnostica reale;
+- non va usata come scenario distruttivo generico senza una ipotesi precisa.
+
+Priorita attuale della seconda ondata:
+
+- `add_resistor_between_nodes` e ormai da considerare gia implementata e
+  validata su `a08`;
+- `open_component` resta la prossima primitiva candidata solo se un batch
+  futuro o un caso piu complesso formuleranno una domanda diagnostica nuova e
+  davvero utile;
+- non forzare `open_component` su `a04` o `a06` solo per estendere
+  artificialmente Experiment 2;
+- non riaprire il Batch A finche non emergera una motivazione sperimentale piu
+  forte o un nuovo insieme di circuiti piu adatto.
 
 Decisione metodologica attuale:
 
@@ -258,7 +385,7 @@ In questo modo manteniamo il runner semplice e generale:
 - eventuali alias semantici futuri demandati al prompt o al catalogo
   descrittivo, non al moltiplicarsi delle primitive eseguibili.
 
-### Casi esclusi per ora
+### Casi esclusi o non prioritari per ora
 
 `a03` resta fuori dall'Esperimento 2 iniziale.
 
@@ -272,6 +399,14 @@ Motivo:
 
 `a03` verra ripreso in una fase successiva dedicata alla correzione del graph o
 alla ricostruzione guidata dall'immagine.
+
+`a04` e `a06` non vengono invece marcati come "fallimenti" di Experiment 2:
+
+- sono casi gia ben spiegati dai risultati di Experiment 1;
+- sul Batch A non hanno espresso una necessita forte di nuove primitive
+  topologiche generali;
+- restano quindi validi come esempi di circuiti per cui Experiment 1 basta gia
+  a localizzare o spiegare il problema.
 
 ### Chat history dell'Esperimento 2
 
@@ -442,41 +577,9 @@ scenarios/<scenario_id>/12_controlled_scenarios.json
 scenarios/<scenario_id>/scenario_comparison.json
 ```
 
-## Esperimento 3 - Automazione agentica
+## Esperimento 3 - Viewer / simulatore visuale
 
 Stato: futuro, dopo Esperimento 2.
-
-Obiettivo:
-
-far eseguire all'agente piu scenari in sequenza, entro un limite controllato,
-per arrivare a una diagnosi finale o a una localizzazione del problema.
-
-Flusso desiderato:
-
-```text
-sintomo utente
--> agente propone scenario
--> pipeline crea run scenario
--> pipeline esegue ngspice
--> pipeline crea scenario_comparison.json
--> agente legge il confronto
--> agente decide se fermarsi o proporre altro
--> massimo 5 scenari
--> conclusione finale
-```
-
-Regole:
-
-- l'agente non modifica file direttamente;
-- la pipeline valida sempre lo scenario;
-- ogni scenario deve essere tracciabile;
-- se uno scenario risolve o localizza abbastanza il problema, l'agente si ferma;
-- se il budget finisce, l'agente produce una conclusione finale;
-- se serve correggere il Graph JSON, l'agente deve dichiararlo esplicitamente.
-
-## Esperimento 4 - Viewer / simulatore visuale
-
-Stato: futuro, dopo scenari e automazione.
 
 Obiettivo:
 
@@ -515,6 +618,38 @@ Prima versione possibile:
 - colorare nodi in base alla tensione;
 - animare componenti o rami con corrente non nulla;
 - mostrare differenze tra base run e scenario run.
+
+## Esperimento 4 - Automazione agentica
+
+Stato: futuro, dopo viewer e primitive scenario consolidate.
+
+Obiettivo:
+
+far eseguire all'agente piu scenari in sequenza, entro un limite controllato,
+per arrivare a una diagnosi finale o a una localizzazione del problema.
+
+Flusso desiderato:
+
+```text
+sintomo utente
+-> agente propone scenario
+-> pipeline crea run scenario
+-> pipeline esegue ngspice
+-> pipeline crea scenario_comparison.json
+-> agente legge il confronto
+-> agente decide se fermarsi o proporre altro
+-> massimo 5 scenari
+-> conclusione finale
+```
+
+Regole:
+
+- l'agente non modifica file direttamente;
+- la pipeline valida sempre lo scenario;
+- ogni scenario deve essere tracciabile;
+- se uno scenario risolve o localizza abbastanza il problema, l'agente si ferma;
+- se il budget finisce, l'agente produce una conclusione finale;
+- se serve correggere il Graph JSON, l'agente deve dichiararlo esplicitamente.
 
 ## Valutazione trasversale degli esperimenti
 
@@ -637,8 +772,8 @@ della diagnosi quando aumentano le capacita dell'agente.
 ```text
 Esperimento 1 = baseline Batch A chiusa
 Esperimento 2 = scenari piu potenti e netlist editing controllato
-Esperimento 3 = agente che prova scenari in autonomia controllata
-Esperimento 4 = viewer visuale basato sulla netlist della run selezionata
+Esperimento 3 = viewer visuale basato sulla netlist della run selezionata
+Esperimento 4 = agente che prova scenari in autonomia controllata
 Valutazione = metriche comuni, CSV/JSON aggregati e grafici finali
 ```
 

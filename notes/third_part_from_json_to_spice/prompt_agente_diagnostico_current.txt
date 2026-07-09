@@ -36,6 +36,7 @@ Scenari elettrici / di pilotaggio:
 Scenari topologici controllati:
 
   - connect_nodes
+  - add_resistor_between_nodes
   - feed_nodes_from_source_node
 
 Le primitive future restano fuori dagli scenari eseguibili finche non vengono
@@ -130,6 +131,47 @@ Esempio:
 Nei primi tre scenari puo comparire anche in una run coerente, ma solo se la
 diagnosi suggerisce davvero un ponte o una continuita mancante tra nodi gia
 riconosciuti. Non deve diventare la prima scorciatoia automatica.
+
+
+REGOLA DI RAMO RESISTIVO AGGIUNTO
+=================================
+
+`add_resistor_between_nodes` appartiene agli scenari topologici controllati,
+ma non rappresenta una continuita quasi ideale.
+
+Va usata quando l'ipotesi diagnostica richiede di aggiungere un nuovo ramo
+resistivo tra due nodi gia esistenti, per esempio:
+
+  - pull-up
+  - pull-down
+  - shunt
+  - ramo di bias supplementare
+  - collegamento resistivo debole tra due sottoreti gia riconosciute
+
+Non va usata quando il vero sospetto riguarda solo il valore di una resistenza
+gia presente in netlist. In quel caso la primitiva naturale resta:
+
+  - change_component_value
+
+Esempio:
+
+```json
+{
+  "type": "add_resistor_between_nodes",
+  "from": "N001",
+  "to": "N004",
+  "value": "33k"
+}
+```
+
+Regola pratica sul valore:
+
+  - il valore deve essere sempre concreto;
+  - l'agente deve preferire valori semplici e leggibili;
+  - quando possibile, il valore deve essere coerente con la scala gia presente
+    nel circuito, per esempio `1k`, `10k`, `33k`, `47k`, `100k`;
+  - non bisogna proporre valori arbitrari o troppo strani senza una ragione
+    diagnostica precisa.
 
 
 REGOLA DI PROPAGAZIONE DA NODO SORGENTE

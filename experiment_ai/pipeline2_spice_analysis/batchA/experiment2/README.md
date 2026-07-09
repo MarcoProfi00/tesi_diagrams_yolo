@@ -30,6 +30,7 @@ Scenari controllati che cambiano la netlist:
 - connect_nodes
 - feed_nodes_from_source_node
 - add_voltage_source_between_nodes
+- add_resistor_between_nodes
 ```
 
 Il focus operativo si e sviluppato in sottofasi successive:
@@ -38,6 +39,7 @@ Il focus operativo si e sviluppato in sottofasi successive:
 1. connect_nodes
 2. feed_nodes_from_source_node
 3. add_voltage_source_between_nodes
+4. add_resistor_between_nodes
 ```
 
 Situazione attuale sul Batch A:
@@ -45,12 +47,13 @@ Situazione attuale sul Batch A:
 - `connect_nodes` e chiusa sui casi `a01`, `a02`, `a09`, `a10`;
 - `feed_nodes_from_source_node` e chiusa sui casi `a01`, `a09`, `a10`;
 - `add_voltage_source_between_nodes` e chiusa sui casi `a05`, `a07`;
+- `add_resistor_between_nodes` e chiusa sul caso `a08`;
 - `a03` resta escluso per ora;
-- `a04`, `a06`, `a08` restano casi non ancora aperti in Experiment 2 e non
-  appaiono prioritari per nuove primitive topologiche semplici.
+- `a04` e `a06` restano casi non prioritari per ulteriori primitive
+  topologiche semplici sul Batch A.
 
 Quindi questo README non descrive piu una fase di implementazione iniziale delle
-primitive, ma una fase gia consolidata su tre famiglie di scenari che
+primitive, ma una fase gia consolidata su quattro famiglie di scenari che
 modificano la netlist in modo controllato.
 
 ## Fonti da considerare autorevoli
@@ -127,11 +130,11 @@ Per ogni circuito di Experiment 2:
 | `a01` | si | completed | `connect_nodes` / `feed_nodes_from_source_node` | `../experiment1/a01.md` | Caso chiuso su due sottofasi: `connect_nodes N001 -> N002` valida la continuita mancante, poi `feed_nodes_from_source_node N001 -> N002` riformula la stessa evidenza come propagazione dal nodo sorgente vivo. |
 | `a02` | si | completed | `connect_nodes` | `../experiment1/a02.md` | Caso chiuso: `connect_nodes N002 -> N004` attiva il ramo resistivo e la corrente di batteria. |
 | `a03` | no | excluded_for_now | - | `../experiment1/a03.md` | Caso image-assisted troppo complesso per la fase iniziale di Experiment 2. |
-| `a04` | si | not started | tbd | `../experiment1/a04.md` | Caso analogico gia eccitato; non prioritario per ulteriori primitive topologiche semplici. |
+| `a04` | si | not started | tbd | `../experiment1/a04.md` | Caso analogico gia eccitato; ben spiegato da Experiment 1 e non prioritario per ulteriori primitive topologiche semplici sul Batch A. |
 | `a05` | si | completed | `add_voltage_source_between_nodes` | `../experiment1/a05.md` | Caso chiuso: la nuova primitiva alimenta correttamente `VMON_INPUT` (`N003`) verso massa e localizza il sintomo come mancanza di eccitazione del circuito base; la chiusura di `TEST` resta secondaria. |
-| `a06` | si | not started | tbd | `../experiment1/a06.md` | Caso analogico gia eccitato; piu adatto a scenari di bias, ampiezza o dinamica che a nuove primitive topologiche. |
+| `a06` | si | not started | tbd | `../experiment1/a06.md` | Caso analogico gia eccitato; piu adatto a scenari di bias, ampiezza o dinamica che a nuove primitive topologiche sul Batch A. |
 | `a07` | si | completed | `add_voltage_source_between_nodes` | `../experiment1/a07.md` | Caso chiuso: il ramo LED si attiva quando `PWR` (`N002`) viene alimentato, mentre il ramo `VAC` si attiva separatamente quando viene eccitato `AC_INPUT` (`N001`); la netlist base risulta inattiva soprattutto per mancanza di eccitazione sugli ingressi esterni. |
-| `a08` | si | not started | tbd | `../experiment1/a08.md` | Caso dinamico gia eccitato; piu vicino a scenari su RC, trigger o ampiezza che a modifiche topologiche semplici. |
+| `a08` | si | completed | `add_resistor_between_nodes` | `../experiment1/a08.md` | Caso chiuso: la nuova primitiva aggiunge un ramo resistivo supplementare tra `N001` e `N004`, confermando il ruolo causale dell'accoppiamento `TRIGGER`-base senza produrre una risoluzione singola definitiva. |
 | `a09` | si | completed | `connect_nodes` / `feed_nodes_from_source_node` | `../experiment1/a09.md` | Caso forte su due sottofasi separate: `connect_nodes` valida i due rami in modo diretto, `feed_nodes_from_source_node` conferma la propagazione da `N003` verso LED e lampada fino allo scenario combinato finale. |
 | `a10` | si | completed | `connect_nodes` / `feed_nodes_from_source_node` | `../experiment1/a10.md` | Primo circuito pilota chiuso su due sottofasi: `connect_nodes` mostra la ricostruzione del percorso verso i due rami, `feed_nodes_from_source_node` rifinisce la stessa logica propagando da `N002` verso lampada e LED. |
 
@@ -206,3 +209,20 @@ Quindi:
 
 - il README batch-level tiene traccia di tutti i circuiti;
 - i file per-circuit nascono solo quando iniziamo davvero a lavorarci.
+
+## Conclusione operativa sul Batch A
+
+Sul Batch A, Experiment 2 puo essere considerato sostanzialmente chiuso.
+
+In particolare:
+
+- i casi prioritari di continuita/alimentazione mancante sono stati coperti;
+- `a08` aggiunge anche un caso utile di modifica strutturale del bias tramite
+  `add_resistor_between_nodes`;
+- `a04` e `a06` non sono stati riaperti artificialmente, perche sul Batch A non
+  hanno formulato una necessita forte di nuove primitive topologiche generali;
+- `a03` resta separato come caso successivo di correzione graph/image-assisted.
+
+Questa e una chiusura metodologica corretta: non tutti i circuiti devono per
+forza ricevere una nuova primitiva topologica perche Experiment 2 sia
+considerato riuscito.

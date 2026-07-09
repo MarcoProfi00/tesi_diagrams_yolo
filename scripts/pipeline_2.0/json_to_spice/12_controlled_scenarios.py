@@ -10,6 +10,7 @@ Versione attuale minimale:
 - lavora sulla netlist copiata in `run/07_netlist.cir`;
 - supporta le azioni generali `drive_node_voltage`,
   `add_voltage_source_between_nodes`, `connect_nodes`,
+  `add_resistor_between_nodes`,
   `feed_nodes_from_source_node`, `change_source_value`,
   `change_component_value` e `close_switch`;
 - aggiunge o aggiorna una sorgente SPICE di scenario;
@@ -326,6 +327,46 @@ def apply_connect_nodes(
         "to": to_node,
         "nodes": [from_node, to_node],
         "resistance": resistance,
+        "inserted_line": resistor_line,
+        "operation": operation,
+        "spice_executed": False,
+    }
+    return updated_netlist, result
+
+
+def apply_add_resistor_between_nodes(
+    action: dict[str, Any],
+    run_dir: Path,
+    netlist_text: str,
+) -> tuple[str, dict[str, Any]]:
+    """
+    Applica `add_resistor_between_nodes` aggiungendo un nuovo ramo resistivo.
+
+    A differenza di `connect_nodes`, che modella una continuita quasi ideale,
+    questa primitiva aggiunge una resistenza con valore arbitrario tra due nodi
+    gia esistenti. Il caso d'uso tipico e un ramo di bias, uno shunt, un
+    pull-up/pull-down o un collegamento resistivo supplementare.
+    """
+    node_map = read_json(run_dir / "03_node_map.json")
+    from_node = validate_existing_node(action.get("from"), node_map, field_name="from")
+    to_node = validate_existing_node(action.get("to"), node_map, field_name="to")
+    if from_node == to_node:
+        raise ValueError("add_resistor_between_nodes requires two different nodes")
+
+    raw_value = action.get("value", action.get("resistance"))
+    resistance = normalize_spice_resistance_value(raw_value)
+    resistor_name = f"RSCENARIO_ADD_{sanitize_spice_name(from_node)}_{sanitize_spice_name(to_node)}"
+    resistor_line = f"{resistor_name} {from_node} {to_node} {resistance}"
+    updated_netlist, operation = insert_or_replace_netlist_element(netlist_text, resistor_name, resistor_line)
+
+    result = {
+        "status": "applied",
+        "type": "add_resistor_between_nodes",
+        "from": from_node,
+        "to": to_node,
+        "nodes": [from_node, to_node],
+        "value": raw_value,
+        "normalized_resistance_value": resistance,
         "inserted_line": resistor_line,
         "operation": operation,
         "spice_executed": False,
@@ -713,6 +754,7 @@ ACTION_HANDLERS = {
     "drive_node_voltage": apply_drive_node_voltage,
     "add_voltage_source_between_nodes": apply_add_voltage_source_between_nodes,
     "connect_nodes": apply_connect_nodes,
+    "add_resistor_between_nodes": apply_add_resistor_between_nodes,
     "feed_nodes_from_source_node": apply_feed_nodes_from_source_node,
     "change_source_value": apply_change_source_value_action,
     "change_component_value": apply_change_component_value_action,

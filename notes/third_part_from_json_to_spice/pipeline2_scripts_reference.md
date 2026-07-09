@@ -1,440 +1,116 @@
 # Pipeline 2.0 - riferimento script
 
-Questo documento riassume cosa fa ogni script della Pipeline 2.0.
+Questo documento descrive gli script reali oggi usati nella Pipeline 2.0.
 
-Serve come riferimento rapido durante lo sviluppo: ogni volta che uno script
-viene modificato, esteso o completato, questo file va aggiornato.
+Non e un piano futuro: deve restare allineato al codice effettivamente presente
+in `scripts/pipeline_2.0/`.
 
-La Pipeline 2.0 parte dai Graph JSON prodotti dalla Pipeline 1.0 e costruisce
-progressivamente una rappresentazione elettrica utile per SPICE, report e agente
-diagnostico.
-
-Sequenza attuale:
+La Pipeline 2.0 parte dai Graph JSON della Pipeline 1.0 e oggi copre due
+blocchi distinti:
 
 ```text
-run_pipeline2.py
-  -> 01_io.py
-  -> 02_normalize.py
-  -> 03_node_map.py
-  -> 04_values.py
-  -> 05_device_profiles.py       # previsto, non sviluppato ora
-  -> 06_component_rules.py
-  -> 07_spice_emit.py
-  -> 08_spice_run.py             # opzionale con --run-spice
+1. pipeline tecnica 01-08
+   Graph JSON -> netlist SPICE -> ngspice
+
+2. layer diagnostico/interattivo 09-12
+   web chat -> contesto diagnostico -> agente -> scenari controllati
 ```
+
+## Struttura generale
+
+Script principali:
+
+```text
+scripts/pipeline_2.0/
+|-- run_pipeline2.py
+|-- prepare_experiment_outputs.py
+`-- json_to_spice/
+    |-- 01_io.py
+    |-- 02_normalize.py
+    |-- 03_node_map.py
+    |-- 04_values.py
+    |-- 05_device_profiles.py
+    |-- 06_component_rules.py
+    |-- 07_spice_emit.py
+    |-- 08_spice_run.py
+    |-- 09_web_chat.py
+    |-- 10_build_diagnostic_context.py
+    |-- 11_agent_readonly.py
+    `-- 12_controlled_scenarios.py
+```
+
+Output possibili:
+
+```text
+outputs/pipeline2.0/<batch>/<circuit>/
+outputs/pipeline2.0/<batch>/<experiment>/<circuit>/
+```
+
+La seconda forma serve quando vogliamo separare esperimenti diversi mantenendo
+indipendenti chat, scenari, conclusioni e artefatti diagnostici.
+
+Convenzione attuale:
+
+- `outputs/pipeline2.0/<batch>/<circuit>/` resta la root canonica della run
+  tecnica di base;
+- `outputs/pipeline2.0/<batch>/<experiment>/<circuit>/` resta una root
+  sperimentale separata, utile per congelare snapshot, confrontare varianti e
+  mantenere indipendenti chat/scenari;
+- nel Batch A teniamo volutamente entrambe le forme: la root canonica
+  `a01...a10` e le cartelle esperimento come `experiment1`, `experiment2` e
+  `experiment2_feed_nodes`.
+
+## Due famiglie di script
+
+### 1. Script di pipeline tecnica
+
+Sono gli script che costruiscono gli output elettrici di base:
+
+```text
+01_io
+02_normalize
+03_node_map
+04_values
+05_device_profiles   # non ancora attivo nel flusso reale
+06_component_rules
+07_spice_emit
+08_spice_run
+```
+
+Questa parte produce la base tecnica del circuito.
+
+### 2. Script diagnostici e interattivi
+
+Sono gli script che lavorano sopra una base gia generata:
+
+```text
+09_web_chat
+10_build_diagnostic_context
+11_agent_readonly
+12_controlled_scenarios
+```
+
+Questa parte non sostituisce la pipeline tecnica. La usa come evidenza.
+
+## Script orchestration
 
 ## run_pipeline2.py
 
-`run_pipeline2.py` e il punto di ingresso della Pipeline 2.0.
-
-Si trova in:
+Path:
 
 ```text
 scripts/pipeline_2.0/run_pipeline2.py
 ```
 
-Responsabilita:
-
-- ricevere da terminale batch e circuiti da elaborare;
-- caricare gli script numerati `01`, `02`, `03`, ecc.;
-- eseguire gli step nell'ordine corretto;
-- creare gli output nella cartella del circuito;
-- opzionalmente eseguire ngspice con `--run-spice`.
-
-Esempio:
-
-```powershell
-python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 a02 a10
-```
-
-Con esecuzione SPICE:
-
-```powershell
-python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 --run-spice --ngspice-executable ngspice_con
-```
-
-Output principale:
-
-```text
-outputs/pipeline2.0/<batch>/<circuit>/
-```
-
-## 01_io.py
-
-`01_io.py` gestisce input, output e percorsi comuni.
-
-Si trova in:
-
-```text
-scripts/pipeline_2.0/json_to_spice/01_io.py
-```
-
-Input principale:
-
-```text
-outputs/pipeline1.0/<batch>/06_graph_report/<circuit>/<circuit>.json
-```
-
-Responsabilita:
-
-- trovare il Graph JSON prodotto dalla Pipeline 1.0;
-- creare la cartella output della Pipeline 2.0;
-- leggere file JSON;
-- scrivere file JSON formattati;
-- copiare il Graph JSON sorgente nella nuova cartella output.
-
-Output prodotto:
-
-```text
-01_graph.json
-```
-
-Perche serve:
-
-Questo step centralizza i percorsi e impedisce che ogni modulo gestisca file e
-cartelle in modo diverso.
-
-## 02_normalize.py
-
-`02_normalize.py` trasforma il Graph JSON in una struttura interna piu comoda.
-
-Si trova in:
-
-```text
-scripts/pipeline_2.0/json_to_spice/02_normalize.py
-```
-
-Input:
-
-```text
-01_graph.json
-```
-
-Responsabilita:
-
-- normalizzare componenti e terminali;
-- costruire lookup rapidi per componenti e terminali;
-- rendere esplicito il grafo terminale-terminale;
-- controllare eventuali riferimenti a terminali non presenti;
-- produrre statistiche e warning di normalizzazione.
-
-Output prodotto:
-
-```text
-02_normalized_circuit.json
-```
-
-Perche serve:
-
-Il JSON della Pipeline 1.0 e corretto come output topologico, ma per SPICE
-servono viste piu ordinate: componenti, terminali, classi, terminali per
-componente e grafo normalizzato.
-
-Questo step non genera ancora nodi SPICE e non produce netlist.
-
-## 03_node_map.py
-
-`03_node_map.py` costruisce la mappa dei nodi elettrici.
-
-Si trova in:
-
-```text
-scripts/pipeline_2.0/json_to_spice/03_node_map.py
-```
-
-Input:
-
-```text
-02_normalized_circuit.json
-```
-
-Responsabilita:
-
-- leggere il grafo dei terminali;
-- trovare le componenti connesse del grafo;
-- assegnare un nodo elettrico a ogni gruppo di terminali connessi;
-- mappare i terminali collegati a GND nel nodo SPICE `0`;
-- costruire la mappa terminale -> nodo;
-- costruire la vista componente -> terminale -> nodo.
-
-Output prodotto:
-
-```text
-03_node_map.json
-```
-
-Perche serve:
-
-SPICE non ragiona in termini di linee disegnate, ma in termini di nodi
-elettrici. Questo step e il ponte tra il grafo topologico e la netlist.
-
-Esempio concettuale:
-
-```text
-resistor22.1_t1 -> N002
-lamp13.1_t1     -> N004
-gnd9.1_t1       -> 0
-```
-
-## 04_values.py
-
-`04_values.py` associa valori, modelli e stati manuali ai componenti.
-
-Si trova in:
-
-```text
-scripts/pipeline_2.0/json_to_spice/04_values.py
-```
-
-Input:
-
-```text
-02_normalized_circuit.json
-03_node_map.json
-metadata/pipeline2_manual_values/<batch>/<circuit>_values.yaml
-```
-
-Responsabilita:
-
-- leggere il file YAML dei valori manuali;
-- associare valori ai componenti riconosciuti;
-- associare eventuali supply manuali ai nodi;
-- associare modelli semplici, per esempio `LED_RED`;
-- leggere lo stato degli switch;
-- distinguere componenti pronti, componenti senza valori e componenti che non
-  richiedono valori;
-- registrare assunzioni e sorgenti dei valori.
-
-Output prodotto:
-
-```text
-04_values_bound.json
-```
-
-Perche serve:
-
-La Pipeline 1.0 riconosce topologia e componenti, ma non sempre legge i valori
-elettrici. Per ora i valori vengono scritti a mano nei file YAML; in futuro
-potranno arrivare da OCR.
-
-Questo step non inventa valori mancanti. Se un valore non e disponibile, lo
-segnala.
-
-## 05_device_profiles.py
-
-`05_device_profiles.py` e previsto per componenti complessi e circuiti
-integrati.
-
-Si trova in:
-
-```text
-scripts/pipeline_2.0/json_to_spice/05_device_profiles.py
-```
-
-Stato attuale:
-
-```text
-scheletro creato, non implementato nella pipeline attuale
-```
-
-Responsabilita future:
-
-- leggere profili dichiarativi per IC e blocchi funzionali;
-- descrivere pin di alimentazione, GND, reset, clock, enable, ingressi e uscite;
-- gestire pin non connessi;
-- dichiarare vincoli minimi di funzionamento;
-- collegare eventuali modelli SPICE o subcircuit disponibili;
-- abilitare controlli pin-aware per Batch C1 e C2.
-
-Output previsto:
-
-```text
-05_device_profiles.json
-```
-
-Perche servira:
-
-Molti circuiti reali contengono IC o componenti non simulabili direttamente.
-Anche senza un modello SPICE completo, sara utile controllare alimentazione,
-GND, reset, clock e collegamenti principali.
-
-## 06_component_rules.py
-
-`06_component_rules.py` decide come trattare ogni componente in SPICE.
-
-Si trova in:
-
-```text
-scripts/pipeline_2.0/json_to_spice/06_component_rules.py
-```
-
-Input:
-
-```text
-04_values_bound.json
-metadata/pipeline2_spice_classes.yaml
-```
-
-Responsabilita:
-
-- leggere il mapping delle classi SPICE;
-- classificare ogni componente;
-- decidere se un componente e emettibile in netlist;
-- distinguere componenti diretti, equivalenti, semplificati, strutturali,
-  non supportati o con parametri mancanti;
-- preparare nodi, prefissi SPICE e parametri da usare nello step 07;
-- produrre statistiche sullo stato del circuito.
-
-Output prodotto:
-
-```text
-06_component_rules.json
-```
-
-Esempi di decisione:
-
-```text
-Resistor  -> emesso come R se ha valore
-Capacitor -> emesso come C se ha valore
-Battery   -> emessa come V se ha valore
-LED       -> emesso come D se ha modello
-Lamp      -> emessa come resistenza equivalente
-Switch    -> gestito in base allo stato open/closed
-Connector -> componente strutturale, non emesso
-GND       -> componente strutturale, non emesso
-```
-
-Perche serve:
-
-Non tutti i componenti riconosciuti devono diventare una riga SPICE. Alcuni
-servono solo per la topologia, altri possono essere semplificati, altri ancora
-devono essere saltati per ora.
-
-Questo step rende esplicita la decisione prima della generazione della netlist.
-
-## 07_spice_emit.py
-
-`07_spice_emit.py` genera la netlist SPICE.
-
-Si trova in:
-
-```text
-scripts/pipeline_2.0/json_to_spice/07_spice_emit.py
-```
-
-Input:
-
-```text
-06_component_rules.json
-```
-
-Responsabilita:
-
-- leggere le regole pronte per SPICE;
-- generare righe SPICE per componenti supportati;
-- emettere sorgenti, resistenze, condensatori, LED, lampade equivalenti e
-  switch chiusi quando disponibili;
-- saltare componenti strutturali come connector e GND;
-- commentare componenti non emessi o non supportati;
-- aggiungere modelli `.model` quando necessari;
-- aggiungere analisi base `.op`;
-- aggiungere `.tran` quando richiesto dal file `values.yaml`;
-- esportare automaticamente i dati transitori in `08_tran.csv`;
-- salvare la netlist e un report di emissione.
-
-Output prodotti:
-
-```text
-07_netlist.cir
-07_spice_emit_report.json
-```
-
-Perche serve:
-
-Questo step trasforma la rappresentazione elettrica interna in un file SPICE
-leggibile da ngspice.
-
-La netlist puo essere completa o parziale. Se alcuni componenti non sono
-supportati, lo script non deve fallire: li registra nel report e, quando utile,
-li commenta nella netlist.
-
-## 08_spice_run.py
-
-`08_spice_run.py` esegue ngspice sulla netlist generata.
-
-Si trova in:
-
-```text
-scripts/pipeline_2.0/json_to_spice/08_spice_run.py
-```
-
-Input:
-
-```text
-07_netlist.cir
-```
-
-Responsabilita:
-
-- cercare l'eseguibile ngspice disponibile nel sistema;
-- supportare `ngspice_con`, `ngspice_con.exe`, `ngspice`, `ngspice.exe` o un
-  path esplicito;
-- eseguire ngspice in batch mode;
-- salvare stdout e stderr;
-- generare `08_tran_plot.svg` quando esiste un export transitorio;
-- registrare codice di uscita e comando usato;
-- non interpretare ancora il significato elettrico del risultato.
-
-Output prodotti:
-
-```text
-08_spice_run.json
-08_ngspice_stdout.txt
-08_ngspice_stderr.txt
-08_tran.csv, se il circuito richiede .tran
-08_tran_plot.svg, se 08_tran.csv e disponibile
-```
-
-Perche serve:
-
-Questo step verifica se la netlist generata e davvero eseguibile da ngspice.
-
-Importante: `08_spice_run.py` non corregge il circuito e non interpreta a fondo
-stdout/stderr. Salva solo il risultato grezzo. L'interpretazione sara compito
-degli step successivi, soprattutto `09_summarize_spice.py`,
-`10_build_diagnostic_context.py` e poi dell'agente diagnostico.
-
-## Output complessivo per circuito
-
-Per un circuito eseguito fino a SPICE, la cartella output ha questa forma:
-
-```text
-outputs/pipeline2.0/<batch>/<circuit>/
-|-- 01_graph.json
-|-- 02_normalized_circuit.json
-|-- 03_node_map.json
-|-- 04_values_bound.json
-|-- 06_component_rules.json
-|-- 07_netlist.cir
-|-- 07_spice_emit_report.json
-|-- 08_spice_run.json
-|-- 08_ngspice_stdout.txt
-`-- 08_ngspice_stderr.txt
-```
-
-Quando `05`, `09`, `10` e `11` saranno implementati, la cartella potra
-contenere anche:
-
-```text
-05_device_profiles.json
-09_spice_summary.json
-10_diagnostic_context.json
-11_agent_response.md
-```
-
-## Stato attuale
-
-Implementati e usati:
+Ruolo:
+
+- e il punto di ingresso della Pipeline 2.0;
+- carica dinamicamente gli step numerati;
+- esegue gli step tecnici nell'ordine corretto;
+- opzionalmente esegue ngspice;
+- alla fine costruisce anche `10_diagnostic_context.json`.
+
+Step oggi caricati davvero dal codice:
 
 ```text
 01_io.py
@@ -444,32 +120,727 @@ Implementati e usati:
 06_component_rules.py
 07_spice_emit.py
 08_spice_run.py
+10_build_diagnostic_context.py
+```
+
+Nota importante:
+
+- `05_device_profiles.py` esiste come scheletro, ma non viene ancora invocato
+  da `run_pipeline2.py`;
+- `09`, `11` e `12` non fanno parte della pipeline batch principale: si usano
+  separatamente.
+
+Input principali:
+
+```text
+outputs/pipeline1.0/<batch>/06_graph_report/<circuit>/<circuit>.json
+metadata/pipeline2_manual_values/<batch>/<circuit>_values.yaml
+metadata/pipeline2_spice_classes.yaml
+metadata/pipeline2_spice_models.yaml
+```
+
+Output tipici:
+
+```text
+01_graph.json
+02_normalized_circuit.json
+03_node_map.json
+04_values_bound.json
+06_component_rules.json
+07_netlist.cir
+07_spice_emit_report.json
+08_spice_run.json                  # se --run-spice
+08_ngspice_stdout.txt              # se --run-spice
+08_ngspice_stderr.txt              # se --run-spice
+08_tran.csv / 08_tran_plot.*       # se disponibili
+10_diagnostic_context.json
+```
+
+Comando tipico:
+
+```powershell
+python scripts\pipeline_2.0\run_pipeline2.py --batch batchA --circuits a01 a02 --run-spice --ngspice-executable ngspice_con
+```
+
+Supporta anche:
+
+```text
+--experiment <name>
+```
+
+per scrivere direttamente in:
+
+```text
+outputs/pipeline2.0/<batch>/<experiment>/<circuit>/
+```
+
+## prepare_experiment_outputs.py
+
+Path:
+
+```text
+scripts/pipeline_2.0/prepare_experiment_outputs.py
+```
+
+Ruolo:
+
+- prepara una root esperimento separata;
+- copia in modo non distruttivo artefatti gia esistenti;
+- permette di separare completamente due esperimenti senza rigenerare sempre la
+  pipeline tecnica.
+
+Modalita:
+
+```text
+base-only
+full
+```
+
+`base-only`:
+
+- copia solo i file top-level `01-08`;
+- non copia `10`, `11`, `scenarios` o chat history;
+- serve quando vogliamo ripartire da una stessa base tecnica con una nuova
+  sessione sperimentale pulita.
+
+`full`:
+
+- copia tutta la cartella circuito;
+- serve quando vogliamo congelare uno stato sperimentale completo.
+
+Output aggiuntivo locale:
+
+```text
+experiment_manifest.json
+```
+
+Comando tipico:
+
+```powershell
+python scripts\pipeline_2.0\prepare_experiment_outputs.py --batch batchA --experiment experiment2 --circuits a01 a02 a03 --mode base-only
+```
+
+## Pipeline tecnica 01-08
+
+## 01_io.py
+
+Path:
+
+```text
+scripts/pipeline_2.0/json_to_spice/01_io.py
+```
+
+Ruolo:
+
+- centralizza percorsi e I/O della Pipeline 2.0;
+- trova il Graph JSON della Pipeline 1.0;
+- prepara la cartella output del circuito;
+- copia il Graph JSON sorgente nella nuova cartella;
+- fornisce helper comuni per lettura/scrittura JSON.
+
+Input principale:
+
+```text
+outputs/pipeline1.0/<batch>/06_graph_report/<circuit>/<circuit>.json
+```
+
+Output:
+
+```text
+01_graph.json
+```
+
+Perche e importante:
+
+senza questo step ogni modulo gestirebbe path e cartelle in modo diverso.
+
+## 02_normalize.py
+
+Path:
+
+```text
+scripts/pipeline_2.0/json_to_spice/02_normalize.py
+```
+
+Ruolo:
+
+- normalizza il Graph JSON in una struttura piu ordinata;
+- costruisce lookup per componenti e terminali;
+- esplicita il grafo terminale-terminale;
+- registra statistiche e warning di normalizzazione.
+
+Input:
+
+```text
+01_graph.json
+```
+
+Output:
+
+```text
+02_normalized_circuit.json
+```
+
+Perche serve:
+
+il JSON della Pipeline 1.0 e topologicamente utile, ma non ancora comodo da
+usare per i passaggi elettrici successivi.
+
+## 03_node_map.py
+
+Path:
+
+```text
+scripts/pipeline_2.0/json_to_spice/03_node_map.py
+```
+
+Ruolo:
+
+- costruisce i nodi elettrici a partire dal grafo normalizzato;
+- trova le componenti connesse;
+- assegna un nodo SPICE a ogni gruppo di terminali;
+- mappa i terminali di massa nel nodo `0`.
+
+Input:
+
+```text
+02_normalized_circuit.json
+```
+
+Output:
+
+```text
+03_node_map.json
+```
+
+Perche serve:
+
+SPICE ragiona in termini di nodi, non di linee disegnate.
+
+## 04_values.py
+
+Path:
+
+```text
+scripts/pipeline_2.0/json_to_spice/04_values.py
+```
+
+Ruolo:
+
+- legge i valori manuali dal file YAML;
+- associa valori, modelli e stati ai componenti;
+- gestisce anche supply manuali e stato degli switch;
+- distingue componenti `bound`, mancanti o non supportati.
+
+Input:
+
+```text
+02_normalized_circuit.json
+03_node_map.json
+metadata/pipeline2_manual_values/<batch>/<circuit>_values.yaml
+```
+
+Output:
+
+```text
+04_values_bound.json
+```
+
+Perche serve:
+
+la topologia da sola non basta a generare una netlist utilizzabile.
+
+## 05_device_profiles.py
+
+Path:
+
+```text
+scripts/pipeline_2.0/json_to_spice/05_device_profiles.py
+```
+
+Stato reale:
+
+```text
+scheletro presente, non ancora integrato nel flusso run_pipeline2.py
+```
+
+Ruolo previsto:
+
+- descrivere componenti complessi e IC tramite profili dichiarativi;
+- modellare pin di alimentazione, GND, reset, clock, enable, ingressi e uscite;
+- supportare controlli pin-aware nei batch futuri.
+
+Output previsto:
+
+```text
+05_device_profiles.json
+```
+
+Nota:
+
+oggi questo step va considerato documentato ma non operativo nel flusso reale.
+
+## 06_component_rules.py
+
+Path:
+
+```text
+scripts/pipeline_2.0/json_to_spice/06_component_rules.py
+```
+
+Ruolo:
+
+- applica il mapping in `metadata/pipeline2_spice_classes.yaml`;
+- decide come trattare ogni componente in SPICE;
+- distingue componenti emettibili, strutturali, mancanti, semplificati o non
+  supportati;
+- prepara prefissi, nodi e parametri da usare nello step 07.
+
+Input:
+
+```text
+04_values_bound.json
+metadata/pipeline2_spice_classes.yaml
+```
+
+Output:
+
+```text
+06_component_rules.json
+```
+
+Perche serve:
+
+non tutti i componenti del graph devono diventare una riga SPICE.
+
+## 07_spice_emit.py
+
+Path:
+
+```text
+scripts/pipeline_2.0/json_to_spice/07_spice_emit.py
+```
+
+Ruolo:
+
+- genera la netlist SPICE vera e propria;
+- emette resistenze, condensatori, sorgenti, LED, lampade equivalenti e altri
+  elementi supportati;
+- commenta o salta componenti strutturali e non emettibili;
+- aggiunge modelli `.model` quando servono;
+- aggiunge `.op` e, se richiesto, anche `.tran`;
+- salva anche un report di emissione.
+
+Input:
+
+```text
+06_component_rules.json
+metadata/pipeline2_spice_models.yaml
+```
+
+Output:
+
+```text
+07_netlist.cir
+07_spice_emit_report.json
+```
+
+Perche serve:
+
+e il punto in cui la rappresentazione elettrica interna diventa una netlist
+leggibile da ngspice.
+
+## 08_spice_run.py
+
+Path:
+
+```text
+scripts/pipeline_2.0/json_to_spice/08_spice_run.py
+```
+
+Ruolo:
+
+- esegue ngspice in batch mode;
+- cerca un eseguibile disponibile o usa quello passato da CLI;
+- salva stdout, stderr, exit code e report;
+- genera anche il plot transitorio se i dati `.tran` sono disponibili.
+
+Input:
+
+```text
+07_netlist.cir
+```
+
+Output:
+
+```text
+08_spice_run.json
+08_ngspice_stdout.txt
+08_ngspice_stderr.txt
+08_tran.csv
+08_tran_plot.png
+08_tran_plot.svg
+```
+
+Perche serve:
+
+verifica se la netlist prodotta e davvero eseguibile e conserva il risultato
+grezzo della simulazione.
+
+Nota importante:
+
+`08_spice_run.py` non interpreta la diagnosi. Esegue e salva.
+
+## Layer diagnostico e interattivo 09-12
+
+## 09_web_chat.py
+
+Path:
+
+```text
+scripts/pipeline_2.0/json_to_spice/09_web_chat.py
+```
+
+Ruolo:
+
+- avvia un server locale temporaneo;
+- mostra gli artefatti del circuito in una pagina web;
+- mantiene una chat diagnostica sempre visibile;
+- chiama lo step 10 per aggiornare il contesto;
+- chiama lo step 11 per ottenere la risposta dell'agente;
+- riconosce richieste come `esegui scenario 1`, `esegui l'ultimo`,
+  `mostra scenari`;
+- chiama lo step 12 per eseguire scenari su copie separate.
+
+Caratteristiche architetturali:
+
+- niente database;
+- niente backend persistente complesso;
+- niente API pubbliche;
+- server solo locale e temporaneo.
+
+Artefatti chat principali:
+
+```text
+11_agent_input_preview_chat.md
+11_agent_prompt_chat.md
+11_agent_response_chat.md
+```
+
+Per root `experiment2*` salva anche memoria ufficiale locale:
+
+```text
+experiment2_chat/chat_history.json
+experiment2_chat/chat_history.md
+experiment2_chat/scenario_registry.json
+experiment2_chat/scenario_registry.md
+```
+
+In questa modalita:
+
+- `chat_history.json` e la sorgente ufficiale della conversazione;
+- `scenario_registry.json` e la sorgente ufficiale degli scenari proposti ed
+  eseguiti;
+- il bottone `Clear` resetta chat, registry, cartelle `scenarios/` e artefatti
+  chat 10/11 della sessione, ma non tocca i file base `01-08`.
+
+Input:
+
+```text
+outputs/pipeline2.0/<batch>/<circuit>/
+outputs/pipeline2.0/<batch>/<experiment>/<circuit>/
+```
+
+Output:
+
+- risposta visibile in chat;
+- file chat `11_*_chat.md`;
+- eventuale `10_diagnostic_context.json` aggiornato;
+- eventuali cartelle `scenarios/scenario_<n>/`.
+
+Comando tipico:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experiment experiment2 --circuit a01 --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+```
+
+## 10_build_diagnostic_context.py
+
+Path:
+
+```text
+scripts/pipeline_2.0/json_to_spice/10_build_diagnostic_context.py
+```
+
+Ruolo:
+
+- costruisce un manifest diagnostico leggero;
+- non duplica tutti gli output in un file enorme;
+- indica all'agente dove si trovano i file reali;
+- riassume lo stato minimo del circuito;
+- indicizza gli scenari gia eseguiti;
+- costruisce anche una sintesi dell'esito scenari e un budget massimo.
+
+Output:
+
+```text
+10_diagnostic_context.json
+```
+
+Contiene soprattutto:
+
+- `summary`
+- `artifacts`
+- `executed_scenarios`
+- `scenario_outcome_summary`
+- `scenario_budget`
+- `image_access`
+- `agent_rules`
+
+Perche serve:
+
+lo step 11 parte da questo manifest, non da un hardcoding di file sparsi.
+
+Nota importante:
+
+oggi questo step e gia reale e viene chiamato sia da `run_pipeline2.py` sia da
+`09_web_chat.py`.
+
+## 11_agent_readonly.py
+
+Path:
+
+```text
+scripts/pipeline_2.0/json_to_spice/11_agent_readonly.py
+```
+
+Ruolo:
+
+- legge `10_diagnostic_context.json`;
+- carica gli artefatti indicati dal manifest;
+- costruisce un preview ordinato dell'input agente;
+- costruisce il prompt finale;
+- chiama OpenAI solo se richiesto esplicitamente;
+- non modifica netlist e non esegue scenari.
+
+Output base:
+
+```text
+11_agent_input_preview.md
+11_agent_prompt.md
+```
+
+Con `--run-agent`:
+
+```text
+11_agent_response.md
+```
+
+Supporta:
+
+- risoluzione del context per batch/circuito;
+- root esperimento separata;
+- scelta modello;
+- domanda utente da CLI.
+
+Modelli attualmente previsti dal codice e dalla chat:
+
+```text
+gpt-5.4
+gpt-5.5
+gpt-5.4-mini
+gpt-5-mini
+```
+
+Perche si chiama read-only:
+
+- interpreta;
+- spiega;
+- propone scenari;
+- ma non tocca mai gli output tecnici.
+
+Comando tipico:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\11_agent_readonly.py --batch batchA --experiment experiment2 --circuit a01 --question "Perche la lampada non si accende?" --run-agent --model gpt-5.4
+```
+
+## 12_controlled_scenarios.py
+
+Path:
+
+```text
+scripts/pipeline_2.0/json_to_spice/12_controlled_scenarios.py
+```
+
+Ruolo:
+
+- applica uno scenario solo dentro una cartella scenario separata;
+- modifica soltanto `run/07_netlist.cir`;
+- opzionalmente rilancia ngspice sulla run scenario;
+- costruisce un confronto base vs scenario;
+- aggiorna `scenario_status.json`.
+
+Regola centrale:
+
+```text
+la base run non viene mai modificata
+```
+
+Struttura scenario:
+
+```text
+scenarios/<scenario_id>/
+|-- scenario.json
+|-- scenario_status.json
+|-- scenario_copy_manifest.json
+|-- 12_controlled_scenarios.json
+|-- scenario_comparison.json
+|-- base_snapshot/
+`-- run/
+```
+
+Primitive oggi supportate:
+
+```text
+Scenari elettrici / di pilotaggio:
+- drive_node_voltage
+- add_voltage_source_between_nodes
+- change_source_value
+- change_component_value
+- close_switch
+
+Scenari topologici controllati:
+- connect_nodes
+- add_resistor_between_nodes
+- feed_nodes_from_source_node
+```
+
+Responsabilita aggiuntive:
+
+- valida i nodi richiesti dallo scenario;
+- normalizza valori SPICE;
+- limita il budget a massimo `5` scenari eseguibili per circuito;
+- crea `scenario_comparison.json`;
+- classifica automaticamente l'esito con categorie come:
+  - `resolved_candidate`
+  - `partially_resolved`
+  - `not_resolved`
+  - `unknown`
+
+Output principali:
+
+```text
+12_controlled_scenarios.json
+scenario_status.json
+scenario_comparison.json
+```
+
+Comando tipico:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\12_controlled_scenarios.py --scenario-dir outputs\pipeline2.0\batchA\experiment2\a01\scenarios\scenario_1 --run-spice --ngspice "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+```
+
+## Flussi reali oggi supportati
+
+## Flusso 1 - pipeline tecnica base
+
+```text
 run_pipeline2.py
+-> 01_io
+-> 02_normalize
+-> 03_node_map
+-> 04_values
+-> 06_component_rules
+-> 07_spice_emit
+-> 08_spice_run          # se richiesto
+-> 10_build_diagnostic_context
 ```
 
-Creato come scheletro, ma non ancora sviluppato:
+## Flusso 2 - chat diagnostica locale
 
 ```text
-05_device_profiles.py
+09_web_chat
+-> aggiorna 10_diagnostic_context.json
+-> costruisce 11_agent_input_preview_chat.md
+-> costruisce 11_agent_prompt_chat.md
+-> chiama il runner agente
+-> salva 11_agent_response_chat.md
 ```
 
-Creati come scheletro per fasi successive:
+## Flusso 3 - scenario controllato da chat
 
 ```text
-09_summarize_spice.py
+utente sceglie uno scenario
+-> 09_web_chat recupera il JSON scenario
+-> crea scenarios/<scenario_id>/
+-> copia base_snapshot/ e run/
+-> chiama 12_controlled_scenarios.py
+-> opzionalmente esegue ngspice sulla run scenario
+-> costruisce scenario_comparison.json
+-> agente puo leggere il nuovo esito
+```
+
+## Stato attuale degli script
+
+Implementati e usati davvero:
+
+```text
+run_pipeline2.py
+prepare_experiment_outputs.py
+01_io.py
+02_normalize.py
+03_node_map.py
+04_values.py
+06_component_rules.py
+07_spice_emit.py
+08_spice_run.py
+09_web_chat.py
 10_build_diagnostic_context.py
 11_agent_readonly.py
 12_controlled_scenarios.py
 ```
 
-## Prossimi aggiornamenti previsti
+Presenti ma non ancora integrati nel flusso reale:
 
-Questo documento andra aggiornato quando:
+```text
+05_device_profiles.py
+```
 
-- aggiungiamo nuove classi in `metadata/pipeline2_spice_classes.yaml`;
-- cambiamo lo schema dei file `values.yaml`;
-- implementiamo `05_device_profiles.py`;
-- implementiamo `09_summarize_spice.py`;
-- implementiamo `10_build_diagnostic_context.py`;
-- implementiamo `11_agent_readonly.py`;
-- aggiungiamo scenari controllati o agente AI.
+Non fanno parte dello stato attuale di riferimento:
+
+- `09_summarize_spice.py` non va piu considerato uno step reale della pipeline
+  corrente;
+- il riferimento ufficiale oggi e la catena `01-08` + `10` per la parte base e
+  `09-12` per il layer diagnostico/interattivo.
+
+## Quando aggiornare questo file
+
+Questo riferimento va aggiornato quando:
+
+- cambia l'ordine o il ruolo di uno script;
+- `run_pipeline2.py` inizia a caricare nuovi step;
+- `05_device_profiles.py` entra davvero nel flusso;
+- vengono aggiunte o rimosse primitive scenario in `12_controlled_scenarios.py`;
+- cambia la struttura output per batch/esperimento/circuito;
+- la web chat introduce nuove responsabilita strutturali.
+
+## Sintesi finale
+
+La Pipeline 2.0 oggi va letta cosi:
+
+```text
+run_pipeline2.py e il motore della base tecnica;
+prepare_experiment_outputs.py separa gli esperimenti;
+09_web_chat.py e l'interfaccia locale;
+10_build_diagnostic_context.py costruisce il manifest;
+11_agent_readonly.py interpreta senza modificare;
+12_controlled_scenarios.py applica scenari su copie separate.
+```
+
+Questa distinzione e importante per tutta la tesi:
+
+- `01-08` costruiscono i fatti elettrici;
+- `09-12` permettono di interrogarli, testarli e confrontarli senza perdere la
+  base run originale.

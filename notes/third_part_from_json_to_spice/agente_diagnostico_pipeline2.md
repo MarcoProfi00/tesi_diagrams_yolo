@@ -844,6 +844,9 @@ Scenari elettrici / di pilotaggio:
 Scenari topologici controllati:
 - connect_nodes
 - feed_nodes_from_source_node
+
+Scenari strutturali / di accoppiamento:
+- add_resistor_between_nodes
 ```
 
 `drive_node_voltage` aggiunge una sorgente di test su un nodo gia presente
@@ -956,6 +959,32 @@ Traduzione SPICE tipica:
 ```spice
 RSCENARIO_CONNECT_N002_N003 N002 N003 1m
 ```
+
+`add_resistor_between_nodes` aggiunge invece un nuovo ramo resistivo tra due
+nodi gia esistenti. E la primitiva naturale quando la domanda diagnostica non
+e "manca continuita quasi ideale?", ma "esiste un accoppiamento resistivo
+troppo debole o manca un ramo di bias/shunt tra due nodi?".
+
+Esempio:
+
+```json
+{
+  "type": "add_resistor_between_nodes",
+  "from": "N001",
+  "to": "N004",
+  "value": "33k"
+}
+```
+
+Traduzione SPICE tipica:
+
+```spice
+RSCENARIO_ADD_N001_N004 N001 N004 33k
+```
+
+Questa primitiva e stata validata su `a08`, dove il punto non era alimentare
+un ramo mancante ma testare un possibile accoppiamento resistivo troppo debole
+tra `TRIGGER` e base del transistor.
 
 Lo step `12_controlled_scenarios.py` puo essere eseguito anche da terminale con
 `--run-spice`. In quel caso:
@@ -1866,6 +1895,22 @@ outputs/pipeline2.0/<batch>/<experiment>/<circuit>/
         `-- run/
 ```
 
+Questa struttura va letta insieme alla root canonica della pipeline:
+
+```text
+outputs/pipeline2.0/<batch>/<circuit>/
+```
+
+Convenzione attuale:
+
+- la root senza `experiment` resta la base tecnica canonica del circuito;
+- la root con `experiment` e una copia/workspace separato usato quando vogliamo
+  congelare un esperimento, riaprire una chat indipendente o eseguire scenari
+  senza mescolare artefatti diversi;
+- nel Batch A teniamo volutamente sia la baseline canonica `a01...a10` sia le
+  root sperimentali come `experiment1`, `experiment2` e
+  `experiment2_feed_nodes`.
+
 Per `experiment2`, `chat_history.json` e `scenario_registry.json` non sono piu
 solo output futuri: sono la memoria ufficiale file-based della sessione. La
 risposta chat dell'agente resta comunque la fonte testuale completa, ma gli
@@ -2218,36 +2263,16 @@ Prossimi esperimenti:
 
    Nota di stato:
 
-   - la prima sottofase `connect_nodes` e gia stata validata sui casi
-     `a01`, `a02`, `a09` e `a10`;
-   - `feed_nodes_from_source_node` e la seconda primitiva topologica per i casi
-     in cui esiste gia un nodo sorgente alimentato;
-   - il prossimo passo atteso e consolidare
-     `add_voltage_source_between_nodes`, da usare quando la base run non ha una
-     vera eccitazione utile e l'agente deve prima alimentare il circuito dal
-     suo ingresso naturale.
+   - `connect_nodes` e gia stata validata sui casi `a01`, `a02`, `a09` e
+     `a10`;
+   - `feed_nodes_from_source_node` e gia stata validata sui casi `a01`, `a09`
+     e `a10`;
+   - `add_voltage_source_between_nodes` e gia stata validata su `a05` e `a07`;
+   - `add_resistor_between_nodes` e gia stata validata su `a08`;
+   - quindi Experiment 2 sul Batch A va ormai letto come fase sostanzialmente
+     consolidata, non piu come sola implementazione iniziale del runner.
 
-2. **Esperimento 3 - automazione agentica degli scenari**
-
-   Obiettivo: far eseguire all'agente piu scenari in sequenza, entro un limite
-   controllato, per provare a risolvere o localizzare il problema.
-
-   Flusso desiderato:
-
-   ```text
-   sintomo utente
-   -> agente propone scenario
-   -> pipeline esegue scenario
-   -> agente legge scenario_comparison.json
-   -> agente decide se fermarsi o provare un altro scenario
-   -> massimo 5 scenari
-   -> conclusione finale
-   ```
-
-   Questa fase deve partire solo dopo aver reso solide le primitive
-   dell'Esperimento 2.
-
-3. **Esperimento 4 - visualizzatore/simulatore del circuito**
+2. **Esperimento 3 - visualizzatore/simulatore del circuito**
 
    Obiettivo: costruire una visualizzazione stile simulatore, non un nuovo
    motore SPICE.
@@ -2266,6 +2291,26 @@ Prossimi esperimenti:
    - ngspice resta il motore di simulazione;
    - il viewer usa netlist, node map, coordinate immagine e risultati SPICE per
      mostrare nodi, tensioni, correnti e rami attivi.
+
+3. **Esperimento 4 - automazione agentica degli scenari**
+
+   Obiettivo: far eseguire all'agente piu scenari in sequenza, entro un limite
+   controllato, per provare a risolvere o localizzare il problema.
+
+   Flusso desiderato:
+
+   ```text
+   sintomo utente
+   -> agente propone scenario
+   -> pipeline esegue scenario
+   -> agente legge scenario_comparison.json
+   -> agente decide se fermarsi o provare un altro scenario
+   -> massimo 5 scenari
+   -> conclusione finale
+   ```
+
+   Questa fase deve partire solo dopo aver reso solide sia le primitive
+   dell'Esperimento 2 sia la leggibilita delle run/scenario run nel viewer.
 
 ## Stato dopo il primo esperimento Batch A
 

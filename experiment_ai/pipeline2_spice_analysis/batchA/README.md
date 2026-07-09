@@ -13,6 +13,18 @@ outputs/pipeline2.0/batchA/
 
 e sui markdown di analisi circuito per circuito presenti in questa cartella.
 
+Convenzione attuale del Batch A:
+
+- `outputs/pipeline2.0/batchA/a01 ... a10` restano la baseline tecnica canonica
+  della Pipeline 2.0;
+- `outputs/pipeline2.0/batchA/experiment1/` e la copia esplicita usata per
+  congelare l'Esperimento 1;
+- `outputs/pipeline2.0/batchA/experiment2/` e
+  `outputs/pipeline2.0/batchA/experiment2_feed_nodes/` restano root
+  sperimentali indipendenti usate per le varianti dell'Esperimento 2;
+- quindi la coesistenza tra root canonica e root esperimento e voluta, non e un
+  residuo casuale.
+
 ## Stato generale
 
 Il Batch A e stato completato sui circuiti:
@@ -448,20 +460,50 @@ La web chat permette di:
 Questa parte resta sperimentale, ma e gia sufficiente per validare il flusso
 diagnostico manuale assistito dall'agente.
 
+## Esperimento 2 - Stato sintetico
+
+Dopo il primo esperimento baseline, il Batch A e stato usato anche per
+Experiment 2, cioe la fase di scenari piu forti che modificano in modo
+controllato la netlist SPICE.
+
+Sul Batch A risultano ormai consolidati:
+
+- `connect_nodes`
+- `feed_nodes_from_source_node`
+- `add_voltage_source_between_nodes`
+- `add_resistor_between_nodes`
+
+I casi principali coperti in `experiment2/` sono:
+
+- `a01`, `a02`, `a09`, `a10` per continuita e propagazione;
+- `a05`, `a07` per eccitazione esterna con sorgente aggiunta;
+- `a08` per modifica strutturale del bias/accoppiamento resistivo.
+
+Restano invece fuori dalla parte topologica forte:
+
+- `a04`, `a06`, perche sul Batch A sono gia ben spiegati da scenari analogici
+  ed elettrici di Experiment 1;
+- `a03`, perche richiede una fase successiva di correzione graph o
+  image-assisted.
+
+Questa distinzione e metodologicamente voluta: non tutti i circuiti devono per
+forza ricevere una nuova primitiva topologica.
+
 ## Prossimo passo consigliato
 
-Dopo questo primo esperimento sul Batch A, il passo piu sensato e consolidare
-la valutazione.
+Con Experiment 1 e Experiment 2 ormai sostanzialmente chiusi sul Batch A, il
+passo piu sensato e consolidare la valutazione.
 
 Ordine consigliato:
 
-1. Congelare i markdown `experiment1/a01.md`-`experiment1/a10.md` come report
-   del primo esperimento.
+1. Congelare i markdown `experiment1/` e `experiment2/` come report manuali di
+   riferimento.
 2. Aggiornare una tabella sintetica con esito base, scenari eseguiti e diagnosi
    finale per ogni circuito.
 3. Definire metriche semplici per la tesi, per esempio success/fail SPICE,
    numero scenari, scenario risolutivo, caso topologico, caso inconclusivo.
-4. Solo dopo, migliorare la visualizzazione web e la parte animata del circuito.
+4. Solo dopo, decidere se aprire Experiment 3 oppure migliorare la
+   visualizzazione web e la parte animata del circuito.
 
 ## Sintesi finale
 

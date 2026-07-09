@@ -634,6 +634,8 @@ implementato per primitive semplici e scenario run separata
 - supporta change_component_value su componenti semplici gia emessi
 - supporta close_switch su switch gia riconosciuti
 - supporta connect_nodes per continuita controllata tra due nodi esistenti
+- supporta add_resistor_between_nodes per aggiungere un nuovo ramo resistivo
+  tra due nodi esistenti
 - supporta feed_nodes_from_source_node per propagare un nodo sorgente gia
   alimentato verso uno o piu target
 - modifica solo run/07_netlist.cir
