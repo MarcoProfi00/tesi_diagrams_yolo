@@ -621,12 +621,19 @@ Prima versione possibile:
 
 ## Esperimento 4 - Automazione agentica
 
-Stato: futuro, dopo viewer e primitive scenario consolidate.
+Stato: futuro, dopo viewer generale Batch A e primitive scenario consolidate.
 
 Obiettivo:
 
 far eseguire all'agente piu scenari in sequenza, entro un limite controllato,
 per arrivare a una diagnosi finale o a una localizzazione del problema.
+
+Prima di questa fase devono essere stabili:
+
+- viewer base run e viewer scenario per tutti i circuiti Batch A;
+- generazione viewer separata da `09_web_chat.py`;
+- primitive scenario gia validate in `12_controlled_scenarios.py`;
+- confronto base/scenario leggibile dall'agente.
 
 Flusso desiderato:
 
@@ -635,6 +642,7 @@ sintomo utente
 -> agente propone scenario
 -> pipeline crea run scenario
 -> pipeline esegue ngspice
+-> pipeline crea viewer dello scenario
 -> pipeline crea scenario_comparison.json
 -> agente legge il confronto
 -> agente decide se fermarsi o proporre altro
@@ -642,14 +650,46 @@ sintomo utente
 -> conclusione finale
 ```
 
+Modalita da supportare:
+
+- diagnosi guidata: l'utente descrive il sintomo e l'agente propone scenari;
+- comando diretto: l'utente chiede "chiudi lo switch", "aggiungi una resistenza",
+  "collega due nodi" o "aggiungi una sorgente";
+- ciclo autonomo controllato: l'agente propone, esegue, confronta e decide se
+  fermarsi o continuare.
+
+Primitive operative iniziali:
+
+- `close_switch`;
+- `connect_nodes`;
+- `feed_nodes_from_source_node`;
+- `add_voltage_source_between_nodes`;
+- `add_resistor_between_nodes`;
+- `drive_node_voltage`;
+- `change_component_value`;
+- `change_source_value`.
+
 Regole:
 
 - l'agente non modifica file direttamente;
 - la pipeline valida sempre lo scenario;
 - ogni scenario deve essere tracciabile;
+- ogni comando diretto viene tradotto in uno `scenario.json` riproducibile;
+- la base run non viene mai modificata;
 - se uno scenario risolve o localizza abbastanza il problema, l'agente si ferma;
 - se il budget finisce, l'agente produce una conclusione finale;
 - se serve correggere il Graph JSON, l'agente deve dichiararlo esplicitamente.
+
+Step essenziali:
+
+1. chiudere Experiment 3 su base run e scenari Batch A;
+2. aggiungere parser leggero per comandi scenario diretti;
+3. validare nodi/componenti richiesti contro `03_node_map.json`,
+   `06_component_rules.json` e `07_netlist.cir`;
+4. eseguire lo scenario con `12_controlled_scenarios.py`;
+5. generare il viewer scenario con gli step `13/14/15`;
+6. far leggere all'agente `scenario_comparison.json` e viewer disponibile;
+7. valutare il ciclo autonomo su tutti i circuiti Batch A.
 
 ## Valutazione trasversale degli esperimenti
 

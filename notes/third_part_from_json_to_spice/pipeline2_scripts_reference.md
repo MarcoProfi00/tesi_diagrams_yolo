@@ -581,10 +581,11 @@ Nota:
 Nota architetturale:
 
 - il viewer attuale della web chat contiene ancora un prototipo visivo cucito su `a01`;
-- questo prototipo serve solo a fissare stile, componenti e comportamento base/scenario;
+- questo prototipo serve solo come prova iniziale, non come riferimento di layout;
 - non va esteso creando renderer hardcoded per `a02`, `a04`, `a09` ecc.;
-- il passo successivo di Experiment 3 e trasformare il lavoro fatto a mano su `a01` in una generazione automatica per ogni circuito e ogni scenario;
-- a regime `09_web_chat.py` deve solo mostrare il viewer della run selezionata, mentre modello, layout e rendering devono derivare da `13_viewer_model.json` e `14_viewer_layout.json`.
+- il viewer deve essere `netlist-grounded + image-guided`;
+- le bbox e i terminali di Pipeline 1.0 vanno usati come geometry seed;
+- a regime `09_web_chat.py` deve solo mostrare il viewer della run selezionata, mentre modello, layout e rendering devono derivare da `13_viewer_model.json`, `14_viewer_layout.json` e dal nuovo renderer `15`.
 
 ## 13_build_viewer_model.py
 
@@ -599,7 +600,8 @@ Ruolo:
 - costruisce il contratto dati del viewer per una base run o una scenario run;
 - parte dalla netlist realmente simulata in `07_netlist.cir`;
 - aggiunge contesto strutturale da `03_node_map.json` e `06_component_rules.json`;
-- aggiunge misure operative da `08_ngspice_stdout.txt`.
+- aggiunge misure operative da `08_ngspice_stdout.txt`;
+- deve essere esteso con geometry seed da Pipeline 1.0 (`03_estimate_terminals`).
 
 Output:
 
@@ -629,8 +631,9 @@ scripts/pipeline_2.0/json_to_spice/14_build_viewer_layout.py
 Ruolo:
 
 - legge `13_viewer_model.json`;
-- produce un primo layout visuale automatico;
-- assegna posizioni a componenti, nodi e connessioni;
+- normalizza bbox e terminali sul canvas viewer;
+- assegna posizioni a componenti, nodi, pin e connessioni;
+- calcola routes e fallback per componenti scenario senza bbox;
 - prepara la separazione tra modello elettrico e coordinate SVG.
 
 Output:
@@ -651,6 +654,50 @@ Nota:
 - il layout non ricostruisce l'immagine originale pixel-perfect;
 - il renderer della web chat usa ancora il prototipo visivo di `a01`, ma genera gia anche questo layout;
 - il layout deve diventare la base del renderer generico per tutti i circuiti e scenari.
+
+## 15_render_viewer_svg.py
+
+Stato:
+
+```text
+da creare nella prossima fase di Experiment 3
+```
+
+Ruolo previsto:
+
+- leggere `13_viewer_model.json`;
+- leggere `14_viewer_layout.json`;
+- applicare il vocabolario dei componenti grafici;
+- produrre SVG/HTML embeddabile nella web chat;
+- sostituire progressivamente il renderer hardcoded di `a01` dentro `09_web_chat.py`.
+
+Principio:
+
+- `13` descrive cosa esiste;
+- `14` descrive dove posizionarlo;
+- `15` descrive come disegnarlo;
+- `09` deve solo mostrare il viewer della run selezionata.
+
+Prima milestone:
+
+```text
+a01 renderizzato da 13 + 14 + 15, senza coordinate specifiche dentro 09_web_chat.py
+```
+
+Seconda milestone:
+
+```text
+scenario_1 di a01 renderizzato dalla run scenario
+```
+
+Poi estensione Batch A:
+
+```text
+a01 -> a10/a09 -> a02/a05/a07 -> a08 -> a04/a06
+```
+
+Ogni nuovo circuito deve aggiungere regole generali di modello/layout/rendering,
+non un renderer dedicato.
 
 ## 10_build_diagnostic_context.py
 

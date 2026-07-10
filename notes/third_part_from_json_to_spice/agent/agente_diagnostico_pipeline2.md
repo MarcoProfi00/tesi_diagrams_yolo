@@ -2297,17 +2297,48 @@ Prossimi esperimenti:
    Obiettivo: far eseguire all'agente piu scenari in sequenza, entro un limite
    controllato, per provare a risolvere o localizzare il problema.
 
+   Questa fase non parte finche Experiment 3 non produce viewer generali per
+   base run e scenari di tutti i circuiti Batch A. Il viewer deve diventare una
+   evidenza leggibile accanto a netlist, stdout ngspice e confronto scenario.
+
    Flusso desiderato:
 
    ```text
    sintomo utente
    -> agente propone scenario
    -> pipeline esegue scenario
+   -> pipeline genera viewer dello scenario
    -> agente legge scenario_comparison.json
    -> agente decide se fermarsi o provare un altro scenario
    -> massimo 5 scenari
    -> conclusione finale
    ```
+
+   Modalita operative previste:
+
+   - diagnosi guidata: l'utente descrive il sintomo e l'agente propone scenari;
+   - comando diretto: l'utente chiede azioni come "chiudi lo switch",
+     "aggiungi una resistenza", "collega due nodi" o "aggiungi una sorgente";
+   - ciclo autonomo controllato: l'agente esegue piu scenari, confronta i
+     risultati e si ferma quando ha una conclusione sufficiente.
+
+   Le prime azioni dirette devono mappare solo primitive gia supportate:
+
+   ```text
+   close_switch
+   connect_nodes
+   feed_nodes_from_source_node
+   add_voltage_source_between_nodes
+   add_resistor_between_nodes
+   drive_node_voltage
+   change_component_value
+   change_source_value
+   ```
+
+   Ogni comando naturale viene prima trasformato in uno `scenario.json`
+   validato. La pipeline controlla nodi e componenti con `03_node_map.json`,
+   `06_component_rules.json` e `07_netlist.cir`; poi `12_controlled_scenarios.py`
+   crea la run scenario e gli step `13/14/15` creano il viewer corrispondente.
 
    Questa fase deve partire solo dopo aver reso solide sia le primitive
    dell'Esperimento 2 sia la leggibilita delle run/scenario run nel viewer.
