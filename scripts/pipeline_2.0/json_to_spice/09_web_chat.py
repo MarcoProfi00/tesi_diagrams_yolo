@@ -53,6 +53,8 @@ TEMPLATE_DIR = WEB_CHAT_DIR / "templates"
 INDEX_TEMPLATE = TEMPLATE_DIR / "index.html"
 STEP10_PATH = Path(__file__).resolve().parent / "10_build_diagnostic_context.py"
 STEP12_PATH = Path(__file__).resolve().parent / "12_controlled_scenarios.py"
+STEP13_PATH = Path(__file__).resolve().parent / "13_build_viewer_model.py"
+STEP14_PATH = Path(__file__).resolve().parent / "14_build_viewer_layout.py"
 CHAT_MODEL = "gpt-5.4"
 CHAT_MODELS = [
     "gpt-5.4",
@@ -1238,6 +1240,469 @@ def render_artifacts(output_dir: Path, plot_url: str = "/artifact/08_tran_plot.p
     return "\n".join(sections)
 
 
+def load_step13_module() -> Any:
+    """Carica lo step 13 per generare il viewer model della run selezionata."""
+    spec = importlib.util.spec_from_file_location("pipeline2_step13", STEP13_PATH)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Impossibile caricare lo step 13 da {STEP13_PATH}")
+
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_step14_module() -> Any:
+    """Carica lo step 14 per generare il layout del viewer della run."""
+    spec = importlib.util.spec_from_file_location("pipeline2_step14", STEP14_PATH)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Impossibile caricare lo step 14 da {STEP14_PATH}")
+
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def load_or_build_viewer_model(run_dir: Path) -> dict[str, Any]:
+    """Legge o genera `13_viewer_model.json` senza bloccare la web chat."""
+    model_path = run_dir / "13_viewer_model.json"
+    model = read_json_safe(model_path)
+    if model:
+        return model
+    step13 = load_step13_module()
+    built = step13.write_viewer_model(run_dir)
+    return built if isinstance(built, dict) else {}
+
+
+def load_or_build_viewer_layout(run_dir: Path) -> dict[str, Any]:
+    """Legge o genera `14_viewer_layout.json` senza cambiare il renderer attuale."""
+    layout_path = run_dir / "14_viewer_layout.json"
+    layout = read_json_safe(layout_path)
+    if layout:
+        return layout
+    step14 = load_step14_module()
+    built = step14.write_viewer_layout(run_dir)
+    return built if isinstance(built, dict) else {}
+
+
+def voltage_color(value: Any) -> str:
+    """Mappa una tensione OP su una palette leggibile in stile viewer."""
+    try:
+        voltage = float(value)
+    except (TypeError, ValueError):
+        return "#6f7c8f"
+    if abs(voltage) < 0.05:
+        return "#6f7c8f"
+    if voltage >= 4.0:
+        return "#18d858"
+    if voltage >= 0.5:
+        return "#d8d31a"
+    if voltage < -0.05:
+        return "#4aa3ff"
+    return "#9aa435"
+
+
+def format_voltage(value: Any) -> str:
+    """Formatta una tensione in volt per le label compatte del viewer."""
+    try:
+        voltage = float(value)
+    except (TypeError, ValueError):
+        return "n/a"
+    if abs(voltage) < 0.001:
+        return "0 V"
+    return f"{voltage:.3g} V"
+
+
+def format_current(value: Any) -> str:
+    """Formatta una corrente usando l'unita' piu' leggibile per il viewer."""
+    try:
+        current = abs(float(value))
+    except (TypeError, ValueError):
+        return "n/a"
+    if current < 1e-6:
+        return "0 A"
+    if current < 1:
+        return f"{current * 1000:.3g} mA"
+    return f"{current:.3g} A"
+
+
+def current_is_active(value: Any, threshold: float = 1e-6) -> bool:
+    """Indica se una corrente e' abbastanza grande da animare il ramo."""
+    try:
+        return abs(float(value)) > threshold
+    except (TypeError, ValueError):
+        return False
+
+
+def find_node_voltage(model: dict[str, Any], node_id: str) -> Any:
+    """Cerca la tensione operativa di un nodo nel viewer model."""
+    for node in model.get("nodes") or []:
+        if isinstance(node, dict) and str(node.get("id")) == node_id:
+            return node.get("voltage_op")
+    return None
+
+
+def model_component(model: dict[str, Any], component_id: str) -> dict[str, Any]:
+    """Restituisce un componente emesso nella netlist a partire dal suo id."""
+    for component in model.get("netlist_components") or []:
+        if isinstance(component, dict) and str(component.get("id")) == component_id:
+            return component
+    return {}
+
+
+def model_structural_component(model: dict[str, Any], component_id: str) -> dict[str, Any]:
+    """Restituisce un componente strutturale letto dal node map o dalle regole."""
+    for component in model.get("structural_components") or []:
+        if isinstance(component, dict) and str(component.get("id")) == component_id:
+            return component
+    return {}
+
+
+def sorted_connector_pins(connector: dict[str, Any]) -> list[tuple[str, str]]:
+    """Ordina i pin del connector usando il numero finale del nome pin."""
+    nodes = connector.get("nodes") or {}
+    if not isinstance(nodes, dict):
+        return []
+
+    def pin_sort_key(item: tuple[str, str]) -> tuple[int, str]:
+        match = re.search(r"(\d+)$", item[0])
+        return (int(match.group(1)) if match else 999, item[0])
+
+    return sorted(
+        [(str(pin), str(node)) for pin, node in nodes.items()],
+        key=pin_sort_key,
+    )
+
+
+def render_connector_symbol(
+    connector: dict[str, Any],
+    *,
+    x: int,
+    y: int,
+    pin_spacing: int = 72,
+) -> tuple[str, dict[str, int]]:
+    """Disegna un connector stretto con i pin centrati in modo automatico."""
+    pins = sorted_connector_pins(connector)
+    if not pins:
+        pins = [("pin1", "")]
+    height = max(150, 42 + pin_spacing * (len(pins) - 1))
+    width = 54
+    pin_x = x + width // 2
+    y_start = y + (height - pin_spacing * (len(pins) - 1)) // 2
+    pin_y: dict[str, int] = {}
+    circles: list[str] = []
+    labels: list[str] = []
+    for index, (pin_name, _node) in enumerate(pins):
+        cy = y_start + index * pin_spacing
+        pin_y[pin_name] = cy
+        number = re.search(r"(\d+)$", pin_name)
+        label = number.group(1) if number else pin_name
+        circles.append(f'<circle cx="{pin_x}" cy="{cy}" r="10"/>')
+        labels.append(f'<text x="{x - 22}" y="{cy + 6}">{html.escape(label)}</text>')
+
+    svg = f"""
+      <g class="connector">
+        <rect x="{x}" y="{y}" width="{width}" height="{height}" rx="4"/>
+        {''.join(circles)}
+        <text class="component-label center" x="{pin_x}" y="{y - 12}">J2</text>
+        {''.join(labels)}
+      </g>
+    """
+    return svg, pin_y
+
+
+def render_node_chip(x: int, y: int, node_id: str, value: Any, *, compact: bool = False) -> str:
+    """Disegna una piccola label di nodo con nome e tensione operativa."""
+    text = f"{node_id} {format_voltage(value)}"
+    width = max(42, (7 if compact else 8) * len(text) + 12)
+    class_name = "node-chip compact" if compact else "node-chip"
+    return f"""
+      <g class="{class_name}" transform="translate({x} {y})">
+        <rect x="0" y="-16" width="{width}" height="22" rx="4"/>
+        <text x="6" y="0">{html.escape(text)}</text>
+      </g>
+    """
+
+
+def render_viewer_legend(x: int, y: int) -> str:
+    """Disegna la legenda compatta delle linee usate nel viewer."""
+    return f"""
+      <g class="viewer-legend" transform="translate({x} {y})">
+        <rect class="panel" x="0" y="0" width="202" height="176" rx="6"/>
+        <text class="legend-title" x="14" y="24">Legenda</text>
+        <path class="wire" style="stroke:#18d858; filter:none" d="M16 46 H62"/>
+        <text x="76" y="50">tensione alta</text>
+        <path class="wire" style="stroke:#d8d31a; filter:none" d="M16 72 H62"/>
+        <text x="76" y="76">tensione intermedia</text>
+        <path class="wire-flow" d="M16 98 H62"/>
+        <text x="76" y="102">corrente</text>
+        <path class="wire wire-inactive" d="M16 124 H62"/>
+        <text x="76" y="128">ramo fermo</text>
+        <path class="wire wire-structural" d="M16 150 H62"/>
+        <text x="76" y="154">collegamento guida</text>
+      </g>
+    """
+
+
+def render_component_flow(active: bool, path_data: str) -> str:
+    """Disegna l'overlay animato della corrente dentro un componente."""
+    if not active:
+        return ""
+    return f'<path class="component-flow" d="{path_data}"/>'
+
+
+def render_falstad_switch_symbol(
+    *,
+    left_x: int,
+    right_x: int,
+    y: int,
+    connector_x: int,
+    closed: bool,
+) -> str:
+    """Disegna uno switch semplice con due stati netti.
+
+    Il simbolo usa due contatti propri. La parte verso il connector e' solo un
+    collegamento guida, quindi lo stato dello switch resta leggibile anche vicino
+    al pin 3 del connector.
+    """
+    contact_radius = 4
+    blade_gap = contact_radius + 1
+    state_class = "closed" if closed else "open"
+    contacts_svg = f"""
+        <circle class="switch-contact-dot" cx="{left_x}" cy="{y}" r="4"/>
+        <circle class="switch-contact-dot" cx="{right_x}" cy="{y}" r="4"/>
+    """
+    if closed:
+        blade_start_x = left_x + contact_radius
+        blade_end_x = right_x - contact_radius
+        blade_svg = (
+            f'<path class="switch-closed-link" '
+            f'vector-effect="non-scaling-stroke" d="M{blade_start_x} {y} H{blade_end_x}" '
+            f'style="fill:none;stroke:#f8fafc;stroke-width:3.5;'
+            f'stroke-linecap:round;stroke-dasharray:none;filter:none"/>'
+        )
+        blade_and_contacts = f"{blade_svg}{contacts_svg}"
+    else:
+        blade_path = f"M{left_x + blade_gap} {y + 24} L{right_x - blade_gap} {y + 4}"
+        blade_svg = f'<path class="switch-blade" vector-effect="non-scaling-stroke" d="{blade_path}"/>'
+        blade_and_contacts = f"{contacts_svg}{blade_svg}"
+    return f"""
+      <g class="component switch {state_class}">
+        <path class="switch-terminal" d="M{left_x - 22} {y} H{left_x}"/>
+        <path class="wire wire-structural switch-guide" d="M{right_x} {y} H{connector_x}"/>
+        {blade_and_contacts}
+      </g>
+    """
+
+
+def render_a01_viewer_svg(model: dict[str, Any]) -> str:
+    """Disegna il viewer provvisorio del circuito pilota `a01`.
+
+    Questo renderer e' ancora basato su coordinate SVG manuali. Lo teniamo come
+    base visiva mentre il prossimo step sposta le coordinate nel layout engine.
+    """
+    v0 = find_node_voltage(model, "0")
+    v1 = find_node_voltage(model, "N001")
+    v2 = find_node_voltage(model, "N002")
+    v3 = find_node_voltage(model, "N003")
+    v4 = find_node_voltage(model, "N004")
+    v5 = find_node_voltage(model, "N005")
+    scenario_components = [
+        component for component in (model.get("netlist_components") or [])
+        if isinstance(component, dict) and component.get("is_scenario_added")
+    ]
+    switch = model_structural_component(model, "switch25.1")
+    connector = model_structural_component(model, "connector5.1")
+    connector_svg, pin_y = render_connector_symbol(connector, x=96, y=74)
+    pin1_y = pin_y.get("pin1", 96)
+    pin2_y = pin_y.get("pin2", 168)
+    pin3_y = pin_y.get("pin3", 240)
+    pin4_y = pin_y.get("pin4", 312)
+    pin_x = 123
+    switch_state = str((switch.get("parameters") or {}).get("state") or "open").lower()
+    switch_is_closed = switch_state == "closed"
+
+    lamp_current = (model.get("measurements") or {}).get("device_currents", {}).get("RLAMP13_1")
+    led_current = (model.get("measurements") or {}).get("device_currents", {}).get("RRESISTOR22_2")
+    led_flow = current_is_active(led_current)
+    lamp_flow = current_is_active(lamp_current)
+    led_flow_paths = ""
+    if led_flow:
+        led_flow_paths = f"""
+        <path class="wire-flow" d="M{pin_x} {pin1_y} H285"/>
+        <path class="wire-flow" d="M397 {pin1_y} H545"/>
+        <path class="wire-flow" d="M631 {pin1_y} H760 V285"/>
+        """
+    lamp_flow_paths = ""
+    if lamp_flow:
+        lamp_flow_paths = f"""
+        <path class="wire-flow" d="M{pin_x} {pin2_y} H285"/>
+        <path class="wire-flow" d="M397 {pin2_y} H545"/>
+        <path class="wire-flow" d="M633 {pin2_y} H760"/>
+        """
+    lamp_wire_class = "wire" if lamp_flow else "wire wire-inactive"
+    structural_wire_class = "wire wire-structural"
+
+    scenario_overlay = ""
+    for component in scenario_components:
+        nodes = component.get("nodes") or []
+        if set(nodes) == {"N001", "N002"}:
+            scenario_overlay += f"""
+              <path class="scenario-wire" d="M{pin_x + 42} {pin1_y} L{pin_x + 42} {pin2_y}"/>
+            """
+
+    return f"""
+    <svg class="viewer-svg" viewBox="0 0 1040 430" role="img" aria-label="Circuito equivalente dalla netlist SPICE">
+      <defs>
+        <filter id="viewerGlow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="2.2" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="viewerCurrentGlow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="1.4" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="viewerLedGlow" x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur stdDeviation="7" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <rect class="viewer-bg" x="0" y="0" width="1040" height="430"/>
+      <g class="grid-minor">
+        <path d="M40 40 H995 M40 90 H995 M40 140 H995 M40 190 H995 M40 240 H995 M40 290 H995 M40 340 H995 M40 390 H995"/>
+        <path d="M80 30 V400 M160 30 V400 M240 30 V400 M320 30 V400 M400 30 V400 M480 30 V400 M560 30 V400 M640 30 V400 M720 30 V400 M800 30 V400 M880 30 V400 M960 30 V400"/>
+      </g>
+      <g class="grid-major">
+        <path d="M40 140 H995 M40 290 H995"/>
+        <path d="M240 30 V400 M480 30 V400 M720 30 V400 M960 30 V400"/>
+      </g>
+
+      <g class="wire-layer">
+        <path class="wire" style="stroke:{voltage_color(v1)}" d="M{pin_x} {pin1_y} H285"/>
+        <path class="wire" style="stroke:{voltage_color(v5)}" d="M397 {pin1_y} H545"/>
+        <path class="wire" style="stroke:{voltage_color(v5)}" d="M631 {pin1_y} H760 V285"/>
+        <path class="{lamp_wire_class}" style="stroke:{voltage_color(v2)}" d="M{pin_x} {pin2_y} H285"/>
+        <path class="{lamp_wire_class}" style="stroke:{voltage_color(v4)}" d="M397 {pin2_y} H545"/>
+        <path class="{lamp_wire_class}" style="stroke:{voltage_color(v4)}" d="M633 {pin2_y} H760"/>
+        <path class="{lamp_wire_class}" style="stroke:{voltage_color(v0)}" d="M760 {pin2_y} V285"/>
+        <path class="{structural_wire_class}" d="M122 {pin3_y} H{pin_x}"/>
+        <path class="{structural_wire_class}" d="M42 {pin3_y} V355"/>
+        <path class="{structural_wire_class}" d="M{pin_x} {pin4_y} V370"/>
+        {led_flow_paths}
+        {lamp_flow_paths}
+        {scenario_overlay}
+      </g>
+
+      {connector_svg}
+
+      <g class="component resistor" transform="translate(285 {pin1_y - 20})">
+        <path d="M0 20 H18 L28 4 L44 36 L60 4 L76 36 L92 4 L102 20 H112"/>
+        {render_component_flow(led_flow, "M0 20 H18 L28 4 L44 36 L60 4 L76 36 L92 4 L102 20 H112")}
+        <text class="component-label center" x="56" y="-14">220R</text>
+      </g>
+      <g class="component resistor" transform="translate(285 {pin2_y - 20})">
+        <path d="M0 20 H18 L28 4 L44 36 L60 4 L76 36 L92 4 L102 20 H112"/>
+        {render_component_flow(lamp_flow, "M0 20 H18 L28 4 L44 36 L60 4 L76 36 L92 4 L102 20 H112")}
+        <text class="component-label center" x="56" y="-14">1k</text>
+      </g>
+      <g class="component diode {'led-on' if led_flow else ''}" transform="translate(545 {pin1_y - 28})">
+        {'<ellipse class="led-halo" cx="46" cy="28" rx="58" ry="42"/>' if led_flow else ''}
+        <path class="led-body" d="M0 28 H24 L24 12 L62 28 L24 44 L24 28 M62 12 V44 M62 28 H86"/>
+        {render_component_flow(led_flow, "M0 28 H24 L24 12 L62 28 L24 44 L24 28 M62 28 H86")}
+        {'<g class="led-rays"><path d="M42 4 L53 -13 M58 7 L72 -9"/></g>' if led_flow else ''}
+        <text class="component-label center" x="44" y="-16">D1</text>
+      </g>
+      <g class="component lamp" transform="translate(545 {pin2_y - 28})">
+        <rect x="22" y="10" width="46" height="36" rx="6"/>
+        <path d="M0 28 H22 M68 28 H88 M32 28 C36 16 54 40 58 28"/>
+        {render_component_flow(lamp_flow, "M0 28 H22 M68 28 H88 M32 28 C36 16 54 40 58 28")}
+        <text class="component-label center" x="44" y="68">Lamp</text>
+      </g>
+      {render_falstad_switch_symbol(left_x=42, right_x=84, y=pin3_y, connector_x=pin_x, closed=switch_is_closed)}
+
+      <g class="ground" transform="translate(42 355)">
+        <path d="M-24 0 H24 M-16 11 H16 M-8 22 H8"/>
+      </g>
+      <g class="ground" transform="translate({pin_x} 370)">
+        <path d="M-24 0 H24 M-16 11 H16 M-8 22 H8"/>
+      </g>
+      <g class="ground" transform="translate(760 285)">
+        <path d="M-24 0 H24 M-16 11 H16 M-8 22 H8"/>
+      </g>
+
+      <g class="node-labels">
+        {render_node_chip(178, pin1_y - 12, "N001", v1, compact=True)}
+        {render_node_chip(432, pin1_y - 12, "N005", v5, compact=True)}
+        {render_node_chip(694, 314, "0", v0, compact=True)}
+      </g>
+
+      <g class="viewer-current">
+        <text x="415" y="{pin1_y + 34}">{html.escape(format_current(led_current))}</text>
+        <text x="415" y="{pin2_y + 34}">{html.escape(format_current(lamp_current))}</text>
+      </g>
+      {render_viewer_legend(835, 52)}
+    </svg>
+    """
+
+
+def render_viewer_section(run_dir: Path) -> str:
+    """Renderizza il viewer della run selezionata, se possibile."""
+    try:
+        model = load_or_build_viewer_model(run_dir)
+        load_or_build_viewer_layout(run_dir)
+    except Exception as exc:
+        return f"""
+        <details class="artifact" open>
+          <summary>
+            <span>Circuito equivalente dalla netlist SPICE</span>
+            <small>viewer unavailable</small>
+          </summary>
+          <div class="viewer-wrap viewer-missing">
+            Viewer non disponibile: {html.escape(str(exc))}
+          </div>
+        </details>
+        """
+
+    if not model:
+        return ""
+
+    layout_status = str((model.get("layout") or {}).get("layout_status") or "")
+    if layout_status != "a01_seeded":
+        return f"""
+        <details class="artifact" open>
+          <summary>
+            <span>Circuito equivalente dalla netlist SPICE</span>
+            <small>13_viewer_model.json</small>
+          </summary>
+          <div class="viewer-wrap viewer-missing">
+            Viewer model generato. Layout grafico non ancora disponibile per questa topologia.
+          </div>
+        </details>
+        """
+
+    return f"""
+    <details class="artifact" open>
+      <summary>
+        <span>Circuito equivalente dalla netlist SPICE</span>
+        <small>13_viewer_model.json</small>
+      </summary>
+      <div class="viewer-wrap">
+        <div class="viewer-toolbar" aria-label="Controlli viewer circuito">
+          <div class="viewer-toolbar-group">
+            <button type="button" data-viewer-action="zoom-out" title="Zoom out" aria-label="Zoom out">-</button>
+            <span class="viewer-zoom-readout">100%</span>
+            <button type="button" data-viewer-action="zoom-in" title="Zoom in" aria-label="Zoom in">+</button>
+            <button type="button" data-viewer-action="reset" title="Reset vista" aria-label="Reset vista">1:1</button>
+          </div>
+        </div>
+        <div class="viewer-canvas">
+          {render_a01_viewer_svg(model)}
+        </div>
+      </div>
+    </details>
+    """
+
+
 def render_comparison_summary(scenario_dir: Path) -> str:
     """Mostra un riepilogo leggibile del confronto base/scenario."""
     comparison = read_json_safe(scenario_dir / "scenario_comparison.json")
@@ -1425,7 +1890,7 @@ def render_page(
         title = "Base run"
         subtitle = project_relative(output_dir)
         status_cards = render_status_cards(status)
-        image_section = render_image_section(batch, circuit, output_dir)
+        image_section = render_viewer_section(output_dir) + render_image_section(batch, circuit, output_dir)
         artifacts = render_artifacts(output_dir)
     else:
         available_scenarios = {scenario["id"] for scenario in list_scenario_runs(output_dir)}
@@ -1437,7 +1902,8 @@ def render_page(
         title = scenario_content["title"]
         subtitle = scenario_content.get("subtitle") or scenario_content["output_dir"]
         status_cards = scenario_content["status_cards"]
-        image_section = render_image_section(batch, circuit, output_dir)
+        scenario_run_dir = output_dir / "scenarios" / active_run / "run"
+        image_section = render_viewer_section(scenario_run_dir) + render_image_section(batch, circuit, output_dir)
         artifacts = scenario_content["artifacts"]
 
     return fill_template(
@@ -2036,6 +2502,18 @@ def handle_scenario_request(
         run_spice=True,
         ngspice_executable=ngspice_executable,
     )
+    viewer_model_path = copy_result["run_dir"] / "13_viewer_model.json"
+    viewer_layout_path = copy_result["run_dir"] / "14_viewer_layout.json"
+    viewer_debug = ""
+    try:
+        load_or_build_viewer_model(copy_result["run_dir"])
+        load_or_build_viewer_layout(copy_result["run_dir"])
+        viewer_debug = (
+            f"Viewer model: {project_relative(viewer_model_path)}; "
+            f"layout: {project_relative(viewer_layout_path)}"
+        )
+    except Exception as exc:
+        viewer_debug = f"Generazione viewer fallita: {exc}"
     applied_actions = apply_report.get("applied_actions") or []
     failed_actions = apply_report.get("failed_actions") or []
     unsupported_actions = apply_report.get("unsupported_actions") or []
@@ -2123,6 +2601,8 @@ def handle_scenario_request(
             project_relative(copy_result["manifest_path"]),
             project_relative(scenario_paths["scenario_dir"] / "12_controlled_scenarios.json"),
             project_relative(scenario_paths["scenario_dir"] / "scenario_comparison.json"),
+            project_relative(viewer_model_path),
+            project_relative(viewer_layout_path),
         ],
         "used_image": False,
         "debug": [
@@ -2134,6 +2614,7 @@ def handle_scenario_request(
             f"Written: {project_relative(scenario_paths['status_path'])}",
             f"Written: {project_relative(copy_result['manifest_path'])}",
             f"Written: {project_relative(scenario_paths['scenario_dir'] / '12_controlled_scenarios.json')}",
+            viewer_debug,
             f"Copied files: {len(copy_result['copied_files'])}",
             f"Applied actions: {len(applied_actions)}",
             f"Unsupported actions: {len(unsupported_actions)}",

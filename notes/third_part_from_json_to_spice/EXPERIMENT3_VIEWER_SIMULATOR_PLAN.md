@@ -330,6 +330,62 @@ Il cuore non deve essere HTML/CSS, ma il modello intermedio:
 
 Questo file deve diventare l'oggetto confrontabile e testabile.
 
+## Decisione architetturale aggiornata: niente renderer hardcoded per circuito
+
+Il prototipo costruito su `a01` serve solo come riferimento visivo e come
+prima grammatica grafica dei componenti.
+
+Non deve diventare il modello finale.
+
+In particolare, non vogliamo introdurre funzioni del tipo:
+
+```text
+render_a01_viewer_svg
+render_a02_viewer_svg
+render_a09_viewer_svg
+...
+```
+
+perche i circuiti del Batch A e dei batch futuri hanno topologie diverse e
+anche gli scenari possono modificare la netlist.
+
+La regola da fissare e:
+
+```text
+per ogni circuito e per ogni scenario, il viewer deve essere generato dalla run
+selezionata, non scritto a mano per quel circuito.
+```
+
+Quindi il lavoro fatto manualmente su `a01` va trasformato in una pipeline
+automatica:
+
+```text
+07_netlist.cir + 03_node_map.json + 06_component_rules.json + risultati 08
+  -> 13_viewer_model.json
+  -> 14_viewer_layout.json
+  -> renderer SVG/HTML generico
+```
+
+`09_web_chat.py` non deve contenere a regime la logica specifica del circuito.
+Deve limitarsi a caricare e mostrare il viewer della run attiva:
+
+- base run: viewer della root del circuito;
+- scenario run: viewer della cartella `scenarios/<scenario_id>/run/`.
+
+Il renderer generale deve applicare regole riusabili:
+
+- disegnare i connector verticali con numero di pin dinamico;
+- disegnare componenti SPICE sui rami della netlist;
+- aggiungere i componenti strutturali utili da `03_node_map.json`;
+- mostrare switch aperti/chiusi in base al modello della run;
+- mostrare componenti aggiunti dagli scenari;
+- usare tensioni e correnti ngspice come overlay informativo;
+- mantenere un layout leggibile anche quando la topologia cambia.
+
+Questa decisione evita di costruire un viewer "per a01" e sposta il lavoro
+verso un motore generale incrementale: ogni nuovo circuito serve a migliorare
+le regole di modello, layout e rendering, non ad aggiungere codice duplicato.
+
 ## Integrazione nella web chat
 
 La web chat oggi presenta:
@@ -1216,6 +1272,33 @@ se non esiste -> viene generato automaticamente o mostrato un placeholder pulito
 
 La generazione automatica e preferibile, purche il fallimento non blocchi la
 chat diagnostica.
+
+### Avvio della web chat su Experiment 3
+
+La workspace `experiment3_viewer` puo gia essere aperta con lo stesso script
+della chat diagnostica, cambiando solo il parametro `--experiment`.
+
+Circuito pilota `a01`:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experiment experiment3_viewer --circuit a01 --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+```
+
+Questa command apre:
+
+```text
+outputs/pipeline2.0/batchA/experiment3_viewer/a01/
+```
+
+Stato attuale:
+
+- la web chat puo mostrare la base run, l'immagine originale, gli artefatti
+  tecnici e gli scenari gia presenti nella workspace;
+- il viewer/simulatore visuale non e ancora implementato;
+- il primo blocco viewer da aggiungere sara quello della base run;
+- quando il viewer sara maturo, la stessa pagina dovra mostrare di default
+  `13_viewer_model.json` della base run e, quando l'utente seleziona o crea uno
+  scenario, il modello viewer della run scenario.
 
 ### Regola di robustezza
 

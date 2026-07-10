@@ -564,6 +564,94 @@ Comando tipico:
 python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experiment experiment2 --circuit a01 --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
 ```
 
+Comando per aprire la workspace di Experiment 3 sul circuito pilota `a01`:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experiment experiment3_viewer --circuit a01 --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+```
+
+Nota:
+
+- questo comando apre gli output in `outputs/pipeline2.0/batchA/experiment3_viewer/a01/`;
+- la web chat mostra gia base run, immagine, artefatti e scenari disponibili;
+- il viewer/simulatore visuale viene mostrato come blocco aggiuntivo della pagina centrale;
+- `13_viewer_model.json` descrive cosa esiste nella run;
+- `14_viewer_layout.json` descrive un primo layout automatico grezzo, non ancora usato come unico renderer.
+
+Nota architetturale:
+
+- il viewer attuale della web chat contiene ancora un prototipo visivo cucito su `a01`;
+- questo prototipo serve solo a fissare stile, componenti e comportamento base/scenario;
+- non va esteso creando renderer hardcoded per `a02`, `a04`, `a09` ecc.;
+- il passo successivo di Experiment 3 e trasformare il lavoro fatto a mano su `a01` in una generazione automatica per ogni circuito e ogni scenario;
+- a regime `09_web_chat.py` deve solo mostrare il viewer della run selezionata, mentre modello, layout e rendering devono derivare da `13_viewer_model.json` e `14_viewer_layout.json`.
+
+## 13_build_viewer_model.py
+
+Path:
+
+```text
+scripts/pipeline_2.0/json_to_spice/13_build_viewer_model.py
+```
+
+Ruolo:
+
+- costruisce il contratto dati del viewer per una base run o una scenario run;
+- parte dalla netlist realmente simulata in `07_netlist.cir`;
+- aggiunge contesto strutturale da `03_node_map.json` e `06_component_rules.json`;
+- aggiunge misure operative da `08_ngspice_stdout.txt`.
+
+Output:
+
+```text
+13_viewer_model.json
+```
+
+Comando:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\13_build_viewer_model.py --run-dir outputs\pipeline2.0\batchA\experiment3_viewer\a01
+```
+
+Nota:
+
+- lo step 13 dice cosa deve essere rappresentato;
+- non deve diventare il motore di layout definitivo.
+
+## 14_build_viewer_layout.py
+
+Path:
+
+```text
+scripts/pipeline_2.0/json_to_spice/14_build_viewer_layout.py
+```
+
+Ruolo:
+
+- legge `13_viewer_model.json`;
+- produce un primo layout visuale automatico;
+- assegna posizioni a componenti, nodi e connessioni;
+- prepara la separazione tra modello elettrico e coordinate SVG.
+
+Output:
+
+```text
+14_viewer_layout.json
+```
+
+Comando:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\14_build_viewer_layout.py --run-dir outputs\pipeline2.0\batchA\experiment3_viewer\a01
+```
+
+Nota:
+
+- lo stato attuale e `rough_auto`;
+- il layout non ricostruisce l'immagine originale pixel-perfect;
+- il renderer della web chat usa ancora il prototipo visivo di `a01`, ma genera gia anche questo layout;
+- il layout deve diventare la base del renderer generico per tutti i circuiti e scenari.
+
 ## 10_build_diagnostic_context.py
 
 Path:

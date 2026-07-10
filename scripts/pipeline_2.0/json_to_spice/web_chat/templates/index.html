@@ -206,6 +206,291 @@
       border: 1px solid var(--line);
       background: white;
     }
+    .viewer-wrap {
+      border-top: 1px solid var(--line);
+      background: #050b14;
+      overflow: hidden;
+    }
+    .viewer-toolbar {
+      display: flex;
+      align-items: center;
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+      background: #07111f;
+    }
+    .viewer-toolbar-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 2px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 10px;
+      background: rgba(8, 15, 28, 0.55);
+    }
+    .viewer-toolbar button {
+      min-width: 38px;
+      height: 32px;
+      padding: 0 10px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 6px;
+      background: rgba(15, 23, 42, 0.72);
+      color: #e2e8f0;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .viewer-toolbar button:hover {
+      border-color: rgba(125, 211, 252, 0.65);
+      background: rgba(30, 41, 59, 0.88);
+    }
+    .viewer-toolbar .viewer-zoom-readout {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 56px;
+      height: 32px;
+      padding: 0 10px;
+      color: #cbd5e1;
+      font-size: 12px;
+      font-weight: 650;
+      text-align: center;
+      border-radius: 6px;
+      background: rgba(15, 23, 42, 0.52);
+    }
+    .viewer-canvas {
+      padding: 14px;
+      overflow: hidden;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+    }
+    .viewer-canvas.is-dragging {
+      cursor: grabbing;
+    }
+    .viewer-missing {
+      color: #cbd5e1;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .viewer-svg {
+      display: block;
+      width: 100%;
+      min-width: 760px;
+      max-height: 520px;
+      font-family: "Segoe UI", Arial, sans-serif;
+      transform-origin: 0 0;
+      will-change: transform;
+    }
+    .viewer-bg { fill: #07111f; }
+    .grid-minor path {
+      stroke: rgba(59, 130, 246, 0.075);
+      stroke-width: 1;
+      fill: none;
+    }
+    .grid-major path {
+      stroke: rgba(125, 211, 252, 0.13);
+      stroke-width: 1;
+      fill: none;
+    }
+    .wire {
+      fill: none;
+      stroke-width: 3.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: url(#viewerGlow);
+    }
+    .wire-flow {
+      fill: none;
+      stroke: #e6ff32;
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 7 13;
+      opacity: 0.86;
+      animation: viewer-flow 0.7s linear infinite;
+      pointer-events: none;
+    }
+    .component-flow {
+      fill: none;
+      stroke: #e6ff32 !important;
+      stroke-width: 2.6 !important;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 6 10;
+      opacity: 0.88;
+      animation: viewer-flow 0.7s linear infinite;
+      filter: url(#viewerCurrentGlow);
+      pointer-events: none;
+    }
+    .wire-inactive {
+      stroke: #dbeafe !important;
+      stroke-width: 3;
+      stroke-dasharray: 8 8;
+      opacity: 0.72;
+      filter: none;
+    }
+    .wire-structural {
+      stroke: #cbd5e1 !important;
+      stroke-width: 2.5;
+      stroke-dasharray: 7 9;
+      opacity: 0.52;
+      filter: none;
+    }
+    @keyframes viewer-flow {
+      to { stroke-dashoffset: -20; }
+    }
+    .scenario-wire {
+      fill: none;
+      stroke: #ffb020;
+      stroke-width: 4;
+      stroke-dasharray: 9 7;
+      stroke-linecap: round;
+      filter: url(#viewerGlow);
+    }
+    .scenario-label {
+      fill: #ffd38a;
+      font-size: 13px;
+      font-weight: 650;
+    }
+    .component path,
+    .component circle,
+    .component rect,
+    .connector rect,
+    .connector circle,
+    .ground path {
+      fill: none;
+      stroke: #f8fafc;
+      stroke-width: 3.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .component.switch circle {
+      fill: #07111f;
+    }
+    .component.switch path.switch-blade {
+      stroke: #f8fafc;
+      stroke-width: 4;
+      filter: none;
+    }
+    .component.switch path.switch-closed-link {
+      fill: none;
+      stroke: #f8fafc !important;
+      stroke-width: 3.5 !important;
+      stroke-linecap: round;
+      stroke-dasharray: none !important;
+      filter: none !important;
+    }
+    .component.switch path.switch-guide {
+      stroke: #cbd5e1 !important;
+      stroke-width: 2.5;
+      stroke-dasharray: 7 9;
+      opacity: 0.52;
+      filter: none;
+    }
+    .component.switch.closed path.switch-terminal {
+      stroke: #f8fafc;
+      stroke-width: 3.5;
+      opacity: 0.95;
+    }
+    .led-halo {
+      fill: #ef4444;
+      opacity: 0.18;
+      filter: url(#viewerLedGlow);
+      pointer-events: none;
+    }
+    .led-on path.led-body {
+      stroke: #fecaca;
+      filter: url(#viewerLedGlow);
+    }
+    .led-rays path {
+      stroke: #ff4d4d !important;
+      stroke-width: 2.6 !important;
+      opacity: 0.92;
+      filter: url(#viewerLedGlow);
+    }
+    .connector rect {
+      stroke-width: 4;
+      stroke: #f1f5f9;
+      fill: rgba(15, 23, 42, 0.56);
+    }
+    .connector circle {
+      fill: #080b0f;
+      stroke-width: 4;
+    }
+    .connector text,
+    .component text,
+    .node-labels text,
+    .viewer-badges text,
+    .viewer-current text {
+      fill: #f8fafc;
+      font-size: 15px;
+      font-weight: 650;
+    }
+    .component-label {
+      fill: #f8fafc;
+      font-size: 12px !important;
+      font-weight: 650 !important;
+    }
+    .component-value {
+      fill: #cbd5e1;
+      font-size: 11px !important;
+      font-weight: 600 !important;
+    }
+    .component-label.center,
+    .component-value.center {
+      text-anchor: middle;
+    }
+    .node-chip rect {
+      fill: rgba(8, 11, 15, 0.72);
+      stroke: rgba(203, 213, 225, 0.22);
+      stroke-width: 1;
+    }
+    .node-chip text {
+      fill: #e2e8f0;
+      font-size: 11px !important;
+      font-weight: 650 !important;
+    }
+    .node-chip.compact rect {
+      fill: rgba(15, 23, 42, 0.58);
+      stroke: rgba(148, 163, 184, 0.18);
+    }
+    .node-chip.compact text {
+      fill: #cbd5e1;
+      font-size: 10px !important;
+    }
+    .viewer-current text {
+      font-size: 14px;
+    }
+    .viewer-badges text {
+      fill: #a8b3c2;
+      font-size: 13px;
+    }
+    .viewer-current text {
+      fill: #9fb0c3;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .viewer-muted {
+      fill: #a8b3c2 !important;
+      font-size: 12px !important;
+      font-weight: 500 !important;
+    }
+    .viewer-legend rect.panel {
+      fill: rgba(3, 10, 22, 0.74);
+      stroke: rgba(148, 163, 184, 0.24);
+      stroke-width: 1;
+    }
+    .viewer-legend text {
+      fill: #dbeafe;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .viewer-legend .legend-title {
+      fill: #f8fafc;
+      font-size: 12px;
+      font-weight: 700;
+    }
     .comparison-wrap {
       border-top: 1px solid var(--line);
       padding: 12px;
@@ -850,6 +1135,110 @@
       );
     }
 
+    // Inizializza zoom, pan e reset per ogni viewer circuito presente nella pagina.
+    function setupCircuitViewers() {
+      const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+      document.querySelectorAll(".viewer-wrap").forEach((viewer) => {
+        const canvas = viewer.querySelector(".viewer-canvas");
+        const svg = viewer.querySelector(".viewer-svg");
+        const readout = viewer.querySelector(".viewer-zoom-readout");
+        if (!canvas || !svg) return;
+
+        const state = {
+          scale: 1,
+          x: 0,
+          y: 0,
+          dragging: false,
+          lastX: 0,
+          lastY: 0
+        };
+
+        // Applica la trasformazione corrente allo SVG e aggiorna la percentuale.
+        function applyTransform() {
+          svg.style.transform = "translate(" + state.x + "px, " + state.y + "px) scale(" + state.scale + ")";
+          if (readout) {
+            readout.textContent = Math.round(state.scale * 100) + "%";
+          }
+        }
+
+        // Esegue lo zoom mantenendo fermo il punto sotto il cursore o il centro.
+        function zoomAt(nextScale, originX, originY) {
+          const previousScale = state.scale;
+          state.scale = clamp(nextScale, 0.45, 3.5);
+          const factor = state.scale / previousScale;
+          state.x = originX - (originX - state.x) * factor;
+          state.y = originY - (originY - state.y) * factor;
+          applyTransform();
+        }
+
+        viewer.querySelectorAll("[data-viewer-action]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const rect = canvas.getBoundingClientRect();
+            const originX = rect.width / 2;
+            const originY = rect.height / 2;
+            const action = button.dataset.viewerAction;
+            if (action === "zoom-in") {
+              zoomAt(state.scale * 1.18, originX, originY);
+            } else if (action === "zoom-out") {
+              zoomAt(state.scale / 1.18, originX, originY);
+            } else if (action === "reset") {
+              state.scale = 1;
+              state.x = 0;
+              state.y = 0;
+              applyTransform();
+            }
+          });
+        });
+
+        canvas.addEventListener("wheel", (event) => {
+          event.preventDefault();
+          const rect = canvas.getBoundingClientRect();
+          const originX = event.clientX - rect.left;
+          const originY = event.clientY - rect.top;
+          const zoomFactor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
+          zoomAt(state.scale * zoomFactor, originX, originY);
+        }, {passive: false});
+
+        canvas.addEventListener("pointerdown", (event) => {
+          state.dragging = true;
+          state.lastX = event.clientX;
+          state.lastY = event.clientY;
+          canvas.classList.add("is-dragging");
+          canvas.setPointerCapture(event.pointerId);
+        });
+
+        canvas.addEventListener("pointermove", (event) => {
+          if (!state.dragging) return;
+          state.x += event.clientX - state.lastX;
+          state.y += event.clientY - state.lastY;
+          state.lastX = event.clientX;
+          state.lastY = event.clientY;
+          applyTransform();
+        });
+
+        // Chiude il trascinamento e rilascia il pointer capture se necessario.
+        function endDrag(event) {
+          state.dragging = false;
+          canvas.classList.remove("is-dragging");
+          if (event && canvas.hasPointerCapture(event.pointerId)) {
+            canvas.releasePointerCapture(event.pointerId);
+          }
+        }
+
+        canvas.addEventListener("pointerup", endDrag);
+        canvas.addEventListener("pointercancel", endDrag);
+        canvas.addEventListener("dblclick", () => {
+          state.scale = 1;
+          state.x = 0;
+          state.y = 0;
+          applyTransform();
+        });
+
+        applyTransform();
+      });
+    }
+
     function setLoading(isLoading) {
       input.disabled = isLoading;
       modelSelect.disabled = isLoading;
@@ -933,6 +1322,7 @@
 
     loadChatModel();
     restoreMessages();
+    setupCircuitViewers();
   </script>
 </body>
 </html>

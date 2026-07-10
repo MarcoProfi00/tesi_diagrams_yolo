@@ -403,6 +403,21 @@ Con ngspice per eseguire scenari dalla chat:
 python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch <batch> --experiment <experiment> --circuit <circuit> --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
 ```
 
+Per aprire la workspace di Experiment 3 sul circuito pilota `a01`:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experiment experiment3_viewer --circuit a01 --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+```
+
+Nota:
+
+- `experiment3_viewer` usa gli output in `outputs/pipeline2.0/batchA/experiment3_viewer/`;
+- la web chat puo gia essere aperta su questa root sperimentale;
+- il blocco viewer/simulatore visuale e disponibile nella pagina centrale;
+- `13_build_viewer_model.py` genera `13_viewer_model.json`;
+- `14_build_viewer_layout.py` genera `14_viewer_layout.json` come primo layout automatico grezzo;
+- il renderer grafico e ancora basato sul prototipo `a01`, ma il layout e ora separato come contratto dati.
+
 Opzioni utili:
 
 ```text
