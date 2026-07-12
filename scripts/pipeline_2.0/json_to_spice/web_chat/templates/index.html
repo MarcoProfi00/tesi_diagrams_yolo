@@ -208,7 +208,7 @@
     }
     .viewer-wrap {
       border-top: 1px solid var(--line);
-      background: #050b14;
+      background: #071321;
       overflow: hidden;
     }
     .viewer-toolbar {
@@ -260,10 +260,19 @@
     }
     .viewer-canvas {
       padding: 14px;
+      min-height: 540px;
       overflow: hidden;
       cursor: grab;
       touch-action: none;
       user-select: none;
+      background-color: #071321;
+      background-image:
+        linear-gradient(rgba(38, 75, 111, 0.24) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(38, 75, 111, 0.24) 1px, transparent 1px),
+        linear-gradient(rgba(29, 57, 86, 0.18) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(29, 57, 86, 0.18) 1px, transparent 1px);
+      background-size: 200px 200px, 200px 200px, 40px 40px, 40px 40px;
+      background-position: 14px 14px;
     }
     .viewer-canvas.is-dragging {
       cursor: grabbing;
@@ -281,6 +290,7 @@
       font-family: "Segoe UI", Arial, sans-serif;
       transform-origin: 0 0;
       will-change: transform;
+      background: transparent;
     }
     .viewer-bg { fill: #07111f; }
     .grid-minor path {
@@ -1157,6 +1167,16 @@
         // Applica la trasformazione corrente allo SVG e aggiorna la percentuale.
         function applyTransform() {
           svg.style.transform = "translate(" + state.x + "px, " + state.y + "px) scale(" + state.scale + ")";
+          const minorGrid = 40 * state.scale;
+          const majorGrid = 200 * state.scale;
+          const gridX = 14 + state.x;
+          const gridY = 14 + state.y;
+          canvas.style.backgroundSize =
+            majorGrid + "px " + majorGrid + "px, " +
+            majorGrid + "px " + majorGrid + "px, " +
+            minorGrid + "px " + minorGrid + "px, " +
+            minorGrid + "px " + minorGrid + "px";
+          canvas.style.backgroundPosition = gridX + "px " + gridY + "px";
           if (readout) {
             readout.textContent = Math.round(state.scale * 100) + "%";
           }

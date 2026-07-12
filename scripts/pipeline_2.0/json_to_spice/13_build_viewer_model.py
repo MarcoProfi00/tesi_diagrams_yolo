@@ -20,6 +20,7 @@ from typing import Any
 
 NETLIST_NAME = "07_netlist.cir"
 VIEWER_MODEL_NAME = "13_viewer_model.json"
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -69,13 +70,32 @@ def expected_node_count(name: str) -> int:
 def source_component_id(spice_name: str) -> str | None:
     """Prova a ricostruire l'id del componente originale dal nome SPICE."""
     prefix = spice_name[:1].upper()
-    if prefix not in {"R", "C", "L", "D", "Q"}:
+    if prefix not in {"R", "C", "L", "D", "Q", "V", "I"}:
         return None
     base = spice_name[1:]
     match = re.match(r"(.+)_([0-9]+)$", base)
     if not match:
         return None
     return f"{match.group(1).lower()}.{match.group(2)}"
+
+
+def enrich_components_with_rules(
+    components: list[dict[str, Any]],
+    rules: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Aggiunge classe, parametri e label dichiarati nelle regole Pipeline 2.0."""
+    component_rules = rules.get("components") or {}
+    enriched: list[dict[str, Any]] = []
+    for component in components:
+        item = dict(component)
+        source_id = str(item.get("source_component_id") or "")
+        rule = component_rules.get(source_id) or {}
+        if isinstance(rule, dict) and rule:
+            item["class_name"] = rule.get("class_name")
+            item["parameters"] = rule.get("parameters") or {}
+            item["display_label"] = (rule.get("parameters") or {}).get("label_text")
+        enriched.append(item)
+    return enriched
 
 
 def parse_netlist(netlist_path: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
@@ -253,6 +273,35 @@ def apply_scenario_visual_overrides(
     return updated
 
 
+def apply_scenario_component_roles(
+    components: list[dict[str, Any]],
+    scenario: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Distingue i componenti fisici dagli equivalenti numerici degli scenari."""
+    connection_pairs: set[frozenset[str]] = set()
+    actions = scenario.get("actions") if isinstance(scenario, dict) else []
+    for action in actions if isinstance(actions, list) else []:
+        if not isinstance(action, dict) or action.get("type") not in {"connect_nodes", "feed_nodes_from_source_node"}:
+            continue
+        first = str(action.get("from") or action.get("source_node") or "")
+        targets = action.get("target_nodes") or [action.get("to") or action.get("target_node")]
+        for target in targets if isinstance(targets, list) else []:
+            second = str(target or "")
+            if first and second:
+                connection_pairs.add(frozenset({normalize_node(first), normalize_node(second)}))
+
+    updated: list[dict[str, Any]] = []
+    for component in components:
+        item = dict(component)
+        component_nodes = frozenset(str(node_id) for node_id in item.get("nodes") or [])
+        if item.get("is_scenario_added") and component_nodes in connection_pairs:
+            item["viewer_kind"] = "connection"
+            item["viewer_label"] = "link"
+            item["viewer_reason"] = "scenario_numeric_continuity_element"
+        updated.append(item)
+    return updated
+
+
 def build_nodes(node_map: dict[str, Any], measurements: dict[str, Any]) -> list[dict[str, Any]]:
     """Unisce i nodi del node map con le tensioni operative misurate."""
     voltages = measurements.get("node_voltages") or {}
@@ -272,50 +321,154 @@ def build_nodes(node_map: dict[str, Any], measurements: dict[str, Any]) -> list[
                 "voltage_op": voltages.get(lookup),
                 "terminals": item.get("terminals") or [],
                 "terminal_count": item.get("terminal_count"),
+                "source_groups": item.get("source_groups") or [],
             }
         )
     return nodes
 
 
-def infer_a01_layout(node_map: dict[str, Any], components: list[dict[str, Any]]) -> dict[str, Any]:
-    """Produce il layout provvisorio del circuito pilota `a01`.
+def infer_batch_id(run_dir: Path) -> str | None:
+    """Ricava il batch dalla posizione della run dentro `outputs/pipeline2.0`."""
+    parts = list(run_dir.resolve().parts)
+    try:
+        pipeline_index = parts.index("pipeline2.0")
+    except ValueError:
+        return None
+    return parts[pipeline_index + 1] if pipeline_index + 1 < len(parts) else None
 
-    Questo blocco e' temporaneo: serve a mantenere usabile il viewer attuale
-    finche' lo step 14 non generera' un layout automatico generale.
-    """
-    component_nodes = node_map.get("component_terminal_nodes") or {}
-    if "connector5.1" not in component_nodes:
-        return {"layout_status": "generic_pending", "node_positions": {}, "component_positions": {}}
 
-    component_positions = {
-        "connector5.1": {"x": 130, "y": 150, "orientation": "vertical"},
-        "VVCC": {"x": 130, "y": 55, "orientation": "vertical"},
-        "Rresistor22_2": {"x": 335, "y": 92, "orientation": "horizontal"},
-        "Dled12_1": {"x": 575, "y": 92, "orientation": "horizontal"},
-        "Rresistor22_1": {"x": 335, "y": 190, "orientation": "horizontal"},
-        "Rlamp13_1": {"x": 575, "y": 190, "orientation": "horizontal"},
-        "switch25.1": {"x": 45, "y": 285, "orientation": "horizontal"},
-        "gnd9.1": {"x": 40, "y": 355, "orientation": "ground"},
-        "gnd9.2": {"x": 130, "y": 370, "orientation": "ground"},
-        "gnd9.3": {"x": 760, "y": 285, "orientation": "ground"},
-    }
-    node_positions = {
-        "N001": {"x": 170, "y": 92},
-        "N002": {"x": 170, "y": 190},
-        "N003": {"x": 130, "y": 285},
-        "N004": {"x": 475, "y": 190},
-        "N005": {"x": 475, "y": 92},
-        "0": {"x": 760, "y": 285},
-    }
-    for component in components:
-        if component.get("is_scenario_added") and component.get("id") not in component_positions:
-            component_positions[str(component.get("id"))] = {"x": 255, "y": 135, "orientation": "horizontal"}
+def normalize_bbox(value: Any) -> list[float] | None:
+    """Valida una bbox nel formato `[x1, y1, x2, y2]`."""
+    if not isinstance(value, list) or len(value) != 4:
+        return None
+    try:
+        bbox = [float(item) for item in value]
+    except (TypeError, ValueError):
+        return None
+    if bbox[2] <= bbox[0] or bbox[3] <= bbox[1]:
+        return None
+    return bbox
+
+
+def index_estimated_components(terminal_estimates: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Indicizza le stime geometriche della Pipeline 1.0 per `instance_id`."""
+    indexed: dict[str, dict[str, Any]] = {}
+    for component in terminal_estimates.get("components") or []:
+        if not isinstance(component, dict):
+            continue
+        instance_id = str(component.get("instance_id") or "")
+        if instance_id:
+            indexed[instance_id] = component
+    return indexed
+
+
+def index_estimated_terminals(estimated_component: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Indicizza i terminali usando sia il nome tecnico sia quello semantico."""
+    indexed: dict[str, dict[str, Any]] = {}
+    for terminal in estimated_component.get("terminals") or []:
+        if not isinstance(terminal, dict):
+            continue
+        for field in ("name", "semantic_terminal_name", "display_name"):
+            name = str(terminal.get(field) or "")
+            if name:
+                indexed[name] = terminal
+    return indexed
+
+
+def build_geometry_component(
+    graph_component: dict[str, Any],
+    estimated_component: dict[str, Any],
+    terminal_nodes: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Unisce bbox, terminali e nodi elettrici di un componente rilevato."""
+    component_id = str(graph_component.get("component_id") or "")
+    bbox = normalize_bbox(estimated_component.get("bbox"))
+    if not component_id or bbox is None:
+        return None
+
+    estimated_terminals = index_estimated_terminals(estimated_component)
+    component_node_map = terminal_nodes.get(component_id) or {}
+    terminals: dict[str, dict[str, Any]] = {}
+
+    # Il terminal graph fornisce gli id stabili; le stime forniscono le coordinate.
+    for terminal in graph_component.get("terminals") or []:
+        if not isinstance(terminal, dict):
+            continue
+        name = str(terminal.get("name") or "")
+        estimate = estimated_terminals.get(name) or {}
+        try:
+            x = float(estimate.get("x"))
+            y = float(estimate.get("y"))
+        except (TypeError, ValueError):
+            continue
+        terminals[name] = {
+            "id": str(terminal.get("terminal_id") or f"{component_id}_{name}"),
+            "name": name,
+            "relative_position": str(
+                estimate.get("relative_position") or terminal.get("relative_position") or ""
+            ),
+            "x": x,
+            "y": y,
+            "node_id": normalize_node(str(component_node_map.get(name) or "")) or None,
+        }
+
     return {
-        "layout_status": "a01_seeded",
-        "width": 860,
-        "height": 430,
-        "node_positions": node_positions,
-        "component_positions": component_positions,
+        "component_id": component_id,
+        "instance_id": str(graph_component.get("instance_id") or ""),
+        "class_name": str(graph_component.get("class_name") or estimated_component.get("class_name") or "Component"),
+        "bbox": bbox,
+        "center": {"x": (bbox[0] + bbox[2]) / 2, "y": (bbox[1] + bbox[3]) / 2},
+        "estimated_orientation": str(estimated_component.get("estimated_orientation") or "unknown"),
+        "terminals": terminals,
+        "state": graph_component.get("state") or estimated_component.get("state"),
+    }
+
+
+def load_geometry_seed(run_dir: Path, circuit_id: str, node_map: dict[str, Any]) -> dict[str, Any]:
+    """Carica la geometria Pipeline 1.0 usata come seme dal layout automatico."""
+    batch_id = infer_batch_id(run_dir)
+    if not batch_id or not circuit_id:
+        return {"status": "missing", "reason": "batch_or_circuit_unknown", "components": {}}
+
+    pipeline1_dir = PROJECT_ROOT / "outputs" / "pipeline1.0" / batch_id
+    estimate_path = pipeline1_dir / "03_estimate_terminals" / f"{circuit_id}.json"
+    graph_path = pipeline1_dir / "05_build_terminal_graph" / f"{circuit_id}.json"
+    terminal_estimates = read_json(estimate_path)
+    terminal_graph = read_json(graph_path)
+    if not terminal_estimates or not terminal_graph:
+        return {
+            "status": "missing",
+            "reason": "pipeline1_geometry_not_found",
+            "source_files": {"terminal_estimates": str(estimate_path), "terminal_graph": str(graph_path)},
+            "components": {},
+        }
+
+    estimates_by_instance = index_estimated_components(terminal_estimates)
+    terminal_nodes = node_map.get("component_terminal_nodes") or {}
+    components: dict[str, dict[str, Any]] = {}
+    for graph_component in terminal_graph.get("components") or []:
+        if not isinstance(graph_component, dict):
+            continue
+        instance_id = str(graph_component.get("instance_id") or "")
+        geometry_component = build_geometry_component(
+            graph_component,
+            estimates_by_instance.get(instance_id) or {},
+            terminal_nodes,
+        )
+        if geometry_component:
+            components[geometry_component["component_id"]] = geometry_component
+
+    return {
+        "status": "loaded" if components else "empty",
+        "source_files": {"terminal_estimates": str(estimate_path), "terminal_graph": str(graph_path)},
+        "image": {
+            "id": terminal_estimates.get("image_id") or circuit_id,
+            "path": terminal_estimates.get("image_path"),
+            "width": terminal_estimates.get("image_width"),
+            "height": terminal_estimates.get("image_height"),
+        },
+        "components": components,
+        "terminal_graph": terminal_graph.get("graph") or {},
     }
 
 
@@ -333,16 +486,21 @@ def build_viewer_model(run_dir: Path) -> dict[str, Any]:
     node_map = read_json(run_dir / "03_node_map.json")
     rules = read_json(run_dir / "06_component_rules.json")
     components, directives, warnings = parse_netlist(run_dir / NETLIST_NAME)
+    components = enrich_components_with_rules(components, rules)
     measurements = parse_ngspice_stdout(run_dir / "08_ngspice_stdout.txt")
     scenario = read_json(scenario_dir / "scenario.json") if scenario_dir else None
+    if scenario:
+        components = apply_scenario_component_roles(components, scenario)
     structural_components = build_structural_components(node_map, rules)
     if scenario:
         structural_components = apply_scenario_visual_overrides(structural_components, scenario, components)
+    circuit_id = str(node_map.get("circuit_id") or rules.get("circuit_id") or "")
+    geometry_seed = load_geometry_seed(run_dir, circuit_id, node_map)
     model = {
         "source_format": "pipeline2.0_viewer_model",
-        "schema_version": 1,
+        "schema_version": 2,
         "metadata": {
-            "circuit_id": node_map.get("circuit_id") or rules.get("circuit_id"),
+            "circuit_id": circuit_id,
             "run_type": run_type,
             "scenario_id": scenario_id,
             "run_dir": str(run_dir),
@@ -354,7 +512,7 @@ def build_viewer_model(run_dir: Path) -> dict[str, Any]:
         "structural_components": structural_components,
         "directives": directives,
         "measurements": measurements,
-        "layout": infer_a01_layout(node_map, components),
+        "geometry_seed": geometry_seed,
         "scenario": scenario,
         "warnings": warnings,
     }

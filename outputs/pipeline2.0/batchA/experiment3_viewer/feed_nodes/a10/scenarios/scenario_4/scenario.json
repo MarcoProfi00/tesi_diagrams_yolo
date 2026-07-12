@@ -1,0 +1,26 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Propagare N002 verso il ramo lampada",
+  "hypothesis": "Dopo la chiusura di switch25.1, il ramo lampada resta spento perche il nodo alimentato N002 non raggiunge l'ingresso N004 della lampada.",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    },
+    {
+      "type": "feed_nodes_from_source_node",
+      "source_node": "N002",
+      "target_nodes": [
+        "N004"
+      ],
+      "resistance": "1m"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N002)",
+    "v(N004)",
+    "i(vbattery2_1#branch)"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "scenario_id": "scenario_6",
+  "title": "Alimentare N004 e chiudere switch25.1",
+  "hypothesis": "Il ramo lampada resta inattivo nonostante N004 sia alimentato perche switch25.1 e aperto e impedisce il passaggio da N004 a N006.",
+  "actions": [
+    {
+      "type": "feed_nodes_from_source_node",
+      "source_node": "N003",
+      "target_nodes": [
+        "N004"
+      ],
+      "resistance": "1m"
+    },
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N003)",
+    "v(N004)",
+    "v(N006)",
+    "i(vbattery2_1#branch)"
+  ]
+}
