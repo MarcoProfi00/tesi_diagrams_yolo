@@ -1286,7 +1286,7 @@ def load_or_build_viewer_model(run_dir: Path) -> dict[str, Any]:
     """Legge o genera `13_viewer_model.json` senza bloccare la web chat."""
     model_path = run_dir / "13_viewer_model.json"
     model = read_json_safe(model_path)
-    if model and int(model.get("schema_version") or 0) >= 2:
+    if model and int(model.get("schema_version") or 0) >= 10:
         return model
     step13 = load_step13_module()
     built = step13.write_viewer_model(run_dir)
@@ -1297,7 +1297,7 @@ def load_or_build_viewer_layout(run_dir: Path) -> dict[str, Any]:
     """Legge o genera `14_viewer_layout.json` nel formato generale corrente."""
     layout_path = run_dir / "14_viewer_layout.json"
     layout = read_json_safe(layout_path)
-    if layout and int(layout.get("schema_version") or 0) >= 2:
+    if layout and int(layout.get("schema_version") or 0) >= 23:
         return layout
     step14 = load_step14_module()
     built = step14.write_viewer_layout(run_dir)
@@ -1317,10 +1317,78 @@ def load_or_build_viewer_svg(run_dir: Path) -> str:
     return svg if isinstance(svg, str) else ""
 
 
+def transient_scope_payload(model: dict[str, Any]) -> dict[str, Any]:
+    """Riduce il modello ai soli dati necessari agli oscilloscopi web."""
+    transient = model.get("transient") or {}
+    traces = transient.get("traces") or {}
+    selected = [str(item) for item in transient.get("selected_traces") or []][:3]
+    current_series = traces.get("series") or {}
+    base_traces = transient.get("base_traces") or {}
+    base_series = base_traces.get("series") or {}
+    return {
+        "selected": selected,
+        "steady_start": transient.get("steady_start"),
+        "current": {
+            "time": traces.get("time") or [],
+            "series": {
+                quantity: current_series[quantity]
+                for quantity in selected
+                if quantity in current_series
+            },
+        },
+        "base": {
+            "time": base_traces.get("time") or [],
+            "series": {
+                quantity: base_series[quantity]
+                for quantity in selected
+                if quantity in base_series
+            },
+        },
+    }
+
+
+def render_transient_scopes(model: dict[str, Any]) -> str:
+    """Crea il contenitore generico degli scope quando esistono tracce TRAN."""
+    payload = transient_scope_payload(model)
+    if not payload["selected"] or not payload["current"]["time"]:
+        return ""
+    comparison_label = (
+        '<span class="viewer-scope-key"><i class="is-base"></i>base</span>'
+        '<span class="viewer-scope-key"><i class="is-current"></i>run corrente</span>'
+        if payload["base"]["series"]
+        else '<span class="viewer-scope-key"><i class="is-current"></i>run corrente</span>'
+    )
+    return f"""
+    <section class="viewer-scopes" aria-label="Oscilloscopi analisi transitoria">
+      <div class="viewer-scope-toolbar">
+        <button type="button" class="viewer-scope-play" data-scope-action="play" title="Play o pausa" aria-label="Play o pausa">&#10074;&#10074;</button>
+        <span class="viewer-scope-time">t = 0 ms</span>
+        <input class="viewer-scope-slider" type="range" min="0" max="1000" value="0" aria-label="Tempo transitorio">
+        <select class="viewer-scope-window" aria-label="Finestra temporale">
+          <option value="full">Intera simulazione</option>
+          <option value="steady">Regime stabile</option>
+        </select>
+        <select class="viewer-scope-display" aria-label="Scala delle tensioni">
+          <option value="centered">AC centrata</option>
+          <option value="real">Tensione reale</option>
+        </select>
+        <select class="viewer-scope-speed" aria-label="Velocita riproduzione">
+          <option value="0.5">0.5x</option>
+          <option value="1" selected>1x</option>
+          <option value="2">2x</option>
+        </select>
+        <div class="viewer-scope-keys">{comparison_label}</div>
+      </div>
+      <div class="viewer-scope-grid"></div>
+      <script type="application/json" class="viewer-scope-data">{json_for_html(payload)}</script>
+    </section>
+    """
+
+
 def render_viewer_section(run_dir: Path) -> str:
     """Renderizza il viewer della run selezionata, se possibile."""
     try:
-        load_or_build_viewer_model(run_dir)
+        viewer_model = load_or_build_viewer_model(run_dir)
         load_or_build_viewer_layout(run_dir)
         viewer_svg = load_or_build_viewer_svg(run_dir)
     except Exception as exc:
@@ -1357,6 +1425,7 @@ def render_viewer_section(run_dir: Path) -> str:
         <div class="viewer-canvas">
           {viewer_svg}
         </div>
+        {render_transient_scopes(viewer_model)}
       </div>
     </details>
     """

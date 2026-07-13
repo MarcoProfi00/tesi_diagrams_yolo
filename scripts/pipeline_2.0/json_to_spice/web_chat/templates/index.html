@@ -292,6 +292,103 @@
       will-change: transform;
       background: transparent;
     }
+    .viewer-scopes {
+      border-top: 1px solid rgba(148, 163, 184, 0.18);
+      background: #050d17;
+    }
+    .viewer-scope-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 48px;
+      padding: 8px 12px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+      flex-wrap: wrap;
+    }
+    .viewer-scope-toolbar button,
+    .viewer-scope-toolbar select {
+      height: 32px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 5px;
+      background: #0b1728;
+      color: #dbeafe;
+      font-size: 12px;
+    }
+    .viewer-scope-toolbar button {
+      width: 36px;
+      padding: 0;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .viewer-scope-toolbar select {
+      padding: 0 8px;
+    }
+    .viewer-scope-time {
+      min-width: 72px;
+      color: #e2e8f0;
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+    .viewer-scope-slider {
+      flex: 1 1 220px;
+      min-width: 150px;
+      accent-color: #38bdf8;
+    }
+    .viewer-scope-keys {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+      color: #94a3b8;
+      font-size: 11px;
+    }
+    .viewer-scope-key {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .viewer-scope-key i {
+      display: inline-block;
+      width: 16px;
+      height: 2px;
+      background: #38bdf8;
+    }
+    .viewer-scope-key i.is-base {
+      background: #94a3b8;
+    }
+    .viewer-scope-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1px;
+      background: rgba(148, 163, 184, 0.16);
+    }
+    .viewer-scope-panel {
+      min-width: 0;
+      padding: 10px 12px 12px;
+      background: #07111f;
+    }
+    .viewer-scope-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+      min-height: 22px;
+      color: #f8fafc;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .viewer-scope-metric {
+      color: #94a3b8;
+      font-size: 10px;
+      font-weight: 600;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    .viewer-scope-canvas {
+      display: block;
+      width: 100%;
+      height: 142px;
+    }
     .viewer-bg { fill: #07111f; }
     .grid-minor path {
       stroke: rgba(59, 130, 246, 0.075);
@@ -1259,6 +1356,273 @@
       });
     }
 
+    // Inizializza gli oscilloscopi TRAN usando esclusivamente i dati preparati dallo step 13.
+    function setupTransientScopes() {
+      document.querySelectorAll(".viewer-scopes").forEach((scope) => {
+        if (scope.dataset.scopeReady === "1") return;
+        const dataNode = scope.querySelector(".viewer-scope-data");
+        const grid = scope.querySelector(".viewer-scope-grid");
+        if (!dataNode || !grid) return;
+
+        let payload;
+        try {
+          payload = JSON.parse(dataNode.textContent || "{}");
+        } catch (error) {
+          return;
+        }
+        const selected = Array.isArray(payload.selected) ? payload.selected : [];
+        const current = payload.current || {time: [], series: {}};
+        const base = payload.base || {time: [], series: {}};
+        if (!selected.length || !Array.isArray(current.time) || !current.time.length) return;
+
+        scope.dataset.scopeReady = "1";
+        const playButton = scope.querySelector(".viewer-scope-play");
+        const slider = scope.querySelector(".viewer-scope-slider");
+        const timeLabel = scope.querySelector(".viewer-scope-time");
+        const windowSelect = scope.querySelector(".viewer-scope-window");
+        const displaySelect = scope.querySelector(".viewer-scope-display");
+        const speedSelect = scope.querySelector(".viewer-scope-speed");
+        const panels = [];
+        const state = {
+          playing: true,
+          progress: 0,
+          previousFrame: null,
+          windowMode: "full",
+          displayMode: "centered",
+          speed: 1
+        };
+
+        // Formatta tensioni molto diverse senza perdere leggibilita nei pannelli compatti.
+        function formatVoltage(value) {
+          const absolute = Math.abs(value);
+          if (absolute >= 1) return value.toFixed(3).replace(/0+$/, "").replace(/\.$/, "") + " V";
+          if (absolute >= 1e-3) return (value * 1e3).toFixed(2).replace(/0+$/, "").replace(/\.$/, "") + " mV";
+          return (value * 1e6).toFixed(2).replace(/0+$/, "").replace(/\.$/, "") + " uV";
+        }
+
+        // Restituisce gli estremi temporali della finestra completa o a regime stabile.
+        function timeBounds() {
+          const minimum = Number(current.time[0]);
+          const maximum = Number(current.time[current.time.length - 1]);
+          const steadyStart = Number(payload.steady_start);
+          return {
+            minimum: state.windowMode === "steady" && Number.isFinite(steadyStart) ? steadyStart : minimum,
+            maximum: maximum
+          };
+        }
+
+        // Trova il campione piu vicino a un istante rispettando timestep non uniformi.
+        function nearestIndex(times, target) {
+          let low = 0;
+          let high = times.length - 1;
+          while (low < high) {
+            const middle = Math.floor((low + high) / 2);
+            if (Number(times[middle]) < target) low = middle + 1;
+            else high = middle;
+          }
+          if (low > 0 && Math.abs(Number(times[low - 1]) - target) < Math.abs(Number(times[low]) - target)) {
+            return low - 1;
+          }
+          return low;
+        }
+
+        // Estrae valori e media limitandosi alla finestra temporale corrente.
+        function windowSeries(times, values, bounds) {
+          const samples = [];
+          for (let index = 0; index < times.length && index < values.length; index += 1) {
+            const time = Number(times[index]);
+            if (time >= bounds.minimum && time <= bounds.maximum) {
+              samples.push({time, value: Number(values[index])});
+            }
+          }
+          const mean = samples.length
+            ? samples.reduce((sum, sample) => sum + sample.value, 0) / samples.length
+            : 0;
+          return {samples, mean};
+        }
+
+        // Disegna una serie usando il tempo reale e interrompendola al cursore se richiesto.
+        function drawTrace(context, samples, color, width, bounds, yMinimum, yMaximum, mean, stopTime) {
+          const drawable = samples.filter((sample) => stopTime === null || sample.time <= stopTime);
+          if (drawable.length < 2) return;
+          const canvasWidth = context.canvas.width;
+          const canvasHeight = context.canvas.height;
+          const timeSpan = Math.max(bounds.maximum - bounds.minimum, 1e-12);
+          const valueSpan = Math.max(yMaximum - yMinimum, 1e-12);
+          context.beginPath();
+          drawable.forEach((sample, index) => {
+            const shownValue = state.displayMode === "centered" ? sample.value - mean : sample.value;
+            const x = ((sample.time - bounds.minimum) / timeSpan) * canvasWidth;
+            const y = canvasHeight - ((shownValue - yMinimum) / valueSpan) * canvasHeight;
+            if (index === 0) context.moveTo(x, y);
+            else context.lineTo(x, y);
+          });
+          context.strokeStyle = color;
+          context.lineWidth = width;
+          context.lineJoin = "round";
+          context.lineCap = "round";
+          context.stroke();
+        }
+
+        // Disegna griglia, tracce, cursore e metriche di un singolo oscilloscopio.
+        function drawPanel(panel, cursorTime) {
+          const canvas = panel.canvas;
+          const rect = canvas.getBoundingClientRect();
+          const ratio = window.devicePixelRatio || 1;
+          const nextWidth = Math.max(Math.round(rect.width * ratio), 1);
+          const nextHeight = Math.max(Math.round(rect.height * ratio), 1);
+          if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
+            canvas.width = nextWidth;
+            canvas.height = nextHeight;
+          }
+          const context = canvas.getContext("2d");
+          if (!context) return;
+          const bounds = timeBounds();
+          const currentWindow = windowSeries(current.time, current.series[panel.quantity] || [], bounds);
+          const baseWindow = windowSeries(base.time || [], (base.series || {})[panel.quantity] || [], bounds);
+          const shownValues = [];
+          currentWindow.samples.forEach((sample) => shownValues.push(
+            state.displayMode === "centered" ? sample.value - currentWindow.mean : sample.value
+          ));
+          baseWindow.samples.forEach((sample) => shownValues.push(
+            state.displayMode === "centered" ? sample.value - baseWindow.mean : sample.value
+          ));
+          let yMinimum = shownValues.length ? Math.min(...shownValues) : -1;
+          let yMaximum = shownValues.length ? Math.max(...shownValues) : 1;
+          const padding = Math.max((yMaximum - yMinimum) * 0.12, 1e-9);
+          yMinimum -= padding;
+          yMaximum += padding;
+
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          context.strokeStyle = "rgba(148, 163, 184, 0.18)";
+          context.lineWidth = 1;
+          for (let index = 1; index < 4; index += 1) {
+            const x = canvas.width * index / 4;
+            context.beginPath();
+            context.moveTo(x, 0);
+            context.lineTo(x, canvas.height);
+            context.stroke();
+          }
+          for (let index = 1; index < 3; index += 1) {
+            const y = canvas.height * index / 3;
+            context.beginPath();
+            context.moveTo(0, y);
+            context.lineTo(canvas.width, y);
+            context.stroke();
+          }
+
+          drawTrace(context, baseWindow.samples, "#94a3b8", 1.5 * ratio, bounds, yMinimum, yMaximum, baseWindow.mean, null);
+          context.globalAlpha = 0.32;
+          drawTrace(context, currentWindow.samples, "#38bdf8", 1.6 * ratio, bounds, yMinimum, yMaximum, currentWindow.mean, null);
+          context.globalAlpha = 1;
+          drawTrace(context, currentWindow.samples, "#38bdf8", 2.2 * ratio, bounds, yMinimum, yMaximum, currentWindow.mean, cursorTime);
+
+          const cursorX = ((cursorTime - bounds.minimum) / Math.max(bounds.maximum - bounds.minimum, 1e-12)) * canvas.width;
+          context.strokeStyle = "rgba(248, 250, 252, 0.82)";
+          context.lineWidth = 1 * ratio;
+          context.beginPath();
+          context.moveTo(cursorX, 0);
+          context.lineTo(cursorX, canvas.height);
+          context.stroke();
+
+          const values = currentWindow.samples.map((sample) => sample.value);
+          const vpp = values.length ? Math.max(...values) - Math.min(...values) : 0;
+          const sampleIndex = nearestIndex(current.time, cursorTime);
+          const instant = Number((current.series[panel.quantity] || [0])[sampleIndex] || 0);
+          panel.metric.textContent = "Vpp " + formatVoltage(vpp) + " | " + formatVoltage(instant);
+        }
+
+        // Aggiorna tutti i pannelli e il tempo mostrato con un unico cursore comune.
+        function renderScopes() {
+          const bounds = timeBounds();
+          const cursorTime = bounds.minimum + state.progress * (bounds.maximum - bounds.minimum);
+          if (slider) slider.value = String(Math.round(state.progress * 1000));
+          if (timeLabel) timeLabel.textContent = "t = " + (cursorTime * 1000).toFixed(2) + " ms";
+          panels.forEach((panel) => drawPanel(panel, cursorTime));
+        }
+
+        // Sincronizza play e pausa con le animazioni del circuito equivalente.
+        function syncCircuitAnimation() {
+          const viewer = scope.closest(".viewer-wrap");
+          if (!viewer) return;
+          viewer.querySelectorAll(".wire.active,.wire.transient,.component-flow,.transistor-flow,.led-glow,.lamp-glow,.battery-glow").forEach((element) => {
+            element.style.animationPlayState = state.playing ? "running" : "paused";
+          });
+          if (playButton) {
+            playButton.innerHTML = state.playing ? "&#10074;&#10074;" : "&#9654;";
+          }
+        }
+
+        // Avanza il cursore con una durata leggibile indipendente dalla durata SPICE.
+        function animate(timestamp) {
+          if (state.previousFrame === null) state.previousFrame = timestamp;
+          const elapsed = timestamp - state.previousFrame;
+          state.previousFrame = timestamp;
+          if (state.playing) {
+            state.progress = (state.progress + elapsed * state.speed / 8000) % 1;
+            renderScopes();
+          }
+          window.requestAnimationFrame(animate);
+        }
+
+        selected.forEach((quantity) => {
+          if (!current.series || !Array.isArray(current.series[quantity])) return;
+          const panel = document.createElement("section");
+          panel.className = "viewer-scope-panel";
+          panel.innerHTML = '<div class="viewer-scope-heading"><span>' + quantity + '</span><span class="viewer-scope-metric"></span></div><canvas class="viewer-scope-canvas"></canvas>';
+          grid.appendChild(panel);
+          panels.push({
+            quantity,
+            canvas: panel.querySelector("canvas"),
+            metric: panel.querySelector(".viewer-scope-metric")
+          });
+        });
+
+        if (playButton) {
+          playButton.addEventListener("click", () => {
+            state.playing = !state.playing;
+            state.previousFrame = null;
+            syncCircuitAnimation();
+            renderScopes();
+          });
+        }
+        if (slider) {
+          slider.addEventListener("input", () => {
+            state.progress = Number(slider.value) / 1000;
+            state.playing = false;
+            syncCircuitAnimation();
+            renderScopes();
+          });
+        }
+        if (windowSelect) {
+          windowSelect.addEventListener("change", () => {
+            state.windowMode = windowSelect.value;
+            state.progress = 0;
+            renderScopes();
+          });
+        }
+        if (displaySelect) {
+          displaySelect.addEventListener("change", () => {
+            state.displayMode = displaySelect.value;
+            renderScopes();
+          });
+        }
+        if (speedSelect) {
+          speedSelect.addEventListener("change", () => {
+            state.speed = Number(speedSelect.value) || 1;
+          });
+        }
+        if (window.ResizeObserver) {
+          const observer = new ResizeObserver(renderScopes);
+          panels.forEach((panel) => observer.observe(panel.canvas));
+        }
+
+        syncCircuitAnimation();
+        renderScopes();
+        window.requestAnimationFrame(animate);
+      });
+    }
+
     function setLoading(isLoading) {
       input.disabled = isLoading;
       modelSelect.disabled = isLoading;
@@ -1343,6 +1707,7 @@
     loadChatModel();
     restoreMessages();
     setupCircuitViewers();
+    setupTransientScopes();
   </script>
 </body>
 </html>
