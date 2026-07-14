@@ -32,6 +32,7 @@ def main() -> None:
 
             if i % 200 == 0 or i == len(files):
                 print(f"Compressi {i}/{len(files)} file...")
+                
 
     size_mb = OUT_ZIP.stat().st_size / (1024 * 1024)
     print("\nZip completato.")
