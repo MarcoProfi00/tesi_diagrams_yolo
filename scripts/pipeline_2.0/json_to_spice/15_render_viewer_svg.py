@@ -21,6 +21,7 @@ from viewer_component_library import component_spec, normalize_component_type
 VIEWER_MODEL_NAME = "13_viewer_model.json"
 VIEWER_LAYOUT_NAME = "14_viewer_layout.json"
 VIEWER_SVG_NAME = "15_viewer.svg"
+VIEWER_RENDER_VERSION = 9
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -136,9 +137,13 @@ def electrical_class(
     if kind == "structural":
         return "wire guide"
     endpoints = {str((connection.get(side) or {}).get("component_id") or "") for side in ("from", "to")}
-    if endpoints & transient_ids:
+    has_steady = bool(endpoints & steady_ids)
+    has_transient = bool(endpoints & transient_ids)
+    if has_steady and has_transient:
+        return "wire mixed"
+    if has_transient:
         return "wire transient"
-    if endpoints & steady_ids:
+    if has_steady:
         return "wire active"
     node_id = str(connection.get("node_id") or "")
     return "wire energized" if node_is_active(node_id, voltages) else "wire idle"
@@ -179,14 +184,82 @@ def routed_path(connection: dict[str, Any], start: dict[str, Any], end: dict[str
     return " ".join(commands)
 
 
+def node_tooltip(model: dict[str, Any], node_id: str) -> str:
+    """Compone il testo breve mostrato passando su un ramo della netlist."""
+    node = next(
+        (
+            item
+            for item in model.get("nodes") or []
+            if isinstance(item, dict) and str(item.get("id") or "") == node_id
+        ),
+        {},
+    )
+    voltage = node.get("voltage_op")
+    try:
+        voltage_text = f"{format_number(float(voltage))} V"
+    except (TypeError, ValueError):
+        voltage_text = "tensione non disponibile"
+    terminal_count = int(node.get("terminal_count") or 0)
+    terminal_text = "terminale" if terminal_count == 1 else "terminali"
+    return f"{node_id} | {voltage_text} | {terminal_count} {terminal_text}"
+
+
+def active_meter_ids(model: dict[str, Any]) -> set[str]:
+    """Restituisce gli strumenti che stanno leggendo una tensione significativa."""
+    active: set[str] = set()
+    for component in model.get("structural_components") or []:
+        if not isinstance(component, dict):
+            continue
+        if str(component.get("measurement_kind") or "").lower() != "voltage":
+            continue
+        try:
+            if abs(float(component.get("measurement_value"))) >= 0.05:
+                active.add(str(component.get("id") or ""))
+        except (TypeError, ValueError):
+            continue
+    return {component_id for component_id in active if component_id}
+
+
+def closed_switch_ids(layout: dict[str, Any]) -> set[str]:
+    """Restituisce gli switch chiusi che rendono conduttivo un collegamento strutturale."""
+    return {
+        str(component_id)
+        for component_id, position in (layout.get("components") or {}).items()
+        if isinstance(position, dict)
+        and normalize_component_type(
+            position.get("component_type") or position.get("visual_class_name"),
+            position.get("layout_kind"),
+        ) == "switch"
+        and str(position.get("state") or "").lower() == "closed"
+    }
+
+
+def active_closed_switch_ids(
+    model: dict[str, Any], layout: dict[str, Any], steady_ids: set[str]
+) -> set[str]:
+    """Associa la corrente della resistenza SPICE di scenario allo switch chiuso originale."""
+    active_switches: set[str] = set()
+    for component in model.get("netlist_components") or []:
+        if not isinstance(component, dict) or str(component.get("id") or "") not in steady_ids:
+            continue
+        source_id = str(component.get("source_component_id") or "")
+        if source_id.startswith("scenario_switch"):
+            active_switches.add(source_id.removeprefix("scenario_"))
+    return active_switches & closed_switch_ids(layout)
+
+
 def render_connections(
     layout: dict[str, Any],
+    model: dict[str, Any],
     steady_ids: set[str],
     transient_ids: set[str],
     voltages: dict[str, float | None],
 ) -> str:
     """Disegna tutti i collegamenti prodotti dallo step 14."""
     paths: list[str] = []
+    active_meters = active_meter_ids(model)
+    closed_switches = closed_switch_ids(layout)
+    active_switches = active_closed_switch_ids(model, layout, steady_ids)
     for connection in layout.get("connections") or []:
         if not isinstance(connection, dict):
             continue
@@ -194,14 +267,31 @@ def render_connections(
         end = connection.get("to") or {}
         if not all(key in start and key in end for key in ("x", "y")):
             continue
-        css_class = electrical_class(
-            str(connection.get("kind") or "electrical"),
-            connection,
-            steady_ids,
-            transient_ids,
-            voltages,
+        node_id = str(connection.get("node_id") or "")
+        endpoint_ids = {str(start.get("component_id") or ""), str(end.get("component_id") or "")}
+        meter_reads_voltage = bool(endpoint_ids & active_meters) and node_id != "0"
+        closed_switch_conducts = bool(endpoint_ids & closed_switches) and node_id != "0" and node_is_active(node_id, voltages)
+        active_switch_conducts = bool(endpoint_ids & active_switches) and node_id != "0"
+        css_class = (
+            "wire active"
+            if active_switch_conducts
+            else "wire energized"
+            if meter_reads_voltage or closed_switch_conducts
+            else electrical_class(
+                str(connection.get("kind") or "electrical"),
+                connection,
+                steady_ids,
+                transient_ids,
+                voltages,
+            )
         )
-        paths.append(f'<path class="{css_class}" d="{routed_path(connection, start, end)}"/>')
+        tooltip = escape(node_tooltip(model, node_id)) if node_id and node_id != "0" else "Massa"
+        path = routed_path(connection, start, end)
+        if css_class == "wire mixed":
+            wire_svg = f'<path class="wire mixed-signal" d="{path}"/>'
+        else:
+            wire_svg = f'<path class="{css_class}" d="{path}"/>'
+        paths.append(f'<g class="node-wire"><title>{tooltip}</title>{wire_svg}</g>')
     return "".join(paths)
 
 
@@ -291,10 +381,21 @@ def render_analog_meter(component: dict[str, Any], position: dict[str, Any]) -> 
         needle_angle = -150.0 + ratio * 120.0
         reading = format_engineering_value(value, "V")
         active = abs(value) >= 0.05
-    radians = math.radians(needle_angle)
-    needle_x = math.cos(radians) * 24.0
-    needle_y = math.sin(radians) * 24.0 + 7.0
     glow = '<rect class="meter-glow" x="-48" y="-40" width="96" height="80" rx="8"/>' if active else ""
+    if active:
+        needle = (
+            f'<g class="meter-needle-group meter-active" style="--needle-angle:{format_number(needle_angle)}deg">'
+            '<path class="meter-needle" d="M0 9 H24"/></g>'
+        )
+        live_indicator = '<circle class="meter-live" cx="-36" cy="-29" r="3"/>'
+        reading_class = "meter-reading meter-active"
+    else:
+        needle = (
+            f'<g transform="rotate({format_number(needle_angle)} 0 9)">'
+            '<path class="meter-needle" d="M0 9 H24"/></g>'
+        )
+        live_indicator = ""
+        reading_class = "meter-reading"
     return (
         f'<g class="component meter" transform="translate({format_number(center_x)} {format_number(center_y)})">'
         f'{glow}<g class="symbol">'
@@ -302,11 +403,12 @@ def render_analog_meter(component: dict[str, Any], position: dict[str, Any]) -> 
         '<rect class="meter-body" x="-48" y="-40" width="96" height="80" rx="8"/>'
         '<path class="meter-scale" d="M-29 8 Q0 -23 29 8"/>'
         '<path class="meter-tick" d="M-28 8 L-23 5 M0 -23 V-17 M28 8 L23 5"/>'
-        f'<path class="meter-needle" d="M0 9 L{format_number(needle_x)} {format_number(needle_y)}"/>'
+        f'{needle}'
         '<circle class="meter-pivot" cx="0" cy="9" r="3"/>'
+        f'{live_indicator}'
         '</g>'
         f'<text class="meter-name" x="0" y="-48">{escape(label)}</text>'
-        f'<text class="meter-reading" x="0" y="31">{escape(reading)}</text>'
+        f'<text class="{reading_class}" x="0" y="31">{escape(reading)}</text>'
         '</g>'
     )
 
@@ -534,8 +636,15 @@ def render_two_terminal_symbol(
         label_y = center_y - 31
         label_anchor = "middle"
     label_svg = render_component_label(label_lines, label_x, label_y, label_anchor)
-    flow_class = "component-flow transient" if transient else "component-flow"
-    flow_svg = f'<path class="{flow_class}" d="{flow_path}"/>' if active and flow_path else ""
+    mixed = component_id in steady_ids and component_id in transient_ids
+    if active and flow_path:
+        if mixed:
+            flow_svg = f'<path class="component-flow mixed-signal" d="{flow_path}"/>'
+        else:
+            flow_class = "component-flow transient" if transient else "component-flow"
+            flow_svg = f'<path class="{flow_class}" d="{flow_path}"/>'
+    else:
+        flow_svg = ""
     return (
         f'<g class="component" transform="translate({format_number(center_x)} {format_number(center_y)}) rotate({format_number(angle)})">'
         f'<g class="{stroke_class}">{body}</g>'
@@ -671,8 +780,15 @@ def render_npn_transistor(
         f'L{format_number(back_x - normal_x)} {format_number(back_y - normal_y)}'
     )
     active = component_id in steady_ids or component_id in transient_ids
-    flow_class = "transistor-flow transient" if component_id in transient_ids else "transistor-flow"
-    flow = f'<path class="{flow_class}" d="{body_path}"/>' if active else ""
+    mixed = component_id in steady_ids and component_id in transient_ids
+    if active:
+        if mixed:
+            flow = f'<path class="transistor-flow mixed-signal" d="{body_path}"/>'
+        else:
+            flow_class = "transistor-flow transient" if component_id in transient_ids else "transistor-flow"
+            flow = f'<path class="{flow_class}" d="{body_path}"/>'
+    else:
+        flow = ""
     label = escape(transistor_reference_label(component))
     return (
         '<g class="symbol transistor">'
@@ -762,7 +878,26 @@ def vertical_label_placements(
     obstacles = {component_id: component_obstacle(position) for component_id, position in components.items()}
     wire_obstacles = connection_obstacles(layout)
     placed_labels: list[tuple[float, float, float, float]] = []
+    fixed_label_obstacles: list[tuple[float, float, float, float]] = []
     placements: dict[str, dict[str, Any]] = {}
+
+    # Le sorgenti verticali hanno una label laterale fissa: riservarne lo spazio
+    # evita che il valore di una resistenza vicina finisca sopra SINE/SQUARE.
+    for component_id, position in components.items():
+        if str(position.get("component_type") or "").lower() != "signal_source":
+            continue
+        if position.get("orientation") != "vertical":
+            continue
+        lines = component_label_lines(indexed.get(component_id) or {}, position)
+        if not lines:
+            continue
+        text_width = max(len(line) for line in lines) * 7.2 + 4.0
+        text_height = max(len(lines), 1) * 14.0 + 4.0
+        label_x = float(position.get("x") or 0) + 34.0
+        label_y = float(position.get("y") or 0) + 4.0
+        fixed_label_obstacles.append(
+            (label_x, label_y - text_height / 2, label_x + text_width, label_y + text_height / 2)
+        )
 
     for component_id, position in components.items():
         if position.get("orientation") != "vertical":
@@ -793,8 +928,9 @@ def vertical_label_placements(
                     if other_id != component_id
                 )
                 label_overlap = sum(rectangles_overlap(box, other) for other in placed_labels)
+                fixed_label_overlap = sum(rectangles_overlap(box, other) for other in fixed_label_obstacles)
                 wire_overlap = sum(rectangles_overlap(box, wire) for wire in wire_obstacles)
-                score = symbol_overlap * 20.0 + label_overlap * 30.0 + wire_overlap * 12.0 + abs(offset_y) * 2.0
+                score = symbol_overlap * 80.0 + label_overlap * 30.0 + fixed_label_overlap * 100.0 + wire_overlap * 12.0 + abs(offset_y) * 2.0
                 candidates.append((score, side, 0.0, offset_y, box))
 
         vertical_half = float((position.get("symbol_size") or {}).get("width") or 72) / 2
@@ -814,11 +950,16 @@ def vertical_label_placements(
                     if other_id != component_id
                 )
                 label_overlap = sum(rectangles_overlap(box, other) for other in placed_labels)
+                fixed_label_overlap = sum(rectangles_overlap(box, other) for other in fixed_label_obstacles)
                 wire_overlap = sum(rectangles_overlap(box, wire) for wire in wire_obstacles)
-                score = symbol_overlap * 20.0 + label_overlap * 30.0 + wire_overlap * 12.0 + 90.0
+                score = symbol_overlap * 80.0 + label_overlap * 30.0 + fixed_label_overlap * 100.0 + wire_overlap * 12.0 + 90.0
                 candidates.append((score, side, offset_x, 0.0, box))
 
-        _, side, offset_x, offset_y, selected_box = min(candidates, key=lambda candidate: candidate[0])
+        # A parita' di spazio libero le label verticali stanno a destra, lontane dai pin numerati.
+        _, side, offset_x, offset_y, selected_box = min(
+            candidates,
+            key=lambda candidate: (candidate[0], 0 if candidate[1] == "right" else 1),
+        )
         placements[component_id] = {"side": side, "offset_x": offset_x, "offset_y": offset_y}
         placed_labels.append(selected_box)
     return placements
@@ -939,10 +1080,77 @@ def render_node_constraints(layout: dict[str, Any]) -> str:
     return "".join(rendered)
 
 
+def node_badge_candidates(layout: dict[str, Any], node_id: str) -> list[tuple[float, float]]:
+    """Ricava punti accanto ai segmenti abbastanza lunghi di uno stesso nodo."""
+    candidates: list[tuple[float, float]] = []
+    for connection in layout.get("connections") or []:
+        if not isinstance(connection, dict) or str(connection.get("node_id") or "") != node_id:
+            continue
+        route = connection.get("route") or []
+        points = [
+            (float(point.get("x") or 0), float(point.get("y") or 0))
+            for point in route
+            if isinstance(point, dict) and "x" in point and "y" in point
+        ]
+        for first, second in zip(points, points[1:]):
+            length = abs(second[0] - first[0]) + abs(second[1] - first[1])
+            if length < 20.0:
+                continue
+            middle_x = (first[0] + second[0]) / 2
+            middle_y = (first[1] + second[1]) / 2
+            if abs(first[1] - second[1]) < 0.01:
+                candidates.extend(((middle_x, middle_y - 16.0), (middle_x, middle_y + 16.0)))
+            else:
+                candidates.extend(((middle_x + 18.0, middle_y), (middle_x - 18.0, middle_y)))
+    return candidates
+
+
+def render_node_badges(model: dict[str, Any], layout: dict[str, Any]) -> str:
+    """Disegna badge discreti per i nodi SPICE non di massa sui rami liberi."""
+    component_bounds = [
+        component_obstacle(position)
+        for position in (layout.get("components") or {}).values()
+        if isinstance(position, dict)
+    ]
+    component_bounds.append((825.0, 14.0, 1025.0, 218.0))
+    occupied: list[tuple[float, float, float, float]] = []
+    rendered: list[str] = []
+    for node in model.get("nodes") or []:
+        if not isinstance(node, dict):
+            continue
+        node_id = str(node.get("id") or "")
+        if not node_id or node_id == "0":
+            continue
+        width, height = max(42.0, len(node_id) * 7.2 + 16.0), 20.0
+        candidates = node_badge_candidates(layout, node_id)
+        scored: list[tuple[float, float, float, tuple[float, float, float, float]]] = []
+        for x, y in candidates:
+            bounds = (x - width / 2, y - height / 2, x + width / 2, y + height / 2)
+            outside = max(0.0, 10.0 - bounds[0]) + max(0.0, bounds[2] - 1030.0)
+            outside += max(0.0, 10.0 - bounds[1]) + max(0.0, bounds[3] - 610.0)
+            overlap = sum(rectangles_overlap(bounds, obstacle) for obstacle in component_bounds + occupied)
+            scored.append((overlap * 100.0 + outside * 10_000.0, x, y, bounds))
+        if not scored:
+            continue
+        _, x, y, bounds = min(scored, key=lambda candidate: candidate[0])
+        occupied.append(bounds)
+        label = escape(node_id)
+        tooltip = escape(node_tooltip(model, node_id))
+        rendered.append(
+            '<g class="node-badge">'
+            f'<title>{tooltip}</title>'
+            f'<rect x="{format_number(bounds[0])}" y="{format_number(bounds[1])}" '
+            f'width="{format_number(width)}" height="{format_number(height)}" rx="4"/>'
+            f'<text x="{format_number(x)}" y="{format_number(y + 4)}">{label}</text>'
+            '</g>'
+        )
+    return "".join(rendered)
+
+
 def render_legend(width: int) -> str:
     """Disegna la legenda minima con le regole comuni del viewer."""
     x = width - 205
-    return f'''<g class="legend" transform="translate({x} 24)"><rect width="180" height="194" rx="6"/><text class="legend-title" x="14" y="22">Legenda</text><path class="wire energized" d="M14 42 H54"/><text x="68" y="46">tensione presente</text><path class="wire active" d="M14 68 H54"/><text x="68" y="72">corrente continua</text><path class="wire transient" d="M14 94 H54"/><text x="68" y="98">segnale variabile</text><path class="wire idle" d="M14 120 H54"/><text x="68" y="124">ramo fermo</text><path class="wire guide" d="M14 146 H54"/><text x="68" y="150">collegamento guida</text><circle class="constraint-node" cx="34" cy="174" r="5"/><text x="68" y="178">vincolo scenario</text></g>'''
+    return f'''<g class="legend" transform="translate({x} 24)"><rect width="180" height="220" rx="6"/><text class="legend-title" x="14" y="22">Legenda</text><path class="wire energized" d="M14 42 H54"/><text x="68" y="46">tensione presente</text><path class="wire active" d="M14 68 H54"/><text x="68" y="72">corrente continua</text><path class="wire transient" d="M14 94 H54"/><text x="68" y="98">segnale variabile</text><path class="wire mixed-signal" d="M14 120 H54"/><text x="68" y="124">DC + segnale</text><path class="wire idle" d="M14 146 H54"/><text x="68" y="150">ramo fermo</text><path class="wire guide" d="M14 172 H54"/><text x="68" y="176">collegamento guida</text><circle class="constraint-node" cx="34" cy="200" r="5"/><text x="68" y="204">vincolo scenario</text></g>'''
 
 
 def render_svg(model: dict[str, Any], layout: dict[str, Any]) -> str:
@@ -952,13 +1160,17 @@ def render_svg(model: dict[str, Any], layout: dict[str, Any]) -> str:
     height = int(canvas.get("height") or 620)
     voltages = node_voltages(model)
     steady_ids, transient_ids = component_activity_ids(model)
-    return f'''<svg class="viewer-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" aria-label="Circuito equivalente dalla netlist SPICE">
+    return f'''<svg class="viewer-svg" data-viewer-version="{VIEWER_RENDER_VERSION}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" aria-label="Circuito equivalente dalla netlist SPICE">
 <defs><filter id="ledGlow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="8"/></filter></defs>
 <style>.viewer-svg{{background:transparent;font-family:Arial,sans-serif}}.wire,.symbol path,.symbol circle,.symbol rect,.connector rect,.connector circle{{fill:none;stroke:#f4f7fb;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}}.wire.energized{{fill:none;stroke:#22c55e;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}}.wire.active,.component-flow,.transistor-flow{{fill:none;stroke:#dce51a;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:9 10;animation:viewerCurrent 1s linear infinite}}.wire.transient,.component-flow.transient,.transistor-flow.transient{{fill:none;stroke:#38bdf8;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:7 9;animation:viewerTransient 1.15s ease-in-out infinite alternate}}.wire.idle{{stroke:#aeb9c9;stroke-dasharray:10 8;opacity:.9}}.wire.guide{{stroke:#52647c;stroke-dasharray:3 11;opacity:.8}}.scenario-link-idle{{stroke:#aeb9c9!important;stroke-dasharray:10 8;opacity:.9}}.scenario-link-component{{cursor:help}}.component-label{{fill:#f4f7fb;font-size:13px;font-weight:700;text-anchor:middle;letter-spacing:0}}.terminal-label{{fill:#f4f7fb;font-size:12px;font-weight:700;letter-spacing:0}}.pin-label{{fill:#f4f7fb;font-size:12px;font-weight:700;text-anchor:end;letter-spacing:0}}.battery-polarity{{fill:#cbd5e1;font-size:19px;font-weight:700;text-anchor:middle;letter-spacing:0}}.battery-polarity.positive{{fill:#f8fafc}}.battery-body{{fill:#0b1728!important}}.scenario-battery-body{{fill:#082334!important;stroke:#38bdf8!important}}.scenario-added-component,.scenario-modified-component{{cursor:help;filter:drop-shadow(0 0 3px rgba(245,158,11,.62))}}.scenario-added-component .symbol path,.scenario-added-component .symbol circle,.scenario-added-component .symbol rect,.scenario-modified-component .symbol path,.scenario-modified-component .symbol circle,.scenario-modified-component .symbol rect{{stroke:#f59e0b}}.scenario-badge{{cursor:help}}.scenario-badge circle{{fill:#111827;stroke:#f59e0b;stroke-width:2}}.scenario-badge text{{fill:#fbbf24;font-size:12px;font-weight:700;text-anchor:middle;letter-spacing:0}}.battery-glow{{fill:#dce51a!important;opacity:.16;stroke:none!important;filter:url(#ledGlow);animation:viewerBatteryPulse 1.5s ease-in-out infinite}}.scenario-source-glow{{fill:#38bdf8!important;opacity:.15;stroke:none!important;filter:url(#ledGlow);animation:viewerScenarioPulse 1.5s ease-in-out infinite}}.led-glow{{fill:#ef4444;opacity:.3;filter:url(#ledGlow);stroke:none;animation:viewerLedPulse 1.25s ease-in-out infinite}}.lamp-glow{{fill:#ffd84a;opacity:.24;filter:url(#ledGlow);animation:viewerLampPulse 1.4s ease-in-out infinite}}.meter-body{{fill:#0b1728!important}}.meter-glow{{fill:#dce51a!important;opacity:.13;stroke:none!important;filter:url(#ledGlow);animation:viewerMeterPulse 1.5s ease-in-out infinite}}.meter-scale,.meter-tick{{stroke:#94a3b8!important;stroke-width:2!important}}.meter-needle{{stroke:#dce51a!important;stroke-width:2.5!important}}.meter-pivot{{fill:#dce51a!important;stroke:none!important}}.meter-name{{fill:#f4f7fb;font-size:13px;font-weight:700;text-anchor:middle;letter-spacing:0}}.meter-reading{{fill:#dce51a;font-size:12px;font-weight:700;text-anchor:middle;letter-spacing:0}}.led-rays{{stroke:#ff4d5a!important}}.source-wave{{stroke-width:2.5!important}}.legend rect{{fill:#06101d;stroke:#314257}}.legend text{{fill:#d7dfeb;font-size:11px;letter-spacing:0}}.legend-title{{font-weight:700}}.legend .wire{{stroke-width:3}}.connector rect{{fill:#0b1728}}.connector circle{{fill:#0b1728}}@keyframes viewerCurrent{{to{{stroke-dashoffset:-38}}}}@keyframes viewerTransient{{from{{stroke-dashoffset:18;opacity:.68}}to{{stroke-dashoffset:-18;opacity:1}}}}@keyframes viewerLedPulse{{0%,100%{{opacity:.2}}50%{{opacity:.48}}}}@keyframes viewerLampPulse{{0%,100%{{opacity:.16}}50%{{opacity:.38}}}}@keyframes viewerBatteryPulse{{0%,100%{{opacity:.1}}50%{{opacity:.24}}}}@keyframes viewerScenarioPulse{{0%,100%{{opacity:.08}}50%{{opacity:.24}}}}@keyframes viewerMeterPulse{{0%,100%{{opacity:.08}}50%{{opacity:.2}}}}@media (prefers-reduced-motion:reduce){{.wire.active,.wire.transient,.component-flow,.transistor-flow,.led-glow,.lamp-glow,.battery-glow,.scenario-source-glow,.meter-glow{{animation:none}}}}</style>
 <style>.terminal-port circle{{fill:#071525!important}}</style>
+<style>.meter-needle-group{{transform-origin:0px 9px;transform-box:fill-box}}.meter-needle-group.meter-active{{animation:viewerMeterNeedle .7s cubic-bezier(.22,.85,.32,1) both}}.meter-live{{fill:#dce51a;stroke:none;filter:url(#ledGlow);animation:viewerMeterLive 1.35s ease-in-out infinite}}.meter-reading.meter-active{{animation:viewerMeterReading 1.35s ease-in-out infinite}}@keyframes viewerMeterNeedle{{from{{transform:rotate(-150deg)}}to{{transform:rotate(var(--needle-angle))}}}}@keyframes viewerMeterLive{{0%,100%{{opacity:.45}}50%{{opacity:1}}}}@keyframes viewerMeterReading{{0%,100%{{opacity:.78}}50%{{opacity:1}}}}@media (prefers-reduced-motion:reduce){{.meter-needle-group.meter-active{{animation:none;transform:rotate(var(--needle-angle))}}.meter-live,.meter-reading.meter-active{{animation:none}}}}</style>
+<style>.wire.mixed-signal,.component-flow.mixed-signal,.transistor-flow.mixed-signal{{fill:none;stroke:#7c83c8;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:7 9;animation:viewerMixed 1.25s linear infinite}}@keyframes viewerMixed{{to{{stroke-dashoffset:-32}}}}@media (prefers-reduced-motion:reduce){{.wire.mixed-signal,.component-flow.mixed-signal,.transistor-flow.mixed-signal{{animation:none}}}}</style>
 <style>.node-constraint{{cursor:help}}.constraint-leader{{fill:none;stroke:#38bdf8;stroke-width:2;stroke-dasharray:4 6;opacity:.8}}.constraint-halo{{fill:#38bdf8;stroke:none;opacity:.16;filter:url(#ledGlow);animation:viewerConstraintPulse 1.5s ease-in-out infinite}}.constraint-node{{fill:#071525;stroke:#38bdf8;stroke-width:3}}.constraint-badge{{fill:#082334;stroke:#38bdf8;stroke-width:1.5}}.constraint-label{{fill:#dff6ff;font-size:12px;font-weight:700;text-anchor:middle;letter-spacing:0}}@keyframes viewerConstraintPulse{{0%,100%{{opacity:.1}}50%{{opacity:.28}}}}@media (prefers-reduced-motion:reduce){{.constraint-halo{{animation:none}}}}</style>
-<g class="connections">{render_connections(layout, steady_ids, transient_ids, voltages)}</g>
+<style>.node-wire{{cursor:help}}.node-badge{{cursor:help}}.node-badge rect{{fill:#0b1728;fill-opacity:.9;stroke:#52647c;stroke-width:1}}.node-badge text{{fill:#d7dfeb;font-size:11px;font-weight:700;text-anchor:middle;letter-spacing:0}}.node-badge:hover rect{{stroke:#38bdf8;fill:#082334}}.node-badge:hover text{{fill:#dff6ff}}</style>
+<g class="connections">{render_connections(layout, model, steady_ids, transient_ids, voltages)}</g>
 <g class="components">{render_components(model, layout, steady_ids, transient_ids)}</g>
+<g class="node-badges">{render_node_badges(model, layout)}</g>
 <g class="node-constraints">{render_node_constraints(layout)}</g>
 {render_legend(width)}
 </svg>'''

@@ -1,0 +1,257 @@
+{
+  "source_format": "pipeline2.0_experiment_scenario_registry",
+  "batch_name": "batchA",
+  "experiment_name": "experiment3_1",
+  "circuit_id": "a10",
+  "created_at": "2026-07-14T13:03:36",
+  "updated_at": "2026-07-14T13:04:40",
+  "max_executable_scenarios": 5,
+  "next_scenario_number": 5,
+  "last_added_scenario_id": "scenario_4",
+  "proposals": [
+    {
+      "proposal_id": "proposal_1",
+      "created_at": "2026-07-14T13:03:36",
+      "source_agent_response": "outputs\\pipeline2.0\\batchA\\experiment3_1\\a10\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_1",
+        "scenario_2",
+        "scenario_3"
+      ]
+    },
+    {
+      "proposal_id": "proposal_2",
+      "created_at": "2026-07-14T13:04:33",
+      "source_agent_response": "outputs\\pipeline2.0\\batchA\\experiment3_1\\a10\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_4"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_number": 1,
+      "scenario_id": "scenario_1",
+      "title": "Chiudere lo switch riconosciuto",
+      "hypothesis": "The open switch may be preventing the battery voltage from reaching the downstream connector side.",
+      "actions": [
+        {
+          "type": "close_switch",
+          "target": "switch25.1"
+        }
+      ],
+      "analysis": "op",
+      "compare": [
+        "v(N001)",
+        "v(N002)",
+        "i(vbattery2_1#branch)"
+      ],
+      "rerun_from": "06",
+      "status": "executed",
+      "outcome": "not_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_1",
+      "execution_path": "outputs\\pipeline2.0\\batchA\\experiment3_1\\a10\\scenarios\\scenario_1",
+      "created_at": "2026-07-14T13:03:36",
+      "updated_at": "2026-07-14T13:03:48",
+      "signature": "{\"actions\": [{\"target\": \"switch25.1\", \"type\": \"close_switch\"}], \"analysis\": \"op\", \"compare\": [\"v(N001)\", \"v(N002)\", \"i(vbattery2_1#branch)\"], \"hypothesis\": \"The open switch may be preventing the battery voltage from reaching the downstream connector side.\", \"title\": \"Chiudere lo switch riconosciuto\"}",
+      "scenario": {
+        "scenario_id": "scenario_1",
+        "title": "Chiudere lo switch riconosciuto",
+        "hypothesis": "The open switch may be preventing the battery voltage from reaching the downstream connector side.",
+        "actions": [
+          {
+            "type": "close_switch",
+            "target": "switch25.1"
+          }
+        ],
+        "rerun_from": "06",
+        "analysis": "op",
+        "compare": [
+          "v(N001)",
+          "v(N002)",
+          "i(vbattery2_1#branch)"
+        ]
+      }
+    },
+    {
+      "scenario_number": 2,
+      "scenario_id": "scenario_2",
+      "title": "Collegare il nodo a valle dello switch al ramo della lampada",
+      "hypothesis": "The lamp branch may be inactive because N004 is not electrically continuous with the switched supply node N002.",
+      "actions": [
+        {
+          "type": "connect_nodes",
+          "from": "N002",
+          "to": "N004",
+          "resistance": "1m"
+        }
+      ],
+      "analysis": "op",
+      "compare": [
+        "v(N002)",
+        "v(N004)",
+        "i(vbattery2_1#branch)"
+      ],
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 2,
+      "original_scenario_id": "scenario_2",
+      "execution_path": null,
+      "created_at": "2026-07-14T13:03:36",
+      "updated_at": "2026-07-14T13:03:36",
+      "signature": "{\"actions\": [{\"from\": \"N002\", \"resistance\": \"1m\", \"to\": \"N004\", \"type\": \"connect_nodes\"}], \"analysis\": \"op\", \"compare\": [\"v(N002)\", \"v(N004)\", \"i(vbattery2_1#branch)\"], \"hypothesis\": \"The lamp branch may be inactive because N004 is not electrically continuous with the switched supply node N002.\", \"title\": \"Collegare il nodo a valle dello switch al ramo della lampada\"}",
+      "scenario": {
+        "scenario_id": "scenario_2",
+        "title": "Collegare il nodo a valle dello switch al ramo della lampada",
+        "hypothesis": "The lamp branch may be inactive because N004 is not electrically continuous with the switched supply node N002.",
+        "actions": [
+          {
+            "type": "connect_nodes",
+            "from": "N002",
+            "to": "N004",
+            "resistance": "1m"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N002)",
+          "v(N004)",
+          "i(vbattery2_1#branch)"
+        ]
+      }
+    },
+    {
+      "scenario_number": 3,
+      "scenario_id": "scenario_3",
+      "title": "Collegare il nodo a valle dello switch al ramo del LED",
+      "hypothesis": "The LED branch may be inactive because N003 is not electrically continuous with the switched supply node N002.",
+      "actions": [
+        {
+          "type": "connect_nodes",
+          "from": "N002",
+          "to": "N003",
+          "resistance": "1m"
+        }
+      ],
+      "analysis": "op",
+      "compare": [
+        "v(N002)",
+        "v(N003)",
+        "v(N005)",
+        "i(vbattery2_1#branch)"
+      ],
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 3,
+      "original_scenario_id": "scenario_3",
+      "execution_path": null,
+      "created_at": "2026-07-14T13:03:36",
+      "updated_at": "2026-07-14T13:03:36",
+      "signature": "{\"actions\": [{\"from\": \"N002\", \"resistance\": \"1m\", \"to\": \"N003\", \"type\": \"connect_nodes\"}], \"analysis\": \"op\", \"compare\": [\"v(N002)\", \"v(N003)\", \"v(N005)\", \"i(vbattery2_1#branch)\"], \"hypothesis\": \"The LED branch may be inactive because N003 is not electrically continuous with the switched supply node N002.\", \"title\": \"Collegare il nodo a valle dello switch al ramo del LED\"}",
+      "scenario": {
+        "scenario_id": "scenario_3",
+        "title": "Collegare il nodo a valle dello switch al ramo del LED",
+        "hypothesis": "The LED branch may be inactive because N003 is not electrically continuous with the switched supply node N002.",
+        "actions": [
+          {
+            "type": "connect_nodes",
+            "from": "N002",
+            "to": "N003",
+            "resistance": "1m"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N002)",
+          "v(N003)",
+          "v(N005)",
+          "i(vbattery2_1#branch)"
+        ]
+      }
+    },
+    {
+      "scenario_number": 4,
+      "scenario_id": "scenario_4",
+      "title": "Propagare l’alimentazione commutata ai rami lampada e LED",
+      "hypothesis": "After closing switch25.1, the battery voltage reaches N002 but does not propagate to the branch input nodes N003 and N004; feeding both from N002 should energize the LED and lamp branches together.",
+      "actions": [
+        {
+          "type": "close_switch",
+          "target": "switch25.1"
+        },
+        {
+          "type": "feed_nodes_from_source_node",
+          "source_node": "N002",
+          "target_nodes": [
+            "N003",
+            "N004"
+          ],
+          "resistance": "1m"
+        }
+      ],
+      "analysis": "op",
+      "compare": [
+        "v(N002)",
+        "v(N003)",
+        "v(N004)",
+        "v(N005)",
+        "i(vbattery2_1#branch)"
+      ],
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_2",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_2",
+      "execution_path": "outputs\\pipeline2.0\\batchA\\experiment3_1\\a10\\scenarios\\scenario_4",
+      "created_at": "2026-07-14T13:04:33",
+      "updated_at": "2026-07-14T13:04:40",
+      "signature": "{\"actions\": [{\"target\": \"switch25.1\", \"type\": \"close_switch\"}, {\"resistance\": \"1m\", \"source_node\": \"N002\", \"target_nodes\": [\"N003\", \"N004\"], \"type\": \"feed_nodes_from_source_node\"}], \"analysis\": \"op\", \"compare\": [\"v(N002)\", \"v(N003)\", \"v(N004)\", \"v(N005)\", \"i(vbattery2_1#branch)\"], \"hypothesis\": \"After closing switch25.1, the battery voltage reaches N002 but does not propagate to the branch input nodes N003 and N004; feeding both from N002 should energize the LED and lamp branches together.\", \"title\": \"Propagare l’alimentazione commutata ai rami lampada e LED\"}",
+      "scenario": {
+        "scenario_id": "scenario_4",
+        "title": "Propagare l’alimentazione commutata ai rami lampada e LED",
+        "hypothesis": "After closing switch25.1, the battery voltage reaches N002 but does not propagate to the branch input nodes N003 and N004; feeding both from N002 should energize the LED and lamp branches together.",
+        "actions": [
+          {
+            "type": "close_switch",
+            "target": "switch25.1"
+          },
+          {
+            "type": "feed_nodes_from_source_node",
+            "source_node": "N002",
+            "target_nodes": [
+              "N003",
+              "N004"
+            ],
+            "resistance": "1m"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N002)",
+          "v(N003)",
+          "v(N004)",
+          "v(N005)",
+          "i(vbattery2_1#branch)"
+        ]
+      }
+    }
+  ]
+}

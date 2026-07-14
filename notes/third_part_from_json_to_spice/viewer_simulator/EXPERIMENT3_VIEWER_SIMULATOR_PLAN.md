@@ -1,12 +1,16 @@
 # Experiment 3 - Viewer visuale Pipeline 2.0
 
-Questo documento contiene solo la roadmap operativa dell'Experiment 3.
+Questo documento registra l'architettura realizzata e la chiusura operativa
+dell'Experiment 3.
 
 Lo stato dell'arte e mantenuto nel file dedicato:
 
 ```text
-notes/third_part_from_json_to_spice/stato_dell_arte_spice_to_viewer.md
+notes/third_part_from_json_to_spice/viewer_simulator/stato_dell_arte_spice_to_viewer.md
 ```
+
+Stato: concluso sul Batch A per `a01`, `a02`, `a04`-`a10`; `a03` resta fuori
+dalla prima fase per il suo caso topologico/SPICE non stabile.
 
 ## Obiettivo
 
@@ -78,10 +82,10 @@ stato switch, quando riconosciuto
   -> dove posizionare componenti, terminali e collegamenti
 
 15_render_viewer_svg.py
-  -> NUOVO: come disegnare SVG/HTML con vocabolario componenti
+  -> come disegnare SVG con vocabolario componenti
 
 09_web_chat.py
-  -> mostra solo il viewer della run selezionata
+  -> genera/carica e mostra il viewer della run selezionata
 ```
 
 ## Decisioni
@@ -94,31 +98,25 @@ stato switch, quando riconosciuto
 - Ogni nuovo circuito deve migliorare regole generali, non aggiungere codice
   specifico.
 
-## Roadmap Essenziale
+## Implementazione Realizzata
 
-1. **Pulire `09_web_chat.py`**
+1. **`09_web_chat.py` come orchestratore leggero**
 
-   Rimuovere progressivamente:
-
-   ```text
-   render_a01_viewer_svg
-   coordinate specifiche di a01
-   simboli SVG hardcoded
-   logica di layout/rendering
-   ```
-
-   `09` deve restare:
+   `09` resta:
 
    ```text
    server web
    chat diagnostica
    selettore base/scenario
-   caricamento viewer della run attiva
+   caricamento o generazione viewer della run attiva
    ```
 
-2. **Estendere `13_build_viewer_model.py`**
+   Per una base run o scenario run invoca gli step `13`, `14` e `15` solo se
+   l'artefatto e assente o non aggiornato.
 
-   Aggiungere al `13_viewer_model.json`:
+2. **`13_build_viewer_model.py`**
+
+   Il `13_viewer_model.json` contiene:
 
    ```text
    componenti SPICE da 07_netlist.cir
@@ -130,9 +128,9 @@ stato switch, quando riconosciuto
    geometry_seed da Pipeline 1.0
    ```
 
-3. **Rendere `14_build_viewer_layout.py` image-guided**
+3. **`14_build_viewer_layout.py` image-guided**
 
-   Lo step 14 deve:
+   Lo step 14:
 
    ```text
    normalizzare bbox immagine -> canvas viewer
@@ -142,7 +140,7 @@ stato switch, quando riconosciuto
    creare fallback per componenti scenario senza bbox
    ```
 
-4. **Creare `15_render_viewer_svg.py`**
+4. **`15_render_viewer_svg.py`**
 
    Input:
 
@@ -151,26 +149,26 @@ stato switch, quando riconosciuto
    14_viewer_layout.json
    ```
 
-   Output:
+   Output realizzato:
 
    ```text
-   15_viewer.svg / 15_viewer.html oppure frammento SVG embeddabile
+   15_viewer.svg
    ```
 
-5. **Collegare `15` alla web chat**
+5. **Integrazione nella web chat**
 
-   `09_web_chat.py` deve:
+   `09_web_chat.py`:
 
    ```text
-   caricare o generare 13
-   caricare o generare 14
-   caricare o generare 15
+   carica o genera 13
+   carica o genera 14
+   carica o genera 15
    mostrare il viewer nella pagina centrale
    ```
 
-6. **Scenario hook**
+6. **Hook scenario**
 
-   Quando l'utente scrive "esegui scenario":
+   Quando l'utente esegue uno scenario dalla chat:
 
    ```text
    copia base run
@@ -287,18 +285,17 @@ Fallback:
 - se ci sono piu componenti scenario tra gli stessi nodi, aumentare l'offset;
 - se manca la posizione di un nodo, usare una piccola area `scenario/extra`.
 
-## Milestone
+## Copertura Raggiunta
 
-1. `a01` base run renderizzata da `13 + 14 + 15`, senza coordinate hardcoded in
-   `09_web_chat.py`.
-2. `scenario_1` di `a01` renderizzato dalla run scenario.
-3. Estensione progressiva:
+1. `a01` base run e scenario renderizzati da `13 + 14 + 15`, senza coordinate
+   hardcoded in `09_web_chat.py`.
+2. Estensione progressiva completata:
 
 ```text
 a01 -> a10/a09 -> a02/a05/a07 -> a08 -> a04/a06
 ```
 
-4. Ogni nuovo circuito aggiunge solo:
+3. I miglioramenti introdotti sono rimasti generali:
 
 ```text
 nuovo simbolo
@@ -315,7 +312,7 @@ Workspace di Experiment 3:
 outputs/pipeline2.0/batchA/experiment3_viewer/
 ```
 
-Prima fase:
+Circuiti coperti:
 
 ```text
 a01, a02, a04, a05, a06, a07, a08, a09, a10
@@ -331,15 +328,17 @@ python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experi
 
 ## Criteri Di Successo
 
-- viewer generato per base run e scenari;
-- nessun renderer hardcoded per singolo circuito;
-- differenze scenario visibili quando la topologia cambia;
-- valori ngspice mostrati senza contraddire la simulazione;
-- fallback chiaro quando layout o simboli non sono ancora supportati.
+- [x] viewer generato per base run e scenari;
+- [x] nessun renderer hardcoded per singolo circuito;
+- [x] differenze scenario visibili quando la topologia cambia;
+- [x] valori ngspice mostrati senza contraddire la simulazione;
+- [x] fallback per componenti aggiunti e collegamenti scenario;
+- [x] navigazione con zoom e pan, scope per transitori e piccoli ponti sugli
+  attraversamenti senza giunzione.
 
 ## Limiti Accettati
 
 - niente ricostruzione pixel-perfect;
-- layout inizialmente grezzo ma leggibile;
+- layout equivalente e leggibile, non pixel-perfect;
 - componenti complessi rappresentabili come blocchi;
 - CircuitJS/Falstad resta riferimento UX, non motore di simulazione.

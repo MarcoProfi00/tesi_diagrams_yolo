@@ -1,0 +1,20 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Alimentare l’ingresso del voltmetro VAC",
+  "hypothesis": "Il voltmetro VAC non mostra nulla nel caso base perché il nodo N001, che rappresenta AC_INPUT ed è il nodo misurato da analog_meter0.1, non è pilotato nel netlist base.",
+  "actions": [
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N001",
+      "negative": "0",
+      "value": "5V"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N001)",
+    "v(N002)",
+    "v(N004)"
+  ]
+}

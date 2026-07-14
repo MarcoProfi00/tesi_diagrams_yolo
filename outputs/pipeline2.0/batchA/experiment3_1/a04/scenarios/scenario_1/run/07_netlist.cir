@@ -1,0 +1,28 @@
+* pipeline2.0 netlist
+* circuit: a04
+
+Vbattery2_1 N001 0 DC 5
+Ccapacitor4_1 N002 N003 100n
+Ccapacitor4_2 N004 0 10u
+Ccapacitor4_3 N005 N006 1u
+Qnpn_transistor18_1 N005 N003 N004 2N2222
+Rresistor22_1 N003 0 10k
+Rresistor22_2 N001 N003 22k
+Rresistor22_3 N001 N005 2.2k
+Rresistor22_4 N004 0 1k
+Rresistor22_5 N006 0 33k
+Vsignal_source23_1 N002 0 SIN(0 0.1 100)
+
+.model 2N2222 NPN(IS=14.34f BF=255.9 VAF=74.03 IKF=0.2847 ISE=14.34f NE=1.307 BR=6.092 NR=1.005 VAR=11.96 IKR=0.0 ISC=0.0 NC=2 RB=10 RC=1 RE=0.1 CJE=22.01p VJE=0.75 MJE=0.377 CJC=7.306p VJC=0.75 MJC=0.3416 TF=411.1p TR=46.91n)
+
+.op
+.save all
+.tran 0.1ms 50ms
+
+.control
+set wr_singlescale
+set wr_vecnames
+run
+wrdata 08_tran.csv time v(N001) v(N002) v(N003) v(N004) v(N005) v(N006)
+.endc
+.end

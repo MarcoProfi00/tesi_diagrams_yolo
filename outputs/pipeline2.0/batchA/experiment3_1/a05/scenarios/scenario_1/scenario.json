@@ -1,0 +1,19 @@
+{
+  "scenario_id": "scenario_1",
+  "title": "Alimentare l’ingresso VMON_INPUT dal connettore",
+  "hypothesis": "VMON reads 0 V because node N003 is not externally driven in the base netlist.",
+  "actions": [
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N003",
+      "negative": "0",
+      "value": "5V"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N003)",
+    "v(N001)"
+  ]
+}

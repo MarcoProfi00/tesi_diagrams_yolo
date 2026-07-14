@@ -2274,8 +2274,10 @@ Prossimi esperimenti:
 
 2. **Esperimento 3 - visualizzatore/simulatore del circuito**
 
-   Obiettivo: costruire una visualizzazione stile simulatore, non un nuovo
-   motore SPICE.
+   Stato: concluso sul Batch A per `a01`, `a02`, `a04`-`a10`; `a03` resta
+   escluso dalla prima fase per il suo caso topologico/SPICE non stabile.
+
+   Risultato: visualizzazione stile simulatore, non un nuovo motore SPICE.
 
    La regola centrale e:
 
@@ -2285,21 +2287,37 @@ Prossimi esperimenti:
 
    Quindi:
 
-   - base run e scenario run possono avere netlist diverse;
-   - se uno scenario cambia topologia, il viewer deve visualizzare quella
-     topologia scenario;
+   - base run e scenario run con netlist diverse hanno viewer diversi;
+   - se uno scenario cambia topologia, il viewer visualizza quella topologia;
    - ngspice resta il motore di simulazione;
    - il viewer usa netlist, node map, coordinate immagine e risultati SPICE per
      mostrare nodi, tensioni, correnti e rami attivi.
 
-3. **Esperimento 4 - automazione agentica degli scenari**
+   Gli step `13_build_viewer_model.py`, `14_build_viewer_layout.py` e
+   `15_render_viewer_svg.py` sono integrati in `09_web_chat.py`: la base run e
+   ogni nuova run scenario ricevono automaticamente `13_viewer_model.json`,
+   `14_viewer_layout.json` e `15_viewer.svg`.
+
+3. **Esperimento 3.1 - validazione end-to-end agente e viewer**
+
+   Stato: prossimo lavoro.
+
+   Obiettivo: ripartire da workspace puliti, chiedere la diagnosi all'agente,
+   eseguire gli scenari che propone e verificare che chat, runner, confronto e
+   viewer scenario restino coerenti senza scenari pre-caricati.
+
+   La sessione chat/registry e stata resa disponibile anche su
+   `experiment3_1` nella cartella `experiment_chat/`; le root `experiment2*`
+   mantengono la cartella storica `experiment2_chat/`.
+
+4. **Esperimento 4 - automazione agentica degli scenari**
 
    Obiettivo: far eseguire all'agente piu scenari in sequenza, entro un limite
    controllato, per provare a risolvere o localizzare il problema.
 
-   Questa fase non parte finche Experiment 3 non produce viewer generali per
-   base run e scenari di tutti i circuiti Batch A. Il viewer deve diventare una
-   evidenza leggibile accanto a netlist, stdout ngspice e confronto scenario.
+   Questa fase non parte finche Experiment 3.1 non ha validato il ciclo
+   completo con scenari nuovi proposti dall'agente. Il viewer e gia
+   un'evidenza leggibile accanto a netlist, stdout ngspice e confronto scenario.
 
    Flusso desiderato:
 

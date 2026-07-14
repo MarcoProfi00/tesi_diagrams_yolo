@@ -1,0 +1,215 @@
+{
+  "source_format": "pipeline2.0_experiment_scenario_registry",
+  "batch_name": "batchA",
+  "experiment_name": "experiment3_1",
+  "circuit_id": "a05",
+  "created_at": "2026-07-14T12:31:58",
+  "updated_at": "2026-07-14T12:32:40",
+  "max_executable_scenarios": 5,
+  "next_scenario_number": 5,
+  "last_added_scenario_id": "scenario_4",
+  "proposals": [
+    {
+      "proposal_id": "proposal_1",
+      "created_at": "2026-07-14T12:31:58",
+      "source_agent_response": "outputs\\pipeline2.0\\batchA\\experiment3_1\\a05\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_1",
+        "scenario_2",
+        "scenario_3"
+      ]
+    },
+    {
+      "proposal_id": "proposal_2",
+      "created_at": "2026-07-14T12:32:40",
+      "source_agent_response": "outputs\\pipeline2.0\\batchA\\experiment3_1\\a05\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_4"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_number": 1,
+      "scenario_id": "scenario_1",
+      "title": "Alimentare l’ingresso VMON_INPUT dal connettore",
+      "hypothesis": "VMON reads 0 V because node N003 is not externally driven in the base netlist.",
+      "actions": [
+        {
+          "type": "add_voltage_source_between_nodes",
+          "positive": "N003",
+          "negative": "0",
+          "value": "5V"
+        }
+      ],
+      "analysis": "op",
+      "compare": [
+        "v(N003)",
+        "v(N001)"
+      ],
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "resolved_candidate",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_1",
+      "execution_path": "outputs\\pipeline2.0\\batchA\\experiment3_1\\a05\\scenarios\\scenario_1",
+      "created_at": "2026-07-14T12:31:58",
+      "updated_at": "2026-07-14T12:32:05",
+      "signature": "{\"actions\": [{\"negative\": \"0\", \"positive\": \"N003\", \"type\": \"add_voltage_source_between_nodes\", \"value\": \"5V\"}], \"analysis\": \"op\", \"compare\": [\"v(N003)\", \"v(N001)\"], \"hypothesis\": \"VMON reads 0 V because node N003 is not externally driven in the base netlist.\", \"title\": \"Alimentare l’ingresso VMON_INPUT dal connettore\"}",
+      "scenario": {
+        "scenario_id": "scenario_1",
+        "title": "Alimentare l’ingresso VMON_INPUT dal connettore",
+        "hypothesis": "VMON reads 0 V because node N003 is not externally driven in the base netlist.",
+        "actions": [
+          {
+            "type": "add_voltage_source_between_nodes",
+            "positive": "N003",
+            "negative": "0",
+            "value": "5V"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N003)",
+          "v(N001)"
+        ]
+      }
+    },
+    {
+      "scenario_number": 2,
+      "scenario_id": "scenario_2",
+      "title": "Chiudere lo switch TEST riconosciuto",
+      "hypothesis": "The open switch state may be keeping the extracted circuit in an inactive test condition.",
+      "actions": [
+        {
+          "type": "close_switch",
+          "target": "switch25.1"
+        }
+      ],
+      "analysis": "op",
+      "compare": [
+        "v(N004)",
+        "v(N001)",
+        "stderr"
+      ],
+      "rerun_from": "06",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 2,
+      "original_scenario_id": "scenario_2",
+      "execution_path": null,
+      "created_at": "2026-07-14T12:31:58",
+      "updated_at": "2026-07-14T12:31:58",
+      "signature": "{\"actions\": [{\"target\": \"switch25.1\", \"type\": \"close_switch\"}], \"analysis\": \"op\", \"compare\": [\"v(N004)\", \"v(N001)\", \"stderr\"], \"hypothesis\": \"The open switch state may be keeping the extracted circuit in an inactive test condition.\", \"title\": \"Chiudere lo switch TEST riconosciuto\"}",
+      "scenario": {
+        "scenario_id": "scenario_2",
+        "title": "Chiudere lo switch TEST riconosciuto",
+        "hypothesis": "The open switch state may be keeping the extracted circuit in an inactive test condition.",
+        "actions": [
+          {
+            "type": "close_switch",
+            "target": "switch25.1"
+          }
+        ],
+        "rerun_from": "06",
+        "analysis": "op",
+        "compare": [
+          "v(N004)",
+          "v(N001)",
+          "stderr"
+        ]
+      }
+    },
+    {
+      "scenario_number": 3,
+      "scenario_id": "scenario_3",
+      "title": "Pilotare direttamente il nodo letto da VMON",
+      "hypothesis": "The measurement node itself is valid, but it remains at 0 V only because no upstream excitation reaches it.",
+      "actions": [
+        {
+          "type": "drive_node_voltage",
+          "target": "N001",
+          "value": "5V"
+        }
+      ],
+      "analysis": "op",
+      "compare": [
+        "v(N001)",
+        "v(N003)"
+      ],
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 3,
+      "original_scenario_id": "scenario_3",
+      "execution_path": null,
+      "created_at": "2026-07-14T12:31:58",
+      "updated_at": "2026-07-14T12:31:58",
+      "signature": "{\"actions\": [{\"target\": \"N001\", \"type\": \"drive_node_voltage\", \"value\": \"5V\"}], \"analysis\": \"op\", \"compare\": [\"v(N001)\", \"v(N003)\"], \"hypothesis\": \"The measurement node itself is valid, but it remains at 0 V only because no upstream excitation reaches it.\", \"title\": \"Pilotare direttamente il nodo letto da VMON\"}",
+      "scenario": {
+        "scenario_id": "scenario_3",
+        "title": "Pilotare direttamente il nodo letto da VMON",
+        "hypothesis": "The measurement node itself is valid, but it remains at 0 V only because no upstream excitation reaches it.",
+        "actions": [
+          {
+            "type": "drive_node_voltage",
+            "target": "N001",
+            "value": "5V"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N001)",
+          "v(N003)"
+        ]
+      }
+    },
+    {
+      "scenario_number": 4,
+      "scenario_id": "scenario_4",
+      "title": "Nessun nuovo scenario necessario",
+      "hypothesis": "The main symptom is already explained by the lack of external drive on N003 (VMON_INPUT) in the base run.",
+      "actions": [],
+      "analysis": "op",
+      "compare": [
+        "v(N003)",
+        "v(N001)"
+      ],
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": false,
+      "kind": "non_executable_proposal",
+      "source_proposal_id": "proposal_2",
+      "source_local_index": 1,
+      "original_scenario_id": "none",
+      "execution_path": null,
+      "created_at": "2026-07-14T12:32:40",
+      "updated_at": "2026-07-14T12:32:40",
+      "signature": "{\"actions\": [], \"analysis\": \"op\", \"compare\": [\"v(N003)\", \"v(N001)\"], \"hypothesis\": \"The main symptom is already explained by the lack of external drive on N003 (VMON_INPUT) in the base run.\", \"title\": \"Nessun nuovo scenario necessario\"}",
+      "scenario": {
+        "scenario_id": "scenario_4",
+        "title": "Nessun nuovo scenario necessario",
+        "hypothesis": "The main symptom is already explained by the lack of external drive on N003 (VMON_INPUT) in the base run.",
+        "actions": [],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N003)",
+          "v(N001)"
+        ]
+      }
+    }
+  ]
+}

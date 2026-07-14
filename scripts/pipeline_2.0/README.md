@@ -256,9 +256,12 @@ Questo manifest include:
 
 - apre un server locale temporaneo;
 - mostra gli artefatti del circuito;
+- mostra il viewer/simulatore della base run o dello scenario selezionato;
 - avvia la chat diagnostica;
 - riconosce comandi di scenario;
-- chiama `10`, `11` e `12` quando necessario.
+- chiama `10`, `11` e `12` quando necessario;
+- genera automaticamente gli artefatti viewer `13-15` per una nuova run
+  scenario.
 
 File chat principali:
 
@@ -276,6 +279,10 @@ experiment2_chat/chat_history.md
 experiment2_chat/scenario_registry.json
 experiment2_chat/scenario_registry.md
 ```
+
+Per `experiment3_1` la stessa sessione file-based e disponibile nella cartella
+`experiment_chat/`; le root `experiment2*` continuano a usare
+`experiment2_chat/` per compatibilita.
 
 ### 11_agent_readonly.py
 
@@ -311,6 +318,26 @@ scenarios/<scenario_id>/
 |-- base_snapshot/
 `-- run/
 ```
+
+### 13_build_viewer_model.py
+
+- costruisce il modello del circuito realmente simulato;
+- unisce netlist, node map, component rules, misure ngspice e geometry seed
+  della Pipeline 1.0;
+- salva `13_viewer_model.json`.
+
+### 14_build_viewer_layout.py
+
+- calcola posizione, terminali e route ortogonali dei componenti;
+- usa bbox/orientamenti come seed e include fallback per componenti scenario;
+- salva `14_viewer_layout.json`.
+
+### 15_render_viewer_svg.py
+
+- renderizza il circuito equivalente in `15_viewer.svg`;
+- usa un vocabolario comune di simboli e stati elettrici;
+- rappresenta rami attivi, segnali variabili, switch, componenti scenario,
+  LED/lampade e attraversamenti senza giunzione.
 
 ## Primitive scenario oggi supportate
 
@@ -412,11 +439,12 @@ python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experi
 Nota:
 
 - `experiment3_viewer` usa gli output in `outputs/pipeline2.0/batchA/experiment3_viewer/`;
-- la web chat puo gia essere aperta su questa root sperimentale;
-- il blocco viewer/simulatore visuale e disponibile nella pagina centrale;
-- `13_build_viewer_model.py` genera `13_viewer_model.json`;
-- `14_build_viewer_layout.py` genera `14_viewer_layout.json` come primo layout automatico grezzo;
-- il renderer grafico e ancora basato sul prototipo `a01`, ma il layout e ora separato come contratto dati.
+- la web chat mostra il viewer/simulatore nella pagina centrale;
+- ogni run usa `13_viewer_model.json`, `14_viewer_layout.json` e
+  `15_viewer.svg`;
+- i tre artefatti vengono generati o aggiornati automaticamente quando si apre
+  una run e dopo l'esecuzione di uno scenario;
+- il renderer e generale e non contiene coordinate hardcoded di `a01`.
 
 Opzioni utili:
 
@@ -504,6 +532,9 @@ utente sceglie uno scenario
 -> chiama 12
 -> ngspice scenario
 -> scenario_comparison.json
+-> 13_build_viewer_model.py
+-> 14_build_viewer_layout.py
+-> 15_render_viewer_svg.py
 ```
 
 ## Budget scenari
@@ -577,6 +608,14 @@ scenario_status.json
 scenario_comparison.json
 ```
 
+Per capire il viewer della run selezionata:
+
+```text
+13_viewer_model.json
+14_viewer_layout.json
+15_viewer.svg
+```
+
 ## Roadmap immediata
 
 Lo stato attuale va letto cosi:
@@ -584,8 +623,10 @@ Lo stato attuale va letto cosi:
 - la base tecnica `01-08` e consolidata;
 - il manifest `10` e consolidato;
 - la web chat `09`, l'agente `11` e gli scenari `12` sono attivi;
+- il viewer `13-15` e integrato nella web chat per base run e scenari;
 - gli esperimenti si gestiscono con root separate;
-- il prossimo grande blocco non e un nuovo step di base, ma il viewer.
+- il prossimo grande blocco e Experiment 3.1: validazione pulita del flusso
+  agente -> scenario -> viewer.
 
 ## Sintesi finale
 
@@ -597,5 +638,6 @@ La Pipeline 2.0 oggi va usata cosi:
 3. apro la chat locale;
 4. faccio rispondere l'agente;
 5. eseguo eventuali scenari su copie separate;
-6. confronto base run e scenario run senza toccare l'originale.
+6. confronto base run e scenario run senza toccare l'originale;
+7. leggo il viewer della run selezionata, generato dalla netlist effettiva.
 ```

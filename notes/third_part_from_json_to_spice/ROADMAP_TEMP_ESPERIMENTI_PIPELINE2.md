@@ -579,12 +579,13 @@ scenarios/<scenario_id>/scenario_comparison.json
 
 ## Esperimento 3 - Viewer / simulatore visuale
 
-Stato: futuro, dopo Esperimento 2.
+Stato: concluso sul Batch A, con `a03` escluso dalla prima fase per il suo
+caso topologico/SPICE non stabile.
 
 Obiettivo:
 
-creare una visualizzazione stile simulatore, ispirata a strumenti come Falstad,
-ma basata sui nostri output Pipeline 1.0 / Pipeline 2.0 e sui risultati ngspice.
+creare una visualizzazione stile simulatore, ispirata a Falstad ma senza usarlo
+come motore, basata sugli output Pipeline 1.0 / Pipeline 2.0 e su ngspice.
 
 Regola centrale:
 
@@ -599,25 +600,72 @@ Questo e importante perche:
 - se uno scenario cambia topologia, anche il circuito visualizzato cambia;
 - quindi il viewer non deve assumere una sola topologia fissa.
 
-Dati utili:
+Risultato realizzato:
 
 ```text
-run/07_netlist.cir
-run/08_ngspice_stdout.txt
-run/08_tran.csv
-run/08_tran_plot.png
-03_node_map.json
-coordinate/componenti da Pipeline 1.0
-immagine originale del circuito
+13_build_viewer_model.py  -> contratto elettrico e strutturale della run
+14_build_viewer_layout.py -> layout image-guided e routing generale
+15_render_viewer_svg.py   -> SVG interattivo con vocabolario componenti
+09_web_chat.py            -> carica/genera il viewer della run selezionata
 ```
 
-Prima versione possibile:
+Il viewer usa:
 
-- mostrare immagine del circuito;
-- sovrapporre marker su componenti e terminali;
-- colorare nodi in base alla tensione;
-- animare componenti o rami con corrente non nulla;
-- mostrare differenze tra base run e scenario run.
+- `07_netlist.cir` come verita elettrica;
+- `03_node_map.json` e `06_component_rules.json` per elementi strutturali;
+- bbox, terminali e orientamenti della Pipeline 1.0 come geometry seed;
+- output OP/TRAN ngspice per tensioni, correnti, animazioni e scope transienti.
+
+Copertura Batch A:
+
+- base run e run scenario di `a01`, `a02`, `a04`-`a10`;
+- varianti topologiche `connect_nodes`, `feed_nodes_from_source_node`,
+  `add_voltage_source_between_nodes` e `add_resistor_between_nodes`;
+- switch aperti/chiusi, componenti aggiunti e modifiche di sorgenti/valori;
+- zoom, pan, routing ortogonale e piccoli ponti per attraversamenti senza
+  giunzione elettrica.
+
+Il viewer non ricostruisce lo schema pixel-perfect: mantiene un circuito
+equivalente leggibile, generale e coerente con la netlist simulata.
+
+## Esperimento 3.1 - Validazione end-to-end agente e viewer
+
+Stato: prossimo lavoro.
+
+Obiettivo:
+
+ripartire da workspace puliti per ogni circuito, chiedere la diagnosi
+all'agente, far proporre scenari nuovi ed eseguirli dalla web chat, verificando
+che ogni run scenario generi automaticamente il proprio viewer.
+
+Flusso da validare:
+
+```text
+base run pulita
+-> sintomo utente
+-> agente propone scenario.json
+-> utente conferma "esegui scenario ..."
+-> 12_controlled_scenarios.py crea e simula la run
+-> 09_web_chat.py genera 13/14/15 sulla run scenario
+-> sidebar e pannello centrale mostrano il nuovo viewer
+-> agente interpreta scenario_comparison.json
+```
+
+Regole:
+
+- nessun riuso degli scenari gia preparati per Experiment 2/3;
+- ogni proposta deve essere riproducibile come `scenario.json`;
+- controllare sia scenari non topologici sia topologici;
+- registrare per ogni circuito se viewer, confronto e chat restano coerenti;
+- correggere solo regole generali emerse dalla validazione.
+
+Sessione interattiva:
+
+- `experiment3_1` e abilitato nella web chat con history e scenario registry;
+- i file della nuova sessione vivono in `experiment_chat/`, mentre le root
+  `experiment2*` mantengono la cartella storica `experiment2_chat/`;
+- base run e struttura dei file restano immutabili fino all'esecuzione di uno
+  scenario confermato dall'utente.
 
 ## Esperimento 4 - Automazione agentica
 
@@ -682,7 +730,7 @@ Regole:
 
 Step essenziali:
 
-1. chiudere Experiment 3 su base run e scenari Batch A;
+1. completare Experiment 3.1 sulla generazione end-to-end di scenari e viewer;
 2. aggiungere parser leggero per comandi scenario diretti;
 3. validare nodi/componenti richiesti contro `03_node_map.json`,
    `06_component_rules.json` e `07_netlist.cir`;

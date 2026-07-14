@@ -1,0 +1,21 @@
+{
+  "scenario_id": "scenario_5",
+  "title": "Portare BAT_FUSED all’ingresso del ramo LED",
+  "hypothesis": "The LED branch stays inactive because N005 is not receiving supply from the already powered node N003; if N003 is connected to N005, voltage should propagate to N007 through Rresistor22_1 and activate the LED branch.",
+  "actions": [
+    {
+      "type": "connect_nodes",
+      "from": "N003",
+      "to": "N005",
+      "resistance": "1m"
+    }
+  ],
+  "rerun_from": "06",
+  "analysis": "op",
+  "compare": [
+    "v(N003)",
+    "v(N005)",
+    "v(N007)",
+    "i(Rresistor22_1)"
+  ]
+}

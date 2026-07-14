@@ -1,0 +1,33 @@
+{
+  "scenario_id": "scenario_6",
+  "title": "Alimentare contemporaneamente ramo lampada e ramo LED",
+  "hypothesis": "Both branches stay inactive in the base run because BAT_FUSED at N003 does not reach both branch inputs; if N003 is connected to N004 and N005 and switch25.1 is closed, both lamp and LED branches should activate together.",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    },
+    {
+      "type": "connect_nodes",
+      "from": "N003",
+      "to": "N004",
+      "resistance": "1m"
+    },
+    {
+      "type": "connect_nodes",
+      "from": "N003",
+      "to": "N005",
+      "resistance": "1m"
+    }
+  ],
+  "rerun_from": "06",
+  "analysis": "op",
+  "compare": [
+    "v(N004)",
+    "v(N005)",
+    "v(N006)",
+    "v(N007)",
+    "i(Rlamp13_1)",
+    "i(Rresistor22_1)"
+  ]
+}

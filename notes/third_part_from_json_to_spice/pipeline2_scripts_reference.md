@@ -491,7 +491,7 @@ Nota importante:
 
 `08_spice_run.py` non interpreta la diagnosi. Esegue e salva.
 
-## Layer diagnostico e interattivo 09-12
+## Layer diagnostico, interattivo e viewer 09-15
 
 ## 09_web_chat.py
 
@@ -511,6 +511,8 @@ Ruolo:
 - riconosce richieste come `esegui scenario 1`, `esegui l'ultimo`,
   `mostra scenari`;
 - chiama lo step 12 per eseguire scenari su copie separate.
+- genera o aggiorna gli step viewer `13`, `14` e `15` per la run visualizzata e
+  per ogni nuova run scenario.
 
 Caratteristiche architetturali:
 
@@ -544,6 +546,13 @@ In questa modalita:
 - il bottone `Clear` resetta chat, registry, cartelle `scenarios/` e artefatti
   chat 10/11 della sessione, ma non tocca i file base `01-08`.
 
+Sessione Experiment 3.1:
+
+- `experiment3_1` usa lo stesso meccanismo di history e registry della chat;
+- salva i file in `experiment_chat/` per non attribuirli artificialmente
+  all'Esperimento 2;
+- le root `experiment2*` conservano `experiment2_chat/` per compatibilita.
+
 Input:
 
 ```text
@@ -576,16 +585,16 @@ Nota:
 - la web chat mostra gia base run, immagine, artefatti e scenari disponibili;
 - il viewer/simulatore visuale viene mostrato come blocco aggiuntivo della pagina centrale;
 - `13_viewer_model.json` descrive cosa esiste nella run;
-- `14_viewer_layout.json` descrive un primo layout automatico grezzo, non ancora usato come unico renderer.
+- `14_viewer_layout.json` descrive layout, terminali e route automatiche;
+- `15_viewer.svg` e il viewer SVG generale mostrato nel pannello centrale.
 
 Nota architetturale:
 
-- il viewer attuale della web chat contiene ancora un prototipo visivo cucito su `a01`;
-- questo prototipo serve solo come prova iniziale, non come riferimento di layout;
-- non va esteso creando renderer hardcoded per `a02`, `a04`, `a09` ecc.;
-- il viewer deve essere `netlist-grounded + image-guided`;
-- le bbox e i terminali di Pipeline 1.0 vanno usati come geometry seed;
-- a regime `09_web_chat.py` deve solo mostrare il viewer della run selezionata, mentre modello, layout e rendering devono derivare da `13_viewer_model.json`, `14_viewer_layout.json` e dal nuovo renderer `15`.
+- il viewer e `netlist-grounded + image-guided`;
+- bbox e terminali della Pipeline 1.0 sono geometry seed, non verita elettrica;
+- `09_web_chat.py` non contiene coordinate o renderer di singoli circuiti;
+- modello, layout e rendering derivano da `13_viewer_model.json`,
+  `14_viewer_layout.json` e `15_viewer.svg`.
 
 ## 13_build_viewer_model.py
 
@@ -600,8 +609,8 @@ Ruolo:
 - costruisce il contratto dati del viewer per una base run o una scenario run;
 - parte dalla netlist realmente simulata in `07_netlist.cir`;
 - aggiunge contesto strutturale da `03_node_map.json` e `06_component_rules.json`;
-- aggiunge misure operative da `08_ngspice_stdout.txt`;
-- deve essere esteso con geometry seed da Pipeline 1.0 (`03_estimate_terminals`).
+- aggiunge misure operative e transienti da `08_*`;
+- acquisisce geometry seed da Pipeline 1.0 (`03_estimate_terminals`).
 
 Output:
 
@@ -618,7 +627,7 @@ python scripts\pipeline_2.0\json_to_spice\13_build_viewer_model.py --run-dir out
 Nota:
 
 - lo step 13 dice cosa deve essere rappresentato;
-- non deve diventare il motore di layout definitivo.
+- non contiene coordinate SVG o regole grafiche.
 
 ## 14_build_viewer_layout.py
 
@@ -650,26 +659,27 @@ python scripts\pipeline_2.0\json_to_spice\14_build_viewer_layout.py --run-dir ou
 
 Nota:
 
-- lo stato attuale e `rough_auto`;
 - il layout non ricostruisce l'immagine originale pixel-perfect;
-- il renderer della web chat usa ancora il prototipo visivo di `a01`, ma genera gia anche questo layout;
-- il layout deve diventare la base del renderer generico per tutti i circuiti e scenari.
+- e la base del renderer generale per tutti i circuiti e scenari;
+- include route ortogonali, fallback scenario e ponti per attraversamenti senza
+  giunzione elettrica.
 
 ## 15_render_viewer_svg.py
 
-Stato:
+Path:
 
 ```text
-da creare nella prossima fase di Experiment 3
+scripts/pipeline_2.0/json_to_spice/15_render_viewer_svg.py
 ```
 
-Ruolo previsto:
+Ruolo:
 
 - leggere `13_viewer_model.json`;
 - leggere `14_viewer_layout.json`;
 - applicare il vocabolario dei componenti grafici;
-- produrre SVG/HTML embeddabile nella web chat;
-- sostituire progressivamente il renderer hardcoded di `a01` dentro `09_web_chat.py`.
+- produrre `15_viewer.svg` embeddabile nella web chat;
+- usare il vocabolario componenti comune, animazioni elettriche, legenda,
+  tooltip scenario, zoom/pan e scope transienti forniti dalla pagina web.
 
 Principio:
 
@@ -678,19 +688,7 @@ Principio:
 - `15` descrive come disegnarlo;
 - `09` deve solo mostrare il viewer della run selezionata.
 
-Prima milestone:
-
-```text
-a01 renderizzato da 13 + 14 + 15, senza coordinate specifiche dentro 09_web_chat.py
-```
-
-Seconda milestone:
-
-```text
-scenario_1 di a01 renderizzato dalla run scenario
-```
-
-Poi estensione Batch A:
+Copertura Experiment 3:
 
 ```text
 a01 -> a10/a09 -> a02/a05/a07 -> a08 -> a04/a06
@@ -914,6 +912,9 @@ utente sceglie uno scenario
 -> chiama 12_controlled_scenarios.py
 -> opzionalmente esegue ngspice sulla run scenario
 -> costruisce scenario_comparison.json
+-> genera 13_viewer_model.json
+-> genera 14_viewer_layout.json
+-> genera 15_viewer.svg
 -> agente puo leggere il nuovo esito
 ```
 
@@ -935,6 +936,9 @@ prepare_experiment_outputs.py
 10_build_diagnostic_context.py
 11_agent_readonly.py
 12_controlled_scenarios.py
+13_build_viewer_model.py
+14_build_viewer_layout.py
+15_render_viewer_svg.py
 ```
 
 Presenti ma non ancora integrati nel flusso reale:
@@ -948,7 +952,7 @@ Non fanno parte dello stato attuale di riferimento:
 - `09_summarize_spice.py` non va piu considerato uno step reale della pipeline
   corrente;
 - il riferimento ufficiale oggi e la catena `01-08` + `10` per la parte base e
-  `09-12` per il layer diagnostico/interattivo.
+  `09-15` per il layer diagnostico, interattivo e viewer.
 
 ## Quando aggiornare questo file
 
@@ -959,6 +963,7 @@ Questo riferimento va aggiornato quando:
 - `05_device_profiles.py` entra davvero nel flusso;
 - vengono aggiunte o rimosse primitive scenario in `12_controlled_scenarios.py`;
 - cambia la struttura output per batch/esperimento/circuito;
+- cambia il contratto `13/14/15` o il vocabolario grafico del viewer;
 - la web chat introduce nuove responsabilita strutturali.
 
 ## Sintesi finale
@@ -972,10 +977,11 @@ prepare_experiment_outputs.py separa gli esperimenti;
 10_build_diagnostic_context.py costruisce il manifest;
 11_agent_readonly.py interpreta senza modificare;
 12_controlled_scenarios.py applica scenari su copie separate.
+13/14/15 costruiscono modello, layout e SVG della run selezionata.
 ```
 
 Questa distinzione e importante per tutta la tesi:
 
 - `01-08` costruiscono i fatti elettrici;
-- `09-12` permettono di interrogarli, testarli e confrontarli senza perdere la
-  base run originale.
+- `09-15` permettono di interrogarli, testarli, visualizzarli e confrontarli
+  senza perdere la base run originale.

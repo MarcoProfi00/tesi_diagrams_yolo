@@ -1,0 +1,25 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Portare BAT_FUSED all’ingresso dello switch della lampada",
+  "hypothesis": "The lamp branch stays inactive because N004 is not actually receiving supply from the powered node N003; if N003 is connected to N004 and switch25.1 is closed, voltage should propagate to N006 and activate Rlamp13_1.",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    },
+    {
+      "type": "connect_nodes",
+      "from": "N003",
+      "to": "N004",
+      "resistance": "1m"
+    }
+  ],
+  "rerun_from": "06",
+  "analysis": "op",
+  "compare": [
+    "v(N003)",
+    "v(N004)",
+    "v(N006)",
+    "i(Rlamp13_1)"
+  ]
+}

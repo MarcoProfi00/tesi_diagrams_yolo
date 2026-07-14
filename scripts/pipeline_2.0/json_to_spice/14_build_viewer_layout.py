@@ -712,6 +712,207 @@ def align_near_perpendicular_leads(positioned: dict[str, dict[str, Any]]) -> Non
             translate_component(component, target_x - float(component.get("x") or 0), 0.0)
 
 
+def align_near_series_components(positioned: dict[str, dict[str, Any]]) -> None:
+    """Allinea una serie orizzontale quasi rettilinea evitando piccoli gradini."""
+    terminals_by_node: dict[str, list[tuple[str, dict[str, Any]]]] = {}
+    for component_id, component in positioned.items():
+        if component.get("is_structural") or component.get("orientation") != "horizontal":
+            continue
+        for terminal in component.get("terminals") or []:
+            node_id = str(terminal.get("node_id") or "")
+            if node_id:
+                terminals_by_node.setdefault(node_id, []).append((component_id, terminal))
+
+    proposed_y: dict[str, list[float]] = {}
+    for terminals in terminals_by_node.values():
+        if len(terminals) != 2:
+            continue
+        first_id, first = terminals[0]
+        second_id, second = terminals[1]
+        if {terminal_side(first), terminal_side(second)} != {"left", "right"}:
+            continue
+        left_id, left_terminal, right_id, right_terminal = (
+            (first_id, first, second_id, second)
+            if float(first.get("x") or 0) < float(second.get("x") or 0)
+            else (second_id, second, first_id, first)
+        )
+        if terminal_side(left_terminal) != "right" or terminal_side(right_terminal) != "left":
+            continue
+        if abs(float(left_terminal.get("y") or 0) - float(right_terminal.get("y") or 0)) > 14.0:
+            continue
+        proposed_y.setdefault(right_id, []).append(float(left_terminal.get("y") or 0))
+
+    for component_id, targets in proposed_y.items():
+        if not targets or max(targets) - min(targets) > 6.0:
+            continue
+        component = positioned.get(component_id)
+        if not component:
+            continue
+        target_y = sum(targets) / len(targets)
+        delta_y = target_y - float(component.get("y") or 0)
+        current_bounds = component_symbol_bounds(component)
+        candidate_bounds = (
+            current_bounds[0],
+            current_bounds[1] + delta_y,
+            current_bounds[2],
+            current_bounds[3] + delta_y,
+        )
+        overlaps_symbol = any(
+            other_id != component_id
+            and rectangle_overlap_area(candidate_bounds, component_symbol_bounds(other)) > 1.0
+            for other_id, other in positioned.items()
+        )
+        if not overlaps_symbol:
+            translate_component(component, 0.0, delta_y)
+
+
+def align_direct_battery_connector_links(positioned: dict[str, dict[str, Any]]) -> None:
+    """Allinea il polo di una batteria al pin quando il nodo li collega direttamente."""
+    terminals_by_node: dict[str, list[tuple[str, dict[str, Any]]]] = {}
+    for component_id, component in positioned.items():
+        for terminal in component.get("terminals") or []:
+            node_id = str(terminal.get("node_id") or "")
+            if node_id and node_id != "0":
+                terminals_by_node.setdefault(node_id, []).append((component_id, terminal))
+
+    for terminals in terminals_by_node.values():
+        if len(terminals) != 2:
+            continue
+        first_id, first_terminal = terminals[0]
+        second_id, second_terminal = terminals[1]
+        first_component = positioned.get(first_id) or {}
+        second_component = positioned.get(second_id) or {}
+        if {str(first_component.get("component_type") or ""), str(second_component.get("component_type") or "")} != {
+            "battery",
+            "connector",
+        }:
+            continue
+        battery_id, battery_terminal, connector_terminal = (
+            (first_id, first_terminal, second_terminal)
+            if first_component.get("component_type") == "battery"
+            else (second_id, second_terminal, first_terminal)
+        )
+        battery = positioned.get(battery_id) or {}
+        direction = terminal_outward_direction(battery_terminal)
+        if battery.get("orientation") != "vertical" or not direction or direction[1] == 0:
+            continue
+        target_terminal_y = float(connector_terminal.get("y") or 0) - direction[1] * 22.0
+        delta_y = target_terminal_y - float(battery_terminal.get("y") or 0)
+        if abs(delta_y) > 70.0:
+            continue
+        current_bounds = component_symbol_bounds(battery)
+        candidate_bounds = (
+            current_bounds[0],
+            current_bounds[1] + delta_y,
+            current_bounds[2],
+            current_bounds[3] + delta_y,
+        )
+        overlaps_symbol = any(
+            other_id != battery_id
+            and other.get("component_type") not in {"ground", "connector"}
+            and rectangle_overlap_area(candidate_bounds, component_symbol_bounds(other)) > 1.0
+            for other_id, other in positioned.items()
+        )
+        if not overlaps_symbol:
+            translate_component(battery, 0.0, delta_y)
+
+
+def align_connector_ground_symbols(positioned: dict[str, dict[str, Any]], model: dict[str, Any]) -> None:
+    """Dispone una massa sotto un pin quando i due terminali formano un gruppo diretto."""
+    direct_ground_groups = [
+        set(str(terminal_id) for terminal_id in group)
+        for node in model.get("nodes") or []
+        if isinstance(node, dict) and str(node.get("id") or "") == "0"
+        for group in node.get("source_groups") or []
+        if isinstance(group, list) and len(group) == 2
+    ]
+    connector_terminals = [
+        terminal
+        for component in positioned.values()
+        if component.get("component_type") == "connector"
+        for terminal in component.get("terminals") or []
+    ]
+    ground_terminals = [
+        (component, (component.get("terminals") or [{}])[0])
+        for component in positioned.values()
+        if component.get("component_type") == "ground" and component.get("terminals")
+    ]
+    for connector_terminal in connector_terminals:
+        connector_id = str(connector_terminal.get("terminal_id") or "")
+        for ground, ground_terminal in ground_terminals:
+            ground_id = str(ground_terminal.get("terminal_id") or "")
+            if not any({connector_id, ground_id} == group for group in direct_ground_groups):
+                continue
+            target_x = float(connector_terminal.get("x") or 0)
+            target_y = float(connector_terminal.get("y") or 0) + 56.0
+            candidate_bounds = (target_x - 22.0, target_y, target_x + 22.0, target_y + 30.0)
+            overlaps_symbol = any(
+                other is not ground
+                and other.get("component_type") != "ground"
+                and rectangle_overlap_area(candidate_bounds, component_symbol_bounds(other)) > 1.0
+                for other in positioned.values()
+            )
+            if overlaps_symbol:
+                continue
+            ground_terminal["x"] = target_x
+            ground_terminal["y"] = target_y
+            ground["x"] = target_x
+            ground["y"] = target_y + 15.0
+
+
+def align_direct_vertical_ground_symbols(positioned: dict[str, dict[str, Any]], model: dict[str, Any]) -> None:
+    """Centra una massa sul componente quando il Graph JSON ne dichiara il ritorno diretto."""
+    direct_ground_groups = [
+        set(str(terminal_id) for terminal_id in group)
+        for node in model.get("nodes") or []
+        if isinstance(node, dict) and str(node.get("id") or "") == "0"
+        for group in node.get("source_groups") or []
+        if isinstance(group, list) and len(group) == 2
+    ]
+    ground_terminals = [
+        (component, (component.get("terminals") or [{}])[0])
+        for component in positioned.values()
+        if component.get("component_type") == "ground" and component.get("terminals")
+    ]
+
+    for component in positioned.values():
+        if component.get("component_type") in {"ground", "connector"}:
+            continue
+        for terminal in component.get("terminals") or []:
+            direction = terminal_outward_direction(terminal)
+            if not direction or direction[0] != 0:
+                continue
+            terminal_id = str(terminal.get("terminal_id") or "")
+            terminal_x = float(terminal.get("x") or 0)
+            terminal_y = float(terminal.get("y") or 0)
+            for ground, ground_terminal in ground_terminals:
+                ground_id = str(ground_terminal.get("terminal_id") or "")
+                if not any({terminal_id, ground_id} == group for group in direct_ground_groups):
+                    continue
+                ground_y = float(ground_terminal.get("y") or 0)
+                # La massa deve restare davanti al terminale, non essere trascinata oltre il simbolo.
+                if direction[1] * (ground_y - terminal_y) <= 0:
+                    continue
+                delta_x = terminal_x - float(ground.get("x") or 0)
+                current_bounds = component_symbol_bounds(ground)
+                candidate_bounds = (
+                    current_bounds[0] + delta_x,
+                    current_bounds[1],
+                    current_bounds[2] + delta_x,
+                    current_bounds[3],
+                )
+                overlaps_symbol = any(
+                    other is not ground
+                    and other.get("component_type") != "ground"
+                    and rectangle_overlap_area(candidate_bounds, component_symbol_bounds(other)) > 1.0
+                    for other in positioned.values()
+                )
+                if overlaps_symbol:
+                    continue
+                ground_terminal["x"] = terminal_x
+                ground["x"] = terminal_x
+
+
 def rectangle_overlap_area(
     first: tuple[float, float, float, float], second: tuple[float, float, float, float]
 ) -> float:
@@ -1420,6 +1621,29 @@ def terminals_face_each_other(
     return start_points_to_end and end_points_to_start
 
 
+def near_axis_facing_route(
+    start_point: tuple[float, float],
+    end_point: tuple[float, float],
+    start_direction: tuple[float, float] | None,
+    end_direction: tuple[float, float] | None,
+) -> list[tuple[float, float]] | None:
+    """Collega direttamente terminali contrapposti quasi allineati dalle bbox."""
+    if not start_direction or not end_direction:
+        return None
+    delta_x = end_point[0] - start_point[0]
+    delta_y = end_point[1] - start_point[1]
+    start_points_to_end = start_direction[0] * delta_x + start_direction[1] * delta_y > 0
+    end_points_to_start = end_direction[0] * -delta_x + end_direction[1] * -delta_y > 0
+    if not (start_points_to_end and end_points_to_start):
+        return None
+    # Le bbox estratte dall'immagine possono differire di pochi pixel pur rappresentando una verticale unica.
+    if start_direction[0] == 0 and end_direction[0] == 0 and abs(delta_x) <= 8.0:
+        return [start_point, (start_point[0], end_point[1]), end_point]
+    if start_direction[1] == 0 and end_direction[1] == 0 and abs(delta_y) <= 8.0:
+        return [start_point, (end_point[0], start_point[1]), end_point]
+    return None
+
+
 def terminal_escape_point(
     point: tuple[float, float], direction: tuple[float, float] | None
 ) -> tuple[float, float]:
@@ -1428,6 +1652,40 @@ def terminal_escape_point(
         return point
     lead_length = 22.0
     return point[0] + direction[0] * lead_length, point[1] + direction[1] * lead_length
+
+
+def route_respects_terminal_directions(
+    points: list[tuple[float, float]],
+    start_direction: tuple[float, float] | None,
+    end_direction: tuple[float, float] | None,
+) -> bool:
+    """Esclude percorsi che tornano subito dentro un terminale dopo esserne usciti."""
+    segments = route_segments(points)
+    if len(segments) >= 2 and start_direction:
+        first_escape = (
+            segments[0][1][0] - segments[0][0][0],
+            segments[0][1][1] - segments[0][0][1],
+        )
+        following = (
+            segments[1][1][0] - segments[1][0][0],
+            segments[1][1][1] - segments[1][0][1],
+        )
+        if first_escape[0] * start_direction[0] + first_escape[1] * start_direction[1] > 0:
+            if following[0] * start_direction[0] + following[1] * start_direction[1] < 0:
+                return False
+    if len(segments) >= 2 and end_direction:
+        last_approach = (
+            segments[-1][1][0] - segments[-1][0][0],
+            segments[-1][1][1] - segments[-1][0][1],
+        )
+        previous = (
+            segments[-2][1][0] - segments[-2][0][0],
+            segments[-2][1][1] - segments[-2][0][1],
+        )
+        if last_approach[0] * end_direction[0] + last_approach[1] * end_direction[1] < 0:
+            if previous[0] * end_direction[0] + previous[1] * end_direction[1] > 0:
+                return False
+    return True
 
 
 def route_connection(
@@ -1460,11 +1718,22 @@ def route_connection(
         and "connector_bridge" in {str(start_component.get("placement") or ""), str(end_component.get("placement") or "")}
         and abs(start_point[1] - end_point[1]) < 0.01
     )
-    if connector_bridge_pair:
+    connector_ground_pair = (
+        {str(start_component.get("component_type") or ""), str(end_component.get("component_type") or "")}
+        == {"connector", "ground"}
+        and abs(start_point[0] - end_point[0]) < 0.01
+    )
+    near_facing_route = near_axis_facing_route(start_point, end_point, start_direction, end_direction)
+    if connector_ground_pair:
+        # Una massa centrata sotto un pin usa una verticale pulita, senza corsie laterali.
+        candidates.append([start_point, end_point])
+    elif connector_bridge_pair:
         # I pin e la dorsale adiacente sono gia' allineati: nessuna corsia di fuga.
         candidates.append([start_point, end_point])
     elif terminals_face_each_other(start_point, end_point, start_direction, end_direction):
         candidates.append([start_point, end_point])
+    elif near_facing_route:
+        candidates.append(near_facing_route)
     elif start_side and start_side == end_side and start_side in {"top", "bottom"}:
         lane_y = min(start_point[1], end_point[1]) - 22.0 if start_side == "top" else max(start_point[1], end_point[1]) + 22.0
         candidates.append([start_point, (start_point[0], lane_y), (end_point[0], lane_y), end_point])
@@ -1492,6 +1761,13 @@ def route_connection(
             ]
         )
     compact_candidates = [compact_route_points(candidate) for candidate in candidates]
+    valid_candidates = [
+        candidate
+        for candidate in compact_candidates
+        if route_respects_terminal_directions(candidate, start_direction, end_direction)
+    ]
+    if valid_candidates:
+        compact_candidates = valid_candidates
     selected = min(compact_candidates, key=lambda candidate: route_score(candidate, obstacles))
     return [{"x": round(point[0], 2), "y": round(point[1], 2)} for point in selected]
 
@@ -1595,14 +1871,18 @@ def build_viewer_layout(run_dir: Path) -> dict[str, Any]:
     component_positions, warnings = build_image_guided_components(components, geometry_seed, transform)
     relocate_overlapping_ground_symbols(component_positions, model)
     align_near_perpendicular_leads(component_positions)
+    align_near_series_components(component_positions)
+    align_direct_battery_connector_links(component_positions)
     realign_connector_bridges(component_positions)
+    align_connector_ground_symbols(component_positions, model)
+    align_direct_vertical_ground_symbols(component_positions, model)
     node_points = collect_node_points(component_positions)
     node_positions = build_node_positions(model, node_points)
     connections = route_layout_connections(build_node_connections(node_points, model), component_positions)
     layout_status = "image_guided" if geometry_seed.get("status") == "loaded" else "fallback"
     return {
         "source_format": "pipeline2.0_viewer_layout",
-        "schema_version": 23,
+        "schema_version": 29,
         "metadata": {
             "run_dir": str(run_dir),
             "source_model_path": str(run_dir / VIEWER_MODEL_NAME),

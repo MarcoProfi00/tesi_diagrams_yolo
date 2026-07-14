@@ -75,6 +75,8 @@ CHAT_PROMPT_NAME = "11_agent_prompt_chat.md"
 CHAT_RESPONSE_NAME = "11_agent_response_chat.md"
 MAX_EXECUTABLE_SCENARIOS = 5
 EXPERIMENT2_CHAT_DIRNAME = "experiment2_chat"
+INTERACTIVE_CHAT_DIRNAME = "experiment_chat"
+INTERACTIVE_HISTORY_EXPERIMENTS = {"experiment3_1"}
 CHAT_HISTORY_JSON_NAME = "chat_history.json"
 CHAT_HISTORY_MD_NAME = "chat_history.md"
 SCENARIO_REGISTRY_JSON_NAME = "scenario_registry.json"
@@ -319,15 +321,18 @@ def project_relative(path: Path) -> str:
 
 
 def is_experiment2_history_enabled(experiment: str | None) -> bool:
-    """Abilita history/registry server-side per Esperimento 2 e sottofasi."""
-    return bool(experiment) and str(experiment).startswith("experiment2")
+    """Abilita history/registry per le root interattive supportate."""
+    normalized_experiment = str(experiment or "")
+    return normalized_experiment.startswith("experiment2") or normalized_experiment in INTERACTIVE_HISTORY_EXPERIMENTS
 
 
 def build_experiment2_chat_dir(output_dir: Path, experiment: str | None) -> Path | None:
-    """Restituisce la cartella della chat history ufficiale di Esperimento 2."""
+    """Restituisce la cartella sessione mantenendo compatibilita con Experiment 2."""
     if not is_experiment2_history_enabled(experiment):
         return None
-    return output_dir / EXPERIMENT2_CHAT_DIRNAME
+    if str(experiment or "").startswith("experiment2"):
+        return output_dir / EXPERIMENT2_CHAT_DIRNAME
+    return output_dir / INTERACTIVE_CHAT_DIRNAME
 
 
 def empty_experiment2_chat_history(batch: str, circuit: str, experiment: str) -> dict[str, Any]:
@@ -488,7 +493,7 @@ def clear_experiment2_chat_history(
     circuit: str,
     experiment: str | None,
 ) -> bool:
-    """Azzera la chat history ufficiale di Esperimento 2."""
+    """Azzera la chat history della sessione interattiva corrente."""
     chat_dir = build_experiment2_chat_dir(output_dir, experiment)
     if chat_dir is None:
         return False
@@ -503,7 +508,7 @@ def clear_experiment2_scenario_registry(
     circuit: str,
     experiment: str | None,
 ) -> bool:
-    """Azzera il registry scenari ufficiale di Esperimento 2."""
+    """Azzera il registry scenari della sessione interattiva corrente."""
     chat_dir = build_experiment2_chat_dir(output_dir, experiment)
     if chat_dir is None:
         return False
@@ -533,7 +538,7 @@ def clear_experiment2_session_state(
     experiment: str | None,
 ) -> dict[str, Any]:
     """
-    Reset completo della sessione Experiment 2 per un circuito.
+    Reset completo della sessione interattiva per un circuito.
 
     Non tocca gli output base 01-08 copiati nell'esperimento. Azzera solo la
     conversazione, il registry, le run scenario e gli artefatti chat 10/11.
@@ -541,7 +546,7 @@ def clear_experiment2_session_state(
     if not is_experiment2_history_enabled(experiment):
         return {
             "cleared": False,
-            "reason": "Experiment 2 session clear is only enabled for experiment2.",
+            "reason": "Session clear is only enabled for supported interactive experiments.",
             "removed_files": [],
             "removed_dirs": [],
         }
@@ -571,10 +576,10 @@ def clear_experiment2_session_state(
 
 
 def empty_experiment2_scenario_registry(batch: str, circuit: str, experiment: str) -> dict[str, Any]:
-    """Costruisce il registro scenari file-based di Esperimento 2."""
+    """Costruisce il registro scenari file-based della sessione interattiva."""
     timestamp = datetime.now().isoformat(timespec="seconds")
     return {
-        "source_format": "pipeline2.0_experiment2_scenario_registry",
+        "source_format": "pipeline2.0_experiment_scenario_registry",
         "batch_name": batch,
         "experiment_name": experiment,
         "circuit_id": circuit,
@@ -594,7 +599,7 @@ def read_experiment2_scenario_registry(
     circuit: str,
     experiment: str | None,
 ) -> dict[str, Any] | None:
-    """Legge il registro scenari ufficiale di Esperimento 2."""
+    """Legge il registro scenari della sessione interattiva corrente."""
     chat_dir = build_experiment2_chat_dir(output_dir, experiment)
     if chat_dir is None:
         return None
@@ -611,7 +616,7 @@ def read_experiment2_scenario_registry(
     if not isinstance(data, dict):
         return empty_experiment2_scenario_registry(batch, circuit, str(experiment))
 
-    data.setdefault("source_format", "pipeline2.0_experiment2_scenario_registry")
+    data.setdefault("source_format", "pipeline2.0_experiment_scenario_registry")
     data.setdefault("batch_name", batch)
     data.setdefault("experiment_name", experiment)
     data.setdefault("circuit_id", circuit)
@@ -639,7 +644,7 @@ def write_experiment2_scenario_registry_files(chat_dir: Path, registry: dict[str
 def build_experiment2_scenario_registry_markdown(registry: dict[str, Any]) -> str:
     """Crea una vista Markdown del registro scenari."""
     lines = [
-        "# Experiment 2 scenario registry",
+        "# Pipeline 2.0 scenario registry",
         "",
         f"- Batch: `{registry.get('batch_name')}`",
         f"- Experiment: `{registry.get('experiment_name')}`",
@@ -1297,7 +1302,7 @@ def load_or_build_viewer_layout(run_dir: Path) -> dict[str, Any]:
     """Legge o genera `14_viewer_layout.json` nel formato generale corrente."""
     layout_path = run_dir / "14_viewer_layout.json"
     layout = read_json_safe(layout_path)
-    if layout and int(layout.get("schema_version") or 0) >= 23:
+    if layout and int(layout.get("schema_version") or 0) >= 29:
         return layout
     step14 = load_step14_module()
     built = step14.write_viewer_layout(run_dir)
@@ -1311,7 +1316,9 @@ def load_or_build_viewer_svg(run_dir: Path) -> str:
     layout_path = run_dir / "14_viewer_layout.json"
     dependencies = [path for path in (model_path, layout_path) if path.exists()]
     if svg_path.exists() and dependencies and svg_path.stat().st_mtime >= max(path.stat().st_mtime for path in dependencies):
-        return svg_path.read_text(encoding="utf-8")
+        svg = svg_path.read_text(encoding="utf-8")
+        if 'data-viewer-version="9"' in svg:
+            return svg
     step15 = load_step15_module()
     svg = step15.write_viewer_svg(run_dir)
     return svg if isinstance(svg, str) else ""
