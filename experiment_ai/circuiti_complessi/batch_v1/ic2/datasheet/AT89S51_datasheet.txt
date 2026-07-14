@@ -1,0 +1,114 @@
+IC: AT89S51
+
+Descrizione:
+L'AT89S51 e' un microcontrollore CMOS a 8 bit compatibile con la famiglia 8051.
+Integra memoria Flash, RAM, porte I/O digitali, timer/counter, porta seriale e logica di interrupt.
+Nel circuito considerato legge il dato digitale dell'ADC0804 e pilota le uscite verso i display a 7 segmenti.
+
+Caratteristiche principali:
+- CPU compatibile MCS-51 / 8051.
+- Memoria Flash interna: 4 Kbyte.
+- RAM interna: 128 byte.
+- Linee I/O programmabili: 32.
+- Timer/counter: due timer/counter a 16 bit.
+- Porta seriale full duplex.
+- Sorgenti di interrupt multiple.
+- Oscillatore e circuito di clock integrati, con quarzo o risonatore esterno.
+
+Pin principali:
+- Pin 1: P1.0, porta I/O.
+- Pin 2: P1.1, porta I/O.
+- Pin 3: P1.2, porta I/O.
+- Pin 4: P1.3, porta I/O.
+- Pin 5: P1.4, porta I/O.
+- Pin 6: P1.5, porta I/O.
+- Pin 7: P1.6, porta I/O.
+- Pin 8: P1.7, porta I/O.
+- Pin 9: RST, reset.
+- Pin 10: P3.0 / RXD.
+- Pin 11: P3.1 / TXD.
+- Pin 12: P3.2 / INT0.
+- Pin 13: P3.3 / INT1.
+- Pin 14: P3.4 / T0.
+- Pin 15: P3.5 / T1.
+- Pin 16: P3.6 / WR.
+- Pin 17: P3.7 / RD.
+- Pin 18: XTAL2.
+- Pin 19: XTAL1.
+- Pin 20: GND.
+- Pin 21: P2.0 / A8.
+- Pin 22: P2.1 / A9.
+- Pin 23: P2.2 / A10.
+- Pin 24: P2.3 / A11.
+- Pin 25: P2.4 / A12.
+- Pin 26: P2.5 / A13.
+- Pin 27: P2.6 / A14.
+- Pin 28: P2.7 / A15.
+- Pin 29: PSEN.
+- Pin 30: ALE / PROG.
+- Pin 31: EA / VPP.
+- Pin 32: P0.7 / AD7.
+- Pin 33: P0.6 / AD6.
+- Pin 34: P0.5 / AD5.
+- Pin 35: P0.4 / AD4.
+- Pin 36: P0.3 / AD3.
+- Pin 37: P0.2 / AD2.
+- Pin 38: P0.1 / AD1.
+- Pin 39: P0.0 / AD0.
+- Pin 40: VCC.
+
+Alimentazione:
+- Il microcontrollore lavora tipicamente con alimentazione a 5 V.
+- Pin 40 deve essere collegato a VCC.
+- Pin 20 deve essere collegato a GND.
+- Il riferimento di massa deve essere comune con gli altri circuiti digitali collegati, come ADC0804 e display.
+
+Reset:
+- Pin 9 RST e' l'ingresso di reset.
+- Il reset e' attivo alto.
+- Per il funzionamento normale, dopo l'impulso iniziale di reset il pin RST deve tornare basso.
+- Una rete RC o un pulsante possono essere usati per generare il reset all'accensione.
+- Se RST resta alto, il microcontrollore rimane in reset e il programma non viene eseguito.
+
+Clock:
+- Pin 18 XTAL2 e pin 19 XTAL1 sono usati per il quarzo, risonatore o clock esterno.
+- Nel collegamento tipico il quarzo e' tra XTAL1 e XTAL2, con due condensatori verso GND.
+- Senza clock valido il microcontrollore non esegue il programma.
+
+Porte I/O:
+- Port 1, P1.0-P1.7, e' una porta I/O a 8 bit con pull-up interni.
+- Port 3, P3.0-P3.7, e' una porta I/O con funzioni alternative.
+- P3.6 puo' essere usato come WR.
+- P3.7 puo' essere usato come RD.
+- P3.2 e P3.3 possono essere usati come ingressi interrupt.
+- Port 0, P0.0-P0.7, e' una porta I/O open-drain quando usata come I/O generale.
+- Se Port 0 pilota carichi digitali o display, servono pull-up o una rete esterna adeguata.
+- Port 2, P2.0-P2.7, puo' funzionare come I/O generale oppure come bus indirizzi alto in sistemi con memoria esterna.
+
+EA / memoria programma:
+- Pin 31 EA / VPP seleziona l'uso della memoria programma interna o esterna.
+- EA alto permette l'esecuzione dalla memoria Flash interna.
+- EA basso forza l'uso di memoria programma esterna.
+- Se il circuito usa il programma interno dell'AT89S51, EA deve essere collegato alto.
+
+Interfaccia con ADC0804:
+- Il bus dati D0-D7 dell'ADC0804 puo' essere collegato a una porta parallela del microcontrollore.
+- Nel circuito considerato D0-D7 dell'ADC0804 sono collegati a P1.0-P1.7.
+- Le linee CS, RD, WR e INTR dell'ADC0804 possono essere collegate a pin della Port 3.
+- P3.6 / WR e P3.7 / RD sono adatti per segnali di controllo di lettura/scrittura.
+- Il microcontrollore avvia la conversione dell'ADC, attende INTR e poi legge il dato digitale sul bus D0-D7.
+
+Interfaccia con display:
+- Le porte I/O possono pilotare segmenti di display tramite resistenze di limitazione.
+- I segmenti a, b, c, d, e, f, g e punto decimale devono essere collegati a uscite digitali coerenti con il programma.
+- Se sono presenti piu' display, il microcontrollore puo' usare transistori o linee di abilitazione per multiplexare le cifre.
+
+Collegamenti attesi nel circuito:
+- Pin 40 collegato a +5 V.
+- Pin 20 collegato a GND.
+- Pin 31 EA collegato alto se si usa la memoria Flash interna.
+- Pin 9 RST collegato a una rete di reset che non lo mantenga sempre alto.
+- Pin 18 e pin 19 collegati al circuito di clock.
+- P1.0-P1.7 collegati al bus dati D0-D7 dell'ADC0804.
+- P3.4-P3.7 collegati alle linee di controllo dell'ADC0804, se usati dal programma.
+- Le uscite verso i display devono passare tramite resistenze o driver adeguati.

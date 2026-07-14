@@ -1,0 +1,68 @@
+{
+  "metadata": {
+    "circuit_id": "b02",
+    "batch": "B",
+    "batch_dir": "batchB",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\images\\b02.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\json\\b02.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "b02.jpg",
+    "json_file": "b02.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:38:18",
+    "judge_latency_seconds": 11.257,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=12792, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=574, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=13366)",
+  "judge_result": {
+    "circuit_id": "b02",
+    "batch": "B",
+    "image_file": "b02.jpg",
+    "json_file": "b02.json",
+    "image_graph_fidelity_score": 95,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 23,
+      "graph_connections": 53,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "terminal_polarity_uncertainty",
+        "description": "La polarità dei condensatori elettrolitici nel JSON appare coerente con i marker '+' visibili, ma la mappatura C1/C2 verso polarized_capacitor20.1/20.2 non è verificabile solo dagli instance_id; nessun impatto topologico certo."
+      },
+      {
+        "type": "component_mapping_ambiguity",
+        "description": "I quattro resistori e i due transistor richiedono mapping topologico tra componenti equivalenti; il graph risulta coerente con una permutazione plausibile, quindi non emerge errore topologico certo."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "Il mapping esatto tra resistor22.1..22.4 e R1..R4 non è deducibile dagli instance_id, ma esiste una corrispondenza topologica coerente.",
+      "Il mapping esatto tra polarized_capacitor20.1/20.2 e C1/C2 è ambiguo come identità nominale, ma i due collegamenti incrociati dei condensatori sono coerenti con l'immagine.",
+      "Le etichette X1, X2, B1, B2 sono callout di nodo e non componenti separati; la loro assenza come endpoint dedicati nel graph non altera la topologia.",
+      "L'orientamento anodo/catodo dei LED è compatibile con il simbolo visibile, ma non è necessario distinguere quale instance_id LED corrisponda a D1 o D2 per validare il graph."
+    ],
+    "short_explanation": "Il campo graph rappresenta fedelmente la topologia visibile del multivibratore astabile: nodo +5V comune alle due anodi LED e ai capi superiori di R2/R4, rami LED+resistenza verso i collettori, resistenze di bias dai +5V alle basi, condensatori incrociati tra collettore di un transistor e base dell'altro, ed entrambi gli emettitori a massa. Non risultano collegamenti inventati, mancanti o fuse/split di net; restano solo lievi ambiguità di mapping tra componenti equivalenti."
+  },
+  "raw_model_output": "{\"circuit_id\":\"b02\",\"batch\":\"B\",\"image_file\":\"b02.jpg\",\"json_file\":\"b02.json\",\"image_graph_fidelity_score\":95,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":23,\"graph_connections\":53,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":2},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"terminal_polarity_uncertainty\",\"description\":\"La polarità dei condensatori elettrolitici nel JSON appare coerente con i marker '+' visibili, ma la mappatura C1/C2 verso polarized_capacitor20.1/20.2 non è verificabile solo dagli instance_id; nessun impatto topologico certo.\"},{\"type\":\"component_mapping_ambiguity\",\"description\":\"I quattro resistori e i due transistor richiedono mapping topologico tra componenti equivalenti; il graph risulta coerente con una permutazione plausibile, quindi non emerge errore topologico certo.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"Il mapping esatto tra resistor22.1..22.4 e R1..R4 non è deducibile dagli instance_id, ma esiste una corrispondenza topologica coerente.\",\"Il mapping esatto tra polarized_capacitor20.1/20.2 e C1/C2 è ambiguo come identità nominale, ma i due collegamenti incrociati dei condensatori sono coerenti con l'immagine.\",\"Le etichette X1, X2, B1, B2 sono callout di nodo e non componenti separati; la loro assenza come endpoint dedicati nel graph non altera la topologia.\",\"L'orientamento anodo/catodo dei LED è compatibile con il simbolo visibile, ma non è necessario distinguere quale instance_id LED corrisponda a D1 o D2 per validare il graph.\"],\"short_explanation\":\"Il campo graph rappresenta fedelmente la topologia visibile del multivibratore astabile: nodo +5V comune alle due anodi LED e ai capi superiori di R2/R4, rami LED+resistenza verso i collettori, resistenze di bias dai +5V alle basi, condensatori incrociati tra collettore di un transistor e base dell'altro, ed entrambi gli emettitori a massa. Non risultano collegamenti inventati, mancanti o fuse/split di net; restano solo lievi ambiguità di mapping tra componenti equivalenti.\"}"
+}

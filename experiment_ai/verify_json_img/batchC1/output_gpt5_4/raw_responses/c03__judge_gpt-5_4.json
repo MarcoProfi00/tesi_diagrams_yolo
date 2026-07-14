@@ -1,0 +1,66 @@
+{
+  "metadata": {
+    "circuit_id": "c03",
+    "batch": "C1",
+    "batch_dir": "batchC1",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\images\\c03.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\json\\c03.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "c03.jpg",
+    "json_file": "c03.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:24:12",
+    "judge_latency_seconds": 24.645,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=16480, input_tokens_details=InputTokensDetails(cached_tokens=16128), output_tokens=1429, output_tokens_details=OutputTokensDetails(reasoning_tokens=859), total_tokens=17909)",
+  "judge_result": {
+    "circuit_id": "c03",
+    "batch": "C1",
+    "image_file": "c03.jpg",
+    "json_file": "c03.json",
+    "image_graph_fidelity_score": 97,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 23,
+      "graph_connections": 55,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "component_class_semantic_mismatch",
+        "description": "Alcuni condensatori visivamente non polarizzati (C2, C3, C4, C5) sono rappresentati come Polarized_Capacitor nel JSON, ma i collegamenti terminale-terminale risultano comunque coerenti con l'immagine."
+      },
+      {
+        "type": "terminal_naming_ic_generic",
+        "description": "I pin del LM555 sono nominati con left/right/top/bottom invece che con ruoli funzionali; tuttavia i numeri di pin e i collegamenti visibili risultano coerenti."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "La polarita reale di C2, C3, C4 e C5 non e chiaramente ricavabile come componente polarizzato dall'immagine; questo non cambia la topologia verificata.",
+      "I due terminali esterni inferiori (ingresso di riferimento e ritorno Vout) sono entrambi fusi al bus inferiore nel JSON; nell'immagine questa fusione e effettivamente visibile tramite il bus continuo."
+    ],
+    "short_explanation": "Il campo graph del JSON riproduce con alta fedelta i nodi visibili dell'immagine: ingresso tramite C1, ramo D1-R2-R3-Q1, nodo comune Q1 collector/C2/LM555 pin 2-6/R4, nodo LM555 pin7/C4/R5, uscita pin3-R6-Vout-C5, alimentazione +12V sui pin 8 e 4, e massa comune su pin1, emettitore di Q1 e condensatori verso il bus inferiore. Non emergono errori topologici certi; restano solo lievi imprecisioni semantiche di classe."
+  },
+  "raw_model_output": "{\n  \"circuit_id\": \"c03\",\n  \"batch\": \"C1\",\n  \"image_file\": \"c03.jpg\",\n  \"json_file\": \"c03.json\",\n  \"image_graph_fidelity_score\": 97,\n  \"decision\": \"VERY_HIGH\",\n  \"usable_as_graph_base\": true,\n  \"scores\": {\n    \"components\": 10,\n    \"terminals_pins\": 23,\n    \"graph_connections\": 55,\n    \"visible_semantics\": 9\n  },\n  \"error_counts\": {\n    \"critical\": 0,\n    \"major\": 0,\n    \"minor\": 2\n  },\n  \"critical_errors\": [],\n  \"major_errors\": [],\n  \"minor_errors\": [\n    {\n      \"type\": \"component_class_semantic_mismatch\",\n      \"description\": \"Alcuni condensatori visivamente non polarizzati (C2, C3, C4, C5) sono rappresentati come Polarized_Capacitor nel JSON, ma i collegamenti terminale-terminale risultano comunque coerenti con l'immagine.\"\n    },\n    {\n      \"type\": \"terminal_naming_ic_generic\",\n      \"description\": \"I pin del LM555 sono nominati con left/right/top/bottom invece che con ruoli funzionali; tuttavia i numeri di pin e i collegamenti visibili risultano coerenti.\"\n    }\n  ],\n  \"missing_from_json\": [],\n  \"extra_in_json\": [],\n  \"wrong_graph_connections\": [],\n  \"uncertain_points\": [\n    \"La polarita reale di C2, C3, C4 e C5 non e chiaramente ricavabile come componente polarizzato dall'immagine; questo non cambia la topologia verificata.\",\n    \"I due terminali esterni inferiori (ingresso di riferimento e ritorno Vout) sono entrambi fusi al bus inferiore nel JSON; nell'immagine questa fusione e effettivamente visibile tramite il bus continuo.\"\n  ],\n  \"short_explanation\": \"Il campo graph del JSON riproduce con alta fedelta i nodi visibili dell'immagine: ingresso tramite C1, ramo D1-R2-R3-Q1, nodo comune Q1 collector/C2/LM555 pin 2-6/R4, nodo LM555 pin7/C4/R5, uscita pin3-R6-Vout-C5, alimentazione +12V sui pin 8 e 4, e massa comune su pin1, emettitore di Q1 e condensatori verso il bus inferiore. Non emergono errori topologici certi; restano solo lievi imprecisioni semantiche di classe.\"\n}"
+}

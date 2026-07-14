@@ -1,0 +1,884 @@
+[
+  {
+    "metadata": {
+      "circuit": "ic13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic13\\results_json\\ic13_gpt-4.1-mini_20260518_110719.txt",
+      "model_under_test": "gpt-4.1-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 17.093,
+      "timestamp": "2026-05-18 11:17:21",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8811, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=918, output_tokens_details=OutputTokensDetails(reasoning_tokens=157), total_tokens=9729)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9523809523809523,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 10 Input 3 e pin 12 Input 4 del bridge B non collegati/non pilotati, quindi il L298 non riceve comandi validi per far girare il motore",
+        "Enable B pin 11 basso o non correttamente pilotato",
+        "Alimentazioni VS pin 4 o VSS pin 9 assenti/insufficienti"
+      ],
+      "model_primary_cause": "Ingressi di controllo pin 10 Input3 e pin 12 Input4 non collegati a nessun segnale, quindi bridge B non comandato",
+      "major_errors": [],
+      "hallucinations": [
+        "Afferma che il pin 8 GND è rappresentato da bottom_1 e bottom_2, ma bottom_1 nel JSON è pin 15 Sense B; bottom_2 è il pin GND non numerato. L'errore non compromette la diagnosi principale.",
+        "Descrive i terminali 26.1, 26.2, 26.3 come presumibilmente VS, Enable, VSS o segnale di controllo: è una deduzione plausibile ma non completamente esplicitata dal JSON."
+      ],
+      "missed_important_points": [
+        "Avrebbe potuto esplicitare che, per far girare il motore, con Enable alto i pin 10 e 12 devono essere in stati opposti H/L o L/H; se uguali causano fast stop.",
+        "Non sottolinea chiaramente che i pin 10 e 12 sono fisicamente senza connessione nel JSON, non solo di livello ignoto."
+      ],
+      "strengths": [
+        "Identifica correttamente il L298 e il bridge B come sezione di pilotaggio del motore.",
+        "Rileva correttamente che il motore è tra pin 13 Out3 e pin 14 Out4.",
+        "Usa correttamente i warning del JSON sugli ingressi pin 10 e pin 12 non connessi.",
+        "Usa correttamente il datasheet per Enable B, livelli logici e alimentazioni VS/VSS.",
+        "Ordina bene le cause più probabili, mettendo al primo posto gli ingressi non collegati.",
+        "Propone controlli pratici sensati: misure sui pin 10, 12, 11, 4 e 9 e verifica del motore."
+      ],
+      "short_explanation": "La risposta è tecnicamente corretta e ben supportata da JSON e datasheet. La causa principale indicata, cioè pin 10 e pin 12 non collegati, è esattamente l'evidenza più forte per un motore che non gira. Buona anche la priorità data a Enable e alimentazioni come verifiche successive. Restano solo lievi imprecisioni sulla rappresentazione del GND/pin 15 e qualche deduzione sui terminali esterni."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic13\\results_json\\ic13_gpt-4.1-nano_20260518_111108.txt",
+      "model_under_test": "gpt-4.1-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 24.482,
+      "timestamp": "2026-05-18 11:17:45",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8499, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1336, output_tokens_details=OutputTokensDetails(reasoning_tokens=388), total_tokens=9835)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 13,
+      "max_score": 21,
+      "normalized_score": 0.619,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 10 Input 3 e pin 12 Input 4 del L298 risultano non collegati nel JSON, quindi i comandi C/D del bridge B sono flottanti o assenti e il motore non può essere comandato in marcia",
+        "Enable B pin 11 deve essere alto; nel JSON è collegato solo a un terminale esterno, quindi va verificato che Ven sia effettivamente >= 2.3 V",
+        "Verificare presenza delle alimentazioni VS su pin 4 e VSS su pin 9, anche se nel JSON risultano collegate a terminali e condensatori",
+        "Verificare che pin 13 e 14 siano collegati al motore e che Sense B pin 15 sia correttamente a massa"
+      ],
+      "model_primary_cause": "Alimentazione insufficiente o non collegata correttamente ai pin 4 VS e 9 VSS",
+      "major_errors": [
+        "Non identifica come causa principale l'evidenza più forte del JSON: i pin 10 e 12 del L298 sono esplicitamente non collegati",
+        "Interpreta erroneamente i warning su top_1 e top_4 come possibili problemi di alimentazione o condensatori, mentre corrispondono ai pin 10 e 12, cioè Input 3 e Input 4",
+        "Attribuisce troppa probabilità ai diodi di ricircolo come causa del motore che non gira, sebbene dal JSON risultino collegati coerentemente e non vi siano evidenze di guasto"
+      ],
+      "hallucinations": [
+        "La nota secondo cui i terminali top_1 e top_4 non collegati potrebbero indicare alimentazioni o condensatori non collegati è tecnicamente errata rispetto al pinout fornito",
+        "La formulazione sui condensatori che influirebbero a causa dei pin top_1/top_4 non collegati non è supportata dal JSON"
+      ],
+      "missed_important_points": [
+        "Manca una diagnosi esplicita che pin 10 e pin 12 sono proprio gli ingressi di direzione del bridge B e sono non connessi",
+        "Non evidenzia che con C e D uguali o flottanti il L298 può trovarsi in stop rapido o in stato indeterminato, quindi il motore non gira",
+        "Non distingue chiaramente tra difetti topologici presenti nel JSON e controlli generici possibili ma non evidenziati"
+      ],
+      "strengths": [
+        "Comprende correttamente la funzione generale del L298 come driver H-bridge per motore DC",
+        "Usa correttamente buona parte del datasheet: VS pin 4, VSS pin 9, Enable pin 11, ingressi pin 10 e 12, uscite pin 13 e 14, soglie logiche",
+        "Propone controlli pratici utili con multimetro sui livelli di alimentazione, enable e ingressi",
+        "Riconosce che l'Enable deve essere alto e che i segnali C/D devono essere corretti per far girare il motore"
+      ],
+      "short_explanation": "La risposta è utile e tecnicamente in parte corretta, ma sbaglia la priorità diagnostica. Dal JSON la causa più evidente è che i pin 10 e 12 del L298, cioè gli ingressi di comando del bridge B, sono non collegati. Il modello li cita genericamente come possibile problema, ma mette al primo posto l'alimentazione e interpreta erroneamente i warning top_1/top_4 come legati ad alimentazioni o condensatori. I controlli pratici sono buoni, ma la diagnosi principale non sfrutta correttamente l'evidenza topologica più forte."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic13\\results_json\\ic13_gpt-4o-mini_20260518_110620.txt",
+      "model_under_test": "gpt-4o-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 22.839,
+      "timestamp": "2026-05-18 11:18:08",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=7804, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1065, output_tokens_details=OutputTokensDetails(reasoning_tokens=216), total_tokens=8869)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 2,
+        "hallucination_absence": 2
+      },
+      "total_score": 13,
+      "max_score": 21,
+      "normalized_score": 0.619,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 10 Input 3 e pin 12 Input 4 del bridge B sono non collegati nel JSON, quindi il L298 non riceve i comandi logici necessari per far girare il motore",
+        "Enable B pin 11 potrebbe non essere alto perché è collegato solo a un terminale esterno e va verificato",
+        "Alimentazioni VS pin 4 e VSS pin 9 da verificare sui terminali esterni, con VSS nel range 4.5-7 V e VS presente per lo stadio di potenza"
+      ],
+      "model_primary_cause": "Pin Enable B non riceve tensione alta",
+      "major_errors": [
+        "Non dà priorità alla forte evidenza del JSON: i pin 10 e 12 sono esplicitamente non collegati, causa diretta e molto probabile del motore fermo",
+        "Afferma che il pin 4 VS non ha connessioni chiaramente definite verso un'alimentazione adeguata, ma nel JSON è collegato a terminale26.1, condensatore e diodi di ricircolo",
+        "In una sezione confonde i pin degli ingressi, indicando integrated_circuit11.1_top_2 come pin 12, mentre top_2 è pin 13; il pin 12 è top_4"
+      ],
+      "hallucinations": [
+        "Riferimento al controllo di velocità tramite ingressi senza evidenza specifica nel circuito fornito",
+        "Possibile insinuazione di collegamento VS non definito, non supportata dal graph perché VS è collegato a un terminale di alimentazione"
+      ],
+      "missed_important_points": [
+        "I pin 10 e 12 risultano nella lista warnings come unconnected_terminals e sono gli ingressi C/D indispensabili per Forward o Reverse",
+        "Con Enable alto ma ingressi flottanti/non collegati il comportamento è indeterminato o il motore non viene comandato correttamente",
+        "Non esplicita che per far girare il motore serve Enable=H e una combinazione opposta sugli ingressi: pin 10 H pin 12 L oppure pin 10 L pin 12 H",
+        "Non distingue chiaramente VSS pin 9, che deve essere 4.5-7 V, da VS pin 4, alimentazione di potenza"
+      ],
+      "strengths": [
+        "Riconosce correttamente il circuito come driver motore DC con L298 bridge B",
+        "Identifica correttamente Enable B pin 11, Out 3 pin 13 e Out 4 pin 14",
+        "Propone misure pratiche utili su Enable, ingressi e alimentazione",
+        "Nota correttamente che i terminali integrated_circuit11.1_top_1 e top_4 sono non collegati"
+      ],
+      "short_explanation": "La risposta è utile ma non ottimale: la causa più evidente dal JSON è che gli ingressi pin 10 e pin 12 del L298 sono non collegati, mentre il modello mette al primo posto Enable basso, che è possibile ma meno supportato. Usa discretamente il datasheet e propone controlli pratici, ma commette una confusione su un pin e interpreta in modo impreciso il collegamento di VS."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic13\\results_json\\ic13_gpt-5-mini_20260518_110911.txt",
+      "model_under_test": "gpt-5-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 17.703,
+      "timestamp": "2026-05-18 11:18:26",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9119, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=891, output_tokens_details=OutputTokensDetails(reasoning_tokens=241), total_tokens=10010)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9523809524,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin10/Input3 e pin12/Input4 del bridge B risultano non connessi, quindi il L298 non riceve comandi validi per pilotare il motore",
+        "Enable B pin11 potrebbe essere basso o non pilotato correttamente",
+        "Assenza o valore errato delle alimentazioni VS pin4 e/o VSS pin9"
+      ],
+      "model_primary_cause": "Gli ingressi di controllo C/D, pin10 e pin12 del L298, risultano scollegati e quindi il bridge non riceve comandi",
+      "major_errors": [],
+      "hallucinations": [
+        "L'affermazione che il pin Sense B collegato direttamente a GND possa attivare protezioni o impedire il corretto comportamento è poco supportata: nel L298 il sense può essere portato a massa, eventualmente tramite resistenza di shunt; l'assenza della resistenza non è di per sé una causa probabile di motore fermo.",
+        "La voce su motore/cablaggio rotto o IC guasto è generica e non direttamente supportata dal JSON, anche se è accettabile come controllo diagnostico secondario."
+      ],
+      "missed_important_points": [],
+      "strengths": [
+        "Identifica correttamente il circuito come ponte H L298 bridge B con motore tra pin13 e pin14.",
+        "Usa correttamente il JSON per rilevare che pin10 e pin12 sono non connessi, che è l'evidenza più forte.",
+        "Usa correttamente il datasheet per pinout, funzione di Enable, soglie logiche e alimentazioni VS/VSS.",
+        "Ordina bene le cause: ingressi scollegati, Enable, alimentazioni.",
+        "Propone misure pratiche sensate su ingressi, Enable, alimentazioni, uscite e motore."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida e individua come causa principale più probabile gli ingressi pin10 e pin12 non connessi, esattamente indicati dal JSON. Anche Enable e alimentazioni sono correttamente considerati come cause successive. L'unico limite rilevante è l'enfasi sul pin Sense collegato direttamente a massa come possibile causa di blocco, che non è ben supportata dal datasheet e non è una causa probabile del sintomo."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic13\\results_json\\ic13_gpt-5-nano_20260518_110804.txt",
+      "model_under_test": "gpt-5-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 22.1,
+      "timestamp": "2026-05-18 11:18:48",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10022, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1162, output_tokens_details=OutputTokensDetails(reasoning_tokens=392), total_tokens=11184)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 18,
+      "max_score": 21,
+      "normalized_score": 0.8571428571428571,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Input 3 pin 10 e Input 4 pin 12 del L298 non collegati/floating, quindi il bridge B non riceve comandi validi per far girare il motore",
+        "Enable B pin 11 non portato a livello alto, quindi il bridge B resta disabilitato",
+        "Alimentazioni VS pin 4 o VSS pin 9 assenti, errate o senza riferimento di massa comune"
+      ],
+      "model_primary_cause": "Ingressi Input 3 pin 10 e Input 4 pin 12 non collegati/floating",
+      "major_errors": [
+        "Afferma che il pin 15 Sense B è collegato tramite una resistenza verso massa, mentre nel JSON risulta collegato direttamente a GND e non è presente alcuna resistenza di sense.",
+        "Descrive terminal26.3/pin 9 VSS in modo confuso, includendo un riferimento errato a 'Output 4 positivo'."
+      ],
+      "hallucinations": [
+        "Resistenza di sense verso massa non presente nel circuito fornito.",
+        "Alcune affermazioni sui condensatori come bypass da 100 nF sono coerenti col datasheet ma il valore non è verificabile dal JSON, anche se l'immagine lo mostra.",
+        "Riferimento a sorgenti di segnale presunte per i terminali esterni non direttamente supportato dal JSON."
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che nel circuito reale i nodi C e D corrispondenti ai pin 10 e 12 sono solo terminali/stub non collegati a una sorgente di comando.",
+        "Non distingue bene tra pin Sense B direttamente a massa e configurazione datasheet con eventuale resistenza di sensing."
+      ],
+      "strengths": [
+        "Identifica correttamente il L298 e il bridge B con motore tra pin 13 e pin 14.",
+        "Usa correttamente il datasheet per pinout, funzione Enable e condizioni Forward/Reverse.",
+        "Individua come causa più probabile i pin 10 e 12 non collegati, che è l'evidenza principale del JSON.",
+        "Ordina correttamente le cause dando priorità agli ingressi non pilotati e poi all'Enable.",
+        "Propone controlli pratici utili su pin 10, pin 12, pin 11, VS, VSS e GND."
+      ],
+      "short_explanation": "La diagnosi principale è corretta: i pin Input 3 e Input 4 del bridge B risultano non collegati nel JSON, quindi il motore non può ricevere un comando Forward/Reverse valido. La risposta usa bene datasheet e JSON e fornisce controlli pratici. Presenta però alcune imprecisioni, soprattutto sulla presunta resistenza di sense e su un riferimento confuso al terminale VSS/pin 9."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic13\\results_json\\ic13_gpt-5.4-mini_20260518_110941.txt",
+      "model_under_test": "gpt-5.4-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 20.726,
+      "timestamp": "2026-05-18 11:19:08",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8766, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1073, output_tokens_details=OutputTokensDetails(reasoning_tokens=358), total_tokens=9839)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9523809524,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 10/Input 3 e pin 12/Input 4 del bridge B risultano non collegati nel JSON, quindi il L298 non riceve comandi logici definiti per far girare il motore",
+        "Pin 11/Enable B è collegato solo a un terminale esterno e potrebbe non essere portato alto; se basso o flottante il bridge B è disabilitato",
+        "Possibile assenza o valore errato delle alimentazioni VS su pin 4 e/o VSS su pin 9, da verificare ai terminali esterni, anche se topologicamente risultano collegate"
+      ],
+      "model_primary_cause": "Gli ingressi di comando del bridge B, pin 10/Input 3 e pin 12/Input 4, sono scollegati, quindi il ponte non riceve un comando valido; inoltre Enable B potrebbe non essere alto.",
+      "major_errors": [],
+      "hallucinations": [
+        "La risposta indica in un punto integrated_circuit11.1_bottom_1 e bottom_2 come GND dell'integrato; dal JSON bottom_1 è pin 15/Sense B collegato a massa, mentre bottom_2 non ha pin_number esplicito. È una piccola imprecisione di funzione/pin, non centrale per la diagnosi."
+      ],
+      "missed_important_points": [],
+      "strengths": [
+        "Identifica correttamente il L298 come ponte H e il motore collegato tra Out 3/pin 13 e Out 4/pin 14.",
+        "Usa correttamente il JSON per rilevare che pin 10 e pin 12 sono non collegati e cita anche il warning unconnected_terminals.",
+        "Usa correttamente il datasheet per spiegare il ruolo di Enable B e delle combinazioni Input 3/Input 4.",
+        "Dà priorità alla causa più supportata dai dati: ingressi di comando scollegati.",
+        "Propone controlli pratici realistici: misurare Enable, verificare i livelli sugli ingressi e controllare le alimentazioni."
+      ],
+      "short_explanation": "La risposta è tecnicamente molto coerente: individua come causa principale i pin 10 e 12 del L298 scollegati, che nel JSON sono esplicitamente segnalati come terminali non connessi, e considera correttamente anche Enable B non garantito alto. La diagnosi è ben supportata da datasheet e JSON. L'unica imprecisione rilevante è una lieve confusione nel descrivere bottom_1 come GND dell'integrato, mentre è il pin 15/Sense B collegato a massa."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic13\\results_json\\ic13_gpt-5.4-nano_20260518_111156.txt",
+      "model_under_test": "gpt-5.4-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 16.924,
+      "timestamp": "2026-05-18 11:19:25",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9325, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=853, output_tokens_details=OutputTokensDetails(reasoning_tokens=175), total_tokens=10178)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9523809523809523,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Input3 pin 10 e Input4 pin 12 del L298 non collegati/flottanti, quindi il bridge B non riceve comandi di direzione validi",
+        "Enable B pin 11 non alto o non pilotato correttamente",
+        "Alimentazioni VS pin 4 o VSS pin 9 assenti/fuori range oppure riferimento di massa non corretto"
+      ],
+      "model_primary_cause": "Input 3 pin10 e Input 4 pin12 del L298 lasciati flottanti/non collegati",
+      "major_errors": [],
+      "hallucinations": [
+        "La frase secondo cui le uscite sono collegate al motore 'tramite diodi' è imprecisa: il motore è direttamente tra Out3 e Out4, mentre i diodi sono di ricircolo/clamp sui nodi di uscita.",
+        "La mancanza di una resistenza di sense viene presentata come possibile causa, ma nel L298 il pin Sense può essere collegato direttamente a massa se non si usa il sensing; non è una causa probabile del motore fermo.",
+        "Il sospetto sui condensatori polarizzati deriva dal class_name del JSON, ma non è una forte evidenza circuitale e non è una causa probabile primaria del mancato avvio."
+      ],
+      "missed_important_points": [],
+      "strengths": [
+        "Identifica correttamente il L298 come driver H-bridge e il motore collegato tra pin 13 e pin 14.",
+        "Usa correttamente il datasheet per pinout, funzione di Enable, Input3/Input4, soglie logiche e alimentazioni VS/VSS.",
+        "Sfrutta bene il warning del JSON sugli ingressi pin 10 e pin 12 non collegati.",
+        "Ordina correttamente le cause, mettendo al primo posto gli ingressi di comando flottanti e subito dopo Enable e alimentazioni.",
+        "Propone misure pratiche realistiche su pin 10, 12, 11, 9 e masse."
+      ],
+      "short_explanation": "La risposta è tecnicamente molto buona: la diagnosi principale coincide con l'evidenza più forte del JSON, cioè Input3 e Input4 del bridge B del L298 non collegati. Anche Enable e alimentazioni sono correttamente indicati come controlli successivi. Ci sono solo alcune imprecisioni minori su diodi, sense resistor e condensatori, ma non compromettono la diagnosi principale."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic13\\results_json\\ic13_gpt-5.4_20260518_110540.txt",
+      "model_under_test": "gpt-5.4",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 21.525,
+      "timestamp": "2026-05-18 11:19:47",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8776, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1049, output_tokens_details=OutputTokensDetails(reasoning_tokens=274), total_tokens=9825)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9523809524,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 10/Input 3 e pin 12/Input 4 del bridge B non collegati o senza livelli logici validi, quindi il L298 non riceve un comando Forward/Reverse",
+        "Pin 11/Enable B non verificato alto: se basso o flottante il bridge B resta disabilitato",
+        "Possibile assenza o errato riferimento delle alimentazioni VS pin 4 e VSS pin 9 rispetto alla massa comune",
+        "Necessità di massa comune tra logica, potenza, sense, condensatori e diodi di ricircolo"
+      ],
+      "model_primary_cause": "I due ingressi di comando del ponte B, pin 10/Input 3 e pin 12/Input 4, risultano scollegati nel JSON.",
+      "major_errors": [],
+      "hallucinations": [
+        "L'enfasi sulla massa 'spezzata' è solo parzialmente supportata: nel JSON i simboli GND appaiono come nodi separati, ma nello schema reale i simboli di massa rappresentano normalmente lo stesso nodo. Il modello la presenta comunque con cautela come ipotesi condizionata."
+      ],
+      "missed_important_points": [
+        "Non esplicita in modo netto che con entrambi gli ingressi allo stesso livello il datasheet prevede Fast Motor Stop, mentre per rotazione servono livelli opposti con Enable alto.",
+        "Non usa i valori di soglia logica numerici del datasheet nei controlli, anche se indica correttamente alto/basso."
+      ],
+      "strengths": [
+        "Identifica correttamente il circuito come pilotaggio di un motore DC tramite bridge B del L298.",
+        "Mappa correttamente pin 13 e 14 alle uscite motore, pin 4 a VS, pin 9 a VSS, pin 11 a Enable B, pin 10/12 agli ingressi e pin 15 a Sense B.",
+        "Rileva correttamente dal JSON che pin 10 e pin 12 sono non connessi e li pone come causa principale.",
+        "Considera correttamente Enable B come causa probabile se non portato alto.",
+        "Propone controlli pratici realistici: misure sui pin di ingresso, enable, alimentazioni e continuità di massa.",
+        "Distingue correttamente Sense B collegato a massa come generalmente non causa primaria."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida e ben supportata da JSON e datasheet. La causa principale indicata, cioè gli ingressi Input 3 e Input 4 scollegati, è la più forte evidenza per un motore che non gira. Anche Enable B, alimentazioni e massa comune sono verifiche pertinenti. L'unico limite rilevante è l'enfasi sulla frammentazione delle masse: dal JSON può apparire così, ma nello schema elettrico i simboli GND normalmente sono comuni."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic13\\results_json_img\\ic13_gpt-4.1-mini_20260518_111216.txt",
+      "model_under_test": "gpt-4.1-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 23.302,
+      "timestamp": "2026-05-18 11:20:10",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8884, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1266, output_tokens_details=OutputTokensDetails(reasoning_tokens=339), total_tokens=10150)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 19,
+      "max_score": 21,
+      "normalized_score": 0.9047619047619048,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 10 e pin 12 del L298, cioè Input 3 e Input 4 del bridge B, risultano non connessi nel JSON e quindi potrebbero essere flottanti o non pilotati: senza una combinazione H/L valida il motore non gira",
+        "Enable B, pin 11, potrebbe essere basso o non correttamente pilotato: con Enable basso il bridge B è disabilitato",
+        "Mancanza o valore errato delle alimentazioni VS sul pin 4 o VSS sul pin 9, oppure problema di massa comune",
+        "Motore aperto/guasto o assenza di tensione differenziale tra le uscite pin 13 e pin 14 durante il comando"
+      ],
+      "model_primary_cause": "Ingressi di controllo pin 10 e pin 12 non collegati o non alimentati con livelli logici corretti",
+      "major_errors": [
+        "Identifica erroneamente bottom_1 come pin 8 GND in un punto della risposta, mentre nel JSON bottom_1 è pin 15 Sense B; il GND dell'integrato è rappresentato dal terminale bottom_2 senza numero pin esplicito.",
+        "Riporta il range VS come 3..46 V, preso dall'immagine, mentre il datasheet fornito indica solo fino a 46 V; errore minore rispetto alla diagnosi."
+      ],
+      "hallucinations": [
+        "Accenna a una possibile resistenza di sense da verificare, mentre nello schema/JSON il pin 15 Sense B è collegato direttamente a massa e non è presente una resistenza di sense esplicita.",
+        "Usa l'espressione 'diodi interni/esterni' in un punto, mentre i diodi mostrati e richiesti dal datasheet sono esterni."
+      ],
+      "missed_important_points": [
+        "Avrebbe potuto chiarire meglio che, secondo la tabella funzionale, se pin 10 e pin 12 sono uguali il risultato è Fast Motor Stop, non rotazione.",
+        "Avrebbe potuto distinguere più nettamente tra la connettività reale suggerita dall'immagine tramite nodi C/D e il warning strutturato del JSON, che è l'evidenza più forte di terminali non connessi."
+      ],
+      "strengths": [
+        "Comprende correttamente che il circuito è un ponte H con L298 per motore DC sul bridge B.",
+        "Usa correttamente pinout e funzioni principali: VS pin 4, VSS pin 9, Enable B pin 11, Input 3/4 pin 10/12, Out 3/4 pin 13/14, Sense B pin 15.",
+        "Individua come causa più probabile i pin 10 e 12 non connessi/flottanti, coerentemente con i warning del JSON.",
+        "Include correttamente Enable basso come altra causa primaria.",
+        "Propone misure pratiche utili sui pin 10, 12, 11, 4, 9 e sulle uscite/motore.",
+        "Nota la discrepanza tra JSON e immagine sui segnali C e D."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida e identifica la causa più probabile: assenza o livelli errati sui pin 10 e 12, che nel JSON risultano non connessi. Include correttamente anche Enable basso e alimentazioni mancanti tra le cause principali, con controlli pratici appropriati. Presenta solo errori minori su identificazione del pin GND nel JSON, range VS e riferimento non necessario alla resistenza di sense."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic13\\results_json_img\\ic13_gpt-4.1-nano_20260518_111239.txt",
+      "model_under_test": "gpt-4.1-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 21.243,
+      "timestamp": "2026-05-18 11:20:32",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8057, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1156, output_tokens_details=OutputTokensDetails(reasoning_tokens=335), total_tokens=9213)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 15,
+      "max_score": 21,
+      "normalized_score": 0.7142857142857143,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 10 e pin 12 del L298, ingressi Input 3 e Input 4 del bridge B, risultano non collegati nel JSON: senza livelli logici validi il motore non può essere comandato in avanti o indietro",
+        "Enable B pin 11 deve essere alto, quindi un Ven basso o assente disabiliterebbe il bridge, ma nel JSON è collegato a un terminale esterno e non è evidenziato come scollegato",
+        "Verifica delle alimentazioni VS pin 4 e VSS pin 9 e della massa comune"
+      ],
+      "model_primary_cause": "Enable pin 11 non riceve un livello HIGH o è collegato male",
+      "major_errors": [
+        "Dà priorità all'Enable come causa più probabile, mentre l'evidenza più forte nel JSON è che i pin 10 e 12 sono esplicitamente non collegati",
+        "Afferma che VS e VSS sono collegati correttamente ai valori corretti, ma il JSON mostra solo collegamenti a terminali e non permette di conoscere i valori reali delle tensioni"
+      ],
+      "hallucinations": [
+        "Indica VS tra 4.5 V e 46 V, mentre il datasheet fornito specifica solo VS fino a 46 V e VSS 4.5-7 V",
+        "Suggerisce che i terminali Enable siano sospetti o non attivi senza una specifica evidenza nel JSON, dato che il pin 11 è collegato a un terminale esterno"
+      ],
+      "missed_important_points": [
+        "Non identifica con sufficiente forza che integrated_circuit11.1_top_1 e top_4 corrispondono precisamente ai pin 10 e 12, cioè gli ingressi di controllo del bridge B",
+        "Non evidenzia che con C e D entrambi scollegati/flottanti non è garantita alcuna condizione Forward o Reverse secondo la tabella funzionale",
+        "Non distingue chiaramente tra difetti evidenziati dal circuito e controlli generici da fare sul banco"
+      ],
+      "strengths": [
+        "Comprende correttamente che il circuito è un driver H-bridge L298 per motore DC",
+        "Usa correttamente la funzione dei pin principali del bridge B, inclusi Enable, ingressi e uscite",
+        "Propone controlli pratici utili su Enable, ingressi logici, alimentazioni e diodi",
+        "Riconosce che i pin top1 e top4 risultano non collegati"
+      ],
+      "short_explanation": "La risposta è tecnicamente utile ma non prioritizza correttamente la causa più evidente: nel JSON i pin 10 e 12, ingressi C e D del L298, sono esplicitamente non collegati. Il modello li cita, ma mette come causa principale l'Enable basso, che è possibile ma meno supportato perché il pin 11 è collegato a un terminale esterno. Buoni i controlli pratici e l'uso generale del datasheet, con alcune affermazioni non supportate sui valori delle alimentazioni."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic13\\results_json_img\\ic13_gpt-4o-mini_20260518_111018.txt",
+      "model_under_test": "gpt-4o-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 23.29,
+      "timestamp": "2026-05-18 11:20:55",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=7850, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1190, output_tokens_details=OutputTokensDetails(reasoning_tokens=323), total_tokens=9040)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 15,
+      "max_score": 21,
+      "normalized_score": 0.7142857143,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "I pin di ingresso del bridge B, pin 10 Input 3 e pin 12 Input 4, risultano non collegati nel JSON: senza livelli logici definiti C/D il L298 non può comandare correttamente il motore",
+        "Il pin 11 Enable B deve essere portato alto: se il terminale Ven non è pilotato alto il bridge B resta disabilitato",
+        "VS al pin 4 e VSS al pin 9 devono essere presenti e nei range corretti, con massa comune",
+        "Se C e D sono entrambi allo stesso livello, il motore va in fast stop invece che ruotare"
+      ],
+      "model_primary_cause": "Pin Enable B basso",
+      "major_errors": [
+        "Non ha dato priorità all'evidenza più forte del JSON: i pin 10 e 12 risultano esplicitamente non collegati nei warning.",
+        "Ha affermato che GND e alimentazioni sono corretti e che la logica ha una tensione nel range accettabile, ma dal JSON si vedono solo terminali di alimentazione, non valori misurati; l'immagine mostra +5 V, ma la presenza reale della tensione resta da verificare."
+      ],
+      "hallucinations": [
+        "La frase secondo cui la logica ha una tensione di alimentazione nella gamma accettabile non è dimostrata dal JSON né da una misura.",
+        "L'affermazione che i terminali GND sono collegati correttamente è solo parzialmente supportata: nel JSON sono presenti più simboli GND, ma non viene discusso il problema dei riferimenti comuni o delle connessioni effettive di alimentazione."
+      ],
+      "missed_important_points": [
+        "I pin 10 e 12 sono unconnected_terminals nel JSON e quindi sono la causa più probabile del mancato moto.",
+        "Non ha evidenziato che per far ruotare il motore servono Enable alto e ingressi complementari: C=H/D=L oppure C=L/D=H; se C=D il datasheet indica fast motor stop.",
+        "Non ha distinto chiaramente tra difetti probabili supportati dalla netlist e controlli generici come diodi guasti o collegamenti difettosi."
+      ],
+      "strengths": [
+        "Comprende correttamente che il circuito è un ponte H con L298 che pilota un motore tra i pin 13 e 14.",
+        "Usa correttamente il pinout principale del bridge B e le soglie logiche essenziali del datasheet.",
+        "Propone controlli pratici sensati: misurare VS, VSS, Enable e gli ingressi 10/12.",
+        "Individua comunque tra le prime tre cause possibili l'assenza di segnali sugli ingressi C e D."
+      ],
+      "short_explanation": "La risposta è utile e tecnicamente abbastanza corretta, ma non sfrutta l'informazione più importante del JSON: i pin 10 e 12 del L298 sono dichiarati non collegati. Questa dovrebbe essere la causa primaria più probabile del motore fermo, più dell'Enable basso. Buoni i controlli proposti su alimentazioni, Enable e ingressi, ma la priorità diagnostica è solo parziale e alcune affermazioni sulle alimentazioni sono non dimostrate."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic13\\results_json_img\\ic13_gpt-5-mini_20260518_111439.txt",
+      "model_under_test": "gpt-5-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 23.959,
+      "timestamp": "2026-05-18 11:21:19",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9413, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1224, output_tokens_details=OutputTokensDetails(reasoning_tokens=408), total_tokens=10637)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 18,
+      "max_score": 21,
+      "normalized_score": 0.857,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin10 e pin12 del L298, cioè Input 3 e Input 4 del bridge B, risultano non collegati nel JSON e quindi il ponte non riceve comandi logici validi",
+        "Enable B su pin11 potrebbe non essere alto, perché è collegato solo a un terminale esterno e il livello reale non è noto",
+        "Mancanza o valore errato di VSS su pin9 o VS su pin4",
+        "Problema di cablaggio del motore tra pin13 e pin14 o motore guasto"
+      ],
+      "model_primary_cause": "Enable pin11 disabilitato o non portato alto",
+      "major_errors": [
+        "La priorità principale non è ottimale: l'evidenza più forte nel JSON è che pin10 e pin12 sono non connessi, mentre il modello mette al primo posto Enable basso, che è possibile ma meno direttamente supportato."
+      ],
+      "hallucinations": [
+        "Attribuisce al collegamento diretto del pin15 Sense B a massa possibili protezioni o limitazioni che fermerebbero il motore; questa affermazione è debole/non ben supportata dal datasheet fornito e nel L298 il sense può anche essere portato a massa se non si usa misura di corrente.",
+        "Parla di fusibili/interruttori/linee esterne non presenti nel JSON o nello schema, anche se come controllo generico non è grave."
+      ],
+      "missed_important_points": [
+        "Avrebbe dovuto enfatizzare ancora di più che pin10 e pin12 sono gli unici terminali esplicitamente segnalati come non connessi dal JSON, quindi sono la causa più probabile del mancato moto.",
+        "Non chiarisce che con Enable alto e Input3 = Input4 il motore resta in fast stop, quindi anche ingressi collegati ma uguali possono spiegare il sintomo."
+      ],
+      "strengths": [
+        "Comprende correttamente il circuito come pilotaggio motore DC tramite bridge B dell'L298.",
+        "Usa correttamente pinout e funzioni principali del datasheet: VS, VSS, Enable B, Input 3/4, Out 3/4, Sense B.",
+        "Rileva correttamente la discrepanza tra immagine, dove C e D sono mostrati come ingressi etichettati, e JSON, dove pin10 e pin12 risultano non collegati.",
+        "Propone misure pratiche sensate su pin9, pin4, pin11, pin10, pin12 e uscite pin13/pin14.",
+        "Include correttamente le soglie logiche di riferimento per Enable e ingressi."
+      ],
+      "short_explanation": "Risposta tecnicamente solida e molto utile, con buon uso di datasheet, JSON e immagine. La causa più supportata dai dati è però l'assenza di collegamento ai pin10/pin12, mentre il modello mette al primo posto Enable basso. Alcune considerazioni sul pin15 Sense e sulle protezioni sono poco supportate. Nel complesso diagnosi valida ma con priorità non perfetta."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic13\\results_json_img\\ic13_gpt-5-nano_20260518_111345.txt",
+      "model_under_test": "gpt-5-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 29.52,
+      "timestamp": "2026-05-18 11:21:48",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10353, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1430, output_tokens_details=OutputTokensDetails(reasoning_tokens=378), total_tokens=11783)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 16,
+      "max_score": 21,
+      "normalized_score": 0.7619047619,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 10 Input 3 e pin 12 Input 4 del bridge B risultano non connessi nel JSON, quindi il L298 non riceve i comandi C/D necessari per forward/reverse",
+        "Enable B pin 11 potrebbe non essere a livello HIGH valido se il terminale Ven esterno non è pilotato correttamente",
+        "Possibili problemi di alimentazione VS pin 4, VSS pin 9 o massa comune, da verificare ma meno supportati dai dati rispetto agli ingressi non connessi"
+      ],
+      "model_primary_cause": "Enable B non alto o bridge B disabilitato",
+      "major_errors": [
+        "La risposta mette come causa più probabile Enable B basso, mentre l'evidenza più forte nel JSON è che i pin 10 e 12, Input 3 e Input 4, sono esplicitamente segnalati come non connessi.",
+        "Tratta la connessione di Enable B come ambigua/non chiara, ma nel JSON il pin 11 è collegato a un terminale esterno, quindi non è un terminale non connesso; resta una verifica valida, ma non la più supportata.",
+        "Considera Sense B e la resistenza di sense come possibile causa di spegnimento/limitazione, ma il datasheet fornito non indica una protezione interna di limitazione corrente tramite quel pin; inoltre nel circuito il pin 15 è collegato a massa, equivalente a sense resistor nulla, configurazione comune se non si usa sensing."
+      ],
+      "hallucinations": [
+        "Riferimento a protezioni o limitazioni legate alla tensione di Sense B non supportato dall'estratto datasheet fornito.",
+        "Affermare che il collegamento di massa comune 'sembra presente' dalla mappa JSON è discutibile, perché nel grafo i simboli GND sono nodi separati, anche se schematicamente i simboli GND implicano massa comune.",
+        "Formula imprecisa secondo cui il motore sarebbe collegato tra Out 3/Out 4 e relativa massa o punto di ritorno; il motore è collegato direttamente tra pin 13 e pin 14."
+      ],
+      "missed_important_points": [
+        "Avrebbe dovuto dare priorità assoluta al warning JSON unconnected_terminals: integrated_circuit11.1_top_1 e top_4, cioè pin 10 e pin 12.",
+        "Avrebbe potuto chiarire che con Input 3/Input 4 entrambi non pilotati il ponte non può essere comandato in Forward/Reverse; se entrambi fossero uguali o flottanti il risultato può essere stop o comportamento indeterminato.",
+        "Avrebbe potuto distinguere meglio tra difetti evidenziati dai dati e controlli generici di alimentazione/diodi."
+      ],
+      "strengths": [
+        "Comprende correttamente che il circuito usa il bridge B del L298 per pilotare un motore tra Out 3 e Out 4.",
+        "Usa correttamente gran parte del pinout del datasheet: VS pin 4, VSS pin 9, Enable B pin 11, Input 3 pin 10, Input 4 pin 12, Out 3/4 pin 13/14.",
+        "Richiama correttamente le soglie logiche TTL e la tabella funzionale Enable/Input per forward/reverse/stop.",
+        "Individua comunque tra le cause principali gli ingressi pin 10 e pin 12 non pilotati, che è la causa più supportata dal JSON.",
+        "Propone controlli pratici utili: misurare Enable, ingressi logici, VS, VSS/GND e verificare i diodi."
+      ],
+      "short_explanation": "Risposta tecnicamente utile e ben strutturata, ma la priorità è non ottimale: la causa più supportata dai dati è che Input 3 e Input 4, pin 10 e 12, sono non connessi nel JSON. Enable B basso è una verifica importante, ma il pin 11 è collegato a un terminale esterno e non è segnalato come non connesso. Alcune parti su Sense B/protezioni e massa comune sono speculative."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic13\\results_json_img\\ic13_gpt-5.4-mini_20260518_111536.txt",
+      "model_under_test": "gpt-5.4-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 23.992,
+      "timestamp": "2026-05-18 11:22:12",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8595, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1175, output_tokens_details=OutputTokensDetails(reasoning_tokens=317), total_tokens=9770)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9523809523809523,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 10 e pin 12 del L298, ingressi Input 3 e Input 4 del bridge B, risultano non connessi nel JSON e quindi il ponte potrebbe non ricevere comandi validi",
+        "Enable B sul pin 11 potrebbe essere basso, flottante o non correttamente pilotato, disabilitando il bridge B",
+        "Mancanza o errore delle alimentazioni VS pin 4 e/o VSS pin 9, oppure assenza di massa comune",
+        "Combinazione logica errata sugli ingressi C/D, ad esempio entrambi allo stesso livello, che causa stop rapido invece della rotazione"
+      ],
+      "model_primary_cause": "Pin 10 e/o pin 12 non pilotati correttamente o non connessi, come indicato dagli unconnected_terminals del JSON",
+      "major_errors": [],
+      "hallucinations": [
+        "La risposta afferma che i condensatori di bypass da 100 nF sono presenti: questo è supportato dall'immagine, ma non dal valore nel JSON, quindi è accettabile dato l'input con immagine.",
+        "Definisce una forte incongruenza tra immagine e JSON sugli ingressi; è una lettura ragionevole, anche se nell'immagine C e D sono terminali di ingresso esterni e non sorgenti esplicite."
+      ],
+      "missed_important_points": [
+        "Non evidenzia che il pin Sense B è collegato direttamente a massa senza resistenza di sense; non è però una causa probabile del motore fermo in questo schema.",
+        "Non discute la possibilità che i diodi esterni non siano fast recovery, ma questo non è una causa primaria del mancato avvio immediato del motore."
+      ],
+      "strengths": [
+        "Identifica correttamente il circuito come ponte H con L298 e associa correttamente i pin principali del bridge B.",
+        "Usa correttamente la tabella funzionale del datasheet: Enable alto e ingressi opposti per far girare il motore, ingressi uguali per stop.",
+        "Integra bene JSON e immagine, notando che il JSON segnala pin 10 e 12 non connessi mentre l'immagine mostra i terminali C e D.",
+        "Dà priorità alla causa più supportata dal JSON: ingressi di comando non connessi o non pilotati.",
+        "Propone controlli pratici sensati: misure su pin 10, 12, 11, alimentazioni, masse e continuità dei segnali."
+      ],
+      "short_explanation": "La diagnosi è tecnicamente solida: il modello riconosce correttamente il L298, il ruolo dei pin e la condizione necessaria per far girare il motore. La causa principale indicata, cioè pin 10 e 12 non pilotati o non connessi, è fortemente supportata dal JSON, che li segnala come unconnected. Anche Enable basso, alimentazioni mancanti e ingressi C/D allo stesso livello sono cause coerenti con datasheet e sintomo. La risposta è utile e ben ordinata; solo lievi imprecisioni derivano dal trattare alcune informazioni dell'immagine come certe e dal definire molto marcata l'incongruenza JSON/immagine."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic13\\results_json_img\\ic13_gpt-5.4-nano_20260518_111508.txt",
+      "model_under_test": "gpt-5.4-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 31.056,
+      "timestamp": "2026-05-18 11:22:43",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8975, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1556, output_tokens_details=OutputTokensDetails(reasoning_tokens=381), total_tokens=10531)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 19,
+      "max_score": 21,
+      "normalized_score": 0.9047619047619048,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Ingressi Input 3 pin 10 e Input 4 pin 12 del bridge B non collegati o non pilotati a livelli TTL validi, quindi il L298 non riceve una combinazione di comando valida per far girare il motore",
+        "Enable B pin 11 basso, flottante o non portato a livello High valido, con conseguente bridge disabilitato",
+        "Alimentazioni VS pin 4 e/o VSS pin 9 assenti, errate o senza massa comune corretta",
+        "Sense B pin 15 non correttamente riferito a massa o collegamento di massa inadeguato",
+        "Problemi sui diodi di ricircolo esterni o sulle connessioni alle uscite pin 13 e pin 14, meno probabili per il solo sintomo di motore fermo se non ci sono corti"
+      ],
+      "model_primary_cause": "Pin 10 e pin 12 del L298 non collegati/flottanti, quindi il driver non riceve un comando valido per il bridge B",
+      "major_errors": [
+        "Interpreta come forte discordanza JSON-immagine il fatto che nell'immagine C e D siano mostrati come nodi di comando mentre nel JSON risultano non connessi; in realtà nello schema i nodi C e D sono comunque terminali di ingresso esterni e la loro assenza nel JSON è la vera evidenza di mancato pilotaggio, non necessariamente una contraddizione funzionale.",
+        "Afferma che nel JSON non si vede un collegamento strutturato a VS/VSS, ma pin 4 e pin 9 sono collegati a terminali e condensatori: il JSON rappresenta plausibilmente i nodi di alimentazione tramite terminali esterni, anche se non ne indica il valore di tensione."
+      ],
+      "hallucinations": [
+        "Riferimento a una 'morsettiera' per C/D/Enable nell'immagine: l'immagine mostra nodi/terminali di comando, non necessariamente una morsettiera.",
+        "La frase su una possibile 'abilitazione attiva bassa' è fuorviante rispetto al datasheet, perché Enable B è attivo alto.",
+        "L'affermazione che un diodo invertito o lento faccia spesso scattare protezioni o impedisca la commutazione è solo parzialmente supportata: i diodi fast recovery sono richiesti per protezione/ricircolo, ma non sono la causa più diretta del motore fermo in questo schema."
+      ],
+      "missed_important_points": [
+        "Avrebbe potuto chiarire meglio che per far girare il motore serve Enable High e pin 10/pin 12 in stati opposti: H/L per un verso oppure L/H per l'altro; se C=D il datasheet indica fast motor stop.",
+        "Avrebbe potuto indicare esplicitamente che i pin 13 e 14 risultano correttamente collegati al motore, quindi il percorso di uscita principale non è la prima anomalia topologica.",
+        "Avrebbe potuto distinguere meglio tra assenza del pilotaggio esterno nel JSON e stato elettrico reale ignoto dei terminali di alimentazione/Enable."
+      ],
+      "strengths": [
+        "Comprende correttamente che il circuito usa il bridge B del L298 per pilotare un motore DC tra Out 3 pin 13 e Out 4 pin 14.",
+        "Usa correttamente il datasheet per pinout, funzione di Enable, ingressi TTL, soglie logiche e alimentazioni VS/VSS.",
+        "Identifica come causa principale più probabile i pin 10 e 12 non collegati nel JSON, coerente con i warning e con il sintomo.",
+        "Propone controlli pratici sensati: misura di pin 10, pin 12, pin 11, VS, VSS e verifica dei livelli logici.",
+        "Include correttamente la necessità di Enable High e di alimentazioni separate logica/potenza.",
+        "Riconosce che i diodi esterni sono richiesti dal datasheet per carichi induttivi, pur non rendendoli la causa principale."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida e diagnostica correttamente la causa più evidente: gli ingressi C/D del bridge B, pin 10 e 12, risultano non connessi nel JSON, quindi il L298 non può ricevere un comando valido per far girare il motore. Buono anche l'uso del datasheet per Enable, soglie TTL e alimentazioni. Ci sono alcune imprecisioni nell'interpretazione della presunta discordanza con l'immagine e qualche affermazione secondaria non pienamente supportata, ma non compromettono la diagnosi principale."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic13",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic13\\results_json_img\\ic13_gpt-5.4_20260518_111639.txt",
+      "model_under_test": "gpt-5.4",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 15.474,
+      "timestamp": "2026-05-18 11:22:59",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9977, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=827, output_tokens_details=OutputTokensDetails(reasoning_tokens=235), total_tokens=10804)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 3
+      },
+      "total_score": 21,
+      "max_score": 21,
+      "normalized_score": 1.0,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 10 Input 3 e pin 12 Input 4 del L298 non collegati o non pilotati, come indicato dai warning JSON",
+        "Enable B pin 11 basso, flottante o non correttamente pilotato",
+        "Mancanza o valore errato di VS al pin 4 o VSS al pin 9, oppure massa comune assente",
+        "Ingressi C e D uguali tra loro invece che complementari, causando fast motor stop"
+      ],
+      "model_primary_cause": "Pin 10 e pin 12 del L298 non collegati o non pilotati",
+      "major_errors": [],
+      "hallucinations": [],
+      "missed_important_points": [],
+      "strengths": [
+        "Identifica correttamente il circuito come driver H-bridge con L298 usando il bridge B",
+        "Usa correttamente il pinout del datasheet per VS, VSS, GND, Enable B, Input 3, Input 4, Out 3, Out 4 e Sense B",
+        "Rileva correttamente che nel JSON i pin 10 e 12 risultano non connessi e li pone come causa più probabile",
+        "Gestisce bene la discordanza tra immagine e JSON, senza ignorare i warning strutturati",
+        "Ordina le cause in modo coerente con le evidenze: ingressi non collegati, enable non alto, alimentazioni, stati logici errati",
+        "Propone misure pratiche utili sui pin 10, 12, 11, 4, 9 e sulle masse",
+        "Non introduce difetti non supportati e distingue bene cause probabili da cause secondarie"
+      ],
+      "short_explanation": "La risposta è tecnicamente molto solida: comprende il circuito, usa correttamente datasheet, JSON e immagine, e individua come causa principale i pin 10 e 12 non connessi nel JSON, coerentemente con i warning e con la tabella funzionale del L298. Anche le cause successive e i controlli proposti sono pertinenti e ben prioritizzati."
+    }
+  }
+]

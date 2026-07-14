@@ -1,0 +1,63 @@
+{
+  "metadata": {
+    "circuit_id": "c17",
+    "batch": "C1",
+    "batch_dir": "batchC1",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\images\\c17.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\json\\c17.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "c17.jpg",
+    "json_file": "c17.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:28:23",
+    "judge_latency_seconds": 25.406,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=13543, input_tokens_details=InputTokensDetails(cached_tokens=13184), output_tokens=1364, output_tokens_details=OutputTokensDetails(reasoning_tokens=892), total_tokens=14907)",
+  "judge_result": {
+    "circuit_id": "c17",
+    "batch": "C1",
+    "image_file": "c17.jpg",
+    "json_file": "c17.json",
+    "image_graph_fidelity_score": 96,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 24,
+      "graph_connections": 53,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 1
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "mapping_ambiguity",
+        "description": "Le tre resistenze della scala verticale e i tre condensatori verso il ramo OUT sono componenti equivalenti e non distinguibili con certezza solo dagli instance_id JSON; il graph risulta comunque coerente con l'immagine usando il mapping topologico migliore."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "L'associazione uno-a-uno tra resistor22.1/resistor22.2/resistor22.3 e le etichette visibili R1/R2/R3 non è verificabile direttamente dagli instance_id; la permutazione topologica migliore rende la catena corretta.",
+      "L'associazione uno-a-uno tra polarized_capacitor20.2/20.3/20.4 e le etichette visibili C2/C3/C4 è ambigua, ma i tre nodi del graph verso OUT coincidono con i tre nodi visibili della rete RC.",
+      "Il simbolo di S1 può essere letto visivamente come stato non perfettamente evidente, ma i suoi due terminali esterni e i fili ai due nodi corretti sono rappresentati coerentemente nel graph."
+    ],
+    "short_explanation": "Il campo graph è sostanzialmente fedele all'immagine: ingresso superiore tramite S1 al pin IN dell'LM317, C1 tra IN e massa, uscita OUT comune al ramo lampada e ai tre condensatori, rete ADJ con tre resistenze in serie verso massa e tre condensatori ai tre nodi della scala verso OUT. Non emergono collegamenti inventati, mancanti o fusi in modo incompatibile; resta solo una lieve ambiguità di mapping tra componenti equivalenti."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c17\",\"batch\":\"C1\",\"image_file\":\"c17.jpg\",\"json_file\":\"c17.json\",\"image_graph_fidelity_score\":96,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":24,\"graph_connections\":53,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":1},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"mapping_ambiguity\",\"description\":\"Le tre resistenze della scala verticale e i tre condensatori verso il ramo OUT sono componenti equivalenti e non distinguibili con certezza solo dagli instance_id JSON; il graph risulta comunque coerente con l'immagine usando il mapping topologico migliore.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"L'associazione uno-a-uno tra resistor22.1/resistor22.2/resistor22.3 e le etichette visibili R1/R2/R3 non è verificabile direttamente dagli instance_id; la permutazione topologica migliore rende la catena corretta.\",\"L'associazione uno-a-uno tra polarized_capacitor20.2/20.3/20.4 e le etichette visibili C2/C3/C4 è ambigua, ma i tre nodi del graph verso OUT coincidono con i tre nodi visibili della rete RC.\",\"Il simbolo di S1 può essere letto visivamente come stato non perfettamente evidente, ma i suoi due terminali esterni e i fili ai due nodi corretti sono rappresentati coerentemente nel graph.\"] ,\"short_explanation\":\"Il campo graph è sostanzialmente fedele all'immagine: ingresso superiore tramite S1 al pin IN dell'LM317, C1 tra IN e massa, uscita OUT comune al ramo lampada e ai tre condensatori, rete ADJ con tre resistenze in serie verso massa e tre condensatori ai tre nodi della scala verso OUT. Non emergono collegamenti inventati, mancanti o fusi in modo incompatibile; resta solo una lieve ambiguità di mapping tra componenti equivalenti.\"}"
+}

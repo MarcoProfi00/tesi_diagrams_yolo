@@ -1,0 +1,19 @@
+{
+  "scenario_id": "scenario_2",
+  "title": "Pilotare l'ingresso del ramo resistivo dal lato connettore",
+  "hypothesis": "Il ramo con resistor22.1 è inattivo perché connector5.1_pin2/N004 non è pilotato da alcuna sorgente esterna nel circuito estratto.",
+  "actions": [
+    {
+      "type": "drive_node_voltage",
+      "target": "N004",
+      "value": "5V"
+    }
+  ],
+  "rerun_from": "04",
+  "analysis": "op",
+  "compare": [
+    "v(N004)",
+    "v(N001)",
+    "i(vbattery2_1#branch)"
+  ]
+}

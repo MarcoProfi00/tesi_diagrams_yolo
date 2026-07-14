@@ -1,0 +1,123 @@
+{
+  "metadata": {
+    "circuit_id": "b01",
+    "batch": "B",
+    "batch_dir": "batchB",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\images\\b01.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\json\\b01.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "b01.jpg",
+    "json_file": "b01.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:38:07",
+    "judge_latency_seconds": 27.096,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=12987, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=1646, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=14633)",
+  "judge_result": {
+    "circuit_id": "b01",
+    "batch": "B",
+    "image_file": "b01.jpg",
+    "json_file": "b01.json",
+    "image_graph_fidelity_score": 80,
+    "decision": "HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 9,
+      "terminals_pins": 18,
+      "graph_connections": 45,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 4,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "wrong_opamp_input_assignment",
+        "description": "Il nodo centrale connesso a R1, R2, R3, base/collector di Q1 e Q2 entra nel terminale non invertente (+) dell'opamp, mentre il JSON collega questo nodo a operational_amplifier19.1_in2 e collega il generatore VOS a operational_amplifier19.1_in1. I due ingressi dell'opamp risultano scambiati rispetto all'immagine.",
+        "image_evidence": "Nel simbolo dell'opamp il filo orizzontale del nodo centrale entra chiaramente nel pin '+' inferiore/sinistro; il generatore VOS e collegato al pin '-' superiore/sinistro.",
+        "json_evidence": "operational_amplifier19.1_in2 e collegato a npn_transistor18.1_E e resistor22.1_t2 (nodo centrale); operational_amplifier19.1_in1 e collegato a voltage_source31.1_negative (VOS)."
+      },
+      {
+        "type": "wrong_transistor_terminal_identity",
+        "description": "Per entrambi i BJT il JSON assegna B e C al nodo di massa e assegna E ai rami superiori. Nell'immagine invece gli emettitori dei due NPN sono entrambi sul nodo di massa inferiore, mentre il terminale laterale/barra e la base e il ramo superiore senza freccia e il collettore.",
+        "image_evidence": "Q1 e Q2 mostrano il ramo con freccia che scende al nodo di massa comune; i rami superiori salgono verso R1 e verso il nodo sinistro superiore; le basi sono unite tra loro dal filo orizzontale.",
+        "json_evidence": "gnd9.1_t1 e collegato a npn_transistor18.1_B, npn_transistor18.1_C, npn_transistor18.2_B, npn_transistor18.2_C; npn_transistor18.1_E e npn_transistor18.2_E sono usati come rami superiori."
+      },
+      {
+        "type": "missing_connection_q1_base_to_q2_base",
+        "description": "Nel disegno le basi di Q1 e Q2 sono chiaramente unite dallo stesso filo orizzontale; nel JSON questo collegamento non compare come rete comune delle basi.",
+        "image_evidence": "Un filo orizzontale collega direttamente i terminali di base di Q2 e Q1.",
+        "json_evidence": "npn_transistor18.1_B e npn_transistor18.2_B non condividono una rete di base dedicata; entrambe sono invece fuse con massa e con i collettori."
+      },
+      {
+        "type": "missing_connection_q2_collector_to_left_main_node",
+        "description": "Il collettore di Q2 e collegato al nodo principale sinistro/centrale che riceve anche R3 e il nodo di ingresso '+' dell'opamp. Nel JSON il ramo superiore di Q2 non e collegato a quel nodo principale.",
+        "image_evidence": "Il ramo superiore di Q2 sale lungo il lato sinistro e arriva al nodo dove si uniscono R3, il nodo centrale e il filo verso l'opamp.",
+        "json_evidence": "npn_transistor18.2_E e collegato solo a resistor22.3_t2; nessun terminale di npn_transistor18.2 e collegato al nodo di operational_amplifier19.1_in2/resistor22.1_t2."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "component_class_semantics",
+        "description": "Il simbolo circolare VOS e trattato come Voltage_Source; topologicamente e plausibile ma la polarita +/- visibile non e riflessa nei nomi terminale t1/t2 del JSON."
+      },
+      {
+        "type": "supply_pin_visibility",
+        "description": "Il pin superiore di alimentazione dell'opamp (VDD) e lasciato non connesso nel JSON; nell'immagine il tratto di supply e visibile ma non termina su un altro componente esplicito, quindi l'omissione non e topologicamente grave."
+      }
+    ],
+    "missing_from_json": [
+      "Connessione del nodo centrale al terminale '+' dell'opamp invece che al '-'",
+      "Connessione base Q1 <-> base Q2",
+      "Connessione collettore Q2 al nodo principale sinistro/centrale",
+      "Emettitore Q1 -> massa come terminale corretto",
+      "Emettitore Q2 -> massa come terminale corretto"
+    ],
+    "extra_in_json": [
+      "Fusione in massa di base e collettore di Q1",
+      "Fusione in massa di base e collettore di Q2",
+      "Connessione del nodo centrale all'ingresso opamp sbagliato (in2 invece del pin '+'/in1 nel mapping del JSON)"
+    ],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "operational_amplifier19.1_in1 collegato al nodo centrale condiviso con resistor22.1_t2, resistor22.2_t2, resistor22.3_t2 e ramo superiore di Q2",
+        "found_in_json": "operational_amplifier19.1_in2 collegato a quel nodo, mentre operational_amplifier19.1_in1 e collegato a voltage_source31.1_negative",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "npn_transistor18.x_E collegato a gnd9.1_t1 per entrambi i transistor",
+        "found_in_json": "gnd9.1_t1 collegato a npn_transistor18.1_B, npn_transistor18.1_C, npn_transistor18.2_B, npn_transistor18.2_C",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "base di Q1 collegata alla base di Q2",
+        "found_in_json": "nessuna connessione dedicata base-base; le basi sono fuse con massa e collettori",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "collettore di Q2 collegato al nodo principale sinistro/centrale",
+        "found_in_json": "nessun terminale di npn_transistor18.2 collegato a tale nodo; npn_transistor18.2_E e collegato solo a resistor22.3_t2",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "Il mapping esatto tra resistor22.1/resistor22.2/resistor22.3 e R1/R2/R3 puo essere permutato; la valutazione ha usato il mapping topologicamente piu coerente.",
+      "Il componente voltage_source31.1 rappresenta il simbolo VOS interno al ramo verso l'ingresso invertente; i nomi positive/negative non sono verificati come polarita elettrica certa oltre ai segni visibili.",
+      "Il terminale operational_amplifier19.1_aux1 (VDD) e visibile come stub di alimentazione ma non e connesso ad altri componenti espliciti nel graph, quindi non e trattato come errore certo di connessione mancante."
+    ],
+    "short_explanation": "Il graph cattura bene la struttura principale con opamp, tre resistori, due transistor, uscita e massa, ma contiene errori topologici locali importanti: gli ingressi dell'opamp sono scambiati e i terminali dei due BJT sono identificati in modo errato, con basi/collettori fusi a massa invece degli emettitori. Nonostante cio, la maggior parte dei nodi principali e dei rami resistivi/opamp resta riconoscibile e il graph e ancora utilizzabile come base correggibile."
+  },
+  "raw_model_output": "{\"circuit_id\":\"b01\",\"batch\":\"B\",\"image_file\":\"b01.jpg\",\"json_file\":\"b01.json\",\"image_graph_fidelity_score\":80,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":9,\"terminals_pins\":18,\"graph_connections\":45,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":4,\"minor\":2},\"critical_errors\":[],\"major_errors\":[{\"type\":\"wrong_opamp_input_assignment\",\"description\":\"Il nodo centrale connesso a R1, R2, R3, base/collector di Q1 e Q2 entra nel terminale non invertente (+) dell'opamp, mentre il JSON collega questo nodo a operational_amplifier19.1_in2 e collega il generatore VOS a operational_amplifier19.1_in1. I due ingressi dell'opamp risultano scambiati rispetto all'immagine.\",\"image_evidence\":\"Nel simbolo dell'opamp il filo orizzontale del nodo centrale entra chiaramente nel pin '+' inferiore/sinistro; il generatore VOS e collegato al pin '-' superiore/sinistro.\",\"json_evidence\":\"operational_amplifier19.1_in2 e collegato a npn_transistor18.1_E e resistor22.1_t2 (nodo centrale); operational_amplifier19.1_in1 e collegato a voltage_source31.1_negative (VOS).\"},{\"type\":\"wrong_transistor_terminal_identity\",\"description\":\"Per entrambi i BJT il JSON assegna B e C al nodo di massa e assegna E ai rami superiori. Nell'immagine invece gli emettitori dei due NPN sono entrambi sul nodo di massa inferiore, mentre il terminale laterale/barra e la base e il ramo superiore senza freccia e il collettore.\",\"image_evidence\":\"Q1 e Q2 mostrano il ramo con freccia che scende al nodo di massa comune; i rami superiori salgono verso R1 e verso il nodo sinistro superiore; le basi sono unite tra loro dal filo orizzontale.\",\"json_evidence\":\"gnd9.1_t1 e collegato a npn_transistor18.1_B, npn_transistor18.1_C, npn_transistor18.2_B, npn_transistor18.2_C; npn_transistor18.1_E e npn_transistor18.2_E sono usati come rami superiori.\"},{\"type\":\"missing_connection_q1_base_to_q2_base\",\"description\":\"Nel disegno le basi di Q1 e Q2 sono chiaramente unite dallo stesso filo orizzontale; nel JSON questo collegamento non compare come rete comune delle basi.\",\"image_evidence\":\"Un filo orizzontale collega direttamente i terminali di base di Q2 e Q1.\",\"json_evidence\":\"npn_transistor18.1_B e npn_transistor18.2_B non condividono una rete di base dedicata; entrambe sono invece fuse con massa e con i collettori.\"},{\"type\":\"missing_connection_q2_collector_to_left_main_node\",\"description\":\"Il collettore di Q2 e collegato al nodo principale sinistro/centrale che riceve anche R3 e il nodo di ingresso '+' dell'opamp. Nel JSON il ramo superiore di Q2 non e collegato a quel nodo principale.\",\"image_evidence\":\"Il ramo superiore di Q2 sale lungo il lato sinistro e arriva al nodo dove si uniscono R3, il nodo centrale e il filo verso l'opamp.\",\"json_evidence\":\"npn_transistor18.2_E e collegato solo a resistor22.3_t2; nessun terminale di npn_transistor18.2 e collegato al nodo di operational_amplifier19.1_in2/resistor22.1_t2.\"}],\"minor_errors\":[{\"type\":\"component_class_semantics\",\"description\":\"Il simbolo circolare VOS e trattato come Voltage_Source; topologicamente e plausibile ma la polarita +/- visibile non e riflessa nei nomi terminale t1/t2 del JSON.\"},{\"type\":\"supply_pin_visibility\",\"description\":\"Il pin superiore di alimentazione dell'opamp (VDD) e lasciato non connesso nel JSON; nell'immagine il tratto di supply e visibile ma non termina su un altro componente esplicito, quindi l'omissione non e topologicamente grave.\"}],\"missing_from_json\":[\"Connessione del nodo centrale al terminale '+' dell'opamp invece che al '-'\",\"Connessione base Q1 <-> base Q2\",\"Connessione collettore Q2 al nodo principale sinistro/centrale\",\"Emettitore Q1 -> massa come terminale corretto\",\"Emettitore Q2 -> massa come terminale corretto\"],\"extra_in_json\":[\"Fusione in massa di base e collettore di Q1\",\"Fusione in massa di base e collettore di Q2\",\"Connessione del nodo centrale all'ingresso opamp sbagliato (in2 invece del pin '+'/in1 nel mapping del JSON)\"],\"wrong_graph_connections\":[{\"expected_from_image\":\"operational_amplifier19.1_in1 collegato al nodo centrale condiviso con resistor22.1_t2, resistor22.2_t2, resistor22.3_t2 e ramo superiore di Q2\",\"found_in_json\":\"operational_amplifier19.1_in2 collegato a quel nodo, mentre operational_amplifier19.1_in1 e collegato a voltage_source31.1_negative\",\"severity\":\"major\"},{\"expected_from_image\":\"npn_transistor18.x_E collegato a gnd9.1_t1 per entrambi i transistor\",\"found_in_json\":\"gnd9.1_t1 collegato a npn_transistor18.1_B, npn_transistor18.1_C, npn_transistor18.2_B, npn_transistor18.2_C\",\"severity\":\"major\"},{\"expected_from_image\":\"base di Q1 collegata alla base di Q2\",\"found_in_json\":\"nessuna connessione dedicata base-base; le basi sono fuse con massa e collettori\",\"severity\":\"major\"},{\"expected_from_image\":\"collettore di Q2 collegato al nodo principale sinistro/centrale\",\"found_in_json\":\"nessun terminale di npn_transistor18.2 collegato a tale nodo; npn_transistor18.2_E e collegato solo a resistor22.3_t2\",\"severity\":\"major\"}],\"uncertain_points\":[\"Il mapping esatto tra resistor22.1/resistor22.2/resistor22.3 e R1/R2/R3 puo essere permutato; la valutazione ha usato il mapping topologicamente piu coerente.\",\"Il componente voltage_source31.1 rappresenta il simbolo VOS interno al ramo verso l'ingresso invertente; i nomi positive/negative non sono verificati come polarita elettrica certa oltre ai segni visibili.\",\"Il terminale operational_amplifier19.1_aux1 (VDD) e visibile come stub di alimentazione ma non e connesso ad altri componenti espliciti nel graph, quindi non e trattato come errore certo di connessione mancante.\"],\"short_explanation\":\"Il graph cattura bene la struttura principale con opamp, tre resistori, due transistor, uscita e massa, ma contiene errori topologici locali importanti: gli ingressi dell'opamp sono scambiati e i terminali dei due BJT sono identificati in modo errato, con basi/collettori fusi a massa invece degli emettitori. Nonostante cio, la maggior parte dei nodi principali e dei rami resistivi/opamp resta riconoscibile e il graph e ancora utilizzabile come base correggibile.\"}"
+}

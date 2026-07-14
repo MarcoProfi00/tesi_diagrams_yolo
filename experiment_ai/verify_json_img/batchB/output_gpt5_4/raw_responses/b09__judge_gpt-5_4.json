@@ -1,0 +1,68 @@
+{
+  "metadata": {
+    "circuit_id": "b09",
+    "batch": "B",
+    "batch_dir": "batchB",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\images\\b09.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\json\\b09.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "b09.jpg",
+    "json_file": "b09.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:40:13",
+    "judge_latency_seconds": 9.468,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=12325, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=477, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=12802)",
+  "judge_result": {
+    "circuit_id": "b09",
+    "batch": "B",
+    "image_file": "b09.jpg",
+    "json_file": "b09.json",
+    "image_graph_fidelity_score": 95,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 22,
+      "graph_connections": 54,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "terminal_naming_semantics",
+        "description": "I nodi VDD e VSS sono rappresentati nel graph come pseudo-endpoint testuali invece che come Terminal/GND componenti espliciti; topologia comunque coerente con l'immagine."
+      },
+      {
+        "type": "polarity_semantics_not_fully_verifiable",
+        "description": "Le batterie VTR1 e VTR2 sono modellate con terminali positive/negative coerenti con i simboli visibili, ma il giudizio topologico non dipende dalla loro semantica di polarita oltre ai collegamenti visibili."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [
+      "Pseudo-nodes testuali 'VDD' e 'VSS' nel graph non presenti come componenti nel campo components."
+    ],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "L'identificazione source/drain dei due MOSFET dipende dal simbolo e dall'orientamento; nel JSON la mappatura scelta risulta comunque coerente con i fili visibili.",
+      "I simboli GND sotto CL e RL sono separati come componenti distinti nel JSON, ma questo non altera la topologia locale perche ciascuno e collegato correttamente al proprio terminale visibile."
+    ],
+    "short_explanation": "Il campo graph riproduce fedelmente i collegamenti visibili: VIN collega il nodo comune tra battery2.1_negative e battery2.2_positive; le due batterie pilotano i gate dei due MOSFET; i drain dei MOSFET convergono sul nodo di uscita comune con VOUT, CL positivo e RL alto; CL negativo e RL basso vanno ai rispettivi GND; i source dei MOSFET vanno a VDD e VSS. Nessun errore topologico certo nei collegamenti terminale-terminale."
+  },
+  "raw_model_output": "{\"circuit_id\":\"b09\",\"batch\":\"B\",\"image_file\":\"b09.jpg\",\"json_file\":\"b09.json\",\"image_graph_fidelity_score\":95,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":22,\"graph_connections\":54,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":2},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"terminal_naming_semantics\",\"description\":\"I nodi VDD e VSS sono rappresentati nel graph come pseudo-endpoint testuali invece che come Terminal/GND componenti espliciti; topologia comunque coerente con l'immagine.\"},{\"type\":\"polarity_semantics_not_fully_verifiable\",\"description\":\"Le batterie VTR1 e VTR2 sono modellate con terminali positive/negative coerenti con i simboli visibili, ma il giudizio topologico non dipende dalla loro semantica di polarita oltre ai collegamenti visibili.\"}],\"missing_from_json\":[],\"extra_in_json\":[\"Pseudo-nodes testuali 'VDD' e 'VSS' nel graph non presenti come componenti nel campo components.\"],\"wrong_graph_connections\":[],\"uncertain_points\":[\"L'identificazione source/drain dei due MOSFET dipende dal simbolo e dall'orientamento; nel JSON la mappatura scelta risulta comunque coerente con i fili visibili.\",\"I simboli GND sotto CL e RL sono separati come componenti distinti nel JSON, ma questo non altera la topologia locale perche ciascuno e collegato correttamente al proprio terminale visibile.\"],\"short_explanation\":\"Il campo graph riproduce fedelmente i collegamenti visibili: VIN collega il nodo comune tra battery2.1_negative e battery2.2_positive; le due batterie pilotano i gate dei due MOSFET; i drain dei MOSFET convergono sul nodo di uscita comune con VOUT, CL positivo e RL alto; CL negativo e RL basso vanno ai rispettivi GND; i source dei MOSFET vanno a VDD e VSS. Nessun errore topologico certo nei collegamenti terminale-terminale.\"}"
+}

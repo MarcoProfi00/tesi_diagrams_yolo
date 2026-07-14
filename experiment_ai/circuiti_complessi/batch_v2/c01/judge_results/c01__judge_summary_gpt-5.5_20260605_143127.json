@@ -1,0 +1,953 @@
+[
+  {
+    "metadata": {
+      "circuit": "c01",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c01\\results_json\\c01_gpt-4.1-mini_20260605_141233.txt",
+      "model_under_test": "gpt-4.1-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 30.938,
+      "timestamp": "2026-06-05 14:24:15",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8276, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1384, output_tokens_details=OutputTokensDetails(reasoning_tokens=442), total_tokens=9660)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 17,
+      "max_score": 21,
+      "normalized_score": 0.8095238095,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Frequenza di oscillazione troppo alta per vedere il LED lampeggiare visibilmente, specialmente con valori come R1=1 kΩ, R2=1 kΩ e C1=1 µF nello schema",
+        "Rete RC di temporizzazione su pin 2, 6 e 7 guasta, con valori errati, condensatore aperto/in corto o collegamento difettoso",
+        "LED invertito, guasto o resistenza serie aperta",
+        "Alimentazione, massa o reset del NE555 non corretti, anche se dal JSON pin 4 e pin 8 risultano collegati a +9 V e pin 1 a GND"
+      ],
+      "model_primary_cause": "RESET pin 4 non sufficientemente alto o flottante, seguito da guasti nella rete RC di temporizzazione",
+      "major_errors": [
+        "Dà priorità al RESET basso/flottante nonostante dal JSON il pin 4 sia chiaramente collegato allo stesso nodo di VCC e al terminale +9 V.",
+        "Non considera la causa molto probabile, visibile dallo schema, della frequenza troppo elevata per un lampeggio percepibile del LED.",
+        "Classifica capacitor4.3 come possibile condensatore di temporizzazione, mentre nel circuito è collegato tra VCC e GND come condensatore di alimentazione/disaccoppiamento."
+      ],
+      "hallucinations": [
+        "Suggerisce che il LED potrebbe essere 'troppo vicino al positivo fisso', ma nel JSON il LED è pilotato dal pin 3 tramite resistenza e il catodo è a massa; non c'è evidenza di un collegamento diretto al positivo.",
+        "Parla genericamente di condensatori di temporizzazione includendo anche capacitor4.3, che non appartiene alla rete temporale del 555."
+      ],
+      "missed_important_points": [
+        "Non segnala che con valori 1 kΩ, 1 kΩ e 1 µF la frequenza dell'astabile è dell'ordine di centinaia di Hz, quindi il LED può apparire fisso anche se il 555 oscilla correttamente.",
+        "Non suggerisce di aumentare il condensatore di temporizzazione o le resistenze per ottenere un lampeggio visibile.",
+        "Non distingue chiaramente tra LED fisso acceso per oscillazione troppo rapida e LED spento per LED invertito/guasto o uscita non oscillante."
+      ],
+      "strengths": [
+        "Legge correttamente la topologia principale dal JSON: pin 8 a +9 V, pin 1 a GND, pin 4 a VCC, pin 2 e 6 collegati insieme, pin 7 sulla rete resistiva, pin 3 verso resistenza e LED.",
+        "Usa correttamente il pinout del NE555 e la funzione dei pin principali dal datasheet.",
+        "Propone controlli pratici sensati: misurare pin 4, pin 8, pin 1, verificare oscillazione su pin 3, controllare LED, resistenza e rete RC.",
+        "Riconosce che non ci sono terminali macroscopicamente scollegati nel JSON."
+      ],
+      "short_explanation": "La risposta è utile e ben ancorata al JSON e al datasheet, con controlli pratici corretti. Tuttavia la priorità diagnostica non è ottimale: il RESET viene messo al primo posto pur risultando collegato a VCC, e viene mancata la causa più importante visibile dallo schema, cioè una frequenza di oscillazione troppo alta per vedere il LED lampeggiare. Ci sono anche piccole imprecisioni nel considerare tutti i condensatori come temporizzazione."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c01",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c01\\results_json\\c01_gpt-4.1-nano_20260605_141312.txt",
+      "model_under_test": "gpt-4.1-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 27.463,
+      "timestamp": "2026-06-05 14:24:42",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8133, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1238, output_tokens_details=OutputTokensDetails(reasoning_tokens=315), total_tokens=9371)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 1,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 2,
+        "hallucination_absence": 0
+      },
+      "total_score": 9,
+      "max_score": 21,
+      "normalized_score": 0.42857142857142855,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Il pin 3 del NE555 non oscilla per problema nella rete astabile R1/R2/C1 o condensatore di temporizzazione guasto, aperto, in corto o di valore errato",
+        "Problema di alimentazione o massa del NE555, anche se nel JSON pin 8 e pin 1 risultano collegati correttamente",
+        "Pin RESET 4 non alto nel circuito reale, anche se nel JSON risulta collegato a +9 V insieme al pin 8",
+        "LED o resistenza serie R3 collegati male, LED invertito, LED guasto o uscita pin 3 bloccata alta/bassa",
+        "Condensatore sul pin 5 o disaccoppiamento/alimentazione con difetti che disturbano il funzionamento"
+      ],
+      "model_primary_cause": "Il secondo NE555 non oscilla o non produce segnale sul pin 3",
+      "major_errors": [
+        "Il modello parla di due NE555, ma il JSON e lo schema forniti mostrano un solo NE555.",
+        "Il modello interpreta il circuito come generatore di suono ding-dong con speaker, mentre nel JSON/schema il carico è un LED con resistenza serie.",
+        "Indica un 'secondo NE555' e uno speaker come elementi diagnostici principali, che non sono presenti nel circuito JSON.",
+        "Afferma che entrambi i NE555 sono collegati correttamente, ma esiste un solo integrato nel JSON."
+      ],
+      "hallucinations": [
+        "Secondo NE555",
+        "Speaker",
+        "Condensatore di accoppiamento verso lo speaker",
+        "Circuito ding-dong a due oscillatori",
+        "Output del secondo NE555"
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che il circuito reale è un astabile 555 singolo che pilota direttamente un LED tramite R3.",
+        "Non sfrutta il JSON per osservare che pin 4 RESET e pin 8 VCC sono sulla stessa rete +9 V, quindi il reset non è una causa topologica probabile nel circuito descritto.",
+        "Non indica esplicitamente di controllare il LED, la sua polarità e la resistenza R3 come percorso di uscita effettivo.",
+        "Non identifica con precisione la rete astabile: pin 2 e 6 collegati insieme a C1 e R2, pin 7 collegato tra R1 e R2."
+      ],
+      "strengths": [
+        "Propone correttamente di misurare l'oscillazione sul pin 3 del 555.",
+        "Usa correttamente le funzioni base dei pin del NE555, in particolare pin 8, pin 1, pin 4 e pin 3.",
+        "Suggerisce controlli pratici sensati su alimentazione, massa, reset e condensatori di temporizzazione.",
+        "La diagnosi generica di uscita bloccata alta/bassa o assenza di oscillazione è compatibile con il sintomo LED fisso/spento."
+      ],
+      "short_explanation": "La risposta è parzialmente utile perché consiglia controlli validi sul 555, soprattutto pin 3, alimentazione, massa, reset e rete RC. Tuttavia commette un errore strutturale importante: assume la presenza di due NE555, speaker e condensatore di accoppiamento audio, elementi non presenti nel JSON/schema. La causa principale indicata, il secondo NE555 che non oscilla, è quindi formalmente sbagliata, anche se l'idea generale di verificare se il pin 3 oscilla è corretta."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c01",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c01\\results_json\\c01_gpt-4o-mini_20260605_141110.txt",
+      "model_under_test": "gpt-4o-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 28.676,
+      "timestamp": "2026-06-05 14:25:11",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=7470, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=1336, output_tokens_details=OutputTokensDetails(reasoning_tokens=350), total_tokens=8806)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 1,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 2,
+        "hallucination_absence": 1
+      },
+      "total_score": 10,
+      "max_score": 21,
+      "normalized_score": 0.4761904762,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Mancanza o anomalia dell'alimentazione +9 V sul nodo comune a pin 8 e pin 4 del 555",
+        "Problema nella rete astabile R1/R2/C1 collegata ai pin 2, 6 e 7, inclusi condensatore di temporizzazione guasto, in corto, aperto o collegato male",
+        "Pin 3 del 555 non oscillante per guasto del 555 o condizioni errate sui pin di temporizzazione",
+        "Problema nel ramo LED: LED invertito o guasto, resistenza serie R3 errata/aperta, collegamento verso massa difettoso",
+        "Condensatore di bypass/alimentazione C3 in corto o alimentazione collassata"
+      ],
+      "model_primary_cause": "Pin 4 RESET non alto",
+      "major_errors": [
+        "Indica come causa più probabile il pin 4 RESET non alto, ma nel JSON il pin 4 è collegato allo stesso nodo del pin 8, del terminale di alimentazione e di R2/C3, quindi risulta tenuto alto se l'alimentazione è presente.",
+        "Afferma che il JSON non chiarisce il collegamento del pin 4, mentre il grafo lo specifica chiaramente.",
+        "Descrive il circuito come basato su due NE555 per audio/ding-dong, ma il JSON e lo schema mostrano un solo NE555 che pilota un LED.",
+        "Dice che condensatori e resistori attorno ai pin 2, 6 e 7 non sono dettagliatamente descritti, ma il grafo mostra chiaramente la rete astabile con pin 2 e 6 insieme, C1 a massa, R1 verso pin 7 e R2 verso VCC."
+      ],
+      "hallucinations": [
+        "Presenza di due timer NE555 nel circuito valutato",
+        "Funzione audio/speaker non presente nel JSON dello schema fornito",
+        "RESET non chiaramente specificato nel JSON"
+      ],
+      "missed_important_points": [
+        "Non riconosce esplicitamente che pin 4 RESET è già collegato a VCC insieme al pin 8.",
+        "Non valorizza la topologia astabile corretta: pin 2 e 6 uniti al condensatore C1, pin 7 alla rete resistiva R1/R2.",
+        "Non menziona la possibilità che C3, essendo tra +9 V e massa, se in corto possa impedire l'accensione.",
+        "Non propone misure specifiche sui pin 2/6 per verificare la rampa tra circa 1/3 e 2/3 VCC.",
+        "Non distingue bene tra guasto reale probabile e connessione già verificata corretta dal JSON."
+      ],
+      "strengths": [
+        "Identifica correttamente pin 1 come GND, pin 8 come VCC e pin 3 come uscita del 555.",
+        "Riconosce che il LED è pilotato dal pin 3 attraverso una resistenza e ha il catodo a massa.",
+        "Propone controlli pratici utili come misurare il pin 3 con oscilloscopio e verificare LED, resistenza e condensatori.",
+        "Considera correttamente problemi della rete RC di temporizzazione come possibile causa del LED fisso o spento."
+      ],
+      "short_explanation": "La risposta è parzialmente utile perché fornisce controlli generici sensati per un 555 astabile e individua pin 3, rete RC e LED come aree da verificare. Tuttavia legge male il JSON sul punto più importante: il pin 4 RESET è chiaramente collegato al nodo +9 V insieme al pin 8, quindi non dovrebbe essere indicato come causa principale. Inoltre introduce elementi non presenti, come due NE555 e audio/speaker, e sottostima le evidenze topologiche della rete astabile già presenti nel grafo."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c01",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c01\\results_json\\c01_gpt-5-mini_20260605_141432.txt",
+      "model_under_test": "gpt-5-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 31.591,
+      "timestamp": "2026-06-05 14:25:42",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8532, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=1488, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10020)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 18,
+      "max_score": 21,
+      "normalized_score": 0.8571428571428571,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "La rete RC di temporizzazione può non produrre un lampeggio visibile: con valori come 1 kΩ, 1 kΩ e 1 µF la frequenza è troppo alta e il LED può apparire fisso",
+        "Condensatore di temporizzazione C1/capacitor4.1 guasto, aperto, in corto o collegato male",
+        "Resistenze della rete astabile R1/R2/resistor22.1/resistor22.2 errate, aperte, cortocircuitate o mal collegate",
+        "Alimentazione assente o errata su pin 8 oppure reset pin 4 non alto",
+        "Problema nel percorso di uscita pin 3, resistenza serie o LED invertito/guasto"
+      ],
+      "model_primary_cause": "Mancata o errata alimentazione su VCC/terminal26.1_t1",
+      "major_errors": [
+        "Non considera come causa molto probabile del LED apparentemente fisso una frequenza di oscillazione troppo alta per essere percepita come lampeggio, aspetto suggerito dallo schema con valori bassi di R e C.",
+        "Mette come prima causa l'assenza di alimentazione, che spiega il LED spento ma non è la spiegazione più specifica per il caso in cui il LED resti acceso fisso/apparentemente fisso."
+      ],
+      "hallucinations": [
+        "Il riferimento al secondo NE555 e alla parte ding-dong come possibile problema è poco pertinente al circuito JSON, che contiene un solo 555 e un LED, anche se deriva dalla descrizione del datasheet fornita.",
+        "Chiama capacitor4.3 parte dei condensatori da controllare insieme a quelli critici, ma non chiarisce che è un condensatore tra alimentazione e massa e non fa parte della temporizzazione del lampeggio."
+      ],
+      "missed_important_points": [
+        "Non propone di stimare o misurare la frequenza di oscillazione del pin 3 per capire se il LED lampeggia troppo velocemente e quindi appare fisso.",
+        "Non segnala che valori di temporizzazione troppo piccoli possono rendere il lampeggio invisibile anche con oscillatore perfettamente funzionante.",
+        "Non distingue abbastanza tra LED spento per guasto di alimentazione/uscita e LED fisso per oscillazione assente oppure troppo rapida."
+      ],
+      "strengths": [
+        "Ricostruisce correttamente dal JSON la topologia astabile del NE555: pin 2 e 6 insieme, condensatore di timing a massa, pin 7 sulla rete resistiva, pin 3 verso resistenza e LED.",
+        "Usa correttamente il pinout del NE555: pin 8 VCC, pin 1 GND, pin 4 RESET alto, pin 5 con condensatore verso massa.",
+        "Propone controlli pratici sensati: misura di VCC, reset, uscita pin 3, verifica LED/resistenza e componenti della rete RC.",
+        "Riconosce correttamente che il pin 4 è collegato al nodo VCC nel JSON e quindi il reset risulta tenuto alto se l'alimentazione è presente."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida e ben basata sul JSON e sul datasheet: identifica correttamente il 555 astabile, il percorso del LED e i principali controlli diagnostici. Tuttavia la priorità diagnostica non è ottimale: per un LED che resta fisso in uno schema astabile con valori come 1 kΩ/1 kΩ/1 µF, una causa chiave è la frequenza troppo alta per vedere il lampeggio. Il modello privilegia invece genericamente l'alimentazione, utile per LED spento ma meno specifica per LED apparentemente fisso. Risposta comunque utile, ma parziale."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c01",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c01\\results_json\\c01_gpt-5-nano_20260605_141345.txt",
+      "model_under_test": "gpt-5-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 27.713,
+      "timestamp": "2026-06-05 14:26:10",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9195, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=1357, output_tokens_details=OutputTokensDetails(reasoning_tokens=415), total_tokens=10552)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 1,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 1,
+        "cause_priority": 1,
+        "practical_checks": 2,
+        "hallucination_absence": 0
+      },
+      "total_score": 8,
+      "max_score": 21,
+      "normalized_score": 0.38095238095238093,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Il 555 singolo non oscilla per problema nella rete astabile R1/R2/C1 collegata ai pin 7, 6 e 2",
+        "Assenza o errore di alimentazione: pin 8 non a +9 V o pin 1 non a GND",
+        "Uscita pin 3 non commuta oppure problema nel percorso LED: R3, LED invertito/guasto o collegamento a massa",
+        "Condensatore C1 di temporizzazione guasto, in corto, aperto o di valore errato",
+        "Reset pin 4 non alto solo se esiste un guasto di collegamento, anche se nello schema/JSON risulta direttamente collegato a +9 V"
+      ],
+      "model_primary_cause": "RESET dei NE555 tenuto basso o non alimentato correttamente",
+      "major_errors": [
+        "Descrive due NE555 e un circuito ding-dong con speaker, mentre il JSON e lo schema mostrano un solo NE555 che pilota un LED",
+        "Attribuisce il pin 3 del secondo NE555 allo speaker tramite condensatore di uscita, ma nel circuito reale il pin 3 va a R3 e LED verso massa",
+        "Indica come causa principale il RESET basso, ma nel JSON il pin 4 è collegato direttamente alla stessa rete di +9 V del pin 8",
+        "Interpreta capacitor4.3/C3 come parte funzionale di reset/uscita, mentre è un condensatore tra VCC e GND, verosimilmente di disaccoppiamento alimentazione"
+      ],
+      "hallucinations": [
+        "Secondo NE555",
+        "Speaker",
+        "Suono ding-dong come funzione del circuito specifico",
+        "Condensatore di uscita verso speaker",
+        "Pin 3 del secondo timer",
+        "Rete di condensatori associata al LED non presente come descritta"
+      ],
+      "missed_important_points": [
+        "Non riconosce chiaramente che il circuito è un astabile 555 singolo con pin 2 e 6 collegati insieme, C1 verso GND, R1/R2 verso pin 7 e VCC",
+        "Non sottolinea che reset e alimentazione risultano già correttamente cablati nel JSON",
+        "Non dà priorità al controllo della tensione sul nodo pin 2/6, che dovrebbe caricare e scaricare fra circa 1/3 e 2/3 VCC",
+        "Non evidenzia in modo pulito il percorso reale del LED: pin 3 -> R3 -> anodo LED -> catodo a GND"
+      ],
+      "strengths": [
+        "Usa correttamente varie informazioni del datasheet sul pinout del 555",
+        "Propone misure pratiche utili: VCC su pin 8, GND su pin 1, stato del reset, oscillazione sul pin 3",
+        "Include il controllo della rete RC sui pin 2/6/7, che è effettivamente rilevante",
+        "Suggerisce di verificare LED, resistore e componenti guasti o montati male"
+      ],
+      "short_explanation": "La risposta è parzialmente utile perché contiene controlli generali corretti per un NE555 astabile, ma legge male il circuito specifico: il JSON mostra un solo 555 con LED su pin 3, non due 555, speaker o condensatore di uscita. La causa principale proposta, reset basso, è poco supportata perché pin 4 è collegato a +9 V nel circuito. La diagnosi avrebbe dovuto concentrarsi prima su rete R1/R2/C1, oscillazione al pin 3 e percorso R3-LED."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c01",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c01\\results_json\\c01_gpt-5.4-mini_20260605_141535.txt",
+      "model_under_test": "gpt-5.4-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 29.825,
+      "timestamp": "2026-06-05 14:26:40",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=7856, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=1295, output_tokens_details=OutputTokensDetails(reasoning_tokens=368), total_tokens=9151)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 1,
+        "cause_priority": 0,
+        "practical_checks": 2,
+        "hallucination_absence": 1
+      },
+      "total_score": 9,
+      "max_score": 21,
+      "normalized_score": 0.4286,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": false,
+      "expected_primary_causes": [
+        "Il circuito JSON/schema mostra una configurazione astabile NE555 sostanzialmente corretta: pin 2 e 6 insieme, condensatore di temporizzazione verso GND, pin 7 collegato alla giunzione delle resistenze, reset e VCC a +9 V",
+        "Se il LED resta fisso o spento, le cause più plausibili non evidenziate da errori topologici sono guasto/valore errato di C1, R1 o R2, condensatore in corto/aperto o polarità errata se elettrolitico",
+        "Verificare alimentazione reale su pin 8, massa su pin 1 e reset alto su pin 4",
+        "Verificare oscillazione su pin 3 e corretto collegamento/polarità di LED e resistenza serie"
+      ],
+      "model_primary_cause": "Errore di cablaggio della rete RC, in particolare presunto collegamento scorretto/corto tra pin 2, 6 e 7 del NE555",
+      "major_errors": [
+        "Il modello afferma che pin 7 è collegato direttamente o quasi allo stesso nodo di pin 2 e pin 6, ma nel JSON pin 7 è su un nodo separato collegato tramite resistor22.1 al nodo pin 2/6, come in un astabile 555 normale",
+        "Interpreta come difetto una topologia che, rispetto al datasheet e allo schema, è coerente con una configurazione astabile",
+        "Dà massima priorità a un errore di cablaggio non supportato dal JSON"
+      ],
+      "hallucinations": [
+        "Presunto corto o collegamento diretto tra pin 7 e pin 6 non presente nel graph",
+        "Affermazione che capacitor4.1_t1 sia nello stesso nodo di pin 2, pin 6 e pin 7: nel JSON è nello stesso nodo di pin 2 e pin 6, ma non di pin 7"
+      ],
+      "missed_important_points": [
+        "Non riconosce che la rete R1/R2/C1 del JSON corrisponde alla classica configurazione astabile del 555",
+        "Non sottolinea abbastanza che, in assenza di errori topologici nel JSON, la diagnosi dovrebbe spostarsi su valori/componenti guasti, alimentazione reale, reset, pin 3 e LED",
+        "Non propone il controllo della tensione rampante sul nodo pin 2/6, utile per distinguere un problema della rete RC da un problema interno del 555"
+      ],
+      "strengths": [
+        "Identifica correttamente il circuito come astabile con NE555 che pilota un LED dal pin 3 tramite resistenza",
+        "Riconosce correttamente pin 8 a +9 V, pin 1 a GND e pin 4 reset alto nel graph",
+        "Propone controlli pratici utili come misurare il pin 3, controllare LED e resistenza serie, e verificare la zona dei pin 2/6/7",
+        "Usa correttamente buona parte del pinout del NE555 dal datasheet"
+      ],
+      "short_explanation": "La risposta è utile a livello generale e identifica correttamente il circuito come astabile 555 con LED sul pin 3, ma la diagnosi principale è basata su una lettura errata del JSON: pin 7 non è cortocircuitato a pin 2/6, bensì collegato tramite una resistenza come previsto. Di conseguenza la priorità delle cause è sbagliata, anche se alcuni controlli pratici suggeriti restano validi."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c01",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c01\\results_json\\c01_gpt-5.4-nano_20260605_141505.txt",
+      "model_under_test": "gpt-5.4-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 33.167,
+      "timestamp": "2026-06-05 14:27:13",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8892, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=1547, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10439)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 1,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 13,
+      "max_score": 21,
+      "normalized_score": 0.619,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": false,
+      "expected_primary_causes": [
+        "Il circuito è un astabile 555 correttamente cablato: pin 8 e pin 4 sono collegati al nodo di alimentazione tramite il terminale +9 V, pin 1 a GND, pin 2 e 6 uniti al condensatore di temporizzazione, pin 7 alla rete resistiva.",
+        "Con i valori visibili nello schema reale, R1=1 kΩ, R2=1 kΩ e C1=1 µF, la frequenza di oscillazione è dell'ordine di centinaia di Hz, quindi il LED può apparire fisso invece di lampeggiare visibilmente.",
+        "Se il LED non si accende affatto, cause pratiche plausibili sono alimentazione assente, LED invertito/guasto, resistenza o collegamento di uscita interrotto, oppure uscita pin 3 non commutante da verificare strumentalmente."
+      ],
+      "model_primary_cause": "Pin 8 VCC del NE555 non collegato correttamente a +9 V",
+      "major_errors": [
+        "Interpreta come assenza di alimentazione il fatto che il pin 8 sia collegato a terminal26.1; nello schema reale quel nodo è il +9 V e alimenta sia pin 8 sia pin 4.",
+        "Considera il RESET pin 4 non chiaramente alto, ma nel circuito reale è collegato allo stesso nodo di +9 V del pin 8.",
+        "Suggerisce che la rete astabile sui pin 2/6/7 non sia garantita o sia sospetta, mentre dal JSON e dallo schema è una configurazione astabile standard del 555.",
+        "Non individua la causa più coerente con LED apparentemente fisso nello schema reale: frequenza troppo alta per lampeggio visibile, dato dai valori R-C."
+      ],
+      "hallucinations": [
+        "La diagnosi di pin 8 non alimentato è poco supportata: il JSON mostra pin 8 connesso a un terminale e allo stesso nodo del pin 4 e della rete di alimentazione, senza warning di terminali non connessi.",
+        "L'insistenza sul secondo NE555/speaker è derivata dalla descrizione generica del datasheet, ma non è pertinente al circuito JSON fornito, che contiene un solo 555 e un LED."
+      ],
+      "missed_important_points": [
+        "Non riconosce che terminal26.1 è verosimilmente il nodo di alimentazione +9 V nello schema.",
+        "Non calcola né discute la frequenza di oscillazione con i valori dello schema, che spiega bene un LED che sembra fisso.",
+        "Non evidenzia che pin 4 RESET e pin 8 VCC sono sullo stesso nodo, quindi il reset è tenuto alto se l'alimentazione è presente.",
+        "Non distingue adeguatamente tra LED realmente fisso per uscita bloccata e LED apparentemente fisso per lampeggio troppo rapido."
+      ],
+      "strengths": [
+        "Identifica correttamente il 555, il pinout principale e il ruolo del pin 3 come uscita verso LED tramite resistenza.",
+        "Riconosce correttamente che il catodo del LED è a massa e l'anodo è pilotato dal pin 3 tramite resistenza.",
+        "Propone controlli pratici utili su pin 8, pin 4, pin 3, GND e rete RC.",
+        "Usa correttamente molte informazioni del datasheet, in particolare reset attivo basso, VCC, GND e funzione dei pin 2/6/7."
+      ],
+      "short_explanation": "La risposta è utile come procedura generale di troubleshooting del 555, ma la diagnosi principale è probabilmente errata: nel circuito reale il pin 8 e il reset pin 4 sono collegati al nodo +9 V tramite il terminale di alimentazione. Anche la rete RC è una configurazione astabile normale. La causa più coerente per un LED che sembra fisso, considerando lo schema, è la frequenza troppo alta per essere percepita come lampeggio visibile; questo punto non viene colto."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c01",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c01\\results_json\\c01_gpt-5.4_20260605_141631.txt",
+      "model_under_test": "gpt-5.4",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 28.907,
+      "timestamp": "2026-06-05 14:27:42",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9352, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=1283, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10635)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 3
+      },
+      "total_score": 19,
+      "max_score": 21,
+      "normalized_score": 0.9047619048,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Il circuito risulta topologicamente corretto come astabile NE555 con LED su pin 3, quindi vanno verificati alimentazione reale, reset alto e oscillazione della rete RC",
+        "Possibile problema o valore errato nella rete temporizzatrice R1/R2/C1 o condensatore C1 guasto/montato male",
+        "Con i valori visibili nello schema reale, R1=1k, R2=1k e C1=1uF producono una frequenza troppo alta per un lampeggio visibile, quindi il LED può apparire fisso",
+        "Problema nel ramo LED: LED invertito/guasto, resistenza serie aperta o saldatura difettosa",
+        "NE555 guasto o uscita pin 3 bloccata"
+      ],
+      "model_primary_cause": "Alimentazione reale mancante o errata sul nodo di alimentazione, seguita da problema nella rete RC di temporizzazione",
+      "major_errors": [],
+      "hallucinations": [],
+      "missed_important_points": [
+        "Non considera la possibilità che il LED sembri fisso perché la frequenza dell'astabile è troppo alta per essere percepita come lampeggio; questo è suggerito dai valori visibili nello schema, ma il modello valutato non aveva ricevuto l'immagine.",
+        "Non distingue in modo forte tra LED fisso acceso per oscillazione troppo rapida e LED spento per guasto/alimentazione/ramo LED."
+      ],
+      "strengths": [
+        "Identifica correttamente il circuito come astabile con NE555 e LED pilotato dal pin 3 tramite resistenza.",
+        "Legge correttamente dal JSON i collegamenti principali: pin 8 a VCC, pin 1 a GND, pin 4 RESET alto, pin 2 e 6 uniti, pin 7 sulla rete resistiva, pin 5 filtrato a massa.",
+        "Conclude correttamente che dal grafo non emerge un errore topologico evidente.",
+        "Propone controlli pratici utili: misura di VCC tra pin 8 e pin 1, misura del reset, osservazione del nodo pin 2/6 e del pin 3, verifica di LED/resistenza/condensatori.",
+        "Evita di inventare collegamenti o componenti non presenti nel JSON."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida rispetto a JSON e datasheet: riconosce la topologia astabile del 555, verifica correttamente i pin e propone una diagnostica pratica coerente. La priorità data all'alimentazione e alla rete RC è ragionevole. L'unico limite importante, verificabile dall'immagine ma non disponibile al modello valutato, è che i valori 1k/1k/1uF rendono il lampeggio troppo rapido e quindi il LED può apparire fisso anche se il circuito oscilla."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c01",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c01\\results_json_img\\c01_gpt-4.1-mini_20260605_141801.txt",
+      "model_under_test": "gpt-4.1-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 27.225,
+      "timestamp": "2026-06-05 14:28:09",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8063, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1326, output_tokens_details=OutputTokensDetails(reasoning_tokens=422), total_tokens=9389)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 16,
+      "max_score": 21,
+      "normalized_score": 0.7619,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "La rete temporizzante R1=1 kΩ, R2=1 kΩ, C1=1 µF produce una frequenza troppo alta per un lampeggio visibile: il LED può apparire fisso",
+        "Valori errati o guasti nella rete R1-R2-C1 possono bloccare o alterare l'oscillazione",
+        "Problemi su LED, polarità del LED o resistenza serie R3 possono causare LED spento",
+        "Alimentazione o reset del 555 da verificare, anche se nello schema pin 4 e pin 8 risultano collegati a +9 V"
+      ],
+      "model_primary_cause": "Pin 4 RESET a livello basso",
+      "major_errors": [
+        "Non identifica come causa principale il fatto che con R1=1 kΩ, R2=1 kΩ e C1=1 µF la frequenza è dell'ordine di centinaia di Hz, quindi il LED non lampeggia visibilmente e può sembrare fisso.",
+        "Dà priorità al RESET basso anche se JSON e immagine mostrano il pin 4 collegato direttamente al nodo +9 V insieme al pin 8.",
+        "Afferma che i valori dei componenti sono coerenti, mentre per un lampeggio visibile i valori mostrati nello schema sono molto probabilmente inadatti."
+      ],
+      "hallucinations": [
+        "Descrive C2 e C3 come condensatori di filtro o accoppiamento in modo generico; C3 è chiaramente un condensatore tra alimentazione e massa, C2 è sul pin 5 verso massa.",
+        "Afferma che i valori dei condensatori e resistori sono coerenti senza giustificarlo e in contrasto con il sintomo di lampeggio visibile.",
+        "Suggerisce che un LED invertito possa portare a LED sempre acceso, cosa poco coerente: normalmente porterebbe a LED spento."
+      ],
+      "missed_important_points": [
+        "Manca il calcolo o la stima della frequenza astabile del 555 con i valori visibili nello schema.",
+        "Non evidenzia che il LED potrebbe effettivamente oscillare ma troppo velocemente per essere percepito dall'occhio umano.",
+        "Non suggerisce di aumentare C1 o R1/R2 per ottenere un lampeggio lento visibile."
+      ],
+      "strengths": [
+        "Riconosce correttamente la configurazione astabile del NE555.",
+        "Usa correttamente il pinout principale del 555: pin 1 massa, pin 8 VCC, pin 4 reset, pin 2/6 rete temporizzante, pin 7 scarica, pin 3 uscita.",
+        "Propone controlli pratici utili: misura su pin 4, pin 8, pin 3, verifica LED, R3 e rete R-C.",
+        "La topologia descritta è in gran parte coerente con JSON e immagine."
+      ],
+      "short_explanation": "La risposta è tecnicamente utile e descrive bene la topologia del 555 astabile, ma non coglie la causa più evidente nello schema: con R1 e R2 da 1 kΩ e C1 da 1 µF la frequenza è troppo alta per un lampeggio visibile, quindi il LED può sembrare fisso. La priorità data al RESET basso è debole perché il pin 4 è mostrato collegato a +9 V. Buoni i controlli pratici, ma la diagnosi principale è solo parziale."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c01",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c01\\results_json_img\\c01_gpt-4.1-nano_20260605_141858.txt",
+      "model_under_test": "gpt-4.1-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 27.379,
+      "timestamp": "2026-06-05 14:28:37",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=7750, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=1385, output_tokens_details=OutputTokensDetails(reasoning_tokens=471), total_tokens=9135)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 12,
+      "max_score": 21,
+      "normalized_score": 0.5714285714,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Verificare se il pin 3 del 555 oscilla: se resta fisso alto o basso il LED rimane acceso fisso o spento",
+        "Controllare rete astabile R1/R2/C1 sui pin 2, 6 e 7, inclusi condensatore aperto/in corto o valore errato",
+        "Controllare LED, polarità del LED e resistenza serie R3 tra pin 3 e LED",
+        "Verificare alimentazione reale: pin 8 a +9 V, pin 1 a GND",
+        "Verificare che RESET pin 4 sia realmente alto, anche se da JSON/schema è collegato a VCC"
+      ],
+      "model_primary_cause": "Mancanza di alimentazione corretta (+9 V o GND) sul NE555",
+      "major_errors": [
+        "Descrive il circuito come se usasse due NE555, mentre JSON e immagine mostrano un solo NE555",
+        "Menziona speaker e secondo NE555 non presenti nello schema fornito",
+        "Non sfrutta adeguatamente il fatto che nel JSON pin 4 RESET e pin 8 VCC sono già collegati allo stesso nodo +9 V",
+        "Attribuisce a C3 un ruolo ambiguo nella temporizzazione/controllo, mentre nello schema C3 è tra +9 V e GND come condensatore di bypass alimentazione"
+      ],
+      "hallucinations": [
+        "Due NE555 nel circuito",
+        "Speaker probabilmente pilotato dal circuito",
+        "Secondo NE555 o uscita audio non rappresentati dal JSON/immagine",
+        "C3 indicato come possibile condensatore di controllo o parte critica della rete di temporizzazione"
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che il LED è collegato dal pin 3 tramite R3 verso massa, quindi un pin 3 fisso alto lo accende fisso e un pin 3 basso lo spegne",
+        "Non distingue tra difetti possibili sul circuito reale e collegamenti già confermati dal JSON",
+        "Non sottolinea che pin 2 e pin 6 sono correttamente uniti al nodo del condensatore C1, tipico astabile",
+        "Non segnala che C2 è sul pin 5 verso massa e non è il condensatore principale di temporizzazione",
+        "Non dà priorità sufficiente a LED invertito/guasto o R3 interrotta nel caso di LED sempre spento"
+      ],
+      "strengths": [
+        "Propone controlli pratici utili su alimentazione, GND, RESET e uscita pin 3",
+        "Riconosce correttamente il ruolo generale del 555 come oscillatore astabile",
+        "Indica correttamente che pin 4 RESET deve essere alto",
+        "Suggerisce l'uso di oscilloscopio o multimetro per verificare l'oscillazione sul pin 3",
+        "Include verifiche su componenti RC e LED"
+      ],
+      "short_explanation": "La risposta è utile come checklist generica per un 555 astabile, ma non legge con precisione lo schema: inventa due NE555 e uno speaker, mentre il circuito contiene un solo 555 che pilota un LED tramite R3. Le verifiche proposte sono in gran parte sensate, ma la priorità delle cause non è ben allineata al JSON, che mostra già RESET e alimentazione collegati correttamente. Mancano osservazioni specifiche sul nodo pin 3-R3-LED-GND e sulla rete astabile R1/R2/C1."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c01",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c01\\results_json_img\\c01_gpt-4o-mini_20260605_141637.txt",
+      "model_under_test": "gpt-4o-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 27.315,
+      "timestamp": "2026-06-05 14:29:04",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=7394, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=1236, output_tokens_details=OutputTokensDetails(reasoning_tokens=428), total_tokens=8630)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 1,
+        "cause_priority": 0,
+        "practical_checks": 2,
+        "hallucination_absence": 2
+      },
+      "total_score": 10,
+      "max_score": 21,
+      "normalized_score": 0.47619047619047616,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": false,
+      "expected_primary_causes": [
+        "I valori della rete astabile sono molto piccoli: R1=1 kΩ, R2=1 kΩ e C1=1 µF producono una frequenza dell'ordine di centinaia di Hz, quindi il LED può apparire fisso invece di lampeggiare visibilmente",
+        "Verificare con oscilloscopio o multimetro in frequenza il pin 3 del 555: se oscilla rapidamente, il problema è la temporizzazione non adatta al lampeggio visibile",
+        "Se il LED non si accende affatto, controllare LED, polarità, resistenza serie R3, collegamento del pin 3 e alimentazione"
+      ],
+      "model_primary_cause": "Pin 4 RESET basso",
+      "major_errors": [
+        "La causa messa al primo posto, pin 4 RESET basso, è poco coerente con JSON e schema: pin 4 è collegato allo stesso nodo di pin 8 e +9 V.",
+        "Non considera il punto più evidente nello schema: con R1=1 kΩ, R2=1 kΩ e C1=1 µF il lampeggio è troppo veloce per essere percepito, quindi il LED può sembrare acceso fisso.",
+        "La priorità diagnostica è generica e non sfrutta i valori e le connessioni reali del circuito."
+      ],
+      "hallucinations": [
+        "Parla di 'pin 8 di NE555' al plurale, mentre nel JSON e nello schema forniti è presente un solo 555.",
+        "Afferma che pin 2 deve ricevere un segnale per iniziare l'oscillazione; in questa configurazione astabile pin 2 e pin 6 sono collegati alla rete RC, non a un trigger esterno."
+      ],
+      "missed_important_points": [
+        "Manca il calcolo o almeno la stima qualitativa della frequenza dell'astabile.",
+        "Non evidenzia che il circuito, topologicamente, appare correttamente configurato come astabile.",
+        "Non distingue bene tra LED apparentemente fisso per frequenza troppo alta e LED completamente spento per guasto o collegamento errato."
+      ],
+      "strengths": [
+        "Riconosce correttamente la configurazione generale astabile del 555.",
+        "Indica correttamente i pin fondamentali: alimentazione, massa, reset, uscita e rete RC.",
+        "Propone controlli pratici utili come misura su pin 8, pin 1, pin 4 e osservazione del pin 3 con oscilloscopio.",
+        "Suggerisce di controllare LED, polarità e componenti RC."
+      ],
+      "short_explanation": "La risposta è utile come checklist generica per un 555 astabile, ma non individua la causa più probabile supportata dallo schema: i valori R1/R2/C1 generano una frequenza troppo alta per un lampeggio visibile. Inoltre mette al primo posto il reset basso, nonostante pin 4 sia chiaramente collegato a +9 V insieme a pin 8."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c01",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c01\\results_json_img\\c01_gpt-5-mini_20260605_142030.txt",
+      "model_under_test": "gpt-5-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 31.365,
+      "timestamp": "2026-06-05 14:29:35",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8764, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1450, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10214)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 19,
+      "max_score": 21,
+      "normalized_score": 0.9048,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Verificare alimentazione +9 V su pin 8 e massa su pin 1 del NE555",
+        "Verificare che RESET pin 4 sia alto, anche se nello schema risulta collegato a +9 V",
+        "Guasto, valore errato, polarità errata o collegamento errato del condensatore di temporizzazione C1 tra pin 2/6 e massa",
+        "Rete astabile R1/R2 o collegamenti ai pin 7, 6 e 2 interrotti o con valori errati",
+        "Uscita pin 3 non oscillante o problema nella catena R3-LED, inclusa polarità LED o resistenza aperta"
+      ],
+      "model_primary_cause": "RESET pin 4 basso, scollegato o non tenuto a livello alto",
+      "major_errors": [
+        "Attribuisce una probabilità relativamente alta al condensatore su pin 5 da 1 µF come possibile causa di blocco dell'oscillazione: il valore è insolito rispetto al classico 10 nF, ma da solo normalmente non è una causa primaria forte di LED fisso/spento in regime stazionario.",
+        "La priorità data al RESET basso è diagnostically utile, ma nello schema/JSON il pin 4 è esplicitamente collegato al rail +9 V, quindi non è l'evidenza più forte salvo difetto fisico di montaggio."
+      ],
+      "hallucinations": [
+        "L'ipotesi che C2 da 1 µF sul pin 5 possa prevenire l'oscillazione è poco supportata; è più una possibilità marginale che una causa probabile."
+      ],
+      "missed_important_points": [
+        "Avrebbe potuto indicare più chiaramente che, con R1=1 kΩ, R2=1 kΩ e C1=1 µF, la frequenza attesa è dell'ordine di centinaia di Hz, quindi il LED potrebbe apparire quasi fisso per persistenza visiva anziché lampeggiare visibilmente.",
+        "Non distingue abbastanza tra LED sempre acceso per oscillazione troppo rapida e LED spento per guasto della catena R3/LED o uscita bassa."
+      ],
+      "strengths": [
+        "Comprende correttamente che il circuito reale mostrato da JSON e immagine è un singolo NE555 in astabile con LED pilotato dal pin 3.",
+        "Usa correttamente il pinout del NE555: pin 8 VCC, pin 1 GND, pin 4 RESET, pin 3 OUTPUT, pin 5 CONTROL, pin 2/6/7 rete temporizzazione.",
+        "Rileva correttamente la discrepanza tra datasheet/descrizione che parla di due NE555 e JSON/immagine che mostrano un solo NE555.",
+        "Propone controlli pratici molto utili: misure su pin 8, 1, 4, 3, verifica rete R-C, LED, R3 e sostituzione del condensatore di temporizzazione.",
+        "La diagnosi è coerente con il sintomo e con la topologia del circuito."
+      ],
+      "short_explanation": "Risposta tecnicamente solida e utile: identifica correttamente il 555 astabile, i pin critici e le verifiche da fare. La priorità è leggermente discutibile perché RESET e alimentazione risultano corretti nello schema, mentre sarebbe importante evidenziare anche che con i valori mostrati il lampeggio può essere troppo rapido per essere visibile. L'ipotesi su C2 da 1 µF è un po' sovrastimata, ma non compromette la qualità complessiva."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c01",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c01\\results_json_img\\c01_gpt-5-nano_20260605_141934.txt",
+      "model_under_test": "gpt-5-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 27.188,
+      "timestamp": "2026-06-05 14:30:03",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8885, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1459, output_tokens_details=OutputTokensDetails(reasoning_tokens=331), total_tokens=10344)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 1,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 2,
+        "hallucination_absence": 0
+      },
+      "total_score": 9,
+      "max_score": 21,
+      "normalized_score": 0.4285714286,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Verificare che il singolo NE555 sia alimentato correttamente: pin 8 a +9 V e pin 1 a GND",
+        "Verificare la rete astabile del singolo NE555: pin 2 e 6 collegati insieme al condensatore C1 verso massa, pin 7 collegato alla rete R1/R2, valori e continuità corretti",
+        "Verificare che il pin 4 RESET sia alto; nello schema/JSON risulta già collegato a +9 V, quindi è un controllo utile ma non la causa più evidenziata dalla topologia",
+        "Verificare il segnale sul pin 3 del singolo NE555 e il percorso R3-LED-GND, inclusa polarità del LED e integrità della resistenza",
+        "Verificare condensatori C1, C2 e C3 per corto, apertura o montaggio errato se polarizzati"
+      ],
+      "model_primary_cause": "RESET basso o non tirato alto su uno dei due NE555",
+      "major_errors": [
+        "Il modello afferma ripetutamente che il circuito contiene due NE555, ma JSON e immagine mostrano un solo NE555.",
+        "Attribuisce il LED/carico all'uscita del secondo NE555, inesistente nello schema fornito.",
+        "Sostiene che il JSON mostri due NE555, cosa falsa: nel JSON è presente solo integrated_circuit11.1.",
+        "Indica come causa più probabile il RESET basso su uno dei due timer, ma nello schema reale il pin 4 del singolo 555 è collegato direttamente al nodo +9 V insieme al pin 8.",
+        "Parla di collegamenti tra primo e secondo timer e di pin 3 del secondo NE555, non supportati dal circuito reale."
+      ],
+      "hallucinations": [
+        "Presenza di due NE555 nel circuito JSON/immagine",
+        "Secondo NE555 che pilota LED o speaker",
+        "Uscita del secondo NE555 collegata al carico tramite condensatore di uscita",
+        "Collegamento tra pin 3 del primo 555 e secondo timer",
+        "Speaker o circuito ding-dong come parte effettiva dello schema mostrato",
+        "C2 interpretato come possibile condensatore di uscita o temporizzazione del secondo timer, mentre nello schema è il condensatore sul pin 5 control voltage"
+      ],
+      "missed_important_points": [
+        "Non riconosce che lo schema reale è un astabile classico con un solo NE555 e LED su pin 3 tramite R3.",
+        "Non evidenzia chiaramente che pin 4 RESET e pin 8 VCC sono già cortocircuitati al nodo +9 V nel JSON/schema.",
+        "Non distingue C1 come condensatore di temporizzazione, C2 come condensatore su pin 5 verso GND e C3 come condensatore di alimentazione/decoupling tra +9 V e GND.",
+        "Non valuta la frequenza attesa con R1=1 kΩ, R2=1 kΩ e C1=1 µF, che potrebbe produrre lampeggio molto rapido e quindi LED apparentemente fisso.",
+        "Non segnala che il LED è direttamente pilotato dal pin 3 attraverso R3 verso massa, senza secondo stadio."
+      ],
+      "strengths": [
+        "Usa correttamente diverse funzioni dei pin del NE555 dal datasheet: pin 1 GND, pin 8 VCC, pin 4 RESET, pin 3 uscita, pin 2/6/7 rete astabile.",
+        "Propone controlli pratici utili come misurare VCC, GND, RESET e osservare il pin 3 con oscilloscopio.",
+        "Include controlli ragionevoli su rete RC, condensatori, LED e polarità.",
+        "La diagnosi contiene alcune cause tecnicamente plausibili per un 555 astabile che non lampeggia."
+      ],
+      "short_explanation": "La risposta è utile come checklist generica per un NE555, ma interpreta gravemente male il circuito: JSON e immagine mostrano un solo 555 astabile con LED su pin 3 tramite R3, mentre il modello parla di due NE555, secondo timer, speaker e condensatore di uscita. Inoltre mette come causa principale il RESET basso su uno dei due timer, nonostante nello schema il pin 4 del singolo 555 sia collegato a +9 V. Contiene comunque controlli pratici validi su alimentazione, pin 3, rete RC e LED, quindi la valutazione è solo parziale."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c01",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c01\\results_json_img\\c01_gpt-5.4-mini_20260605_142157.txt",
+      "model_under_test": "gpt-5.4-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 27.133,
+      "timestamp": "2026-06-05 14:30:30",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=7935, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=1241, output_tokens_details=OutputTokensDetails(reasoning_tokens=487), total_tokens=9176)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 16,
+      "max_score": 21,
+      "normalized_score": 0.7619047619,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": false,
+      "expected_primary_causes": [
+        "Con R1=1 kΩ, R2=1 kΩ e C1=1 µF la frequenza astabile è dell'ordine di centinaia di Hz, quindi il LED può apparire fisso invece che lampeggiare visibilmente",
+        "Valori errati o non adatti della rete RC sui pin 2, 6 e 7",
+        "Guasto o montaggio errato del condensatore di temporizzazione C1 o collegamenti della rete astabile"
+      ],
+      "model_primary_cause": "Il NE555 non sta oscillando per un problema nella rete RC di temporizzazione",
+      "major_errors": [
+        "Attribuisce come causa principale la mancata oscillazione, mentre dallo schema con R1=1 kΩ, R2=1 kΩ e C1=1 µF il 555 probabilmente oscilla troppo velocemente per produrre un lampeggio visibile.",
+        "Afferma che i valori 1 kΩ, 1 kΩ e 1 µF dovrebbero dare un lampeggio visibile, ma in una configurazione astabile 555 questi valori producono una frequenza di circa centinaia di Hz, percepita come LED fisso."
+      ],
+      "hallucinations": [
+        "La conclusione che 1 kΩ, 1 kΩ e 1 µF diano un lampeggio visibile non è supportata dal calcolo della frequenza."
+      ],
+      "missed_important_points": [
+        "Non calcola né stima la frequenza dell'astabile dai valori visibili nello schema.",
+        "Non mette tra le cause principali il fatto che il LED possa apparire fisso perché la frequenza è troppo alta.",
+        "Non suggerisce esplicitamente di aumentare C1 o le resistenze di temporizzazione per ottenere un lampeggio visibile."
+      ],
+      "strengths": [
+        "Riconosce correttamente la topologia astabile con NE555.",
+        "Identifica correttamente i collegamenti principali: pin 8 a +9 V, pin 1 a massa, pin 4 alto, pin 2 e 6 insieme, pin 7 nella rete resistiva, pin 3 verso LED tramite R3.",
+        "Propone controlli pratici utili su alimentazione, reset, LED, resistenza serie e rete RC.",
+        "Usa correttamente il pinout del NE555 e il ruolo dei pin principali."
+      ],
+      "short_explanation": "La risposta è tecnicamente utile e legge bene la topologia del circuito, ma sbaglia la priorità diagnostica: con i valori visibili nello schema l'astabile lavora a frequenza molto alta, quindi il LED può sembrare fisso. Il modello invece considera più probabile una mancata oscillazione e afferma erroneamente che quei valori dovrebbero dare un lampeggio visibile."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c01",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c01\\results_json_img\\c01_gpt-5.4-nano_20260605_142124.txt",
+      "model_under_test": "gpt-5.4-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 32.96,
+      "timestamp": "2026-06-05 14:31:03",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8332, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=1476, output_tokens_details=OutputTokensDetails(reasoning_tokens=513), total_tokens=9808)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 13,
+      "max_score": 21,
+      "normalized_score": 0.619,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Verificare che pin 8 del NE555 sia realmente a +9 V e pin 1 a GND",
+        "Verificare che pin 4 RESET sia alto, come da schema collegato a +9 V",
+        "Verificare la rete astabile R1/R2/C1 sui pin 7, 6 e 2 e il condensatore di timing",
+        "Verificare uscita pin 3, resistenza R3, polarità LED e collegamento a massa",
+        "Verificare pin 5 con condensatore verso GND e possibili valori/componenti errati"
+      ],
+      "model_primary_cause": "Pin 8 VCC non alimentato o pin 4 RESET non collegato, dedotti da una presunta omissione nel JSON",
+      "major_errors": [
+        "Afferma che nel JSON non compaiono collegamenti espliciti verso pin 8 e pin 4, ma il JSON collega pin 8 e pin 4 alla stessa rete del terminale di alimentazione, di R2 e di C3, coerente con l'immagine.",
+        "Dichiara una grossa discrepanza JSON-immagine che in realtà non è supportata dalla topologia fornita.",
+        "Attribuisce la causa più probabile a un errore di alimentazione/reset basandosi su una lettura errata del JSON, non su un'anomalia reale dello schema."
+      ],
+      "hallucinations": [
+        "Menzione di un condensatore di accoppiamento tra uscita e LED, non presente nello schema: il LED è pilotato dal pin 3 tramite R3 verso massa.",
+        "Affermazione che pin 8 e pin 4 siano assenti/non collegati nel JSON.",
+        "Descrizione delle reti di timing come 'condensatori su pin 2/6/7', mentre nello schema il condensatore di timing principale è tra la rete pin 2/6 e GND; il pin 7 è collegato alla rete resistiva."
+      ],
+      "missed_important_points": [
+        "Non riconosce che il JSON rappresenta il terminale di alimentazione tramite terminal26.1 connesso alla rete di pin 4 e pin 8.",
+        "Non valorizza correttamente che lo schema è un astabile 555 standard con R1/R2/C1, pin 2 e 6 uniti, pin 7 alla giunzione R1/R2, pin 3 che pilota LED tramite R3.",
+        "Non segnala che C2 sul pin 5 è indicato come 1 uF, valore più alto del tipico 0.01 uF, anche se non necessariamente causa primaria."
+      ],
+      "strengths": [
+        "Usa correttamente il datasheet per ricordare le funzioni dei pin 1, 3, 4, 5, 8 e il ruolo del reset.",
+        "Propone controlli pratici validi: misura tra pin 8 e pin 1, verifica del pin 4, osservazione del pin 3 con oscilloscopio, controllo di LED e resistenza.",
+        "Identifica correttamente la configurazione generale come astabile con uscita su pin 3 che pilota il LED.",
+        "Include cause plausibili come guasti o errori nella rete RC, condensatori in corto/aperti, LED invertito o resistenza interrotta."
+      ],
+      "short_explanation": "La risposta è utile come procedura generale di troubleshooting per un 555 astabile, ma commette un errore importante nell'uso delle fonti: interpreta male il JSON e sostiene che pin 4 e pin 8 non siano collegati, mentre risultano sulla rete di alimentazione come nell'immagine. Di conseguenza la priorità delle cause è falsata, anche se molti controlli pratici proposti restano corretti."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "c01",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\c01\\results_json_img\\c01_gpt-5.4_20260605_142255.txt",
+      "model_under_test": "gpt-5.4",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 24.144,
+      "timestamp": "2026-06-05 14:31:27",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9487, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=1073, output_tokens_details=OutputTokensDetails(reasoning_tokens=382), total_tokens=10560)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 3
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9523809523809523,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "errore o guasto nella rete RC di temporizzazione sui pin 2, 6 e 7",
+        "condensatore C1 guasto, in corto, aperto o con valore errato",
+        "LED invertito, guasto o resistenza serie R3 aperta",
+        "pin 4 RESET non realmente alto",
+        "alimentazione o massa mancanti sui pin 8 e 1",
+        "NE555 montato con orientamento errato o guasto",
+        "valori errati di R1, R2 o C1 che rendono il lampeggio troppo veloce o troppo lento"
+      ],
+      "model_primary_cause": "Errore o guasto nella rete di temporizzazione attorno ai pin 2, 6 e 7 con R1, R2 e C1",
+      "major_errors": [],
+      "hallucinations": [],
+      "missed_important_points": [
+        "La priorità diagnostica poteva dare leggermente più enfasi iniziale alla misura diretta di alimentazione, reset e pin 3 prima di ipotizzare componenti guasti nella rete RC"
+      ],
+      "strengths": [
+        "Riconosce correttamente il circuito come astabile con NE555 che pilota un LED dal pin 3 tramite resistenza",
+        "Usa correttamente il pinout del NE555: pin 8 a VCC, pin 1 a GND, pin 4 reset alto, pin 2/6 nodo di temporizzazione, pin 7 discharge, pin 5 filtrato",
+        "Interpreta correttamente i collegamenti del JSON e li confronta coerentemente con l'immagine",
+        "Propone cause tecnicamente plausibili per LED fisso o spento",
+        "Suggerisce controlli pratici molto utili, in particolare misurare se il pin 3 oscilla",
+        "Distingue correttamente tra guasto dell'oscillatore e guasto della catena R3-LED"
+      ],
+      "short_explanation": "La risposta è tecnicamente solida: identifica correttamente l'astabile con NE555, ricostruisce bene i collegamenti da JSON e immagine e propone verifiche pratiche appropriate. La causa primaria indicata, cioè un problema nella rete RC di temporizzazione, è coerente con il sintomo. L'unico limite minore è che l'ordine delle priorità potrebbe iniziare più sistematicamente da alimentazione, reset e misura del pin 3, ma la diagnosi complessiva è corretta e utile."
+    }
+  }
+]

@@ -1,0 +1,19 @@
+{
+  "scenario_id": "scenario_3",
+  "title": "Alimentare il ramo LED dal suo ingresso su N003",
+  "hypothesis": "Il ramo formato da Rresistor22_1 e Dled12_1 non si attiva nel base run perché N003 non è pilotato; alimentando N003 il ramo LED dovrebbe reagire.",
+  "actions": [
+    {
+      "type": "drive_node_voltage",
+      "target": "N003",
+      "value": "5V"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N003)",
+    "v(N005)",
+    "i(Rresistor22_1)"
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "metadata": {
+    "circuit_id": "c07",
+    "batch": "C1",
+    "batch_dir": "batchC1",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\images\\c07.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\json\\c07.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "c07.jpg",
+    "json_file": "c07.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:31:20",
+    "judge_latency_seconds": 16.209,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=17676, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=873, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=18549)",
+  "judge_result": {
+    "circuit_id": "c07",
+    "batch": "C1",
+    "image_file": "c07.jpg",
+    "json_file": "c07.json",
+    "image_graph_fidelity_score": 93,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 23,
+      "graph_connections": 51,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 1,
+      "minor": 1
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "missing_graph_connection",
+        "description": "Un terminale del secondo pulsante risulta non connesso nel JSON, ma nell'immagine S2 e' visibilmente collegato tra il nodo CLK e il nodo RST; quindi entrambi i terminali del pulsante devono appartenere a quei due nodi.",
+        "image_evidence": "Nella colonna sinistra il pulsante S2 e' disegnato tra il nodo etichettato CLK (sopra) e il nodo etichettato RST (sotto), con contatto visibile su entrambe le estremita.",
+        "json_evidence": "push_button21.2_t1 e' vuoto in graph, mentre push_button21.2_t2 e' fuso nel nodo comune con gnd9.2_t1, integrated_circuit11.1_left_2, integrated_circuit11.1_left_3, integrated_circuit11.1_left_4 e resistor22.1_t1."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "switch_terminal_state_ambiguity",
+        "description": "Il JSON tratta push_button21.1 con entrambi i terminali sullo stesso nodo comune; questo puo' essere compatibile con un rilevamento degenerato del contatto del pulsante S1, ma la connettivita esatta dei suoi due capi non e' completamente leggibile dall'immagine e resta solo lievemente sospetta."
+      }
+    ],
+    "missing_from_json": [
+      "Collegamento del terminale libero di push_button21.2 al nodo CLK (lo stesso nodo di integrated_circuit11.1_left_1 e integrated_circuit11.1_top_1), oppure equivalentemente al nodo RST a seconda del mapping dei due terminali del pulsante."
+    ],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "push_button21.2 deve collegare il nodo CLK (integrated_circuit11.1_left_1 / integrated_circuit11.1_top_1) al nodo RST comune (integrated_circuit11.1_left_2 / integrated_circuit11.1_left_3 / integrated_circuit11.1_left_4 / resistor22.1_t1 / gnd9.2_t1)",
+        "found_in_json": "push_button21.2_t1 e' non connesso e push_button21.2_t2 appartiene solo al nodo RST comune",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "Il mapping preciso dei due terminali di push_button21.1 e push_button21.2 rispetto ai simboli S1 e S2 non e' completamente certo; ho valutato il graph con il mapping topologico piu' favorevole.",
+      "La connettivita tra il tratto verticale superiore, il nodo CLK e il pulsante S1 e' parzialmente ambigua nel disegno; non emerge una contraddizione certa sufficiente per errore maggiore oltre al caso del pulsante S2.",
+      "Le uscite a-g del CD4026 verso il display tramite le sette resistenze risultano coerenti come struttura; l'associazione esatta dei singoli resistori equivalenti e' stata valutata con il mapping migliore."
+    ],
+    "short_explanation": "Il graph rappresenta molto bene la topologia principale: nodo comune RST/INH/CLK inhibit, alimentazione Vdd legata al clock input visibile, Vss/UCS a massa, sette uscite del CD4026 instradate tramite sette resistori ai segmenti del display e common cathode del display a GND. L'unico errore topologico certo e' il secondo pulsante, che nell'immagine e' connesso tra due nodi ma nel JSON ha un terminale lasciato flottante."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c07\",\"batch\":\"C1\",\"image_file\":\"c07.jpg\",\"json_file\":\"c07.json\",\"image_graph_fidelity_score\":93,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":23,\"graph_connections\":51,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":1,\"minor\":1},\"critical_errors\":[],\"major_errors\":[{\"type\":\"missing_graph_connection\",\"description\":\"Un terminale del secondo pulsante risulta non connesso nel JSON, ma nell'immagine S2 e' visibilmente collegato tra il nodo CLK e il nodo RST; quindi entrambi i terminali del pulsante devono appartenere a quei due nodi.\",\"image_evidence\":\"Nella colonna sinistra il pulsante S2 e' disegnato tra il nodo etichettato CLK (sopra) e il nodo etichettato RST (sotto), con contatto visibile su entrambe le estremita.\",\"json_evidence\":\"push_button21.2_t1 e' vuoto in graph, mentre push_button21.2_t2 e' fuso nel nodo comune con gnd9.2_t1, integrated_circuit11.1_left_2, integrated_circuit11.1_left_3, integrated_circuit11.1_left_4 e resistor22.1_t1.\"}],\"minor_errors\":[{\"type\":\"switch_terminal_state_ambiguity\",\"description\":\"Il JSON tratta push_button21.1 con entrambi i terminali sullo stesso nodo comune; questo puo' essere compatibile con un rilevamento degenerato del contatto del pulsante S1, ma la connettivita esatta dei suoi due capi non e' completamente leggibile dall'immagine e resta solo lievemente sospetta.\"}],\"missing_from_json\":[\"Collegamento del terminale libero di push_button21.2 al nodo CLK (lo stesso nodo di integrated_circuit11.1_left_1 e integrated_circuit11.1_top_1), oppure equivalentemente al nodo RST a seconda del mapping dei due terminali del pulsante.\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"push_button21.2 deve collegare il nodo CLK (integrated_circuit11.1_left_1 / integrated_circuit11.1_top_1) al nodo RST comune (integrated_circuit11.1_left_2 / integrated_circuit11.1_left_3 / integrated_circuit11.1_left_4 / resistor22.1_t1 / gnd9.2_t1)\",\"found_in_json\":\"push_button21.2_t1 e' non connesso e push_button21.2_t2 appartiene solo al nodo RST comune\",\"severity\":\"major\"}],\"uncertain_points\":[\"Il mapping preciso dei due terminali di push_button21.1 e push_button21.2 rispetto ai simboli S1 e S2 non e' completamente certo; ho valutato il graph con il mapping topologico piu' favorevole.\",\"La connettivita tra il tratto verticale superiore, il nodo CLK e il pulsante S1 e' parzialmente ambigua nel disegno; non emerge una contraddizione certa sufficiente per errore maggiore oltre al caso del pulsante S2.\",\"Le uscite a-g del CD4026 verso il display tramite le sette resistenze risultano coerenti come struttura; l'associazione esatta dei singoli resistori equivalenti e' stata valutata con il mapping migliore.\"],\"short_explanation\":\"Il graph rappresenta molto bene la topologia principale: nodo comune RST/INH/CLK inhibit, alimentazione Vdd legata al clock input visibile, Vss/UCS a massa, sette uscite del CD4026 instradate tramite sette resistori ai segmenti del display e common cathode del display a GND. L'unico errore topologico certo e' il secondo pulsante, che nell'immagine e' connesso tra due nodi ma nel JSON ha un terminale lasciato flottante.\"}"
+}

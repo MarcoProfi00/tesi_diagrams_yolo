@@ -1,0 +1,44 @@
+circuit_id: a05
+
+components:
+  resistor22.1:
+    value: 1000
+    unit: ohm
+    source: manual_from_image_label
+    label_text: "1k"
+
+  capacitor4.1:
+    value: 47
+    unit: nF
+    source: manual_from_image_label
+    label_text: "47nF"
+
+  switch25.1:
+    state: open
+    source: graph_json_state
+    label_text: "TEST"
+
+  analog_meter0.1:
+    kind: voltmeter
+    label: VMON
+    source: manual_from_image_label
+    label_text: "VMON"
+
+nodes:
+  connector5.1_pin1:
+    label: VMON_INPUT
+    source: inferred_from_image_label
+
+  connector5.1_pin2:
+    label: FILTER_NODE
+    source: inferred_from_capacitor_branch
+
+  connector5.1_pin3:
+    label: TEST
+    source: manual_from_image_label
+    label_text: "TEST"
+
+  connector5.1_pin4:
+    label: GND
+    spice_node: 0
+    source: graph_json_gnd

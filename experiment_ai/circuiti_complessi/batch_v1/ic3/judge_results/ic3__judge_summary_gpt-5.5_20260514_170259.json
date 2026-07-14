@@ -1,0 +1,878 @@
+[
+  {
+    "metadata": {
+      "circuit": "ic3",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic3\\results_json\\ic3_gpt-4.1-mini_20260514_162458.txt",
+      "model_under_test": "gpt-4.1-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 23.78,
+      "timestamp": "2026-05-14 16:58:04",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9260, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1278, output_tokens_details=OutputTokensDetails(reasoning_tokens=396), total_tokens=10538)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 19,
+      "max_score": 21,
+      "normalized_score": 0.9048,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non portato allo stato ON perché lo switch verso +V risulta aperto, quindi amplificatore in mute/stand-by o comunque non abilitato",
+        "Assenza di segnale audio effettivo sui pin 1 e 13 secondo il JSON, che mostra solo condensatori collegati ai pin di ingresso senza sorgente audio esplicita",
+        "Alimentazione o massa da verificare ai pin 3/10 e 2/5/8, anche se dal JSON risultano topologicamente corrette"
+      ],
+      "model_primary_cause": "Pin 11 mute/standby disattivato perché lo switch25.1 è aperto e non collega il pin 11 alla tensione positiva, mettendo il TDA1553 in stand-by",
+      "major_errors": [
+        "Ha invertito le etichette degli speaker rispetto al JSON: nel grafo speaker24.2 è sui pin 4-6 e speaker24.1 è sui pin 9-7, anche se la conclusione funzionale BTL resta corretta"
+      ],
+      "hallucinations": [
+        "L'affermazione che gli ingressi siano in cortocircuito a massa è un po' più forte di quanto supportato: dal JSON risultano collegati tramite condensatori verso massa e senza sorgente esplicita, non necessariamente cortocircuitati in DC",
+        "Assume che pin 11 flottante equivalga probabilmente a 0 V/stand-by; è plausibile per diagnosi pratica, ma la tensione reale andrebbe misurata"
+      ],
+      "missed_important_points": [
+        "Poteva distinguere meglio tra evidenza certa dal JSON, cioè switch aperto sul pin 11, ed evidenza potenzialmente dovuta a estrazione incompleta sugli ingressi audio",
+        "Poteva menzionare esplicitamente il controllo del pin 12 LSP con condensatore verso massa, anche se nel circuito appare correttamente collegato e non è la causa più probabile"
+      ],
+      "strengths": [
+        "Identifica correttamente il TDA1553 come amplificatore stereo BTL e riconosce che gli speaker devono stare tra coppie di uscite, non verso massa",
+        "Usa correttamente il datasheet per pinout, alimentazioni, masse, ingressi, uscite e soglia ON del pin 11",
+        "Individua la causa più probabile supportata dal JSON: switch aperto tra +V e pin 11 M/SS",
+        "Propone controlli pratici sensati: misurare pin 11, verificare segnale ai pin 1 e 13, misurare alimentazione ai pin 3 e 10",
+        "Ordina bene le cause, dando priorità al mute/stand-by rispetto a guasti generici o cortocircuiti non evidenziati"
+      ],
+      "short_explanation": "La risposta è tecnicamente solida e la diagnosi principale è corretta: dal JSON lo switch verso il pin 11 è aperto, quindi il TDA1553 probabilmente non è nello stato ON. Buono anche l'uso del datasheet e dei controlli pratici. I limiti principali sono lo scambio delle etichette dei due speaker rispetto al grafo e una formulazione un po' troppo assertiva sugli ingressi come cortocircuitati/assenti, ma non compromettono la diagnosi principale."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic3",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic3\\results_json\\ic3_gpt-4.1-nano_20260514_162545.txt",
+      "model_under_test": "gpt-4.1-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 20.089,
+      "timestamp": "2026-05-14 16:58:24",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9199, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1209, output_tokens_details=OutputTokensDetails(reasoning_tokens=351), total_tokens=10408)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 19,
+      "max_score": 21,
+      "normalized_score": 0.9047619047619048,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non portato allo stato ON perché lo switch di modo risulta aperto nel JSON, quindi il TDA1553Q può essere in mute/stand-by o comunque non abilitato",
+        "Alimentazione assente o errata sui pin 3 e 10",
+        "Assenza del segnale audio sui pin 1 e 13",
+        "Problemi di massa sui pin 2, 5 e 8",
+        "Corti o problemi sugli speaker/uscite BTL, anche se nel JSON gli speaker risultano collegati alle coppie corrette"
+      ],
+      "model_primary_cause": "Pin 11 in modalità mute o stand-by a causa dello switch25.1 aperto; verificare che sia nello stato ON con tensione >= 8.5 V",
+      "major_errors": [],
+      "hallucinations": [
+        "Afferma che i pin GND 2, 5 e 8 sono collegati tra loro e a GND tramite vari componenti GND, includendo impropriamente gnd9.1; nel JSON pin 2 è su gnd9.2, pin 5 e 8 su gnd9.3, mentre gnd9.1 è solo il riferimento del condensatore sul pin 12. Nello schema i simboli di massa rappresentano comunque la stessa massa, quindi l'errore è lieve.",
+        "Parla genericamente di condensatori di decoupling e possibili malcollegamenti come causa, ma il JSON non mostra warning specifici su questi componenti."
+      ],
+      "missed_important_points": [
+        "Avrebbe potuto esplicitare meglio che, con lo switch aperto, il pin 11 non è collegato al nodo +12 V dei pin 3 e 10, quindi non raggiunge la soglia ON richiesta dal datasheet.",
+        "Avrebbe potuto distinguere tra collegamenti speaker effettivamente corretti nel JSON e la verifica di eventuali corti/guasti fisici non deducibili dal grafo."
+      ],
+      "strengths": [
+        "Identifica correttamente il TDA1553Q come amplificatore stereo BTL.",
+        "Usa correttamente il pinout del datasheet, incluse alimentazioni, masse, ingressi, uscite BTL, pin 11 e soglia ON di circa 8.5 V.",
+        "Riconosce dal JSON che lo switch sul pin 11 è aperto e lo pone come causa più probabile del mancato audio.",
+        "Propone controlli pratici pertinenti: tensione sul pin 11, alimentazioni sui pin 3 e 10, masse, ingressi audio e uscite verso speaker.",
+        "Non penalizza erroneamente gli speaker: nota che sono collegati tra le coppie BTL corrette."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida: la causa principale indicata, pin 11 M/SS non abilitato per switch aperto, è la più supportata dal JSON e dal datasheet. Buono anche l'ordine delle verifiche e l'uso delle soglie del datasheet. Ci sono solo lievi imprecisioni nella descrizione delle masse del JSON e qualche causa generica non direttamente evidenziata dal grafo, ma non compromettono la diagnosi."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic3",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic3\\results_json\\ic3_gpt-4o-mini_20260514_160954.txt",
+      "model_under_test": "gpt-4o-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 24.558,
+      "timestamp": "2026-05-14 16:58:48",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8664, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1363, output_tokens_details=OutputTokensDetails(reasoning_tokens=451), total_tokens=10027)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 18,
+      "max_score": 21,
+      "normalized_score": 0.8571428571,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non portato allo stato ON: nel JSON lo switch25.1 risulta aperto tra la linea di alimentazione e il pin 11, quindi il TDA1553 può restare in mute/stand-by o con comando flottante",
+        "Mancanza o anomalia dell'alimentazione sui pin 3 e 10",
+        "Assenza di segnale audio sui pin 1 e 13",
+        "Problemi sui collegamenti degli speaker BTL o corti sulle uscite"
+      ],
+      "model_primary_cause": "Pin mute/stand-by 11 in stato errato, da verificare con tensione > 8.5 V",
+      "major_errors": [
+        "Non evidenzia esplicitamente il dato più forte del JSON: lo switch25.1 è marcato come open e collega proprio il pin 11 alla linea di alimentazione, quindi il comando ON del mute/stand-by è probabilmente assente.",
+        "Dice che l'alimentazione dei pin 3 e 10 non è mostrata esplicitamente nel grafo, mentre nel JSON i pin 3 e 10 sono collegati tra loro e al terminal26.1 con condensatori di filtro; manca solo l'etichetta di tensione positiva.",
+        "Attribuisce speaker24.1 ai pin 4-6 e speaker24.2 ai pin 7-9, mentre nel JSON è il contrario: speaker24.2 è sui pin 4-6 e speaker24.1 sui pin 9-7. La sostanza BTL è comunque corretta."
+      ],
+      "hallucinations": [
+        "La voce generica 'problemi con i condensatori' non è supportata da un warning specifico o da un'evidenza concreta nel JSON/datasheet, anche se resta una possibilità diagnostica generica."
+      ],
+      "missed_important_points": [
+        "Avrebbe dovuto indicare come causa più probabile specifica lo switch di mode/mute aperto, non solo genericamente il pin 11 in stato errato.",
+        "Avrebbe potuto distinguere le soglie del pin 11: ON circa >= 8.5 V, mute 3.3-6.4 V, stand-by 0-2 V.",
+        "Avrebbe potuto osservare che i collegamenti degli speaker sono corretti in configurazione BTL e quindi non sono tra le cause più probabili secondo il JSON."
+      ],
+      "strengths": [
+        "Comprende correttamente che il TDA1553Q pilota gli speaker in bridge e non verso massa.",
+        "Usa correttamente il pinout principale del datasheet.",
+        "Identifica correttamente il pin 11 M/SS come causa prioritaria di assenza audio.",
+        "Propone controlli pratici utili: tensione su pin 11, alimentazione sui pin 3 e 10, masse, segnale agli ingressi e corti sulle uscite.",
+        "Riconosce che i pin GND 2, 5 e 8 risultano collegati a massa."
+      ],
+      "short_explanation": "Risposta tecnicamente buona e utile: individua correttamente il mute/stand-by sul pin 11 come causa principale e propone verifiche coerenti col datasheet. Il limite principale è che non sfrutta pienamente il JSON, perché non cita esplicitamente che lo switch verso il pin 11 è aperto, che è l'evidenza più forte del guasto. Presenta anche piccole imprecisioni sui nomi degli speaker e sull'alimentazione nel grafo."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic3",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic3\\results_json\\ic3_gpt-5-mini_20260514_163308.txt",
+      "model_under_test": "gpt-5-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 21.095,
+      "timestamp": "2026-05-14 16:59:09",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9545, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1231, output_tokens_details=OutputTokensDetails(reasoning_tokens=411), total_tokens=10776)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9523809523809523,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non portato allo stato ON perché collegato tramite switch aperto al nodo +V, quindi IC probabilmente in mute/stand-by",
+        "Assenza effettiva di alimentazione su pin 3 e pin 10 o nodo +12 V non alimentato",
+        "Segnale audio assente sui pin 1 e 13 o percorso di ingresso non correttamente rappresentato/collegato",
+        "Speaker o uscite in corto/aperti, anche se nel circuito risultano collegati correttamente in BTL"
+      ],
+      "model_primary_cause": "Pin11 M/SS non portato in ON a causa dello switch aperto, quindi amplificatore in mute/stand-by",
+      "major_errors": [],
+      "hallucinations": [
+        "Il riferimento a possibili condensatori di bootstrap guasti non è supportato dal datasheet fornito né dal JSON: 20.4/20.5 sono sul nodo di alimentazione e 20.1 su LSP.",
+        "L'interpretazione dei condensatori di ingresso 20.2/20.3 come polarizzati e montati con polarità anomala è basata sul JSON, ma nello schema reale sono condensatori di accoppiamento non polarizzati; resta comunque valida la verifica dell'assenza del segnale sui pin 1 e 13."
+      ],
+      "missed_important_points": [
+        "Avrebbe potuto citare esplicitamente le soglie del pin 11: ON circa >= 8.5 V, mute 3.3-6.4 V, stand-by 0-2 V.",
+        "Avrebbe potuto distinguere meglio tra errore topologico certo nel JSON sugli ingressi e possibile limite di estrazione/riconoscimento dei componenti."
+      ],
+      "strengths": [
+        "Identifica correttamente il TDA1553 come amplificatore stereo BTL.",
+        "Verifica correttamente che gli speaker sono collegati tra le coppie di uscite BTL corrette, non verso massa.",
+        "Riconosce correttamente alimentazioni pin 3 e 10 e masse pin 2, 5 e 8.",
+        "Individua come causa più probabile il pin 11 M/SS lasciato non portato a +V dallo switch aperto.",
+        "Propone controlli pratici pertinenti: misura pin 11, misura VP, verifica segnale sui pin 1/13, controllo speaker e corti sulle uscite.",
+        "Ordina le cause in modo coerente con le evidenze più forti del JSON."
+      ],
+      "short_explanation": "La risposta è tecnicamente molto buona: usa bene JSON e datasheet, individua correttamente la causa principale più probabile nello switch aperto sul pin 11 M/SS e propone verifiche realistiche. Le connessioni BTL, alimentazione, masse e LSP sono interpretate correttamente. Le uniche riserve riguardano alcune ipotesi secondarie meno supportate, in particolare la polarità dei condensatori di ingresso e il riferimento a bootstrap, ma non compromettono la diagnosi principale."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic3",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic3\\results_json\\ic3_gpt-5-nano_20260514_163204.txt",
+      "model_under_test": "gpt-5-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 23.702,
+      "timestamp": "2026-05-14 16:59:33",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10995, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1401, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=12396)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 19,
+      "max_score": 21,
+      "normalized_score": 0.9047619048,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non portato allo stato ON perché lo switch di mode è aperto, quindi il TDA1553Q resta in mute/stand-by o con pin flottante",
+        "Assenza o problema di alimentazione sui pin 3 e 10",
+        "Assenza di segnale audio sugli ingressi pin 1 e pin 13",
+        "Problemi di massa sui pin 2, 5 e 8",
+        "Corti o guasti sulle uscite BTL, anche se gli speaker risultano collegati alle coppie corrette"
+      ],
+      "model_primary_cause": "Mute/stand-by non attivo correttamente: pin 11 M/SS non in stato ON, probabilmente a causa dello switch25.1 aperto",
+      "major_errors": [
+        "In un punto confonde i riferimenti dei terminali JSON dell'alimentazione, citando VP1/top_1 pin3 e VP2/top_2 pin10, mentre nel JSON top_1 è pin12 LSP, top_2 è pin3 e top_3 è pin10.",
+        "Afferma che tutte le masse sono collegate a GND comune; nel JSON i simboli GND sono rappresentati come nodi separati, anche se nello schema reale sono presumibilmente la stessa massa."
+      ],
+      "hallucinations": [
+        "Menziona possibili condensatori di uscita o bootstrap, che non sono presenti né richiesti per questa configurazione BTL nel circuito fornito.",
+        "Usa termini impropri come 'uscite FIR' e 'bridges', probabilmente refusi, senza impatto sostanziale sulla diagnosi."
+      ],
+      "missed_important_points": [
+        "Avrebbe potuto evidenziare in modo più netto che nel circuito lo switch aperto scollega direttamente il pin 11 dal nodo +12 V, quindi il livello ON richiesto dal datasheet non è garantito.",
+        "Avrebbe potuto notare che gli speaker nel JSON sono effettivamente collegati correttamente in BTL, quindi questa non è una causa probabile primaria salvo guasti fisici o corti."
+      ],
+      "strengths": [
+        "Identifica correttamente il TDA1553Q come amplificatore stereo BTL.",
+        "Usa correttamente le soglie del pin M/SS del datasheet.",
+        "Riconosce correttamente che gli speaker sono collegati tra le coppie di uscite BTL pin 4-6 e pin 7-9.",
+        "Dà la priorità corretta al pin 11 M/SS, supportata dallo switch aperto nel JSON.",
+        "Propone controlli pratici utili: misura del pin 11, verifica alimentazioni pin 3/10, masse pin 2/5/8, ingressi audio e corti sulle uscite."
+      ],
+      "short_explanation": "La risposta è tecnicamente buona e la diagnosi principale è corretta: lo switch aperto sul pin 11 M/SS è la causa più probabile dell'assenza di audio, perché il TDA1553Q richiede circa almeno 8.5 V su quel pin per essere ON. La risposta usa bene datasheet e JSON e fornisce controlli pratici sensati. Presenta però alcuni errori di riferimento ai terminali JSON dell'alimentazione e qualche affermazione non pienamente supportata, come bootstrap/condensatori di uscita."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic3",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic3\\results_json\\ic3_gpt-5.4-mini_20260514_163420.txt",
+      "model_under_test": "gpt-5.4-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 18.505,
+      "timestamp": "2026-05-14 16:59:52",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9202, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1116, output_tokens_details=OutputTokensDetails(reasoning_tokens=342), total_tokens=10318)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9523809524,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non portato allo stato ON perché lo switch di modo è aperto, quindi l'amplificatore resta in mute/stand-by o con controllo flottante",
+        "Assenza o insufficienza della tensione positiva sui pin 3 e 10 o sul nodo che dovrebbe alimentare anche il controllo del pin 11",
+        "Mancanza del segnale audio sui pin di ingresso 1 e 13",
+        "Problemi di massa sui pin 2, 5 e 8",
+        "Corti o guasti sulle uscite o sugli speaker, anche se nel JSON gli speaker risultano collegati correttamente in BTL"
+      ],
+      "model_primary_cause": "Il pin 11 di mute/stand-by non è portato nello stato ON perché switch25.1 è aperto, quindi l'amplificatore può restare in mute/stand-by o con pin flottante.",
+      "major_errors": [],
+      "hallucinations": [
+        "La parte sui condensatori montati male o guasti come possibile causa di mancato avvio è plausibile ma poco supportata direttamente dal JSON; è comunque presentata come ipotesi secondaria."
+      ],
+      "missed_important_points": [
+        "Non esplicita le soglie numeriche del pin 11, in particolare ON circa >= 8.5 V, mute 3.3-6.4 V e stand-by 0-2 V, pur indicando correttamente la necessità dello stato ON.",
+        "Non evidenzia in modo specifico il controllo di eventuali corti delle uscite verso GND o alimentazione, anche se il resto della diagnostica è adeguato."
+      ],
+      "strengths": [
+        "Identifica correttamente il TDA1553 come amplificatore stereo BTL.",
+        "Usa correttamente il pinout del datasheet per alimentazione, masse, ingressi, uscite e pin mute/stand-by.",
+        "Legge correttamente dal JSON che gli speaker sono collegati tra le coppie BTL corrette e non verso massa.",
+        "Riconosce come causa più probabile lo switch aperto sul pin 11.",
+        "Propone controlli pratici sensati: misura del pin 11, verifica alimentazione sui pin 3 e 10, verifica del segnale sugli ingressi."
+      ],
+      "short_explanation": "La risposta è tecnicamente coerente e ben supportata dal JSON e dal datasheet. La diagnosi principale è corretta: lo switch aperto lascia il pin 11 M/SS non sicuramente nello stato ON, condizione sufficiente a spiegare l'assenza di audio. Buona anche la verifica di speaker BTL, alimentazione, masse e ingressi. Le uniche debolezze sono alcune ipotesi secondarie sui condensatori poco supportate e la mancata citazione esplicita delle soglie numeriche del mute/stand-by."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic3",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic3\\results_json\\ic3_gpt-5.4-nano_20260514_163354.txt",
+      "model_under_test": "gpt-5.4-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 26.068,
+      "timestamp": "2026-05-14 17:00:18",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9659, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1432, output_tokens_details=OutputTokensDetails(reasoning_tokens=493), total_tokens=11091)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 17,
+      "max_score": 21,
+      "normalized_score": 0.8095,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non portato al livello ON: lo switch risulta aperto e il TDA1553Q può restare in mute/stand-by o con comando flottante",
+        "Assenza di segnale audio effettivo sui pin 1 e 13, dato che nel JSON non è rappresentata una sorgente audio collegata agli ingressi",
+        "Mancanza di alimentazione esterna sul nodo dei pin 3 e 10 se il terminale di alimentazione non è realmente connesso a +V nel circuito fisico"
+      ],
+      "model_primary_cause": "Pin 11 M/SS non correttamente portato a livello ON a causa dello switch aperto/flottante, con IC in mute o stand-by",
+      "major_errors": [
+        "La sezione sull'alimentazione è parzialmente fuorviante: lo switch aperto non interrompe l'alimentazione dei pin 3 e 10, perché è sul ramo del pin 11 M/SS; i pin 3 e 10 sono comunque collegati al terminale di alimentazione nel JSON.",
+        "Gli ingressi audio sono descritti come collegati a massa in modo troppo netto: dal JSON risultano collegati tramite condensatori a una rete che include GND, ma non necessariamente come corto DC diretto; il problema più corretto è assenza/mancata rappresentazione della sorgente audio o accoppiamento errato."
+      ],
+      "hallucinations": [
+        "L'affermazione che l'IC probabilmente non riceva alimentazione perché lo switch è open è poco supportata dalla topologia: lo switch open riguarda il pin 11, non il collegamento diretto del nodo VP1/VP2 al terminale di alimentazione."
+      ],
+      "missed_important_points": [
+        "Avrebbe dovuto distinguere meglio tra nodo di alimentazione esterno rappresentato da terminal26.1 e assenza di una sorgente esplicita nel JSON.",
+        "Avrebbe dovuto evidenziare che il cablaggio degli speaker è corretto e quindi non è una causa probabile primaria.",
+        "Avrebbe potuto formulare la questione degli ingressi come 'nessuna sorgente audio visibile nel JSON' invece che come ingressi sicuramente schiacciati a massa."
+      ],
+      "strengths": [
+        "Identifica correttamente il TDA1553Q come amplificatore BTL e riconosce che gli speaker devono stare tra le coppie di uscite, non verso massa.",
+        "Usa correttamente il datasheet per pinout, funzioni dei pin e soglie del pin 11 M/SS.",
+        "La causa principale indicata, pin 11 non portato a ON con switch aperto, è ben supportata dal JSON ed è molto coerente con il sintomo.",
+        "Propone controlli pratici utili: misure sui pin 11, 3, 10, 1, 13, verifica speaker e corti.",
+        "Riconosce correttamente che il pin 12 LSP con condensatore verso massa è plausibile e lo tratta come causa secondaria."
+      ],
+      "short_explanation": "La risposta è complessivamente buona: capisce il circuito, usa bene il datasheet e individua correttamente come causa principale il pin 11 M/SS lasciato non abilitato dallo switch aperto. Tuttavia sovrastima la probabilità di mancata alimentazione interpretando lo switch aperto come possibile interruzione del rail, mentre topologicamente lo switch riguarda il comando M/SS; inoltre descrive gli ingressi come messi a massa in modo un po' troppo assoluto. I controlli pratici proposti sono validi."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic3",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic3\\results_json\\ic3_gpt-5.4_20260514_163537.txt",
+      "model_under_test": "gpt-5.4",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 24.295,
+      "timestamp": "2026-05-14 17:00:42",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10032, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1327, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=11359)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 18,
+      "max_score": 21,
+      "normalized_score": 0.8571428571428571,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non portato allo stato ON perché il mode switch risulta aperto, quindi l'integrato può restare in mute o stand-by",
+        "Assenza o mancato arrivo del segnale audio ai pin 1 e 13, se la sorgente d'ingresso non è effettivamente collegata",
+        "Problemi di alimentazione o riferimento di massa da verificare sui pin 3, 10 rispetto ai pin 2, 5, 8",
+        "Corti o anomalie sulle uscite BTL, anche se nel JSON gli speaker risultano collegati correttamente tra le coppie di uscita"
+      ],
+      "model_primary_cause": "Pin 11 M/SS non viene portato in stato ON perché lo switch verso il positivo è indicato come aperto",
+      "major_errors": [
+        "Interpreta le diverse istanze GND del JSON come masse necessariamente isolate; in uno schema elettrico i simboli GND normalmente rappresentano lo stesso nodo, quindi questa conclusione è sospetta se non verificata fisicamente.",
+        "Attribuisce con molta forza l'assenza di sorgente audio agli ingressi; dal JSON gli ingressi risultano incompleti, ma nello schema reale sono presenti sorgenti d'ingresso tramite condensatori di accoppiamento."
+      ],
+      "hallucinations": [],
+      "missed_important_points": [
+        "Avrebbe potuto distinguere meglio tra errore reale del circuito e possibile limite di estrazione del JSON, soprattutto per i simboli GND e per le sorgenti audio non rappresentate.",
+        "Avrebbe potuto evidenziare che gli speaker risultano effettivamente corretti in BTL e quindi non sono una causa probabile nel circuito fornito."
+      ],
+      "strengths": [
+        "Identifica correttamente il TDA1553Q come amplificatore stereo BTL.",
+        "Usa correttamente il pinout del datasheet per alimentazioni, masse, ingressi, uscite, M/SS e LSP.",
+        "Riconosce correttamente che gli speaker sono collegati tra le coppie BTL corrette e non verso massa.",
+        "Individua come causa più probabile il pin 11 non attivato a causa dello switch aperto.",
+        "Propone controlli pratici sensati: misura del pin 11, verifica alimentazione, continuità delle masse, verifica del segnale agli ingressi."
+      ],
+      "short_explanation": "La risposta è complessivamente molto buona: la diagnosi principale, cioè pin 11 M/SS lasciato aperto e quindi possibile mute/stand-by, è corretta e ben supportata da JSON e datasheet. Sono corretti anche il riconoscimento della configurazione BTL e i controlli pratici proposti. I limiti principali sono l'interpretazione troppo letterale di GND separati nel grafo, che in uno schema normalmente sono lo stesso nodo, e l'affermazione forte che non arrivi audio agli ingressi, mentre lo schema reale mostra sorgenti d'ingresso non pienamente rappresentate nel JSON."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic3",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic3\\results_json_img\\ic3_gpt-4.1-mini_20260514_164110.txt",
+      "model_under_test": "gpt-4.1-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 16.669,
+      "timestamp": "2026-05-14 17:00:59",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9217, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1105, output_tokens_details=OutputTokensDetails(reasoning_tokens=267), total_tokens=10322)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 19,
+      "max_score": 21,
+      "normalized_score": 0.9047619047619048,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non portato allo stato ON: lo switch è aperto e quindi il pin 11 non riceve la tensione richiesta di circa >= 8.5 V",
+        "Assenza di alimentazione reale sui pin 3 e 10 o massa non corretta sui pin 2, 5 e 8",
+        "Assenza del segnale audio sui pin 1 e 13",
+        "Speaker o collegamenti di uscita difettosi, pur essendo topologicamente corretti tra le coppie BTL 4-6 e 7-9",
+        "Corti sulle uscite o IC guasto"
+      ],
+      "model_primary_cause": "Pin 11 mute/stand-by in stand-by perché lo switch è aperto e non porta il pin 11 a +12 V",
+      "major_errors": [],
+      "hallucinations": [
+        "Afferma che lo switch seleziona tra +12 V e 0 V/massa, mentre dal JSON e dallo schema lo switch collega solo il pin 11 alla linea +12 V; non è mostrato un collegamento diretto a massa.",
+        "Dice che con switch aperto il pin 11 è a massa/0 V: è più corretto dire che resta non pilotato o non portato allo stato ON; l'effettivo livello dipende da eventuali bias interni non documentati nel materiale fornito.",
+        "Afferma che il segnale audio in ingresso sembra presente, ma JSON/schema mostrano solo il percorso di ingresso, non garantiscono la presenza reale del segnale."
+      ],
+      "missed_important_points": [
+        "Avrebbe potuto distinguere meglio tra pin 11 flottante/non abilitato e pin 11 effettivamente cortocircuitato o collegato a massa.",
+        "Avrebbe potuto evidenziare che i collegamenti degli speaker risultano corretti dal JSON, quindi non sono una causa primaria supportata, ma solo una verifica secondaria."
+      ],
+      "strengths": [
+        "Identifica correttamente il TDA1553 come amplificatore stereo BTL.",
+        "Usa correttamente il pinout principale del datasheet: alimentazioni, masse, ingressi, uscite, pin M/SS e pin LSP.",
+        "Riconosce che gli speaker devono essere collegati tra le coppie di uscite e non verso massa.",
+        "Individua come causa più probabile lo switch aperto sul pin 11, coerente con JSON e datasheet.",
+        "Propone controlli pratici sensati: misura del pin 11, alimentazioni, masse, ingressi audio, speaker e corti sulle uscite."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida e individua correttamente la causa più probabile: il pin 11 M/SS non viene portato a livello ON perché lo switch è aperto. Usa bene datasheet, JSON e immagine, e propone verifiche pratiche utili. Le principali imprecisioni sono l'affermazione che lo switch selezioni anche la massa e che il pin 11 sia sicuramente a 0 V, mentre dallo schema risulta semplicemente non collegato a +12 V quando lo switch è aperto."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic3",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic3\\results_json_img\\ic3_gpt-4.1-nano_20260514_164149.txt",
+      "model_under_test": "gpt-4.1-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 18.207,
+      "timestamp": "2026-05-14 17:01:17",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8960, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1051, output_tokens_details=OutputTokensDetails(reasoning_tokens=317), total_tokens=10011)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 19,
+      "max_score": 21,
+      "normalized_score": 0.9047619048,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non portato alto: nel JSON lo switch risulta aperto, quindi il pin 11 può restare flottante/in mute/stand-by e impedire l'audio",
+        "Alimentazione assente o insufficiente sui pin 3 e 10",
+        "Segnale audio assente sui pin 1 e 13",
+        "Speaker o collegamenti di uscita BTL difettosi, anche se nel JSON risultano collegati alle coppie corrette 4-6 e 9-7",
+        "Corti sulle uscite verso massa o alimentazione"
+      ],
+      "model_primary_cause": "Pin 11 in modalità mute o stand-by perché non sufficientemente alto",
+      "major_errors": [
+        "Non evidenzia esplicitamente che nel JSON lo switch del pin 11 è indicato come open, che è l'evidenza topologica più forte per il guasto simulato"
+      ],
+      "hallucinations": [
+        "Afferma che pin 3 e 10 sono collegati alla +12 V tramite condensatori, formulazione imprecisa: sono collegati direttamente al nodo di alimentazione, con condensatori di disaccoppiamento verso massa",
+        "Attribuisce genericamente nomi C1-C5 ai condensatori dal disegno, mentre nel JSON sono indicati con ID generici; è comunque coerente con l'immagine"
+      ],
+      "missed_important_points": [
+        "Doveva sottolineare con maggiore forza che lo switch aperto lascia il pin 11 non collegato alla +12 V, quindi l'amplificatore non è garantito in stato ON",
+        "Non distingue chiaramente tra collegamenti speaker verificati come corretti nel JSON e controlli secondari meno probabili"
+      ],
+      "strengths": [
+        "Comprende correttamente che il TDA1553 pilota gli speaker in configurazione BTL",
+        "Usa correttamente pinout e soglie del pin M/SS dal datasheet",
+        "Propone controlli pratici appropriati: misura pin 11, alimentazioni, ingressi e uscite",
+        "Ordina correttamente il pin 11 come causa più probabile",
+        "Riconosce che gli speaker sono collegati alle coppie BTL corrette"
+      ],
+      "short_explanation": "La risposta è tecnicamente valida e individua correttamente come causa principale il pin 11 M/SS non alto. Tuttavia non sfrutta pienamente l'evidenza più importante del JSON, cioè lo switch aperto tra +12 V e pin 11, che rende questa causa molto più specifica e probabile. Presenta solo piccole imprecisioni sui collegamenti dell'alimentazione e alcune cause generiche."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic3",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic3\\results_json_img\\ic3_gpt-4o-mini_20260514_164019.txt",
+      "model_under_test": "gpt-4o-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 17.786,
+      "timestamp": "2026-05-14 17:01:35",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8530, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1101, output_tokens_details=OutputTokensDetails(reasoning_tokens=379), total_tokens=9631)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 3
+      },
+      "total_score": 16,
+      "max_score": 21,
+      "normalized_score": 0.7619047619,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non portato allo stato ON perché il mode switch risulta aperto nel JSON: il pin 11 è collegato solo a un lato dello switch, mentre l'altro lato va al +12 V; quindi il pin può restare flottante o in mute/stand-by",
+        "Verificare che i pin 3 e 10 siano effettivamente alimentati a +12 V",
+        "Verificare presenza del segnale audio sui pin 1 e 13",
+        "Verificare eventuali corti sulle uscite BTL o problemi agli speaker"
+      ],
+      "model_primary_cause": "Alimentazione assente o insufficiente sui pin 3 e 10",
+      "major_errors": [
+        "Non ha identificato come causa più probabile l'evidenza specifica del circuito: lo switch di mode/mute è indicato aperto nel JSON, quindi il pin 11 M/SS non viene portato al +12 V e l'amplificatore può restare in mute o stand-by.",
+        "Ha dato priorità all'alimentazione assente, che è un controllo valido ma meno supportato dallo schema rispetto al problema del pin 11."
+      ],
+      "hallucinations": [],
+      "missed_important_points": [
+        "Mancata discussione esplicita dello stato open dello switch25.1 collegato al pin 11.",
+        "Mancata indicazione che il pin 11 deve essere misurato rispetto alle soglie del datasheet e che, con switch aperto, non è garantito lo stato ON.",
+        "Non ha sfruttato pienamente JSON/immagine per distinguere tra cause generiche e causa più probabile nel circuito specifico."
+      ],
+      "strengths": [
+        "Comprende correttamente che il TDA1553 è un amplificatore BTL e che gli speaker devono stare tra coppie di uscite, non verso massa.",
+        "Usa correttamente il pinout principale del datasheet.",
+        "Riporta correttamente le soglie del pin mute/stand-by e propone di controllare il pin 11.",
+        "Propone controlli pratici sensati: alimentazione, massa, ingressi audio, speaker e corti sulle uscite."
+      ],
+      "short_explanation": "La risposta è tecnicamente coerente e utile come checklist generale, ma non coglie la causa più probabile supportata dal JSON e dallo schema: il mode switch verso il +12 V è aperto, quindi il pin 11 M/SS non viene portato nello stato ON. Per questo la priorità diagnostica è non ottimale, pur includendo il controllo del pin 11 tra le prime tre cause."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic3",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic3\\results_json_img\\ic3_gpt-5-mini_20260514_164334.txt",
+      "model_under_test": "gpt-5-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 16.771,
+      "timestamp": "2026-05-14 17:01:51",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9638, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=924, output_tokens_details=OutputTokensDetails(reasoning_tokens=328), total_tokens=10562)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 3
+      },
+      "total_score": 21,
+      "max_score": 21,
+      "normalized_score": 1.0,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non portato allo stato ON a causa dello switch aperto o mancata tensione alta, quindi IC in mute/stand-by",
+        "Mancanza o insufficienza della alimentazione positiva sui pin 3 e 10",
+        "Masse assenti o difettose sui pin 2, 5 e 8",
+        "Assenza di segnale audio agli ingressi pin 1 e 13",
+        "Problemi su speaker o uscite BTL, inclusi collegamenti errati, altoparlanti aperti o corti"
+      ],
+      "model_primary_cause": "Pin 11 M/SS non portato in stato ON perché lo switch risulta aperto/incerto, lasciando il TDA1553 in mute o stand-by",
+      "major_errors": [],
+      "hallucinations": [],
+      "missed_important_points": [],
+      "strengths": [
+        "Identifica correttamente il TDA1553 come amplificatore stereo BTL e riconosce le coppie di uscita corrette per gli speaker.",
+        "Usa correttamente il datasheet, inclusi pinout, funzioni dei pin e soglie del pin 11 M/SS.",
+        "Sfrutta bene JSON e immagine, notando lo switch sul pin 11 e lo stato open indicato nel JSON.",
+        "Ordina correttamente le cause dando priorità al pin 11 M/SS, che è la causa più supportata dai dati forniti.",
+        "Propone controlli pratici realistici con multimetro e oscilloscopio.",
+        "Evita di inventare difetti non supportati e distingue bene tra cause probabili e cause solo possibili."
+      ],
+      "short_explanation": "La risposta è tecnicamente molto solida: comprende correttamente la topologia BTL del TDA1553, usa il datasheet per pinout e soglie, e individua come causa primaria più probabile il pin 11 M/SS non portato alto a causa dello switch aperto/incerto. Le verifiche suggerite sono pertinenti e ordinate in modo diagnosticamente utile."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic3",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic3\\results_json_img\\ic3_gpt-5-nano_20260514_164237.txt",
+      "model_under_test": "gpt-5-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 18.577,
+      "timestamp": "2026-05-14 17:02:10",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10631, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1118, output_tokens_details=OutputTokensDetails(reasoning_tokens=249), total_tokens=11749)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 19,
+      "max_score": 21,
+      "normalized_score": 0.9047619048,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non portato allo stato ON: nel JSON lo switch verso +12 V risulta open, quindi il pin 11 può restare flottante o non sopra 8.5 V, causando mute/stand-by",
+        "Alimentazione assente o errata sui pin 3 e 10 oppure massa mancante sui pin 2, 5 e 8",
+        "Segnale audio assente ai pin 1 e 13 o problema sui condensatori di ingresso",
+        "Problemi agli speaker o corti sulle uscite BTL, anche se nel JSON gli speaker risultano collegati alle coppie corrette"
+      ],
+      "model_primary_cause": "Mute/Stand-by attivo o pin 11 non in stato ON",
+      "major_errors": [],
+      "hallucinations": [
+        "Introduce alcune etichette e riferimenti come C1/C2/C3/C4/C5 e valori: sono visibili nell'immagine, quindi non sono gravi, ma non derivano dal JSON strutturato.",
+        "La frase su alimentazione '± o +12 V' è imprecisa per questo circuito, che usa alimentazione singola +12 V.",
+        "Suggerisce che cavi speaker 'invertiti' possano causare assenza di suono; in una connessione BTL l'inversione di polarità dello speaker non elimina il suono, salvo cablaggi realmente errati o aperti.",
+        "Usa termini poco chiari o refusi come 'OOP', 'spie', 'cross-coupling', non supportati come difetti specifici."
+      ],
+      "missed_important_points": [
+        "Non evidenzia con sufficiente forza che nel JSON lo switch25.1 è esplicitamente in stato open e collega il pin 11 alla linea +12 V solo se chiuso: questa è l'evidenza topologica più forte per il mancato audio.",
+        "Non distingue chiaramente tra speaker correttamente cablati nel JSON e possibilità generica di errore sul circuito reale."
+      ],
+      "strengths": [
+        "Identifica correttamente il TDA1553Q come amplificatore stereo BTL.",
+        "Usa correttamente il pinout del datasheet: pin 3 e 10 alimentazione, pin 2/5/8 GND, pin 11 M/SS, uscite BTL 4-6 e 7-9, ingressi 1 e 13.",
+        "Mette correttamente come causa più probabile il pin 11 in mute/stand-by.",
+        "Propone controlli pratici utili: misura pin 11, alimentazioni, masse, segnale di ingresso e corti sulle uscite.",
+        "Riconosce che gli speaker devono essere collegati tra le coppie di uscite BTL e non verso massa."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida e la diagnosi principale è corretta: il pin 11 M/SS è la causa più probabile, soprattutto perché nel JSON lo switch verso +12 V è aperto. Usa bene datasheet, JSON e immagine e fornisce una checklist utile. Il limite principale è che non sfrutta esplicitamente abbastanza lo stato 'open' dello switch nel JSON come prova forte; inoltre contiene alcune imprecisioni minori e formulazioni generiche non strettamente supportate."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic3",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic3\\results_json_img\\ic3_gpt-5.4-mini_20260514_164453.txt",
+      "model_under_test": "gpt-5.4-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 15.555,
+      "timestamp": "2026-05-14 17:02:26",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8926, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=793, output_tokens_details=OutputTokensDetails(reasoning_tokens=279), total_tokens=9719)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 3
+      },
+      "total_score": 21,
+      "max_score": 21,
+      "normalized_score": 1.0,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non portato al livello ON perché il mode switch risulta aperto",
+        "Comando mute/stand-by difettoso o collegamento interrotto tra +12 V e pin 11",
+        "Assenza di segnale audio ai pin 1 e 13"
+      ],
+      "model_primary_cause": "Pin 11 in mute/stand-by perché il mode switch è aperto e quindi non porta il pin M/SS al livello ON",
+      "major_errors": [],
+      "hallucinations": [],
+      "missed_important_points": [],
+      "strengths": [
+        "Identifica correttamente il TDA1553 come amplificatore stereo BTL.",
+        "Usa correttamente il datasheet per pinout, funzione del pin 11 e soglie ON/mute/stand-by.",
+        "Interpreta correttamente JSON e immagine, evidenziando lo switch aperto sul pin 11.",
+        "Dà la priorità alla causa più supportata dalle evidenze: pin 11 non abilitato.",
+        "Verifica correttamente che gli speaker siano collegati tra le coppie BTL 4-6 e 7-9.",
+        "Propone controlli pratici pertinenti: misura pin 11, alimentazioni, masse, ingressi e corti sulle uscite."
+      ],
+      "short_explanation": "La risposta è tecnicamente corretta e ben supportata da datasheet, JSON e immagine. La diagnosi principale, cioè pin 11 M/SS non abilitato a causa dello switch aperto, è la causa più probabile del mancato audio. Le altre cause sono ordinate in modo realistico e i controlli suggeriti sono utili e coerenti."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic3",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic3\\results_json_img\\ic3_gpt-5.4-nano_20260514_164417.txt",
+      "model_under_test": "gpt-5.4-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 18.036,
+      "timestamp": "2026-05-14 17:02:44",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10012, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1081, output_tokens_details=OutputTokensDetails(reasoning_tokens=221), total_tokens=11093)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 18,
+      "max_score": 21,
+      "normalized_score": 0.8571428571428571,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non portato a livello ON perché lo switch risulta aperto, quindi IC in mute/stand-by o pin flottante",
+        "Assenza o errata alimentazione sui pin 3 e 10",
+        "Mancanza del segnale audio sui pin 1 e 13",
+        "Problemi di massa sui pin 2, 5 e 8",
+        "Speaker o uscite BTL in corto/interrotte"
+      ],
+      "model_primary_cause": "Pin 11 M/SS lasciato in mute/stand-by a causa dello switch aperto",
+      "major_errors": [
+        "Il collegamento del pin 12 LSP viene descritto come poco chiaro e forse non verso massa, ma nel JSON pin 12 è collegato al positivo di un condensatore il cui negativo va a GND, e nell'immagine C3 è chiaramente verso massa.",
+        "La risposta suggerisce che l'alimentazione su pin 3 e 10 non sia rappresentata chiaramente, mentre nel JSON i pin 3 e 10 sono collegati allo stesso nodo con terminale di alimentazione e condensatori di bypass, e nell'immagine sono chiaramente a +12 V."
+      ],
+      "hallucinations": [
+        "Affermazione che nell'immagine il pin 12 sembri collegato al nodo alimentazione/mute: non è supportata dallo schema, dove pin 12 va a C3 verso massa.",
+        "Riferimento a possibili condensatori d'ingresso invertiti: nel disegno C4/C5 sono non polarizzati; il JSON li classifica come polarizzati, ma non è un difetto chiaramente supportato."
+      ],
+      "missed_important_points": [
+        "Non evidenzia con sufficiente decisione che il pin 12 appare in realtà correttamente collegato a un condensatore verso massa, quindi non dovrebbe essere tra le cause più probabili.",
+        "Non nota l'inversione solo nominale tra speaker24.1/speaker24.2 nel JSON rispetto alle etichette K1/K2, anche se elettricamente le coppie BTL sono corrette."
+      ],
+      "strengths": [
+        "Identifica correttamente il TDA1553 come amplificatore stereo BTL.",
+        "Usa correttamente pinout e soglie mute/stand-by/ON del pin 11.",
+        "Dà la massima priorità allo switch aperto sul pin 11, che è la causa più supportata dal JSON.",
+        "Riconosce che gli speaker sono collegati correttamente tra le coppie di uscite BTL.",
+        "Propone misure pratiche utili su pin 11, alimentazioni, masse, ingressi e speaker."
+      ],
+      "short_explanation": "La risposta è complessivamente buona e la diagnosi principale è corretta: lo switch aperto sul pin 11 M/SS può lasciare il TDA1553 in mute/stand-by, spiegando l'assenza di audio. Usa bene il datasheet e propone controlli realistici. Tuttavia interpreta in modo troppo incerto o errato il pin 12 LSP, che nello schema e nel JSON è sostanzialmente collegato a un condensatore verso massa, e rende l'alimentazione più sospetta di quanto risulti dalle fonti."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic3",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic3\\results_json_img\\ic3_gpt-5.4_20260514_164605.txt",
+      "model_under_test": "gpt-5.4",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 15.068,
+      "timestamp": "2026-05-14 17:02:59",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10390, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=910, output_tokens_details=OutputTokensDetails(reasoning_tokens=226), total_tokens=11300)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9523809524,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non portato allo stato ON perché lo switch risulta aperto, quindi IC in standby o mute",
+        "Assenza di alimentazione su pin 3 e pin 10 o problema sulla linea +12 V",
+        "Assenza di segnale audio agli ingressi pin 1 e pin 13",
+        "Problemi di massa sui pin 2, 5, 8 o massa sorgente non comune",
+        "Corti o problemi sui carichi/uscite BTL"
+      ],
+      "model_primary_cause": "Pin 11 M/SS non abilitato perché il mode switch risulta aperto nel JSON, lasciando l'IC in standby o mute",
+      "major_errors": [],
+      "hallucinations": [
+        "Specula su possibili guasti o montaggi errati dei condensatori di ingresso C4/C5 senza evidenza diretta nel JSON o nell'immagine, anche se li presenta come ipotesi da verificare e non come fatto certo"
+      ],
+      "missed_important_points": [],
+      "strengths": [
+        "Identifica correttamente il TDA1553 come amplificatore stereo BTL e riconosce che gli speaker sono collegati tra coppie di uscite, non verso massa",
+        "Usa correttamente il pinout e le soglie mute/stand-by/ON del datasheet",
+        "Individua come causa più probabile lo switch aperto sul pin 11, forte evidenza presente nel JSON",
+        "Integra correttamente JSON e immagine, segnalando anche l'ambiguità della rappresentazione dei condensatori di ingresso nel JSON",
+        "Propone controlli pratici pertinenti: misura pin 11, alimentazione pin 3/10, masse, segnale sugli ingressi, continuità speaker e corti sulle uscite",
+        "Ordina le cause in modo realistico e utile per il troubleshooting"
+      ],
+      "short_explanation": "La risposta è tecnicamente solida e ben supportata da datasheet, JSON e immagine. La diagnosi principale, pin 11 M/SS non portato alto a causa dello switch aperto, è la causa più probabile e coerente con il sintomo di assenza totale di audio. Buona anche la verifica dei collegamenti BTL, dell'alimentazione, delle masse e degli ingressi. L'unico limite minore è qualche ipotesi sui condensatori di ingresso formulata oltre le evidenze dirette, ma senza compromettere la diagnosi."
+    }
+  }
+]

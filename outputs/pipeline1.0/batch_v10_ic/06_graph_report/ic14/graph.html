@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Graph ic14</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
+      color: #1f2d3a;
+    }
+    .page {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .topbar h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .links a {
+      text-decoration: none;
+      color: #144a7b;
+      background: #ffffff;
+      border: 1px solid #d8e1ea;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-weight: 600;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .summary-item {
+      background: rgba(255,255,255,0.88);
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .summary-item .k {
+      color: #5f7184;
+      font-size: 13px;
+    }
+    .summary-item .v {
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .panel-grid {
+      display: grid;
+      grid-template-columns: minmax(280px, 420px) 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+    .panel {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #d8e1ea;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 12px 24px rgba(27, 53, 82, 0.06);
+    }
+    .panel h2 {
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
+    .preview-image {
+      width: 100%;
+      display: block;
+      border-radius: 12px;
+      border: 1px solid #d8e1ea;
+      background: #fff;
+    }
+    .preview-missing {
+      min-height: 220px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      border: 1px dashed #c6d2de;
+      color: #6f8093;
+      background: #f9fbfd;
+    }
+    .graph-wrap {
+      overflow: hidden;
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      background: #f8fbff;
+      cursor: grab;
+      min-height: 720px;
+    }
+    .graph-wrap:active {
+      cursor: grabbing;
+    }
+    #graph-svg {
+      width: 100%;
+      height: 760px;
+      display: block;
+      user-select: none;
+    }
+    .node-label {
+      fill: #314457;
+      font-size: 11px;
+      font-weight: 600;
+      pointer-events: none;
+    }
+    .node-label.small {
+      font-size: 10px;
+    }
+    .legend {
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      font-size: 13px;
+      color: #55687d;
+    }
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .warning-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .warning-box {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .warning-box h3 {
+      margin: 0 0 10px 0;
+      font-size: 15px;
+    }
+    .warning-box p, .warning-box li {
+      color: #526274;
+      font-size: 13px;
+    }
+    details {
+      margin-top: 18px;
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+    }
+    pre {
+      margin: 14px 0 0 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+      color: #314457;
+    }
+    .note {
+      color: #5c6f82;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    @media (max-width: 980px) {
+      .panel-grid {
+        grid-template-columns: 1fr;
+      }
+      #graph-svg {
+        height: 600px;
+      }
+      .graph-wrap {
+        min-height: 560px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <h1>Graph ic14</h1>
+      <div class="links">
+        <a href="graph_compact.html">Vista compatta HTML</a><a href="graph_compact.png">Vista compatta PNG</a>
+        <a href="ic14.json">JSON finale 05</a>
+        <a href="graph.png">Graph PNG</a>
+        <a href="../index.html">Batch index</a>
+      </div>
+    </div>
+
+    <div class="summary-grid"><div class="summary-item"><span class="k">Componenti</span><span class="v">13</span></div><div class="summary-item"><span class="k">Terminali</span><span class="v">34</span></div><div class="summary-item"><span class="k">Nodi elettrici</span><span class="v">10</span></div><div class="summary-item"><span class="k">Isolati</span><span class="v">3</span></div><div class="summary-item"><span class="k">Unmatched</span><span class="v">0</span></div><div class="summary-item"><span class="k">Suspicious</span><span class="v">0</span></div></div>
+
+    <div class="panel-grid">
+      <section class="panel">
+        <h2>Circuito</h2>
+        <img src="ic14.jpg" alt="Circuito ic14" class="preview-image">
+        <p class="note">Il grafo sotto e costruito solo a partire dal JSON del passo 05. La lettura va da sinistra a destra: circuito, classi, componenti, terminali e nodi elettrici.</p>
+      </section>
+
+      <section class="panel">
+        <h2>Graph interattivo</h2>
+        <div class="graph-wrap" id="graph-wrap"><svg id="graph-svg" viewBox="0 1051.8 1260 920" data-full-width="1260" data-full-height="3504" xmlns="http://www.w3.org/2000/svg" aria-label="Graph"><line x1="90.0" y1="1511.8" x2="270.0" y2="158.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="158.5" x2="500.0" y2="158.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="158.5" x2="780.0" y2="82.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="158.5" x2="780.0" y2="158.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="158.5" x2="780.0" y2="234.9" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="90.0" y1="1511.8" x2="270.0" y2="488.7" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="488.7" x2="500.0" y2="429.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="429.5" x2="780.0" y2="429.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="488.7" x2="500.0" y2="548.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="548.0" x2="780.0" y2="548.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="90.0" y1="1511.8" x2="270.0" y2="1463.3" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1463.3" x2="500.0" y2="780.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="780.8" x2="780.0" y2="742.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="780.8" x2="780.0" y2="819.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1463.3" x2="500.0" y2="975.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="975.8" x2="780.0" y2="937.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="975.8" x2="780.0" y2="1014.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1463.3" x2="500.0" y2="1170.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1170.8" x2="780.0" y2="1132.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1170.8" x2="780.0" y2="1209.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1463.3" x2="500.0" y2="1365.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1365.8" x2="780.0" y2="1327.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1365.8" x2="780.0" y2="1404.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1463.3" x2="500.0" y2="1560.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1560.8" x2="780.0" y2="1522.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1560.8" x2="780.0" y2="1599.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1463.3" x2="500.0" y2="1755.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1755.8" x2="780.0" y2="1717.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1755.8" x2="780.0" y2="1794.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1463.3" x2="500.0" y2="1950.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1950.8" x2="780.0" y2="1912.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1950.8" x2="780.0" y2="1989.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1463.3" x2="500.0" y2="2145.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2145.8" x2="780.0" y2="2107.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2145.8" x2="780.0" y2="2184.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="90.0" y1="1511.8" x2="270.0" y2="2416.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="2416.8" x2="500.0" y2="2416.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2416.8" x2="780.0" y2="2378.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2416.8" x2="780.0" y2="2455.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="90.0" y1="1511.8" x2="270.0" y2="3031.9" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="3031.9" x2="500.0" y2="3031.9" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3031.9" x2="780.0" y2="2649.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3031.9" x2="780.0" y2="2726.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3031.9" x2="780.0" y2="2802.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3031.9" x2="780.0" y2="2878.9" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3031.9" x2="780.0" y2="2955.4" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3031.9" x2="780.0" y2="3031.9" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3031.9" x2="780.0" y2="3108.4" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3031.9" x2="780.0" y2="3184.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3031.9" x2="780.0" y2="3261.3" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3031.9" x2="780.0" y2="3337.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3031.9" x2="780.0" y2="3414.2" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="780.0" y1="82.0" x2="1080.0" y2="82.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="158.5" x2="1080.0" y2="294.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="429.5" x2="1080.0" y2="294.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="234.9" x2="1080.0" y2="234.9" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="742.5" x2="1080.0" y2="1802.1" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="937.5" x2="1080.0" y2="1802.1" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2726.0" x2="1080.0" y2="1802.1" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2802.5" x2="1080.0" y2="1802.1" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="819.0" x2="1080.0" y2="1836.1" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1014.0" x2="1080.0" y2="1836.1" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1209.0" x2="1080.0" y2="1836.1" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="548.0" x2="1080.0" y2="1836.1" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2955.4" x2="1080.0" y2="1836.1" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3031.9" x2="1080.0" y2="1836.1" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3414.2" x2="1080.0" y2="1836.1" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1404.0" x2="1080.0" y2="1836.1" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1599.0" x2="1080.0" y2="1836.1" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1794.0" x2="1080.0" y2="1836.1" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1989.0" x2="1080.0" y2="1836.1" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2184.0" x2="1080.0" y2="1836.1" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1132.5" x2="1080.0" y2="2005.7" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2878.9" x2="1080.0" y2="2005.7" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2378.5" x2="1080.0" y2="2514.0" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2649.5" x2="1080.0" y2="2514.0" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2455.0" x2="1080.0" y2="2781.7" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3108.4" x2="1080.0" y2="2781.7" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3184.8" x2="1080.0" y2="2147.7" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3261.3" x2="1080.0" y2="2147.7" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1327.5" x2="1080.0" y2="2147.7" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1522.5" x2="1080.0" y2="2147.7" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1717.5" x2="1080.0" y2="2147.7" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1912.5" x2="1080.0" y2="2147.7" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2107.5" x2="1080.0" y2="2147.7" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3337.8" x2="1080.0" y2="3337.8" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><g class="node-group" data-node-type="root"><title>Circuito ic14
+Componenti: 13
+Terminali: 34
+Nodi elettrici: 10</title><circle cx="90.0" cy="1511.8" r="36.0" fill="#f26a63" stroke="#d4534c" stroke-width="2"></circle><text x="90.0" y="1515.8" text-anchor="middle" class="node-label">ic14</text></g><g class="node-group" data-node-type="class"><title>Classe: Connector
+Componenti: 1</title><circle cx="270.0" cy="158.5" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="162.5" text-anchor="middle" class="node-label">Connector</text></g><g class="node-group" data-node-type="component"><title>Componente: connector5.1
+Classe: Connector
+Instance: 5.1</title><circle cx="500.0" cy="158.5" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="162.5" text-anchor="middle" class="node-label">connector5.1</text></g><g class="node-group" data-node-type="warning_terminal"><title>Terminal: connector5.1_pin1
+Componente: connector5.1
+Nome: pin1
+Posizione: right</title><circle cx="780.0" cy="82.0" r="25.0" fill="#ffd0d0" stroke="#d12f2f" stroke-width="2"></circle><text x="780.0" y="86.0" text-anchor="middle" class="node-label">pin1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: connector5.1_pin2
+Componente: connector5.1
+Nome: pin2
+Posizione: right</title><circle cx="780.0" cy="158.5" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="162.5" text-anchor="middle" class="node-label">pin2</text></g><g class="node-group" data-node-type="warning_terminal"><title>Terminal: connector5.1_pin3
+Componente: connector5.1
+Nome: pin3
+Posizione: right</title><circle cx="780.0" cy="234.9" r="25.0" fill="#ffd0d0" stroke="#d12f2f" stroke-width="2"></circle><text x="780.0" y="238.9" text-anchor="middle" class="node-label">pin3</text></g><g class="node-group" data-node-type="class"><title>Classe: GND
+Componenti: 2</title><circle cx="270.0" cy="488.7" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="492.7" text-anchor="middle" class="node-label">GND</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.1
+Classe: GND
+Instance: 9.1</title><circle cx="500.0" cy="429.5" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="433.5" text-anchor="middle" class="node-label">gnd9.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: gnd9.1_t1
+Componente: gnd9.1
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="429.5" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="433.5" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.2
+Classe: GND
+Instance: 9.2</title><circle cx="500.0" cy="548.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="552.0" text-anchor="middle" class="node-label">gnd9.2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: gnd9.2_t1
+Componente: gnd9.2
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="548.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="552.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="class"><title>Classe: Capacitor
+Componenti: 8</title><circle cx="270.0" cy="1463.3" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="1467.3" text-anchor="middle" class="node-label">Capacitor</text></g><g class="node-group" data-node-type="component"><title>Componente: capacitor4.1
+Classe: Capacitor
+Instance: 4.1</title><circle cx="500.0" cy="780.8" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="784.8" text-anchor="middle" class="node-label">capacitor4.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: capacitor4.1_t1
+Componente: capacitor4.1
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="742.5" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="746.5" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: capacitor4.1_t2
+Componente: capacitor4.1
+Nome: t2
+Posizione: bottom</title><circle cx="780.0" cy="819.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="823.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: capacitor4.2
+Classe: Capacitor
+Instance: 4.2</title><circle cx="500.0" cy="975.8" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="979.8" text-anchor="middle" class="node-label">capacitor4.2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: capacitor4.2_t1
+Componente: capacitor4.2
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="937.5" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="941.5" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: capacitor4.2_t2
+Componente: capacitor4.2
+Nome: t2
+Posizione: bottom</title><circle cx="780.0" cy="1014.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1018.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: capacitor4.3
+Classe: Capacitor
+Instance: 4.3</title><circle cx="500.0" cy="1170.8" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1174.8" text-anchor="middle" class="node-label">capacitor4.3</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: capacitor4.3_t1
+Componente: capacitor4.3
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="1132.5" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1136.5" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: capacitor4.3_t2
+Componente: capacitor4.3
+Nome: t2
+Posizione: bottom</title><circle cx="780.0" cy="1209.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1213.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: capacitor4.4
+Classe: Capacitor
+Instance: 4.4</title><circle cx="500.0" cy="1365.8" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1369.8" text-anchor="middle" class="node-label">capacitor4.4</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: capacitor4.4_t1
+Componente: capacitor4.4
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="1327.5" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1331.5" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: capacitor4.4_t2
+Componente: capacitor4.4
+Nome: t2
+Posizione: bottom</title><circle cx="780.0" cy="1404.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1408.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: capacitor4.5
+Classe: Capacitor
+Instance: 4.5</title><circle cx="500.0" cy="1560.8" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1564.8" text-anchor="middle" class="node-label">capacitor4.5</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: capacitor4.5_t1
+Componente: capacitor4.5
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="1522.5" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1526.5" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: capacitor4.5_t2
+Componente: capacitor4.5
+Nome: t2
+Posizione: bottom</title><circle cx="780.0" cy="1599.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1603.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: capacitor4.6
+Classe: Capacitor
+Instance: 4.6</title><circle cx="500.0" cy="1755.8" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1759.8" text-anchor="middle" class="node-label">capacitor4.6</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: capacitor4.6_t1
+Componente: capacitor4.6
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="1717.5" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1721.5" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: capacitor4.6_t2
+Componente: capacitor4.6
+Nome: t2
+Posizione: bottom</title><circle cx="780.0" cy="1794.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1798.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: capacitor4.7
+Classe: Capacitor
+Instance: 4.7</title><circle cx="500.0" cy="1950.8" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1954.8" text-anchor="middle" class="node-label">capacitor4.7</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: capacitor4.7_t1
+Componente: capacitor4.7
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="1912.5" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1916.5" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: capacitor4.7_t2
+Componente: capacitor4.7
+Nome: t2
+Posizione: bottom</title><circle cx="780.0" cy="1989.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1993.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: capacitor4.8
+Classe: Capacitor
+Instance: 4.8</title><circle cx="500.0" cy="2145.8" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="2149.8" text-anchor="middle" class="node-label">capacitor4.8</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: capacitor4.8_t1
+Componente: capacitor4.8
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="2107.5" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2111.5" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: capacitor4.8_t2
+Componente: capacitor4.8
+Nome: t2
+Posizione: bottom</title><circle cx="780.0" cy="2184.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2188.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="class"><title>Classe: Inductor
+Componenti: 1</title><circle cx="270.0" cy="2416.8" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="2420.8" text-anchor="middle" class="node-label">Inductor</text></g><g class="node-group" data-node-type="component"><title>Componente: inductor10.1
+Classe: Inductor
+Instance: 10.1</title><circle cx="500.0" cy="2416.8" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="2420.8" text-anchor="middle" class="node-label">inductor10.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: inductor10.1_t1
+Componente: inductor10.1
+Nome: t1
+Posizione: left</title><circle cx="780.0" cy="2378.5" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2382.5" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: inductor10.1_t2
+Componente: inductor10.1
+Nome: t2
+Posizione: right</title><circle cx="780.0" cy="2455.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2459.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="class"><title>Classe: Integrated_Circuit
+Componenti: 1</title><circle cx="270.0" cy="3031.9" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="3028.9" text-anchor="middle" class="node-label small">Integrated</text><text x="270.0" y="3042.9" text-anchor="middle" class="node-label small">Circuit</text></g><g class="node-group" data-node-type="component"><title>Componente: integrated_circuit11.1
+Classe: Integrated_Circuit
+Instance: 11.1
+Display: TPS63061
+IC marking: TPS63061</title><circle cx="500.0" cy="3031.9" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="3035.9" text-anchor="middle" class="node-label">TPS63061</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_left_1
+Componente: integrated_circuit11.1
+Nome: left_1
+Posizione: left
+Display: TPS63061 left_1 pin1
+Pin: 1</title><circle cx="780.0" cy="2649.5" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2653.5" text-anchor="middle" class="node-label">pin1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_left_2
+Componente: integrated_circuit11.1
+Nome: left_2
+Posizione: left
+Display: TPS63061 left_2 pin2
+Pin: 2</title><circle cx="780.0" cy="2726.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2730.0" text-anchor="middle" class="node-label">pin2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_left_3
+Componente: integrated_circuit11.1
+Nome: left_3
+Posizione: left
+Display: TPS63061 left_3 pin3
+Pin: 3</title><circle cx="780.0" cy="2802.5" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2806.5" text-anchor="middle" class="node-label">pin3</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_left_4
+Componente: integrated_circuit11.1
+Nome: left_4
+Posizione: left
+Display: TPS63061 left_4 pin6
+Pin: 6</title><circle cx="780.0" cy="2878.9" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2882.9" text-anchor="middle" class="node-label">pin6</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_left_5
+Componente: integrated_circuit11.1
+Nome: left_5
+Posizione: left
+Display: TPS63061 left_5 pin4
+Pin: 4</title><circle cx="780.0" cy="2955.4" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2959.4" text-anchor="middle" class="node-label">pin4</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_left_6
+Componente: integrated_circuit11.1
+Nome: left_6
+Posizione: left
+Display: TPS63061 left_6 pin7
+Pin: 7</title><circle cx="780.0" cy="3031.9" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3035.9" text-anchor="middle" class="node-label">pin7</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_1
+Componente: integrated_circuit11.1
+Nome: right_1
+Posizione: right
+Display: TPS63061 right_1 pin10
+Pin: 10</title><circle cx="780.0" cy="3108.4" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3112.4" text-anchor="middle" class="node-label">pin10</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_2
+Componente: integrated_circuit11.1
+Nome: right_2
+Posizione: right
+Display: TPS63061 right_2 pin9
+Pin: 9</title><circle cx="780.0" cy="3184.8" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3188.8" text-anchor="middle" class="node-label">pin9</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_3
+Componente: integrated_circuit11.1
+Nome: right_3
+Posizione: right
+Display: TPS63061 right_3 pin8
+Pin: 8</title><circle cx="780.0" cy="3261.3" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3265.3" text-anchor="middle" class="node-label">pin8</text></g><g class="node-group" data-node-type="warning_terminal"><title>Terminal: integrated_circuit11.1_right_4
+Componente: integrated_circuit11.1
+Nome: right_4
+Posizione: right
+Display: TPS63061 right_4 pin5
+Pin: 5</title><circle cx="780.0" cy="3337.8" r="25.0" fill="#ffd0d0" stroke="#d12f2f" stroke-width="2"></circle><text x="780.0" y="3341.8" text-anchor="middle" class="node-label">pin5</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_5
+Componente: integrated_circuit11.1
+Nome: right_5
+Posizione: right
+Display: TPS63061 right_5 pin11
+Pin: 11</title><circle cx="780.0" cy="3414.2" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3418.2" text-anchor="middle" class="node-label">pin11</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 1
+Terminali collegati: 1
+connector5.1_pin1</title><circle cx="1080.0" cy="82.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="86.0" text-anchor="middle" class="node-label">1</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 2
+Terminali collegati: 2
+connector5.1_pin2
+gnd9.1_t1</title><circle cx="1080.0" cy="294.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="298.0" text-anchor="middle" class="node-label">2</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 3
+Terminali collegati: 1
+connector5.1_pin3</title><circle cx="1080.0" cy="234.9" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="238.9" text-anchor="middle" class="node-label">3</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 4
+Terminali collegati: 4
+capacitor4.1_t1
+capacitor4.2_t1
+integrated_circuit11.1_left_2
+integrated_circuit11.1_left_3</title><circle cx="1080.0" cy="1802.1" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="1806.1" text-anchor="middle" class="node-label">4</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 5
+Terminali collegati: 12
+capacitor4.1_t2
+capacitor4.2_t2
+capacitor4.3_t2
+gnd9.2_t1
+integrated_circuit11.1_left_5
+integrated_circuit11.1_left_6
+integrated_circuit11.1_right_5
+capacitor4.4_t2
+capacitor4.5_t2
+capacitor4.6_t2
+capacitor4.7_t2
+capacitor4.8_t2</title><circle cx="1080.0" cy="1836.1" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="1840.1" text-anchor="middle" class="node-label">5</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 6
+Terminali collegati: 2
+capacitor4.3_t1
+integrated_circuit11.1_left_4</title><circle cx="1080.0" cy="2005.7" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2009.7" text-anchor="middle" class="node-label">6</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 7
+Terminali collegati: 2
+inductor10.1_t1
+integrated_circuit11.1_left_1</title><circle cx="1080.0" cy="2514.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2518.0" text-anchor="middle" class="node-label">7</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 8
+Terminali collegati: 2
+inductor10.1_t2
+integrated_circuit11.1_right_1</title><circle cx="1080.0" cy="2781.7" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2785.7" text-anchor="middle" class="node-label">8</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 9
+Terminali collegati: 7
+integrated_circuit11.1_right_2
+integrated_circuit11.1_right_3
+capacitor4.4_t1
+capacitor4.5_t1
+capacitor4.6_t1
+capacitor4.7_t1
+capacitor4.8_t1</title><circle cx="1080.0" cy="2147.7" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2151.7" text-anchor="middle" class="node-label">9</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 10
+Terminali collegati: 1
+integrated_circuit11.1_right_4</title><circle cx="1080.0" cy="3337.8" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="3341.8" text-anchor="middle" class="node-label">10</text></g></svg></div>
+        <div class="legend">
+          <span><i class="dot" style="background:#f26a63"></i> circuito</span>
+          <span><i class="dot" style="background:#dcc9a5"></i> classe</span>
+          <span><i class="dot" style="background:#85d68d"></i> componente</span>
+          <span><i class="dot" style="background:#f4abc7"></i> terminale</span>
+          <span><i class="dot" style="background:#ffd65a"></i> nodo elettrico</span>
+        </div>
+      </section>
+    </div>
+
+    <div class="warning-grid"><div class="warning-box"><h3>Unconnected Terminals</h3><ul><li>connector5.1_pin1</li><li>connector5.1_pin3</li><li>integrated_circuit11.1_right_4</li></ul></div><div class="warning-box"><h3>Unmatched Terminals</h3><p>Nessun elemento.</p></div><div class="warning-box"><h3>Suspicious Matches</h3><p>Nessun elemento.</p></div></div>
+
+    <details>
+      <summary>Mostra JSON finale completo</summary>
+      <pre>{
+  &quot;image_id&quot;: &quot;ic14&quot;,
+  &quot;image_name&quot;: &quot;ic14.jpg&quot;,
+  &quot;components&quot;: [
+    {
+      &quot;component_id&quot;: &quot;connector5.1&quot;,
+      &quot;instance_id&quot;: &quot;5.1&quot;,
+      &quot;class_name&quot;: &quot;Connector&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;connector5.1_pin1&quot;,
+          &quot;name&quot;: &quot;pin1&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;connector5.1_pin2&quot;,
+          &quot;name&quot;: &quot;pin2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;connector5.1_pin3&quot;,
+          &quot;name&quot;: &quot;pin3&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;gnd9.1&quot;,
+      &quot;instance_id&quot;: &quot;9.1&quot;,
+      &quot;class_name&quot;: &quot;GND&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;gnd9.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;capacitor4.1&quot;,
+      &quot;instance_id&quot;: &quot;4.1&quot;,
+      &quot;class_name&quot;: &quot;Capacitor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;capacitor4.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;capacitor4.1_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;capacitor4.2&quot;,
+      &quot;instance_id&quot;: &quot;4.2&quot;,
+      &quot;class_name&quot;: &quot;Capacitor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;capacitor4.2_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;capacitor4.2_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;capacitor4.3&quot;,
+      &quot;instance_id&quot;: &quot;4.3&quot;,
+      &quot;class_name&quot;: &quot;Capacitor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;capacitor4.3_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;capacitor4.3_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;gnd9.2&quot;,
+      &quot;instance_id&quot;: &quot;9.2&quot;,
+      &quot;class_name&quot;: &quot;GND&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;gnd9.2_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;inductor10.1&quot;,
+      &quot;instance_id&quot;: &quot;10.1&quot;,
+      &quot;class_name&quot;: &quot;Inductor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;inductor10.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;inductor10.1_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;instance_id&quot;: &quot;11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_left_1&quot;,
+          &quot;name&quot;: &quot;left_1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;TPS63061 left_1 pin1&quot;,
+          &quot;pin_number&quot;: &quot;1&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_left_2&quot;,
+          &quot;name&quot;: &quot;left_2&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;TPS63061 left_2 pin2&quot;,
+          &quot;pin_number&quot;: &quot;2&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_left_3&quot;,
+          &quot;name&quot;: &quot;left_3&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;TPS63061 left_3 pin3&quot;,
+          &quot;pin_number&quot;: &quot;3&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_left_4&quot;,
+          &quot;name&quot;: &quot;left_4&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;TPS63061 left_4 pin6&quot;,
+          &quot;pin_number&quot;: &quot;6&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_left_5&quot;,
+          &quot;name&quot;: &quot;left_5&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;TPS63061 left_5 pin4&quot;,
+          &quot;pin_number&quot;: &quot;4&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_left_6&quot;,
+          &quot;name&quot;: &quot;left_6&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;TPS63061 left_6 pin7&quot;,
+          &quot;pin_number&quot;: &quot;7&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_1&quot;,
+          &quot;name&quot;: &quot;right_1&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;TPS63061 right_1 pin10&quot;,
+          &quot;pin_number&quot;: &quot;10&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_2&quot;,
+          &quot;name&quot;: &quot;right_2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;TPS63061 right_2 pin9&quot;,
+          &quot;pin_number&quot;: &quot;9&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_3&quot;,
+          &quot;name&quot;: &quot;right_3&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;TPS63061 right_3 pin8&quot;,
+          &quot;pin_number&quot;: &quot;8&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_4&quot;,
+          &quot;name&quot;: &quot;right_4&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;TPS63061 right_4 pin5&quot;,
+          &quot;pin_number&quot;: &quot;5&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_5&quot;,
+          &quot;name&quot;: &quot;right_5&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;TPS63061 right_5 pin11&quot;,
+          &quot;pin_number&quot;: &quot;11&quot;
+        }
+      ],
+      &quot;display_name&quot;: &quot;TPS63061&quot;,
+      &quot;ic_marking&quot;: &quot;TPS63061&quot;
+    },
+    {
+      &quot;component_id&quot;: &quot;capacitor4.4&quot;,
+      &quot;instance_id&quot;: &quot;4.4&quot;,
+      &quot;class_name&quot;: &quot;Capacitor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;capacitor4.4_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;capacitor4.4_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;capacitor4.5&quot;,
+      &quot;instance_id&quot;: &quot;4.5&quot;,
+      &quot;class_name&quot;: &quot;Capacitor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;capacitor4.5_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;capacitor4.5_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;capacitor4.6&quot;,
+      &quot;instance_id&quot;: &quot;4.6&quot;,
+      &quot;class_name&quot;: &quot;Capacitor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;capacitor4.6_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;capacitor4.6_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;capacitor4.7&quot;,
+      &quot;instance_id&quot;: &quot;4.7&quot;,
+      &quot;class_name&quot;: &quot;Capacitor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;capacitor4.7_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;capacitor4.7_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;capacitor4.8&quot;,
+      &quot;instance_id&quot;: &quot;4.8&quot;,
+      &quot;class_name&quot;: &quot;Capacitor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;capacitor4.8_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;capacitor4.8_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    }
+  ],
+  &quot;terminal_metadata&quot;: {
+    &quot;integrated_circuit11.1_left_1&quot;: {
+      &quot;display_name&quot;: &quot;TPS63061 left_1 pin1&quot;,
+      &quot;pin_number&quot;: &quot;1&quot;,
+      &quot;component_display_name&quot;: &quot;TPS63061&quot;,
+      &quot;ic_marking&quot;: &quot;TPS63061&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_left_2&quot;: {
+      &quot;display_name&quot;: &quot;TPS63061 left_2 pin2&quot;,
+      &quot;pin_number&quot;: &quot;2&quot;,
+      &quot;component_display_name&quot;: &quot;TPS63061&quot;,
+      &quot;ic_marking&quot;: &quot;TPS63061&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_left_3&quot;: {
+      &quot;display_name&quot;: &quot;TPS63061 left_3 pin3&quot;,
+      &quot;pin_number&quot;: &quot;3&quot;,
+      &quot;component_display_name&quot;: &quot;TPS63061&quot;,
+      &quot;ic_marking&quot;: &quot;TPS63061&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_left_4&quot;: {
+      &quot;display_name&quot;: &quot;TPS63061 left_4 pin6&quot;,
+      &quot;pin_number&quot;: &quot;6&quot;,
+      &quot;component_display_name&quot;: &quot;TPS63061&quot;,
+      &quot;ic_marking&quot;: &quot;TPS63061&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_left_5&quot;: {
+      &quot;display_name&quot;: &quot;TPS63061 left_5 pin4&quot;,
+      &quot;pin_number&quot;: &quot;4&quot;,
+      &quot;component_display_name&quot;: &quot;TPS63061&quot;,
+      &quot;ic_marking&quot;: &quot;TPS63061&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_left_6&quot;: {
+      &quot;display_name&quot;: &quot;TPS63061 left_6 pin7&quot;,
+      &quot;pin_number&quot;: &quot;7&quot;,
+      &quot;component_display_name&quot;: &quot;TPS63061&quot;,
+      &quot;ic_marking&quot;: &quot;TPS63061&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_1&quot;: {
+      &quot;display_name&quot;: &quot;TPS63061 right_1 pin10&quot;,
+      &quot;pin_number&quot;: &quot;10&quot;,
+      &quot;component_display_name&quot;: &quot;TPS63061&quot;,
+      &quot;ic_marking&quot;: &quot;TPS63061&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_2&quot;: {
+      &quot;display_name&quot;: &quot;TPS63061 right_2 pin9&quot;,
+      &quot;pin_number&quot;: &quot;9&quot;,
+      &quot;component_display_name&quot;: &quot;TPS63061&quot;,
+      &quot;ic_marking&quot;: &quot;TPS63061&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_3&quot;: {
+      &quot;display_name&quot;: &quot;TPS63061 right_3 pin8&quot;,
+      &quot;pin_number&quot;: &quot;8&quot;,
+      &quot;component_display_name&quot;: &quot;TPS63061&quot;,
+      &quot;ic_marking&quot;: &quot;TPS63061&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_4&quot;: {
+      &quot;display_name&quot;: &quot;TPS63061 right_4 pin5&quot;,
+      &quot;pin_number&quot;: &quot;5&quot;,
+      &quot;component_display_name&quot;: &quot;TPS63061&quot;,
+      &quot;ic_marking&quot;: &quot;TPS63061&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_5&quot;: {
+      &quot;display_name&quot;: &quot;TPS63061 right_5 pin11&quot;,
+      &quot;pin_number&quot;: &quot;11&quot;,
+      &quot;component_display_name&quot;: &quot;TPS63061&quot;,
+      &quot;ic_marking&quot;: &quot;TPS63061&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    }
+  },
+  &quot;graph&quot;: {
+    &quot;capacitor4.1_t1&quot;: [
+      &quot;capacitor4.2_t1&quot;,
+      &quot;integrated_circuit11.1_left_2&quot;,
+      &quot;integrated_circuit11.1_left_3&quot;
+    ],
+    &quot;capacitor4.1_t2&quot;: [
+      &quot;capacitor4.2_t2&quot;,
+      &quot;capacitor4.3_t2&quot;,
+      &quot;capacitor4.4_t2&quot;,
+      &quot;capacitor4.5_t2&quot;,
+      &quot;capacitor4.6_t2&quot;,
+      &quot;capacitor4.7_t2&quot;,
+      &quot;capacitor4.8_t2&quot;,
+      &quot;gnd9.2_t1&quot;,
+      &quot;integrated_circuit11.1_left_5&quot;,
+      &quot;integrated_circuit11.1_left_6&quot;,
+      &quot;integrated_circuit11.1_right_5&quot;
+    ],
+    &quot;capacitor4.2_t1&quot;: [
+      &quot;capacitor4.1_t1&quot;,
+      &quot;integrated_circuit11.1_left_2&quot;,
+      &quot;integrated_circuit11.1_left_3&quot;
+    ],
+    &quot;capacitor4.2_t2&quot;: [
+      &quot;capacitor4.1_t2&quot;,
+      &quot;capacitor4.3_t2&quot;,
+      &quot;capacitor4.4_t2&quot;,
+      &quot;capacitor4.5_t2&quot;,
+      &quot;capacitor4.6_t2&quot;,
+      &quot;capacitor4.7_t2&quot;,
+      &quot;capacitor4.8_t2&quot;,
+      &quot;gnd9.2_t1&quot;,
+      &quot;integrated_circuit11.1_left_5&quot;,
+      &quot;integrated_circuit11.1_left_6&quot;,
+      &quot;integrated_circuit11.1_right_5&quot;
+    ],
+    &quot;capacitor4.3_t1&quot;: [
+      &quot;integrated_circuit11.1_left_4&quot;
+    ],
+    &quot;capacitor4.3_t2&quot;: [
+      &quot;capacitor4.1_t2&quot;,
+      &quot;capacitor4.2_t2&quot;,
+      &quot;capacitor4.4_t2&quot;,
+      &quot;capacitor4.5_t2&quot;,
+      &quot;capacitor4.6_t2&quot;,
+      &quot;capacitor4.7_t2&quot;,
+      &quot;capacitor4.8_t2&quot;,
+      &quot;gnd9.2_t1&quot;,
+      &quot;integrated_circuit11.1_left_5&quot;,
+      &quot;integrated_circuit11.1_left_6&quot;,
+      &quot;integrated_circuit11.1_right_5&quot;
+    ],
+    &quot;capacitor4.4_t1&quot;: [
+      &quot;capacitor4.5_t1&quot;,
+      &quot;capacitor4.6_t1&quot;,
+      &quot;capacitor4.7_t1&quot;,
+      &quot;capacitor4.8_t1&quot;,
+      &quot;integrated_circuit11.1_right_2&quot;,
+      &quot;integrated_circuit11.1_right_3&quot;
+    ],
+    &quot;capacitor4.4_t2&quot;: [
+      &quot;capacitor4.1_t2&quot;,
+      &quot;capacitor4.2_t2&quot;,
+      &quot;capacitor4.3_t2&quot;,
+      &quot;capacitor4.5_t2&quot;,
+      &quot;capacitor4.6_t2&quot;,
+      &quot;capacitor4.7_t2&quot;,
+      &quot;capacitor4.8_t2&quot;,
+      &quot;gnd9.2_t1&quot;,
+      &quot;integrated_circuit11.1_left_5&quot;,
+      &quot;integrated_circuit11.1_left_6&quot;,
+      &quot;integrated_circuit11.1_right_5&quot;
+    ],
+    &quot;capacitor4.5_t1&quot;: [
+      &quot;capacitor4.4_t1&quot;,
+      &quot;capacitor4.6_t1&quot;,
+      &quot;capacitor4.7_t1&quot;,
+      &quot;capacitor4.8_t1&quot;,
+      &quot;integrated_circuit11.1_right_2&quot;,
+      &quot;integrated_circuit11.1_right_3&quot;
+    ],
+    &quot;capacitor4.5_t2&quot;: [
+      &quot;capacitor4.1_t2&quot;,
+      &quot;capacitor4.2_t2&quot;,
+      &quot;capacitor4.3_t2&quot;,
+      &quot;capacitor4.4_t2&quot;,
+      &quot;capacitor4.6_t2&quot;,
+      &quot;capacitor4.7_t2&quot;,
+      &quot;capacitor4.8_t2&quot;,
+      &quot;gnd9.2_t1&quot;,
+      &quot;integrated_circuit11.1_left_5&quot;,
+      &quot;integrated_circuit11.1_left_6&quot;,
+      &quot;integrated_circuit11.1_right_5&quot;
+    ],
+    &quot;capacitor4.6_t1&quot;: [
+      &quot;capacitor4.4_t1&quot;,
+      &quot;capacitor4.5_t1&quot;,
+      &quot;capacitor4.7_t1&quot;,
+      &quot;capacitor4.8_t1&quot;,
+      &quot;integrated_circuit11.1_right_2&quot;,
+      &quot;integrated_circuit11.1_right_3&quot;
+    ],
+    &quot;capacitor4.6_t2&quot;: [
+      &quot;capacitor4.1_t2&quot;,
+      &quot;capacitor4.2_t2&quot;,
+      &quot;capacitor4.3_t2&quot;,
+      &quot;capacitor4.4_t2&quot;,
+      &quot;capacitor4.5_t2&quot;,
+      &quot;capacitor4.7_t2&quot;,
+      &quot;capacitor4.8_t2&quot;,
+      &quot;gnd9.2_t1&quot;,
+      &quot;integrated_circuit11.1_left_5&quot;,
+      &quot;integrated_circuit11.1_left_6&quot;,
+      &quot;integrated_circuit11.1_right_5&quot;
+    ],
+    &quot;capacitor4.7_t1&quot;: [
+      &quot;capacitor4.4_t1&quot;,
+      &quot;capacitor4.5_t1&quot;,
+      &quot;capacitor4.6_t1&quot;,
+      &quot;capacitor4.8_t1&quot;,
+      &quot;integrated_circuit11.1_right_2&quot;,
+      &quot;integrated_circuit11.1_right_3&quot;
+    ],
+    &quot;capacitor4.7_t2&quot;: [
+      &quot;capacitor4.1_t2&quot;,
+      &quot;capacitor4.2_t2&quot;,
+      &quot;capacitor4.3_t2&quot;,
+      &quot;capacitor4.4_t2&quot;,
+      &quot;capacitor4.5_t2&quot;,
+      &quot;capacitor4.6_t2&quot;,
+      &quot;capacitor4.8_t2&quot;,
+      &quot;gnd9.2_t1&quot;,
+      &quot;integrated_circuit11.1_left_5&quot;,
+      &quot;integrated_circuit11.1_left_6&quot;,
+      &quot;integrated_circuit11.1_right_5&quot;
+    ],
+    &quot;capacitor4.8_t1&quot;: [
+      &quot;capacitor4.4_t1&quot;,
+      &quot;capacitor4.5_t1&quot;,
+      &quot;capacitor4.6_t1&quot;,
+      &quot;capacitor4.7_t1&quot;,
+      &quot;integrated_circuit11.1_right_2&quot;,
+      &quot;integrated_circuit11.1_right_3&quot;
+    ],
+    &quot;capacitor4.8_t2&quot;: [
+      &quot;capacitor4.1_t2&quot;,
+      &quot;capacitor4.2_t2&quot;,
+      &quot;capacitor4.3_t2&quot;,
+      &quot;capacitor4.4_t2&quot;,
+      &quot;capacitor4.5_t2&quot;,
+      &quot;capacitor4.6_t2&quot;,
+      &quot;capacitor4.7_t2&quot;,
+      &quot;gnd9.2_t1&quot;,
+      &quot;integrated_circuit11.1_left_5&quot;,
+      &quot;integrated_circuit11.1_left_6&quot;,
+      &quot;integrated_circuit11.1_right_5&quot;
+    ],
+    &quot;connector5.1_pin1&quot;: [],
+    &quot;connector5.1_pin2&quot;: [
+      &quot;gnd9.1_t1&quot;
+    ],
+    &quot;connector5.1_pin3&quot;: [],
+    &quot;gnd9.1_t1&quot;: [
+      &quot;connector5.1_pin2&quot;
+    ],
+    &quot;gnd9.2_t1&quot;: [
+      &quot;capacitor4.1_t2&quot;,
+      &quot;capacitor4.2_t2&quot;,
+      &quot;capacitor4.3_t2&quot;,
+      &quot;capacitor4.4_t2&quot;,
+      &quot;capacitor4.5_t2&quot;,
+      &quot;capacitor4.6_t2&quot;,
+      &quot;capacitor4.7_t2&quot;,
+      &quot;capacitor4.8_t2&quot;,
+      &quot;integrated_circuit11.1_left_5&quot;,
+      &quot;integrated_circuit11.1_left_6&quot;,
+      &quot;integrated_circuit11.1_right_5&quot;
+    ],
+    &quot;inductor10.1_t1&quot;: [
+      &quot;integrated_circuit11.1_left_1&quot;
+    ],
+    &quot;inductor10.1_t2&quot;: [
+      &quot;integrated_circuit11.1_right_1&quot;
+    ],
+    &quot;integrated_circuit11.1_left_1&quot;: [
+      &quot;inductor10.1_t1&quot;
+    ],
+    &quot;integrated_circuit11.1_left_2&quot;: [
+      &quot;capacitor4.1_t1&quot;,
+      &quot;capacitor4.2_t1&quot;,
+      &quot;integrated_circuit11.1_left_3&quot;
+    ],
+    &quot;integrated_circuit11.1_left_3&quot;: [
+      &quot;capacitor4.1_t1&quot;,
+      &quot;capacitor4.2_t1&quot;,
+      &quot;integrated_circuit11.1_left_2&quot;
+    ],
+    &quot;integrated_circuit11.1_left_4&quot;: [
+      &quot;capacitor4.3_t1&quot;
+    ],
+    &quot;integrated_circuit11.1_left_5&quot;: [
+      &quot;capacitor4.1_t2&quot;,
+      &quot;capacitor4.2_t2&quot;,
+      &quot;capacitor4.3_t2&quot;,
+      &quot;capacitor4.4_t2&quot;,
+      &quot;capacitor4.5_t2&quot;,
+      &quot;capacitor4.6_t2&quot;,
+      &quot;capacitor4.7_t2&quot;,
+      &quot;capacitor4.8_t2&quot;,
+      &quot;gnd9.2_t1&quot;,
+      &quot;integrated_circuit11.1_left_6&quot;,
+      &quot;integrated_circuit11.1_right_5&quot;
+    ],
+    &quot;integrated_circuit11.1_left_6&quot;: [
+      &quot;capacitor4.1_t2&quot;,
+      &quot;capacitor4.2_t2&quot;,
+      &quot;capacitor4.3_t2&quot;,
+      &quot;capacitor4.4_t2&quot;,
+      &quot;capacitor4.5_t2&quot;,
+      &quot;capacitor4.6_t2&quot;,
+      &quot;capacitor4.7_t2&quot;,
+      &quot;capacitor4.8_t2&quot;,
+      &quot;gnd9.2_t1&quot;,
+      &quot;integrated_circuit11.1_left_5&quot;,
+      &quot;integrated_circuit11.1_right_5&quot;
+    ],
+    &quot;integrated_circuit11.1_right_1&quot;: [
+      &quot;inductor10.1_t2&quot;
+    ],
+    &quot;integrated_circuit11.1_right_2&quot;: [
+      &quot;capacitor4.4_t1&quot;,
+      &quot;capacitor4.5_t1&quot;,
+      &quot;capacitor4.6_t1&quot;,
+      &quot;capacitor4.7_t1&quot;,
+      &quot;capacitor4.8_t1&quot;,
+      &quot;integrated_circuit11.1_right_3&quot;
+    ],
+    &quot;integrated_circuit11.1_right_3&quot;: [
+      &quot;capacitor4.4_t1&quot;,
+      &quot;capacitor4.5_t1&quot;,
+      &quot;capacitor4.6_t1&quot;,
+      &quot;capacitor4.7_t1&quot;,
+      &quot;capacitor4.8_t1&quot;,
+      &quot;integrated_circuit11.1_right_2&quot;
+    ],
+    &quot;integrated_circuit11.1_right_4&quot;: [],
+    &quot;integrated_circuit11.1_right_5&quot;: [
+      &quot;capacitor4.1_t2&quot;,
+      &quot;capacitor4.2_t2&quot;,
+      &quot;capacitor4.3_t2&quot;,
+      &quot;capacitor4.4_t2&quot;,
+      &quot;capacitor4.5_t2&quot;,
+      &quot;capacitor4.6_t2&quot;,
+      &quot;capacitor4.7_t2&quot;,
+      &quot;capacitor4.8_t2&quot;,
+      &quot;gnd9.2_t1&quot;,
+      &quot;integrated_circuit11.1_left_5&quot;,
+      &quot;integrated_circuit11.1_left_6&quot;
+    ]
+  },
+  &quot;warnings&quot;: {
+    &quot;unconnected_terminals&quot;: [
+      &quot;connector5.1_pin1&quot;,
+      &quot;connector5.1_pin3&quot;,
+      &quot;integrated_circuit11.1_right_4&quot;
+    ],
+    &quot;unmatched_terminals&quot;: [],
+    &quot;suspicious_matches&quot;: []
+  }
+}</pre>
+    </details>
+  </div>
+
+  <script>
+    (() => {
+      const svg = document.getElementById("graph-svg");
+      const viewBox = svg.viewBox.baseVal;
+      let isDragging = false;
+      let startX = 0;
+      let startY = 0;
+      let startViewX = viewBox.x;
+      let startViewY = viewBox.y;
+
+      function pointFromEvent(event) {
+        const rect = svg.getBoundingClientRect();
+        return {
+          x: (event.clientX - rect.left) * (viewBox.width / rect.width),
+          y: (event.clientY - rect.top) * (viewBox.height / rect.height),
+        };
+      }
+
+      svg.addEventListener("wheel", (event) => {
+        event.preventDefault();
+        const scale = event.deltaY < 0 ? 0.92 : 1.08;
+        const point = pointFromEvent(event);
+        const newWidth = viewBox.width * scale;
+        const newHeight = viewBox.height * scale;
+        viewBox.x = point.x - (point.x - viewBox.x) * scale;
+        viewBox.y = point.y - (point.y - viewBox.y) * scale;
+        viewBox.width = Math.max(480, newWidth);
+        viewBox.height = Math.max(360, newHeight);
+      }, { passive: false });
+
+      svg.addEventListener("pointerdown", (event) => {
+        isDragging = true;
+        svg.setPointerCapture(event.pointerId);
+        startX = event.clientX;
+        startY = event.clientY;
+        startViewX = viewBox.x;
+        startViewY = viewBox.y;
+      });
+
+      svg.addEventListener("pointermove", (event) => {
+        if (!isDragging) return;
+        const rect = svg.getBoundingClientRect();
+        const dx = (event.clientX - startX) * (viewBox.width / rect.width);
+        const dy = (event.clientY - startY) * (viewBox.height / rect.height);
+        viewBox.x = startViewX - dx;
+        viewBox.y = startViewY - dy;
+      });
+
+      svg.addEventListener("pointerup", () => {
+        isDragging = false;
+      });
+
+      svg.addEventListener("pointerleave", () => {
+        isDragging = false;
+      });
+    })();
+  </script>
+</body>
+</html>

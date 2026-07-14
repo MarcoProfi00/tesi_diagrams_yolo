@@ -1,0 +1,236 @@
+{
+  "image_id": "4",
+  "image_name": "4.jpg",
+  "components": [
+    {
+      "component_id": "terminal26.1",
+      "instance_id": "26.1",
+      "class_name": "Terminal",
+      "terminals": [
+        {
+          "terminal_id": "terminal26.1_t1",
+          "name": "t1",
+          "relative_position": "bottom"
+        }
+      ]
+    },
+    {
+      "component_id": "terminal26.2",
+      "instance_id": "26.2",
+      "class_name": "Terminal",
+      "terminals": [
+        {
+          "terminal_id": "terminal26.2_t1",
+          "name": "t1",
+          "relative_position": "right"
+        }
+      ]
+    },
+    {
+      "component_id": "gnd9.1",
+      "instance_id": "9.1",
+      "class_name": "GND",
+      "terminals": [
+        {
+          "terminal_id": "gnd9.1_t1",
+          "name": "t1",
+          "relative_position": "top"
+        }
+      ]
+    },
+    {
+      "component_id": "current_source6.1",
+      "instance_id": "6.1",
+      "class_name": "Current_Source",
+      "terminals": [
+        {
+          "terminal_id": "current_source6.1_current_from",
+          "name": "current_from",
+          "relative_position": "top"
+        },
+        {
+          "terminal_id": "current_source6.1_current_to",
+          "name": "current_to",
+          "relative_position": "bottom"
+        }
+      ]
+    },
+    {
+      "component_id": "diode7.1",
+      "instance_id": "7.1",
+      "class_name": "Diode",
+      "terminals": [
+        {
+          "terminal_id": "diode7.1_anode",
+          "name": "anode",
+          "relative_position": "top"
+        },
+        {
+          "terminal_id": "diode7.1_cathode",
+          "name": "cathode",
+          "relative_position": "bottom"
+        }
+      ]
+    },
+    {
+      "component_id": "diode7.2",
+      "instance_id": "7.2",
+      "class_name": "Diode",
+      "terminals": [
+        {
+          "terminal_id": "diode7.2_anode",
+          "name": "anode",
+          "relative_position": "top"
+        },
+        {
+          "terminal_id": "diode7.2_cathode",
+          "name": "cathode",
+          "relative_position": "bottom"
+        }
+      ]
+    },
+    {
+      "component_id": "npn_transistor18.1",
+      "instance_id": "18.1",
+      "class_name": "NPN_Transistor",
+      "terminals": [
+        {
+          "terminal_id": "npn_transistor18.1_B",
+          "name": "B",
+          "relative_position": "left"
+        },
+        {
+          "terminal_id": "npn_transistor18.1_E",
+          "name": "E",
+          "relative_position": "top"
+        },
+        {
+          "terminal_id": "npn_transistor18.1_C",
+          "name": "C",
+          "relative_position": "bottom"
+        }
+      ]
+    },
+    {
+      "component_id": "npn_transistor18.2",
+      "instance_id": "18.2",
+      "class_name": "NPN_Transistor",
+      "terminals": [
+        {
+          "terminal_id": "npn_transistor18.2_B",
+          "name": "B",
+          "relative_position": "left"
+        },
+        {
+          "terminal_id": "npn_transistor18.2_C",
+          "name": "C",
+          "relative_position": "top"
+        },
+        {
+          "terminal_id": "npn_transistor18.2_E",
+          "name": "E",
+          "relative_position": "bottom"
+        }
+      ]
+    },
+    {
+      "component_id": "resistor22.1",
+      "instance_id": "22.1",
+      "class_name": "Resistor",
+      "terminals": [
+        {
+          "terminal_id": "resistor22.1_t1",
+          "name": "t1",
+          "relative_position": "top"
+        },
+        {
+          "terminal_id": "resistor22.1_t2",
+          "name": "t2",
+          "relative_position": "bottom"
+        }
+      ]
+    },
+    {
+      "component_id": "gnd9.2",
+      "instance_id": "9.2",
+      "class_name": "GND",
+      "terminals": [
+        {
+          "terminal_id": "gnd9.2_t1",
+          "name": "t1",
+          "relative_position": "top"
+        }
+      ]
+    }
+  ],
+  "graph": {
+    "current_source6.1_current_from": [
+      "npn_transistor18.2_C"
+    ],
+    "current_source6.1_current_to": [
+      "diode7.1_anode",
+      "npn_transistor18.2_B"
+    ],
+    "diode7.1_anode": [
+      "current_source6.1_current_to",
+      "npn_transistor18.2_B"
+    ],
+    "diode7.1_cathode": [
+      "diode7.2_anode"
+    ],
+    "diode7.2_anode": [
+      "diode7.1_cathode"
+    ],
+    "diode7.2_cathode": [
+      "npn_transistor18.1_B",
+      "terminal26.2_t1"
+    ],
+    "gnd9.1_t1": [
+      "terminal26.1_t1"
+    ],
+    "gnd9.2_t1": [
+      "resistor22.1_t2"
+    ],
+    "npn_transistor18.1_B": [
+      "diode7.2_cathode",
+      "terminal26.2_t1"
+    ],
+    "npn_transistor18.1_C": [],
+    "npn_transistor18.1_E": [
+      "npn_transistor18.2_E",
+      "resistor22.1_t1"
+    ],
+    "npn_transistor18.2_B": [
+      "current_source6.1_current_to",
+      "diode7.1_anode"
+    ],
+    "npn_transistor18.2_C": [
+      "current_source6.1_current_from"
+    ],
+    "npn_transistor18.2_E": [
+      "npn_transistor18.1_E",
+      "resistor22.1_t1"
+    ],
+    "resistor22.1_t1": [
+      "npn_transistor18.1_E",
+      "npn_transistor18.2_E"
+    ],
+    "resistor22.1_t2": [
+      "gnd9.2_t1"
+    ],
+    "terminal26.1_t1": [
+      "gnd9.1_t1"
+    ],
+    "terminal26.2_t1": [
+      "diode7.2_cathode",
+      "npn_transistor18.1_B"
+    ]
+  },
+  "warnings": {
+    "unconnected_terminals": [
+      "npn_transistor18.1_C"
+    ],
+    "unmatched_terminals": [],
+    "suspicious_matches": []
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "metadata": {
+    "circuit_id": "a09",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a09.png",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a09.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "a09.png",
+    "json_file": "a09.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-05 17:52:26",
+    "judge_latency_seconds": 40.995,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=12608, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=2699, output_tokens_details=OutputTokensDetails(reasoning_tokens=1616), total_tokens=15307)",
+  "judge_result": {
+    "circuit_id": "a09",
+    "batch": "A",
+    "image_file": "a09.png",
+    "json_file": "a09.json",
+    "image_graph_fidelity_score": 71,
+    "decision": "MEDIUM",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 9,
+      "terminals_pins": 20,
+      "graph_connections": 33,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 1,
+      "major": 2,
+      "minor": 1
+    },
+    "critical_errors": [
+      {
+        "type": "net_fuse",
+        "description": "Il JSON fonde erroneamente il nodo di J1 pin4 / lato sinistro di R3 con il nodo di massa del condensatore C1. Nell'immagine il condensatore e collegato tra J1 pin2 e GND; il nodo J1 pin4-R3 e separato dalla massa.",
+        "image_evidence": "Nel disegno C1 e verticale: il terminale superiore va al ramo proveniente da J1 pin2, il terminale inferiore va al simbolo GND. La linea di J1 pin4 va invece solo al resistore R3; non c'e junction dot tra quel nodo e C1/GND.",
+        "json_evidence": "Il graph dichiara capacitor4.1_t2 collegato a connector5.1_pin4, gnd9.3_t1 e resistor22.1_t1; inoltre resistor22.1_t1 e connector5.1_pin4 risultano nello stesso nodo con gnd9.3_t1."
+      }
+    ],
+    "major_errors": [
+      {
+        "type": "missing_connection",
+        "description": "Manca il collegamento visibile tra il terminale inferiore della lampada e il suo simbolo di massa.",
+        "image_evidence": "La lampada a destra ha il terminale inferiore collegato con un filo verticale al simbolo GND sotto di essa.",
+        "json_evidence": "lamp13.1_t2 e gnd9.5_t1 sono entrambi presenti ma risultano non collegati nel graph; compaiono anche in warnings.unconnected_terminals."
+      },
+      {
+        "type": "wrong_node_assignment",
+        "description": "Il nodo del lato sinistro del resistore R3 dovrebbe essere solo J1 pin4; nel JSON e invece unito anche a massa e al terminale inferiore del condensatore.",
+        "image_evidence": "R3 parte da J1 pin4 e prosegue verso il LED. Il nodo di R3 a sinistra non e connesso al GND visibile.",
+        "json_evidence": "resistor22.1_t1 e collegato a connector5.1_pin4, gnd9.3_t1 e capacitor4.1_t2."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "polarity_uncertain",
+        "description": "La polarita semanticamente assegnata alla batteria non e verificabile con assoluta certezza dalla resa grafica; non altera la topologia dei collegamenti."
+      }
+    ],
+    "missing_from_json": [
+      "lamp13.1_t2 <-> gnd9.5_t1",
+      "capacitor4.1_t2 <-> gnd9.3_t1 come collegamento esclusivo del terminale inferiore del condensatore",
+      "resistor22.1_t1 <-> connector5.1_pin4 come nodo separato da GND"
+    ],
+    "extra_in_json": [
+      "capacitor4.1_t2 <-> connector5.1_pin4",
+      "capacitor4.1_t2 <-> resistor22.1_t1",
+      "resistor22.1_t1 <-> gnd9.3_t1"
+    ],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "capacitor4.1_t2 collegato solo a gnd9.3_t1",
+        "found_in_json": "capacitor4.1_t2 collegato a connector5.1_pin4, gnd9.3_t1 e resistor22.1_t1",
+        "severity": "critical"
+      },
+      {
+        "expected_from_image": "resistor22.1_t1 collegato solo a connector5.1_pin4",
+        "found_in_json": "resistor22.1_t1 collegato a capacitor4.1_t2, connector5.1_pin4 e gnd9.3_t1",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "lamp13.1_t2 collegato a gnd9.5_t1",
+        "found_in_json": "lamp13.1_t2 non collegato; gnd9.5_t1 non collegato",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "L'orientamento/polarita positiva-negativa della batteria non e perfettamente leggibile dall'immagine, ma cio non cambia la topologia.",
+      "La polarita LED appare compatibile con anodo in alto e catodo in basso, ma il dettaglio grafico della barra non e molto nitido."
+    ],
+    "short_explanation": "Il graph riproduce bene gran parte della struttura visibile: batteria-fusibile-connettore, pin2 verso condensatore, pin3 verso switch e lampada, pin4 verso resistore e LED. Tuttavia contiene un errore topologico critico: fonde il nodo J1 pin4/R3 con la massa del condensatore, che nell'immagine e un nodo separato. Inoltre manca il collegamento della lampada al suo GND. Per questo la fedelta complessiva e solo MEDIA."
+  },
+  "raw_model_output": "{\"circuit_id\":\"a09\",\"batch\":\"A\",\"image_file\":\"a09.png\",\"json_file\":\"a09.json\",\"image_graph_fidelity_score\":71,\"decision\":\"MEDIUM\",\"usable_as_graph_base\":true,\"scores\":{\"components\":9,\"terminals_pins\":20,\"graph_connections\":33,\"visible_semantics\":9},\"error_counts\":{\"critical\":1,\"major\":2,\"minor\":1},\"critical_errors\":[{\"type\":\"net_fuse\",\"description\":\"Il JSON fonde erroneamente il nodo di J1 pin4 / lato sinistro di R3 con il nodo di massa del condensatore C1. Nell'immagine il condensatore e collegato tra J1 pin2 e GND; il nodo J1 pin4-R3 e separato dalla massa.\",\"image_evidence\":\"Nel disegno C1 e verticale: il terminale superiore va al ramo proveniente da J1 pin2, il terminale inferiore va al simbolo GND. La linea di J1 pin4 va invece solo al resistore R3; non c'e junction dot tra quel nodo e C1/GND.\",\"json_evidence\":\"Il graph dichiara capacitor4.1_t2 collegato a connector5.1_pin4, gnd9.3_t1 e resistor22.1_t1; inoltre resistor22.1_t1 e connector5.1_pin4 risultano nello stesso nodo con gnd9.3_t1.\"}],\"major_errors\":[{\"type\":\"missing_connection\",\"description\":\"Manca il collegamento visibile tra il terminale inferiore della lampada e il suo simbolo di massa.\",\"image_evidence\":\"La lampada a destra ha il terminale inferiore collegato con un filo verticale al simbolo GND sotto di essa.\",\"json_evidence\":\"lamp13.1_t2 e gnd9.5_t1 sono entrambi presenti ma risultano non collegati nel graph; compaiono anche in warnings.unconnected_terminals.\"},{\"type\":\"wrong_node_assignment\",\"description\":\"Il nodo del lato sinistro del resistore R3 dovrebbe essere solo J1 pin4; nel JSON e invece unito anche a massa e al terminale inferiore del condensatore.\",\"image_evidence\":\"R3 parte da J1 pin4 e prosegue verso il LED. Il nodo di R3 a sinistra non e connesso al GND visibile.\",\"json_evidence\":\"resistor22.1_t1 e collegato a connector5.1_pin4, gnd9.3_t1 e capacitor4.1_t2.\"}],\"minor_errors\":[{\"type\":\"polarity_uncertain\",\"description\":\"La polarita semanticamente assegnata alla batteria non e verificabile con assoluta certezza dalla resa grafica; non altera la topologia dei collegamenti.\"}],\"missing_from_json\":[\"lamp13.1_t2 <-> gnd9.5_t1\",\"capacitor4.1_t2 <-> gnd9.3_t1 come collegamento esclusivo del terminale inferiore del condensatore\",\"resistor22.1_t1 <-> connector5.1_pin4 come nodo separato da GND\"],\"extra_in_json\":[\"capacitor4.1_t2 <-> connector5.1_pin4\",\"capacitor4.1_t2 <-> resistor22.1_t1\",\"resistor22.1_t1 <-> gnd9.3_t1\"],\"wrong_graph_connections\":[{\"expected_from_image\":\"capacitor4.1_t2 collegato solo a gnd9.3_t1\",\"found_in_json\":\"capacitor4.1_t2 collegato a connector5.1_pin4, gnd9.3_t1 e resistor22.1_t1\",\"severity\":\"critical\"},{\"expected_from_image\":\"resistor22.1_t1 collegato solo a connector5.1_pin4\",\"found_in_json\":\"resistor22.1_t1 collegato a capacitor4.1_t2, connector5.1_pin4 e gnd9.3_t1\",\"severity\":\"major\"},{\"expected_from_image\":\"lamp13.1_t2 collegato a gnd9.5_t1\",\"found_in_json\":\"lamp13.1_t2 non collegato; gnd9.5_t1 non collegato\",\"severity\":\"major\"}],\"uncertain_points\":[\"L'orientamento/polarita positiva-negativa della batteria non e perfettamente leggibile dall'immagine, ma cio non cambia la topologia.\",\"La polarita LED appare compatibile con anodo in alto e catodo in basso, ma il dettaglio grafico della barra non e molto nitido.\"],\"short_explanation\":\"Il graph riproduce bene gran parte della struttura visibile: batteria-fusibile-connettore, pin2 verso condensatore, pin3 verso switch e lampada, pin4 verso resistore e LED. Tuttavia contiene un errore topologico critico: fonde il nodo J1 pin4/R3 con la massa del condensatore, che nell'immagine e un nodo separato. Inoltre manca il collegamento della lampada al suo GND. Per questo la fedelta complessiva e solo MEDIA.\"}"
+}

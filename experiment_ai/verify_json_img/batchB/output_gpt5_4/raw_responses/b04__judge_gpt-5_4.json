@@ -1,0 +1,76 @@
+{
+  "metadata": {
+    "circuit_id": "b04",
+    "batch": "B",
+    "batch_dir": "batchB",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\images\\b04.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchB\\json\\b04.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "b04.jpg",
+    "json_file": "b04.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:38:46",
+    "judge_latency_seconds": 13.701,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=13877, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=740, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=14617)",
+  "judge_result": {
+    "circuit_id": "b04",
+    "batch": "B",
+    "image_file": "b04.jpg",
+    "json_file": "b04.json",
+    "image_graph_fidelity_score": 94,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 22,
+      "graph_connections": 53,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 1,
+      "minor": 1
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "terminal_identity_mismatch",
+        "description": "Il transistor Q1 visibile ha la base sul lato sinistro, mentre nel JSON la base di npn_transistor18.1 e indicata sul lato destro. I nodi principali risultano comunque coerenti topologicamente, ma l'identita fisica dei terminali B/C/E non e perfettamente aderente al simbolo visibile.",
+        "image_evidence": "Nel simbolo di Q1 la barra/base e il terminale di controllo arrivano da sinistra tramite D1; il ramo a destra va verso D2; il ramo inferiore scende al nodo di ritorno in basso.",
+        "json_evidence": "npn_transistor18.1_B ha relative_position 'right', npn_transistor18.1_C 'top', npn_transistor18.1_E 'bottom'."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "component_class_semantics",
+        "description": "H1 nell'immagine sembra un SCR/thyristor, ma nel JSON e modellato come diode7.1. Tuttavia i due terminali principali risultano collegati ai nodi corretti e l'effetto topologico sul graph principale e limitato."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "Il terminale di controllo sinistro di Q1 (base) collegato al nodo proveniente da D1; il terminale destro collegato a D2; il terminale inferiore al nodo di ritorno comune.",
+        "found_in_json": "npn_transistor18.1_B assegnato al lato destro, con npn_transistor18.1_C al ramo superiore e npn_transistor18.1_E al nodo inferiore.",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "H1 e etichettato 2N3668 e graficamente non appare come semplice diodo; per questa valutazione e stato considerato soprattutto come elemento a due terminali sui nodi sinistra-destra, con un possibile terminale di gate non modellato.",
+      "L'orientamento/polarita esatta di alcuni diodi piccoli e leggibile ma non perfettamente nitida; non emerge comunque una contraddizione certa nei collegamenti di rete dichiarati nel graph.",
+      "I terminali terminal26.1/26.2/26.3/26.4 rappresentano punti esterni/rail dell'immagine senza naming esplicito nel disegno, ma i loro collegamenti ai nodi visibili sono coerenti."
+    ],
+    "short_explanation": "Il campo graph riproduce molto bene la topologia visibile: secondario del trasformatore, rete con R1-R2-D3-D4-H1, ramo R3-R4-R5, D2, fusibile e nodo di ritorno risultano sostanzialmente coerenti. Non emergono net fuse o net split gravi. L'unica criticita rilevante e l'identificazione dei terminali del transistor Q1, semanticamente non allineata al simbolo visibile; il graph resta comunque una base molto buona."
+  },
+  "raw_model_output": "{\"circuit_id\":\"b04\",\"batch\":\"B\",\"image_file\":\"b04.jpg\",\"json_file\":\"b04.json\",\"image_graph_fidelity_score\":94,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":22,\"graph_connections\":53,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":1,\"minor\":1},\"critical_errors\":[],\"major_errors\":[{\"type\":\"terminal_identity_mismatch\",\"description\":\"Il transistor Q1 visibile ha la base sul lato sinistro, mentre nel JSON la base di npn_transistor18.1 e indicata sul lato destro. I nodi principali risultano comunque coerenti topologicamente, ma l'identita fisica dei terminali B/C/E non e perfettamente aderente al simbolo visibile.\",\"image_evidence\":\"Nel simbolo di Q1 la barra/base e il terminale di controllo arrivano da sinistra tramite D1; il ramo a destra va verso D2; il ramo inferiore scende al nodo di ritorno in basso.\",\"json_evidence\":\"npn_transistor18.1_B ha relative_position 'right', npn_transistor18.1_C 'top', npn_transistor18.1_E 'bottom'.\"}],\"minor_errors\":[{\"type\":\"component_class_semantics\",\"description\":\"H1 nell'immagine sembra un SCR/thyristor, ma nel JSON e modellato come diode7.1. Tuttavia i due terminali principali risultano collegati ai nodi corretti e l'effetto topologico sul graph principale e limitato.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Il terminale di controllo sinistro di Q1 (base) collegato al nodo proveniente da D1; il terminale destro collegato a D2; il terminale inferiore al nodo di ritorno comune.\",\"found_in_json\":\"npn_transistor18.1_B assegnato al lato destro, con npn_transistor18.1_C al ramo superiore e npn_transistor18.1_E al nodo inferiore.\",\"severity\":\"major\"}],\"uncertain_points\":[\"H1 e etichettato 2N3668 e graficamente non appare come semplice diodo; per questa valutazione e stato considerato soprattutto come elemento a due terminali sui nodi sinistra-destra, con un possibile terminale di gate non modellato.\",\"L'orientamento/polarita esatta di alcuni diodi piccoli e leggibile ma non perfettamente nitida; non emerge comunque una contraddizione certa nei collegamenti di rete dichiarati nel graph.\",\"I terminali terminal26.1/26.2/26.3/26.4 rappresentano punti esterni/rail dell'immagine senza naming esplicito nel disegno, ma i loro collegamenti ai nodi visibili sono coerenti.\"],\"short_explanation\":\"Il campo graph riproduce molto bene la topologia visibile: secondario del trasformatore, rete con R1-R2-D3-D4-H1, ramo R3-R4-R5, D2, fusibile e nodo di ritorno risultano sostanzialmente coerenti. Non emergono net fuse o net split gravi. L'unica criticita rilevante e l'identificazione dei terminali del transistor Q1, semanticamente non allineata al simbolo visibile; il graph resta comunque una base molto buona.\"}"
+}

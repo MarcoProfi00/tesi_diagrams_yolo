@@ -1,0 +1,245 @@
+{
+  "circuit_id": "a03",
+  "source_format": "pipeline2.0_component_rules",
+  "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\pipeline2_manual_values\\batchA\\a03_values.yaml",
+  "spice_classes_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\pipeline2_spice_classes.yaml",
+  "supplies": {},
+  "components": {
+    "battery2.1": {
+      "class_name": "Battery",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "V",
+      "emit_as": "independent_voltage_source",
+      "node_order": [
+        "positive",
+        "negative"
+      ],
+      "nodes": [
+        "N002",
+        "N001"
+      ],
+      "parameters": {
+        "type": "dc",
+        "value": 12,
+        "unit": "V",
+        "source": "manual_from_image_label",
+        "label_text": "B1 12V"
+      }
+    },
+    "battery2.2": {
+      "class_name": "Battery",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "V",
+      "emit_as": "independent_voltage_source",
+      "node_order": [
+        "positive",
+        "negative"
+      ],
+      "nodes": [
+        "N004",
+        "N003"
+      ],
+      "parameters": {
+        "type": "dc",
+        "value": 12,
+        "unit": "V",
+        "source": "manual_from_image_label",
+        "label_text": "B1 12V"
+      }
+    },
+    "inductor10.1": {
+      "class_name": "Inductor",
+      "status": "missing_parameters",
+      "spice_support": "direct",
+      "missing_fields": [
+        "value"
+      ]
+    },
+    "lamp13.1": {
+      "class_name": "Lamp",
+      "status": "missing_parameters",
+      "spice_support": "equivalent",
+      "missing_fields": [
+        "equivalent_resistance"
+      ]
+    },
+    "led12.1": {
+      "class_name": "LED",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "D",
+      "emit_as": "diode",
+      "node_order": [
+        "anode",
+        "cathode"
+      ],
+      "nodes": [
+        "N005",
+        "N002"
+      ],
+      "parameters": {
+        "model": "LED_RED",
+        "source": "manual_from_image_label",
+        "label_text": "D1 DIODE"
+      }
+    },
+    "npn_transistor18.1": {
+      "class_name": "NPN_Transistor",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "Q",
+      "emit_as": "bjt_npn",
+      "node_order": [
+        "C",
+        "B",
+        "E"
+      ],
+      "nodes": [
+        "N009",
+        "N008",
+        "N003"
+      ],
+      "parameters": {
+        "model": "BC547",
+        "source": "manual_from_image_label",
+        "label_text": "Q1 BC547"
+      }
+    },
+    "npn_transistor18.2": {
+      "class_name": "NPN_Transistor",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "Q",
+      "emit_as": "bjt_npn",
+      "node_order": [
+        "C",
+        "B",
+        "E"
+      ],
+      "nodes": [
+        "N005",
+        "N009",
+        "N003"
+      ],
+      "parameters": {
+        "model": "BC547",
+        "source": "manual_from_image_label",
+        "label_text": "Q2 BC547"
+      }
+    },
+    "resistor22.1": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N008",
+        "N003"
+      ],
+      "parameters": {
+        "value": 100,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "RV1 100k"
+      }
+    },
+    "resistor22.2": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N002",
+        "N009"
+      ],
+      "parameters": {
+        "value": 1,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R1 1k"
+      }
+    },
+    "signal_source23.1": {
+      "class_name": "Signal_Source",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "V",
+      "emit_as": "independent_voltage_source",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N010",
+        "N006"
+      ],
+      "parameters": {
+        "type": "ac",
+        "value": 220,
+        "unit": "V",
+        "source": "manual_from_image_label",
+        "label_text": "V1 220VAC"
+      }
+    },
+    "switch25.1": {
+      "class_name": "Switch",
+      "status": "spice_ready",
+      "spice_support": "simplified",
+      "spice_prefix": null,
+      "emit_as": null,
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N011",
+        "N007"
+      ],
+      "parameters": {
+        "state": "closed",
+        "state_source": "graph_json_state",
+        "state_confidence": 0.95,
+        "label": "RL1_CONTACT",
+        "source": "manual_from_image_label",
+        "label_text": "RL1"
+      },
+      "strategy": "short_circuit"
+    },
+    "variable_resistor30.1": {
+      "class_name": "Variable_Resistor",
+      "status": "missing_parameters",
+      "spice_support": "equivalent",
+      "missing_fields": [
+        "equivalent_resistance"
+      ]
+    }
+  },
+  "simulation": {
+    "analyses": [
+      "op"
+    ]
+  },
+  "stats": {
+    "components_total": 12,
+    "spice_ready_components": 9,
+    "not_emitted_components": 0,
+    "measurement_components": 0,
+    "missing_components": 3,
+    "unsupported_components": 0,
+    "pin_aware_components": 0,
+    "invalid_components": 0,
+    "supplies_ready_count": 0
+  }
+}

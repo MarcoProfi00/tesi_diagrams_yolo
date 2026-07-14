@@ -1,0 +1,76 @@
+IC: ADC0804
+
+Descrizione:
+L'ADC0804 e' un convertitore analogico-digitale a 8 bit compatibile con microprocessori.
+Converte una tensione analogica differenziale in un dato digitale parallelo a 8 bit.
+Nel circuito considerato l'ADC0804 legge il segnale analogico in ingresso e invia il valore convertito al microcontrollore tramite il bus dati D0-D7.
+
+Pin principali:
+- Pin 1: CS, chip select, attivo basso.
+- Pin 2: RD, read, attivo basso.
+- Pin 3: WR, write / start conversion, attivo basso.
+- Pin 4: CLK IN, ingresso clock.
+- Pin 5: INTR, interrupt / end of conversion, attivo basso.
+- Pin 6: VIN(+), ingresso analogico positivo.
+- Pin 7: VIN(-), ingresso analogico negativo.
+- Pin 8: AGND, massa analogica.
+- Pin 9: VREF/2, riferimento di tensione.
+- Pin 10: DGND, massa digitale.
+- Pin 11: DB7, uscita dati bit 7, MSB.
+- Pin 12: DB6, uscita dati bit 6.
+- Pin 13: DB5, uscita dati bit 5.
+- Pin 14: DB4, uscita dati bit 4.
+- Pin 15: DB3, uscita dati bit 3.
+- Pin 16: DB2, uscita dati bit 2.
+- Pin 17: DB1, uscita dati bit 1.
+- Pin 18: DB0, uscita dati bit 0, LSB.
+- Pin 19: CLK R, terminale per la rete RC del clock interno.
+- Pin 20: VCC, alimentazione positiva.
+
+Alimentazione:
+- L'ADC0804 funziona con alimentazione singola a 5 V.
+- Pin 20 deve essere collegato a +5 V.
+- Pin 8 AGND e pin 10 DGND devono essere collegati a massa.
+- Le masse analogica e digitale devono avere un riferimento comune.
+
+Ingressi analogici:
+- La conversione misura la differenza tra VIN(+) e VIN(-).
+- Il segnale analogico principale va applicato a VIN(+), pin 6.
+- VIN(-), pin 7, viene spesso collegato a massa se si misura un segnale rispetto a GND.
+- AGND, pin 8, e' il riferimento analogico dell'ingresso.
+- Se VIN(+) non riceve il segnale analogico corretto, il dato digitale in uscita non rappresenta la grandezza da misurare.
+
+Riferimento:
+- Pin 9: VREF/2.
+- Se VREF/2 e' lasciato aperto, il range tipico di ingresso e' 0 V - 5 V con VCC = 5 V.
+- Se viene applicata una tensione a VREF/2, il fondo scala dell'ADC e' circa 2 volte VREF/2.
+- Un riferimento errato sul pin 9 cambia la scala della conversione.
+
+Clock:
+- L'ADC0804 richiede un clock per eseguire la conversione.
+- Il clock puo' essere fornito dall'esterno su CLK IN oppure generato con una rete RC tra CLK R e CLK IN.
+- Nel collegamento RC tipico, una resistenza va tra pin 19 CLK R e pin 4 CLK IN, e un condensatore va da pin 4 CLK IN a massa.
+- Se il clock manca, e' errato o la rete RC e' scollegata, la conversione puo' non partire o non terminare.
+
+Controllo conversione:
+- CS deve essere basso per selezionare il convertitore.
+- Un impulso su WR avvia la conversione.
+- INTR va basso quando la conversione e' completata.
+- RD basso abilita la lettura del dato convertito sulle uscite D0-D7.
+- Se CS, RD, WR o INTR non sono collegati o non sono pilotati correttamente, il microcontrollore puo' non leggere alcun dato valido.
+
+Uscite digitali:
+- D0-D7 sono uscite digitali parallele a 8 bit compatibili TTL.
+- DB7 e' il bit piu' significativo.
+- DB0 e' il bit meno significativo.
+- Le uscite possono essere lette dal microcontrollore quando RD e CS sono attivi.
+- Se una linea D0-D7 e' interrotta, in corto o collegata al pin sbagliato del microcontrollore, il valore visualizzato puo' essere errato.
+
+Collegamenti attesi nel circuito:
+- Pin 20 collegato a +5 V.
+- Pin 8 e pin 10 collegati a GND.
+- Pin 6 collegato al segnale analogico da convertire.
+- Pin 7 collegato al riferimento analogico, spesso GND.
+- Pin 4 e pin 19 collegati alla rete di clock RC o a un clock esterno.
+- Pin 1 CS, pin 2 RD, pin 3 WR e pin 5 INTR collegati al microcontrollore.
+- D0-D7 collegati a ingressi digitali del microcontrollore nello stesso ordine logico.

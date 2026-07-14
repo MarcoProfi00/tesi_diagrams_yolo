@@ -1,0 +1,50 @@
+IC: CD4026B / CD4026
+
+Descrizione:
+Il CD4026 e' un contatore decade CMOS con driver decodificato per display a 7 segmenti.
+Conta gli impulsi applicati al pin di clock e pilota direttamente le uscite dei segmenti a, b, c, d, e, f, g per visualizzare le cifre da 0 a 9 su un display a 7 segmenti.
+
+Pin principali:
+- Pin 1: CLOCK. Ingresso degli impulsi da contare.
+- Pin 2: CLOCK INHIBIT. Se attivo, blocca il conteggio degli impulsi di clock.
+- Pin 3: DISPLAY ENABLE IN. Abilita o disabilita le uscite verso il display.
+- Pin 4: DISPLAY ENABLE OUT. Uscita usata per funzioni di blanking/cascata.
+- Pin 5: CARRY OUT. Uscita di riporto per collegare piu' contatori in cascata.
+- Pin 6: uscita segmento f.
+- Pin 7: uscita segmento g.
+- Pin 8: VSS / GND.
+- Pin 9: uscita segmento d.
+- Pin 10: uscita segmento a.
+- Pin 11: uscita segmento e.
+- Pin 12: uscita segmento b.
+- Pin 13: uscita segmento c.
+- Pin 14: ungated C segment output. Uscita ausiliaria legata al segmento c.
+- Pin 15: RESET. Se attivo, azzera il contatore.
+- Pin 16: VDD, alimentazione positiva.
+
+Alimentazione:
+- Pin 16 deve essere collegato a VDD.
+- Pin 8 deve essere collegato a GND.
+- Il circuito e' CMOS: ingressi lasciati flottanti possono causare conteggi errati o comportamento instabile.
+
+Funzionamento:
+- Ad ogni impulso valido sul pin CLOCK, il contatore avanza di una cifra.
+- Le uscite a-g cambiano stato per visualizzare la cifra corrente.
+- RESET deve essere inattivo durante il funzionamento normale; se resta attivo il display rimane bloccato sulla cifra di reset.
+- CLOCK INHIBIT deve essere inattivo per permettere il conteggio; se e' attivo, gli impulsi di clock vengono ignorati.
+- DISPLAY ENABLE IN deve essere nello stato che abilita il display; se disabilitato, le uscite dei segmenti possono non accendere il display.
+
+Collegamento al display:
+- Le uscite a, b, c, d, e, f, g devono andare ai segmenti corrispondenti del display tramite resistenze di limitazione.
+- L'ordine delle linee a-g deve essere corretto; se le linee sono scambiate, le cifre visualizzate risultano errate.
+- Usare un display compatibile con il tipo di pilotaggio previsto dal circuito.
+
+Controlli diagnostici utili:
+- Verificare VDD sul pin 16 e GND sul pin 8.
+- Verificare che il pin RESET non sia bloccato nello stato attivo.
+- Verificare che CLOCK INHIBIT non stia bloccando il conteggio.
+- Verificare che DISPLAY ENABLE IN abiliti effettivamente il display.
+- Verificare che sul pin CLOCK arrivino impulsi puliti.
+- Se il display resta fisso, controllare clock, reset e inhibit.
+- Se il display resta spento, controllare alimentazione, display enable, common del display e resistenze dei segmenti.
+- Se alcune cifre o segmenti sono errati, controllare collegamenti a-g, resistenze e display.

@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Graph c07</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
+      color: #1f2d3a;
+    }
+    .page {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .topbar h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .links a {
+      text-decoration: none;
+      color: #144a7b;
+      background: #ffffff;
+      border: 1px solid #d8e1ea;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-weight: 600;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .summary-item {
+      background: rgba(255,255,255,0.88);
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .summary-item .k {
+      color: #5f7184;
+      font-size: 13px;
+    }
+    .summary-item .v {
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .panel-grid {
+      display: grid;
+      grid-template-columns: minmax(280px, 420px) 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+    .panel {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #d8e1ea;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 12px 24px rgba(27, 53, 82, 0.06);
+    }
+    .panel h2 {
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
+    .preview-image {
+      width: 100%;
+      display: block;
+      border-radius: 12px;
+      border: 1px solid #d8e1ea;
+      background: #fff;
+    }
+    .preview-missing {
+      min-height: 220px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      border: 1px dashed #c6d2de;
+      color: #6f8093;
+      background: #f9fbfd;
+    }
+    .graph-wrap {
+      overflow: hidden;
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      background: #f8fbff;
+      cursor: grab;
+      min-height: 720px;
+    }
+    .graph-wrap:active {
+      cursor: grabbing;
+    }
+    #graph-svg {
+      width: 100%;
+      height: 760px;
+      display: block;
+      user-select: none;
+    }
+    .node-label {
+      fill: #314457;
+      font-size: 11px;
+      font-weight: 600;
+      pointer-events: none;
+    }
+    .node-label.small {
+      font-size: 10px;
+    }
+    .legend {
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      font-size: 13px;
+      color: #55687d;
+    }
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .warning-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .warning-box {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .warning-box h3 {
+      margin: 0 0 10px 0;
+      font-size: 15px;
+    }
+    .warning-box p, .warning-box li {
+      color: #526274;
+      font-size: 13px;
+    }
+    details {
+      margin-top: 18px;
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+    }
+    pre {
+      margin: 14px 0 0 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+      color: #314457;
+    }
+    .note {
+      color: #5c6f82;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    @media (max-width: 980px) {
+      .panel-grid {
+        grid-template-columns: 1fr;
+      }
+      #graph-svg {
+        height: 600px;
+      }
+      .graph-wrap {
+        min-height: 560px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <h1>Graph c07</h1>
+      <div class="links">
+        <a href="graph_compact.html">Vista compatta HTML</a><a href="graph_compact.png">Vista compatta PNG</a>
+        <a href="c07.json">JSON finale 05</a>
+        <a href="graph.png">Graph PNG</a>
+        <a href="../index.html">Batch index</a>
+      </div>
+    </div>
+
+    <div class="summary-grid"><div class="summary-item"><span class="k">Componenti</span><span class="v">16</span></div><div class="summary-item"><span class="k">Terminali</span><span class="v">48</span></div><div class="summary-item"><span class="k">Nodi elettrici</span><span class="v">22</span></div><div class="summary-item"><span class="k">Isolati</span><span class="v">3</span></div><div class="summary-item"><span class="k">Unmatched</span><span class="v">0</span></div><div class="summary-item"><span class="k">Suspicious</span><span class="v">0</span></div></div>
+
+    <div class="panel-grid">
+      <section class="panel">
+        <h2>Circuito</h2>
+        <img src="c07.jpg" alt="Circuito c07" class="preview-image">
+        <p class="note">Il grafo sotto e costruito solo a partire dal JSON del passo 05. La lettura va da sinistra a destra: circuito, classi, componenti, terminali e nodi elettrici.</p>
+      </section>
+
+      <section class="panel">
+        <h2>Graph interattivo</h2>
+        <div class="graph-wrap" id="graph-wrap"><svg id="graph-svg" viewBox="0 872.0 1260 920" data-full-width="1260" data-full-height="3696" xmlns="http://www.w3.org/2000/svg" aria-label="Graph"><line x1="90.0" y1="1332.0" x2="270.0" y2="188.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="188.0" x2="500.0" y2="111.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="111.0" x2="780.0" y2="82.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="111.0" x2="780.0" y2="140.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="188.0" x2="500.0" y2="265.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="265.0" x2="780.0" y2="236.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="265.0" x2="780.0" y2="294.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="90.0" y1="1332.0" x2="270.0" y2="610.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="610.0" x2="500.0" y2="466.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="466.0" x2="780.0" y2="466.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="610.0" x2="500.0" y2="562.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="562.0" x2="780.0" y2="562.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="610.0" x2="500.0" y2="658.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="658.0" x2="780.0" y2="658.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="610.0" x2="500.0" y2="754.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="754.0" x2="780.0" y2="754.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="90.0" y1="1332.0" x2="270.0" y2="1494.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1494.0" x2="500.0" y2="955.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="955.0" x2="780.0" y2="926.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="955.0" x2="780.0" y2="984.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1494.0" x2="500.0" y2="1109.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1109.0" x2="780.0" y2="1080.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1109.0" x2="780.0" y2="1138.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1494.0" x2="500.0" y2="1263.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1263.0" x2="780.0" y2="1234.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1263.0" x2="780.0" y2="1292.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1494.0" x2="500.0" y2="1417.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1417.0" x2="780.0" y2="1388.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1417.0" x2="780.0" y2="1446.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1494.0" x2="500.0" y2="1571.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1571.0" x2="780.0" y2="1542.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1571.0" x2="780.0" y2="1600.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1494.0" x2="500.0" y2="1725.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1725.0" x2="780.0" y2="1696.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1725.0" x2="780.0" y2="1754.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1494.0" x2="500.0" y2="1879.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1879.0" x2="780.0" y2="1850.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1879.0" x2="780.0" y2="1908.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1494.0" x2="500.0" y2="2033.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2033.0" x2="780.0" y2="2004.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2033.0" x2="780.0" y2="2062.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="90.0" y1="1332.0" x2="270.0" y2="3036.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="3036.0" x2="500.0" y2="2669.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2669.0" x2="780.0" y2="2234.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2669.0" x2="780.0" y2="2292.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2669.0" x2="780.0" y2="2350.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2669.0" x2="780.0" y2="2408.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2669.0" x2="780.0" y2="2466.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2669.0" x2="780.0" y2="2524.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2669.0" x2="780.0" y2="2582.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2669.0" x2="780.0" y2="2640.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2669.0" x2="780.0" y2="2698.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2669.0" x2="780.0" y2="2756.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2669.0" x2="780.0" y2="2814.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2669.0" x2="780.0" y2="2872.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2669.0" x2="780.0" y2="2930.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2669.0" x2="780.0" y2="2988.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2669.0" x2="780.0" y2="3046.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2669.0" x2="780.0" y2="3104.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="3036.0" x2="500.0" y2="3403.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3403.0" x2="780.0" y2="3200.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3403.0" x2="780.0" y2="3258.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3403.0" x2="780.0" y2="3316.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3403.0" x2="780.0" y2="3374.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3403.0" x2="780.0" y2="3432.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3403.0" x2="780.0" y2="3490.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3403.0" x2="780.0" y2="3548.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3403.0" x2="780.0" y2="3606.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="780.0" y1="82.0" x2="1080.0" y2="1131.8" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="140.0" x2="1080.0" y2="1131.8" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="294.0" x2="1080.0" y2="1131.8" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="926.0" x2="1080.0" y2="1131.8" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="562.0" x2="1080.0" y2="1131.8" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2292.0" x2="1080.0" y2="1131.8" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2350.0" x2="1080.0" y2="1131.8" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2408.0" x2="1080.0" y2="1131.8" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="236.0" x2="1080.0" y2="236.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="466.0" x2="1080.0" y2="725.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="984.0" x2="1080.0" y2="725.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="658.0" x2="1080.0" y2="2226.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2930.0" x2="1080.0" y2="2226.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2988.0" x2="1080.0" y2="2226.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2234.0" x2="1080.0" y2="2553.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2872.0" x2="1080.0" y2="2553.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2466.0" x2="1080.0" y2="2158.0" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1850.0" x2="1080.0" y2="2158.0" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2524.0" x2="1080.0" y2="2110.0" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1696.0" x2="1080.0" y2="2110.0" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2582.0" x2="1080.0" y2="2062.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1542.0" x2="1080.0" y2="2062.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2640.0" x2="1080.0" y2="2014.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1388.0" x2="1080.0" y2="2014.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2698.0" x2="1080.0" y2="1966.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1234.0" x2="1080.0" y2="1966.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2756.0" x2="1080.0" y2="1918.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1080.0" x2="1080.0" y2="1918.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2814.0" x2="1080.0" y2="2409.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2004.0" x2="1080.0" y2="2409.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3046.0" x2="1080.0" y2="3046.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3104.0" x2="1080.0" y2="3104.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1138.0" x2="1080.0" y2="2314.0" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3490.0" x2="1080.0" y2="2314.0" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1292.0" x2="1080.0" y2="2362.0" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3432.0" x2="1080.0" y2="2362.0" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1446.0" x2="1080.0" y2="2443.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3374.0" x2="1080.0" y2="2443.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1600.0" x2="1080.0" y2="2477.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3316.0" x2="1080.0" y2="2477.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1754.0" x2="1080.0" y2="2511.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3258.0" x2="1080.0" y2="2511.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1908.0" x2="1080.0" y2="2587.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3200.0" x2="1080.0" y2="2587.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2062.0" x2="1080.0" y2="2805.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3548.0" x2="1080.0" y2="2805.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3606.0" x2="1080.0" y2="2192.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="754.0" x2="1080.0" y2="2192.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><g class="node-group" data-node-type="root"><title>Circuito c07
+Componenti: 16
+Terminali: 48
+Nodi elettrici: 22</title><circle cx="90.0" cy="1332.0" r="36.0" fill="#f26a63" stroke="#d4534c" stroke-width="2"></circle><text x="90.0" y="1336.0" text-anchor="middle" class="node-label">c07</text></g><g class="node-group" data-node-type="class"><title>Classe: Push_Button
+Componenti: 2</title><circle cx="270.0" cy="188.0" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="192.0" text-anchor="middle" class="node-label">Push Button</text></g><g class="node-group" data-node-type="component"><title>Componente: push_button21.1
+Classe: Push_Button
+Instance: 21.1</title><circle cx="500.0" cy="111.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="115.0" text-anchor="middle" class="node-label">push_button21.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: push_button21.1_t1
+Componente: push_button21.1
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="82.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="86.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: push_button21.1_t2
+Componente: push_button21.1
+Nome: t2
+Posizione: bottom</title><circle cx="780.0" cy="140.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="144.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: push_button21.2
+Classe: Push_Button
+Instance: 21.2</title><circle cx="500.0" cy="265.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="269.0" text-anchor="middle" class="node-label">push_button21.2</text></g><g class="node-group" data-node-type="warning_terminal"><title>Terminal: push_button21.2_t1
+Componente: push_button21.2
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="236.0" r="25.0" fill="#ffd0d0" stroke="#d12f2f" stroke-width="2"></circle><text x="780.0" y="240.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: push_button21.2_t2
+Componente: push_button21.2
+Nome: t2
+Posizione: bottom</title><circle cx="780.0" cy="294.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="298.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="class"><title>Classe: GND
+Componenti: 4</title><circle cx="270.0" cy="610.0" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="614.0" text-anchor="middle" class="node-label">GND</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.1
+Classe: GND
+Instance: 9.1</title><circle cx="500.0" cy="466.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="470.0" text-anchor="middle" class="node-label">gnd9.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: gnd9.1_t1
+Componente: gnd9.1
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="466.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="470.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.2
+Classe: GND
+Instance: 9.2</title><circle cx="500.0" cy="562.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="566.0" text-anchor="middle" class="node-label">gnd9.2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: gnd9.2_t1
+Componente: gnd9.2
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="562.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="566.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.3
+Classe: GND
+Instance: 9.3</title><circle cx="500.0" cy="658.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="662.0" text-anchor="middle" class="node-label">gnd9.3</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: gnd9.3_t1
+Componente: gnd9.3
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="658.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="662.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.4
+Classe: GND
+Instance: 9.4</title><circle cx="500.0" cy="754.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="758.0" text-anchor="middle" class="node-label">gnd9.4</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: gnd9.4_t1
+Componente: gnd9.4
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="754.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="758.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="class"><title>Classe: Resistor
+Componenti: 8</title><circle cx="270.0" cy="1494.0" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="1498.0" text-anchor="middle" class="node-label">Resistor</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.1
+Classe: Resistor
+Instance: 22.1</title><circle cx="500.0" cy="955.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="959.0" text-anchor="middle" class="node-label">resistor22.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.1_t1
+Componente: resistor22.1
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="926.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="930.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.1_t2
+Componente: resistor22.1
+Nome: t2
+Posizione: bottom</title><circle cx="780.0" cy="984.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="988.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.2
+Classe: Resistor
+Instance: 22.2</title><circle cx="500.0" cy="1109.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1113.0" text-anchor="middle" class="node-label">resistor22.2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.2_t1
+Componente: resistor22.2
+Nome: t1
+Posizione: left</title><circle cx="780.0" cy="1080.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1084.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.2_t2
+Componente: resistor22.2
+Nome: t2
+Posizione: right</title><circle cx="780.0" cy="1138.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1142.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.3
+Classe: Resistor
+Instance: 22.3</title><circle cx="500.0" cy="1263.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1267.0" text-anchor="middle" class="node-label">resistor22.3</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.3_t1
+Componente: resistor22.3
+Nome: t1
+Posizione: left</title><circle cx="780.0" cy="1234.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1238.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.3_t2
+Componente: resistor22.3
+Nome: t2
+Posizione: right</title><circle cx="780.0" cy="1292.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1296.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.4
+Classe: Resistor
+Instance: 22.4</title><circle cx="500.0" cy="1417.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1421.0" text-anchor="middle" class="node-label">resistor22.4</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.4_t1
+Componente: resistor22.4
+Nome: t1
+Posizione: left</title><circle cx="780.0" cy="1388.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1392.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.4_t2
+Componente: resistor22.4
+Nome: t2
+Posizione: right</title><circle cx="780.0" cy="1446.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1450.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.5
+Classe: Resistor
+Instance: 22.5</title><circle cx="500.0" cy="1571.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1575.0" text-anchor="middle" class="node-label">resistor22.5</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.5_t1
+Componente: resistor22.5
+Nome: t1
+Posizione: left</title><circle cx="780.0" cy="1542.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1546.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.5_t2
+Componente: resistor22.5
+Nome: t2
+Posizione: right</title><circle cx="780.0" cy="1600.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1604.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.6
+Classe: Resistor
+Instance: 22.6</title><circle cx="500.0" cy="1725.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1729.0" text-anchor="middle" class="node-label">resistor22.6</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.6_t1
+Componente: resistor22.6
+Nome: t1
+Posizione: left</title><circle cx="780.0" cy="1696.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1700.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.6_t2
+Componente: resistor22.6
+Nome: t2
+Posizione: right</title><circle cx="780.0" cy="1754.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1758.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.7
+Classe: Resistor
+Instance: 22.7</title><circle cx="500.0" cy="1879.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1883.0" text-anchor="middle" class="node-label">resistor22.7</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.7_t1
+Componente: resistor22.7
+Nome: t1
+Posizione: left</title><circle cx="780.0" cy="1850.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1854.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.7_t2
+Componente: resistor22.7
+Nome: t2
+Posizione: right</title><circle cx="780.0" cy="1908.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1912.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.8
+Classe: Resistor
+Instance: 22.8</title><circle cx="500.0" cy="2033.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="2037.0" text-anchor="middle" class="node-label">resistor22.8</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.8_t1
+Componente: resistor22.8
+Nome: t1
+Posizione: left</title><circle cx="780.0" cy="2004.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2008.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.8_t2
+Componente: resistor22.8
+Nome: t2
+Posizione: right</title><circle cx="780.0" cy="2062.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2066.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="class"><title>Classe: Integrated_Circuit
+Componenti: 2</title><circle cx="270.0" cy="3036.0" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="3033.0" text-anchor="middle" class="node-label small">Integrated</text><text x="270.0" y="3047.0" text-anchor="middle" class="node-label small">Circuit</text></g><g class="node-group" data-node-type="component"><title>Componente: integrated_circuit11.1
+Classe: Integrated_Circuit
+Instance: 11.1
+Display: CD4026
+IC marking: CD4026</title><circle cx="500.0" cy="2669.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="2673.0" text-anchor="middle" class="node-label">CD4026</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_left_1
+Componente: integrated_circuit11.1
+Nome: left_1
+Posizione: left
+Display: CD4026 left_1 pin3
+Pin: 3</title><circle cx="780.0" cy="2234.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2238.0" text-anchor="middle" class="node-label">pin3</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_left_2
+Componente: integrated_circuit11.1
+Nome: left_2
+Posizione: left
+Display: CD4026 left_2 pin15
+Pin: 15</title><circle cx="780.0" cy="2292.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2296.0" text-anchor="middle" class="node-label">pin15</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_left_3
+Componente: integrated_circuit11.1
+Nome: left_3
+Posizione: left
+Display: CD4026 left_3 pin2
+Pin: 2</title><circle cx="780.0" cy="2350.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2354.0" text-anchor="middle" class="node-label">pin2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_left_4
+Componente: integrated_circuit11.1
+Nome: left_4
+Posizione: left
+Display: CD4026 left_4 pin1
+Pin: 1</title><circle cx="780.0" cy="2408.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2412.0" text-anchor="middle" class="node-label">pin1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_1
+Componente: integrated_circuit11.1
+Nome: right_1
+Posizione: right
+Display: CD4026 right_1 pin10
+Pin: 10</title><circle cx="780.0" cy="2466.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2470.0" text-anchor="middle" class="node-label">pin10</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_2
+Componente: integrated_circuit11.1
+Nome: right_2
+Posizione: right
+Display: CD4026 right_2 pin12
+Pin: 12</title><circle cx="780.0" cy="2524.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2528.0" text-anchor="middle" class="node-label">pin12</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_3
+Componente: integrated_circuit11.1
+Nome: right_3
+Posizione: right
+Display: CD4026 right_3 pin13
+Pin: 13</title><circle cx="780.0" cy="2582.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2586.0" text-anchor="middle" class="node-label">pin13</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_4
+Componente: integrated_circuit11.1
+Nome: right_4
+Posizione: right
+Display: CD4026 right_4 pin9
+Pin: 9</title><circle cx="780.0" cy="2640.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2644.0" text-anchor="middle" class="node-label">pin9</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_5
+Componente: integrated_circuit11.1
+Nome: right_5
+Posizione: right
+Display: CD4026 right_5 pin11
+Pin: 11</title><circle cx="780.0" cy="2698.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2702.0" text-anchor="middle" class="node-label">pin11</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_6
+Componente: integrated_circuit11.1
+Nome: right_6
+Posizione: right
+Display: CD4026 right_6 pin6
+Pin: 6</title><circle cx="780.0" cy="2756.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2760.0" text-anchor="middle" class="node-label">pin6</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_7
+Componente: integrated_circuit11.1
+Nome: right_7
+Posizione: right
+Display: CD4026 right_7 pin7
+Pin: 7</title><circle cx="780.0" cy="2814.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2818.0" text-anchor="middle" class="node-label">pin7</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_top_1
+Componente: integrated_circuit11.1
+Nome: top_1
+Posizione: top
+Display: CD4026 top_1 pin16
+Pin: 16</title><circle cx="780.0" cy="2872.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2876.0" text-anchor="middle" class="node-label">pin16</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_bottom_1
+Componente: integrated_circuit11.1
+Nome: bottom_1
+Posizione: bottom
+Display: CD4026 bottom_1 pin8
+Pin: 8</title><circle cx="780.0" cy="2930.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2934.0" text-anchor="middle" class="node-label">pin8</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_bottom_2
+Componente: integrated_circuit11.1
+Nome: bottom_2
+Posizione: bottom
+Display: CD4026 bottom_2 pin14
+Pin: 14</title><circle cx="780.0" cy="2988.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2992.0" text-anchor="middle" class="node-label">pin14</text></g><g class="node-group" data-node-type="warning_terminal"><title>Terminal: integrated_circuit11.1_bottom_3
+Componente: integrated_circuit11.1
+Nome: bottom_3
+Posizione: bottom
+Display: CD4026 bottom_3 pin4
+Pin: 4</title><circle cx="780.0" cy="3046.0" r="25.0" fill="#ffd0d0" stroke="#d12f2f" stroke-width="2"></circle><text x="780.0" y="3050.0" text-anchor="middle" class="node-label">pin4</text></g><g class="node-group" data-node-type="warning_terminal"><title>Terminal: integrated_circuit11.1_bottom_4
+Componente: integrated_circuit11.1
+Nome: bottom_4
+Posizione: bottom
+Display: CD4026 bottom_4 pin5
+Pin: 5</title><circle cx="780.0" cy="3104.0" r="25.0" fill="#ffd0d0" stroke="#d12f2f" stroke-width="2"></circle><text x="780.0" y="3108.0" text-anchor="middle" class="node-label">pin5</text></g><g class="node-group" data-node-type="component"><title>Componente: integrated_circuit11.2
+Classe: Integrated_Circuit
+Instance: 11.2
+Display: DISP1
+IC marking: DISP1
+Subtype: seven_segment_display</title><circle cx="500.0" cy="3403.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="3407.0" text-anchor="middle" class="node-label">DISP1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_left_1
+Componente: integrated_circuit11.2
+Nome: left_1
+Posizione: left
+Display: DISP1 left_1 a
+Pin label: a</title><circle cx="780.0" cy="3200.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3204.0" text-anchor="middle" class="node-label">a</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_left_2
+Componente: integrated_circuit11.2
+Nome: left_2
+Posizione: left
+Display: DISP1 left_2 b
+Pin label: b</title><circle cx="780.0" cy="3258.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3262.0" text-anchor="middle" class="node-label">b</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_left_3
+Componente: integrated_circuit11.2
+Nome: left_3
+Posizione: left
+Display: DISP1 left_3 c
+Pin label: c</title><circle cx="780.0" cy="3316.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3320.0" text-anchor="middle" class="node-label">c</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_left_4
+Componente: integrated_circuit11.2
+Nome: left_4
+Posizione: left
+Display: DISP1 left_4 d
+Pin label: d</title><circle cx="780.0" cy="3374.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3378.0" text-anchor="middle" class="node-label">d</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_left_5
+Componente: integrated_circuit11.2
+Nome: left_5
+Posizione: left
+Display: DISP1 left_5 e
+Pin label: e</title><circle cx="780.0" cy="3432.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3436.0" text-anchor="middle" class="node-label">e</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_left_6
+Componente: integrated_circuit11.2
+Nome: left_6
+Posizione: left
+Display: DISP1 left_6 f
+Pin label: f</title><circle cx="780.0" cy="3490.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3494.0" text-anchor="middle" class="node-label">f</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_left_7
+Componente: integrated_circuit11.2
+Nome: left_7
+Posizione: left
+Display: DISP1 left_7 g
+Pin label: g</title><circle cx="780.0" cy="3548.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3552.0" text-anchor="middle" class="node-label">g</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_bottom_1
+Componente: integrated_circuit11.2
+Nome: bottom_1
+Posizione: bottom
+Display: DISP1 bottom_1 cc
+Pin label: cc</title><circle cx="780.0" cy="3606.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3610.0" text-anchor="middle" class="node-label">cc</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 1
+Terminali collegati: 8
+push_button21.1_t1
+push_button21.1_t2
+push_button21.2_t2
+resistor22.1_t1
+gnd9.2_t1
+integrated_circuit11.1_left_2
+integrated_circuit11.1_left_3
+integrated_circuit11.1_left_4</title><circle cx="1080.0" cy="1131.8" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="1135.8" text-anchor="middle" class="node-label">1</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 2
+Terminali collegati: 1
+push_button21.2_t1</title><circle cx="1080.0" cy="236.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="240.0" text-anchor="middle" class="node-label">2</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 3
+Terminali collegati: 2
+gnd9.1_t1
+resistor22.1_t2</title><circle cx="1080.0" cy="725.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="729.0" text-anchor="middle" class="node-label">3</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 4
+Terminali collegati: 3
+gnd9.3_t1
+integrated_circuit11.1_bottom_1
+integrated_circuit11.1_bottom_2</title><circle cx="1080.0" cy="2226.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2230.0" text-anchor="middle" class="node-label">4</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 5
+Terminali collegati: 2
+integrated_circuit11.1_left_1
+integrated_circuit11.1_top_1</title><circle cx="1080.0" cy="2553.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2557.0" text-anchor="middle" class="node-label">5</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 6
+Terminali collegati: 2
+integrated_circuit11.1_right_1
+resistor22.7_t1</title><circle cx="1080.0" cy="2158.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2162.0" text-anchor="middle" class="node-label">6</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 7
+Terminali collegati: 2
+integrated_circuit11.1_right_2
+resistor22.6_t1</title><circle cx="1080.0" cy="2110.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2114.0" text-anchor="middle" class="node-label">7</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 8
+Terminali collegati: 2
+integrated_circuit11.1_right_3
+resistor22.5_t1</title><circle cx="1080.0" cy="2062.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2066.0" text-anchor="middle" class="node-label">8</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 9
+Terminali collegati: 2
+integrated_circuit11.1_right_4
+resistor22.4_t1</title><circle cx="1080.0" cy="2014.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2018.0" text-anchor="middle" class="node-label">9</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 10
+Terminali collegati: 2
+integrated_circuit11.1_right_5
+resistor22.3_t1</title><circle cx="1080.0" cy="1966.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="1970.0" text-anchor="middle" class="node-label">10</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 11
+Terminali collegati: 2
+integrated_circuit11.1_right_6
+resistor22.2_t1</title><circle cx="1080.0" cy="1918.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="1922.0" text-anchor="middle" class="node-label">11</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 12
+Terminali collegati: 2
+integrated_circuit11.1_right_7
+resistor22.8_t1</title><circle cx="1080.0" cy="2409.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2413.0" text-anchor="middle" class="node-label">12</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 13
+Terminali collegati: 1
+integrated_circuit11.1_bottom_3</title><circle cx="1080.0" cy="3046.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="3050.0" text-anchor="middle" class="node-label">13</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 14
+Terminali collegati: 1
+integrated_circuit11.1_bottom_4</title><circle cx="1080.0" cy="3104.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="3108.0" text-anchor="middle" class="node-label">14</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 15
+Terminali collegati: 2
+resistor22.2_t2
+integrated_circuit11.2_left_6</title><circle cx="1080.0" cy="2314.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2318.0" text-anchor="middle" class="node-label">15</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 16
+Terminali collegati: 2
+resistor22.3_t2
+integrated_circuit11.2_left_5</title><circle cx="1080.0" cy="2362.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2366.0" text-anchor="middle" class="node-label">16</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 17
+Terminali collegati: 2
+resistor22.4_t2
+integrated_circuit11.2_left_4</title><circle cx="1080.0" cy="2443.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2447.0" text-anchor="middle" class="node-label">17</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 18
+Terminali collegati: 2
+resistor22.5_t2
+integrated_circuit11.2_left_3</title><circle cx="1080.0" cy="2477.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2481.0" text-anchor="middle" class="node-label">18</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 19
+Terminali collegati: 2
+resistor22.6_t2
+integrated_circuit11.2_left_2</title><circle cx="1080.0" cy="2511.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2515.0" text-anchor="middle" class="node-label">19</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 20
+Terminali collegati: 2
+resistor22.7_t2
+integrated_circuit11.2_left_1</title><circle cx="1080.0" cy="2587.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2591.0" text-anchor="middle" class="node-label">20</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 21
+Terminali collegati: 2
+resistor22.8_t2
+integrated_circuit11.2_left_7</title><circle cx="1080.0" cy="2805.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2809.0" text-anchor="middle" class="node-label">21</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 22
+Terminali collegati: 2
+integrated_circuit11.2_bottom_1
+gnd9.4_t1</title><circle cx="1080.0" cy="2192.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2196.0" text-anchor="middle" class="node-label">22</text></g></svg></div>
+        <div class="legend">
+          <span><i class="dot" style="background:#f26a63"></i> circuito</span>
+          <span><i class="dot" style="background:#dcc9a5"></i> classe</span>
+          <span><i class="dot" style="background:#85d68d"></i> componente</span>
+          <span><i class="dot" style="background:#f4abc7"></i> terminale</span>
+          <span><i class="dot" style="background:#ffd65a"></i> nodo elettrico</span>
+        </div>
+      </section>
+    </div>
+
+    <div class="warning-grid"><div class="warning-box"><h3>Unconnected Terminals</h3><ul><li>integrated_circuit11.1_bottom_3</li><li>integrated_circuit11.1_bottom_4</li><li>push_button21.2_t1</li></ul></div><div class="warning-box"><h3>Unmatched Terminals</h3><p>Nessun elemento.</p></div><div class="warning-box"><h3>Suspicious Matches</h3><p>Nessun elemento.</p></div></div>
+
+    <details>
+      <summary>Mostra JSON finale completo</summary>
+      <pre>{
+  &quot;image_id&quot;: &quot;c07&quot;,
+  &quot;image_name&quot;: &quot;c07.jpg&quot;,
+  &quot;components&quot;: [
+    {
+      &quot;component_id&quot;: &quot;push_button21.1&quot;,
+      &quot;instance_id&quot;: &quot;21.1&quot;,
+      &quot;class_name&quot;: &quot;Push_Button&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;push_button21.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;push_button21.1_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;push_button21.2&quot;,
+      &quot;instance_id&quot;: &quot;21.2&quot;,
+      &quot;class_name&quot;: &quot;Push_Button&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;push_button21.2_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;push_button21.2_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;gnd9.1&quot;,
+      &quot;instance_id&quot;: &quot;9.1&quot;,
+      &quot;class_name&quot;: &quot;GND&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;gnd9.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.1&quot;,
+      &quot;instance_id&quot;: &quot;22.1&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.1_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;gnd9.2&quot;,
+      &quot;instance_id&quot;: &quot;9.2&quot;,
+      &quot;class_name&quot;: &quot;GND&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;gnd9.2_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;gnd9.3&quot;,
+      &quot;instance_id&quot;: &quot;9.3&quot;,
+      &quot;class_name&quot;: &quot;GND&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;gnd9.3_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;instance_id&quot;: &quot;11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_left_1&quot;,
+          &quot;name&quot;: &quot;left_1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;CD4026 left_1 pin3&quot;,
+          &quot;pin_number&quot;: &quot;3&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_left_2&quot;,
+          &quot;name&quot;: &quot;left_2&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;CD4026 left_2 pin15&quot;,
+          &quot;pin_number&quot;: &quot;15&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_left_3&quot;,
+          &quot;name&quot;: &quot;left_3&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;CD4026 left_3 pin2&quot;,
+          &quot;pin_number&quot;: &quot;2&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_left_4&quot;,
+          &quot;name&quot;: &quot;left_4&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;CD4026 left_4 pin1&quot;,
+          &quot;pin_number&quot;: &quot;1&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_1&quot;,
+          &quot;name&quot;: &quot;right_1&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;CD4026 right_1 pin10&quot;,
+          &quot;pin_number&quot;: &quot;10&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_2&quot;,
+          &quot;name&quot;: &quot;right_2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;CD4026 right_2 pin12&quot;,
+          &quot;pin_number&quot;: &quot;12&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_3&quot;,
+          &quot;name&quot;: &quot;right_3&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;CD4026 right_3 pin13&quot;,
+          &quot;pin_number&quot;: &quot;13&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_4&quot;,
+          &quot;name&quot;: &quot;right_4&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;CD4026 right_4 pin9&quot;,
+          &quot;pin_number&quot;: &quot;9&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_5&quot;,
+          &quot;name&quot;: &quot;right_5&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;CD4026 right_5 pin11&quot;,
+          &quot;pin_number&quot;: &quot;11&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_6&quot;,
+          &quot;name&quot;: &quot;right_6&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;CD4026 right_6 pin6&quot;,
+          &quot;pin_number&quot;: &quot;6&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_7&quot;,
+          &quot;name&quot;: &quot;right_7&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;CD4026 right_7 pin7&quot;,
+          &quot;pin_number&quot;: &quot;7&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_top_1&quot;,
+          &quot;name&quot;: &quot;top_1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;,
+          &quot;display_name&quot;: &quot;CD4026 top_1 pin16&quot;,
+          &quot;pin_number&quot;: &quot;16&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_bottom_1&quot;,
+          &quot;name&quot;: &quot;bottom_1&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;,
+          &quot;display_name&quot;: &quot;CD4026 bottom_1 pin8&quot;,
+          &quot;pin_number&quot;: &quot;8&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_bottom_2&quot;,
+          &quot;name&quot;: &quot;bottom_2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;,
+          &quot;display_name&quot;: &quot;CD4026 bottom_2 pin14&quot;,
+          &quot;pin_number&quot;: &quot;14&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_bottom_3&quot;,
+          &quot;name&quot;: &quot;bottom_3&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;,
+          &quot;display_name&quot;: &quot;CD4026 bottom_3 pin4&quot;,
+          &quot;pin_number&quot;: &quot;4&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_bottom_4&quot;,
+          &quot;name&quot;: &quot;bottom_4&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;,
+          &quot;display_name&quot;: &quot;CD4026 bottom_4 pin5&quot;,
+          &quot;pin_number&quot;: &quot;5&quot;
+        }
+      ],
+      &quot;display_name&quot;: &quot;CD4026&quot;,
+      &quot;ic_marking&quot;: &quot;CD4026&quot;
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.2&quot;,
+      &quot;instance_id&quot;: &quot;22.2&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.2_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.2_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.3&quot;,
+      &quot;instance_id&quot;: &quot;22.3&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.3_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.3_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.4&quot;,
+      &quot;instance_id&quot;: &quot;22.4&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.4_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.4_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.5&quot;,
+      &quot;instance_id&quot;: &quot;22.5&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.5_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.5_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.6&quot;,
+      &quot;instance_id&quot;: &quot;22.6&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.6_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.6_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.7&quot;,
+      &quot;instance_id&quot;: &quot;22.7&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.7_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.7_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.8&quot;,
+      &quot;instance_id&quot;: &quot;22.8&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.8_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.8_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;instance_id&quot;: &quot;11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_left_1&quot;,
+          &quot;name&quot;: &quot;left_1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;DISP1 left_1 a&quot;,
+          &quot;pin_label&quot;: &quot;a&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_left_2&quot;,
+          &quot;name&quot;: &quot;left_2&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;DISP1 left_2 b&quot;,
+          &quot;pin_label&quot;: &quot;b&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_left_3&quot;,
+          &quot;name&quot;: &quot;left_3&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;DISP1 left_3 c&quot;,
+          &quot;pin_label&quot;: &quot;c&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_left_4&quot;,
+          &quot;name&quot;: &quot;left_4&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;DISP1 left_4 d&quot;,
+          &quot;pin_label&quot;: &quot;d&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_left_5&quot;,
+          &quot;name&quot;: &quot;left_5&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;DISP1 left_5 e&quot;,
+          &quot;pin_label&quot;: &quot;e&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_left_6&quot;,
+          &quot;name&quot;: &quot;left_6&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;DISP1 left_6 f&quot;,
+          &quot;pin_label&quot;: &quot;f&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_left_7&quot;,
+          &quot;name&quot;: &quot;left_7&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;DISP1 left_7 g&quot;,
+          &quot;pin_label&quot;: &quot;g&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_bottom_1&quot;,
+          &quot;name&quot;: &quot;bottom_1&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;,
+          &quot;display_name&quot;: &quot;DISP1 bottom_1 cc&quot;,
+          &quot;pin_label&quot;: &quot;cc&quot;
+        }
+      ],
+      &quot;display_name&quot;: &quot;DISP1&quot;,
+      &quot;ic_marking&quot;: &quot;DISP1&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;
+    },
+    {
+      &quot;component_id&quot;: &quot;gnd9.4&quot;,
+      &quot;instance_id&quot;: &quot;9.4&quot;,
+      &quot;class_name&quot;: &quot;GND&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;gnd9.4_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        }
+      ]
+    }
+  ],
+  &quot;terminal_metadata&quot;: {
+    &quot;integrated_circuit11.1_bottom_1&quot;: {
+      &quot;display_name&quot;: &quot;CD4026 bottom_1 pin8&quot;,
+      &quot;pin_number&quot;: &quot;8&quot;,
+      &quot;component_display_name&quot;: &quot;CD4026&quot;,
+      &quot;ic_marking&quot;: &quot;CD4026&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_bottom_2&quot;: {
+      &quot;display_name&quot;: &quot;CD4026 bottom_2 pin14&quot;,
+      &quot;pin_number&quot;: &quot;14&quot;,
+      &quot;component_display_name&quot;: &quot;CD4026&quot;,
+      &quot;ic_marking&quot;: &quot;CD4026&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_bottom_3&quot;: {
+      &quot;display_name&quot;: &quot;CD4026 bottom_3 pin4&quot;,
+      &quot;pin_number&quot;: &quot;4&quot;,
+      &quot;component_display_name&quot;: &quot;CD4026&quot;,
+      &quot;ic_marking&quot;: &quot;CD4026&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_bottom_4&quot;: {
+      &quot;display_name&quot;: &quot;CD4026 bottom_4 pin5&quot;,
+      &quot;pin_number&quot;: &quot;5&quot;,
+      &quot;component_display_name&quot;: &quot;CD4026&quot;,
+      &quot;ic_marking&quot;: &quot;CD4026&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_left_1&quot;: {
+      &quot;display_name&quot;: &quot;CD4026 left_1 pin3&quot;,
+      &quot;pin_number&quot;: &quot;3&quot;,
+      &quot;component_display_name&quot;: &quot;CD4026&quot;,
+      &quot;ic_marking&quot;: &quot;CD4026&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_left_2&quot;: {
+      &quot;display_name&quot;: &quot;CD4026 left_2 pin15&quot;,
+      &quot;pin_number&quot;: &quot;15&quot;,
+      &quot;component_display_name&quot;: &quot;CD4026&quot;,
+      &quot;ic_marking&quot;: &quot;CD4026&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_left_3&quot;: {
+      &quot;display_name&quot;: &quot;CD4026 left_3 pin2&quot;,
+      &quot;pin_number&quot;: &quot;2&quot;,
+      &quot;component_display_name&quot;: &quot;CD4026&quot;,
+      &quot;ic_marking&quot;: &quot;CD4026&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_left_4&quot;: {
+      &quot;display_name&quot;: &quot;CD4026 left_4 pin1&quot;,
+      &quot;pin_number&quot;: &quot;1&quot;,
+      &quot;component_display_name&quot;: &quot;CD4026&quot;,
+      &quot;ic_marking&quot;: &quot;CD4026&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_1&quot;: {
+      &quot;display_name&quot;: &quot;CD4026 right_1 pin10&quot;,
+      &quot;pin_number&quot;: &quot;10&quot;,
+      &quot;component_display_name&quot;: &quot;CD4026&quot;,
+      &quot;ic_marking&quot;: &quot;CD4026&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_2&quot;: {
+      &quot;display_name&quot;: &quot;CD4026 right_2 pin12&quot;,
+      &quot;pin_number&quot;: &quot;12&quot;,
+      &quot;component_display_name&quot;: &quot;CD4026&quot;,
+      &quot;ic_marking&quot;: &quot;CD4026&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_3&quot;: {
+      &quot;display_name&quot;: &quot;CD4026 right_3 pin13&quot;,
+      &quot;pin_number&quot;: &quot;13&quot;,
+      &quot;component_display_name&quot;: &quot;CD4026&quot;,
+      &quot;ic_marking&quot;: &quot;CD4026&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_4&quot;: {
+      &quot;display_name&quot;: &quot;CD4026 right_4 pin9&quot;,
+      &quot;pin_number&quot;: &quot;9&quot;,
+      &quot;component_display_name&quot;: &quot;CD4026&quot;,
+      &quot;ic_marking&quot;: &quot;CD4026&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_5&quot;: {
+      &quot;display_name&quot;: &quot;CD4026 right_5 pin11&quot;,
+      &quot;pin_number&quot;: &quot;11&quot;,
+      &quot;component_display_name&quot;: &quot;CD4026&quot;,
+      &quot;ic_marking&quot;: &quot;CD4026&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_6&quot;: {
+      &quot;display_name&quot;: &quot;CD4026 right_6 pin6&quot;,
+      &quot;pin_number&quot;: &quot;6&quot;,
+      &quot;component_display_name&quot;: &quot;CD4026&quot;,
+      &quot;ic_marking&quot;: &quot;CD4026&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_7&quot;: {
+      &quot;display_name&quot;: &quot;CD4026 right_7 pin7&quot;,
+      &quot;pin_number&quot;: &quot;7&quot;,
+      &quot;component_display_name&quot;: &quot;CD4026&quot;,
+      &quot;ic_marking&quot;: &quot;CD4026&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_top_1&quot;: {
+      &quot;display_name&quot;: &quot;CD4026 top_1 pin16&quot;,
+      &quot;pin_number&quot;: &quot;16&quot;,
+      &quot;component_display_name&quot;: &quot;CD4026&quot;,
+      &quot;ic_marking&quot;: &quot;CD4026&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_bottom_1&quot;: {
+      &quot;display_name&quot;: &quot;DISP1 bottom_1 cc&quot;,
+      &quot;pin_label&quot;: &quot;cc&quot;,
+      &quot;component_display_name&quot;: &quot;DISP1&quot;,
+      &quot;ic_marking&quot;: &quot;DISP1&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_left_1&quot;: {
+      &quot;display_name&quot;: &quot;DISP1 left_1 a&quot;,
+      &quot;pin_label&quot;: &quot;a&quot;,
+      &quot;component_display_name&quot;: &quot;DISP1&quot;,
+      &quot;ic_marking&quot;: &quot;DISP1&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_left_2&quot;: {
+      &quot;display_name&quot;: &quot;DISP1 left_2 b&quot;,
+      &quot;pin_label&quot;: &quot;b&quot;,
+      &quot;component_display_name&quot;: &quot;DISP1&quot;,
+      &quot;ic_marking&quot;: &quot;DISP1&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_left_3&quot;: {
+      &quot;display_name&quot;: &quot;DISP1 left_3 c&quot;,
+      &quot;pin_label&quot;: &quot;c&quot;,
+      &quot;component_display_name&quot;: &quot;DISP1&quot;,
+      &quot;ic_marking&quot;: &quot;DISP1&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_left_4&quot;: {
+      &quot;display_name&quot;: &quot;DISP1 left_4 d&quot;,
+      &quot;pin_label&quot;: &quot;d&quot;,
+      &quot;component_display_name&quot;: &quot;DISP1&quot;,
+      &quot;ic_marking&quot;: &quot;DISP1&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_left_5&quot;: {
+      &quot;display_name&quot;: &quot;DISP1 left_5 e&quot;,
+      &quot;pin_label&quot;: &quot;e&quot;,
+      &quot;component_display_name&quot;: &quot;DISP1&quot;,
+      &quot;ic_marking&quot;: &quot;DISP1&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_left_6&quot;: {
+      &quot;display_name&quot;: &quot;DISP1 left_6 f&quot;,
+      &quot;pin_label&quot;: &quot;f&quot;,
+      &quot;component_display_name&quot;: &quot;DISP1&quot;,
+      &quot;ic_marking&quot;: &quot;DISP1&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_left_7&quot;: {
+      &quot;display_name&quot;: &quot;DISP1 left_7 g&quot;,
+      &quot;pin_label&quot;: &quot;g&quot;,
+      &quot;component_display_name&quot;: &quot;DISP1&quot;,
+      &quot;ic_marking&quot;: &quot;DISP1&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    }
+  },
+  &quot;graph&quot;: {
+    &quot;gnd9.1_t1&quot;: [
+      &quot;resistor22.1_t2&quot;
+    ],
+    &quot;gnd9.2_t1&quot;: [
+      &quot;integrated_circuit11.1_left_2&quot;,
+      &quot;integrated_circuit11.1_left_3&quot;,
+      &quot;integrated_circuit11.1_left_4&quot;,
+      &quot;push_button21.1_t1&quot;,
+      &quot;push_button21.1_t2&quot;,
+      &quot;push_button21.2_t2&quot;,
+      &quot;resistor22.1_t1&quot;
+    ],
+    &quot;gnd9.3_t1&quot;: [
+      &quot;integrated_circuit11.1_bottom_1&quot;,
+      &quot;integrated_circuit11.1_bottom_2&quot;
+    ],
+    &quot;gnd9.4_t1&quot;: [
+      &quot;integrated_circuit11.2_bottom_1&quot;
+    ],
+    &quot;integrated_circuit11.1_bottom_1&quot;: [
+      &quot;gnd9.3_t1&quot;,
+      &quot;integrated_circuit11.1_bottom_2&quot;
+    ],
+    &quot;integrated_circuit11.1_bottom_2&quot;: [
+      &quot;gnd9.3_t1&quot;,
+      &quot;integrated_circuit11.1_bottom_1&quot;
+    ],
+    &quot;integrated_circuit11.1_bottom_3&quot;: [],
+    &quot;integrated_circuit11.1_bottom_4&quot;: [],
+    &quot;integrated_circuit11.1_left_1&quot;: [
+      &quot;integrated_circuit11.1_top_1&quot;
+    ],
+    &quot;integrated_circuit11.1_left_2&quot;: [
+      &quot;gnd9.2_t1&quot;,
+      &quot;integrated_circuit11.1_left_3&quot;,
+      &quot;integrated_circuit11.1_left_4&quot;,
+      &quot;push_button21.1_t1&quot;,
+      &quot;push_button21.1_t2&quot;,
+      &quot;push_button21.2_t2&quot;,
+      &quot;resistor22.1_t1&quot;
+    ],
+    &quot;integrated_circuit11.1_left_3&quot;: [
+      &quot;gnd9.2_t1&quot;,
+      &quot;integrated_circuit11.1_left_2&quot;,
+      &quot;integrated_circuit11.1_left_4&quot;,
+      &quot;push_button21.1_t1&quot;,
+      &quot;push_button21.1_t2&quot;,
+      &quot;push_button21.2_t2&quot;,
+      &quot;resistor22.1_t1&quot;
+    ],
+    &quot;integrated_circuit11.1_left_4&quot;: [
+      &quot;gnd9.2_t1&quot;,
+      &quot;integrated_circuit11.1_left_2&quot;,
+      &quot;integrated_circuit11.1_left_3&quot;,
+      &quot;push_button21.1_t1&quot;,
+      &quot;push_button21.1_t2&quot;,
+      &quot;push_button21.2_t2&quot;,
+      &quot;resistor22.1_t1&quot;
+    ],
+    &quot;integrated_circuit11.1_right_1&quot;: [
+      &quot;resistor22.7_t1&quot;
+    ],
+    &quot;integrated_circuit11.1_right_2&quot;: [
+      &quot;resistor22.6_t1&quot;
+    ],
+    &quot;integrated_circuit11.1_right_3&quot;: [
+      &quot;resistor22.5_t1&quot;
+    ],
+    &quot;integrated_circuit11.1_right_4&quot;: [
+      &quot;resistor22.4_t1&quot;
+    ],
+    &quot;integrated_circuit11.1_right_5&quot;: [
+      &quot;resistor22.3_t1&quot;
+    ],
+    &quot;integrated_circuit11.1_right_6&quot;: [
+      &quot;resistor22.2_t1&quot;
+    ],
+    &quot;integrated_circuit11.1_right_7&quot;: [
+      &quot;resistor22.8_t1&quot;
+    ],
+    &quot;integrated_circuit11.1_top_1&quot;: [
+      &quot;integrated_circuit11.1_left_1&quot;
+    ],
+    &quot;integrated_circuit11.2_bottom_1&quot;: [
+      &quot;gnd9.4_t1&quot;
+    ],
+    &quot;integrated_circuit11.2_left_1&quot;: [
+      &quot;resistor22.7_t2&quot;
+    ],
+    &quot;integrated_circuit11.2_left_2&quot;: [
+      &quot;resistor22.6_t2&quot;
+    ],
+    &quot;integrated_circuit11.2_left_3&quot;: [
+      &quot;resistor22.5_t2&quot;
+    ],
+    &quot;integrated_circuit11.2_left_4&quot;: [
+      &quot;resistor22.4_t2&quot;
+    ],
+    &quot;integrated_circuit11.2_left_5&quot;: [
+      &quot;resistor22.3_t2&quot;
+    ],
+    &quot;integrated_circuit11.2_left_6&quot;: [
+      &quot;resistor22.2_t2&quot;
+    ],
+    &quot;integrated_circuit11.2_left_7&quot;: [
+      &quot;resistor22.8_t2&quot;
+    ],
+    &quot;push_button21.1_t1&quot;: [
+      &quot;gnd9.2_t1&quot;,
+      &quot;integrated_circuit11.1_left_2&quot;,
+      &quot;integrated_circuit11.1_left_3&quot;,
+      &quot;integrated_circuit11.1_left_4&quot;,
+      &quot;push_button21.1_t2&quot;,
+      &quot;push_button21.2_t2&quot;,
+      &quot;resistor22.1_t1&quot;
+    ],
+    &quot;push_button21.1_t2&quot;: [
+      &quot;gnd9.2_t1&quot;,
+      &quot;integrated_circuit11.1_left_2&quot;,
+      &quot;integrated_circuit11.1_left_3&quot;,
+      &quot;integrated_circuit11.1_left_4&quot;,
+      &quot;push_button21.1_t1&quot;,
+      &quot;push_button21.2_t2&quot;,
+      &quot;resistor22.1_t1&quot;
+    ],
+    &quot;push_button21.2_t1&quot;: [],
+    &quot;push_button21.2_t2&quot;: [
+      &quot;gnd9.2_t1&quot;,
+      &quot;integrated_circuit11.1_left_2&quot;,
+      &quot;integrated_circuit11.1_left_3&quot;,
+      &quot;integrated_circuit11.1_left_4&quot;,
+      &quot;push_button21.1_t1&quot;,
+      &quot;push_button21.1_t2&quot;,
+      &quot;resistor22.1_t1&quot;
+    ],
+    &quot;resistor22.1_t1&quot;: [
+      &quot;gnd9.2_t1&quot;,
+      &quot;integrated_circuit11.1_left_2&quot;,
+      &quot;integrated_circuit11.1_left_3&quot;,
+      &quot;integrated_circuit11.1_left_4&quot;,
+      &quot;push_button21.1_t1&quot;,
+      &quot;push_button21.1_t2&quot;,
+      &quot;push_button21.2_t2&quot;
+    ],
+    &quot;resistor22.1_t2&quot;: [
+      &quot;gnd9.1_t1&quot;
+    ],
+    &quot;resistor22.2_t1&quot;: [
+      &quot;integrated_circuit11.1_right_6&quot;
+    ],
+    &quot;resistor22.2_t2&quot;: [
+      &quot;integrated_circuit11.2_left_6&quot;
+    ],
+    &quot;resistor22.3_t1&quot;: [
+      &quot;integrated_circuit11.1_right_5&quot;
+    ],
+    &quot;resistor22.3_t2&quot;: [
+      &quot;integrated_circuit11.2_left_5&quot;
+    ],
+    &quot;resistor22.4_t1&quot;: [
+      &quot;integrated_circuit11.1_right_4&quot;
+    ],
+    &quot;resistor22.4_t2&quot;: [
+      &quot;integrated_circuit11.2_left_4&quot;
+    ],
+    &quot;resistor22.5_t1&quot;: [
+      &quot;integrated_circuit11.1_right_3&quot;
+    ],
+    &quot;resistor22.5_t2&quot;: [
+      &quot;integrated_circuit11.2_left_3&quot;
+    ],
+    &quot;resistor22.6_t1&quot;: [
+      &quot;integrated_circuit11.1_right_2&quot;
+    ],
+    &quot;resistor22.6_t2&quot;: [
+      &quot;integrated_circuit11.2_left_2&quot;
+    ],
+    &quot;resistor22.7_t1&quot;: [
+      &quot;integrated_circuit11.1_right_1&quot;
+    ],
+    &quot;resistor22.7_t2&quot;: [
+      &quot;integrated_circuit11.2_left_1&quot;
+    ],
+    &quot;resistor22.8_t1&quot;: [
+      &quot;integrated_circuit11.1_right_7&quot;
+    ],
+    &quot;resistor22.8_t2&quot;: [
+      &quot;integrated_circuit11.2_left_7&quot;
+    ]
+  },
+  &quot;warnings&quot;: {
+    &quot;unconnected_terminals&quot;: [
+      &quot;integrated_circuit11.1_bottom_3&quot;,
+      &quot;integrated_circuit11.1_bottom_4&quot;,
+      &quot;push_button21.2_t1&quot;
+    ],
+    &quot;unmatched_terminals&quot;: [],
+    &quot;suspicious_matches&quot;: []
+  }
+}</pre>
+    </details>
+  </div>
+
+  <script>
+    (() => {
+      const svg = document.getElementById("graph-svg");
+      const viewBox = svg.viewBox.baseVal;
+      let isDragging = false;
+      let startX = 0;
+      let startY = 0;
+      let startViewX = viewBox.x;
+      let startViewY = viewBox.y;
+
+      function pointFromEvent(event) {
+        const rect = svg.getBoundingClientRect();
+        return {
+          x: (event.clientX - rect.left) * (viewBox.width / rect.width),
+          y: (event.clientY - rect.top) * (viewBox.height / rect.height),
+        };
+      }
+
+      svg.addEventListener("wheel", (event) => {
+        event.preventDefault();
+        const scale = event.deltaY < 0 ? 0.92 : 1.08;
+        const point = pointFromEvent(event);
+        const newWidth = viewBox.width * scale;
+        const newHeight = viewBox.height * scale;
+        viewBox.x = point.x - (point.x - viewBox.x) * scale;
+        viewBox.y = point.y - (point.y - viewBox.y) * scale;
+        viewBox.width = Math.max(480, newWidth);
+        viewBox.height = Math.max(360, newHeight);
+      }, { passive: false });
+
+      svg.addEventListener("pointerdown", (event) => {
+        isDragging = true;
+        svg.setPointerCapture(event.pointerId);
+        startX = event.clientX;
+        startY = event.clientY;
+        startViewX = viewBox.x;
+        startViewY = viewBox.y;
+      });
+
+      svg.addEventListener("pointermove", (event) => {
+        if (!isDragging) return;
+        const rect = svg.getBoundingClientRect();
+        const dx = (event.clientX - startX) * (viewBox.width / rect.width);
+        const dy = (event.clientY - startY) * (viewBox.height / rect.height);
+        viewBox.x = startViewX - dx;
+        viewBox.y = startViewY - dy;
+      });
+
+      svg.addEventListener("pointerup", () => {
+        isDragging = false;
+      });
+
+      svg.addEventListener("pointerleave", () => {
+        isDragging = false;
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+IC: NE555
+
+Descrizione:
+Il NE555 e' un circuito integrato timer usato per generare ritardi temporali, impulsi oppure oscillazioni periodiche. In un circuito con LED puo' essere usato per far lampeggiare uno o piu' LED, generare un impulso temporizzato o commutare un'uscita per un tempo determinato.
+
+Pin principali NE555:
+- Pin 1: GND, massa.
+- Pin 2: TRIGGER, ingresso di trigger. Quando scende sotto circa 1/3 VCC puo' avviare la commutazione interna.
+- Pin 3: OUTPUT, uscita del timer.
+- Pin 4: RESET, reset attivo basso. Per funzionamento normale deve essere mantenuto alto, di solito collegato a VCC tramite collegamento diretto o resistenza.
+- Pin 5: CONTROL VOLTAGE, controllo delle soglie interne. Se non usato, spesso e' filtrato verso GND con un piccolo condensatore, tipicamente circa 0.01 uF.
+- Pin 6: THRESHOLD, ingresso soglia. Quando supera circa 2/3 VCC puo' terminare l'impulso o invertire lo stato dell'uscita.
+- Pin 7: DISCHARGE, collettore del transistor interno che scarica il condensatore di temporizzazione.
+- Pin 8: VCC, alimentazione positiva.
+
+Alimentazione:
+- Il NE555 funziona tipicamente con alimentazione circa 4.5 V - 16 V.
+- Pin 8 deve essere collegato alla tensione positiva.
+- Pin 1 deve essere collegato a GND.
+- Pin 4 RESET deve essere a livello alto. Se pin 4 resta basso o flottante, il 555 puo' restare bloccato e l'uscita sul pin 3 non commuta correttamente.
+
+Funzionamento astabile tipico:
+- In configurazione astabile il 555 genera un'onda quadra sul pin 3.
+- Pin 2 e pin 6 sono spesso collegati insieme al condensatore di temporizzazione.
+- Pin 7 e' collegato alla rete resistiva che carica e scarica il condensatore.
+- Il condensatore di temporizzazione va normalmente verso GND.
+- La frequenza e il duty cycle dipendono dai resistori e dal condensatore collegati ai pin 2, 6 e 7.
+
+Funzionamento monostabile tipico:
+- In configurazione monostabile il 555 genera un singolo impulso di durata definita quando riceve un trigger sul pin 2.
+- La durata dell'impulso dipende dalla rete R-C collegata ai pin 6 e 7.
+- Se il trigger, il condensatore o la rete di scarica non funzionano, l'uscita puo' restare fissa alta o bassa.
+
+Uscita:
+- Pin 3 e' l'uscita del 555.
+- L'uscita puo' pilotare un LED tramite una resistenza di limitazione.
+- Se il LED resta sempre acceso, sempre spento o non lampeggia, controllare se il pin 3 commuta realmente.
+- Se il pin 3 commuta ma il LED non segue, il problema puo' essere nel LED, nella resistenza serie, nella polarita' del LED o nel collegamento a GND/VCC.
+
+Controlli diagnostici utili:
+- Verificare la tensione sul pin 8 rispetto al pin 1.
+- Verificare che il pin 1 sia realmente collegato a GND.
+- Verificare che il pin 4 RESET sia alto.
+- Misurare se il pin 3 OUTPUT commuta quando il circuito dovrebbe lampeggiare o temporizzare.
+- Verificare la rete R-C collegata ai pin 2, 6 e 7.
+- Controllare che il condensatore di temporizzazione non sia aperto, in corto o montato con polarita' errata se polarizzato.
+- Controllare il condensatore sul pin 5 se presente: un corto sul pin 5 puo' alterare le soglie interne.
+- Verificare polarita' del LED e valore/continuita' della resistenza in serie.
+- Verificare saldature, piste interrotte o cortocircuiti sui nodi di trigger, threshold, discharge e output.

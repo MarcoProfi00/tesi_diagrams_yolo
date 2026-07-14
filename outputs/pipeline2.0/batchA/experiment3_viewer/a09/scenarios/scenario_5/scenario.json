@@ -1,0 +1,20 @@
+{
+  "scenario_id": "scenario_5",
+  "title": "Collegare BAT_FUSED a PWR_LED_INPUT",
+  "hypothesis": "Il ramo LED resta inattivo perché N005 (PWR_LED_INPUT) non ha continuità con il nodo alimentato N003 (BAT_FUSED); collegandoli il ramo LED dovrebbe attivarsi.",
+  "actions": [
+    {
+      "type": "connect_nodes",
+      "from": "N003",
+      "to": "N005",
+      "resistance": "1m"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N005)",
+    "v(N007)",
+    "i(Rresistor22_1)"
+  ]
+}

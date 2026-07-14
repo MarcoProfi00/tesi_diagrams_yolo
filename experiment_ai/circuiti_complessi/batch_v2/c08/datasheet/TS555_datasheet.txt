@@ -1,0 +1,39 @@
+IC: TS555 / 555 timer
+
+Descrizione:
+Il TS555 e' un timer CMOS compatibile funzionalmente con la famiglia 555. Puo' essere usato come oscillatore astabile, monostabile o generatore di impulsi. In molti circuiti fornisce un segnale periodico di clock verso altri integrati o verso uno stadio di uscita.
+
+Pin principali:
+- Pin 1: GND, massa.
+- Pin 2: TRIGGER. Ingresso di trigger; commuta quando scende sotto circa 1/3 VCC.
+- Pin 3: OUTPUT. Uscita del timer.
+- Pin 4: RESET. Reset attivo basso; per funzionamento normale deve essere mantenuto alto.
+- Pin 5: CONTROL VOLTAGE. Controlla le soglie interne; se non usato puo' essere filtrato verso GND con un piccolo condensatore.
+- Pin 6: THRESHOLD. Ingresso soglia; commuta quando sale sopra circa 2/3 VCC.
+- Pin 7: DISCHARGE. Transistor interno di scarica del condensatore di temporizzazione.
+- Pin 8: VCC, alimentazione positiva.
+
+Alimentazione:
+- Pin 8 deve essere collegato alla tensione positiva.
+- Pin 1 deve essere collegato a GND.
+- Pin 4 RESET deve essere alto; se e' basso o flottante, l'uscita puo' restare bloccata.
+
+Funzionamento astabile:
+- In configurazione astabile il timer genera un'onda quadra sul pin 3.
+- Pin 2 e pin 6 sono spesso collegati alla rete del condensatore di temporizzazione.
+- Pin 7 e' collegato alla rete resistiva che carica e scarica il condensatore.
+- Frequenza e duty cycle dipendono dai valori di resistenze e condensatore.
+
+Uso come generatore di clock:
+- Il pin 3 puo' fornire impulsi periodici a un contatore o sequenziatore logico.
+- Se il pin 3 resta fisso alto o basso, il circuito successivo non avanza.
+- Impulsi troppo veloci, troppo lenti o instabili possono produrre sequenze errate.
+
+Controlli diagnostici utili:
+- Verificare VCC su pin 8 e GND su pin 1.
+- Verificare che RESET pin 4 sia alto.
+- Misurare se il pin 3 genera impulsi.
+- Controllare la rete R-C collegata ai pin 2, 6 e 7.
+- Controllare che il condensatore di temporizzazione non sia aperto, in corto o montato con polarita' errata se polarizzato.
+- Controllare eventuale condensatore sul pin 5 se presente.
+- Se il circuito a valle non cambia stato, verificare continuita' tra pin 3 del TS555 e ingresso clock del circuito successivo.

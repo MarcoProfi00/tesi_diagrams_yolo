@@ -1,0 +1,944 @@
+[
+  {
+    "metadata": {
+      "circuit": "ic7",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic7\\results_json\\ic7_gpt-4.1-mini_20260514_182150.txt",
+      "model_under_test": "gpt-4.1-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 26.031,
+      "timestamp": "2026-05-14 18:33:45",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8895, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1474, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10369)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 14,
+      "max_score": 21,
+      "normalized_score": 0.6666666667,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non allo stato ON, quindi amplificatore in mute o stand-by",
+        "Alimentazione VP sul pin 10 assente o insufficiente",
+        "Segnale audio assente o non accoppiato correttamente all'ingresso tramite C1",
+        "Speaker o collegamenti tra pin 5 e pin 9 interrotti, oppure corti sulle uscite",
+        "Masse pin 3 e pin 7 non effettivamente collegate a massa"
+      ],
+      "model_primary_cause": "Errato collegamento o assenza del segnale audio in ingresso, soprattutto pin 1 collegato a Vref e segnale solo su pin 13",
+      "major_errors": [
+        "Attribuisce priorità eccessiva al collegamento pin 1-pin 4 come possibile errore, mentre nello schema reale tale collegamento appare intenzionale e non è dimostrato come guasto dal JSON o dal datasheet fornito.",
+        "Interpreta in modo troppo rigido gli ingressi BTL sostenendo che il segnale debba arrivare a pin 1 e pin 13, mentre il circuito mostrato usa il segnale su pin 2/13 con pin 1 riferito a Vref; questo non basta da solo a diagnosticare un difetto.",
+        "Mette come causa principale un presunto errore di ingresso meno supportato rispetto a controlli più probabili e direttamente indicati dal datasheet, come stato del pin 11 e alimentazione del pin 10."
+      ],
+      "hallucinations": [
+        "La frase secondo cui l'alimentazione positiva del pin 10 è collegata tramite un terminale polarizzato è imprecisa: nel JSON il pin 10 è sul nodo con condensatori e switch, ma non c'è un vero terminale di alimentazione esplicito.",
+        "La conclusione che il collegamento pin 1-Vref possa bloccare o ridurre il segnale è speculativa rispetto alle fonti fornite."
+      ],
+      "missed_important_points": [
+        "Non evidenzia abbastanza che, secondo il JSON, pin 6 e pin 8 risultano sullo stesso nodo di VP; tuttavia il datasheet fornito non specifica il collegamento atteso dei bootstrap, quindi non era una causa primaria obbligatoria.",
+        "Non distingue chiaramente tra ciò che è effettivamente errato nel JSON e ciò che richiede solo misura sul circuito reale.",
+        "Non dà priorità massima al controllo del pin 11 M/SS, che è una causa molto tipica di assenza totale di audio."
+      ],
+      "strengths": [
+        "Riconosce correttamente il TDA1516BQ in configurazione BTL.",
+        "Rileva correttamente che lo speaker è tra pin 5 e pin 9 e non verso massa.",
+        "Usa correttamente le soglie del pin 11, indicando ON sopra circa 8,5 V.",
+        "Propone controlli pratici sensati: misura pin 10, pin 11, presenza segnale audio, continuità speaker e corti sulle uscite.",
+        "Nota correttamente che nel JSON non è esplicita una sorgente di alimentazione esterna sul nodo VP."
+      ],
+      "short_explanation": "La risposta è utile e contiene molti controlli diagnostici corretti, soprattutto su alimentazione, mute/stand-by, ingresso e speaker. Tuttavia la causa messa al primo posto, cioè il presunto errore del pin 1 collegato a Vref, è debole e probabilmente non supportata come guasto reale dallo schema. La priorità delle cause non è ottimale: pin 11 non ON e alimentazione del pin 10 avrebbero dovuto essere trattati come cause più probabili e direttamente verificabili."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic7",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic7\\results_json\\ic7_gpt-4.1-nano_20260514_182221.txt",
+      "model_under_test": "gpt-4.1-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 25.4,
+      "timestamp": "2026-05-14 18:34:10",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8452, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1500, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=9952)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 17,
+      "max_score": 21,
+      "normalized_score": 0.8095238095238095,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non effettivamente in stato ON, quindi amplificatore in mute o stand-by",
+        "Alimentazione VP su pin 10 assente, insufficiente o instabile",
+        "Masse pin 3 e pin 7 non realmente comuni o non correttamente collegate",
+        "Segnale audio assente o non correttamente accoppiato agli ingressi tramite C1",
+        "Speaker o collegamenti tra pin 5 e pin 9 aperti, difettosi o cortocircuitati",
+        "Cortocircuito delle uscite verso massa o alimentazione"
+      ],
+      "model_primary_cause": "Il pin M/SS pin 11 non è effettivamente nello stato ON",
+      "major_errors": [
+        "Attribuisce alta probabilità al pin 11 non ON pur riconoscendo che nel JSON lo switch è indicato come chiuso e collega il pin 11 alla rete di alimentazione; resta comunque un controllo valido perché lo stato ha confidenza limitata.",
+        "Dice che il JSON non mostra direttamente i collegamenti agli ingressi pin 1 e 2, ma in realtà il JSON mostra il condensatore di ingresso collegato ai pin 2 e 13, mentre pin 1 è cortocircuitato a pin 4."
+      ],
+      "hallucinations": [
+        "Definisce la configurazione BTL come 'Flyback', termine improprio per questo amplificatore audio.",
+        "Afferma che il circuito include alimentazione VP a circa 14.4 V, mentre il circuito mostrato usa 12 V DC e il valore 14.4 V è solo tipico da datasheet.",
+        "Cita genericamente condensatori bootstrap esterni, ma nel JSON non sono presenti condensatori dedicati ai pin bootstrap; i pin 6 e 8 risultano collegati alla rete di alimentazione."
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che, secondo il JSON, il pin 11 dovrebbe essere collegato alla linea positiva tramite switch chiuso, quindi il guasto M/SS sarebbe più un problema fisico dello switch o della tensione reale che un errore topologico.",
+        "Non nota la particolarità dei pin 6 e 8 bootstrap collegati direttamente alla rete VP, che potrebbe meritare verifica rispetto all'applicazione del datasheet, anche se non è indicata come causa primaria dal materiale fornito.",
+        "Non distingue bene tra il pin 1 e il pin 13 come ingressi: l'ingresso audio nel JSON arriva tramite condensatore ai pin 2 e 13, non genericamente a pin 1 o 2."
+      ],
+      "strengths": [
+        "Comprende correttamente che il TDA1516BQ è usato in BTL e che lo speaker deve stare tra OUT1 pin 5 e OUT2 pin 9.",
+        "Usa correttamente le soglie del pin M/SS e propone la misura della tensione sul pin 11.",
+        "Verifica correttamente dal JSON il collegamento dello speaker ai pin 5 e 9.",
+        "Propone controlli pratici utili: tensione su pin 10, masse, segnale in ingresso, continuità speaker e corti sulle uscite.",
+        "La lista delle cause è tecnicamente plausibile e utile per troubleshooting."
+      ],
+      "short_explanation": "Risposta complessivamente valida: identifica correttamente il ruolo del pin M/SS, alimentazione, ingresso audio e collegamento BTL dello speaker. Usa bene datasheet e JSON, ma con alcune imprecisioni: il pin 11 risulta già collegato alla linea positiva tramite switch chiuso nel JSON, l'ingresso audio è in realtà visibile su pin 2/13 tramite C1, e vengono introdotti dettagli non pienamente supportati come 14.4 V e 'Flyback'. Diagnosi comunque utile e in gran parte coerente."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic7",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic7\\results_json\\ic7_gpt-4o-mini_20260514_182105.txt",
+      "model_under_test": "gpt-4o-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 24.057,
+      "timestamp": "2026-05-14 18:34:34",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8017, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1381, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=9398)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 16,
+      "max_score": 21,
+      "normalized_score": 0.7619047619,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "assenza o insufficienza della tensione VP sul pin 10",
+        "pin 11 M/SS non portato allo stato ON, anche se nel JSON lo switch risulta chiuso verso la rete di alimentazione",
+        "assenza del segnale audio all'ingresso tramite il condensatore di accoppiamento",
+        "speaker aperto o cortocircuiti sulle uscite pin 5 e pin 9",
+        "problemi di massa sui pin 3 o 7"
+      ],
+      "model_primary_cause": "Problema di alimentazione sul pin 10 VP",
+      "major_errors": [
+        "Non evidenzia chiaramente che, dal JSON, il pin 11 è collegato tramite switch chiuso alla stessa rete del pin 10, quindi il mute/stand-by è verosimilmente ON se l'alimentazione è presente.",
+        "Indica il controllo del segnale audio sugli ingressi 'pins 1, 2', mentre dal datasheet gli ingressi principali sono pin 1 e pin 13, e nel JSON il condensatore di ingresso è collegato alla rete dei pin 2 e 13."
+      ],
+      "hallucinations": [
+        "Parla di condensatori di accoppiamento al plurale, mentre nel JSON è presente un solo condensatore di accoppiamento audio.",
+        "Descrive il collegamento del mute come se fosse solo genericamente 'parte del percorso', senza riconoscere la connessione specifica switch chiuso tra pin 11 e rete VP."
+      ],
+      "missed_important_points": [
+        "Non sfrutta pienamente il fatto che lo speaker risulta già correttamente collegato tra pin 5 e pin 9, quindi un errore di cablaggio dello speaker è meno probabile rispetto a speaker guasto, aperto o uscita in corto.",
+        "Non nota che le masse pin 3 e pin 7 sono presenti ma su due simboli GND separati nel JSON; sarebbe utile verificare che siano effettivamente comuni nel circuito reale.",
+        "Non distingue bene tra difetto topologico presente nel JSON e controlli generici di troubleshooting."
+      ],
+      "strengths": [
+        "Comprende correttamente che il TDA1516BQ è usato in configurazione BTL.",
+        "Identifica correttamente i pin principali: VP pin 10, GND pin 3 e 7, M/SS pin 11, uscite pin 5 e pin 9.",
+        "Usa correttamente le soglie del pin M/SS dal datasheet.",
+        "Propone controlli pratici utili: misura VP, misura M/SS, verifica speaker, verifica segnale ingresso, controllo corti.",
+        "Riconosce che lo speaker è collegato tra le due uscite e non verso massa."
+      ],
+      "short_explanation": "La risposta è tecnicamente utile e abbastanza coerente: identifica alimentazione, mute/stand-by, speaker e ingresso audio come controlli rilevanti. Tuttavia resta generica e non sfrutta del tutto il JSON: il pin 11 risulta collegato tramite switch chiuso alla rete di alimentazione, quindi il mute è meno sospetto se VP è presente; inoltre l'analisi degli ingressi contiene imprecisioni sui pin. Buona come checklist diagnostica, ma non ottimale nella priorità e nella lettura topologica."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic7",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic7\\results_json\\ic7_gpt-5-mini_20260514_182417.txt",
+      "model_under_test": "gpt-5-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 21.441,
+      "timestamp": "2026-05-14 18:34:56",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9268, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1322, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10590)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 18,
+      "max_score": 21,
+      "normalized_score": 0.8571428571428571,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Assenza o mancata connessione esplicita della tensione positiva VP al pin 10 nel JSON",
+        "Pin 11 M/SS non portato allo stato ON se il nodo VP non è alimentato",
+        "Assenza del segnale audio all'ingresso tramite il condensatore di accoppiamento",
+        "Possibili corti o guasti sulle uscite pin 5 e pin 9 o sullo speaker"
+      ],
+      "model_primary_cause": "Assenza/errata connessione dell’alimentazione positiva VP su pin10",
+      "major_errors": [
+        "Interpreta il collegamento pin1-pin4 e pin2-pin13 come anomalia molto rilevante, ma tale collegamento è presente nello schema reale e non è dimostrato dal datasheet fornito come causa certa di assenza audio."
+      ],
+      "hallucinations": [
+        "Afferma che pin4 Vref non deve essere cortocircuitato all'ingresso audio e che questo può bloccare o danneggiare il comportamento dell'IC; questa conclusione non è sufficientemente supportata dalle fonti fornite e contrasta con lo schema mostrato.",
+        "Descrive gli ingressi pin2 e pin13 accoppiati insieme come anomali, ma il circuito applicativo rappresentato li collega proprio insieme tramite il condensatore di ingresso."
+      ],
+      "missed_important_points": [
+        "Non evidenzia che, nello schema reale, il nodo superiore è etichettato 12 V DC; tuttavia il modello non aveva ricevuto l'immagine e dal JSON la sorgente positiva non è esplicita.",
+        "Non distingue abbastanza tra difetti realmente evidenziati dal JSON e collegamenti applicativi che possono essere intenzionali nello schema."
+      ],
+      "strengths": [
+        "Capisce correttamente che il TDA1516BQ è usato in BTL con speaker tra pin 5 e pin 9.",
+        "Usa correttamente il datasheet per pinout, alimentazione, masse e soglia ON del pin M/SS.",
+        "Identifica correttamente dal JSON che il pin 10 è collegato al nodo di disaccoppiamento ma non a una sorgente positiva esplicita.",
+        "Collega correttamente il problema del pin 11 M/SS alla possibile assenza di VP.",
+        "Propone misure pratiche utili: VP su pin10, tensione su pin11, continuità masse, controllo ingresso e corti sulle uscite."
+      ],
+      "short_explanation": "La risposta è complessivamente solida: individua come causa principale la mancanza di una sorgente VP esplicita sul pin 10 nel JSON e correla correttamente il pin 11 M/SS allo stato ON richiesto dal datasheet. I controlli pratici sono pertinenti. Il limite principale è che segnala come probabile errore il collegamento degli ingressi e di Vref, ma nello schema reale quei collegamenti appaiono intenzionali e non sono dimostrati dalle fonti come causa primaria del guasto."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic7",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic7\\results_json\\ic7_gpt-5-nano_20260514_182316.txt",
+      "model_under_test": "gpt-5-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 33.782,
+      "timestamp": "2026-05-14 18:35:30",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=10176, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1824, output_tokens_details=OutputTokensDetails(reasoning_tokens=755), total_tokens=12000)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 1,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 12,
+      "max_score": 21,
+      "normalized_score": 0.5714,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non portato allo stato ON, quindi amplificatore in mute o stand-by",
+        "Assenza o insufficienza della tensione di alimentazione su pin 10 VP",
+        "Massa non corretta sui pin 3 e 7",
+        "Segnale audio non presente sugli ingressi tramite condensatore di accoppiamento",
+        "Problema allo speaker o alle uscite pin 5 e pin 9, inclusi corti verso GND o alimentazione"
+      ],
+      "model_primary_cause": "Connessione impropria tra VP pin 10, bootstrap BS1/BS2 pin 6/8 e M/SS pin 11, con alimentazione/bootstrap/mute-standby errati",
+      "major_errors": [
+        "Attribuisce come causa principale un presunto errore di cablaggio tra pin 6, 8 e 10, ma nello schema reale questi pin risultano collegati al nodo positivo di alimentazione e non è dimostrato dal materiale fornito che questo sia il guasto simulato.",
+        "Interpreta in modo impreciso il nodo M/SS: nel JSON il pin 11 è collegato al terminale t2 dello switch, mentre il nodo positivo è sul terminale t1; la chiusura dello switch è indicata dallo stato, non da un collegamento diretto nel grafo.",
+        "Sovrastima il problema dei bootstrap rispetto alle cause diagnostiche più direttamente supportate dal datasheet: alimentazione VP, stato M/SS, ingressi, masse e speaker."
+      ],
+      "hallucinations": [
+        "Afferma che i pin bootstrap BS1/BS2 richiedano condensatori appropriati tra BS e OUT come elemento diagnostico centrale, ma questo dettaglio non è presente nell'estratto datasheet fornito e non è rappresentato nel JSON.",
+        "Descrive i condensatori 20.2 e 20.3 come possibili condensatori di bootstrap, mentre dal JSON e dallo schema sono condensatori di filtro/disaccoppiamento tra alimentazione e massa.",
+        "Nelle note finali identifica in modo confuso M/SS con top_1/top_2 o con i pin 6/8, mentre il pin 11 è integrated_circuit11.1_right_1."
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che lo switch risulta indicato come chiuso, quindi il pin 11 potrebbe essere effettivamente portato al nodo positivo se lo stato dello switch è da considerare elettricamente valido.",
+        "Non distingue abbastanza tra ciò che è un'anomalia certa del JSON e ciò che è solo una possibile interpretazione rispetto a uno schema applicativo tipico.",
+        "Non considera che il collegamento dello speaker tra pin 5 e pin 9 e le masse sui pin 3 e 7 risultano corretti e quindi dovrebbero essere controlli secondari, non sospetti principali."
+      ],
+      "strengths": [
+        "Riconosce correttamente il TDA1516BQ in configurazione BTL con speaker tra OUT1 pin 5 e OUT2 pin 9.",
+        "Usa correttamente molte informazioni del datasheet, inclusi pinout, funzione del pin 11 M/SS e soglia ON circa >= 8.5 V.",
+        "Propone controlli pratici validi: misura VP su pin 10, continuità delle masse, tensione su M/SS, verifica speaker e corti sulle uscite.",
+        "Individua correttamente che l'assenza di audio può dipendere da alimentazione, mute/stand-by, ingresso audio o uscita/speaker."
+      ],
+      "short_explanation": "La risposta è utile come checklist diagnostica generale e usa abbastanza bene pinout e soglie del datasheet. Tuttavia la diagnosi principale è debole: concentra la causa su un presunto errore VP/BS/MSS non dimostrato e in parte incompatibile con lo schema reale, dove i pin 6, 8 e 10 sono collegati al nodo positivo. Inoltre interpreta confusamente il pin 11 e introduce dettagli sui condensatori di bootstrap non supportati dall'estratto fornito. Le verifiche pratiche su VP, M/SS, ingressi e speaker restano comunque corrette e utili."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic7",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic7\\results_json\\ic7_gpt-5.4-mini_20260514_182602.txt",
+      "model_under_test": "gpt-5.4-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 34.834,
+      "timestamp": "2026-05-14 18:36:04",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8902, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1892, output_tokens_details=OutputTokensDetails(reasoning_tokens=891), total_tokens=10794)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 17,
+      "max_score": 21,
+      "normalized_score": 0.8095,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Assenza o tensione insufficiente su pin 10 VP rispetto a massa",
+        "Pin 11 M/SS non portato allo stato ON, quindi amplificatore in mute o stand-by",
+        "Segnale audio assente o non correttamente accoppiato agli ingressi tramite C1",
+        "Problemi di continuità o cortocircuiti sulle uscite pin 5 e pin 9 o sullo speaker",
+        "Masse pin 3 e pin 7 non correttamente collegate"
+      ],
+      "model_primary_cause": "Problema di alimentazione/cablaggio sul nodo superiore del TDA1516BQ, con possibile assenza di alimentazione su pin 10 e sospetto collegamento errato di bootstrap, VP e mute/stand-by",
+      "major_errors": [
+        "Considera molto sospetto il collegamento dei pin bootstrap 6 e 8 allo stesso nodo di VP, ma nello schema reale fornito tale collegamento è presente; il datasheet estratto non fornisce abbastanza supporto per dichiararlo sicuramente errato.",
+        "Descrive il nodo superiore come commistione problematica tra VP, bootstrap e controllo mute/stand-by, mentre il collegamento del pin 11 a VP tramite switch è coerente con la necessità di portare M/SS nello stato ON.",
+        "Mette tra le cause principali un possibile errore sui pin bootstrap, che è meno supportato rispetto a controlli fondamentali come tensione su pin 10, stato del pin 11 e presenza del segnale d'ingresso."
+      ],
+      "hallucinations": [
+        "L'affermazione che i pin 6 e 8 non dovrebbero essere semplicemente collegati a VP e tra loro è non sufficientemente supportata dall'estratto datasheet e contraddetta dallo schema visibile.",
+        "La formulazione secondo cui pin 10, 6, 8 e 11 sarebbero intrecciati sullo stesso nodo è parzialmente imprecisa: il pin 11 è collegato tramite switch, non direttamente nello stesso nodo fisso."
+      ],
+      "missed_important_points": [
+        "Non evidenzia con sufficiente priorità che, se il pin 11 è collegato tramite switch chiuso al nodo positivo, la condizione ON dovrebbe essere soddisfatta solo se tale nodo è realmente a tensione adeguata.",
+        "Non distingue chiaramente tra difetto reale del circuito e possibile omissione del generatore di alimentazione nel JSON.",
+        "Non menziona esplicitamente le soglie numeriche del pin 11, in particolare ON circa >= 8.5 V."
+      ],
+      "strengths": [
+        "Riconosce correttamente la configurazione BTL del TDA1516BQ.",
+        "Identifica correttamente speaker tra pin 5 e pin 9 e masse sui pin 3 e 7.",
+        "Usa bene il JSON per tracciare i nodi e i collegamenti principali.",
+        "Propone controlli pratici utili: misura di VP su pin 10, misura del pin 11, verifica ingresso audio e verifica delle uscite.",
+        "La diagnosi di possibile mancata alimentazione su pin 10 è coerente con il JSON, che non mostra una sorgente positiva esplicita."
+      ],
+      "short_explanation": "La risposta è utile e ben strutturata: capisce il circuito BTL, usa correttamente molti pin del datasheet e propone misure diagnostiche concrete. La causa principale dell'assenza di alimentazione su pin 10 è ragionevole guardando il JSON, che non esplicita una sorgente positiva. Tuttavia sovrastima e probabilmente interpreta male il collegamento dei pin bootstrap 6 e 8 al nodo di alimentazione, che nello schema reale appare intenzionale; inoltre tratta il collegamento del pin 11 tramite switch al positivo come sospetto, mentre è proprio il modo per portare l'amplificatore in ON. Per questo la valutazione è positiva ma solo parziale."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic7",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic7\\results_json\\ic7_gpt-5.4-nano_20260514_182444.txt",
+      "model_under_test": "gpt-5.4-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 25.828,
+      "timestamp": "2026-05-14 18:36:30",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8961, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1464, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10425)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 1,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 11,
+      "max_score": 21,
+      "normalized_score": 0.5238095238,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non nello stato ON, quindi amplificatore in mute o stand-by",
+        "Assenza o tensione insufficiente su pin 10 VP",
+        "Segnale audio assente o non correttamente accoppiato agli ingressi",
+        "Problemi di massa sui pin 3 o 7",
+        "Speaker o uscite pin 5/pin 9 interrotti, in corto o collegati male"
+      ],
+      "model_primary_cause": "Pin 10 VP dell'amplificatore non collegato o alimentazione assente",
+      "major_errors": [
+        "Ha affermato che il pin 10 non compare collegato ad alcuna rete nel graph, ma nel JSON integrated_circuit11.1_top_3 è collegato alla stessa rete di pin 6, pin 8, condensatori di filtro e switch25.1_t1.",
+        "Non ha valorizzato correttamente lo stato dello switch indicato come closed: con switch chiuso il pin 11 è collegato alla stessa rete del pin 10, quindi la causa mute/stand-by è da verificare ma non è la più fortemente supportata dal JSON.",
+        "Ha trattato l'ingresso audio come quasi assente, mentre il JSON mostra un terminale esterno tramite condensatore di accoppiamento verso i pin 2/13; l'assenza di una sorgente esplicita è normale per un terminale di ingresso."
+      ],
+      "hallucinations": [
+        "Interpretazione del pin 10 come non collegato, contraddetta dal graph.",
+        "Sospetto forte sui bootstrap pin 6 e 8 come cortocircuitati o errati senza sufficiente supporto dal datasheet fornito; nello schema reale sono sulla rete di alimentazione.",
+        "Confusione nel commento sugli ingressi: accenna erroneamente che il pin 4 sarebbe INV, mentre il datasheet fornito indica pin 4 come Vref e pin 2 come INV."
+      ],
+      "missed_important_points": [
+        "Non ha riconosciuto che la rete pin 10, condensatori C2/C3 e switch rappresenta verosimilmente la linea positiva di alimentazione, anche se nel JSON non è etichettata come 12 V.",
+        "Non ha dato priorità alla misura del pin 11 come causa principale condizionata dallo stato effettivo dello switch e dalla tensione ON >= 8.5 V.",
+        "Non ha distinto abbastanza tra difetti realmente supportati dal JSON e semplici limiti di rappresentazione dovuti ai terminali esterni."
+      ],
+      "strengths": [
+        "Ha identificato correttamente il TDA1516BQ in configurazione BTL.",
+        "Ha verificato correttamente che lo speaker è collegato tra pin 5 e pin 9 e non verso massa.",
+        "Ha riconosciuto correttamente la presenza delle masse sui pin 3 e 7.",
+        "Ha proposto controlli pratici utili: tensione su pin 10, tensione su pin 11, continuità masse, presenza del segnale audio, controlli su speaker e corti in uscita."
+      ],
+      "short_explanation": "La risposta è utile e contiene vari controlli diagnostici corretti, ma la diagnosi principale è basata su una lettura errata del JSON: il pin 10 non è isolato, bensì collegato alla rete dei condensatori e dello switch. Inoltre lo switch è indicato chiuso, quindi il pin 11 potrebbe essere portato alla rete di alimentazione. Alcune osservazioni sugli ingressi e sui bootstrap sono eccessivamente speculative. Nel complesso è una risposta parzialmente corretta ma con priorità diagnostica non affidabile."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic7",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic7\\results_json\\ic7_gpt-5.4_20260514_182709.txt",
+      "model_under_test": "gpt-5.4",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 34.15,
+      "timestamp": "2026-05-14 18:37:05",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9983, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1863, output_tokens_details=OutputTokensDetails(reasoning_tokens=830), total_tokens=11846)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 14,
+      "max_score": 21,
+      "normalized_score": 0.6666666667,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": false,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non nello stato ON, ad esempio switch S1 aperto o tensione su pin 11 insufficiente",
+        "Assenza o valore errato della tensione VP sul pin 10 rispetto a massa",
+        "Segnale audio non presente o non correttamente accoppiato all'ingresso",
+        "Problemi di massa sui pin 3 e 7",
+        "Speaker o collegamenti tra pin 5 e pin 9 interrotti"
+      ],
+      "model_primary_cause": "Alimentazione positiva del TDA1516BQ probabilmente assente o non realmente collegata al pin 10 VP",
+      "major_errors": [
+        "Ha dato priorità alla presunta assenza di alimentazione perché nel JSON non compare un terminale di alimentazione, ma nello schema reale il nodo superiore è chiaramente la linea 12 V DC collegata al pin 10.",
+        "Ha considerato fortemente sospetto il collegamento dei pin 6 e 8 bootstrap al nodo VP, ma questo collegamento è presente nello schema fornito e non è indicato come difetto dal datasheet estratto.",
+        "Ha classificato come anomala la rete di ingresso con pin 1 collegato a Vref e segnale su pin 2/pin 13, ma questa topologia corrisponde allo schema mostrato e non è dimostrata errata dalle fonti disponibili.",
+        "Ha messo solo al quinto posto il controllo del pin M/SS, che è una causa primaria di assenza audio secondo il datasheet e, nello schema, dipende direttamente dallo switch S1."
+      ],
+      "hallucinations": [
+        "L'affermazione che i pin bootstrap 6 e 8 non dovrebbero essere collegati a VP è basata su una generalizzazione non supportata dall'estratto datasheet fornito.",
+        "L'interpretazione della rete di ingresso come verosimilmente errata è non supportata, dato che corrisponde allo schema applicativo mostrato.",
+        "La separazione tra gnd9.1 e gnd9.2 nel grafo è trattata come possibile difetto critico, mentre nello schema i simboli di massa rappresentano lo stesso riferimento; resta un controllo utile ma non una causa fortemente supportata."
+      ],
+      "missed_important_points": [
+        "Non ha dato sufficiente priorità alla misura della tensione su pin 11 M/SS rispetto alle soglie ON/mute/stand-by.",
+        "Non ha evidenziato abbastanza che lo switch S1 è il comando diretto di abilitazione e che, se aperto o se non porta il pin 11 sopra circa 8.5 V, l'amplificatore resta muto.",
+        "Non ha distinto chiaramente tra difetti reali supportati dallo schema e possibili artefatti/limiti dell'estrazione JSON, come l'assenza del terminale 12 V nel grafo."
+      ],
+      "strengths": [
+        "Riconosce correttamente la configurazione BTL e il collegamento dello speaker tra pin 5 e pin 9.",
+        "Identifica correttamente i pin principali del TDA1516BQ: VP, GND, M/SS, OUT1 e OUT2.",
+        "Propone controlli pratici validi: misura di VP, continuità masse, tensione su M/SS, controllo speaker e segnale d'ingresso.",
+        "Usa in modo dettagliato il grafo JSON e cita i nodi/componenti specifici."
+      ],
+      "short_explanation": "La risposta è utile e ben strutturata, con buona comprensione generale del TDA1516BQ in BTL e controlli pratici pertinenti. Tuttavia la priorità diagnostica non è ottimale: la causa più critica per assenza audio è il pin 11 M/SS non in stato ON, mentre il modello la relega in basso. Inoltre segnala come probabili difetti alcuni collegamenti che nello schema reale sono presenti come parte del circuito, in particolare bootstrap verso VP e rete d'ingresso. La diagnosi è quindi parzialmente corretta ma contiene inferenze non sufficientemente supportate."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic7",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic7\\results_json_img\\ic7_gpt-4.1-mini_20260514_182812.txt",
+      "model_under_test": "gpt-4.1-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 26.773,
+      "timestamp": "2026-05-14 18:37:31",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8285, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1387, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=9672)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 18,
+      "max_score": 21,
+      "normalized_score": 0.8571428571428571,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non nello stato ON, quindi amplificatore in mute o stand-by",
+        "Alimentazione assente o errata sul pin 10",
+        "Massa assente o difettosa sui pin 3 e/o 7",
+        "Speaker non collegato correttamente tra OUT1 pin 5 e OUT2 pin 9, guasto o uscita in corto",
+        "Segnale audio assente o non correttamente accoppiato agli ingressi tramite condensatore"
+      ],
+      "model_primary_cause": "Pin 11 M/SS in mute o stand-by per switch S1 aperto o tensione ON insufficiente",
+      "major_errors": [
+        "Il modello afferma che l'ingresso audio arriva al pin 1 tramite C1, mentre da JSON e immagine C1 è collegato alla rete dei pin 2 e 13; il pin 1 è collegato al pin 4.",
+        "Non considera che nel JSON lo switch S1 risulta chiuso, quindi la causa 'S1 aperto' è meno supportata topologicamente, anche se resta un controllo diagnostico valido."
+      ],
+      "hallucinations": [
+        "Collegamento C1 verso pin 1 non supportato da JSON/immagine.",
+        "Identificazione dei valori C1, C2, C3 e 12 V è supportata dall'immagine ma non dal JSON; non è grave perché il modello aveva anche l'immagine."
+      ],
+      "missed_important_points": [
+        "Avrebbe dovuto evidenziare con maggiore precisione la reale rete di ingresso: pin 2 e pin 13 collegati insieme e al lato negativo di C1, pin 1 collegato a Vref/pin 4.",
+        "Avrebbe potuto notare che il pin 11 è collegato allo stesso nodo di alimentazione tramite switch chiuso nel JSON, quindi una mancata abilitazione richiederebbe guasto dello switch, alimentazione assente o discrepanza reale rispetto allo schema."
+      ],
+      "strengths": [
+        "Comprende correttamente che il circuito è un amplificatore BTL con TDA1516BQ e speaker tra pin 5 e pin 9.",
+        "Usa correttamente le funzioni principali dei pin da datasheet: pin 10 alimentazione, pin 3 e 7 massa, pin 11 mute/stand-by, pin 5 e 9 uscite.",
+        "Propone controlli pratici sensati: tensione pin 11, tensione pin 10, continuità masse, verifica speaker, presenza segnale in ingresso, corti sulle uscite.",
+        "La priorità data al pin M/SS è tecnicamente plausibile per un sintomo di assenza totale di audio.",
+        "Non inventa difetti radicalmente incompatibili con il circuito."
+      ],
+      "short_explanation": "La risposta è complessivamente valida e diagnostica: identifica le cause principali compatibili con il datasheet e propone misure utili. Il limite maggiore è una lettura errata della rete di ingresso, perché C1 non va al pin 1 ma ai pin 2/13, mentre pin 1 è collegato al pin 4. Inoltre dà massima priorità allo switch S1 aperto pur essendo indicato chiuso nel JSON, anche se il controllo del pin 11 resta corretto e importante."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic7",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic7\\results_json_img\\ic7_gpt-4.1-nano_20260514_182836.txt",
+      "model_under_test": "gpt-4.1-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 28.165,
+      "timestamp": "2026-05-14 18:38:00",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8354, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1566, output_tokens_details=OutputTokensDetails(reasoning_tokens=657), total_tokens=9920)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 17,
+      "max_score": 21,
+      "normalized_score": 0.8095,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non effettivamente in stato ON o switch/rete di controllo difettosa",
+        "Alimentazione VP assente o insufficiente sul pin 10",
+        "Massa mancante o cattiva continuità sui pin 3 e 7",
+        "Segnale audio assente o non accoppiato correttamente tramite C1 agli ingressi",
+        "Problema sullo speaker o sulle connessioni tra pin 5 e pin 9",
+        "Cortocircuito sulle uscite OUT1/OUT2 verso massa o alimentazione"
+      ],
+      "model_primary_cause": "Pin 11 M/SS non in stato ON, con amplificatore in mute o stand-by",
+      "major_errors": [
+        "Non valorizza abbastanza il fatto che nel JSON e nello schema lo switch risulta chiuso e collega il pin 11 alla linea positiva, quindi il M/SS appare già predisposto per ON se l'alimentazione è presente.",
+        "Presenta alcune cause di cablaggio come probabili senza distinguere chiaramente tra errori supportati dallo schema e guasti fisici da verificare sul circuito reale."
+      ],
+      "hallucinations": [
+        "Descrive inizialmente 'condensatori di accoppiamento' al plurale, mentre lo schema/JSON mostra un solo condensatore di ingresso C1.",
+        "La frase secondo cui le uscite OUT1 e OUT2 'devono essere collegate tra loro' è imprecisa: devono essere collegate ai due capi dello speaker, non cortocircuitate tra loro."
+      ],
+      "missed_important_points": [
+        "Non evidenzia esplicitamente che lo schema mostra già lo speaker correttamente collegato in BTL tra pin 5 e pin 9 e non verso GND.",
+        "Non evidenzia esplicitamente che pin 10, pin 6 e pin 8 sono sul nodo positivo nel JSON/schema, e che pin 3 e pin 7 sono collegati a masse distinte ma entrambe indicate come GND.",
+        "Non suggerisce in modo esplicito di misurare eventuali cortocircuiti delle uscite pin 5 e pin 9 verso VP oltre che verso GND."
+      ],
+      "strengths": [
+        "Comprende correttamente che il TDA1516BQ è usato in configurazione BTL.",
+        "Usa correttamente il pinout principale del datasheet: VP pin 10, GND pin 3/7, M/SS pin 11, OUT1/OUT2 pin 5/9.",
+        "Indica correttamente la soglia ON del pin 11 intorno a 8.5 V.",
+        "Propone controlli pratici utili: misura di VP, misura di M/SS, continuità masse, verifica speaker e verifica segnale in ingresso.",
+        "Non sostiene erroneamente che lo speaker debba essere collegato a massa."
+      ],
+      "short_explanation": "La risposta è tecnicamente utile e in gran parte coerente con datasheet, JSON e immagine. Identifica correttamente le verifiche principali per un TDA1516BQ BTL senza audio. Tuttavia la priorità non è perfetta perché lo schema/JSON mostrano già pin 11 collegato al positivo tramite switch chiuso, speaker tra pin 5 e pin 9 e masse presenti; quindi avrebbe dovuto distinguere meglio tra difetti probabili sul circuito reale e errori di schema. Presenta anche piccole imprecisioni terminologiche sulle uscite e sull'ingresso."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic7",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic7\\results_json_img\\ic7_gpt-4o-mini_20260514_182739.txt",
+      "model_under_test": "gpt-4o-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 28.712,
+      "timestamp": "2026-05-14 18:38:28",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8229, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1550, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=9779)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 15,
+      "max_score": 21,
+      "normalized_score": 0.7142857142857143,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non effettivamente in stato ON se lo switch S1 o il collegamento verso VP non funzionano",
+        "Assenza o insufficienza della tensione di alimentazione su pin 10 rispetto a GND",
+        "Segnale audio assente o non correttamente accoppiato tramite C1 verso gli ingressi pin 2/pin 13",
+        "Problemi sullo speaker o sui collegamenti tra OUT1 pin 5 e OUT2 pin 9",
+        "Cortocircuiti delle uscite pin 5/pin 9 verso massa o alimentazione",
+        "Masse pin 3 e pin 7 non realmente continue verso GND"
+      ],
+      "model_primary_cause": "Alimentazione assente o insufficiente su pin 10",
+      "major_errors": [
+        "La priorità delle cause è generica e non sfrutta bene l'evidenza dello schema/JSON: lo speaker risulta correttamente collegato tra pin 5 e pin 9, le masse sono presenti e il pin 11 risulta collegato a VP tramite switch chiuso.",
+        "Indica principalmente il pin 13 come ingresso audio, ma nel circuito JSON/immagine il segnale dopo C1 è collegato al nodo comune dei pin 2 e 13; la descrizione è quindi incompleta.",
+        "Non evidenzia che il pin 11, con S1 chiuso, dovrebbe essere già nello stato ON, quindi un guasto su questo ramo sarebbe più legato a switch aperto/difettoso o mancata VP, non alla normale topologia."
+      ],
+      "hallucinations": [
+        "Chiama lo speaker K1 e lo switch S1, nomi visibili nell'immagine ma non nel JSON; accettabile dato che il modello aveva anche l'immagine.",
+        "Afferma che i nomi e valori dei componenti sembrano corretti senza discutere eventuali particolarità topologiche, come pin 6 e 8 collegati al nodo VP nello schema.",
+        "Usa formulazioni imprecise come 'TDA1516BQ: ponti tra i pin di ingresso audio e le uscite' e 'Pin C1', tecnicamente poco rigorose."
+      ],
+      "missed_important_points": [
+        "Non distingue bene tra cause supportate dallo schema e controlli generici.",
+        "Non sottolinea che in BTL lo speaker è già correttamente tra pin 5 e pin 9, quindi il collegamento speaker errato è meno probabile salvo guasto fisico o cablaggio reale difettoso.",
+        "Non considera esplicitamente che lo switch è indicato come chiuso nel JSON, quindi il mute/standby dovrebbe essere disattivato se VP è presente.",
+        "Non cita la verifica del ritorno audio a massa/terminali di ingresso come parte del percorso del segnale."
+      ],
+      "strengths": [
+        "Comprende correttamente che il TDA1516BQ è usato in configurazione BTL per pilotare uno speaker da 4 ohm.",
+        "Identifica correttamente i controlli principali: VP su pin 10, masse pin 3 e 7, pin 11 M/SS, speaker tra pin 5 e pin 9, segnale di ingresso e corti sulle uscite.",
+        "Usa correttamente la soglia ON del pin 11, pari a circa almeno 8.5 V.",
+        "Le verifiche pratiche proposte sono realistiche e utili per un troubleshooting di base."
+      ],
+      "short_explanation": "La risposta è utile e tecnicamente in gran parte coerente con datasheet e schema, ma rimane abbastanza generica e non prioritizza bene le cause in base alle evidenze del JSON/immagine. In particolare, lo switch del mute risulta chiuso verso VP e lo speaker è correttamente tra pin 5 e pin 9, quindi alcune cause elencate sono più controlli generici che cause probabili. Ci sono anche piccole imprecisioni sugli ingressi audio e formulazioni poco rigorose, ma i controlli diagnostici principali sono corretti."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic7",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic7\\results_json_img\\ic7_gpt-5-mini_20260514_183014.txt",
+      "model_under_test": "gpt-5-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 26.65,
+      "timestamp": "2026-05-14 18:38:55",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9127, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1482, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10609)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 14,
+      "max_score": 21,
+      "normalized_score": 0.6666666667,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non portato allo stato ON o switch/rete di mute-standby non efficace",
+        "Alimentazione assente o insufficiente sul pin 10 VP",
+        "Massa mancante o cattiva sui pin 3 e 7",
+        "Segnale audio assente o non accoppiato correttamente agli ingressi tramite C1",
+        "Speaker o collegamenti di uscita pin 5-pin 9 interrotti o in corto"
+      ],
+      "model_primary_cause": "Ingressi e Vref cortocircuitati o collegati in modo errato, in particolare pin1-pin4 e pin2-pin13",
+      "major_errors": [
+        "Ha trattato come probabile guasto principale i collegamenti pin1-pin4 e pin2-pin13, che risultano anche nello schema immagine e non sono necessariamente un difetto accidentale supportato dal problema.",
+        "Ha dato priorità a presunti cortocircuiti sugli ingressi rispetto a controlli più fondamentali e direttamente supportati dal datasheet, come M/SS, VP, masse e presenza del segnale audio.",
+        "Ha interpretato il condensatore C1 come possibile elettrolitico/polarizzato montato male principalmente perché nel JSON è classificato come Polarized_Capacitor, mentre nell'immagine è indicato 220 nF e appare come condensatore non polarizzato."
+      ],
+      "hallucinations": [
+        "Ipotesi di elettrolitico polarizzato errato per C1 non supportata dall'immagine, che mostra C1 da 220 nF non polarizzato.",
+        "Indicazione che pin1-pin4 e pin2-pin13 siano verosimilmente ponti o cortocircuiti accidentali, mentre sono tracciati nello schema fornito.",
+        "Discussione dei bootstrap come difetto probabile con reti mancanti o scorrette senza un chiaro supporto dal datasheet estratto o dal sintomo specifico."
+      ],
+      "missed_important_points": [
+        "Non ha enfatizzato abbastanza che lo switch S1 chiuso dovrebbe portare pin 11 verso il rail positivo, ma la misura reale del pin 11 resta uno dei controlli primari.",
+        "Non ha indicato come causa primaria semplice l'assenza del segnale audio all'ingresso o un problema della sorgente audio, pur menzionandolo nei controlli.",
+        "Non ha dato priorità sufficiente a VP su pin 10 e alle masse pin 3/pin 7 come verifiche iniziali."
+      ],
+      "strengths": [
+        "Comprende correttamente che il TDA1516BQ è usato in configurazione BTL con speaker tra pin 5 e pin 9.",
+        "Usa correttamente le soglie del pin M/SS e propone di misurare pin 11 rispetto a massa.",
+        "Propone controlli pratici utili su alimentazione, masse, speaker, uscite e segnale d'ingresso.",
+        "Riconosce correttamente che lo speaker non risulta collegato a massa nel JSON e che il collegamento pin5-pin9 è coerente con BTL."
+      ],
+      "short_explanation": "La risposta è utile e contiene molti controlli diagnostici corretti, soprattutto su M/SS, alimentazione, masse e speaker. Tuttavia la diagnosi principale è poco convincente: considera guasti probabili i collegamenti pin1-pin4 e pin2-pin13, che sono presenti anche nello schema fornito e non sono dimostrati come difetti. Inoltre enfatizza un presunto problema di polarizzazione di C1 basandosi sul JSON, mentre l'immagine mostra un 220 nF non polarizzato. La priorità delle cause è quindi non ottimale, anche se la risposta rimane parzialmente valida grazie ai controlli pratici proposti."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic7",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic7\\results_json_img\\ic7_gpt-5-nano_20260514_182924.txt",
+      "model_under_test": "gpt-5-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 23.857,
+      "timestamp": "2026-05-14 18:39:19",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9658, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1333, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10991)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 18,
+      "max_score": 21,
+      "normalized_score": 0.8571428571428571,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non nello stato ON, quindi amplificatore in mute o stand-by",
+        "Assenza, tensione insufficiente o instabilità dell'alimentazione sul pin 10 VP",
+        "Mancanza del segnale audio in ingresso o problema sul condensatore di accoppiamento C1/rete di ingresso",
+        "Speaker o collegamenti di uscita pin 5-pin 9 difettosi, aperti o in corto verso GND/VP",
+        "Masse pin 3 e pin 7 non correttamente collegate"
+      ],
+      "model_primary_cause": "Mute/Stand-by non attivo: pin 11 M/SS non nello stato ON",
+      "major_errors": [
+        "Non valorizza abbastanza il fatto che nel JSON lo switch risulta chiuso e collega il pin 11 alla rete di alimentazione, quindi M/SS dovrebbe essere ON se VP è presente; ciò rende la priorità della causa M/SS meno fortemente supportata dai dati topologici.",
+        "Descrive in modo un po' impreciso gli ingressi audio, citando pin 1 e/o pin 13 tramite condensatore, mentre nello schema/JSON C1 arriva alla rete dei pin 2 e 13 e il pin 1 è collegato al pin 4/Vref."
+      ],
+      "hallucinations": [
+        "Riferimento poco chiaro a C2 tra VP e '+e-inline', termine non presente nelle fonti.",
+        "Citazione di chassis/loop di massa come possibile causa, plausibile in generale ma non supportata specificamente da JSON, immagine o datasheet forniti."
+      ],
+      "missed_important_points": [
+        "Avrebbe potuto evidenziare più chiaramente che, dato lo switch chiuso nel JSON, la misura del pin 11 va interpretata insieme alla presenza di VP: se pin 10 è alimentato e S1 è davvero chiuso, M/SS dovrebbe essere alto.",
+        "Non distingue con precisione la rete di ingresso reale: C1 verso pin 2/13 e pin 1 collegato a Vref/pin 4 secondo JSON e immagine."
+      ],
+      "strengths": [
+        "Comprende correttamente la configurazione BTL del TDA1516BQ e il collegamento dello speaker tra OUT1 pin 5 e OUT2 pin 9.",
+        "Usa correttamente le soglie del pin M/SS e il range operativo di VP dal datasheet.",
+        "Propone controlli pratici pertinenti: misura di VP, misura di M/SS, continuità masse, verifica speaker e corti sulle uscite, verifica segnale d'ingresso.",
+        "Integra in modo generalmente coerente JSON, immagine e datasheet, senza sostenere che lo speaker sia erroneamente collegato a massa.",
+        "La diagnosi è complessivamente utile e tecnicamente coerente con il sintomo di assenza audio."
+      ],
+      "short_explanation": "Risposta complessivamente solida: identifica correttamente TDA1516BQ in BTL, pin principali, soglie M/SS, alimentazione, uscite e controlli diagnostici. La causa principale proposta, M/SS non ON, è tecnicamente valida e molto rilevante, anche se nel JSON lo switch risulta chiuso verso VP e quindi avrebbe dovuto ridurre leggermente la priorità di questa ipotesi rispetto a verificare alimentazione e ingresso. Presenti alcune imprecisioni sulla rete di ingresso e qualche elemento generico non strettamente supportato, ma la risposta rimane utile e sostanzialmente corretta."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic7",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic7\\results_json_img\\ic7_gpt-5.4-mini_20260514_183118.txt",
+      "model_under_test": "gpt-5.4-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 16.392,
+      "timestamp": "2026-05-14 18:39:35",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8787, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=986, output_tokens_details=OutputTokensDetails(reasoning_tokens=443), total_tokens=9773)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 3
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9524,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non nello stato ON, quindi amplificatore in mute o stand-by",
+        "Segnale audio assente o non correttamente accoppiato agli ingressi tramite C1",
+        "Alimentazione assente o insufficiente sul pin 10",
+        "Masse pin 3 e pin 7 non correttamente collegate",
+        "Speaker o collegamenti BTL tra pin 5 e pin 9 aperti, errati o in corto"
+      ],
+      "model_primary_cause": "Pin 11 M/SS non realmente in stato ON",
+      "major_errors": [],
+      "hallucinations": [],
+      "missed_important_points": [],
+      "strengths": [
+        "Identifica correttamente il circuito come amplificatore mono BTL con TDA1516BQ.",
+        "Usa correttamente il datasheet per pinout, soglie del pin M/SS, alimentazione, masse e uscite BTL.",
+        "Confronta in modo coerente JSON e immagine sui collegamenti principali.",
+        "Propone cause diagnostiche tecnicamente plausibili e ben ordinate.",
+        "Fornisce controlli pratici utili: misura del pin 11, pin 10, continuità masse, ingresso audio e uscite.",
+        "Non attribuisce erroneamente lo speaker a massa e riconosce correttamente il collegamento tra pin 5 e pin 9."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida: comprende correttamente la configurazione BTL, usa bene datasheet, JSON e immagine, e propone controlli realistici. La priorità al pin 11 è plausibile anche se il JSON indica lo switch chiuso, quindi la priorità non è perfettamente vincolata all'evidenza strutturata; tuttavia resta una causa primaria corretta per il sintomo."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic7",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic7\\results_json_img\\ic7_gpt-5.4-nano_20260514_183039.txt",
+      "model_under_test": "gpt-5.4-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 24.854,
+      "timestamp": "2026-05-14 18:40:00",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9230, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1373, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10603)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 17,
+      "max_score": 21,
+      "normalized_score": 0.8095238095238095,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Pin 11 M/SS non portato allo stato ON, quindi amplificatore in mute o stand-by",
+        "Pin 10 VP non alimentato correttamente o alimentazione assente",
+        "Segnale audio non presente o non accoppiato correttamente agli ingressi tramite C1",
+        "Problema sullo speaker o sui collegamenti BTL tra pin 5 e pin 9",
+        "Masse pin 3 e pin 7 non correttamente riferite a GND"
+      ],
+      "model_primary_cause": "Pin 11 M/SS non in stato ON, quindi amplificatore in mute/stand-by",
+      "major_errors": [
+        "Afferma che il JSON non mostra alcun collegamento al pin 10, ma nel grafo il pin 10 è collegato alla stessa rete dei pin 6, 8, dei condensatori di alimentazione e dello switch; manca semmai un terminale esplicito di alimentazione etichettato.",
+        "Descrive in modo impreciso il collegamento JSON del pin 11: il grafo mostra pin 11 collegato allo switch, e lo switch risulta chiuso con confidenza 0.75, quindi la diagnosi di M/SS non ON è plausibile come controllo ma non fortemente supportata dal JSON."
+      ],
+      "hallucinations": [
+        "La dichiarazione che il JSON non contenga collegamenti realistici del pin 11 è esagerata rispetto al grafo fornito.",
+        "La dichiarazione che il JSON non mostri alcun collegamento al pin 10 è tecnicamente inesatta."
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che nel JSON pin 3 e pin 7 sono su due reti GND separate, anche se nello schema reale i simboli di massa possono rappresentare la stessa massa comune.",
+        "Non discute il fatto che nel JSON pin 6, pin 8 e pin 10 risultano tutti sulla stessa rete di alimentazione, aspetto potenzialmente sospetto per i pin bootstrap, anche se il datasheet estratto non fornisce dettagli sufficienti per considerarlo causa primaria."
+      ],
+      "strengths": [
+        "Comprende correttamente che il TDA1516BQ è usato in configurazione BTL.",
+        "Identifica correttamente lo speaker collegato tra OUT1 pin 5 e OUT2 pin 9.",
+        "Usa correttamente le soglie del pin M/SS dal datasheet.",
+        "Propone controlli pratici utili: misura di VP, misura di M/SS, verifica dello speaker, verifica del segnale di ingresso e controllo corti sulle uscite.",
+        "Ordina le cause in modo generalmente utile per un troubleshooting reale."
+      ],
+      "short_explanation": "La risposta è tecnicamente utile e identifica correttamente le cause principali da verificare per assenza audio: M/SS non ON, alimentazione VP, ingresso audio e collegamento BTL dello speaker. Usa bene il datasheet e propone misure pratiche pertinenti. Tuttavia interpreta in modo non del tutto corretto il JSON, soprattutto sul pin 10 e sul pin 11, che risultano comunque collegati alla rete di alimentazione tramite lo switch nel grafo. Per questo la valutazione è alta ma non perfetta."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic7",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic7\\results_json_img\\ic7_gpt-5.4_20260514_183218.txt",
+      "model_under_test": "gpt-5.4",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 28.217,
+      "timestamp": "2026-05-14 18:40:28",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9851, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1552, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=11403)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 17,
+      "max_score": 21,
+      "normalized_score": 0.8095238095238095,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": false,
+      "expected_primary_causes": [
+        "Collegamento sospetto/errato dei pin bootstrap 6 e 8 direttamente al rail positivo insieme al pin 10",
+        "Collegamento anomalo tra pin 1 input 1 e pin 4 Vref",
+        "Possibile configurazione di ingresso non corretta con pin 2 e pin 13 uniti e pilotati da C1",
+        "Pin 11 M/SS non realmente in stato ON nel circuito fisico",
+        "Assenza reale di alimentazione o massa, oppure segnale audio assente all'ingresso"
+      ],
+      "model_primary_cause": "Pin 11 M/SS non portato realmente allo stato ON per problema di switch S1 o alimentazione al comando",
+      "major_errors": [
+        "La priorità diagnostica è poco ottimale: il modello mette al primo posto cause generiche come mute, alimentazione e ingresso, mentre dal JSON e dall'immagine le evidenze strutturali più forti sono i collegamenti anomali dei pin 6/8 bootstrap al +12 V e pin 1 con pin 4.",
+        "Considera molto probabile un problema del pin 11 anche se nello schema/JSON lo switch risulta chiuso e collega il pin 11 al rail positivo; resta un controllo utile, ma non è la causa più supportata dalla topologia fornita."
+      ],
+      "hallucinations": [
+        "Assume esplicitamente alimentazione a 12 V DC: è visibile nell'immagine, ma nel JSON non è codificato come valore numerico; comunque è supportato dall'immagine ricevuta.",
+        "Alcune affermazioni sugli effetti dei pin bootstrap collegati al +12 V, come protezione interna o assenza uscita, sono plausibili ma non direttamente dimostrate dall'estratto datasheet fornito."
+      ],
+      "missed_important_points": [
+        "Avrebbe dovuto dare maggiore peso, come cause primarie, alle anomalie topologiche presenti nello schema: pin 6, pin 8 e pin 10 sulla stessa rete di alimentazione.",
+        "Avrebbe dovuto trattare il collegamento pin 1-pin 4 come possibile causa principale anziché secondaria, dato che pin 4 è Vref e pin 1 è input 1 secondo il datasheet.",
+        "Non evidenzia abbastanza che, secondo JSON e immagine, alimentazione, masse, speaker BTL e pin 11 risultano formalmente collegati in modo compatibile, quindi le cause generiche sono meno supportate rispetto agli errori di schema."
+      ],
+      "strengths": [
+        "Comprende correttamente che il circuito è un amplificatore mono BTL con TDA1516BQ e speaker da 4 ohm tra OUT1 e OUT2.",
+        "Usa correttamente il datasheet per identificare pin 10 come VP, pin 3 e 7 come masse, pin 5 e 9 come uscite, pin 11 come mute/standby e le soglie ON/mute/standby.",
+        "Verifica correttamente la coerenza tra JSON e immagine, includendo speaker non collegato a massa e ingresso tramite condensatore C1.",
+        "Individua effettivamente le anomalie più importanti dello schema, in particolare bootstrap pin 6/8 collegati al +12 V e pin 1 collegato a Vref pin 4.",
+        "Propone controlli pratici utili: misura del pin 11, alimentazione, masse, segnale prima/dopo C1, continuità speaker e corti sulle uscite."
+      ],
+      "short_explanation": "La risposta è tecnicamente ricca e in gran parte corretta: capisce il circuito, usa bene datasheet, JSON e immagine, e propone verifiche pratiche valide. Tuttavia la diagnosi principale è prioritizzata male: mette al primo posto mute, alimentazione e ingresso, che nello schema risultano formalmente collegati, mentre le evidenze più forti sono i collegamenti anomali dei pin bootstrap 6/8 al +12 V e del pin 1 con Vref pin 4. Per questo la valutazione è positiva ma solo parziale."
+    }
+  }
+]

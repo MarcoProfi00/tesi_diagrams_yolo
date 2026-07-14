@@ -1,0 +1,62 @@
+{
+  "metadata": {
+    "circuit_id": "a05",
+    "batch": "A",
+    "batch_dir": "batchA",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\images\\a05.png",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchA\\json\\a05.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "a05.png",
+    "json_file": "a05.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-05 17:50:25",
+    "judge_latency_seconds": 14.194,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=11864, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=761, output_tokens_details=OutputTokensDetails(reasoning_tokens=372), total_tokens=12625)",
+  "judge_result": {
+    "circuit_id": "a05",
+    "batch": "A",
+    "image_file": "a05.png",
+    "json_file": "a05.json",
+    "image_graph_fidelity_score": 96,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 23,
+      "graph_connections": 54,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 0,
+      "minor": 1
+    },
+    "critical_errors": [],
+    "major_errors": [],
+    "minor_errors": [
+      {
+        "type": "meter_terminal_localization",
+        "description": "Il collegamento del ramo resistore->strumento e topologicamente corretto, ma nell'immagine il contatto lato ingresso del voltmetro e meno esplicito del post inferiore destro verso GND; lieve incertezza solo sull'esatta resa del terminale fisico del meter."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [],
+    "uncertain_points": [
+      "Nel voltmetro VMON il terminale verso il resistore appare collegato al lato sinistro del corpo dello strumento piu che a un post chiaramente disegnato; tuttavia la topologia visibile resta coerente con una connessione strumento-resistore.",
+      "Non e necessario fondere i tre simboli GND in un'unica net globale: il JSON li mantiene separati come nell'immagine, e questo e accettabile secondo le regole."
+    ],
+    "short_explanation": "Il campo graph e sostanzialmente fedele all'immagine: J15 pin1 va al resistore e poi al meter VMON con ritorno a GND, pin2 va al condensatore verso GND, pin3 va allo switch TEST aperto verso GND, pin4 va direttamente a GND. Nessun net fuse/split evidente e nessun collegamento inventato o mancante rilevante."
+  },
+  "raw_model_output": "{\"circuit_id\":\"a05\",\"batch\":\"A\",\"image_file\":\"a05.png\",\"json_file\":\"a05.json\",\"image_graph_fidelity_score\":96,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":23,\"graph_connections\":54,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":0,\"minor\":1},\"critical_errors\":[],\"major_errors\":[],\"minor_errors\":[{\"type\":\"meter_terminal_localization\",\"description\":\"Il collegamento del ramo resistore->strumento e topologicamente corretto, ma nell'immagine il contatto lato ingresso del voltmetro e meno esplicito del post inferiore destro verso GND; lieve incertezza solo sull'esatta resa del terminale fisico del meter.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[],\"uncertain_points\":[\"Nel voltmetro VMON il terminale verso il resistore appare collegato al lato sinistro del corpo dello strumento piu che a un post chiaramente disegnato; tuttavia la topologia visibile resta coerente con una connessione strumento-resistore.\",\"Non e necessario fondere i tre simboli GND in un'unica net globale: il JSON li mantiene separati come nell'immagine, e questo e accettabile secondo le regole.\"],\"short_explanation\":\"Il campo graph e sostanzialmente fedele all'immagine: J15 pin1 va al resistore e poi al meter VMON con ritorno a GND, pin2 va al condensatore verso GND, pin3 va allo switch TEST aperto verso GND, pin4 va direttamente a GND. Nessun net fuse/split evidente e nessun collegamento inventato o mancante rilevante.\"}"
+}

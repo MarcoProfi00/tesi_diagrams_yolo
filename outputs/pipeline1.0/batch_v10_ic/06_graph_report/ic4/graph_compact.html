@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Graph compatto ic4</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
+      color: #1f2d3a;
+    }
+    .page {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .topbar h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .links a {
+      text-decoration: none;
+      color: #144a7b;
+      background: #ffffff;
+      border: 1px solid #d8e1ea;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-weight: 600;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .summary-item {
+      background: rgba(255,255,255,0.88);
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .summary-item .k {
+      color: #5f7184;
+      font-size: 13px;
+    }
+    .summary-item .v {
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .explain-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .explain-box {
+      background: rgba(255,255,255,0.94);
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+    .explain-box h2 {
+      margin: 0 0 8px 0;
+      font-size: 16px;
+    }
+    .explain-box p {
+      margin: 0;
+      color: #526274;
+      line-height: 1.45;
+      font-size: 14px;
+    }
+    .panel-grid {
+      display: grid;
+      grid-template-columns: minmax(260px, 360px) 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+    .panel {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #d8e1ea;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 12px 24px rgba(27, 53, 82, 0.06);
+    }
+    .panel h2 {
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
+    .preview-image {
+      width: 100%;
+      display: block;
+      border-radius: 12px;
+      border: 1px solid #d8e1ea;
+      background: #fff;
+    }
+    .preview-missing {
+      min-height: 220px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      border: 1px dashed #c6d2de;
+      color: #6f8093;
+      background: #f9fbfd;
+    }
+    .graph-wrap {
+      overflow: hidden;
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      background: #f8fbff;
+      cursor: grab;
+      min-height: 720px;
+    }
+    .graph-wrap:active {
+      cursor: grabbing;
+    }
+    #graph-svg {
+      width: 100%;
+      height: 760px;
+      display: block;
+      user-select: none;
+    }
+    .node-label {
+      fill: #314457;
+      font-size: 11px;
+      font-weight: 600;
+      pointer-events: none;
+    }
+    .node-label.small {
+      font-size: 10px;
+    }
+    .legend {
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      font-size: 13px;
+      color: #55687d;
+    }
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .warning-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .warning-box {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .warning-box h3 {
+      margin: 0 0 10px 0;
+      font-size: 15px;
+    }
+    .warning-box p, .warning-box li {
+      color: #526274;
+      font-size: 13px;
+    }
+    @media (max-width: 980px) {
+      .panel-grid {
+        grid-template-columns: 1fr;
+      }
+      #graph-svg {
+        height: 600px;
+      }
+      .graph-wrap {
+        min-height: 560px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <h1>Graph compatto ic4</h1>
+      <div class="links">
+        <a href="graph.html">Vista completa HTML</a>
+        <a href="graph.png">Vista completa PNG</a>
+        <a href="ic4.json">JSON finale 05</a>
+        <a href="graph_compact.png">Compatto PNG</a>
+        <a href="../index.html">Batch index</a>
+      </div>
+    </div>
+
+    <div class="summary-grid"><div class="summary-item"><span class="k">Componenti</span><span class="v">28</span></div><div class="summary-item"><span class="k">Terminali</span><span class="v">48</span></div><div class="summary-item"><span class="k">Nodi elettrici</span><span class="v">19</span></div><div class="summary-item"><span class="k">Isolati</span><span class="v">0</span></div><div class="summary-item"><span class="k">Unmatched</span><span class="v">0</span></div><div class="summary-item"><span class="k">Suspicious</span><span class="v">0</span></div></div>
+
+    <div class="explain-grid">
+      <section class="explain-box">
+        <h2>Cosa stai guardando</h2>
+        <p>Questa e una vista topologica compatta costruita dal JSON del passo 05. I nodi verdi sono componenti. I nodi gialli sono net, cioe nodi elettrici: gruppi di terminali collegati dallo stesso filo.</p>
+      </section>
+      <section class="explain-box">
+        <h2>Come si legge</h2>
+        <p>Se due componenti arrivano alla stessa net gialla, allora sono collegati allo stesso nodo elettrico. Per esempio: <code>resistor22.1 -> net 3 <- TDA7000</code> significa che un terminale del resistore e un pin del circuito integrato condividono quel collegamento.</p>
+      </section>
+      <section class="explain-box">
+        <h2>Perche non solo componente-componente</h2>
+        <p>Mostrare la net evita ambiguita: quando tre o piu componenti sono collegati allo stesso filo, una semplice linea componente-componente farebbe sembrare tanti collegamenti separati. La net dice che in realta e un unico nodo comune.</p>
+      </section>
+    </div>
+
+    <div class="panel-grid">
+      <section class="panel">
+        <h2>Circuito</h2>
+        <img src="ic4.jpg" alt="Circuito ic4" class="preview-image">
+      </section>
+
+      <section class="panel">
+        <h2>Vista componenti/net</h2>
+        <div class="graph-wrap" id="graph-wrap"><svg id="graph-svg" viewBox="0 685.3 980 920" data-full-width="980" data-full-height="2312" xmlns="http://www.w3.org/2000/svg" aria-label="Graph"><line x1="260.0" y1="90.0" x2="760.0" y2="129.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"><title>gnd9.1 -&gt; net_1
+Terminali del componente su questa net:
+t1 (gnd9.1_t1)</title></line><line x1="260.0" y1="168.0" x2="760.0" y2="129.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"><title>resistor22.1 -&gt; net_1
+Terminali del componente su questa net:
+t1 (resistor22.1_t1)</title></line><line x1="260.0" y1="168.0" x2="760.0" y2="272.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"><title>resistor22.1 -&gt; net_2
+Terminali del componente su questa net:
+t2 (resistor22.1_t2)</title></line><line x1="260.0" y1="246.0" x2="760.0" y2="272.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"><title>resistor22.2 -&gt; net_2
+Terminali del componente su questa net:
+t1 (resistor22.2_t1)</title></line><line x1="260.0" y1="246.0" x2="760.0" y2="350.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"><title>resistor22.2 -&gt; net_3
+Terminali del componente su questa net:
+t2 (resistor22.2_t2)</title></line><line x1="260.0" y1="324.0" x2="760.0" y2="350.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"><title>gnd9.2 -&gt; net_3
+Terminali del componente su questa net:
+t1 (gnd9.2_t1)</title></line><line x1="260.0" y1="402.0" x2="760.0" y2="272.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"><title>polarized_capacitor20.1 -&gt; net_2
+Terminali del componente su questa net:
+negative (polarized_capacitor20.1_negative)</title></line><line x1="260.0" y1="402.0" x2="760.0" y2="558.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"><title>polarized_capacitor20.1 -&gt; net_4
+Terminali del componente su questa net:
+positive (polarized_capacitor20.1_positive)</title></line><line x1="260.0" y1="480.0" x2="760.0" y2="350.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"><title>resistor22.3 -&gt; net_3
+Terminali del componente su questa net:
+t2 (resistor22.3_t2)</title></line><line x1="260.0" y1="480.0" x2="760.0" y2="558.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"><title>resistor22.3 -&gt; net_4
+Terminali del componente su questa net:
+t1 (resistor22.3_t1)</title></line><line x1="260.0" y1="558.0" x2="760.0" y2="597.0" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"><title>resistor22.4 -&gt; net_6
+Terminali del componente su questa net:
+t2 (resistor22.4_t2)</title></line><line x1="260.0" y1="558.0" x2="760.0" y2="849.3" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"><title>resistor22.4 -&gt; net_5
+Terminali del componente su questa net:
+t1 (resistor22.4_t1)</title></line><line x1="260.0" y1="636.0" x2="760.0" y2="597.0" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"><title>polarized_capacitor20.2 -&gt; net_6
+Terminali del componente su questa net:
+positive (polarized_capacitor20.2_positive)</title></line><line x1="260.0" y1="636.0" x2="760.0" y2="675.0" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"><title>polarized_capacitor20.2 -&gt; net_7
+Terminali del componente su questa net:
+negative (polarized_capacitor20.2_negative)</title></line><line x1="260.0" y1="714.0" x2="760.0" y2="675.0" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"><title>gnd9.3 -&gt; net_7
+Terminali del componente su questa net:
+t1 (gnd9.3_t1)</title></line><line x1="260.0" y1="792.0" x2="760.0" y2="558.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"><title>LM1875 -&gt; net_4
+Terminali del componente su questa net:
+pin1 (integrated_circuit11.1_left_1)</title></line><line x1="260.0" y1="792.0" x2="760.0" y2="849.3" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"><title>LM1875 -&gt; net_5
+Terminali del componente su questa net:
+pin2 (integrated_circuit11.1_left_2)</title></line><line x1="260.0" y1="792.0" x2="760.0" y2="1194.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"><title>LM1875 -&gt; net_10
+Terminali del componente su questa net:
+pin3 (integrated_circuit11.1_bottom_1)</title></line><line x1="260.0" y1="792.0" x2="760.0" y2="1272.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"><title>LM1875 -&gt; net_9
+Terminali del componente su questa net:
+pin5 (integrated_circuit11.1_top_1)</title></line><line x1="260.0" y1="792.0" x2="760.0" y2="1469.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"><title>LM1875 -&gt; net_8
+Terminali del componente su questa net:
+pin4 (integrated_circuit11.1_right_1)</title></line><line x1="260.0" y1="886.0" x2="760.0" y2="925.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"><title>polarized_capacitor20.3 -&gt; net_11
+Terminali del componente su questa net:
+negative (polarized_capacitor20.3_negative)</title></line><line x1="260.0" y1="886.0" x2="760.0" y2="1194.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"><title>polarized_capacitor20.3 -&gt; net_10
+Terminali del componente su questa net:
+positive (polarized_capacitor20.3_positive)</title></line><line x1="260.0" y1="964.0" x2="760.0" y2="925.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"><title>gnd9.4 -&gt; net_11
+Terminali del componente su questa net:
+t1 (gnd9.4_t1)</title></line><line x1="260.0" y1="1042.0" x2="760.0" y2="1081.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"><title>polarized_capacitor20.4 -&gt; net_12
+Terminali del componente su questa net:
+negative (polarized_capacitor20.4_negative)</title></line><line x1="260.0" y1="1042.0" x2="760.0" y2="1272.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"><title>polarized_capacitor20.4 -&gt; net_9
+Terminali del componente su questa net:
+positive (polarized_capacitor20.4_positive)</title></line><line x1="260.0" y1="1120.0" x2="760.0" y2="1081.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"><title>gnd9.5 -&gt; net_12
+Terminali del componente su questa net:
+t1 (gnd9.5_t1)</title></line><line x1="260.0" y1="1198.0" x2="760.0" y2="849.3" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"><title>resistor22.5 -&gt; net_5
+Terminali del componente su questa net:
+t1 (resistor22.5_t1)</title></line><line x1="260.0" y1="1198.0" x2="760.0" y2="1469.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"><title>resistor22.5 -&gt; net_8
+Terminali del componente su questa net:
+t2 (resistor22.5_t2)</title></line><line x1="260.0" y1="1276.0" x2="760.0" y2="1194.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"><title>polarized_capacitor20.5 -&gt; net_10
+Terminali del componente su questa net:
+positive (polarized_capacitor20.5_positive)</title></line><line x1="260.0" y1="1276.0" x2="760.0" y2="1393.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"><title>polarized_capacitor20.5 -&gt; net_13
+Terminali del componente su questa net:
+negative (polarized_capacitor20.5_negative)</title></line><line x1="260.0" y1="1354.0" x2="760.0" y2="1272.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"><title>polarized_capacitor20.6 -&gt; net_9
+Terminali del componente su questa net:
+positive (polarized_capacitor20.6_positive)</title></line><line x1="260.0" y1="1354.0" x2="760.0" y2="1431.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"><title>polarized_capacitor20.6 -&gt; net_14
+Terminali del componente su questa net:
+negative (polarized_capacitor20.6_negative)</title></line><line x1="260.0" y1="1432.0" x2="760.0" y2="1431.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"><title>gnd9.6 -&gt; net_14
+Terminali del componente su questa net:
+t1 (gnd9.6_t1)</title></line><line x1="260.0" y1="1510.0" x2="760.0" y2="1393.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"><title>gnd9.7 -&gt; net_13
+Terminali del componente su questa net:
+t1 (gnd9.7_t1)</title></line><line x1="260.0" y1="1588.0" x2="760.0" y2="1627.0" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"><title>polarized_capacitor20.7 -&gt; net_15
+Terminali del componente su questa net:
+positive (polarized_capacitor20.7_positive)</title></line><line x1="260.0" y1="1588.0" x2="760.0" y2="1666.0" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"><title>polarized_capacitor20.7 -&gt; net_16
+Terminali del componente su questa net:
+negative (polarized_capacitor20.7_negative)</title></line><line x1="260.0" y1="1666.0" x2="760.0" y2="1469.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"><title>resistor22.6 -&gt; net_8
+Terminali del componente su questa net:
+t1 (resistor22.6_t1)</title></line><line x1="260.0" y1="1666.0" x2="760.0" y2="1627.0" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"><title>resistor22.6 -&gt; net_15
+Terminali del componente su questa net:
+t2 (resistor22.6_t2)</title></line><line x1="260.0" y1="1744.0" x2="760.0" y2="1666.0" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"><title>gnd9.8 -&gt; net_16
+Terminali del componente su questa net:
+t1 (gnd9.8_t1)</title></line><line x1="260.0" y1="1822.0" x2="760.0" y2="1194.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"><title>fuse8.1 -&gt; net_10
+Terminali del componente su questa net:
+t1 (fuse8.1_t1)</title></line><line x1="260.0" y1="1822.0" x2="760.0" y2="1978.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"><title>fuse8.1 -&gt; net_17
+Terminali del componente su questa net:
+t2 (fuse8.1_t2)</title></line><line x1="260.0" y1="1900.0" x2="760.0" y2="1272.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"><title>fuse8.2 -&gt; net_9
+Terminali del componente su questa net:
+t1 (fuse8.2_t1)</title></line><line x1="260.0" y1="1900.0" x2="760.0" y2="1939.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"><title>fuse8.2 -&gt; net_18
+Terminali del componente su questa net:
+t2 (fuse8.2_t2)</title></line><line x1="260.0" y1="1978.0" x2="760.0" y2="1939.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"><title>terminal26.1 -&gt; net_18
+Terminali del componente su questa net:
+t1 (terminal26.1_t1)</title></line><line x1="260.0" y1="2056.0" x2="760.0" y2="2134.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"><title>gnd9.9 -&gt; net_19
+Terminali del componente su questa net:
+t1 (gnd9.9_t1)</title></line><line x1="260.0" y1="2134.0" x2="760.0" y2="1978.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"><title>terminal26.2 -&gt; net_17
+Terminali del componente su questa net:
+t1 (terminal26.2_t1)</title></line><line x1="260.0" y1="2212.0" x2="760.0" y2="1469.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"><title>speaker24.1 -&gt; net_8
+Terminali del componente su questa net:
+t1 (speaker24.1_t1)</title></line><line x1="260.0" y1="2212.0" x2="760.0" y2="2134.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"><title>speaker24.1 -&gt; net_19
+Terminali del componente su questa net:
+t2 (speaker24.1_t2)</title></line><g class="node-group" data-node-type="component"><title>Componente: gnd9.1
+Classe: GND
+Instance: 9.1</title><circle cx="260.0" cy="90.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="94.0" text-anchor="middle" class="node-label">gnd9.1</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.1
+Classe: Resistor
+Instance: 22.1</title><circle cx="260.0" cy="168.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="172.0" text-anchor="middle" class="node-label">resistor22.1</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.2
+Classe: Resistor
+Instance: 22.2</title><circle cx="260.0" cy="246.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="250.0" text-anchor="middle" class="node-label">resistor22.2</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.2
+Classe: GND
+Instance: 9.2</title><circle cx="260.0" cy="324.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="328.0" text-anchor="middle" class="node-label">gnd9.2</text></g><g class="node-group" data-node-type="component"><title>Componente: polarized_capacitor20.1
+Classe: Polarized_Capacitor
+Instance: 20.1</title><circle cx="260.0" cy="402.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="399.0" text-anchor="middle" class="node-label small">polarized</text><text x="260.0" y="413.0" text-anchor="middle" class="node-label small">capacitor20.1</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.3
+Classe: Resistor
+Instance: 22.3</title><circle cx="260.0" cy="480.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="484.0" text-anchor="middle" class="node-label">resistor22.3</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.4
+Classe: Resistor
+Instance: 22.4</title><circle cx="260.0" cy="558.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="562.0" text-anchor="middle" class="node-label">resistor22.4</text></g><g class="node-group" data-node-type="component"><title>Componente: polarized_capacitor20.2
+Classe: Polarized_Capacitor
+Instance: 20.2</title><circle cx="260.0" cy="636.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="633.0" text-anchor="middle" class="node-label small">polarized</text><text x="260.0" y="647.0" text-anchor="middle" class="node-label small">capacitor20.2</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.3
+Classe: GND
+Instance: 9.3</title><circle cx="260.0" cy="714.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="718.0" text-anchor="middle" class="node-label">gnd9.3</text></g><g class="node-group" data-node-type="component"><title>Componente: integrated_circuit11.1
+Classe: Integrated_Circuit
+Instance: 11.1
+Display: LM1875
+IC marking: LM1875</title><circle cx="260.0" cy="792.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="796.0" text-anchor="middle" class="node-label">LM1875</text></g><g class="node-group" data-node-type="component"><title>Componente: polarized_capacitor20.3
+Classe: Polarized_Capacitor
+Instance: 20.3</title><circle cx="260.0" cy="886.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="883.0" text-anchor="middle" class="node-label small">polarized</text><text x="260.0" y="897.0" text-anchor="middle" class="node-label small">capacitor20.3</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.4
+Classe: GND
+Instance: 9.4</title><circle cx="260.0" cy="964.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="968.0" text-anchor="middle" class="node-label">gnd9.4</text></g><g class="node-group" data-node-type="component"><title>Componente: polarized_capacitor20.4
+Classe: Polarized_Capacitor
+Instance: 20.4</title><circle cx="260.0" cy="1042.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="1039.0" text-anchor="middle" class="node-label small">polarized</text><text x="260.0" y="1053.0" text-anchor="middle" class="node-label small">capacitor20.4</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.5
+Classe: GND
+Instance: 9.5</title><circle cx="260.0" cy="1120.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="1124.0" text-anchor="middle" class="node-label">gnd9.5</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.5
+Classe: Resistor
+Instance: 22.5</title><circle cx="260.0" cy="1198.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="1202.0" text-anchor="middle" class="node-label">resistor22.5</text></g><g class="node-group" data-node-type="component"><title>Componente: polarized_capacitor20.5
+Classe: Polarized_Capacitor
+Instance: 20.5</title><circle cx="260.0" cy="1276.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="1273.0" text-anchor="middle" class="node-label small">polarized</text><text x="260.0" y="1287.0" text-anchor="middle" class="node-label small">capacitor20.5</text></g><g class="node-group" data-node-type="component"><title>Componente: polarized_capacitor20.6
+Classe: Polarized_Capacitor
+Instance: 20.6</title><circle cx="260.0" cy="1354.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="1351.0" text-anchor="middle" class="node-label small">polarized</text><text x="260.0" y="1365.0" text-anchor="middle" class="node-label small">capacitor20.6</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.6
+Classe: GND
+Instance: 9.6</title><circle cx="260.0" cy="1432.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="1436.0" text-anchor="middle" class="node-label">gnd9.6</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.7
+Classe: GND
+Instance: 9.7</title><circle cx="260.0" cy="1510.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="1514.0" text-anchor="middle" class="node-label">gnd9.7</text></g><g class="node-group" data-node-type="component"><title>Componente: polarized_capacitor20.7
+Classe: Polarized_Capacitor
+Instance: 20.7</title><circle cx="260.0" cy="1588.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="1585.0" text-anchor="middle" class="node-label small">polarized</text><text x="260.0" y="1599.0" text-anchor="middle" class="node-label small">capacitor20.7</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.6
+Classe: Resistor
+Instance: 22.6</title><circle cx="260.0" cy="1666.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="1670.0" text-anchor="middle" class="node-label">resistor22.6</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.8
+Classe: GND
+Instance: 9.8</title><circle cx="260.0" cy="1744.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="1748.0" text-anchor="middle" class="node-label">gnd9.8</text></g><g class="node-group" data-node-type="component"><title>Componente: fuse8.1
+Classe: Fuse
+Instance: 8.1</title><circle cx="260.0" cy="1822.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="1826.0" text-anchor="middle" class="node-label">fuse8.1</text></g><g class="node-group" data-node-type="component"><title>Componente: fuse8.2
+Classe: Fuse
+Instance: 8.2</title><circle cx="260.0" cy="1900.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="1904.0" text-anchor="middle" class="node-label">fuse8.2</text></g><g class="node-group" data-node-type="component"><title>Componente: terminal26.1
+Classe: Terminal
+Instance: 26.1</title><circle cx="260.0" cy="1978.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="1982.0" text-anchor="middle" class="node-label">terminal26.1</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.9
+Classe: GND
+Instance: 9.9</title><circle cx="260.0" cy="2056.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="2060.0" text-anchor="middle" class="node-label">gnd9.9</text></g><g class="node-group" data-node-type="component"><title>Componente: terminal26.2
+Classe: Terminal
+Instance: 26.2</title><circle cx="260.0" cy="2134.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="2138.0" text-anchor="middle" class="node-label">terminal26.2</text></g><g class="node-group" data-node-type="component"><title>Componente: speaker24.1
+Classe: Speaker
+Instance: 24.1</title><circle cx="260.0" cy="2212.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="260.0" y="2216.0" text-anchor="middle" class="node-label">speaker24.1</text></g><g class="node-group" data-node-type="net"><title>Net 1
+Una net e un nodo elettrico: raggruppa terminali collegati dallo stesso filo.
+Componenti collegati: 2
+Terminali collegati: 2
+gnd9.1_t1
+resistor22.1_t1</title><circle cx="760.0" cy="129.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="760.0" y="133.0" text-anchor="middle" class="node-label">1</text></g><g class="node-group" data-node-type="net"><title>Net 2
+Una net e un nodo elettrico: raggruppa terminali collegati dallo stesso filo.
+Componenti collegati: 3
+Terminali collegati: 3
+resistor22.1_t2
+resistor22.2_t1
+polarized_capacitor20.1_negative</title><circle cx="760.0" cy="272.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="760.0" y="276.0" text-anchor="middle" class="node-label">2</text></g><g class="node-group" data-node-type="net"><title>Net 3
+Una net e un nodo elettrico: raggruppa terminali collegati dallo stesso filo.
+Componenti collegati: 3
+Terminali collegati: 3
+resistor22.2_t2
+gnd9.2_t1
+resistor22.3_t2</title><circle cx="760.0" cy="350.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="760.0" y="354.0" text-anchor="middle" class="node-label">3</text></g><g class="node-group" data-node-type="net"><title>Net 4
+Una net e un nodo elettrico: raggruppa terminali collegati dallo stesso filo.
+Componenti collegati: 3
+Terminali collegati: 3
+polarized_capacitor20.1_positive
+resistor22.3_t1
+integrated_circuit11.1_left_1</title><circle cx="760.0" cy="558.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="760.0" y="562.0" text-anchor="middle" class="node-label">4</text></g><g class="node-group" data-node-type="net"><title>Net 5
+Una net e un nodo elettrico: raggruppa terminali collegati dallo stesso filo.
+Componenti collegati: 3
+Terminali collegati: 3
+resistor22.4_t1
+integrated_circuit11.1_left_2
+resistor22.5_t1</title><circle cx="760.0" cy="849.3" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="760.0" y="853.3" text-anchor="middle" class="node-label">5</text></g><g class="node-group" data-node-type="net"><title>Net 6
+Una net e un nodo elettrico: raggruppa terminali collegati dallo stesso filo.
+Componenti collegati: 2
+Terminali collegati: 2
+resistor22.4_t2
+polarized_capacitor20.2_positive</title><circle cx="760.0" cy="597.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="760.0" y="601.0" text-anchor="middle" class="node-label">6</text></g><g class="node-group" data-node-type="net"><title>Net 7
+Una net e un nodo elettrico: raggruppa terminali collegati dallo stesso filo.
+Componenti collegati: 2
+Terminali collegati: 2
+polarized_capacitor20.2_negative
+gnd9.3_t1</title><circle cx="760.0" cy="675.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="760.0" y="679.0" text-anchor="middle" class="node-label">7</text></g><g class="node-group" data-node-type="net"><title>Net 8
+Una net e un nodo elettrico: raggruppa terminali collegati dallo stesso filo.
+Componenti collegati: 4
+Terminali collegati: 4
+integrated_circuit11.1_right_1
+resistor22.5_t2
+resistor22.6_t1
+speaker24.1_t1</title><circle cx="760.0" cy="1469.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="760.0" y="1473.0" text-anchor="middle" class="node-label">8</text></g><g class="node-group" data-node-type="net"><title>Net 9
+Una net e un nodo elettrico: raggruppa terminali collegati dallo stesso filo.
+Componenti collegati: 4
+Terminali collegati: 4
+integrated_circuit11.1_top_1
+polarized_capacitor20.4_positive
+polarized_capacitor20.6_positive
+fuse8.2_t1</title><circle cx="760.0" cy="1272.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="760.0" y="1276.0" text-anchor="middle" class="node-label">9</text></g><g class="node-group" data-node-type="net"><title>Net 10
+Una net e un nodo elettrico: raggruppa terminali collegati dallo stesso filo.
+Componenti collegati: 4
+Terminali collegati: 4
+integrated_circuit11.1_bottom_1
+polarized_capacitor20.3_positive
+polarized_capacitor20.5_positive
+fuse8.1_t1</title><circle cx="760.0" cy="1194.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="760.0" y="1198.0" text-anchor="middle" class="node-label">10</text></g><g class="node-group" data-node-type="net"><title>Net 11
+Una net e un nodo elettrico: raggruppa terminali collegati dallo stesso filo.
+Componenti collegati: 2
+Terminali collegati: 2
+polarized_capacitor20.3_negative
+gnd9.4_t1</title><circle cx="760.0" cy="925.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="760.0" y="929.0" text-anchor="middle" class="node-label">11</text></g><g class="node-group" data-node-type="net"><title>Net 12
+Una net e un nodo elettrico: raggruppa terminali collegati dallo stesso filo.
+Componenti collegati: 2
+Terminali collegati: 2
+polarized_capacitor20.4_negative
+gnd9.5_t1</title><circle cx="760.0" cy="1081.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="760.0" y="1085.0" text-anchor="middle" class="node-label">12</text></g><g class="node-group" data-node-type="net"><title>Net 13
+Una net e un nodo elettrico: raggruppa terminali collegati dallo stesso filo.
+Componenti collegati: 2
+Terminali collegati: 2
+polarized_capacitor20.5_negative
+gnd9.7_t1</title><circle cx="760.0" cy="1393.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="760.0" y="1397.0" text-anchor="middle" class="node-label">13</text></g><g class="node-group" data-node-type="net"><title>Net 14
+Una net e un nodo elettrico: raggruppa terminali collegati dallo stesso filo.
+Componenti collegati: 2
+Terminali collegati: 2
+polarized_capacitor20.6_negative
+gnd9.6_t1</title><circle cx="760.0" cy="1431.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="760.0" y="1435.0" text-anchor="middle" class="node-label">14</text></g><g class="node-group" data-node-type="net"><title>Net 15
+Una net e un nodo elettrico: raggruppa terminali collegati dallo stesso filo.
+Componenti collegati: 2
+Terminali collegati: 2
+polarized_capacitor20.7_positive
+resistor22.6_t2</title><circle cx="760.0" cy="1627.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="760.0" y="1631.0" text-anchor="middle" class="node-label">15</text></g><g class="node-group" data-node-type="net"><title>Net 16
+Una net e un nodo elettrico: raggruppa terminali collegati dallo stesso filo.
+Componenti collegati: 2
+Terminali collegati: 2
+polarized_capacitor20.7_negative
+gnd9.8_t1</title><circle cx="760.0" cy="1666.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="760.0" y="1670.0" text-anchor="middle" class="node-label">16</text></g><g class="node-group" data-node-type="net"><title>Net 17
+Una net e un nodo elettrico: raggruppa terminali collegati dallo stesso filo.
+Componenti collegati: 2
+Terminali collegati: 2
+fuse8.1_t2
+terminal26.2_t1</title><circle cx="760.0" cy="1978.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="760.0" y="1982.0" text-anchor="middle" class="node-label">17</text></g><g class="node-group" data-node-type="net"><title>Net 18
+Una net e un nodo elettrico: raggruppa terminali collegati dallo stesso filo.
+Componenti collegati: 2
+Terminali collegati: 2
+fuse8.2_t2
+terminal26.1_t1</title><circle cx="760.0" cy="1939.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="760.0" y="1943.0" text-anchor="middle" class="node-label">18</text></g><g class="node-group" data-node-type="net"><title>Net 19
+Una net e un nodo elettrico: raggruppa terminali collegati dallo stesso filo.
+Componenti collegati: 2
+Terminali collegati: 2
+gnd9.9_t1
+speaker24.1_t2</title><circle cx="760.0" cy="2134.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="760.0" y="2138.0" text-anchor="middle" class="node-label">19</text></g></svg></div>
+        <div class="legend">
+          <span><i class="dot" style="background:#85d68d"></i> componente</span>
+          <span><i class="dot" style="background:#ffd65a"></i> net / nodo elettrico</span>
+          <span>Passa sopra archi e nodi per vedere terminali e pin esatti.</span>
+        </div>
+      </section>
+    </div>
+
+    <div class="warning-grid"><div class="warning-box"><h3>Unconnected Terminals</h3><p>Nessun elemento.</p></div><div class="warning-box"><h3>Unmatched Terminals</h3><p>Nessun elemento.</p></div><div class="warning-box"><h3>Suspicious Matches</h3><p>Nessun elemento.</p></div></div>
+  </div>
+
+  <script>
+    (() => {
+      const svg = document.getElementById("graph-svg");
+      const viewBox = svg.viewBox.baseVal;
+      let isDragging = false;
+      let startX = 0;
+      let startY = 0;
+      let startViewX = viewBox.x;
+      let startViewY = viewBox.y;
+
+      function pointFromEvent(event) {
+        const rect = svg.getBoundingClientRect();
+        return {
+          x: (event.clientX - rect.left) * (viewBox.width / rect.width),
+          y: (event.clientY - rect.top) * (viewBox.height / rect.height),
+        };
+      }
+
+      svg.addEventListener("wheel", (event) => {
+        event.preventDefault();
+        const scale = event.deltaY < 0 ? 0.92 : 1.08;
+        const point = pointFromEvent(event);
+        const newWidth = viewBox.width * scale;
+        const newHeight = viewBox.height * scale;
+        viewBox.x = point.x - (point.x - viewBox.x) * scale;
+        viewBox.y = point.y - (point.y - viewBox.y) * scale;
+        viewBox.width = Math.max(420, newWidth);
+        viewBox.height = Math.max(320, newHeight);
+      }, { passive: false });
+
+      svg.addEventListener("pointerdown", (event) => {
+        isDragging = true;
+        svg.setPointerCapture(event.pointerId);
+        startX = event.clientX;
+        startY = event.clientY;
+        startViewX = viewBox.x;
+        startViewY = viewBox.y;
+      });
+
+      svg.addEventListener("pointermove", (event) => {
+        if (!isDragging) return;
+        const rect = svg.getBoundingClientRect();
+        const dx = (event.clientX - startX) * (viewBox.width / rect.width);
+        const dy = (event.clientY - startY) * (viewBox.height / rect.height);
+        viewBox.x = startViewX - dx;
+        viewBox.y = startViewY - dy;
+      });
+
+      svg.addEventListener("pointerup", () => {
+        isDragging = false;
+      });
+
+      svg.addEventListener("pointerleave", () => {
+        isDragging = false;
+      });
+    })();
+  </script>
+</body>
+</html>

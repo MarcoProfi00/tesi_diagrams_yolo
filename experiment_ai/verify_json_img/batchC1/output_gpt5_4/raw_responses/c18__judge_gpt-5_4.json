@@ -1,0 +1,82 @@
+{
+  "metadata": {
+    "circuit_id": "c18",
+    "batch": "C1",
+    "batch_dir": "batchC1",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\images\\c18.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\json\\c18.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "c18.jpg",
+    "json_file": "c18.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:31:34",
+    "judge_latency_seconds": 13.909,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=15442, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=747, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=16189)",
+  "judge_result": {
+    "circuit_id": "c18",
+    "batch": "C1",
+    "image_file": "c18.jpg",
+    "json_file": "c18.json",
+    "image_graph_fidelity_score": 92,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 22,
+      "graph_connections": 52,
+      "visible_semantics": 8
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 1,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "opamp_supply_pin_missing_connection",
+        "description": "L'opamp centrale inferiore (IC2a) mostra nell'immagine anche il pin di alimentazione inferiore collegato a -15V DC, ma nel JSON per operational_amplifier19.3 e presente solo aux1 e manca l'altro pin supply visibile.",
+        "image_evidence": "Nel simbolo IC2a si vedono due pin supply: superiore verso +15V DC e inferiore verso -15V DC.",
+        "json_evidence": "operational_amplifier19.3 contiene terminals {in1,in2,out,aux1} ma non un terminale aux2; quindi il collegamento del supply inferiore visibile non puo comparire nel graph."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "opamp_input_slot_label_uncertain",
+        "description": "Per i quattro opamp il JSON usa in1/in2 senza distinguere esplicitamente ingresso invertente/non invertente; topologicamente i nodi risultano comunque coerenti con i due ingressi visibili."
+      },
+      {
+        "type": "polarized_capacitor_semantics_overstated",
+        "description": "I condensatori C1-C3 nell'immagine appaiono come condensatori non polarizzati; nel JSON sono classificati come Polarized_Capacitor. La topologia dei due terminali resta pero coerente."
+      }
+    ],
+    "missing_from_json": [
+      "Connessione del pin supply inferiore visibile di IC2a (-15V DC)"
+    ],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "operational_amplifier19.3 dovrebbe avere anche un terminale supply inferiore collegato al nodo -15V DC visibile",
+        "found_in_json": "nessun terminale/connessione corrispondente presente per operational_amplifier19.3",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "I mapping tra resistor22.1/resistor22.3 e le resistenze di feedback del blocco Low out sono equivalenti topologicamente; non emerge errore certo scambiando gli instance_id.",
+      "I pin numerici degli opamp visibili nell'immagine non sono riportati nel JSON; non necessario per validare il graph terminale-terminale.",
+      "I terminali Terminal 26.x rappresentano etichette/nodi esterni (Audio IN, High out, Low out, alimentazioni); la loro associazione appare coerente, ma i nomi testuali non sono nel JSON."
+    ],
+    "short_explanation": "Il campo graph riproduce molto bene la topologia visibile: ingresso Audio IN sdoppiato verso R1/R4/R5, primo opamp alto con rete R1-R2-R3 e uscita High out con R7/C2, secondo stadio con R6 e terzo/finale con R8 e rete R9/C3 verso Low out. Le masse sugli ingressi non invertenti e i feedback principali sono coerenti. L’unica mancanza topologica rilevante e l’assenza nel JSON del pin supply inferiore visibile dell’opamp IC2a; per il resto il graph e molto fedele e utilizzabile come base."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c18\",\"batch\":\"C1\",\"image_file\":\"c18.jpg\",\"json_file\":\"c18.json\",\"image_graph_fidelity_score\":92,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":22,\"graph_connections\":52,\"visible_semantics\":8},\"error_counts\":{\"critical\":0,\"major\":1,\"minor\":2},\"critical_errors\":[],\"major_errors\":[{\"type\":\"opamp_supply_pin_missing_connection\",\"description\":\"L'opamp centrale inferiore (IC2a) mostra nell'immagine anche il pin di alimentazione inferiore collegato a -15V DC, ma nel JSON per operational_amplifier19.3 e presente solo aux1 e manca l'altro pin supply visibile.\",\"image_evidence\":\"Nel simbolo IC2a si vedono due pin supply: superiore verso +15V DC e inferiore verso -15V DC.\",\"json_evidence\":\"operational_amplifier19.3 contiene terminals {in1,in2,out,aux1} ma non un terminale aux2; quindi il collegamento del supply inferiore visibile non puo comparire nel graph.\"}],\"minor_errors\":[{\"type\":\"opamp_input_slot_label_uncertain\",\"description\":\"Per i quattro opamp il JSON usa in1/in2 senza distinguere esplicitamente ingresso invertente/non invertente; topologicamente i nodi risultano comunque coerenti con i due ingressi visibili.\"},{\"type\":\"polarized_capacitor_semantics_overstated\",\"description\":\"I condensatori C1-C3 nell'immagine appaiono come condensatori non polarizzati; nel JSON sono classificati come Polarized_Capacitor. La topologia dei due terminali resta pero coerente.\"}],\"missing_from_json\":[\"Connessione del pin supply inferiore visibile di IC2a (-15V DC)\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"operational_amplifier19.3 dovrebbe avere anche un terminale supply inferiore collegato al nodo -15V DC visibile\",\"found_in_json\":\"nessun terminale/connessione corrispondente presente per operational_amplifier19.3\",\"severity\":\"major\"}],\"uncertain_points\":[\"I mapping tra resistor22.1/resistor22.3 e le resistenze di feedback del blocco Low out sono equivalenti topologicamente; non emerge errore certo scambiando gli instance_id.\",\"I pin numerici degli opamp visibili nell'immagine non sono riportati nel JSON; non necessario per validare il graph terminale-terminale.\",\"I terminali Terminal 26.x rappresentano etichette/nodi esterni (Audio IN, High out, Low out, alimentazioni); la loro associazione appare coerente, ma i nomi testuali non sono nel JSON.\"],\"short_explanation\":\"Il campo graph riproduce molto bene la topologia visibile: ingresso Audio IN sdoppiato verso R1/R4/R5, primo opamp alto con rete R1-R2-R3 e uscita High out con R7/C2, secondo stadio con R6 e terzo/finale con R8 e rete R9/C3 verso Low out. Le masse sugli ingressi non invertenti e i feedback principali sono coerenti. L’unica mancanza topologica rilevante e l’assenza nel JSON del pin supply inferiore visibile dell’opamp IC2a; per il resto il graph e molto fedele e utilizzabile come base.\"}"
+}

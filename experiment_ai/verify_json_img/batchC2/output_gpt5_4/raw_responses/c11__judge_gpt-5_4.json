@@ -1,0 +1,76 @@
+{
+  "metadata": {
+    "circuit_id": "c11",
+    "batch": "C2",
+    "batch_dir": "batchC2",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\images\\c11.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\json\\c11.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "c11.jpg",
+    "json_file": "c11.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:34:35",
+    "judge_latency_seconds": 18.926,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=15451, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=819, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=16270)",
+  "judge_result": {
+    "circuit_id": "c11",
+    "batch": "C2",
+    "image_file": "c11.jpg",
+    "json_file": "c11.json",
+    "image_graph_fidelity_score": 95,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 22,
+      "graph_connections": 53,
+      "visible_semantics": 10
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 1,
+      "minor": 1
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "switch_terminal_geometry",
+        "description": "Lo switch e rappresentato con terminali t1/t2 e stato open, ma la geometria del terminale t2 nel JSON (relative_position top) non e coerente con il vocabolario standard del simbolo a due terminali; inoltre il nodo di alimentazione collegato allo switch e plausibile ma il dettaglio terminale-lato resta leggermente imperfetto. La connettivita principale pero risulta corretta: pin 11 del IC e collegato al mode switch, e l'altro lato dello switch va al bus +12V.",
+        "image_evidence": "Nel disegno il Mode switch collega il pin 11 del TDA1553 a un ramo verticale che sale al bus superiore +12V; il contatto appare aperto.",
+        "json_evidence": "switch25.1 ha state='open'; integrated_circuit11.1_right_1 e collegato a switch25.1_t1, mentre switch25.1_t2 e sul nodo comune con top_2/top_3/capacitori/terminale."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "terminal_labeling_imprecision",
+        "description": "Per lo switch il terminale t2 e marcato come relativo a top invece che al lato opposto lungo l'asse del componente; imprecisione semantica senza impatto topologico certo."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "Pin 11 del TDA1553 collegato a un terminale del Mode switch; altro terminale del Mode switch collegato al nodo +12V comune con pin 3, pin 10, C1+, C2+ e terminale di alimentazione",
+        "found_in_json": "Connessione corretta nel grafo, ma con identificazione geometrica del terminale switch25.1_t2 non perfettamente coerente con il simbolo",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "I due simboli circolari a sinistra dei condensatori C4 e C5 non sono modellati come componenti nel JSON; sembrano terminali/ingressi grafici ausiliari, ma la loro assenza non altera i collegamenti terminale-terminale principali gia rappresentati tra C4/C5 e i pin 1/13 del IC.",
+      "La polarita positiva/negativa assegnata ai condensatori C4 e C5 nel JSON e compatibile con il verso visibile, ma il giudizio topologico non dipende da tale polarita oltre ai nodi collegati.",
+      "Il mapping dei due speaker JSON ai simboli K1/K2 e coerente topologicamente; anche se i reference designator non sono nel JSON, non emerge errore di scambio."
+    ],
+    "short_explanation": "Il campo graph riproduce molto bene la topologia visibile: pin 12 con C3 a massa, pin 1 con C4 verso ingresso, pin 2 a massa comune con i lati sinistri di C4/C5, pin 13 con C5 verso ingresso, pin 5 e 8 entrambi a massa, pin 3 e 10 sul bus +12V comune con C1 e C2, pin 11 al Mode switch verso lo stesso bus, e le quattro uscite 4/6/9/7 ai due speaker. Non emergono net fuse o net split gravi; resta solo una lieve imprecisione nella rappresentazione del terminale dello switch."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c11\",\"batch\":\"C2\",\"image_file\":\"c11.jpg\",\"json_file\":\"c11.json\",\"image_graph_fidelity_score\":95,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":22,\"graph_connections\":53,\"visible_semantics\":10},\"error_counts\":{\"critical\":0,\"major\":1,\"minor\":1},\"critical_errors\":[],\"major_errors\":[{\"type\":\"switch_terminal_geometry\",\"description\":\"Lo switch e rappresentato con terminali t1/t2 e stato open, ma la geometria del terminale t2 nel JSON (relative_position top) non e coerente con il vocabolario standard del simbolo a due terminali; inoltre il nodo di alimentazione collegato allo switch e plausibile ma il dettaglio terminale-lato resta leggermente imperfetto. La connettivita principale pero risulta corretta: pin 11 del IC e collegato al mode switch, e l'altro lato dello switch va al bus +12V.\",\"image_evidence\":\"Nel disegno il Mode switch collega il pin 11 del TDA1553 a un ramo verticale che sale al bus superiore +12V; il contatto appare aperto.\",\"json_evidence\":\"switch25.1 ha state='open'; integrated_circuit11.1_right_1 e collegato a switch25.1_t1, mentre switch25.1_t2 e sul nodo comune con top_2/top_3/capacitori/terminale.\"}],\"minor_errors\":[{\"type\":\"terminal_labeling_imprecision\",\"description\":\"Per lo switch il terminale t2 e marcato come relativo a top invece che al lato opposto lungo l'asse del componente; imprecisione semantica senza impatto topologico certo.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Pin 11 del TDA1553 collegato a un terminale del Mode switch; altro terminale del Mode switch collegato al nodo +12V comune con pin 3, pin 10, C1+, C2+ e terminale di alimentazione\",\"found_in_json\":\"Connessione corretta nel grafo, ma con identificazione geometrica del terminale switch25.1_t2 non perfettamente coerente con il simbolo\",\"severity\":\"major\"}],\"uncertain_points\":[\"I due simboli circolari a sinistra dei condensatori C4 e C5 non sono modellati come componenti nel JSON; sembrano terminali/ingressi grafici ausiliari, ma la loro assenza non altera i collegamenti terminale-terminale principali gia rappresentati tra C4/C5 e i pin 1/13 del IC.\",\"La polarita positiva/negativa assegnata ai condensatori C4 e C5 nel JSON e compatibile con il verso visibile, ma il giudizio topologico non dipende da tale polarita oltre ai nodi collegati.\",\"Il mapping dei due speaker JSON ai simboli K1/K2 e coerente topologicamente; anche se i reference designator non sono nel JSON, non emerge errore di scambio.\"],\"short_explanation\":\"Il campo graph riproduce molto bene la topologia visibile: pin 12 con C3 a massa, pin 1 con C4 verso ingresso, pin 2 a massa comune con i lati sinistri di C4/C5, pin 13 con C5 verso ingresso, pin 5 e 8 entrambi a massa, pin 3 e 10 sul bus +12V comune con C1 e C2, pin 11 al Mode switch verso lo stesso bus, e le quattro uscite 4/6/9/7 ai due speaker. Non emergono net fuse o net split gravi; resta solo una lieve imprecisione nella rappresentazione del terminale dello switch.\"}"
+}

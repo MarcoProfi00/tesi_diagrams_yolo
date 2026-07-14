@@ -1,0 +1,23 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Propagare N003 verso l’ingresso del ramo LED",
+  "hypothesis": "Il ramo LED e inattivo perche il nodo alimentato N003 non raggiunge il nodo di ingresso PWR_LED_INPUT N005.",
+  "actions": [
+    {
+      "type": "feed_nodes_from_source_node",
+      "source_node": "N003",
+      "target_nodes": [
+        "N005"
+      ],
+      "resistance": "1m"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N003)",
+    "v(N005)",
+    "v(N007)",
+    "i(vbattery2_1#branch)"
+  ]
+}

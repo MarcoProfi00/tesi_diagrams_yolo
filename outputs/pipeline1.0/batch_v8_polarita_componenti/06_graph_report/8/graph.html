@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Graph 8</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
+      color: #1f2d3a;
+    }
+    .page {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .topbar h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .links a {
+      text-decoration: none;
+      color: #144a7b;
+      background: #ffffff;
+      border: 1px solid #d8e1ea;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-weight: 600;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .summary-item {
+      background: rgba(255,255,255,0.88);
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .summary-item .k {
+      color: #5f7184;
+      font-size: 13px;
+    }
+    .summary-item .v {
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .panel-grid {
+      display: grid;
+      grid-template-columns: minmax(280px, 420px) 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+    .panel {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #d8e1ea;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 12px 24px rgba(27, 53, 82, 0.06);
+    }
+    .panel h2 {
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
+    .preview-image {
+      width: 100%;
+      display: block;
+      border-radius: 12px;
+      border: 1px solid #d8e1ea;
+      background: #fff;
+    }
+    .preview-missing {
+      min-height: 220px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      border: 1px dashed #c6d2de;
+      color: #6f8093;
+      background: #f9fbfd;
+    }
+    .graph-wrap {
+      overflow: hidden;
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      background: #f8fbff;
+      cursor: grab;
+      min-height: 720px;
+    }
+    .graph-wrap:active {
+      cursor: grabbing;
+    }
+    #graph-svg {
+      width: 100%;
+      height: 760px;
+      display: block;
+      user-select: none;
+    }
+    .node-label {
+      fill: #314457;
+      font-size: 11px;
+      font-weight: 600;
+      pointer-events: none;
+    }
+    .node-label.small {
+      font-size: 10px;
+    }
+    .legend {
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      font-size: 13px;
+      color: #55687d;
+    }
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .warning-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .warning-box {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .warning-box h3 {
+      margin: 0 0 10px 0;
+      font-size: 15px;
+    }
+    .warning-box p, .warning-box li {
+      color: #526274;
+      font-size: 13px;
+    }
+    details {
+      margin-top: 18px;
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+    }
+    pre {
+      margin: 14px 0 0 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+      color: #314457;
+    }
+    .note {
+      color: #5c6f82;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    @media (max-width: 980px) {
+      .panel-grid {
+        grid-template-columns: 1fr;
+      }
+      #graph-svg {
+        height: 600px;
+      }
+      .graph-wrap {
+        min-height: 560px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <h1>Graph 8</h1>
+      <div class="links">
+        <a href="graph_compact.html">Vista compatta HTML</a><a href="graph_compact.png">Vista compatta PNG</a>
+        <a href="8.json">JSON finale 05</a>
+        <a href="graph.png">Graph PNG</a>
+        <a href="../index.html">Batch index</a>
+      </div>
+    </div>
+
+    <div class="summary-grid"><div class="summary-item"><span class="k">Componenti</span><span class="v">20</span></div><div class="summary-item"><span class="k">Terminali</span><span class="v">42</span></div><div class="summary-item"><span class="k">Nodi elettrici</span><span class="v">16</span></div><div class="summary-item"><span class="k">Isolati</span><span class="v">1</span></div><div class="summary-item"><span class="k">Unmatched</span><span class="v">0</span></div><div class="summary-item"><span class="k">Suspicious</span><span class="v">0</span></div></div>
+
+    <div class="panel-grid">
+      <section class="panel">
+        <h2>Circuito</h2>
+        <img src="8.jpg" alt="Circuito 8" class="preview-image">
+        <p class="note">Il grafo sotto e costruito solo a partire dal JSON del passo 05. La lettura va da sinistra a destra: circuito, classi, componenti, terminali e nodi elettrici.</p>
+      </section>
+
+      <section class="panel">
+        <h2>Graph interattivo</h2>
+        <div class="graph-wrap" id="graph-wrap"><svg id="graph-svg" viewBox="0 1336.5 1260 920" data-full-width="1260" data-full-height="3812" xmlns="http://www.w3.org/2000/svg" aria-label="Graph"><line x1="90.0" y1="1796.5" x2="270.0" y2="113.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="113.0" x2="500.0" y2="113.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="113.0" x2="780.0" y2="82.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="113.0" x2="780.0" y2="143.9" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="90.0" y1="1796.5" x2="270.0" y2="469.7" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="469.7" x2="500.0" y2="319.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="319.8" x2="780.0" y2="319.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="469.7" x2="500.0" y2="419.7" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="419.7" x2="780.0" y2="419.7" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="469.7" x2="500.0" y2="519.6" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="519.6" x2="780.0" y2="519.6" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="469.7" x2="500.0" y2="619.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="619.5" x2="780.0" y2="619.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="90.0" y1="1796.5" x2="270.0" y2="988.2" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="988.2" x2="500.0" y2="826.4" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="826.4" x2="780.0" y2="795.4" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="826.4" x2="780.0" y2="857.3" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="988.2" x2="500.0" y2="988.2" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="988.2" x2="780.0" y2="957.2" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="988.2" x2="780.0" y2="1019.1" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="988.2" x2="500.0" y2="1150.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1150.0" x2="780.0" y2="1119.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1150.0" x2="780.0" y2="1181.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="90.0" y1="1796.5" x2="270.0" y2="2201.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="2201.8" x2="500.0" y2="1418.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1418.8" x2="780.0" y2="1356.9" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1418.8" x2="780.0" y2="1418.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1418.8" x2="780.0" y2="1480.7" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="2201.8" x2="500.0" y2="1642.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1642.5" x2="780.0" y2="1580.6" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1642.5" x2="780.0" y2="1642.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1642.5" x2="780.0" y2="1704.4" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="2201.8" x2="500.0" y2="1866.2" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1866.2" x2="780.0" y2="1804.3" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1866.2" x2="780.0" y2="1866.2" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1866.2" x2="780.0" y2="1928.1" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="2201.8" x2="500.0" y2="2089.9" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2089.9" x2="780.0" y2="2028.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2089.9" x2="780.0" y2="2089.9" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2089.9" x2="780.0" y2="2151.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="2201.8" x2="500.0" y2="2313.6" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2313.6" x2="780.0" y2="2251.7" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2313.6" x2="780.0" y2="2313.6" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2313.6" x2="780.0" y2="2375.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="2201.8" x2="500.0" y2="2537.3" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2537.3" x2="780.0" y2="2475.4" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2537.3" x2="780.0" y2="2537.3" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2537.3" x2="780.0" y2="2599.2" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="2201.8" x2="500.0" y2="2761.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2761.0" x2="780.0" y2="2699.1" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2761.0" x2="780.0" y2="2761.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2761.0" x2="780.0" y2="2823.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="2201.8" x2="500.0" y2="2984.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2984.8" x2="780.0" y2="2922.9" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2984.8" x2="780.0" y2="2984.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2984.8" x2="780.0" y2="3046.7" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="90.0" y1="1796.5" x2="270.0" y2="3334.4" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="3334.4" x2="500.0" y2="3253.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3253.5" x2="780.0" y2="3222.6" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3253.5" x2="780.0" y2="3284.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="3334.4" x2="500.0" y2="3415.3" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3415.3" x2="780.0" y2="3384.4" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3415.3" x2="780.0" y2="3446.3" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="90.0" y1="1796.5" x2="270.0" y2="3672.1" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="3672.1" x2="500.0" y2="3622.2" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3622.2" x2="780.0" y2="3622.2" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="3672.1" x2="500.0" y2="3722.1" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3722.1" x2="780.0" y2="3722.1" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="780.0" y1="82.0" x2="1080.0" y2="1828.8" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1642.5" x2="1080.0" y2="1828.8" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2537.3" x2="1080.0" y2="1828.8" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2984.8" x2="1080.0" y2="1828.8" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="143.9" x2="1080.0" y2="143.9" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="319.8" x2="1080.0" y2="588.6" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="857.3" x2="1080.0" y2="588.6" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="795.4" x2="1080.0" y2="1361.8" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1928.1" x2="1080.0" y2="1361.8" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1356.9" x2="1080.0" y2="2219.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1580.6" x2="1080.0" y2="2219.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2089.9" x2="1080.0" y2="2219.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2251.7" x2="1080.0" y2="2219.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2375.5" x2="1080.0" y2="2219.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2475.4" x2="1080.0" y2="2219.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2699.1" x2="1080.0" y2="2219.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2922.9" x2="1080.0" y2="2219.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1418.8" x2="1080.0" y2="1561.6" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1704.4" x2="1080.0" y2="1561.6" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1480.7" x2="1080.0" y2="1794.8" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1804.3" x2="1080.0" y2="1794.8" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1866.2" x2="1080.0" y2="1794.8" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2028.0" x2="1080.0" y2="1794.8" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2151.8" x2="1080.0" y2="2687.2" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3222.6" x2="1080.0" y2="2687.2" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2313.6" x2="1080.0" y2="2456.4" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2599.2" x2="1080.0" y2="2456.4" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="419.7" x2="1080.0" y2="719.4" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1019.1" x2="1080.0" y2="719.4" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3284.5" x2="1080.0" y2="2120.9" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="957.2" x2="1080.0" y2="2120.9" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2761.0" x2="1080.0" y2="2903.9" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3046.7" x2="1080.0" y2="2903.9" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2823.0" x2="1080.0" y2="3276.5" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3384.4" x2="1080.0" y2="3276.5" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3622.2" x2="1080.0" y2="3276.5" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="519.6" x2="1080.0" y2="850.3" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1181.0" x2="1080.0" y2="850.3" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3446.3" x2="1080.0" y2="2282.7" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1119.0" x2="1080.0" y2="2282.7" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3722.1" x2="1080.0" y2="2170.8" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="619.5" x2="1080.0" y2="2170.8" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><g class="node-group" data-node-type="root"><title>Circuito 8
+Componenti: 20
+Terminali: 42
+Nodi elettrici: 16</title><circle cx="90.0" cy="1796.5" r="36.0" fill="#f26a63" stroke="#d4534c" stroke-width="2"></circle><text x="90.0" y="1800.5" text-anchor="middle" class="node-label">8</text></g><g class="node-group" data-node-type="class"><title>Classe: Battery
+Componenti: 1</title><circle cx="270.0" cy="113.0" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="117.0" text-anchor="middle" class="node-label">Battery</text></g><g class="node-group" data-node-type="component"><title>Componente: battery2.1
+Classe: Battery
+Instance: 2.1</title><circle cx="500.0" cy="113.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="117.0" text-anchor="middle" class="node-label">battery2.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: battery2.1_positive
+Componente: battery2.1
+Nome: positive
+Posizione: top</title><circle cx="780.0" cy="82.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="86.0" text-anchor="middle" class="node-label">positive</text></g><g class="node-group" data-node-type="warning_terminal"><title>Terminal: battery2.1_negative
+Componente: battery2.1
+Nome: negative
+Posizione: bottom</title><circle cx="780.0" cy="143.9" r="25.0" fill="#ffd0d0" stroke="#d12f2f" stroke-width="2"></circle><text x="780.0" y="147.9" text-anchor="middle" class="node-label">negative</text></g><g class="node-group" data-node-type="class"><title>Classe: GND
+Componenti: 4</title><circle cx="270.0" cy="469.7" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="473.7" text-anchor="middle" class="node-label">GND</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.1
+Classe: GND
+Instance: 9.1</title><circle cx="500.0" cy="319.8" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="323.8" text-anchor="middle" class="node-label">gnd9.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: gnd9.1_t1
+Componente: gnd9.1
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="319.8" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="323.8" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.2
+Classe: GND
+Instance: 9.2</title><circle cx="500.0" cy="419.7" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="423.7" text-anchor="middle" class="node-label">gnd9.2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: gnd9.2_t1
+Componente: gnd9.2
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="419.7" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="423.7" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.3
+Classe: GND
+Instance: 9.3</title><circle cx="500.0" cy="519.6" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="523.6" text-anchor="middle" class="node-label">gnd9.3</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: gnd9.3_t1
+Componente: gnd9.3
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="519.6" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="523.6" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.4
+Classe: GND
+Instance: 9.4</title><circle cx="500.0" cy="619.5" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="623.5" text-anchor="middle" class="node-label">gnd9.4</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: gnd9.4_t1
+Componente: gnd9.4
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="619.5" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="623.5" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="class"><title>Classe: Diode
+Componenti: 3</title><circle cx="270.0" cy="988.2" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="992.2" text-anchor="middle" class="node-label">Diode</text></g><g class="node-group" data-node-type="component"><title>Componente: diode7.1
+Classe: Diode
+Instance: 7.1</title><circle cx="500.0" cy="826.4" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="830.4" text-anchor="middle" class="node-label">diode7.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: diode7.1_anode
+Componente: diode7.1
+Nome: anode
+Posizione: top</title><circle cx="780.0" cy="795.4" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="799.4" text-anchor="middle" class="node-label">anode</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: diode7.1_cathode
+Componente: diode7.1
+Nome: cathode
+Posizione: bottom</title><circle cx="780.0" cy="857.3" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="861.3" text-anchor="middle" class="node-label">cathode</text></g><g class="node-group" data-node-type="component"><title>Componente: diode7.2
+Classe: Diode
+Instance: 7.2</title><circle cx="500.0" cy="988.2" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="992.2" text-anchor="middle" class="node-label">diode7.2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: diode7.2_anode
+Componente: diode7.2
+Nome: anode
+Posizione: top</title><circle cx="780.0" cy="957.2" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="961.2" text-anchor="middle" class="node-label">anode</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: diode7.2_cathode
+Componente: diode7.2
+Nome: cathode
+Posizione: bottom</title><circle cx="780.0" cy="1019.1" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1023.1" text-anchor="middle" class="node-label">cathode</text></g><g class="node-group" data-node-type="component"><title>Componente: diode7.3
+Classe: Diode
+Instance: 7.3</title><circle cx="500.0" cy="1150.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1154.0" text-anchor="middle" class="node-label">diode7.3</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: diode7.3_anode
+Componente: diode7.3
+Nome: anode
+Posizione: top</title><circle cx="780.0" cy="1119.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1123.0" text-anchor="middle" class="node-label">anode</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: diode7.3_cathode
+Componente: diode7.3
+Nome: cathode
+Posizione: bottom</title><circle cx="780.0" cy="1181.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1185.0" text-anchor="middle" class="node-label">cathode</text></g><g class="node-group" data-node-type="class"><title>Classe: Mosfet
+Componenti: 8</title><circle cx="270.0" cy="2201.8" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="2205.8" text-anchor="middle" class="node-label">Mosfet</text></g><g class="node-group" data-node-type="component"><title>Componente: mosfet16.1
+Classe: Mosfet
+Instance: 16.1</title><circle cx="500.0" cy="1418.8" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1422.8" text-anchor="middle" class="node-label">mosfet16.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.1_G
+Componente: mosfet16.1
+Nome: G
+Posizione: right</title><circle cx="780.0" cy="1356.9" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1360.9" text-anchor="middle" class="node-label">G</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.1_S
+Componente: mosfet16.1
+Nome: S
+Posizione: top</title><circle cx="780.0" cy="1418.8" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1422.8" text-anchor="middle" class="node-label">S</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.1_D
+Componente: mosfet16.1
+Nome: D
+Posizione: bottom</title><circle cx="780.0" cy="1480.7" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1484.7" text-anchor="middle" class="node-label">D</text></g><g class="node-group" data-node-type="component"><title>Componente: mosfet16.2
+Classe: Mosfet
+Instance: 16.2</title><circle cx="500.0" cy="1642.5" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1646.5" text-anchor="middle" class="node-label">mosfet16.2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.2_G
+Componente: mosfet16.2
+Nome: G
+Posizione: right</title><circle cx="780.0" cy="1580.6" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1584.6" text-anchor="middle" class="node-label">G</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.2_S
+Componente: mosfet16.2
+Nome: S
+Posizione: top</title><circle cx="780.0" cy="1642.5" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1646.5" text-anchor="middle" class="node-label">S</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.2_D
+Componente: mosfet16.2
+Nome: D
+Posizione: bottom</title><circle cx="780.0" cy="1704.4" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1708.4" text-anchor="middle" class="node-label">D</text></g><g class="node-group" data-node-type="component"><title>Componente: mosfet16.3
+Classe: Mosfet
+Instance: 16.3</title><circle cx="500.0" cy="1866.2" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1870.2" text-anchor="middle" class="node-label">mosfet16.3</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.3_G
+Componente: mosfet16.3
+Nome: G
+Posizione: right</title><circle cx="780.0" cy="1804.3" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1808.3" text-anchor="middle" class="node-label">G</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.3_D
+Componente: mosfet16.3
+Nome: D
+Posizione: top</title><circle cx="780.0" cy="1866.2" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1870.2" text-anchor="middle" class="node-label">D</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.3_S
+Componente: mosfet16.3
+Nome: S
+Posizione: bottom</title><circle cx="780.0" cy="1928.1" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1932.1" text-anchor="middle" class="node-label">S</text></g><g class="node-group" data-node-type="component"><title>Componente: mosfet16.4
+Classe: Mosfet
+Instance: 16.4</title><circle cx="500.0" cy="2089.9" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="2093.9" text-anchor="middle" class="node-label">mosfet16.4</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.4_G
+Componente: mosfet16.4
+Nome: G
+Posizione: left</title><circle cx="780.0" cy="2028.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2032.0" text-anchor="middle" class="node-label">G</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.4_D
+Componente: mosfet16.4
+Nome: D
+Posizione: top</title><circle cx="780.0" cy="2089.9" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2093.9" text-anchor="middle" class="node-label">D</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.4_S
+Componente: mosfet16.4
+Nome: S
+Posizione: bottom</title><circle cx="780.0" cy="2151.8" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2155.8" text-anchor="middle" class="node-label">S</text></g><g class="node-group" data-node-type="component"><title>Componente: mosfet16.5
+Classe: Mosfet
+Instance: 16.5</title><circle cx="500.0" cy="2313.6" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="2317.6" text-anchor="middle" class="node-label">mosfet16.5</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.5_G
+Componente: mosfet16.5
+Nome: G
+Posizione: left</title><circle cx="780.0" cy="2251.7" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2255.7" text-anchor="middle" class="node-label">G</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.5_S
+Componente: mosfet16.5
+Nome: S
+Posizione: top</title><circle cx="780.0" cy="2313.6" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2317.6" text-anchor="middle" class="node-label">S</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.5_D
+Componente: mosfet16.5
+Nome: D
+Posizione: bottom</title><circle cx="780.0" cy="2375.5" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2379.5" text-anchor="middle" class="node-label">D</text></g><g class="node-group" data-node-type="component"><title>Componente: mosfet16.6
+Classe: Mosfet
+Instance: 16.6</title><circle cx="500.0" cy="2537.3" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="2541.3" text-anchor="middle" class="node-label">mosfet16.6</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.6_G
+Componente: mosfet16.6
+Nome: G
+Posizione: left</title><circle cx="780.0" cy="2475.4" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2479.4" text-anchor="middle" class="node-label">G</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.6_S
+Componente: mosfet16.6
+Nome: S
+Posizione: top</title><circle cx="780.0" cy="2537.3" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2541.3" text-anchor="middle" class="node-label">S</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.6_D
+Componente: mosfet16.6
+Nome: D
+Posizione: bottom</title><circle cx="780.0" cy="2599.2" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2603.2" text-anchor="middle" class="node-label">D</text></g><g class="node-group" data-node-type="component"><title>Componente: mosfet16.7
+Classe: Mosfet
+Instance: 16.7</title><circle cx="500.0" cy="2761.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="2765.0" text-anchor="middle" class="node-label">mosfet16.7</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.7_G
+Componente: mosfet16.7
+Nome: G
+Posizione: left</title><circle cx="780.0" cy="2699.1" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2703.1" text-anchor="middle" class="node-label">G</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.7_S
+Componente: mosfet16.7
+Nome: S
+Posizione: top</title><circle cx="780.0" cy="2761.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2765.0" text-anchor="middle" class="node-label">S</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.7_D
+Componente: mosfet16.7
+Nome: D
+Posizione: bottom</title><circle cx="780.0" cy="2823.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2827.0" text-anchor="middle" class="node-label">D</text></g><g class="node-group" data-node-type="component"><title>Componente: mosfet16.8
+Classe: Mosfet
+Instance: 16.8</title><circle cx="500.0" cy="2984.8" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="2988.8" text-anchor="middle" class="node-label">mosfet16.8</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.8_G
+Componente: mosfet16.8
+Nome: G
+Posizione: left</title><circle cx="780.0" cy="2922.9" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2926.9" text-anchor="middle" class="node-label">G</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.8_S
+Componente: mosfet16.8
+Nome: S
+Posizione: top</title><circle cx="780.0" cy="2984.8" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2988.8" text-anchor="middle" class="node-label">S</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: mosfet16.8_D
+Componente: mosfet16.8
+Nome: D
+Posizione: bottom</title><circle cx="780.0" cy="3046.7" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3050.7" text-anchor="middle" class="node-label">D</text></g><g class="node-group" data-node-type="class"><title>Classe: Resistor
+Componenti: 2</title><circle cx="270.0" cy="3334.4" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="3338.4" text-anchor="middle" class="node-label">Resistor</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.1
+Classe: Resistor
+Instance: 22.1</title><circle cx="500.0" cy="3253.5" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="3257.5" text-anchor="middle" class="node-label">resistor22.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.1_t1
+Componente: resistor22.1
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="3222.6" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3226.6" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.1_t2
+Componente: resistor22.1
+Nome: t2
+Posizione: bottom</title><circle cx="780.0" cy="3284.5" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3288.5" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.2
+Classe: Resistor
+Instance: 22.2</title><circle cx="500.0" cy="3415.3" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="3419.3" text-anchor="middle" class="node-label">resistor22.2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.2_t1
+Componente: resistor22.2
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="3384.4" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3388.4" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.2_t2
+Componente: resistor22.2
+Nome: t2
+Posizione: bottom</title><circle cx="780.0" cy="3446.3" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3450.3" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="class"><title>Classe: Terminal
+Componenti: 2</title><circle cx="270.0" cy="3672.1" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="3676.1" text-anchor="middle" class="node-label">Terminal</text></g><g class="node-group" data-node-type="component"><title>Componente: terminal26.1
+Classe: Terminal
+Instance: 26.1</title><circle cx="500.0" cy="3622.2" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="3626.2" text-anchor="middle" class="node-label">terminal26.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: terminal26.1_t1
+Componente: terminal26.1
+Nome: t1
+Posizione: left</title><circle cx="780.0" cy="3622.2" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3626.2" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="component"><title>Componente: terminal26.2
+Classe: Terminal
+Instance: 26.2</title><circle cx="500.0" cy="3722.1" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="3726.1" text-anchor="middle" class="node-label">terminal26.2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: terminal26.2_t1
+Componente: terminal26.2
+Nome: t1
+Posizione: bottom</title><circle cx="780.0" cy="3722.1" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3726.1" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 1
+Terminali collegati: 4
+battery2.1_positive
+mosfet16.2_S
+mosfet16.6_S
+mosfet16.8_S</title><circle cx="1080.0" cy="1828.8" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="1832.8" text-anchor="middle" class="node-label">1</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 2
+Terminali collegati: 1
+battery2.1_negative</title><circle cx="1080.0" cy="143.9" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="147.9" text-anchor="middle" class="node-label">2</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 3
+Terminali collegati: 2
+gnd9.1_t1
+diode7.1_cathode</title><circle cx="1080.0" cy="588.6" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="592.6" text-anchor="middle" class="node-label">3</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 4
+Terminali collegati: 2
+diode7.1_anode
+mosfet16.3_S</title><circle cx="1080.0" cy="1361.8" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="1365.8" text-anchor="middle" class="node-label">4</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 5
+Terminali collegati: 8
+mosfet16.1_G
+mosfet16.2_G
+mosfet16.4_D
+mosfet16.5_G
+mosfet16.5_D
+mosfet16.6_G
+mosfet16.7_G
+mosfet16.8_G</title><circle cx="1080.0" cy="2219.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2223.0" text-anchor="middle" class="node-label">5</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 6
+Terminali collegati: 2
+mosfet16.1_S
+mosfet16.2_D</title><circle cx="1080.0" cy="1561.6" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="1565.6" text-anchor="middle" class="node-label">6</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 7
+Terminali collegati: 4
+mosfet16.1_D
+mosfet16.3_G
+mosfet16.3_D
+mosfet16.4_G</title><circle cx="1080.0" cy="1794.8" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="1798.8" text-anchor="middle" class="node-label">7</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 8
+Terminali collegati: 2
+mosfet16.4_S
+resistor22.1_t1</title><circle cx="1080.0" cy="2687.2" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2691.2" text-anchor="middle" class="node-label">8</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 9
+Terminali collegati: 2
+mosfet16.5_S
+mosfet16.6_D</title><circle cx="1080.0" cy="2456.4" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2460.4" text-anchor="middle" class="node-label">9</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 10
+Terminali collegati: 2
+gnd9.2_t1
+diode7.2_cathode</title><circle cx="1080.0" cy="719.4" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="723.4" text-anchor="middle" class="node-label">10</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 11
+Terminali collegati: 2
+resistor22.1_t2
+diode7.2_anode</title><circle cx="1080.0" cy="2120.9" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2124.9" text-anchor="middle" class="node-label">11</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 12
+Terminali collegati: 2
+mosfet16.7_S
+mosfet16.8_D</title><circle cx="1080.0" cy="2903.9" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2907.9" text-anchor="middle" class="node-label">12</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 13
+Terminali collegati: 3
+mosfet16.7_D
+resistor22.2_t1
+terminal26.1_t1</title><circle cx="1080.0" cy="3276.5" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="3280.5" text-anchor="middle" class="node-label">13</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 14
+Terminali collegati: 2
+gnd9.3_t1
+diode7.3_cathode</title><circle cx="1080.0" cy="850.3" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="854.3" text-anchor="middle" class="node-label">14</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 15
+Terminali collegati: 2
+resistor22.2_t2
+diode7.3_anode</title><circle cx="1080.0" cy="2282.7" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2286.7" text-anchor="middle" class="node-label">15</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 16
+Terminali collegati: 2
+terminal26.2_t1
+gnd9.4_t1</title><circle cx="1080.0" cy="2170.8" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2174.8" text-anchor="middle" class="node-label">16</text></g></svg></div>
+        <div class="legend">
+          <span><i class="dot" style="background:#f26a63"></i> circuito</span>
+          <span><i class="dot" style="background:#dcc9a5"></i> classe</span>
+          <span><i class="dot" style="background:#85d68d"></i> componente</span>
+          <span><i class="dot" style="background:#f4abc7"></i> terminale</span>
+          <span><i class="dot" style="background:#ffd65a"></i> nodo elettrico</span>
+        </div>
+      </section>
+    </div>
+
+    <div class="warning-grid"><div class="warning-box"><h3>Unconnected Terminals</h3><ul><li>battery2.1_negative</li></ul></div><div class="warning-box"><h3>Unmatched Terminals</h3><p>Nessun elemento.</p></div><div class="warning-box"><h3>Suspicious Matches</h3><p>Nessun elemento.</p></div></div>
+
+    <details>
+      <summary>Mostra JSON finale completo</summary>
+      <pre>{
+  &quot;image_id&quot;: &quot;8&quot;,
+  &quot;image_name&quot;: &quot;8.jpg&quot;,
+  &quot;components&quot;: [
+    {
+      &quot;component_id&quot;: &quot;battery2.1&quot;,
+      &quot;instance_id&quot;: &quot;2.1&quot;,
+      &quot;class_name&quot;: &quot;Battery&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;battery2.1_positive&quot;,
+          &quot;name&quot;: &quot;positive&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;battery2.1_negative&quot;,
+          &quot;name&quot;: &quot;negative&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;gnd9.1&quot;,
+      &quot;instance_id&quot;: &quot;9.1&quot;,
+      &quot;class_name&quot;: &quot;GND&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;gnd9.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;diode7.1&quot;,
+      &quot;instance_id&quot;: &quot;7.1&quot;,
+      &quot;class_name&quot;: &quot;Diode&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;diode7.1_anode&quot;,
+          &quot;name&quot;: &quot;anode&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;diode7.1_cathode&quot;,
+          &quot;name&quot;: &quot;cathode&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;mosfet16.1&quot;,
+      &quot;instance_id&quot;: &quot;16.1&quot;,
+      &quot;class_name&quot;: &quot;Mosfet&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.1_G&quot;,
+          &quot;name&quot;: &quot;G&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.1_S&quot;,
+          &quot;name&quot;: &quot;S&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.1_D&quot;,
+          &quot;name&quot;: &quot;D&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;mosfet16.2&quot;,
+      &quot;instance_id&quot;: &quot;16.2&quot;,
+      &quot;class_name&quot;: &quot;Mosfet&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.2_G&quot;,
+          &quot;name&quot;: &quot;G&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.2_S&quot;,
+          &quot;name&quot;: &quot;S&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.2_D&quot;,
+          &quot;name&quot;: &quot;D&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;mosfet16.3&quot;,
+      &quot;instance_id&quot;: &quot;16.3&quot;,
+      &quot;class_name&quot;: &quot;Mosfet&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.3_G&quot;,
+          &quot;name&quot;: &quot;G&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.3_D&quot;,
+          &quot;name&quot;: &quot;D&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.3_S&quot;,
+          &quot;name&quot;: &quot;S&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;mosfet16.4&quot;,
+      &quot;instance_id&quot;: &quot;16.4&quot;,
+      &quot;class_name&quot;: &quot;Mosfet&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.4_G&quot;,
+          &quot;name&quot;: &quot;G&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.4_D&quot;,
+          &quot;name&quot;: &quot;D&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.4_S&quot;,
+          &quot;name&quot;: &quot;S&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;mosfet16.5&quot;,
+      &quot;instance_id&quot;: &quot;16.5&quot;,
+      &quot;class_name&quot;: &quot;Mosfet&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.5_G&quot;,
+          &quot;name&quot;: &quot;G&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.5_S&quot;,
+          &quot;name&quot;: &quot;S&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.5_D&quot;,
+          &quot;name&quot;: &quot;D&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;mosfet16.6&quot;,
+      &quot;instance_id&quot;: &quot;16.6&quot;,
+      &quot;class_name&quot;: &quot;Mosfet&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.6_G&quot;,
+          &quot;name&quot;: &quot;G&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.6_S&quot;,
+          &quot;name&quot;: &quot;S&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.6_D&quot;,
+          &quot;name&quot;: &quot;D&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;gnd9.2&quot;,
+      &quot;instance_id&quot;: &quot;9.2&quot;,
+      &quot;class_name&quot;: &quot;GND&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;gnd9.2_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.1&quot;,
+      &quot;instance_id&quot;: &quot;22.1&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.1_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;diode7.2&quot;,
+      &quot;instance_id&quot;: &quot;7.2&quot;,
+      &quot;class_name&quot;: &quot;Diode&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;diode7.2_anode&quot;,
+          &quot;name&quot;: &quot;anode&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;diode7.2_cathode&quot;,
+          &quot;name&quot;: &quot;cathode&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;mosfet16.7&quot;,
+      &quot;instance_id&quot;: &quot;16.7&quot;,
+      &quot;class_name&quot;: &quot;Mosfet&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.7_G&quot;,
+          &quot;name&quot;: &quot;G&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.7_S&quot;,
+          &quot;name&quot;: &quot;S&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.7_D&quot;,
+          &quot;name&quot;: &quot;D&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;mosfet16.8&quot;,
+      &quot;instance_id&quot;: &quot;16.8&quot;,
+      &quot;class_name&quot;: &quot;Mosfet&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.8_G&quot;,
+          &quot;name&quot;: &quot;G&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.8_S&quot;,
+          &quot;name&quot;: &quot;S&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;mosfet16.8_D&quot;,
+          &quot;name&quot;: &quot;D&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;gnd9.3&quot;,
+      &quot;instance_id&quot;: &quot;9.3&quot;,
+      &quot;class_name&quot;: &quot;GND&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;gnd9.3_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.2&quot;,
+      &quot;instance_id&quot;: &quot;22.2&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.2_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.2_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;diode7.3&quot;,
+      &quot;instance_id&quot;: &quot;7.3&quot;,
+      &quot;class_name&quot;: &quot;Diode&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;diode7.3_anode&quot;,
+          &quot;name&quot;: &quot;anode&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;diode7.3_cathode&quot;,
+          &quot;name&quot;: &quot;cathode&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;terminal26.1&quot;,
+      &quot;instance_id&quot;: &quot;26.1&quot;,
+      &quot;class_name&quot;: &quot;Terminal&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;terminal26.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;terminal26.2&quot;,
+      &quot;instance_id&quot;: &quot;26.2&quot;,
+      &quot;class_name&quot;: &quot;Terminal&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;terminal26.2_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;gnd9.4&quot;,
+      &quot;instance_id&quot;: &quot;9.4&quot;,
+      &quot;class_name&quot;: &quot;GND&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;gnd9.4_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        }
+      ]
+    }
+  ],
+  &quot;graph&quot;: {
+    &quot;battery2.1_negative&quot;: [],
+    &quot;battery2.1_positive&quot;: [
+      &quot;mosfet16.2_S&quot;,
+      &quot;mosfet16.6_S&quot;,
+      &quot;mosfet16.8_S&quot;
+    ],
+    &quot;diode7.1_anode&quot;: [
+      &quot;mosfet16.3_S&quot;
+    ],
+    &quot;diode7.1_cathode&quot;: [
+      &quot;gnd9.1_t1&quot;
+    ],
+    &quot;diode7.2_anode&quot;: [
+      &quot;resistor22.1_t2&quot;
+    ],
+    &quot;diode7.2_cathode&quot;: [
+      &quot;gnd9.2_t1&quot;
+    ],
+    &quot;diode7.3_anode&quot;: [
+      &quot;resistor22.2_t2&quot;
+    ],
+    &quot;diode7.3_cathode&quot;: [
+      &quot;gnd9.3_t1&quot;
+    ],
+    &quot;gnd9.1_t1&quot;: [
+      &quot;diode7.1_cathode&quot;
+    ],
+    &quot;gnd9.2_t1&quot;: [
+      &quot;diode7.2_cathode&quot;
+    ],
+    &quot;gnd9.3_t1&quot;: [
+      &quot;diode7.3_cathode&quot;
+    ],
+    &quot;gnd9.4_t1&quot;: [
+      &quot;terminal26.2_t1&quot;
+    ],
+    &quot;mosfet16.1_D&quot;: [
+      &quot;mosfet16.3_D&quot;,
+      &quot;mosfet16.3_G&quot;,
+      &quot;mosfet16.4_G&quot;
+    ],
+    &quot;mosfet16.1_G&quot;: [
+      &quot;mosfet16.2_G&quot;,
+      &quot;mosfet16.4_D&quot;,
+      &quot;mosfet16.5_D&quot;,
+      &quot;mosfet16.5_G&quot;,
+      &quot;mosfet16.6_G&quot;,
+      &quot;mosfet16.7_G&quot;,
+      &quot;mosfet16.8_G&quot;
+    ],
+    &quot;mosfet16.1_S&quot;: [
+      &quot;mosfet16.2_D&quot;
+    ],
+    &quot;mosfet16.2_D&quot;: [
+      &quot;mosfet16.1_S&quot;
+    ],
+    &quot;mosfet16.2_G&quot;: [
+      &quot;mosfet16.1_G&quot;,
+      &quot;mosfet16.4_D&quot;,
+      &quot;mosfet16.5_D&quot;,
+      &quot;mosfet16.5_G&quot;,
+      &quot;mosfet16.6_G&quot;,
+      &quot;mosfet16.7_G&quot;,
+      &quot;mosfet16.8_G&quot;
+    ],
+    &quot;mosfet16.2_S&quot;: [
+      &quot;battery2.1_positive&quot;,
+      &quot;mosfet16.6_S&quot;,
+      &quot;mosfet16.8_S&quot;
+    ],
+    &quot;mosfet16.3_D&quot;: [
+      &quot;mosfet16.1_D&quot;,
+      &quot;mosfet16.3_G&quot;,
+      &quot;mosfet16.4_G&quot;
+    ],
+    &quot;mosfet16.3_G&quot;: [
+      &quot;mosfet16.1_D&quot;,
+      &quot;mosfet16.3_D&quot;,
+      &quot;mosfet16.4_G&quot;
+    ],
+    &quot;mosfet16.3_S&quot;: [
+      &quot;diode7.1_anode&quot;
+    ],
+    &quot;mosfet16.4_D&quot;: [
+      &quot;mosfet16.1_G&quot;,
+      &quot;mosfet16.2_G&quot;,
+      &quot;mosfet16.5_D&quot;,
+      &quot;mosfet16.5_G&quot;,
+      &quot;mosfet16.6_G&quot;,
+      &quot;mosfet16.7_G&quot;,
+      &quot;mosfet16.8_G&quot;
+    ],
+    &quot;mosfet16.4_G&quot;: [
+      &quot;mosfet16.1_D&quot;,
+      &quot;mosfet16.3_D&quot;,
+      &quot;mosfet16.3_G&quot;
+    ],
+    &quot;mosfet16.4_S&quot;: [
+      &quot;resistor22.1_t1&quot;
+    ],
+    &quot;mosfet16.5_D&quot;: [
+      &quot;mosfet16.1_G&quot;,
+      &quot;mosfet16.2_G&quot;,
+      &quot;mosfet16.4_D&quot;,
+      &quot;mosfet16.5_G&quot;,
+      &quot;mosfet16.6_G&quot;,
+      &quot;mosfet16.7_G&quot;,
+      &quot;mosfet16.8_G&quot;
+    ],
+    &quot;mosfet16.5_G&quot;: [
+      &quot;mosfet16.1_G&quot;,
+      &quot;mosfet16.2_G&quot;,
+      &quot;mosfet16.4_D&quot;,
+      &quot;mosfet16.5_D&quot;,
+      &quot;mosfet16.6_G&quot;,
+      &quot;mosfet16.7_G&quot;,
+      &quot;mosfet16.8_G&quot;
+    ],
+    &quot;mosfet16.5_S&quot;: [
+      &quot;mosfet16.6_D&quot;
+    ],
+    &quot;mosfet16.6_D&quot;: [
+      &quot;mosfet16.5_S&quot;
+    ],
+    &quot;mosfet16.6_G&quot;: [
+      &quot;mosfet16.1_G&quot;,
+      &quot;mosfet16.2_G&quot;,
+      &quot;mosfet16.4_D&quot;,
+      &quot;mosfet16.5_D&quot;,
+      &quot;mosfet16.5_G&quot;,
+      &quot;mosfet16.7_G&quot;,
+      &quot;mosfet16.8_G&quot;
+    ],
+    &quot;mosfet16.6_S&quot;: [
+      &quot;battery2.1_positive&quot;,
+      &quot;mosfet16.2_S&quot;,
+      &quot;mosfet16.8_S&quot;
+    ],
+    &quot;mosfet16.7_D&quot;: [
+      &quot;resistor22.2_t1&quot;,
+      &quot;terminal26.1_t1&quot;
+    ],
+    &quot;mosfet16.7_G&quot;: [
+      &quot;mosfet16.1_G&quot;,
+      &quot;mosfet16.2_G&quot;,
+      &quot;mosfet16.4_D&quot;,
+      &quot;mosfet16.5_D&quot;,
+      &quot;mosfet16.5_G&quot;,
+      &quot;mosfet16.6_G&quot;,
+      &quot;mosfet16.8_G&quot;
+    ],
+    &quot;mosfet16.7_S&quot;: [
+      &quot;mosfet16.8_D&quot;
+    ],
+    &quot;mosfet16.8_D&quot;: [
+      &quot;mosfet16.7_S&quot;
+    ],
+    &quot;mosfet16.8_G&quot;: [
+      &quot;mosfet16.1_G&quot;,
+      &quot;mosfet16.2_G&quot;,
+      &quot;mosfet16.4_D&quot;,
+      &quot;mosfet16.5_D&quot;,
+      &quot;mosfet16.5_G&quot;,
+      &quot;mosfet16.6_G&quot;,
+      &quot;mosfet16.7_G&quot;
+    ],
+    &quot;mosfet16.8_S&quot;: [
+      &quot;battery2.1_positive&quot;,
+      &quot;mosfet16.2_S&quot;,
+      &quot;mosfet16.6_S&quot;
+    ],
+    &quot;resistor22.1_t1&quot;: [
+      &quot;mosfet16.4_S&quot;
+    ],
+    &quot;resistor22.1_t2&quot;: [
+      &quot;diode7.2_anode&quot;
+    ],
+    &quot;resistor22.2_t1&quot;: [
+      &quot;mosfet16.7_D&quot;,
+      &quot;terminal26.1_t1&quot;
+    ],
+    &quot;resistor22.2_t2&quot;: [
+      &quot;diode7.3_anode&quot;
+    ],
+    &quot;terminal26.1_t1&quot;: [
+      &quot;mosfet16.7_D&quot;,
+      &quot;resistor22.2_t1&quot;
+    ],
+    &quot;terminal26.2_t1&quot;: [
+      &quot;gnd9.4_t1&quot;
+    ]
+  },
+  &quot;warnings&quot;: {
+    &quot;unconnected_terminals&quot;: [
+      &quot;battery2.1_negative&quot;
+    ],
+    &quot;unmatched_terminals&quot;: [],
+    &quot;suspicious_matches&quot;: []
+  }
+}</pre>
+    </details>
+  </div>
+
+  <script>
+    (() => {
+      const svg = document.getElementById("graph-svg");
+      const viewBox = svg.viewBox.baseVal;
+      let isDragging = false;
+      let startX = 0;
+      let startY = 0;
+      let startViewX = viewBox.x;
+      let startViewY = viewBox.y;
+
+      function pointFromEvent(event) {
+        const rect = svg.getBoundingClientRect();
+        return {
+          x: (event.clientX - rect.left) * (viewBox.width / rect.width),
+          y: (event.clientY - rect.top) * (viewBox.height / rect.height),
+        };
+      }
+
+      svg.addEventListener("wheel", (event) => {
+        event.preventDefault();
+        const scale = event.deltaY < 0 ? 0.92 : 1.08;
+        const point = pointFromEvent(event);
+        const newWidth = viewBox.width * scale;
+        const newHeight = viewBox.height * scale;
+        viewBox.x = point.x - (point.x - viewBox.x) * scale;
+        viewBox.y = point.y - (point.y - viewBox.y) * scale;
+        viewBox.width = Math.max(480, newWidth);
+        viewBox.height = Math.max(360, newHeight);
+      }, { passive: false });
+
+      svg.addEventListener("pointerdown", (event) => {
+        isDragging = true;
+        svg.setPointerCapture(event.pointerId);
+        startX = event.clientX;
+        startY = event.clientY;
+        startViewX = viewBox.x;
+        startViewY = viewBox.y;
+      });
+
+      svg.addEventListener("pointermove", (event) => {
+        if (!isDragging) return;
+        const rect = svg.getBoundingClientRect();
+        const dx = (event.clientX - startX) * (viewBox.width / rect.width);
+        const dy = (event.clientY - startY) * (viewBox.height / rect.height);
+        viewBox.x = startViewX - dx;
+        viewBox.y = startViewY - dy;
+      });
+
+      svg.addEventListener("pointerup", () => {
+        isDragging = false;
+      });
+
+      svg.addEventListener("pointerleave", () => {
+        isDragging = false;
+      });
+    })();
+  </script>
+</body>
+</html>

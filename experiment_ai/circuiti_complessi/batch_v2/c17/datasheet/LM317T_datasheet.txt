@@ -1,0 +1,40 @@
+IC: LM317T / LM317
+
+Descrizione:
+LM317T e' un regolatore lineare positivo regolabile. Fornisce una tensione di uscita regolata impostata da una rete esterna collegata tra OUT, ADJ e GND/riferimento. Puo' essere usato come regolatore di tensione o come parte di circuiti temporizzati/lampeggiatori con componenti esterni.
+
+Pin principali:
+- IN: ingresso della tensione non regolata.
+- OUT: uscita regolata.
+- ADJ: terminale di regolazione.
+
+Alimentazione e dropout:
+- La tensione su IN deve essere maggiore della tensione desiderata su OUT di un margine sufficiente per il dropout del regolatore.
+- Se IN e' troppo bassa, OUT non puo' raggiungere la tensione prevista.
+- Il regolatore puo' richiedere dissipazione termica adeguata quando la differenza IN-OUT e la corrente del carico sono elevate.
+
+Regolazione della tensione:
+- La tensione di uscita e' determinata principalmente dalla rete resistiva tra OUT, ADJ e riferimento.
+- Il regolatore mantiene circa 1.25 V tra OUT e ADJ in condizioni normali.
+- Se il pin ADJ e' aperto, cortocircuitato o collegato a una rete errata, la tensione di uscita puo' essere sbagliata o instabile.
+
+Condensatori:
+- Un condensatore sull'ingresso aiuta a stabilizzare l'alimentazione.
+- Un condensatore sull'uscita puo' migliorare stabilita' e risposta al carico.
+- Un condensatore sul pin ADJ, se presente, puo' migliorare il ripple rejection ma rende il comportamento dinamico dipendente dalla carica/scarica del condensatore.
+- Condensatori elettrolitici invertiti, aperti o in corto possono impedire il funzionamento corretto.
+
+Carico:
+- Il carico e' collegato all'uscita regolata.
+- Se il carico e' aperto, in corto o di valore non adatto, l'uscita puo' essere assente, bassa, instabile o il regolatore puo' entrare in protezione.
+
+Controlli diagnostici utili:
+- Verificare la tensione su IN rispetto a GND.
+- Verificare la tensione su OUT rispetto a GND.
+- Verificare la tensione tra OUT e ADJ.
+- Verificare continuita' e valore delle resistenze della rete di regolazione.
+- Verificare che ADJ non sia scollegato o cortocircuitato.
+- Controllare polarita' e stato dei condensatori collegati a IN, OUT e ADJ.
+- Verificare che il carico sia collegato correttamente e non sia in corto o interrotto.
+- Se l'uscita e' troppo bassa, controllare dropout, carico e surriscaldamento.
+- Se l'uscita e' instabile o pulsante, controllare condensatori, rete ADJ e connessioni del carico.

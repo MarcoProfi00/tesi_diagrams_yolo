@@ -1,0 +1,245 @@
+{
+  "source_format": "pipeline2.0_experiment2_scenario_registry",
+  "batch_name": "batchA",
+  "experiment_name": "experiment2_feed_nodes",
+  "circuit_id": "a01",
+  "created_at": "2026-07-07T17:07:00",
+  "updated_at": "2026-07-07T17:11:57",
+  "max_executable_scenarios": 5,
+  "next_scenario_number": 5,
+  "last_added_scenario_id": "scenario_4",
+  "proposals": [
+    {
+      "proposal_id": "proposal_1",
+      "created_at": "2026-07-07T17:07:00",
+      "source_agent_response": "outputs\\pipeline2.0\\batchA\\experiment2_feed_nodes\\a01\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_1",
+        "scenario_2",
+        "scenario_3"
+      ]
+    },
+    {
+      "proposal_id": "proposal_2",
+      "created_at": "2026-07-07T17:11:57",
+      "source_agent_response": "outputs\\pipeline2.0\\batchA\\experiment2_feed_nodes\\a01\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_4"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_number": 1,
+      "scenario_id": "scenario_1",
+      "title": "Alimentare l'ingresso del ramo lampada",
+      "hypothesis": "La lampada non si accende perché N002 non è pilotato.",
+      "actions": [
+        {
+          "type": "drive_node_voltage",
+          "target": "N002",
+          "value": "5V"
+        }
+      ],
+      "analysis": "op",
+      "compare": [
+        "v(N002)",
+        "v(N004)",
+        "i(Rlamp13_1)"
+      ],
+      "rerun_from": "04",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_1",
+      "execution_path": null,
+      "created_at": "2026-07-07T17:07:00",
+      "updated_at": "2026-07-07T17:07:00",
+      "signature": "{\"actions\": [{\"target\": \"N002\", \"type\": \"drive_node_voltage\", \"value\": \"5V\"}], \"analysis\": \"op\", \"compare\": [\"v(N002)\", \"v(N004)\", \"i(Rlamp13_1)\"], \"hypothesis\": \"La lampada non si accende perché N002 non è pilotato.\", \"title\": \"Alimentare l'ingresso del ramo lampada\"}",
+      "scenario": {
+        "scenario_id": "scenario_1",
+        "title": "Alimentare l'ingresso del ramo lampada",
+        "hypothesis": "La lampada non si accende perché N002 non è pilotato.",
+        "actions": [
+          {
+            "type": "drive_node_voltage",
+            "target": "N002",
+            "value": "5V"
+          }
+        ],
+        "rerun_from": "04",
+        "analysis": "op",
+        "compare": [
+          "v(N002)",
+          "v(N004)",
+          "i(Rlamp13_1)"
+        ]
+      }
+    },
+    {
+      "scenario_number": 2,
+      "scenario_id": "scenario_2",
+      "title": "Portare il +5 V esistente al ramo lampada",
+      "hypothesis": "La lampada resta spenta perché il nodo alimentato N001 non raggiunge N002.",
+      "actions": [
+        {
+          "type": "feed_nodes_from_source_node",
+          "source_node": "N001",
+          "target_nodes": [
+            "N002"
+          ],
+          "resistance": "1m"
+        }
+      ],
+      "analysis": "op",
+      "compare": [
+        "v(N001)",
+        "v(N002)",
+        "v(N004)",
+        "i(Rlamp13_1)"
+      ],
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 2,
+      "original_scenario_id": "scenario_2",
+      "execution_path": "outputs\\pipeline2.0\\batchA\\experiment2_feed_nodes\\a01\\scenarios\\scenario_2",
+      "created_at": "2026-07-07T17:07:00",
+      "updated_at": "2026-07-07T17:10:26",
+      "signature": "{\"actions\": [{\"resistance\": \"1m\", \"source_node\": \"N001\", \"target_nodes\": [\"N002\"], \"type\": \"feed_nodes_from_source_node\"}], \"analysis\": \"op\", \"compare\": [\"v(N001)\", \"v(N002)\", \"v(N004)\", \"i(Rlamp13_1)\"], \"hypothesis\": \"La lampada resta spenta perché il nodo alimentato N001 non raggiunge N002.\", \"title\": \"Portare il +5 V esistente al ramo lampada\"}",
+      "scenario": {
+        "scenario_id": "scenario_2",
+        "title": "Portare il +5 V esistente al ramo lampada",
+        "hypothesis": "La lampada resta spenta perché il nodo alimentato N001 non raggiunge N002.",
+        "actions": [
+          {
+            "type": "feed_nodes_from_source_node",
+            "source_node": "N001",
+            "target_nodes": [
+              "N002"
+            ],
+            "resistance": "1m"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N001)",
+          "v(N002)",
+          "v(N004)",
+          "i(Rlamp13_1)"
+        ]
+      }
+    },
+    {
+      "scenario_number": 3,
+      "scenario_id": "scenario_3",
+      "title": "Chiudere lo switch riconosciuto",
+      "hypothesis": "Lo stato aperto di switch25.1 potrebbe impedire una condizione necessaria al funzionamento della lampada.",
+      "actions": [
+        {
+          "type": "close_switch",
+          "target": "switch25.1"
+        }
+      ],
+      "analysis": "op",
+      "compare": [
+        "v(N003)",
+        "v(N002)",
+        "v(N004)",
+        "i(Rlamp13_1)"
+      ],
+      "rerun_from": "06",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 3,
+      "original_scenario_id": "scenario_3",
+      "execution_path": null,
+      "created_at": "2026-07-07T17:07:00",
+      "updated_at": "2026-07-07T17:07:00",
+      "signature": "{\"actions\": [{\"target\": \"switch25.1\", \"type\": \"close_switch\"}], \"analysis\": \"op\", \"compare\": [\"v(N003)\", \"v(N002)\", \"v(N004)\", \"i(Rlamp13_1)\"], \"hypothesis\": \"Lo stato aperto di switch25.1 potrebbe impedire una condizione necessaria al funzionamento della lampada.\", \"title\": \"Chiudere lo switch riconosciuto\"}",
+      "scenario": {
+        "scenario_id": "scenario_3",
+        "title": "Chiudere lo switch riconosciuto",
+        "hypothesis": "Lo stato aperto di switch25.1 potrebbe impedire una condizione necessaria al funzionamento della lampada.",
+        "actions": [
+          {
+            "type": "close_switch",
+            "target": "switch25.1"
+          }
+        ],
+        "rerun_from": "06",
+        "analysis": "op",
+        "compare": [
+          "v(N003)",
+          "v(N002)",
+          "v(N004)",
+          "i(Rlamp13_1)"
+        ]
+      }
+    },
+    {
+      "scenario_number": 4,
+      "scenario_id": "scenario_4",
+      "title": "Verificare la continuità diretta tra N001 e N002",
+      "hypothesis": "Il ramo lampada resta spento perché nel circuito base manca una continuità elettrica utile tra N001 e N002, indipendentemente dallo stato dello switch riconosciuto.",
+      "actions": [
+        {
+          "type": "connect_nodes",
+          "from": "N001",
+          "to": "N002",
+          "resistance": "1m"
+        }
+      ],
+      "analysis": "op",
+      "compare": [
+        "v(N001)",
+        "v(N002)",
+        "v(N004)",
+        "i(Rlamp13_1)"
+      ],
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_2",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_3",
+      "execution_path": null,
+      "created_at": "2026-07-07T17:11:57",
+      "updated_at": "2026-07-07T17:11:57",
+      "signature": "{\"actions\": [{\"from\": \"N001\", \"resistance\": \"1m\", \"to\": \"N002\", \"type\": \"connect_nodes\"}], \"analysis\": \"op\", \"compare\": [\"v(N001)\", \"v(N002)\", \"v(N004)\", \"i(Rlamp13_1)\"], \"hypothesis\": \"Il ramo lampada resta spento perché nel circuito base manca una continuità elettrica utile tra N001 e N002, indipendentemente dallo stato dello switch riconosciuto.\", \"title\": \"Verificare la continuità diretta tra N001 e N002\"}",
+      "scenario": {
+        "scenario_id": "scenario_4",
+        "title": "Verificare la continuità diretta tra N001 e N002",
+        "hypothesis": "Il ramo lampada resta spento perché nel circuito base manca una continuità elettrica utile tra N001 e N002, indipendentemente dallo stato dello switch riconosciuto.",
+        "actions": [
+          {
+            "type": "connect_nodes",
+            "from": "N001",
+            "to": "N002",
+            "resistance": "1m"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N001)",
+          "v(N002)",
+          "v(N004)",
+          "i(Rlamp13_1)"
+        ]
+      }
+    }
+  ]
+}

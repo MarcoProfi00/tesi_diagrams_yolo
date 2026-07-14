@@ -1,0 +1,20 @@
+{
+  "scenario_id": "scenario_1",
+  "title": "Alimentare l’ingresso VMON_INPUT dal connettore",
+  "hypothesis": "VMON legge 0 V perché il nodo N003 (VMON_INPUT) non è alimentato nel netlist base.",
+  "actions": [
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N003",
+      "negative": "0",
+      "value": "5V"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N003)",
+    "v(N001)",
+    "stderr"
+  ]
+}

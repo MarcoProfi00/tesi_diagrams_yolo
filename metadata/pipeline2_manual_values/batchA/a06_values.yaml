@@ -1,0 +1,126 @@
+circuit_id: a06
+
+simulation:
+  analyses: [op, tran]
+  tran:
+    step: 0.1ms
+    stop: 50ms
+
+supplies:
+  VCC:
+    terminal: terminal26.1_t1
+    value: 12
+    unit: V
+    reference: 0
+    type: dc
+    source: manual_from_image_label
+    label_text: "VCC 12 V"
+
+  VEE:
+    terminal: terminal26.2_t1
+    value: 0
+    unit: V
+    reference: 0
+    type: dc
+    source: manual_from_image_label
+    label_text: "VEE 0 V"
+
+components:
+  signal_source23.1:
+    type: sin
+    waveform: sin
+    value: 1
+    unit: V
+    offset: 0
+    amplitude: 1
+    frequency: 100
+    frequency_unit: Hz
+    source: manual_from_image_label
+    label_text: "vs AC 1"
+    note: "Frequency not shown in the image; 100 Hz is assumed for transient simulation."
+
+  resistor22.1:
+    value: 1
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "Rs 1 kOhm"
+
+  capacitor4.1:
+    value: 1
+    unit: uf
+    source: manual_from_image_label
+    label_text: "Cc1 1 uF"
+
+  resistor22.2:
+    value: 100
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "100 kOhm"
+
+  resistor22.3:
+    value: 47
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "47 kOhm"
+
+  npn_transistor18.1:
+    model: 2N2222
+    source: manual_assumption
+    label_text: "NPN transistor"
+
+  resistor22.4:
+    value: 6.8
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "6.8 kOhm"
+
+  resistor22.5:
+    value: 3.9
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "3.9 kOhm"
+
+  capacitor4.2:
+    value: 100
+    unit: uf
+    source: manual_from_image_label
+    label_text: "CE 100 uF"
+
+  capacitor4.3:
+    value: 10
+    unit: uf
+    source: manual_from_image_label
+    label_text: "Cc2 10 uF"
+
+  resistor22.6:
+    value: 10
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "RL 10 kOhm"
+
+nodes:
+  terminal26.1_t1:
+    label: VCC
+    source: manual_from_image_label
+    label_text: "VCC 12 V"
+
+  terminal26.2_t1:
+    label: VEE
+    spice_node: 0
+    source: manual_from_image_label
+    label_text: "VEE 0 V"
+
+  terminal26.3_t1:
+    label: VOUT
+    source: manual_from_image_label
+    label_text: "vo"
+
+  signal_source23.1_t1:
+    label: VS
+    source: manual_from_image_label
+    label_text: "vs AC 1"
+
+  gnd9.1_t1:
+    label: GND
+    spice_node: 0
+    source: graph_json_gnd

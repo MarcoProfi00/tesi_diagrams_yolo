@@ -1,0 +1,290 @@
+PROMPT AGENTE DIAGNOSTICO - SNAPSHOT CORRENTE
+=============================================
+
+Questo file documenta lo snapshot corrente del prompt dell'agente diagnostico.
+
+Importante:
+
+- questo file NON viene letto a runtime dalla pipeline;
+- e una nota di allineamento e consultazione umana;
+- il prompt operativo viene generato dal codice in:
+
+```text
+scripts/pipeline_2.0/json_to_spice/agent_readonly/prompt_builder.py
+scripts/pipeline_2.0/json_to_spice/agent_readonly/scenario_prompt.py
+```
+
+- in CLI lo step 11 genera `11_agent_prompt.md`;
+- nella web chat lo step 09 genera `11_agent_prompt_chat.md`.
+
+Le regole qui descritte sono generali: devono valere per tutti i batch e per
+tutti i circuiti, non solo per `a01`.
+
+
+FAMIGLIE DI SCENARIO
+====================
+
+Il prompt corrente distingue due famiglie principali di scenario.
+
+Scenari elettrici / di pilotaggio:
+
+  - drive_node_voltage
+  - change_source_value
+  - change_component_value
+  - close_switch
+
+Scenari topologici controllati:
+
+  - connect_nodes
+  - add_resistor_between_nodes
+  - feed_nodes_from_source_node
+
+Le primitive future restano fuori dagli scenari eseguibili finche non vengono
+implementate davvero nel runner.
+
+
+REGOLA DI NATURALEZZA
+=====================
+
+Quando un ramo di carico e alimentato attraverso un ingresso a monte, l'agente
+deve preferire l'ingresso a monte invece di forzare direttamente il nodo
+interno del carico.
+
+Esempio:
+
+```text
+connector pin -> resistor -> lamp -> ground
+```
+
+Scenario naturale:
+
+```json
+{
+  "type": "drive_node_voltage",
+  "target": "N002",
+  "value": "5V"
+}
+```
+
+Scenario meno naturale, da usare solo come test successivo di isolamento:
+
+```json
+{
+  "type": "drive_node_voltage",
+  "target": "N004",
+  "value": "5V"
+}
+```
+
+Se esiste uno switch gia riconosciuto, aprire o chiudere quello switch e spesso
+piu naturale che inventare un nuovo punto interno di alimentazione.
+
+Se l'ipotesi riguarda invece un valore gia presente in netlist, per esempio una
+resistenza di bias, un condensatore RC o una resistenza equivalente, l'agente
+deve preferire `change_component_value` invece di forzare direttamente un nodo
+interno.
+
+Esempio:
+
+```json
+{
+  "type": "change_component_value",
+  "target": "Rresistor22_4",
+  "value": "33k"
+}
+```
+
+
+REGOLA TOPOLOGICA
+=================
+
+`connect_nodes` appartiene agli scenari topologici controllati.
+
+Va usata quando l'ipotesi principale e una continuita mancante tra due nodi gia
+riconosciuti dalla pipeline, per esempio:
+
+  - jumper
+  - bridge
+  - wire
+  - collegamento connector-to-branch
+  - percorso di continuita che dovrebbe esistere tra due nodi gia presenti
+
+Non va usata come scorciatoia generica per "accendere qualcosa" quando il caso
+e spiegabile in modo piu naturale con:
+
+  - close_switch
+  - drive_node_voltage su un ingresso reale
+  - change_source_value
+  - change_component_value
+
+Esempio:
+
+```json
+{
+  "type": "connect_nodes",
+  "from": "N002",
+  "to": "N003",
+  "resistance": "1m"
+}
+```
+
+Nei primi tre scenari puo comparire anche in una run coerente, ma solo se la
+diagnosi suggerisce davvero un ponte o una continuita mancante tra nodi gia
+riconosciuti. Non deve diventare la prima scorciatoia automatica.
+
+
+REGOLA DI RAMO RESISTIVO AGGIUNTO
+=================================
+
+`add_resistor_between_nodes` appartiene agli scenari topologici controllati,
+ma non rappresenta una continuita quasi ideale.
+
+Va usata quando l'ipotesi diagnostica richiede di aggiungere un nuovo ramo
+resistivo tra due nodi gia esistenti, per esempio:
+
+  - pull-up
+  - pull-down
+  - shunt
+  - ramo di bias supplementare
+  - collegamento resistivo debole tra due sottoreti gia riconosciute
+
+Non va usata quando il vero sospetto riguarda solo il valore di una resistenza
+gia presente in netlist. In quel caso la primitiva naturale resta:
+
+  - change_component_value
+
+Esempio:
+
+```json
+{
+  "type": "add_resistor_between_nodes",
+  "from": "N001",
+  "to": "N004",
+  "value": "33k"
+}
+```
+
+Regola pratica sul valore:
+
+  - il valore deve essere sempre concreto;
+  - l'agente deve preferire valori semplici e leggibili;
+  - quando possibile, il valore deve essere coerente con la scala gia presente
+    nel circuito, per esempio `1k`, `10k`, `33k`, `47k`, `100k`;
+  - non bisogna proporre valori arbitrari o troppo strani senza una ragione
+    diagnostica precisa.
+
+
+REGOLA DI PROPAGAZIONE DA NODO SORGENTE
+=======================================
+
+`feed_nodes_from_source_node` appartiene agli scenari topologici controllati,
+ma ha una semantica piu specifica di `connect_nodes`.
+
+Va usata quando:
+
+  - esiste un nodo sorgente gia alimentato nella base run;
+  - oppure il nodo sorgente viene reso alimentato da un'altra azione nello
+    stesso scenario self-contained;
+  - il sospetto diagnostico e che quell'alimentazione debba propagarsi verso
+    uno o piu nodi target di ingresso ramo.
+
+Non va usata quando nella netlist base non esiste alcun nodo sorgente attivo.
+In quel caso sono piu naturali `drive_node_voltage` o, in una fase successiva,
+una primitiva che aggiunge una sorgente tra due nodi.
+
+Esempio:
+
+```json
+{
+  "type": "feed_nodes_from_source_node",
+  "source_node": "N001",
+  "target_nodes": ["N002"],
+  "resistance": "1m"
+}
+```
+
+Questa primitiva e preferibile a piu `connect_nodes` separati solo quando
+l'idea diagnostica e esplicitamente:
+
+```text
+propagare alimentazione da un unico nodo sorgente verso uno o piu target
+```
+
+Se invece l'ipotesi e un singolo ponte o jumper specifico tra due nodi,
+`connect_nodes` resta la primitiva piu chiara.
+
+
+REGOLA DI AUTOSUFFICIENZA
+=========================
+
+I primi tre scenari devono poter essere eseguiti da soli.
+
+Dopo che esistono scenari gia eseguiti, anche ogni nuovo scenario proposto deve
+poter essere eseguito da solo partendo dalla base run. Le modifiche applicate
+in una cartella scenario precedente non restano attive automaticamente.
+
+Non va bene proporre:
+
+```text
+dopo lo scenario 1, esegui .tran
+```
+
+se lo scenario non include anche le azioni necessarie ad alimentare il ramo.
+
+La forma corretta e includere tutto nello stesso JSON.
+
+Regola pratica:
+
+```text
+se il prossimo scenario dipende da una condizione abilitante gia verificata,
+quella condizione va ripetuta nello stesso array actions del nuovo scenario.
+```
+
+Esempio:
+
+```json
+{
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    },
+    {
+      "type": "connect_nodes",
+      "from": "N002",
+      "to": "N003",
+      "resistance": "1m"
+    }
+  ]
+}
+```
+
+Non bisogna pero combinare tutto automaticamente: si reincludono solo le azioni
+abilitanti davvero necessarie alla nuova ipotesi.
+
+
+MODALITA CONCLUSIONE FINALE
+===========================
+
+Quando l'utente non chiede piu "quale scenario provo adesso?", ma chiede invece
+una sintesi o una conclusione, l'agente deve entrare in una modalita diversa.
+
+Esempi tipici:
+
+  - Dammi una conclusione finale
+  - Qual e la diagnosi finale piu probabile?
+  - Riassumi cosa hanno mostrato gli scenari
+  - Dopo questi test, cosa possiamo concludere?
+  - Ha senso continuare oppure possiamo fermarci qui?
+
+In questa modalita l'agente:
+
+  1. usa come evidenza principale gli scenari gia eseguiti;
+  2. non propone automaticamente un nuovo scenario;
+  3. spiega quali ipotesi sono state rafforzate e quali indebolite;
+  4. da la conclusione diagnostica piu forte raggiungibile;
+  5. chiarisce cosa non e ancora dimostrato;
+  6. suggerisce un altro scenario solo se e davvero l'unico test decisivo rimasto.
+
+Questa regola serve a evitare che l'agente continui a generare scenari in modo
+automatico anche quando l'utente vuole semplicemente tirare le conclusioni.

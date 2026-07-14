@@ -1,0 +1,45 @@
+Componente: display a 7 segmenti common cathode
+
+Descrizione:
+Un display a 7 segmenti e' un indicatore LED usato per visualizzare cifre numeriche.
+Ogni cifra contiene i segmenti a, b, c, d, e, f, g e, se presente, il punto decimale DP.
+
+Nel circuito considerato e' presente un singolo display a 7 segmenti pilotato dal circuito integrato 4026.
+Il 4026 fornisce direttamente le uscite per i segmenti a, b, c, d, e, f e g.
+
+Pin logici principali:
+- a: segmento superiore.
+- b: segmento superiore destro.
+- c: segmento inferiore destro.
+- d: segmento inferiore.
+- e: segmento inferiore sinistro.
+- f: segmento superiore sinistro.
+- g: segmento centrale.
+- DP: punto decimale, se presente.
+- com / cc: terminale comune della cifra.
+
+Tipo common cathode:
+- In un display common cathode i catodi dei LED interni sono collegati al terminale comune.
+- Il terminale com / cc deve essere collegato a GND.
+- Un segmento si accende quando il relativo ingresso a, b, c, d, e, f o g riceve un livello alto attraverso una resistenza di limitazione.
+- Se il terminale common cathode non e' collegato correttamente a GND, il display puo' restare spento o funzionare in modo instabile.
+
+Resistenze dei segmenti:
+- Ogni segmento LED deve avere una resistenza di limitazione della corrente.
+- Nel circuito sono presenti sette resistenze, una per ciascun segmento a-g.
+- Il valore indicato nello schema e' 7 x 330 ohm.
+- Se una resistenza e' aperta, di valore errato o non collegata, il segmento corrispondente puo' restare spento o avere luminosita' anomala.
+- Senza resistenze di limitazione, il display o le uscite del driver possono danneggiarsi.
+
+Collegamento con il 4026:
+- Le uscite a, b, c, d, e, f, g del 4026 devono andare ai segmenti corrispondenti del display tramite resistenze.
+- L'ordine delle connessioni a-g deve essere coerente: se due segmenti sono scambiati, il display mostra cifre errate.
+- Se il 4026 riceve clock ma il display non cambia cifra, controllare anche i pin di reset, inhibit, display enable e alimentazione del 4026.
+
+Controlli diagnostici utili:
+- Verificare che il terminale common cathode del display sia collegato a GND.
+- Verificare continuita' tra ogni uscita a-g del 4026, la relativa resistenza e il segmento corrispondente del display.
+- Verificare che le sette resistenze dei segmenti siano presenti e di valore corretto.
+- Verificare che il display sia realmente common cathode; un display common anode non funzionerebbe correttamente con lo stesso collegamento.
+- Se mancano singoli segmenti, controllare prima resistenza, pista e pin del segmento interessato.
+- Se tutto il display resta spento, controllare common cathode, alimentazione del 4026 e abilitazione display.

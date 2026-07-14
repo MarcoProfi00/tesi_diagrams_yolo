@@ -1,0 +1,76 @@
+{
+  "metadata": {
+    "circuit_id": "c14",
+    "batch": "C2",
+    "batch_dir": "batchC2",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\images\\c14.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\json\\c14.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "c14.jpg",
+    "json_file": "c14.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:35:23",
+    "judge_latency_seconds": 16.656,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=14954, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=651, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=15605)",
+  "judge_result": {
+    "circuit_id": "c14",
+    "batch": "C2",
+    "image_file": "c14.jpg",
+    "json_file": "c14.json",
+    "image_graph_fidelity_score": 94,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 22,
+      "graph_connections": 52,
+      "visible_semantics": 10
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 1,
+      "minor": 1
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "terminal_polarity_error",
+        "description": "I due condensatori superiori visibili (C1 e C2) sono disegnati come condensatori non polarizzati, mentre nel JSON sono modellati come Polarized_Capacitor con terminali positive/negative. La topologia dei collegamenti resta pero coerente con l'immagine.",
+        "image_evidence": "Nella parte alta del circuito, i simboli C1 e C2 sono quelli di condensatori non polarizzati collegati tra rail superiore e nodo comune verso pin 2 dell'IC.",
+        "json_evidence": "components include polarized_capacitor20.1 and polarized_capacitor20.2 with terminals named positive/negative."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "component_class_semantic_imprecision",
+        "description": "Il marking visibile nel corpo IC nell'immagine appare TC4423/TC4424 in modo non completamente coerente con il testo in basso, ma questo non altera i collegamenti del graph."
+      }
+    ],
+    "missing_from_json": [],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "C1/C2 as generic two-terminal capacitors between V+ rail and node shared with IC pin 2",
+        "found_in_json": "polarized_capacitor20.1 and polarized_capacitor20.2 represented with positive/negative terminals on the same two nodes",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "Il testo nell'immagine riporta 'Motor driver using TC4424' mentre il corpo IC e il JSON riportano TC4423; la discrepanza di OCR/label non influisce sui collegamenti.",
+      "La corrispondenza esatta R1/R2 con resistor22.1/resistor22.2 non e necessaria: entrambe le resistenze risultano correttamente collegate tra +5V e i due ingressi/terminali di controllo.",
+      "I simboli di GND sono multipli e separati graficamente; il JSON li mantiene separati, coerentemente con la regola di non fonderli automaticamente oltre i fili visibili."
+    ],
+    "short_explanation": "Il campo graph e topologicamente molto fedele all'immagine: ingressi Power/Direction con pull-up a +5V, IC con pin 2/4/3 a sinistra e 7/6/5 a destra, nodo di alimentazione con i due condensatori, motore tra i due output estremi e rete di quattro diodi verso rail alto e GND sono rappresentati correttamente. L'unica deviazione rilevante e la classificazione dei due condensatori come polarizzati, ma i nodi collegati sono quelli giusti."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c14\",\"batch\":\"C2\",\"image_file\":\"c14.jpg\",\"json_file\":\"c14.json\",\"image_graph_fidelity_score\":94,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":22,\"graph_connections\":52,\"visible_semantics\":10},\"error_counts\":{\"critical\":0,\"major\":1,\"minor\":1},\"critical_errors\":[],\"major_errors\":[{\"type\":\"terminal_polarity_error\",\"description\":\"I due condensatori superiori visibili (C1 e C2) sono disegnati come condensatori non polarizzati, mentre nel JSON sono modellati come Polarized_Capacitor con terminali positive/negative. La topologia dei collegamenti resta pero coerente con l'immagine.\",\"image_evidence\":\"Nella parte alta del circuito, i simboli C1 e C2 sono quelli di condensatori non polarizzati collegati tra rail superiore e nodo comune verso pin 2 dell'IC.\",\"json_evidence\":\"components include polarized_capacitor20.1 and polarized_capacitor20.2 with terminals named positive/negative.\"}],\"minor_errors\":[{\"type\":\"component_class_semantic_imprecision\",\"description\":\"Il marking visibile nel corpo IC nell'immagine appare TC4423/TC4424 in modo non completamente coerente con il testo in basso, ma questo non altera i collegamenti del graph.\"}],\"missing_from_json\":[],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"C1/C2 as generic two-terminal capacitors between V+ rail and node shared with IC pin 2\",\"found_in_json\":\"polarized_capacitor20.1 and polarized_capacitor20.2 represented with positive/negative terminals on the same two nodes\",\"severity\":\"major\"}],\"uncertain_points\":[\"Il testo nell'immagine riporta 'Motor driver using TC4424' mentre il corpo IC e il JSON riportano TC4423; la discrepanza di OCR/label non influisce sui collegamenti.\",\"La corrispondenza esatta R1/R2 con resistor22.1/resistor22.2 non e necessaria: entrambe le resistenze risultano correttamente collegate tra +5V e i due ingressi/terminali di controllo.\",\"I simboli di GND sono multipli e separati graficamente; il JSON li mantiene separati, coerentemente con la regola di non fonderli automaticamente oltre i fili visibili.\"],\"short_explanation\":\"Il campo graph e topologicamente molto fedele all'immagine: ingressi Power/Direction con pull-up a +5V, IC con pin 2/4/3 a sinistra e 7/6/5 a destra, nodo di alimentazione con i due condensatori, motore tra i due output estremi e rete di quattro diodi verso rail alto e GND sono rappresentati correttamente. L'unica deviazione rilevante e la classificazione dei due condensatori come polarizzati, ma i nodi collegati sono quelli giusti.\"}"
+}

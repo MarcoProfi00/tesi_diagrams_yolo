@@ -1,0 +1,2886 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Graph c09</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
+      color: #1f2d3a;
+    }
+    .page {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .topbar h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .links a {
+      text-decoration: none;
+      color: #144a7b;
+      background: #ffffff;
+      border: 1px solid #d8e1ea;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-weight: 600;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .summary-item {
+      background: rgba(255,255,255,0.88);
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .summary-item .k {
+      color: #5f7184;
+      font-size: 13px;
+    }
+    .summary-item .v {
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .panel-grid {
+      display: grid;
+      grid-template-columns: minmax(280px, 420px) 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+    .panel {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #d8e1ea;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 12px 24px rgba(27, 53, 82, 0.06);
+    }
+    .panel h2 {
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
+    .preview-image {
+      width: 100%;
+      display: block;
+      border-radius: 12px;
+      border: 1px solid #d8e1ea;
+      background: #fff;
+    }
+    .preview-missing {
+      min-height: 220px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      border: 1px dashed #c6d2de;
+      color: #6f8093;
+      background: #f9fbfd;
+    }
+    .graph-wrap {
+      overflow: hidden;
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      background: #f8fbff;
+      cursor: grab;
+      min-height: 720px;
+    }
+    .graph-wrap:active {
+      cursor: grabbing;
+    }
+    #graph-svg {
+      width: 100%;
+      height: 760px;
+      display: block;
+      user-select: none;
+    }
+    .node-label {
+      fill: #314457;
+      font-size: 11px;
+      font-weight: 600;
+      pointer-events: none;
+    }
+    .node-label.small {
+      font-size: 10px;
+    }
+    .legend {
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      font-size: 13px;
+      color: #55687d;
+    }
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .warning-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .warning-box {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .warning-box h3 {
+      margin: 0 0 10px 0;
+      font-size: 15px;
+    }
+    .warning-box p, .warning-box li {
+      color: #526274;
+      font-size: 13px;
+    }
+    details {
+      margin-top: 18px;
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+    }
+    pre {
+      margin: 14px 0 0 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+      color: #314457;
+    }
+    .note {
+      color: #5c6f82;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    @media (max-width: 980px) {
+      .panel-grid {
+        grid-template-columns: 1fr;
+      }
+      #graph-svg {
+        height: 600px;
+      }
+      .graph-wrap {
+        min-height: 560px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <h1>Graph c09</h1>
+      <div class="links">
+        <a href="graph_compact.html">Vista compatta HTML</a><a href="graph_compact.png">Vista compatta PNG</a>
+        <a href="c09.json">JSON finale 05</a>
+        <a href="graph.png">Graph PNG</a>
+        <a href="../index.html">Batch index</a>
+      </div>
+    </div>
+
+    <div class="summary-grid"><div class="summary-item"><span class="k">Componenti</span><span class="v">34</span></div><div class="summary-item"><span class="k">Terminali</span><span class="v">114</span></div><div class="summary-item"><span class="k">Nodi elettrici</span><span class="v">50</span></div><div class="summary-item"><span class="k">Isolati</span><span class="v">2</span></div><div class="summary-item"><span class="k">Unmatched</span><span class="v">0</span></div><div class="summary-item"><span class="k">Suspicious</span><span class="v">0</span></div></div>
+
+    <div class="panel-grid">
+      <section class="panel">
+        <h2>Circuito</h2>
+        <img src="c09.jpg" alt="Circuito c09" class="preview-image">
+        <p class="note">Il grafo sotto e costruito solo a partire dal JSON del passo 05. La lettura va da sinistra a destra: circuito, classi, componenti, terminali e nodi elettrici.</p>
+      </section>
+
+      <section class="panel">
+        <h2>Graph interattivo</h2>
+        <div class="graph-wrap" id="graph-wrap"><svg id="graph-svg" viewBox="0 4146.6 1260 920" data-full-width="1260" data-full-height="8436" xmlns="http://www.w3.org/2000/svg" aria-label="Graph"><line x1="90.0" y1="4606.6" x2="270.0" y2="1035.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1035.0" x2="500.0" y2="111.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="111.0" x2="780.0" y2="82.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="111.0" x2="780.0" y2="140.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1035.0" x2="500.0" y2="265.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="265.0" x2="780.0" y2="236.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="265.0" x2="780.0" y2="294.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1035.0" x2="500.0" y2="419.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="419.0" x2="780.0" y2="390.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="419.0" x2="780.0" y2="448.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1035.0" x2="500.0" y2="573.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="573.0" x2="780.0" y2="544.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="573.0" x2="780.0" y2="602.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1035.0" x2="500.0" y2="727.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="727.0" x2="780.0" y2="698.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="727.0" x2="780.0" y2="756.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1035.0" x2="500.0" y2="881.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="881.0" x2="780.0" y2="852.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="881.0" x2="780.0" y2="910.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1035.0" x2="500.0" y2="1035.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1035.0" x2="780.0" y2="1006.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1035.0" x2="780.0" y2="1064.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1035.0" x2="500.0" y2="1189.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1189.0" x2="780.0" y2="1160.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1189.0" x2="780.0" y2="1218.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1035.0" x2="500.0" y2="1343.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1343.0" x2="780.0" y2="1314.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1343.0" x2="780.0" y2="1372.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1035.0" x2="500.0" y2="1497.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1497.0" x2="780.0" y2="1468.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1497.0" x2="780.0" y2="1526.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1035.0" x2="500.0" y2="1651.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1651.0" x2="780.0" y2="1622.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1651.0" x2="780.0" y2="1680.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1035.0" x2="500.0" y2="1805.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1805.0" x2="780.0" y2="1776.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1805.0" x2="780.0" y2="1834.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1035.0" x2="500.0" y2="1959.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1959.0" x2="780.0" y2="1930.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1959.0" x2="780.0" y2="1988.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="90.0" y1="4606.6" x2="270.0" y2="2448.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="2448.0" x2="500.0" y2="2160.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2160.0" x2="780.0" y2="2160.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="2448.0" x2="500.0" y2="2256.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2256.0" x2="780.0" y2="2256.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="2448.0" x2="500.0" y2="2352.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2352.0" x2="780.0" y2="2352.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="2448.0" x2="500.0" y2="2448.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2448.0" x2="780.0" y2="2448.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="2448.0" x2="500.0" y2="2544.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2544.0" x2="780.0" y2="2544.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="2448.0" x2="500.0" y2="2640.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2640.0" x2="780.0" y2="2640.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="2448.0" x2="500.0" y2="2736.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2736.0" x2="780.0" y2="2736.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="90.0" y1="4606.6" x2="270.0" y2="3100.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="3100.0" x2="500.0" y2="2908.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2908.0" x2="780.0" y2="2908.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="3100.0" x2="500.0" y2="3004.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3004.0" x2="780.0" y2="3004.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="3100.0" x2="500.0" y2="3100.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3100.0" x2="780.0" y2="3100.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="3100.0" x2="500.0" y2="3196.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3196.0" x2="780.0" y2="3196.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="3100.0" x2="500.0" y2="3292.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3292.0" x2="780.0" y2="3292.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="90.0" y1="4606.6" x2="270.0" y2="3570.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="3570.0" x2="500.0" y2="3493.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3493.0" x2="780.0" y2="3464.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3493.0" x2="780.0" y2="3522.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="3570.0" x2="500.0" y2="3647.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3647.0" x2="780.0" y2="3618.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="3647.0" x2="780.0" y2="3676.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="90.0" y1="4606.6" x2="270.0" y2="6094.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="6094.5" x2="500.0" y2="4399.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="4399.0" x2="780.0" y2="3848.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="4399.0" x2="780.0" y2="3906.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="4399.0" x2="780.0" y2="3964.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="4399.0" x2="780.0" y2="4022.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="4399.0" x2="780.0" y2="4080.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="4399.0" x2="780.0" y2="4138.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="4399.0" x2="780.0" y2="4196.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="4399.0" x2="780.0" y2="4254.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="4399.0" x2="780.0" y2="4312.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="4399.0" x2="780.0" y2="4370.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="4399.0" x2="780.0" y2="4428.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="4399.0" x2="780.0" y2="4486.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="4399.0" x2="780.0" y2="4544.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="4399.0" x2="780.0" y2="4602.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="4399.0" x2="780.0" y2="4660.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="4399.0" x2="780.0" y2="4718.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="4399.0" x2="780.0" y2="4776.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="4399.0" x2="780.0" y2="4834.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="4399.0" x2="780.0" y2="4892.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="4399.0" x2="780.0" y2="4950.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="6094.5" x2="500.0" y2="5771.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="5046.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="5104.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="5162.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="5220.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="5278.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="5336.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="5394.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="5452.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="5510.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="5568.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="5626.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="5684.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="5742.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="5800.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="5858.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="5916.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="5974.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="6032.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="6090.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="6148.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="6206.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="6264.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="6322.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="6380.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="6438.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="5771.0" x2="780.0" y2="6496.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="6094.5" x2="500.0" y2="6824.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="6824.0" x2="780.0" y2="6592.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="6824.0" x2="780.0" y2="6650.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="6824.0" x2="780.0" y2="6708.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="6824.0" x2="780.0" y2="6766.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="6824.0" x2="780.0" y2="6824.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="6824.0" x2="780.0" y2="6882.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="6824.0" x2="780.0" y2="6940.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="6824.0" x2="780.0" y2="6998.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="6824.0" x2="780.0" y2="7056.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="6094.5" x2="500.0" y2="7384.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="7384.0" x2="780.0" y2="7152.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="7384.0" x2="780.0" y2="7210.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="7384.0" x2="780.0" y2="7268.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="7384.0" x2="780.0" y2="7326.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="7384.0" x2="780.0" y2="7384.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="7384.0" x2="780.0" y2="7442.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="7384.0" x2="780.0" y2="7500.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="7384.0" x2="780.0" y2="7558.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="7384.0" x2="780.0" y2="7616.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="90.0" y1="4606.6" x2="270.0" y2="7817.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="7817.0" x2="500.0" y2="7817.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="7817.0" x2="780.0" y2="7788.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="7817.0" x2="780.0" y2="7846.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="90.0" y1="4606.6" x2="270.0" y2="8182.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="8182.0" x2="500.0" y2="8076.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="8076.0" x2="780.0" y2="8018.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="8076.0" x2="780.0" y2="8076.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="8076.0" x2="780.0" y2="8134.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="8182.0" x2="500.0" y2="8288.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="8288.0" x2="780.0" y2="8230.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="8288.0" x2="780.0" y2="8288.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="8288.0" x2="780.0" y2="8346.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="780.0" y1="82.0" x2="1080.0" y2="1495.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2908.0" x2="1080.0" y2="1495.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="140.0" x2="1080.0" y2="2542.5" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2160.0" x2="1080.0" y2="2542.5" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3906.0" x2="1080.0" y2="2542.5" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3964.0" x2="1080.0" y2="2542.5" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3464.0" x2="1080.0" y2="2612.7" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="294.0" x2="1080.0" y2="2612.7" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="4080.0" x2="1080.0" y2="2612.7" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3522.0" x2="1080.0" y2="2889.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2256.0" x2="1080.0" y2="2889.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="236.0" x2="1080.0" y2="2129.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="4022.0" x2="1080.0" y2="2129.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3004.0" x2="1080.0" y2="3948.0" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="4892.0" x2="1080.0" y2="3948.0" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3848.0" x2="1080.0" y2="3848.0" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="4138.0" x2="1080.0" y2="4621.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="5104.0" x2="1080.0" y2="4621.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="4196.0" x2="1080.0" y2="4679.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="5162.0" x2="1080.0" y2="4679.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="4254.0" x2="1080.0" y2="4737.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="5220.0" x2="1080.0" y2="4737.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="4312.0" x2="1080.0" y2="4822.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="5278.0" x2="1080.0" y2="4822.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="4370.0" x2="1080.0" y2="4924.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="5336.0" x2="1080.0" y2="4924.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="4428.0" x2="1080.0" y2="4992.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="5394.0" x2="1080.0" y2="4992.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="4486.0" x2="1080.0" y2="5060.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="5452.0" x2="1080.0" y2="5060.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="4544.0" x2="1080.0" y2="5128.0" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="5510.0" x2="1080.0" y2="5128.0" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="4602.0" x2="1080.0" y2="5162.0" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="5568.0" x2="1080.0" y2="5162.0" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="4660.0" x2="1080.0" y2="5264.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="5626.0" x2="1080.0" y2="5264.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="4718.0" x2="1080.0" y2="5332.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="5684.0" x2="1080.0" y2="5332.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="4776.0" x2="1080.0" y2="5366.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="5742.0" x2="1080.0" y2="5366.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="4834.0" x2="1080.0" y2="4856.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="4950.0" x2="1080.0" y2="3651.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2352.0" x2="1080.0" y2="3651.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="7788.0" x2="1080.0" y2="4890.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3618.0" x2="1080.0" y2="4890.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3100.0" x2="1080.0" y2="4890.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="7846.0" x2="1080.0" y2="4239.5" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="390.0" x2="1080.0" y2="4239.5" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3676.0" x2="1080.0" y2="4239.5" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="5046.0" x2="1080.0" y2="4239.5" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="448.0" x2="1080.0" y2="1448.0" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2448.0" x2="1080.0" y2="1448.0" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3196.0" x2="1080.0" y2="4788.0" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="6380.0" x2="1080.0" y2="4788.0" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="5800.0" x2="1080.0" y2="3753.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1622.0" x2="1080.0" y2="3753.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="5858.0" x2="1080.0" y2="3586.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1314.0" x2="1080.0" y2="3586.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="5916.0" x2="1080.0" y2="3719.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1468.0" x2="1080.0" y2="3719.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="5974.0" x2="1080.0" y2="3336.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="698.0" x2="1080.0" y2="3336.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="6032.0" x2="1080.0" y2="3519.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1006.0" x2="1080.0" y2="3519.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="6090.0" x2="1080.0" y2="3471.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="852.0" x2="1080.0" y2="3471.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="6148.0" x2="1080.0" y2="3685.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1160.0" x2="1080.0" y2="3685.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="6206.0" x2="1080.0" y2="3375.0" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="544.0" x2="1080.0" y2="3375.0" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="6264.0" x2="1080.0" y2="4020.0" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1776.0" x2="1080.0" y2="4020.0" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="6322.0" x2="1080.0" y2="4128.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1930.0" x2="1080.0" y2="4128.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="6438.0" x2="1080.0" y2="4958.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="3292.0" x2="1080.0" y2="4958.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="6496.0" x2="1080.0" y2="4520.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2544.0" x2="1080.0" y2="4520.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="602.0" x2="1080.0" y2="4094.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1218.0" x2="1080.0" y2="4094.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="6998.0" x2="1080.0" y2="4094.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="7558.0" x2="1080.0" y2="4094.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="756.0" x2="1080.0" y2="5026.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="6766.0" x2="1080.0" y2="5026.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="7326.0" x2="1080.0" y2="5026.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="910.0" x2="1080.0" y2="5196.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="6940.0" x2="1080.0" y2="5196.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="7500.0" x2="1080.0" y2="5196.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1064.0" x2="1080.0" y2="5230.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="6882.0" x2="1080.0" y2="5230.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="7442.0" x2="1080.0" y2="5230.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1372.0" x2="1080.0" y2="4199.0" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1680.0" x2="1080.0" y2="4199.0" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="6592.0" x2="1080.0" y2="4199.0" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="7152.0" x2="1080.0" y2="4199.0" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1526.0" x2="1080.0" y2="5298.0" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="6708.0" x2="1080.0" y2="5298.0" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="7268.0" x2="1080.0" y2="5298.0" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1834.0" x2="1080.0" y2="5094.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="8018.0" x2="1080.0" y2="5094.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1988.0" x2="1080.0" y2="5094.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="8230.0" x2="1080.0" y2="5094.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="8076.0" x2="1080.0" y2="7566.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="7056.0" x2="1080.0" y2="7566.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="8134.0" x2="1080.0" y2="5400.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2640.0" x2="1080.0" y2="5400.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="6650.0" x2="1080.0" y2="6930.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="7210.0" x2="1080.0" y2="6930.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="6824.0" x2="1080.0" y2="7104.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="7384.0" x2="1080.0" y2="7104.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="8288.0" x2="1080.0" y2="7952.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="7616.0" x2="1080.0" y2="7952.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="8346.0" x2="1080.0" y2="5541.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2736.0" x2="1080.0" y2="5541.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><g class="node-group" data-node-type="root"><title>Circuito c09
+Componenti: 34
+Terminali: 114
+Nodi elettrici: 50</title><circle cx="90.0" cy="4606.6" r="36.0" fill="#f26a63" stroke="#d4534c" stroke-width="2"></circle><text x="90.0" y="4610.6" text-anchor="middle" class="node-label">c09</text></g><g class="node-group" data-node-type="class"><title>Classe: Resistor
+Componenti: 13</title><circle cx="270.0" cy="1035.0" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="1039.0" text-anchor="middle" class="node-label">Resistor</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.1
+Classe: Resistor
+Instance: 22.1</title><circle cx="500.0" cy="111.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="115.0" text-anchor="middle" class="node-label">resistor22.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.1_t1
+Componente: resistor22.1
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="82.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="86.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.1_t2
+Componente: resistor22.1
+Nome: t2
+Posizione: bottom</title><circle cx="780.0" cy="140.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="144.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.2
+Classe: Resistor
+Instance: 22.2</title><circle cx="500.0" cy="265.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="269.0" text-anchor="middle" class="node-label">resistor22.2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.2_t1
+Componente: resistor22.2
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="236.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="240.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.2_t2
+Componente: resistor22.2
+Nome: t2
+Posizione: bottom</title><circle cx="780.0" cy="294.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="298.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.3
+Classe: Resistor
+Instance: 22.3</title><circle cx="500.0" cy="419.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="423.0" text-anchor="middle" class="node-label">resistor22.3</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.3_t1
+Componente: resistor22.3
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="390.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="394.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.3_t2
+Componente: resistor22.3
+Nome: t2
+Posizione: bottom</title><circle cx="780.0" cy="448.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="452.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.4
+Classe: Resistor
+Instance: 22.4</title><circle cx="500.0" cy="573.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="577.0" text-anchor="middle" class="node-label">resistor22.4</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.4_t1
+Componente: resistor22.4
+Nome: t1
+Posizione: left</title><circle cx="780.0" cy="544.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="548.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.4_t2
+Componente: resistor22.4
+Nome: t2
+Posizione: right</title><circle cx="780.0" cy="602.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="606.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.5
+Classe: Resistor
+Instance: 22.5</title><circle cx="500.0" cy="727.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="731.0" text-anchor="middle" class="node-label">resistor22.5</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.5_t1
+Componente: resistor22.5
+Nome: t1
+Posizione: left</title><circle cx="780.0" cy="698.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="702.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.5_t2
+Componente: resistor22.5
+Nome: t2
+Posizione: right</title><circle cx="780.0" cy="756.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="760.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.6
+Classe: Resistor
+Instance: 22.6</title><circle cx="500.0" cy="881.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="885.0" text-anchor="middle" class="node-label">resistor22.6</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.6_t1
+Componente: resistor22.6
+Nome: t1
+Posizione: left</title><circle cx="780.0" cy="852.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="856.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.6_t2
+Componente: resistor22.6
+Nome: t2
+Posizione: right</title><circle cx="780.0" cy="910.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="914.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.7
+Classe: Resistor
+Instance: 22.7</title><circle cx="500.0" cy="1035.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1039.0" text-anchor="middle" class="node-label">resistor22.7</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.7_t1
+Componente: resistor22.7
+Nome: t1
+Posizione: left</title><circle cx="780.0" cy="1006.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1010.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.7_t2
+Componente: resistor22.7
+Nome: t2
+Posizione: right</title><circle cx="780.0" cy="1064.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1068.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.8
+Classe: Resistor
+Instance: 22.8</title><circle cx="500.0" cy="1189.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1193.0" text-anchor="middle" class="node-label">resistor22.8</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.8_t1
+Componente: resistor22.8
+Nome: t1
+Posizione: left</title><circle cx="780.0" cy="1160.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1164.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.8_t2
+Componente: resistor22.8
+Nome: t2
+Posizione: right</title><circle cx="780.0" cy="1218.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1222.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.9
+Classe: Resistor
+Instance: 22.9</title><circle cx="500.0" cy="1343.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1347.0" text-anchor="middle" class="node-label">resistor22.9</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.9_t1
+Componente: resistor22.9
+Nome: t1
+Posizione: left</title><circle cx="780.0" cy="1314.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1318.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.9_t2
+Componente: resistor22.9
+Nome: t2
+Posizione: right</title><circle cx="780.0" cy="1372.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1376.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.10
+Classe: Resistor
+Instance: 22.10</title><circle cx="500.0" cy="1497.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1501.0" text-anchor="middle" class="node-label">resistor22.10</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.10_t1
+Componente: resistor22.10
+Nome: t1
+Posizione: left</title><circle cx="780.0" cy="1468.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1472.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.10_t2
+Componente: resistor22.10
+Nome: t2
+Posizione: right</title><circle cx="780.0" cy="1526.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1530.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.11
+Classe: Resistor
+Instance: 22.11</title><circle cx="500.0" cy="1651.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1655.0" text-anchor="middle" class="node-label">resistor22.11</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.11_t1
+Componente: resistor22.11
+Nome: t1
+Posizione: left</title><circle cx="780.0" cy="1622.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1626.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.11_t2
+Componente: resistor22.11
+Nome: t2
+Posizione: right</title><circle cx="780.0" cy="1680.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1684.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.12
+Classe: Resistor
+Instance: 22.12</title><circle cx="500.0" cy="1805.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1809.0" text-anchor="middle" class="node-label">resistor22.12</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.12_t1
+Componente: resistor22.12
+Nome: t1
+Posizione: left</title><circle cx="780.0" cy="1776.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1780.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.12_t2
+Componente: resistor22.12
+Nome: t2
+Posizione: right</title><circle cx="780.0" cy="1834.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1838.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.13
+Classe: Resistor
+Instance: 22.13</title><circle cx="500.0" cy="1959.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1963.0" text-anchor="middle" class="node-label">resistor22.13</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.13_t1
+Componente: resistor22.13
+Nome: t1
+Posizione: left</title><circle cx="780.0" cy="1930.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1934.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.13_t2
+Componente: resistor22.13
+Nome: t2
+Posizione: right</title><circle cx="780.0" cy="1988.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1992.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="class"><title>Classe: GND
+Componenti: 7</title><circle cx="270.0" cy="2448.0" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="2452.0" text-anchor="middle" class="node-label">GND</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.1
+Classe: GND
+Instance: 9.1</title><circle cx="500.0" cy="2160.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="2164.0" text-anchor="middle" class="node-label">gnd9.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: gnd9.1_t1
+Componente: gnd9.1
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="2160.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2164.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.2
+Classe: GND
+Instance: 9.2</title><circle cx="500.0" cy="2256.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="2260.0" text-anchor="middle" class="node-label">gnd9.2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: gnd9.2_t1
+Componente: gnd9.2
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="2256.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2260.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.3
+Classe: GND
+Instance: 9.3</title><circle cx="500.0" cy="2352.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="2356.0" text-anchor="middle" class="node-label">gnd9.3</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: gnd9.3_t1
+Componente: gnd9.3
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="2352.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2356.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.4
+Classe: GND
+Instance: 9.4</title><circle cx="500.0" cy="2448.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="2452.0" text-anchor="middle" class="node-label">gnd9.4</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: gnd9.4_t1
+Componente: gnd9.4
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="2448.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2452.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.5
+Classe: GND
+Instance: 9.5</title><circle cx="500.0" cy="2544.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="2548.0" text-anchor="middle" class="node-label">gnd9.5</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: gnd9.5_t1
+Componente: gnd9.5
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="2544.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2548.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.6
+Classe: GND
+Instance: 9.6</title><circle cx="500.0" cy="2640.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="2644.0" text-anchor="middle" class="node-label">gnd9.6</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: gnd9.6_t1
+Componente: gnd9.6
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="2640.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2644.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.7
+Classe: GND
+Instance: 9.7</title><circle cx="500.0" cy="2736.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="2740.0" text-anchor="middle" class="node-label">gnd9.7</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: gnd9.7_t1
+Componente: gnd9.7
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="2736.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2740.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="class"><title>Classe: Terminal
+Componenti: 5</title><circle cx="270.0" cy="3100.0" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="3104.0" text-anchor="middle" class="node-label">Terminal</text></g><g class="node-group" data-node-type="component"><title>Componente: terminal26.1
+Classe: Terminal
+Instance: 26.1</title><circle cx="500.0" cy="2908.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="2912.0" text-anchor="middle" class="node-label">terminal26.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: terminal26.1_t1
+Componente: terminal26.1
+Nome: t1
+Posizione: bottom</title><circle cx="780.0" cy="2908.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2912.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="component"><title>Componente: terminal26.2
+Classe: Terminal
+Instance: 26.2</title><circle cx="500.0" cy="3004.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="3008.0" text-anchor="middle" class="node-label">terminal26.2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: terminal26.2_t1
+Componente: terminal26.2
+Nome: t1
+Posizione: bottom</title><circle cx="780.0" cy="3004.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3008.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="component"><title>Componente: terminal26.3
+Classe: Terminal
+Instance: 26.3</title><circle cx="500.0" cy="3100.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="3104.0" text-anchor="middle" class="node-label">terminal26.3</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: terminal26.3_t1
+Componente: terminal26.3
+Nome: t1
+Posizione: bottom</title><circle cx="780.0" cy="3100.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3104.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="component"><title>Componente: terminal26.4
+Classe: Terminal
+Instance: 26.4</title><circle cx="500.0" cy="3196.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="3200.0" text-anchor="middle" class="node-label">terminal26.4</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: terminal26.4_t1
+Componente: terminal26.4
+Nome: t1
+Posizione: bottom</title><circle cx="780.0" cy="3196.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3200.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="component"><title>Componente: terminal26.5
+Classe: Terminal
+Instance: 26.5</title><circle cx="500.0" cy="3292.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="3296.0" text-anchor="middle" class="node-label">terminal26.5</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: terminal26.5_t1
+Componente: terminal26.5
+Nome: t1
+Posizione: bottom</title><circle cx="780.0" cy="3292.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3296.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="class"><title>Classe: Polarized_Capacitor
+Componenti: 2</title><circle cx="270.0" cy="3570.0" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="3567.0" text-anchor="middle" class="node-label small">Polarized</text><text x="270.0" y="3581.0" text-anchor="middle" class="node-label small">Capacitor</text></g><g class="node-group" data-node-type="component"><title>Componente: polarized_capacitor20.1
+Classe: Polarized_Capacitor
+Instance: 20.1</title><circle cx="500.0" cy="3493.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="3490.0" text-anchor="middle" class="node-label small">polarized</text><text x="500.0" y="3504.0" text-anchor="middle" class="node-label small">capacitor20.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: polarized_capacitor20.1_positive
+Componente: polarized_capacitor20.1
+Nome: positive
+Posizione: top</title><circle cx="780.0" cy="3464.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3468.0" text-anchor="middle" class="node-label">positive</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: polarized_capacitor20.1_negative
+Componente: polarized_capacitor20.1
+Nome: negative
+Posizione: bottom</title><circle cx="780.0" cy="3522.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3526.0" text-anchor="middle" class="node-label">negative</text></g><g class="node-group" data-node-type="component"><title>Componente: polarized_capacitor20.2
+Classe: Polarized_Capacitor
+Instance: 20.2</title><circle cx="500.0" cy="3647.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="3644.0" text-anchor="middle" class="node-label small">polarized</text><text x="500.0" y="3658.0" text-anchor="middle" class="node-label small">capacitor20.2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: polarized_capacitor20.2_positive
+Componente: polarized_capacitor20.2
+Nome: positive
+Posizione: top</title><circle cx="780.0" cy="3618.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3622.0" text-anchor="middle" class="node-label">positive</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: polarized_capacitor20.2_negative
+Componente: polarized_capacitor20.2
+Nome: negative
+Posizione: bottom</title><circle cx="780.0" cy="3676.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3680.0" text-anchor="middle" class="node-label">negative</text></g><g class="node-group" data-node-type="class"><title>Classe: Integrated_Circuit
+Componenti: 4</title><circle cx="270.0" cy="6094.5" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="6091.5" text-anchor="middle" class="node-label small">Integrated</text><text x="270.0" y="6105.5" text-anchor="middle" class="node-label small">Circuit</text></g><g class="node-group" data-node-type="component"><title>Componente: integrated_circuit11.1
+Classe: Integrated_Circuit
+Instance: 11.1
+Display: ADC0804
+IC marking: ADC0804</title><circle cx="500.0" cy="4399.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="4403.0" text-anchor="middle" class="node-label">ADC0804</text></g><g class="node-group" data-node-type="warning_terminal"><title>Terminal: integrated_circuit11.1_left_1
+Componente: integrated_circuit11.1
+Nome: left_1
+Posizione: left
+Display: ADC0804 left_1 pin6
+Pin: 6</title><circle cx="780.0" cy="3848.0" r="25.0" fill="#ffd0d0" stroke="#d12f2f" stroke-width="2"></circle><text x="780.0" y="3852.0" text-anchor="middle" class="node-label">pin6</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_left_2
+Componente: integrated_circuit11.1
+Nome: left_2
+Posizione: left
+Display: ADC0804 left_2 pin7
+Pin: 7</title><circle cx="780.0" cy="3906.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3910.0" text-anchor="middle" class="node-label">pin7</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_left_3
+Componente: integrated_circuit11.1
+Nome: left_3
+Posizione: left
+Display: ADC0804 left_3 pin8
+Pin: 8</title><circle cx="780.0" cy="3964.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="3968.0" text-anchor="middle" class="node-label">pin8</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_left_4
+Componente: integrated_circuit11.1
+Nome: left_4
+Posizione: left
+Display: ADC0804 left_4 pin19
+Pin: 19</title><circle cx="780.0" cy="4022.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="4026.0" text-anchor="middle" class="node-label">pin19</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_left_5
+Componente: integrated_circuit11.1
+Nome: left_5
+Posizione: left
+Display: ADC0804 left_5 pin4
+Pin: 4</title><circle cx="780.0" cy="4080.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="4084.0" text-anchor="middle" class="node-label">pin4</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_1
+Componente: integrated_circuit11.1
+Nome: right_1
+Posizione: right
+Display: ADC0804 right_1 D0
+Pin label: D0</title><circle cx="780.0" cy="4138.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="4142.0" text-anchor="middle" class="node-label">D0</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_2
+Componente: integrated_circuit11.1
+Nome: right_2
+Posizione: right
+Display: ADC0804 right_2 D1
+Pin label: D1</title><circle cx="780.0" cy="4196.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="4200.0" text-anchor="middle" class="node-label">D1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_3
+Componente: integrated_circuit11.1
+Nome: right_3
+Posizione: right
+Display: ADC0804 right_3 D2
+Pin label: D2</title><circle cx="780.0" cy="4254.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="4258.0" text-anchor="middle" class="node-label">D2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_4
+Componente: integrated_circuit11.1
+Nome: right_4
+Posizione: right
+Display: ADC0804 right_4 D3
+Pin label: D3</title><circle cx="780.0" cy="4312.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="4316.0" text-anchor="middle" class="node-label">D3</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_5
+Componente: integrated_circuit11.1
+Nome: right_5
+Posizione: right
+Display: ADC0804 right_5 D4
+Pin label: D4</title><circle cx="780.0" cy="4370.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="4374.0" text-anchor="middle" class="node-label">D4</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_6
+Componente: integrated_circuit11.1
+Nome: right_6
+Posizione: right
+Display: ADC0804 right_6 D5
+Pin label: D5</title><circle cx="780.0" cy="4428.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="4432.0" text-anchor="middle" class="node-label">D5</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_7
+Componente: integrated_circuit11.1
+Nome: right_7
+Posizione: right
+Display: ADC0804 right_7 D6
+Pin label: D6</title><circle cx="780.0" cy="4486.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="4490.0" text-anchor="middle" class="node-label">D6</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_8
+Componente: integrated_circuit11.1
+Nome: right_8
+Posizione: right
+Display: ADC0804 right_8 D7
+Pin label: D7</title><circle cx="780.0" cy="4544.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="4548.0" text-anchor="middle" class="node-label">D7</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_9
+Componente: integrated_circuit11.1
+Nome: right_9
+Posizione: right
+Display: ADC0804 right_9 CS
+Pin label: CS</title><circle cx="780.0" cy="4602.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="4606.0" text-anchor="middle" class="node-label">CS</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_10
+Componente: integrated_circuit11.1
+Nome: right_10
+Posizione: right
+Display: ADC0804 right_10 RD
+Pin label: RD</title><circle cx="780.0" cy="4660.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="4664.0" text-anchor="middle" class="node-label">RD</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_11
+Componente: integrated_circuit11.1
+Nome: right_11
+Posizione: right
+Display: ADC0804 right_11 WR
+Pin label: WR</title><circle cx="780.0" cy="4718.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="4722.0" text-anchor="middle" class="node-label">WR</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_right_12
+Componente: integrated_circuit11.1
+Nome: right_12
+Posizione: right
+Display: ADC0804 right_12 INTR
+Pin label: INTR</title><circle cx="780.0" cy="4776.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="4780.0" text-anchor="middle" class="node-label">INTR</text></g><g class="node-group" data-node-type="warning_terminal"><title>Terminal: integrated_circuit11.1_top_1
+Componente: integrated_circuit11.1
+Nome: top_1
+Posizione: top
+Display: ADC0804 top_1 pin9
+Pin: 9</title><circle cx="780.0" cy="4834.0" r="25.0" fill="#ffd0d0" stroke="#d12f2f" stroke-width="2"></circle><text x="780.0" y="4838.0" text-anchor="middle" class="node-label">pin9</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_top_2
+Componente: integrated_circuit11.1
+Nome: top_2
+Posizione: top
+Display: ADC0804 top_2 pin20
+Pin: 20</title><circle cx="780.0" cy="4892.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="4896.0" text-anchor="middle" class="node-label">pin20</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.1_bottom_1
+Componente: integrated_circuit11.1
+Nome: bottom_1
+Posizione: bottom
+Display: ADC0804 bottom_1 pin10
+Pin: 10</title><circle cx="780.0" cy="4950.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="4954.0" text-anchor="middle" class="node-label">pin10</text></g><g class="node-group" data-node-type="component"><title>Componente: integrated_circuit11.2
+Classe: Integrated_Circuit
+Instance: 11.2
+Display: AT89S51
+IC marking: AT89S51</title><circle cx="500.0" cy="5771.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="5775.0" text-anchor="middle" class="node-label">AT89S51</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_left_1
+Componente: integrated_circuit11.2
+Nome: left_1
+Posizione: left
+Display: AT89S51 left_1 pin9
+Pin: 9</title><circle cx="780.0" cy="5046.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="5050.0" text-anchor="middle" class="node-label">pin9</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_left_2
+Componente: integrated_circuit11.2
+Nome: left_2
+Posizione: left
+Display: AT89S51 left_2 P1.0
+Pin label: P1.0</title><circle cx="780.0" cy="5104.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="5108.0" text-anchor="middle" class="node-label">P1.0</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_left_3
+Componente: integrated_circuit11.2
+Nome: left_3
+Posizione: left
+Display: AT89S51 left_3 P1.1
+Pin label: P1.1</title><circle cx="780.0" cy="5162.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="5166.0" text-anchor="middle" class="node-label">P1.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_left_4
+Componente: integrated_circuit11.2
+Nome: left_4
+Posizione: left
+Display: AT89S51 left_4 P1.2
+Pin label: P1.2</title><circle cx="780.0" cy="5220.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="5224.0" text-anchor="middle" class="node-label">P1.2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_left_5
+Componente: integrated_circuit11.2
+Nome: left_5
+Posizione: left
+Display: AT89S51 left_5 P1.3
+Pin label: P1.3</title><circle cx="780.0" cy="5278.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="5282.0" text-anchor="middle" class="node-label">P1.3</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_left_6
+Componente: integrated_circuit11.2
+Nome: left_6
+Posizione: left
+Display: AT89S51 left_6 P1.4
+Pin label: P1.4</title><circle cx="780.0" cy="5336.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="5340.0" text-anchor="middle" class="node-label">P1.4</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_left_7
+Componente: integrated_circuit11.2
+Nome: left_7
+Posizione: left
+Display: AT89S51 left_7 P1.5
+Pin label: P1.5</title><circle cx="780.0" cy="5394.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="5398.0" text-anchor="middle" class="node-label">P1.5</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_left_8
+Componente: integrated_circuit11.2
+Nome: left_8
+Posizione: left
+Display: AT89S51 left_8 P1.6
+Pin label: P1.6</title><circle cx="780.0" cy="5452.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="5456.0" text-anchor="middle" class="node-label">P1.6</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_left_9
+Componente: integrated_circuit11.2
+Nome: left_9
+Posizione: left
+Display: AT89S51 left_9 P1.7
+Pin label: P1.7</title><circle cx="780.0" cy="5510.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="5514.0" text-anchor="middle" class="node-label">P1.7</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_left_10
+Componente: integrated_circuit11.2
+Nome: left_10
+Posizione: left
+Display: AT89S51 left_10 P3.7
+Pin label: P3.7</title><circle cx="780.0" cy="5568.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="5572.0" text-anchor="middle" class="node-label">P3.7</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_left_11
+Componente: integrated_circuit11.2
+Nome: left_11
+Posizione: left
+Display: AT89S51 left_11 P3.6
+Pin label: P3.6</title><circle cx="780.0" cy="5626.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="5630.0" text-anchor="middle" class="node-label">P3.6</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_left_12
+Componente: integrated_circuit11.2
+Nome: left_12
+Posizione: left
+Display: AT89S51 left_12 P3.5
+Pin label: P3.5</title><circle cx="780.0" cy="5684.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="5688.0" text-anchor="middle" class="node-label">P3.5</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_left_13
+Componente: integrated_circuit11.2
+Nome: left_13
+Posizione: left
+Display: AT89S51 left_13 P3.4
+Pin label: P3.4</title><circle cx="780.0" cy="5742.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="5746.0" text-anchor="middle" class="node-label">P3.4</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_right_1
+Componente: integrated_circuit11.2
+Nome: right_1
+Posizione: right
+Display: AT89S51 right_1 P0.0
+Pin label: P0.0</title><circle cx="780.0" cy="5800.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="5804.0" text-anchor="middle" class="node-label">P0.0</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_right_2
+Componente: integrated_circuit11.2
+Nome: right_2
+Posizione: right
+Display: AT89S51 right_2 P0.1
+Pin label: P0.1</title><circle cx="780.0" cy="5858.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="5862.0" text-anchor="middle" class="node-label">P0.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_right_3
+Componente: integrated_circuit11.2
+Nome: right_3
+Posizione: right
+Display: AT89S51 right_3 P0.2
+Pin label: P0.2</title><circle cx="780.0" cy="5916.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="5920.0" text-anchor="middle" class="node-label">P0.2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_right_4
+Componente: integrated_circuit11.2
+Nome: right_4
+Posizione: right
+Display: AT89S51 right_4 P0.3
+Pin label: P0.3</title><circle cx="780.0" cy="5974.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="5978.0" text-anchor="middle" class="node-label">P0.3</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_right_5
+Componente: integrated_circuit11.2
+Nome: right_5
+Posizione: right
+Display: AT89S51 right_5 P0.4
+Pin label: P0.4</title><circle cx="780.0" cy="6032.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="6036.0" text-anchor="middle" class="node-label">P0.4</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_right_6
+Componente: integrated_circuit11.2
+Nome: right_6
+Posizione: right
+Display: AT89S51 right_6 P0.5
+Pin label: P0.5</title><circle cx="780.0" cy="6090.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="6094.0" text-anchor="middle" class="node-label">P0.5</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_right_7
+Componente: integrated_circuit11.2
+Nome: right_7
+Posizione: right
+Display: AT89S51 right_7 P0.6
+Pin label: P0.6</title><circle cx="780.0" cy="6148.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="6152.0" text-anchor="middle" class="node-label">P0.6</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_right_8
+Componente: integrated_circuit11.2
+Nome: right_8
+Posizione: right
+Display: AT89S51 right_8 P0.7
+Pin label: P0.7</title><circle cx="780.0" cy="6206.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="6210.0" text-anchor="middle" class="node-label">P0.7</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_right_9
+Componente: integrated_circuit11.2
+Nome: right_9
+Posizione: right
+Display: AT89S51 right_9 P3.2
+Pin label: P3.2</title><circle cx="780.0" cy="6264.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="6268.0" text-anchor="middle" class="node-label">P3.2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_right_10
+Componente: integrated_circuit11.2
+Nome: right_10
+Posizione: right
+Display: AT89S51 right_10 P3.1
+Pin label: P3.1</title><circle cx="780.0" cy="6322.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="6326.0" text-anchor="middle" class="node-label">P3.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_top_1
+Componente: integrated_circuit11.2
+Nome: top_1
+Posizione: top
+Display: AT89S51 top_1 pin31
+Pin: 31</title><circle cx="780.0" cy="6380.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="6384.0" text-anchor="middle" class="node-label">pin31</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_top_2
+Componente: integrated_circuit11.2
+Nome: top_2
+Posizione: top
+Display: AT89S51 top_2 pin40
+Pin: 40</title><circle cx="780.0" cy="6438.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="6442.0" text-anchor="middle" class="node-label">pin40</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.2_bottom_1
+Componente: integrated_circuit11.2
+Nome: bottom_1
+Posizione: bottom
+Display: AT89S51 bottom_1 pin20
+Pin: 20</title><circle cx="780.0" cy="6496.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="6500.0" text-anchor="middle" class="node-label">pin20</text></g><g class="node-group" data-node-type="component"><title>Componente: integrated_circuit11.3
+Classe: Integrated_Circuit
+Instance: 11.3
+Display: seven_segment_display
+Subtype: seven_segment_display</title><circle cx="500.0" cy="6824.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="6821.0" text-anchor="middle" class="node-label small">seven segment</text><text x="500.0" y="6835.0" text-anchor="middle" class="node-label small">display</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.3_left_1
+Componente: integrated_circuit11.3
+Nome: left_1
+Posizione: left
+Display: seven_segment_display left_1 a
+Pin label: a</title><circle cx="780.0" cy="6592.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="6596.0" text-anchor="middle" class="node-label">a</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.3_left_2
+Componente: integrated_circuit11.3
+Nome: left_2
+Posizione: left
+Display: seven_segment_display left_2 b
+Pin label: b</title><circle cx="780.0" cy="6650.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="6654.0" text-anchor="middle" class="node-label">b</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.3_left_3
+Componente: integrated_circuit11.3
+Nome: left_3
+Posizione: left
+Display: seven_segment_display left_3 c
+Pin label: c</title><circle cx="780.0" cy="6708.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="6712.0" text-anchor="middle" class="node-label">c</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.3_left_4
+Componente: integrated_circuit11.3
+Nome: left_4
+Posizione: left
+Display: seven_segment_display left_4 d
+Pin label: d</title><circle cx="780.0" cy="6766.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="6770.0" text-anchor="middle" class="node-label">d</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.3_left_5
+Componente: integrated_circuit11.3
+Nome: left_5
+Posizione: left
+Display: seven_segment_display left_5 e
+Pin label: e</title><circle cx="780.0" cy="6824.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="6828.0" text-anchor="middle" class="node-label">e</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.3_left_6
+Componente: integrated_circuit11.3
+Nome: left_6
+Posizione: left
+Display: seven_segment_display left_6 f
+Pin label: f</title><circle cx="780.0" cy="6882.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="6886.0" text-anchor="middle" class="node-label">f</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.3_left_7
+Componente: integrated_circuit11.3
+Nome: left_7
+Posizione: left
+Display: seven_segment_display left_7 g
+Pin label: g</title><circle cx="780.0" cy="6940.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="6944.0" text-anchor="middle" class="node-label">g</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.3_left_8
+Componente: integrated_circuit11.3
+Nome: left_8
+Posizione: left
+Display: seven_segment_display left_8 h
+Pin label: h</title><circle cx="780.0" cy="6998.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="7002.0" text-anchor="middle" class="node-label">h</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.3_bottom_1
+Componente: integrated_circuit11.3
+Nome: bottom_1
+Posizione: bottom
+Display: seven_segment_display bottom_1 cc
+Pin label: cc</title><circle cx="780.0" cy="7056.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="7060.0" text-anchor="middle" class="node-label">cc</text></g><g class="node-group" data-node-type="component"><title>Componente: integrated_circuit11.4
+Classe: Integrated_Circuit
+Instance: 11.4
+Display: EEOO7T
+IC marking: EEOO7T
+Subtype: seven_segment_display</title><circle cx="500.0" cy="7384.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="7388.0" text-anchor="middle" class="node-label">EEOO7T</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.4_left_1
+Componente: integrated_circuit11.4
+Nome: left_1
+Posizione: left
+Display: EEOO7T left_1 a
+Pin label: a</title><circle cx="780.0" cy="7152.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="7156.0" text-anchor="middle" class="node-label">a</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.4_left_2
+Componente: integrated_circuit11.4
+Nome: left_2
+Posizione: left
+Display: EEOO7T left_2 b
+Pin label: b</title><circle cx="780.0" cy="7210.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="7214.0" text-anchor="middle" class="node-label">b</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.4_left_3
+Componente: integrated_circuit11.4
+Nome: left_3
+Posizione: left
+Display: EEOO7T left_3 c
+Pin label: c</title><circle cx="780.0" cy="7268.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="7272.0" text-anchor="middle" class="node-label">c</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.4_left_4
+Componente: integrated_circuit11.4
+Nome: left_4
+Posizione: left
+Display: EEOO7T left_4 d
+Pin label: d</title><circle cx="780.0" cy="7326.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="7330.0" text-anchor="middle" class="node-label">d</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.4_left_5
+Componente: integrated_circuit11.4
+Nome: left_5
+Posizione: left
+Display: EEOO7T left_5 e
+Pin label: e</title><circle cx="780.0" cy="7384.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="7388.0" text-anchor="middle" class="node-label">e</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.4_left_6
+Componente: integrated_circuit11.4
+Nome: left_6
+Posizione: left
+Display: EEOO7T left_6 f
+Pin label: f</title><circle cx="780.0" cy="7442.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="7446.0" text-anchor="middle" class="node-label">f</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.4_left_7
+Componente: integrated_circuit11.4
+Nome: left_7
+Posizione: left
+Display: EEOO7T left_7 g
+Pin label: g</title><circle cx="780.0" cy="7500.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="7504.0" text-anchor="middle" class="node-label">g</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.4_left_8
+Componente: integrated_circuit11.4
+Nome: left_8
+Posizione: left
+Display: EEOO7T left_8 h
+Pin label: h</title><circle cx="780.0" cy="7558.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="7562.0" text-anchor="middle" class="node-label">h</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: integrated_circuit11.4_bottom_1
+Componente: integrated_circuit11.4
+Nome: bottom_1
+Posizione: bottom
+Display: EEOO7T bottom_1 cc
+Pin label: cc</title><circle cx="780.0" cy="7616.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="7620.0" text-anchor="middle" class="node-label">cc</text></g><g class="node-group" data-node-type="class"><title>Classe: Push_Button
+Componenti: 1</title><circle cx="270.0" cy="7817.0" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="7821.0" text-anchor="middle" class="node-label">Push Button</text></g><g class="node-group" data-node-type="component"><title>Componente: push_button21.1
+Classe: Push_Button
+Instance: 21.1</title><circle cx="500.0" cy="7817.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="7821.0" text-anchor="middle" class="node-label">push_button21.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: push_button21.1_t1
+Componente: push_button21.1
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="7788.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="7792.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: push_button21.1_t2
+Componente: push_button21.1
+Nome: t2
+Posizione: bottom</title><circle cx="780.0" cy="7846.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="7850.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="class"><title>Classe: NPN_Transistor
+Componenti: 2</title><circle cx="270.0" cy="8182.0" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="8186.0" text-anchor="middle" class="node-label">NPN Transistor</text></g><g class="node-group" data-node-type="component"><title>Componente: npn_transistor18.1
+Classe: NPN_Transistor
+Instance: 18.1</title><circle cx="500.0" cy="8076.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="8073.0" text-anchor="middle" class="node-label small">npn</text><text x="500.0" y="8087.0" text-anchor="middle" class="node-label small">transistor18.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: npn_transistor18.1_B
+Componente: npn_transistor18.1
+Nome: B
+Posizione: left</title><circle cx="780.0" cy="8018.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="8022.0" text-anchor="middle" class="node-label">B</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: npn_transistor18.1_C
+Componente: npn_transistor18.1
+Nome: C
+Posizione: top</title><circle cx="780.0" cy="8076.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="8080.0" text-anchor="middle" class="node-label">C</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: npn_transistor18.1_E
+Componente: npn_transistor18.1
+Nome: E
+Posizione: bottom</title><circle cx="780.0" cy="8134.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="8138.0" text-anchor="middle" class="node-label">E</text></g><g class="node-group" data-node-type="component"><title>Componente: npn_transistor18.2
+Classe: NPN_Transistor
+Instance: 18.2</title><circle cx="500.0" cy="8288.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="8285.0" text-anchor="middle" class="node-label small">npn</text><text x="500.0" y="8299.0" text-anchor="middle" class="node-label small">transistor18.2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: npn_transistor18.2_B
+Componente: npn_transistor18.2
+Nome: B
+Posizione: left</title><circle cx="780.0" cy="8230.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="8234.0" text-anchor="middle" class="node-label">B</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: npn_transistor18.2_C
+Componente: npn_transistor18.2
+Nome: C
+Posizione: top</title><circle cx="780.0" cy="8288.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="8292.0" text-anchor="middle" class="node-label">C</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: npn_transistor18.2_E
+Componente: npn_transistor18.2
+Nome: E
+Posizione: bottom</title><circle cx="780.0" cy="8346.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="8350.0" text-anchor="middle" class="node-label">E</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 1
+Terminali collegati: 2
+resistor22.1_t1
+terminal26.1_t1</title><circle cx="1080.0" cy="1495.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="1499.0" text-anchor="middle" class="node-label">1</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 2
+Terminali collegati: 4
+resistor22.1_t2
+gnd9.1_t1
+integrated_circuit11.1_left_2
+integrated_circuit11.1_left_3</title><circle cx="1080.0" cy="2542.5" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2546.5" text-anchor="middle" class="node-label">2</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 3
+Terminali collegati: 3
+polarized_capacitor20.1_positive
+resistor22.2_t2
+integrated_circuit11.1_left_5</title><circle cx="1080.0" cy="2612.7" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2616.7" text-anchor="middle" class="node-label">3</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 4
+Terminali collegati: 2
+polarized_capacitor20.1_negative
+gnd9.2_t1</title><circle cx="1080.0" cy="2889.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2893.0" text-anchor="middle" class="node-label">4</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 5
+Terminali collegati: 2
+resistor22.2_t1
+integrated_circuit11.1_left_4</title><circle cx="1080.0" cy="2129.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="2133.0" text-anchor="middle" class="node-label">5</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 6
+Terminali collegati: 2
+terminal26.2_t1
+integrated_circuit11.1_top_2</title><circle cx="1080.0" cy="3948.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="3952.0" text-anchor="middle" class="node-label">6</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 7
+Terminali collegati: 1
+integrated_circuit11.1_left_1</title><circle cx="1080.0" cy="3848.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="3852.0" text-anchor="middle" class="node-label">7</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 8
+Terminali collegati: 2
+integrated_circuit11.1_right_1
+integrated_circuit11.2_left_2</title><circle cx="1080.0" cy="4621.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="4625.0" text-anchor="middle" class="node-label">8</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 9
+Terminali collegati: 2
+integrated_circuit11.1_right_2
+integrated_circuit11.2_left_3</title><circle cx="1080.0" cy="4679.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="4683.0" text-anchor="middle" class="node-label">9</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 10
+Terminali collegati: 2
+integrated_circuit11.1_right_3
+integrated_circuit11.2_left_4</title><circle cx="1080.0" cy="4737.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="4741.0" text-anchor="middle" class="node-label">10</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 11
+Terminali collegati: 2
+integrated_circuit11.1_right_4
+integrated_circuit11.2_left_5</title><circle cx="1080.0" cy="4822.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="4826.0" text-anchor="middle" class="node-label">11</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 12
+Terminali collegati: 2
+integrated_circuit11.1_right_5
+integrated_circuit11.2_left_6</title><circle cx="1080.0" cy="4924.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="4928.0" text-anchor="middle" class="node-label">12</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 13
+Terminali collegati: 2
+integrated_circuit11.1_right_6
+integrated_circuit11.2_left_7</title><circle cx="1080.0" cy="4992.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="4996.0" text-anchor="middle" class="node-label">13</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 14
+Terminali collegati: 2
+integrated_circuit11.1_right_7
+integrated_circuit11.2_left_8</title><circle cx="1080.0" cy="5060.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="5064.0" text-anchor="middle" class="node-label">14</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 15
+Terminali collegati: 2
+integrated_circuit11.1_right_8
+integrated_circuit11.2_left_9</title><circle cx="1080.0" cy="5128.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="5132.0" text-anchor="middle" class="node-label">15</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 16
+Terminali collegati: 2
+integrated_circuit11.1_right_9
+integrated_circuit11.2_left_10</title><circle cx="1080.0" cy="5162.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="5166.0" text-anchor="middle" class="node-label">16</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 17
+Terminali collegati: 2
+integrated_circuit11.1_right_10
+integrated_circuit11.2_left_11</title><circle cx="1080.0" cy="5264.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="5268.0" text-anchor="middle" class="node-label">17</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 18
+Terminali collegati: 2
+integrated_circuit11.1_right_11
+integrated_circuit11.2_left_12</title><circle cx="1080.0" cy="5332.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="5336.0" text-anchor="middle" class="node-label">18</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 19
+Terminali collegati: 2
+integrated_circuit11.1_right_12
+integrated_circuit11.2_left_13</title><circle cx="1080.0" cy="5366.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="5370.0" text-anchor="middle" class="node-label">19</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 20
+Terminali collegati: 1
+integrated_circuit11.1_top_1</title><circle cx="1080.0" cy="4856.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="4860.0" text-anchor="middle" class="node-label">20</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 21
+Terminali collegati: 2
+integrated_circuit11.1_bottom_1
+gnd9.3_t1</title><circle cx="1080.0" cy="3651.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="3655.0" text-anchor="middle" class="node-label">21</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 22
+Terminali collegati: 3
+push_button21.1_t1
+polarized_capacitor20.2_positive
+terminal26.3_t1</title><circle cx="1080.0" cy="4890.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="4894.0" text-anchor="middle" class="node-label">22</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 23
+Terminali collegati: 4
+push_button21.1_t2
+resistor22.3_t1
+polarized_capacitor20.2_negative
+integrated_circuit11.2_left_1</title><circle cx="1080.0" cy="4239.5" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="4243.5" text-anchor="middle" class="node-label">23</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 24
+Terminali collegati: 2
+resistor22.3_t2
+gnd9.4_t1</title><circle cx="1080.0" cy="1448.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="1452.0" text-anchor="middle" class="node-label">24</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 25
+Terminali collegati: 2
+terminal26.4_t1
+integrated_circuit11.2_top_1</title><circle cx="1080.0" cy="4788.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="4792.0" text-anchor="middle" class="node-label">25</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 26
+Terminali collegati: 2
+integrated_circuit11.2_right_1
+resistor22.11_t1</title><circle cx="1080.0" cy="3753.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="3757.0" text-anchor="middle" class="node-label">26</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 27
+Terminali collegati: 2
+integrated_circuit11.2_right_2
+resistor22.9_t1</title><circle cx="1080.0" cy="3586.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="3590.0" text-anchor="middle" class="node-label">27</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 28
+Terminali collegati: 2
+integrated_circuit11.2_right_3
+resistor22.10_t1</title><circle cx="1080.0" cy="3719.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="3723.0" text-anchor="middle" class="node-label">28</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 29
+Terminali collegati: 2
+integrated_circuit11.2_right_4
+resistor22.5_t1</title><circle cx="1080.0" cy="3336.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="3340.0" text-anchor="middle" class="node-label">29</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 30
+Terminali collegati: 2
+integrated_circuit11.2_right_5
+resistor22.7_t1</title><circle cx="1080.0" cy="3519.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="3523.0" text-anchor="middle" class="node-label">30</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 31
+Terminali collegati: 2
+integrated_circuit11.2_right_6
+resistor22.6_t1</title><circle cx="1080.0" cy="3471.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="3475.0" text-anchor="middle" class="node-label">31</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 32
+Terminali collegati: 2
+integrated_circuit11.2_right_7
+resistor22.8_t1</title><circle cx="1080.0" cy="3685.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="3689.0" text-anchor="middle" class="node-label">32</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 33
+Terminali collegati: 2
+integrated_circuit11.2_right_8
+resistor22.4_t1</title><circle cx="1080.0" cy="3375.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="3379.0" text-anchor="middle" class="node-label">33</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 34
+Terminali collegati: 2
+integrated_circuit11.2_right_9
+resistor22.12_t1</title><circle cx="1080.0" cy="4020.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="4024.0" text-anchor="middle" class="node-label">34</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 35
+Terminali collegati: 2
+integrated_circuit11.2_right_10
+resistor22.13_t1</title><circle cx="1080.0" cy="4128.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="4132.0" text-anchor="middle" class="node-label">35</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 36
+Terminali collegati: 2
+integrated_circuit11.2_top_2
+terminal26.5_t1</title><circle cx="1080.0" cy="4958.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="4962.0" text-anchor="middle" class="node-label">36</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 37
+Terminali collegati: 2
+integrated_circuit11.2_bottom_1
+gnd9.5_t1</title><circle cx="1080.0" cy="4520.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="4524.0" text-anchor="middle" class="node-label">37</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 38
+Terminali collegati: 4
+resistor22.4_t2
+resistor22.8_t2
+integrated_circuit11.3_left_8
+integrated_circuit11.4_left_8</title><circle cx="1080.0" cy="4094.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="4098.0" text-anchor="middle" class="node-label">38</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 39
+Terminali collegati: 3
+resistor22.5_t2
+integrated_circuit11.3_left_4
+integrated_circuit11.4_left_4</title><circle cx="1080.0" cy="5026.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="5030.0" text-anchor="middle" class="node-label">39</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 40
+Terminali collegati: 3
+resistor22.6_t2
+integrated_circuit11.3_left_7
+integrated_circuit11.4_left_7</title><circle cx="1080.0" cy="5196.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="5200.0" text-anchor="middle" class="node-label">40</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 41
+Terminali collegati: 3
+resistor22.7_t2
+integrated_circuit11.3_left_6
+integrated_circuit11.4_left_6</title><circle cx="1080.0" cy="5230.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="5234.0" text-anchor="middle" class="node-label">41</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 42
+Terminali collegati: 4
+resistor22.9_t2
+resistor22.11_t2
+integrated_circuit11.3_left_1
+integrated_circuit11.4_left_1</title><circle cx="1080.0" cy="4199.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="4203.0" text-anchor="middle" class="node-label">42</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 43
+Terminali collegati: 3
+resistor22.10_t2
+integrated_circuit11.3_left_3
+integrated_circuit11.4_left_3</title><circle cx="1080.0" cy="5298.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="5302.0" text-anchor="middle" class="node-label">43</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 44
+Terminali collegati: 4
+resistor22.12_t2
+npn_transistor18.1_B
+resistor22.13_t2
+npn_transistor18.2_B</title><circle cx="1080.0" cy="5094.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="5098.0" text-anchor="middle" class="node-label">44</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 45
+Terminali collegati: 2
+npn_transistor18.1_C
+integrated_circuit11.3_bottom_1</title><circle cx="1080.0" cy="7566.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="7570.0" text-anchor="middle" class="node-label">45</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 46
+Terminali collegati: 2
+npn_transistor18.1_E
+gnd9.6_t1</title><circle cx="1080.0" cy="5400.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="5404.0" text-anchor="middle" class="node-label">46</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 47
+Terminali collegati: 2
+integrated_circuit11.3_left_2
+integrated_circuit11.4_left_2</title><circle cx="1080.0" cy="6930.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="6934.0" text-anchor="middle" class="node-label">47</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 48
+Terminali collegati: 2
+integrated_circuit11.3_left_5
+integrated_circuit11.4_left_5</title><circle cx="1080.0" cy="7104.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="7108.0" text-anchor="middle" class="node-label">48</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 49
+Terminali collegati: 2
+npn_transistor18.2_C
+integrated_circuit11.4_bottom_1</title><circle cx="1080.0" cy="7952.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="7956.0" text-anchor="middle" class="node-label">49</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 50
+Terminali collegati: 2
+npn_transistor18.2_E
+gnd9.7_t1</title><circle cx="1080.0" cy="5541.0" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="5545.0" text-anchor="middle" class="node-label">50</text></g></svg></div>
+        <div class="legend">
+          <span><i class="dot" style="background:#f26a63"></i> circuito</span>
+          <span><i class="dot" style="background:#dcc9a5"></i> classe</span>
+          <span><i class="dot" style="background:#85d68d"></i> componente</span>
+          <span><i class="dot" style="background:#f4abc7"></i> terminale</span>
+          <span><i class="dot" style="background:#ffd65a"></i> nodo elettrico</span>
+        </div>
+      </section>
+    </div>
+
+    <div class="warning-grid"><div class="warning-box"><h3>Unconnected Terminals</h3><ul><li>integrated_circuit11.1_left_1</li><li>integrated_circuit11.1_top_1</li></ul></div><div class="warning-box"><h3>Unmatched Terminals</h3><p>Nessun elemento.</p></div><div class="warning-box"><h3>Suspicious Matches</h3><p>Nessun elemento.</p></div></div>
+
+    <details>
+      <summary>Mostra JSON finale completo</summary>
+      <pre>{
+  &quot;image_id&quot;: &quot;c09&quot;,
+  &quot;image_name&quot;: &quot;c09.jpg&quot;,
+  &quot;components&quot;: [
+    {
+      &quot;component_id&quot;: &quot;resistor22.1&quot;,
+      &quot;instance_id&quot;: &quot;22.1&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.1_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;gnd9.1&quot;,
+      &quot;instance_id&quot;: &quot;9.1&quot;,
+      &quot;class_name&quot;: &quot;GND&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;gnd9.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;terminal26.1&quot;,
+      &quot;instance_id&quot;: &quot;26.1&quot;,
+      &quot;class_name&quot;: &quot;Terminal&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;terminal26.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;polarized_capacitor20.1&quot;,
+      &quot;instance_id&quot;: &quot;20.1&quot;,
+      &quot;class_name&quot;: &quot;Polarized_Capacitor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;polarized_capacitor20.1_positive&quot;,
+          &quot;name&quot;: &quot;positive&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;polarized_capacitor20.1_negative&quot;,
+          &quot;name&quot;: &quot;negative&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.2&quot;,
+      &quot;instance_id&quot;: &quot;22.2&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.2_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.2_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;gnd9.2&quot;,
+      &quot;instance_id&quot;: &quot;9.2&quot;,
+      &quot;class_name&quot;: &quot;GND&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;gnd9.2_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;terminal26.2&quot;,
+      &quot;instance_id&quot;: &quot;26.2&quot;,
+      &quot;class_name&quot;: &quot;Terminal&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;terminal26.2_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;instance_id&quot;: &quot;11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_left_1&quot;,
+          &quot;name&quot;: &quot;left_1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;ADC0804 left_1 pin6&quot;,
+          &quot;pin_number&quot;: &quot;6&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_left_2&quot;,
+          &quot;name&quot;: &quot;left_2&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;ADC0804 left_2 pin7&quot;,
+          &quot;pin_number&quot;: &quot;7&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_left_3&quot;,
+          &quot;name&quot;: &quot;left_3&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;ADC0804 left_3 pin8&quot;,
+          &quot;pin_number&quot;: &quot;8&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_left_4&quot;,
+          &quot;name&quot;: &quot;left_4&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;ADC0804 left_4 pin19&quot;,
+          &quot;pin_number&quot;: &quot;19&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_left_5&quot;,
+          &quot;name&quot;: &quot;left_5&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;ADC0804 left_5 pin4&quot;,
+          &quot;pin_number&quot;: &quot;4&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_1&quot;,
+          &quot;name&quot;: &quot;right_1&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;ADC0804 right_1 D0&quot;,
+          &quot;pin_label&quot;: &quot;D0&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_2&quot;,
+          &quot;name&quot;: &quot;right_2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;ADC0804 right_2 D1&quot;,
+          &quot;pin_label&quot;: &quot;D1&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_3&quot;,
+          &quot;name&quot;: &quot;right_3&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;ADC0804 right_3 D2&quot;,
+          &quot;pin_label&quot;: &quot;D2&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_4&quot;,
+          &quot;name&quot;: &quot;right_4&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;ADC0804 right_4 D3&quot;,
+          &quot;pin_label&quot;: &quot;D3&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_5&quot;,
+          &quot;name&quot;: &quot;right_5&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;ADC0804 right_5 D4&quot;,
+          &quot;pin_label&quot;: &quot;D4&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_6&quot;,
+          &quot;name&quot;: &quot;right_6&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;ADC0804 right_6 D5&quot;,
+          &quot;pin_label&quot;: &quot;D5&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_7&quot;,
+          &quot;name&quot;: &quot;right_7&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;ADC0804 right_7 D6&quot;,
+          &quot;pin_label&quot;: &quot;D6&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_8&quot;,
+          &quot;name&quot;: &quot;right_8&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;ADC0804 right_8 D7&quot;,
+          &quot;pin_label&quot;: &quot;D7&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_9&quot;,
+          &quot;name&quot;: &quot;right_9&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;ADC0804 right_9 CS&quot;,
+          &quot;pin_label&quot;: &quot;CS&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_10&quot;,
+          &quot;name&quot;: &quot;right_10&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;ADC0804 right_10 RD&quot;,
+          &quot;pin_label&quot;: &quot;RD&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_11&quot;,
+          &quot;name&quot;: &quot;right_11&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;ADC0804 right_11 WR&quot;,
+          &quot;pin_label&quot;: &quot;WR&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_right_12&quot;,
+          &quot;name&quot;: &quot;right_12&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;ADC0804 right_12 INTR&quot;,
+          &quot;pin_label&quot;: &quot;INTR&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_top_1&quot;,
+          &quot;name&quot;: &quot;top_1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;,
+          &quot;display_name&quot;: &quot;ADC0804 top_1 pin9&quot;,
+          &quot;pin_number&quot;: &quot;9&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_top_2&quot;,
+          &quot;name&quot;: &quot;top_2&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;,
+          &quot;display_name&quot;: &quot;ADC0804 top_2 pin20&quot;,
+          &quot;pin_number&quot;: &quot;20&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.1_bottom_1&quot;,
+          &quot;name&quot;: &quot;bottom_1&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;,
+          &quot;display_name&quot;: &quot;ADC0804 bottom_1 pin10&quot;,
+          &quot;pin_number&quot;: &quot;10&quot;
+        }
+      ],
+      &quot;display_name&quot;: &quot;ADC0804&quot;,
+      &quot;ic_marking&quot;: &quot;ADC0804&quot;
+    },
+    {
+      &quot;component_id&quot;: &quot;gnd9.3&quot;,
+      &quot;instance_id&quot;: &quot;9.3&quot;,
+      &quot;class_name&quot;: &quot;GND&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;gnd9.3_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;push_button21.1&quot;,
+      &quot;instance_id&quot;: &quot;21.1&quot;,
+      &quot;class_name&quot;: &quot;Push_Button&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;push_button21.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;push_button21.1_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.3&quot;,
+      &quot;instance_id&quot;: &quot;22.3&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.3_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.3_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;polarized_capacitor20.2&quot;,
+      &quot;instance_id&quot;: &quot;20.2&quot;,
+      &quot;class_name&quot;: &quot;Polarized_Capacitor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;polarized_capacitor20.2_positive&quot;,
+          &quot;name&quot;: &quot;positive&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;polarized_capacitor20.2_negative&quot;,
+          &quot;name&quot;: &quot;negative&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;gnd9.4&quot;,
+      &quot;instance_id&quot;: &quot;9.4&quot;,
+      &quot;class_name&quot;: &quot;GND&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;gnd9.4_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;terminal26.3&quot;,
+      &quot;instance_id&quot;: &quot;26.3&quot;,
+      &quot;class_name&quot;: &quot;Terminal&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;terminal26.3_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;terminal26.4&quot;,
+      &quot;instance_id&quot;: &quot;26.4&quot;,
+      &quot;class_name&quot;: &quot;Terminal&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;terminal26.4_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;instance_id&quot;: &quot;11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_left_1&quot;,
+          &quot;name&quot;: &quot;left_1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 left_1 pin9&quot;,
+          &quot;pin_number&quot;: &quot;9&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_left_2&quot;,
+          &quot;name&quot;: &quot;left_2&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 left_2 P1.0&quot;,
+          &quot;pin_label&quot;: &quot;P1.0&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_left_3&quot;,
+          &quot;name&quot;: &quot;left_3&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 left_3 P1.1&quot;,
+          &quot;pin_label&quot;: &quot;P1.1&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_left_4&quot;,
+          &quot;name&quot;: &quot;left_4&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 left_4 P1.2&quot;,
+          &quot;pin_label&quot;: &quot;P1.2&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_left_5&quot;,
+          &quot;name&quot;: &quot;left_5&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 left_5 P1.3&quot;,
+          &quot;pin_label&quot;: &quot;P1.3&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_left_6&quot;,
+          &quot;name&quot;: &quot;left_6&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 left_6 P1.4&quot;,
+          &quot;pin_label&quot;: &quot;P1.4&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_left_7&quot;,
+          &quot;name&quot;: &quot;left_7&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 left_7 P1.5&quot;,
+          &quot;pin_label&quot;: &quot;P1.5&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_left_8&quot;,
+          &quot;name&quot;: &quot;left_8&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 left_8 P1.6&quot;,
+          &quot;pin_label&quot;: &quot;P1.6&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_left_9&quot;,
+          &quot;name&quot;: &quot;left_9&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 left_9 P1.7&quot;,
+          &quot;pin_label&quot;: &quot;P1.7&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_left_10&quot;,
+          &quot;name&quot;: &quot;left_10&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 left_10 P3.7&quot;,
+          &quot;pin_label&quot;: &quot;P3.7&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_left_11&quot;,
+          &quot;name&quot;: &quot;left_11&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 left_11 P3.6&quot;,
+          &quot;pin_label&quot;: &quot;P3.6&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_left_12&quot;,
+          &quot;name&quot;: &quot;left_12&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 left_12 P3.5&quot;,
+          &quot;pin_label&quot;: &quot;P3.5&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_left_13&quot;,
+          &quot;name&quot;: &quot;left_13&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 left_13 P3.4&quot;,
+          &quot;pin_label&quot;: &quot;P3.4&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_right_1&quot;,
+          &quot;name&quot;: &quot;right_1&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 right_1 P0.0&quot;,
+          &quot;pin_label&quot;: &quot;P0.0&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_right_2&quot;,
+          &quot;name&quot;: &quot;right_2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 right_2 P0.1&quot;,
+          &quot;pin_label&quot;: &quot;P0.1&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_right_3&quot;,
+          &quot;name&quot;: &quot;right_3&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 right_3 P0.2&quot;,
+          &quot;pin_label&quot;: &quot;P0.2&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_right_4&quot;,
+          &quot;name&quot;: &quot;right_4&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 right_4 P0.3&quot;,
+          &quot;pin_label&quot;: &quot;P0.3&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_right_5&quot;,
+          &quot;name&quot;: &quot;right_5&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 right_5 P0.4&quot;,
+          &quot;pin_label&quot;: &quot;P0.4&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_right_6&quot;,
+          &quot;name&quot;: &quot;right_6&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 right_6 P0.5&quot;,
+          &quot;pin_label&quot;: &quot;P0.5&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_right_7&quot;,
+          &quot;name&quot;: &quot;right_7&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 right_7 P0.6&quot;,
+          &quot;pin_label&quot;: &quot;P0.6&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_right_8&quot;,
+          &quot;name&quot;: &quot;right_8&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 right_8 P0.7&quot;,
+          &quot;pin_label&quot;: &quot;P0.7&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_right_9&quot;,
+          &quot;name&quot;: &quot;right_9&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 right_9 P3.2&quot;,
+          &quot;pin_label&quot;: &quot;P3.2&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_right_10&quot;,
+          &quot;name&quot;: &quot;right_10&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 right_10 P3.1&quot;,
+          &quot;pin_label&quot;: &quot;P3.1&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_top_1&quot;,
+          &quot;name&quot;: &quot;top_1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 top_1 pin31&quot;,
+          &quot;pin_number&quot;: &quot;31&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_top_2&quot;,
+          &quot;name&quot;: &quot;top_2&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 top_2 pin40&quot;,
+          &quot;pin_number&quot;: &quot;40&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.2_bottom_1&quot;,
+          &quot;name&quot;: &quot;bottom_1&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;,
+          &quot;display_name&quot;: &quot;AT89S51 bottom_1 pin20&quot;,
+          &quot;pin_number&quot;: &quot;20&quot;
+        }
+      ],
+      &quot;display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;
+    },
+    {
+      &quot;component_id&quot;: &quot;gnd9.5&quot;,
+      &quot;instance_id&quot;: &quot;9.5&quot;,
+      &quot;class_name&quot;: &quot;GND&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;gnd9.5_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;terminal26.5&quot;,
+      &quot;instance_id&quot;: &quot;26.5&quot;,
+      &quot;class_name&quot;: &quot;Terminal&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;terminal26.5_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.4&quot;,
+      &quot;instance_id&quot;: &quot;22.4&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.4_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.4_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.5&quot;,
+      &quot;instance_id&quot;: &quot;22.5&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.5_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.5_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.6&quot;,
+      &quot;instance_id&quot;: &quot;22.6&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.6_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.6_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.7&quot;,
+      &quot;instance_id&quot;: &quot;22.7&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.7_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.7_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.8&quot;,
+      &quot;instance_id&quot;: &quot;22.8&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.8_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.8_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.9&quot;,
+      &quot;instance_id&quot;: &quot;22.9&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.9_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.9_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.10&quot;,
+      &quot;instance_id&quot;: &quot;22.10&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.10_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.10_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.11&quot;,
+      &quot;instance_id&quot;: &quot;22.11&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.11_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.11_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.12&quot;,
+      &quot;instance_id&quot;: &quot;22.12&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.12_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.12_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;npn_transistor18.1&quot;,
+      &quot;instance_id&quot;: &quot;18.1&quot;,
+      &quot;class_name&quot;: &quot;NPN_Transistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;npn_transistor18.1_B&quot;,
+          &quot;name&quot;: &quot;B&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;npn_transistor18.1_C&quot;,
+          &quot;name&quot;: &quot;C&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;npn_transistor18.1_E&quot;,
+          &quot;name&quot;: &quot;E&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;integrated_circuit11.3&quot;,
+      &quot;instance_id&quot;: &quot;11.3&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.3_left_1&quot;,
+          &quot;name&quot;: &quot;left_1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;seven_segment_display left_1 a&quot;,
+          &quot;pin_label&quot;: &quot;a&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.3_left_2&quot;,
+          &quot;name&quot;: &quot;left_2&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;seven_segment_display left_2 b&quot;,
+          &quot;pin_label&quot;: &quot;b&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.3_left_3&quot;,
+          &quot;name&quot;: &quot;left_3&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;seven_segment_display left_3 c&quot;,
+          &quot;pin_label&quot;: &quot;c&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.3_left_4&quot;,
+          &quot;name&quot;: &quot;left_4&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;seven_segment_display left_4 d&quot;,
+          &quot;pin_label&quot;: &quot;d&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.3_left_5&quot;,
+          &quot;name&quot;: &quot;left_5&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;seven_segment_display left_5 e&quot;,
+          &quot;pin_label&quot;: &quot;e&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.3_left_6&quot;,
+          &quot;name&quot;: &quot;left_6&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;seven_segment_display left_6 f&quot;,
+          &quot;pin_label&quot;: &quot;f&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.3_left_7&quot;,
+          &quot;name&quot;: &quot;left_7&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;seven_segment_display left_7 g&quot;,
+          &quot;pin_label&quot;: &quot;g&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.3_left_8&quot;,
+          &quot;name&quot;: &quot;left_8&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;seven_segment_display left_8 h&quot;,
+          &quot;pin_label&quot;: &quot;h&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.3_bottom_1&quot;,
+          &quot;name&quot;: &quot;bottom_1&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;,
+          &quot;display_name&quot;: &quot;seven_segment_display bottom_1 cc&quot;,
+          &quot;pin_label&quot;: &quot;cc&quot;
+        }
+      ],
+      &quot;display_name&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;
+    },
+    {
+      &quot;component_id&quot;: &quot;gnd9.6&quot;,
+      &quot;instance_id&quot;: &quot;9.6&quot;,
+      &quot;class_name&quot;: &quot;GND&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;gnd9.6_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.13&quot;,
+      &quot;instance_id&quot;: &quot;22.13&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.13_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.13_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;npn_transistor18.2&quot;,
+      &quot;instance_id&quot;: &quot;18.2&quot;,
+      &quot;class_name&quot;: &quot;NPN_Transistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;npn_transistor18.2_B&quot;,
+          &quot;name&quot;: &quot;B&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;npn_transistor18.2_C&quot;,
+          &quot;name&quot;: &quot;C&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;npn_transistor18.2_E&quot;,
+          &quot;name&quot;: &quot;E&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;integrated_circuit11.4&quot;,
+      &quot;instance_id&quot;: &quot;11.4&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.4_left_1&quot;,
+          &quot;name&quot;: &quot;left_1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;EEOO7T left_1 a&quot;,
+          &quot;pin_label&quot;: &quot;a&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.4_left_2&quot;,
+          &quot;name&quot;: &quot;left_2&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;EEOO7T left_2 b&quot;,
+          &quot;pin_label&quot;: &quot;b&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.4_left_3&quot;,
+          &quot;name&quot;: &quot;left_3&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;EEOO7T left_3 c&quot;,
+          &quot;pin_label&quot;: &quot;c&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.4_left_4&quot;,
+          &quot;name&quot;: &quot;left_4&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;EEOO7T left_4 d&quot;,
+          &quot;pin_label&quot;: &quot;d&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.4_left_5&quot;,
+          &quot;name&quot;: &quot;left_5&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;EEOO7T left_5 e&quot;,
+          &quot;pin_label&quot;: &quot;e&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.4_left_6&quot;,
+          &quot;name&quot;: &quot;left_6&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;EEOO7T left_6 f&quot;,
+          &quot;pin_label&quot;: &quot;f&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.4_left_7&quot;,
+          &quot;name&quot;: &quot;left_7&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;EEOO7T left_7 g&quot;,
+          &quot;pin_label&quot;: &quot;g&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.4_left_8&quot;,
+          &quot;name&quot;: &quot;left_8&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;,
+          &quot;display_name&quot;: &quot;EEOO7T left_8 h&quot;,
+          &quot;pin_label&quot;: &quot;h&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;integrated_circuit11.4_bottom_1&quot;,
+          &quot;name&quot;: &quot;bottom_1&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;,
+          &quot;display_name&quot;: &quot;EEOO7T bottom_1 cc&quot;,
+          &quot;pin_label&quot;: &quot;cc&quot;
+        }
+      ],
+      &quot;display_name&quot;: &quot;EEOO7T&quot;,
+      &quot;ic_marking&quot;: &quot;EEOO7T&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;
+    },
+    {
+      &quot;component_id&quot;: &quot;gnd9.7&quot;,
+      &quot;instance_id&quot;: &quot;9.7&quot;,
+      &quot;class_name&quot;: &quot;GND&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;gnd9.7_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        }
+      ]
+    }
+  ],
+  &quot;terminal_metadata&quot;: {
+    &quot;integrated_circuit11.1_bottom_1&quot;: {
+      &quot;display_name&quot;: &quot;ADC0804 bottom_1 pin10&quot;,
+      &quot;pin_number&quot;: &quot;10&quot;,
+      &quot;component_display_name&quot;: &quot;ADC0804&quot;,
+      &quot;ic_marking&quot;: &quot;ADC0804&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_left_1&quot;: {
+      &quot;display_name&quot;: &quot;ADC0804 left_1 pin6&quot;,
+      &quot;pin_number&quot;: &quot;6&quot;,
+      &quot;component_display_name&quot;: &quot;ADC0804&quot;,
+      &quot;ic_marking&quot;: &quot;ADC0804&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_left_2&quot;: {
+      &quot;display_name&quot;: &quot;ADC0804 left_2 pin7&quot;,
+      &quot;pin_number&quot;: &quot;7&quot;,
+      &quot;component_display_name&quot;: &quot;ADC0804&quot;,
+      &quot;ic_marking&quot;: &quot;ADC0804&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_left_3&quot;: {
+      &quot;display_name&quot;: &quot;ADC0804 left_3 pin8&quot;,
+      &quot;pin_number&quot;: &quot;8&quot;,
+      &quot;component_display_name&quot;: &quot;ADC0804&quot;,
+      &quot;ic_marking&quot;: &quot;ADC0804&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_left_4&quot;: {
+      &quot;display_name&quot;: &quot;ADC0804 left_4 pin19&quot;,
+      &quot;pin_number&quot;: &quot;19&quot;,
+      &quot;component_display_name&quot;: &quot;ADC0804&quot;,
+      &quot;ic_marking&quot;: &quot;ADC0804&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_left_5&quot;: {
+      &quot;display_name&quot;: &quot;ADC0804 left_5 pin4&quot;,
+      &quot;pin_number&quot;: &quot;4&quot;,
+      &quot;component_display_name&quot;: &quot;ADC0804&quot;,
+      &quot;ic_marking&quot;: &quot;ADC0804&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_1&quot;: {
+      &quot;display_name&quot;: &quot;ADC0804 right_1 D0&quot;,
+      &quot;pin_label&quot;: &quot;D0&quot;,
+      &quot;component_display_name&quot;: &quot;ADC0804&quot;,
+      &quot;ic_marking&quot;: &quot;ADC0804&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_10&quot;: {
+      &quot;display_name&quot;: &quot;ADC0804 right_10 RD&quot;,
+      &quot;pin_label&quot;: &quot;RD&quot;,
+      &quot;component_display_name&quot;: &quot;ADC0804&quot;,
+      &quot;ic_marking&quot;: &quot;ADC0804&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_11&quot;: {
+      &quot;display_name&quot;: &quot;ADC0804 right_11 WR&quot;,
+      &quot;pin_label&quot;: &quot;WR&quot;,
+      &quot;component_display_name&quot;: &quot;ADC0804&quot;,
+      &quot;ic_marking&quot;: &quot;ADC0804&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_12&quot;: {
+      &quot;display_name&quot;: &quot;ADC0804 right_12 INTR&quot;,
+      &quot;pin_label&quot;: &quot;INTR&quot;,
+      &quot;component_display_name&quot;: &quot;ADC0804&quot;,
+      &quot;ic_marking&quot;: &quot;ADC0804&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_2&quot;: {
+      &quot;display_name&quot;: &quot;ADC0804 right_2 D1&quot;,
+      &quot;pin_label&quot;: &quot;D1&quot;,
+      &quot;component_display_name&quot;: &quot;ADC0804&quot;,
+      &quot;ic_marking&quot;: &quot;ADC0804&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_3&quot;: {
+      &quot;display_name&quot;: &quot;ADC0804 right_3 D2&quot;,
+      &quot;pin_label&quot;: &quot;D2&quot;,
+      &quot;component_display_name&quot;: &quot;ADC0804&quot;,
+      &quot;ic_marking&quot;: &quot;ADC0804&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_4&quot;: {
+      &quot;display_name&quot;: &quot;ADC0804 right_4 D3&quot;,
+      &quot;pin_label&quot;: &quot;D3&quot;,
+      &quot;component_display_name&quot;: &quot;ADC0804&quot;,
+      &quot;ic_marking&quot;: &quot;ADC0804&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_5&quot;: {
+      &quot;display_name&quot;: &quot;ADC0804 right_5 D4&quot;,
+      &quot;pin_label&quot;: &quot;D4&quot;,
+      &quot;component_display_name&quot;: &quot;ADC0804&quot;,
+      &quot;ic_marking&quot;: &quot;ADC0804&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_6&quot;: {
+      &quot;display_name&quot;: &quot;ADC0804 right_6 D5&quot;,
+      &quot;pin_label&quot;: &quot;D5&quot;,
+      &quot;component_display_name&quot;: &quot;ADC0804&quot;,
+      &quot;ic_marking&quot;: &quot;ADC0804&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_7&quot;: {
+      &quot;display_name&quot;: &quot;ADC0804 right_7 D6&quot;,
+      &quot;pin_label&quot;: &quot;D6&quot;,
+      &quot;component_display_name&quot;: &quot;ADC0804&quot;,
+      &quot;ic_marking&quot;: &quot;ADC0804&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_8&quot;: {
+      &quot;display_name&quot;: &quot;ADC0804 right_8 D7&quot;,
+      &quot;pin_label&quot;: &quot;D7&quot;,
+      &quot;component_display_name&quot;: &quot;ADC0804&quot;,
+      &quot;ic_marking&quot;: &quot;ADC0804&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_right_9&quot;: {
+      &quot;display_name&quot;: &quot;ADC0804 right_9 CS&quot;,
+      &quot;pin_label&quot;: &quot;CS&quot;,
+      &quot;component_display_name&quot;: &quot;ADC0804&quot;,
+      &quot;ic_marking&quot;: &quot;ADC0804&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_top_1&quot;: {
+      &quot;display_name&quot;: &quot;ADC0804 top_1 pin9&quot;,
+      &quot;pin_number&quot;: &quot;9&quot;,
+      &quot;component_display_name&quot;: &quot;ADC0804&quot;,
+      &quot;ic_marking&quot;: &quot;ADC0804&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.1_top_2&quot;: {
+      &quot;display_name&quot;: &quot;ADC0804 top_2 pin20&quot;,
+      &quot;pin_number&quot;: &quot;20&quot;,
+      &quot;component_display_name&quot;: &quot;ADC0804&quot;,
+      &quot;ic_marking&quot;: &quot;ADC0804&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.1&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_bottom_1&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 bottom_1 pin20&quot;,
+      &quot;pin_number&quot;: &quot;20&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_left_1&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 left_1 pin9&quot;,
+      &quot;pin_number&quot;: &quot;9&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_left_10&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 left_10 P3.7&quot;,
+      &quot;pin_label&quot;: &quot;P3.7&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_left_11&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 left_11 P3.6&quot;,
+      &quot;pin_label&quot;: &quot;P3.6&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_left_12&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 left_12 P3.5&quot;,
+      &quot;pin_label&quot;: &quot;P3.5&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_left_13&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 left_13 P3.4&quot;,
+      &quot;pin_label&quot;: &quot;P3.4&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_left_2&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 left_2 P1.0&quot;,
+      &quot;pin_label&quot;: &quot;P1.0&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_left_3&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 left_3 P1.1&quot;,
+      &quot;pin_label&quot;: &quot;P1.1&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_left_4&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 left_4 P1.2&quot;,
+      &quot;pin_label&quot;: &quot;P1.2&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_left_5&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 left_5 P1.3&quot;,
+      &quot;pin_label&quot;: &quot;P1.3&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_left_6&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 left_6 P1.4&quot;,
+      &quot;pin_label&quot;: &quot;P1.4&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_left_7&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 left_7 P1.5&quot;,
+      &quot;pin_label&quot;: &quot;P1.5&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_left_8&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 left_8 P1.6&quot;,
+      &quot;pin_label&quot;: &quot;P1.6&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_left_9&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 left_9 P1.7&quot;,
+      &quot;pin_label&quot;: &quot;P1.7&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_right_1&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 right_1 P0.0&quot;,
+      &quot;pin_label&quot;: &quot;P0.0&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_right_10&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 right_10 P3.1&quot;,
+      &quot;pin_label&quot;: &quot;P3.1&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_right_2&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 right_2 P0.1&quot;,
+      &quot;pin_label&quot;: &quot;P0.1&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_right_3&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 right_3 P0.2&quot;,
+      &quot;pin_label&quot;: &quot;P0.2&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_right_4&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 right_4 P0.3&quot;,
+      &quot;pin_label&quot;: &quot;P0.3&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_right_5&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 right_5 P0.4&quot;,
+      &quot;pin_label&quot;: &quot;P0.4&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_right_6&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 right_6 P0.5&quot;,
+      &quot;pin_label&quot;: &quot;P0.5&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_right_7&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 right_7 P0.6&quot;,
+      &quot;pin_label&quot;: &quot;P0.6&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_right_8&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 right_8 P0.7&quot;,
+      &quot;pin_label&quot;: &quot;P0.7&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_right_9&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 right_9 P3.2&quot;,
+      &quot;pin_label&quot;: &quot;P3.2&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_top_1&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 top_1 pin31&quot;,
+      &quot;pin_number&quot;: &quot;31&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.2_top_2&quot;: {
+      &quot;display_name&quot;: &quot;AT89S51 top_2 pin40&quot;,
+      &quot;pin_number&quot;: &quot;40&quot;,
+      &quot;component_display_name&quot;: &quot;AT89S51&quot;,
+      &quot;ic_marking&quot;: &quot;AT89S51&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.2&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.3_bottom_1&quot;: {
+      &quot;display_name&quot;: &quot;seven_segment_display bottom_1 cc&quot;,
+      &quot;pin_label&quot;: &quot;cc&quot;,
+      &quot;component_display_name&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.3&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.3_left_1&quot;: {
+      &quot;display_name&quot;: &quot;seven_segment_display left_1 a&quot;,
+      &quot;pin_label&quot;: &quot;a&quot;,
+      &quot;component_display_name&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.3&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.3_left_2&quot;: {
+      &quot;display_name&quot;: &quot;seven_segment_display left_2 b&quot;,
+      &quot;pin_label&quot;: &quot;b&quot;,
+      &quot;component_display_name&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.3&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.3_left_3&quot;: {
+      &quot;display_name&quot;: &quot;seven_segment_display left_3 c&quot;,
+      &quot;pin_label&quot;: &quot;c&quot;,
+      &quot;component_display_name&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.3&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.3_left_4&quot;: {
+      &quot;display_name&quot;: &quot;seven_segment_display left_4 d&quot;,
+      &quot;pin_label&quot;: &quot;d&quot;,
+      &quot;component_display_name&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.3&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.3_left_5&quot;: {
+      &quot;display_name&quot;: &quot;seven_segment_display left_5 e&quot;,
+      &quot;pin_label&quot;: &quot;e&quot;,
+      &quot;component_display_name&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.3&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.3_left_6&quot;: {
+      &quot;display_name&quot;: &quot;seven_segment_display left_6 f&quot;,
+      &quot;pin_label&quot;: &quot;f&quot;,
+      &quot;component_display_name&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.3&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.3_left_7&quot;: {
+      &quot;display_name&quot;: &quot;seven_segment_display left_7 g&quot;,
+      &quot;pin_label&quot;: &quot;g&quot;,
+      &quot;component_display_name&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.3&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.3_left_8&quot;: {
+      &quot;display_name&quot;: &quot;seven_segment_display left_8 h&quot;,
+      &quot;pin_label&quot;: &quot;h&quot;,
+      &quot;component_display_name&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.3&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.4_bottom_1&quot;: {
+      &quot;display_name&quot;: &quot;EEOO7T bottom_1 cc&quot;,
+      &quot;pin_label&quot;: &quot;cc&quot;,
+      &quot;component_display_name&quot;: &quot;EEOO7T&quot;,
+      &quot;ic_marking&quot;: &quot;EEOO7T&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.4&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.4_left_1&quot;: {
+      &quot;display_name&quot;: &quot;EEOO7T left_1 a&quot;,
+      &quot;pin_label&quot;: &quot;a&quot;,
+      &quot;component_display_name&quot;: &quot;EEOO7T&quot;,
+      &quot;ic_marking&quot;: &quot;EEOO7T&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.4&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.4_left_2&quot;: {
+      &quot;display_name&quot;: &quot;EEOO7T left_2 b&quot;,
+      &quot;pin_label&quot;: &quot;b&quot;,
+      &quot;component_display_name&quot;: &quot;EEOO7T&quot;,
+      &quot;ic_marking&quot;: &quot;EEOO7T&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.4&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.4_left_3&quot;: {
+      &quot;display_name&quot;: &quot;EEOO7T left_3 c&quot;,
+      &quot;pin_label&quot;: &quot;c&quot;,
+      &quot;component_display_name&quot;: &quot;EEOO7T&quot;,
+      &quot;ic_marking&quot;: &quot;EEOO7T&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.4&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.4_left_4&quot;: {
+      &quot;display_name&quot;: &quot;EEOO7T left_4 d&quot;,
+      &quot;pin_label&quot;: &quot;d&quot;,
+      &quot;component_display_name&quot;: &quot;EEOO7T&quot;,
+      &quot;ic_marking&quot;: &quot;EEOO7T&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.4&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.4_left_5&quot;: {
+      &quot;display_name&quot;: &quot;EEOO7T left_5 e&quot;,
+      &quot;pin_label&quot;: &quot;e&quot;,
+      &quot;component_display_name&quot;: &quot;EEOO7T&quot;,
+      &quot;ic_marking&quot;: &quot;EEOO7T&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.4&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.4_left_6&quot;: {
+      &quot;display_name&quot;: &quot;EEOO7T left_6 f&quot;,
+      &quot;pin_label&quot;: &quot;f&quot;,
+      &quot;component_display_name&quot;: &quot;EEOO7T&quot;,
+      &quot;ic_marking&quot;: &quot;EEOO7T&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.4&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.4_left_7&quot;: {
+      &quot;display_name&quot;: &quot;EEOO7T left_7 g&quot;,
+      &quot;pin_label&quot;: &quot;g&quot;,
+      &quot;component_display_name&quot;: &quot;EEOO7T&quot;,
+      &quot;ic_marking&quot;: &quot;EEOO7T&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.4&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    },
+    &quot;integrated_circuit11.4_left_8&quot;: {
+      &quot;display_name&quot;: &quot;EEOO7T left_8 h&quot;,
+      &quot;pin_label&quot;: &quot;h&quot;,
+      &quot;component_display_name&quot;: &quot;EEOO7T&quot;,
+      &quot;ic_marking&quot;: &quot;EEOO7T&quot;,
+      &quot;component_subtype&quot;: &quot;seven_segment_display&quot;,
+      &quot;component_id&quot;: &quot;integrated_circuit11.4&quot;,
+      &quot;class_name&quot;: &quot;Integrated_Circuit&quot;
+    }
+  },
+  &quot;graph&quot;: {
+    &quot;gnd9.1_t1&quot;: [
+      &quot;integrated_circuit11.1_left_2&quot;,
+      &quot;integrated_circuit11.1_left_3&quot;,
+      &quot;resistor22.1_t2&quot;
+    ],
+    &quot;gnd9.2_t1&quot;: [
+      &quot;polarized_capacitor20.1_negative&quot;
+    ],
+    &quot;gnd9.3_t1&quot;: [
+      &quot;integrated_circuit11.1_bottom_1&quot;
+    ],
+    &quot;gnd9.4_t1&quot;: [
+      &quot;resistor22.3_t2&quot;
+    ],
+    &quot;gnd9.5_t1&quot;: [
+      &quot;integrated_circuit11.2_bottom_1&quot;
+    ],
+    &quot;gnd9.6_t1&quot;: [
+      &quot;npn_transistor18.1_E&quot;
+    ],
+    &quot;gnd9.7_t1&quot;: [
+      &quot;npn_transistor18.2_E&quot;
+    ],
+    &quot;integrated_circuit11.1_bottom_1&quot;: [
+      &quot;gnd9.3_t1&quot;
+    ],
+    &quot;integrated_circuit11.1_left_1&quot;: [],
+    &quot;integrated_circuit11.1_left_2&quot;: [
+      &quot;gnd9.1_t1&quot;,
+      &quot;integrated_circuit11.1_left_3&quot;,
+      &quot;resistor22.1_t2&quot;
+    ],
+    &quot;integrated_circuit11.1_left_3&quot;: [
+      &quot;gnd9.1_t1&quot;,
+      &quot;integrated_circuit11.1_left_2&quot;,
+      &quot;resistor22.1_t2&quot;
+    ],
+    &quot;integrated_circuit11.1_left_4&quot;: [
+      &quot;resistor22.2_t1&quot;
+    ],
+    &quot;integrated_circuit11.1_left_5&quot;: [
+      &quot;polarized_capacitor20.1_positive&quot;,
+      &quot;resistor22.2_t2&quot;
+    ],
+    &quot;integrated_circuit11.1_right_1&quot;: [
+      &quot;integrated_circuit11.2_left_2&quot;
+    ],
+    &quot;integrated_circuit11.1_right_10&quot;: [
+      &quot;integrated_circuit11.2_left_11&quot;
+    ],
+    &quot;integrated_circuit11.1_right_11&quot;: [
+      &quot;integrated_circuit11.2_left_12&quot;
+    ],
+    &quot;integrated_circuit11.1_right_12&quot;: [
+      &quot;integrated_circuit11.2_left_13&quot;
+    ],
+    &quot;integrated_circuit11.1_right_2&quot;: [
+      &quot;integrated_circuit11.2_left_3&quot;
+    ],
+    &quot;integrated_circuit11.1_right_3&quot;: [
+      &quot;integrated_circuit11.2_left_4&quot;
+    ],
+    &quot;integrated_circuit11.1_right_4&quot;: [
+      &quot;integrated_circuit11.2_left_5&quot;
+    ],
+    &quot;integrated_circuit11.1_right_5&quot;: [
+      &quot;integrated_circuit11.2_left_6&quot;
+    ],
+    &quot;integrated_circuit11.1_right_6&quot;: [
+      &quot;integrated_circuit11.2_left_7&quot;
+    ],
+    &quot;integrated_circuit11.1_right_7&quot;: [
+      &quot;integrated_circuit11.2_left_8&quot;
+    ],
+    &quot;integrated_circuit11.1_right_8&quot;: [
+      &quot;integrated_circuit11.2_left_9&quot;
+    ],
+    &quot;integrated_circuit11.1_right_9&quot;: [
+      &quot;integrated_circuit11.2_left_10&quot;
+    ],
+    &quot;integrated_circuit11.1_top_1&quot;: [],
+    &quot;integrated_circuit11.1_top_2&quot;: [
+      &quot;terminal26.2_t1&quot;
+    ],
+    &quot;integrated_circuit11.2_bottom_1&quot;: [
+      &quot;gnd9.5_t1&quot;
+    ],
+    &quot;integrated_circuit11.2_left_1&quot;: [
+      &quot;polarized_capacitor20.2_negative&quot;,
+      &quot;push_button21.1_t2&quot;,
+      &quot;resistor22.3_t1&quot;
+    ],
+    &quot;integrated_circuit11.2_left_10&quot;: [
+      &quot;integrated_circuit11.1_right_9&quot;
+    ],
+    &quot;integrated_circuit11.2_left_11&quot;: [
+      &quot;integrated_circuit11.1_right_10&quot;
+    ],
+    &quot;integrated_circuit11.2_left_12&quot;: [
+      &quot;integrated_circuit11.1_right_11&quot;
+    ],
+    &quot;integrated_circuit11.2_left_13&quot;: [
+      &quot;integrated_circuit11.1_right_12&quot;
+    ],
+    &quot;integrated_circuit11.2_left_2&quot;: [
+      &quot;integrated_circuit11.1_right_1&quot;
+    ],
+    &quot;integrated_circuit11.2_left_3&quot;: [
+      &quot;integrated_circuit11.1_right_2&quot;
+    ],
+    &quot;integrated_circuit11.2_left_4&quot;: [
+      &quot;integrated_circuit11.1_right_3&quot;
+    ],
+    &quot;integrated_circuit11.2_left_5&quot;: [
+      &quot;integrated_circuit11.1_right_4&quot;
+    ],
+    &quot;integrated_circuit11.2_left_6&quot;: [
+      &quot;integrated_circuit11.1_right_5&quot;
+    ],
+    &quot;integrated_circuit11.2_left_7&quot;: [
+      &quot;integrated_circuit11.1_right_6&quot;
+    ],
+    &quot;integrated_circuit11.2_left_8&quot;: [
+      &quot;integrated_circuit11.1_right_7&quot;
+    ],
+    &quot;integrated_circuit11.2_left_9&quot;: [
+      &quot;integrated_circuit11.1_right_8&quot;
+    ],
+    &quot;integrated_circuit11.2_right_1&quot;: [
+      &quot;resistor22.11_t1&quot;
+    ],
+    &quot;integrated_circuit11.2_right_10&quot;: [
+      &quot;resistor22.13_t1&quot;
+    ],
+    &quot;integrated_circuit11.2_right_2&quot;: [
+      &quot;resistor22.9_t1&quot;
+    ],
+    &quot;integrated_circuit11.2_right_3&quot;: [
+      &quot;resistor22.10_t1&quot;
+    ],
+    &quot;integrated_circuit11.2_right_4&quot;: [
+      &quot;resistor22.5_t1&quot;
+    ],
+    &quot;integrated_circuit11.2_right_5&quot;: [
+      &quot;resistor22.7_t1&quot;
+    ],
+    &quot;integrated_circuit11.2_right_6&quot;: [
+      &quot;resistor22.6_t1&quot;
+    ],
+    &quot;integrated_circuit11.2_right_7&quot;: [
+      &quot;resistor22.8_t1&quot;
+    ],
+    &quot;integrated_circuit11.2_right_8&quot;: [
+      &quot;resistor22.4_t1&quot;
+    ],
+    &quot;integrated_circuit11.2_right_9&quot;: [
+      &quot;resistor22.12_t1&quot;
+    ],
+    &quot;integrated_circuit11.2_top_1&quot;: [
+      &quot;terminal26.4_t1&quot;
+    ],
+    &quot;integrated_circuit11.2_top_2&quot;: [
+      &quot;terminal26.5_t1&quot;
+    ],
+    &quot;integrated_circuit11.3_bottom_1&quot;: [
+      &quot;npn_transistor18.1_C&quot;
+    ],
+    &quot;integrated_circuit11.3_left_1&quot;: [
+      &quot;integrated_circuit11.4_left_1&quot;,
+      &quot;resistor22.11_t2&quot;,
+      &quot;resistor22.9_t2&quot;
+    ],
+    &quot;integrated_circuit11.3_left_2&quot;: [
+      &quot;integrated_circuit11.4_left_2&quot;
+    ],
+    &quot;integrated_circuit11.3_left_3&quot;: [
+      &quot;integrated_circuit11.4_left_3&quot;,
+      &quot;resistor22.10_t2&quot;
+    ],
+    &quot;integrated_circuit11.3_left_4&quot;: [
+      &quot;integrated_circuit11.4_left_4&quot;,
+      &quot;resistor22.5_t2&quot;
+    ],
+    &quot;integrated_circuit11.3_left_5&quot;: [
+      &quot;integrated_circuit11.4_left_5&quot;
+    ],
+    &quot;integrated_circuit11.3_left_6&quot;: [
+      &quot;integrated_circuit11.4_left_6&quot;,
+      &quot;resistor22.7_t2&quot;
+    ],
+    &quot;integrated_circuit11.3_left_7&quot;: [
+      &quot;integrated_circuit11.4_left_7&quot;,
+      &quot;resistor22.6_t2&quot;
+    ],
+    &quot;integrated_circuit11.3_left_8&quot;: [
+      &quot;integrated_circuit11.4_left_8&quot;,
+      &quot;resistor22.4_t2&quot;,
+      &quot;resistor22.8_t2&quot;
+    ],
+    &quot;integrated_circuit11.4_bottom_1&quot;: [
+      &quot;npn_transistor18.2_C&quot;
+    ],
+    &quot;integrated_circuit11.4_left_1&quot;: [
+      &quot;integrated_circuit11.3_left_1&quot;
+    ],
+    &quot;integrated_circuit11.4_left_2&quot;: [
+      &quot;integrated_circuit11.3_left_2&quot;
+    ],
+    &quot;integrated_circuit11.4_left_3&quot;: [
+      &quot;integrated_circuit11.3_left_3&quot;
+    ],
+    &quot;integrated_circuit11.4_left_4&quot;: [
+      &quot;integrated_circuit11.3_left_4&quot;
+    ],
+    &quot;integrated_circuit11.4_left_5&quot;: [
+      &quot;integrated_circuit11.3_left_5&quot;
+    ],
+    &quot;integrated_circuit11.4_left_6&quot;: [
+      &quot;integrated_circuit11.3_left_6&quot;
+    ],
+    &quot;integrated_circuit11.4_left_7&quot;: [
+      &quot;integrated_circuit11.3_left_7&quot;
+    ],
+    &quot;integrated_circuit11.4_left_8&quot;: [
+      &quot;integrated_circuit11.3_left_8&quot;
+    ],
+    &quot;npn_transistor18.1_B&quot;: [
+      &quot;npn_transistor18.2_B&quot;,
+      &quot;resistor22.12_t2&quot;,
+      &quot;resistor22.13_t2&quot;
+    ],
+    &quot;npn_transistor18.1_C&quot;: [
+      &quot;integrated_circuit11.3_bottom_1&quot;
+    ],
+    &quot;npn_transistor18.1_E&quot;: [
+      &quot;gnd9.6_t1&quot;
+    ],
+    &quot;npn_transistor18.2_B&quot;: [
+      &quot;npn_transistor18.1_B&quot;,
+      &quot;resistor22.12_t2&quot;,
+      &quot;resistor22.13_t2&quot;
+    ],
+    &quot;npn_transistor18.2_C&quot;: [
+      &quot;integrated_circuit11.4_bottom_1&quot;
+    ],
+    &quot;npn_transistor18.2_E&quot;: [
+      &quot;gnd9.7_t1&quot;
+    ],
+    &quot;polarized_capacitor20.1_negative&quot;: [
+      &quot;gnd9.2_t1&quot;
+    ],
+    &quot;polarized_capacitor20.1_positive&quot;: [
+      &quot;integrated_circuit11.1_left_5&quot;,
+      &quot;resistor22.2_t2&quot;
+    ],
+    &quot;polarized_capacitor20.2_negative&quot;: [
+      &quot;integrated_circuit11.2_left_1&quot;,
+      &quot;push_button21.1_t2&quot;,
+      &quot;resistor22.3_t1&quot;
+    ],
+    &quot;polarized_capacitor20.2_positive&quot;: [
+      &quot;push_button21.1_t1&quot;,
+      &quot;terminal26.3_t1&quot;
+    ],
+    &quot;push_button21.1_t1&quot;: [
+      &quot;polarized_capacitor20.2_positive&quot;,
+      &quot;terminal26.3_t1&quot;
+    ],
+    &quot;push_button21.1_t2&quot;: [
+      &quot;integrated_circuit11.2_left_1&quot;,
+      &quot;polarized_capacitor20.2_negative&quot;,
+      &quot;resistor22.3_t1&quot;
+    ],
+    &quot;resistor22.10_t1&quot;: [
+      &quot;integrated_circuit11.2_right_3&quot;
+    ],
+    &quot;resistor22.10_t2&quot;: [
+      &quot;integrated_circuit11.3_left_3&quot;
+    ],
+    &quot;resistor22.11_t1&quot;: [
+      &quot;integrated_circuit11.2_right_1&quot;
+    ],
+    &quot;resistor22.11_t2&quot;: [
+      &quot;integrated_circuit11.3_left_1&quot;,
+      &quot;resistor22.9_t2&quot;
+    ],
+    &quot;resistor22.12_t1&quot;: [
+      &quot;integrated_circuit11.2_right_9&quot;
+    ],
+    &quot;resistor22.12_t2&quot;: [
+      &quot;npn_transistor18.1_B&quot;,
+      &quot;npn_transistor18.2_B&quot;,
+      &quot;resistor22.13_t2&quot;
+    ],
+    &quot;resistor22.13_t1&quot;: [
+      &quot;integrated_circuit11.2_right_10&quot;
+    ],
+    &quot;resistor22.13_t2&quot;: [
+      &quot;npn_transistor18.1_B&quot;,
+      &quot;npn_transistor18.2_B&quot;,
+      &quot;resistor22.12_t2&quot;
+    ],
+    &quot;resistor22.1_t1&quot;: [
+      &quot;terminal26.1_t1&quot;
+    ],
+    &quot;resistor22.1_t2&quot;: [
+      &quot;gnd9.1_t1&quot;,
+      &quot;integrated_circuit11.1_left_2&quot;,
+      &quot;integrated_circuit11.1_left_3&quot;
+    ],
+    &quot;resistor22.2_t1&quot;: [
+      &quot;integrated_circuit11.1_left_4&quot;
+    ],
+    &quot;resistor22.2_t2&quot;: [
+      &quot;integrated_circuit11.1_left_5&quot;,
+      &quot;polarized_capacitor20.1_positive&quot;
+    ],
+    &quot;resistor22.3_t1&quot;: [
+      &quot;integrated_circuit11.2_left_1&quot;,
+      &quot;polarized_capacitor20.2_negative&quot;,
+      &quot;push_button21.1_t2&quot;
+    ],
+    &quot;resistor22.3_t2&quot;: [
+      &quot;gnd9.4_t1&quot;
+    ],
+    &quot;resistor22.4_t1&quot;: [
+      &quot;integrated_circuit11.2_right_8&quot;
+    ],
+    &quot;resistor22.4_t2&quot;: [
+      &quot;integrated_circuit11.3_left_8&quot;,
+      &quot;resistor22.8_t2&quot;
+    ],
+    &quot;resistor22.5_t1&quot;: [
+      &quot;integrated_circuit11.2_right_4&quot;
+    ],
+    &quot;resistor22.5_t2&quot;: [
+      &quot;integrated_circuit11.3_left_4&quot;
+    ],
+    &quot;resistor22.6_t1&quot;: [
+      &quot;integrated_circuit11.2_right_6&quot;
+    ],
+    &quot;resistor22.6_t2&quot;: [
+      &quot;integrated_circuit11.3_left_7&quot;
+    ],
+    &quot;resistor22.7_t1&quot;: [
+      &quot;integrated_circuit11.2_right_5&quot;
+    ],
+    &quot;resistor22.7_t2&quot;: [
+      &quot;integrated_circuit11.3_left_6&quot;
+    ],
+    &quot;resistor22.8_t1&quot;: [
+      &quot;integrated_circuit11.2_right_7&quot;
+    ],
+    &quot;resistor22.8_t2&quot;: [
+      &quot;integrated_circuit11.3_left_8&quot;,
+      &quot;resistor22.4_t2&quot;
+    ],
+    &quot;resistor22.9_t1&quot;: [
+      &quot;integrated_circuit11.2_right_2&quot;
+    ],
+    &quot;resistor22.9_t2&quot;: [
+      &quot;integrated_circuit11.3_left_1&quot;,
+      &quot;resistor22.11_t2&quot;
+    ],
+    &quot;terminal26.1_t1&quot;: [
+      &quot;resistor22.1_t1&quot;
+    ],
+    &quot;terminal26.2_t1&quot;: [
+      &quot;integrated_circuit11.1_top_2&quot;
+    ],
+    &quot;terminal26.3_t1&quot;: [
+      &quot;polarized_capacitor20.2_positive&quot;,
+      &quot;push_button21.1_t1&quot;
+    ],
+    &quot;terminal26.4_t1&quot;: [
+      &quot;integrated_circuit11.2_top_1&quot;
+    ],
+    &quot;terminal26.5_t1&quot;: [
+      &quot;integrated_circuit11.2_top_2&quot;
+    ]
+  },
+  &quot;warnings&quot;: {
+    &quot;unconnected_terminals&quot;: [
+      &quot;integrated_circuit11.1_left_1&quot;,
+      &quot;integrated_circuit11.1_top_1&quot;
+    ],
+    &quot;unmatched_terminals&quot;: [],
+    &quot;suspicious_matches&quot;: []
+  }
+}</pre>
+    </details>
+  </div>
+
+  <script>
+    (() => {
+      const svg = document.getElementById("graph-svg");
+      const viewBox = svg.viewBox.baseVal;
+      let isDragging = false;
+      let startX = 0;
+      let startY = 0;
+      let startViewX = viewBox.x;
+      let startViewY = viewBox.y;
+
+      function pointFromEvent(event) {
+        const rect = svg.getBoundingClientRect();
+        return {
+          x: (event.clientX - rect.left) * (viewBox.width / rect.width),
+          y: (event.clientY - rect.top) * (viewBox.height / rect.height),
+        };
+      }
+
+      svg.addEventListener("wheel", (event) => {
+        event.preventDefault();
+        const scale = event.deltaY < 0 ? 0.92 : 1.08;
+        const point = pointFromEvent(event);
+        const newWidth = viewBox.width * scale;
+        const newHeight = viewBox.height * scale;
+        viewBox.x = point.x - (point.x - viewBox.x) * scale;
+        viewBox.y = point.y - (point.y - viewBox.y) * scale;
+        viewBox.width = Math.max(480, newWidth);
+        viewBox.height = Math.max(360, newHeight);
+      }, { passive: false });
+
+      svg.addEventListener("pointerdown", (event) => {
+        isDragging = true;
+        svg.setPointerCapture(event.pointerId);
+        startX = event.clientX;
+        startY = event.clientY;
+        startViewX = viewBox.x;
+        startViewY = viewBox.y;
+      });
+
+      svg.addEventListener("pointermove", (event) => {
+        if (!isDragging) return;
+        const rect = svg.getBoundingClientRect();
+        const dx = (event.clientX - startX) * (viewBox.width / rect.width);
+        const dy = (event.clientY - startY) * (viewBox.height / rect.height);
+        viewBox.x = startViewX - dx;
+        viewBox.y = startViewY - dy;
+      });
+
+      svg.addEventListener("pointerup", () => {
+        isDragging = false;
+      });
+
+      svg.addEventListener("pointerleave", () => {
+        isDragging = false;
+      });
+    })();
+  </script>
+</body>
+</html>

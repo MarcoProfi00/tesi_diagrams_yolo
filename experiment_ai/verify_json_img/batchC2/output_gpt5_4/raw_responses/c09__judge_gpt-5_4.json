@@ -1,0 +1,114 @@
+{
+  "metadata": {
+    "circuit_id": "c09",
+    "batch": "C2",
+    "batch_dir": "batchC2",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\images\\c09.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\json\\c09.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "c09.jpg",
+    "json_file": "c09.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:34:03",
+    "judge_latency_seconds": 25.697,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=27286, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=1483, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=28769)",
+  "judge_result": {
+    "circuit_id": "c09",
+    "batch": "C2",
+    "image_file": "c09.jpg",
+    "json_file": "c09.json",
+    "image_graph_fidelity_score": 86,
+    "decision": "HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 9,
+      "terminals_pins": 21,
+      "graph_connections": 47,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 4,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "missing_component_connection",
+        "description": "Il nodo comune/emettitore dei due transistor e la massa sono visivamente un unico nodo condiviso, ma nel JSON sono modellati come due masse separate senza collegamento tra gnd9.6, gnd9.7 e il nodo comune con P3.1.",
+        "image_evidence": "Nella parte bassa a destra il filo di P3.1 scende al nodo con junction, condiviso con gli emitter di Q1 e Q2 e con un unico simbolo GND; il secondo simbolo GND a destra e collegato all'emettitore di Q2.",
+        "json_evidence": "npn_transistor18.1_E -> gnd9.6_t1 e npn_transistor18.2_E -> gnd9.7_t1, mentre integrated_circuit11.2_right_10 (P3.1) collega solo resistor22.13_t1 e non al nodo di massa/emettitori."
+      },
+      {
+        "type": "net_split",
+        "description": "Il nodo visibile che unisce base di Q2, uscita di R12 e linea P3.1 e anche il montante comune in basso; nel JSON il lato base di Q2 e separato dal ramo P3.1/resistore R13-equivalente.",
+        "image_evidence": "R12 va alla base di Q2; la linea P3.1 scende e si unisce con junction al montante che prosegue verso la base di Q2 e il nodo di massa comune.",
+        "json_evidence": "integrated_circuit11.2_right_10 -> resistor22.13_t1 -> resistor22.13_t2 -> npn_transistor18.1_B/npn_transistor18.2_B, ma manca il collegamento dello stesso nodo a gnd9.6/gnd9.7 o al nodo di emitter comune."
+      },
+      {
+        "type": "extra_connection",
+        "description": "Il JSON fonde tra loro due uscite di resistenza verso il display sinistro che nell'immagine risultano su segmenti distinti.",
+        "image_evidence": "Sul display D1 le linee da R1 a R8 entrano su pin segmenti distinti a,b,c,d,e,f,g,h; non si vede un nodo che unisca due resistenze prima del display sul segmento superiore.",
+        "json_evidence": "integrated_circuit11.3_left_1 è collegato sia a resistor22.11_t2 sia a resistor22.9_t2, creando una fusione R11/R9 sullo stesso pin del display."
+      },
+      {
+        "type": "extra_connection",
+        "description": "Il JSON fonde due uscite di resistenza anche su un altro ingresso del display sinistro, non supportato chiaramente dall'immagine.",
+        "image_evidence": "Nell'immagine ogni resistenza della batteria R1-R8 porta a un ingresso separato del display; non si vede unione esplicita tra due resistenze sul pin h del display D1.",
+        "json_evidence": "integrated_circuit11.3_left_8 è collegato contemporaneamente a resistor22.4_t2 e resistor22.8_t2."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "terminal_identity_ambiguity",
+        "description": "Le associazioni tra i singoli resistori orizzontali e i pin a..h dei display non sono tutte affidabili; parte del mapping sembra permutato ma con struttura generale corretta."
+      },
+      {
+        "type": "component_class_semantics",
+        "description": "I display a sette segmenti sono modellati come Integrated_Circuit; semanticamente imperfetto ma topologicamente accettabile."
+      }
+    ],
+    "missing_from_json": [
+      "Collegamento del nodo comune P3.1 / emitter Q1 / emitter Q2 / massa come unico nodo condiviso visibile.",
+      "Collegamento esplicito tra il nodo base di Q2 (uscita R12) e il montante comune inferiore, se si interpreta la giunzione visibile come unica rete."
+    ],
+    "extra_in_json": [
+      "Fusione di due resistenze sul pin integrated_circuit11.3_left_1 del display D1.",
+      "Fusione di due resistenze sul pin integrated_circuit11.3_left_8 del display D1."
+    ],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "Nodo unico condiviso tra integrated_circuit11.2_right_10 (P3.1), npn_transistor18.1_E, npn_transistor18.2_E e massa comune inferiore",
+        "found_in_json": "integrated_circuit11.2_right_10 collegato solo a resistor22.13_t1, con npn_transistor18.1_E e npn_transistor18.2_E separati su gnd9.6 e gnd9.7",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "integrated_circuit11.3_left_1 collegato a una sola uscita di resistore del gruppo segmenti",
+        "found_in_json": "integrated_circuit11.3_left_1 collegato sia a resistor22.11_t2 sia a resistor22.9_t2",
+        "severity": "major"
+      },
+      {
+        "expected_from_image": "integrated_circuit11.3_left_8 collegato a una sola uscita di resistore del gruppo segmenti",
+        "found_in_json": "integrated_circuit11.3_left_8 collegato sia a resistor22.4_t2 sia a resistor22.8_t2",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "Il wiring locale attorno a Q2/P3.1/base Q2 e al montante inferiore e molto fitto; la presenza della junction rende probabile il nodo unico, ma alcuni tratti corti sono visivamente compressi.",
+      "Il mapping esatto tra resistor22.4..22.11 e i resistori etichettati R1..R8 nell'immagine non e verificabile uno a uno senza ambiguita completa; valutato con permutazione topologica migliore.",
+      "Il pin integrated_circuit11.1_left_1 (Vref/2) appare non connesso nel JSON e nell'immagine sembra anch'esso non cablato direttamente, quindi non trattato come errore."
+    ],
+    "short_explanation": "Il graph JSON cattura bene la struttura principale: potenziometro/ingresso ADC0804, bus D0-D7 verso AT89S51, reset RC, reti verso i due display e transistor di pilotaggio. Gli errori principali sono nella zona bassa destra, dove il nodo comune P3.1/emettitori/massa risulta spezzato, e in alcune fusioni non visibili tra uscite resistive e pin del display sinistro. Base comunque utile e in gran parte fedele."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c09\",\"batch\":\"C2\",\"image_file\":\"c09.jpg\",\"json_file\":\"c09.json\",\"image_graph_fidelity_score\":86,\"decision\":\"HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":9,\"terminals_pins\":21,\"graph_connections\":47,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":4,\"minor\":2},\"critical_errors\":[],\"major_errors\":[{\"type\":\"missing_component_connection\",\"description\":\"Il nodo comune/emettitore dei due transistor e la massa sono visivamente un unico nodo condiviso, ma nel JSON sono modellati come due masse separate senza collegamento tra gnd9.6, gnd9.7 e il nodo comune con P3.1.\",\"image_evidence\":\"Nella parte bassa a destra il filo di P3.1 scende al nodo con junction, condiviso con gli emitter di Q1 e Q2 e con un unico simbolo GND; il secondo simbolo GND a destra e collegato all'emettitore di Q2.\",\"json_evidence\":\"npn_transistor18.1_E -> gnd9.6_t1 e npn_transistor18.2_E -> gnd9.7_t1, mentre integrated_circuit11.2_right_10 (P3.1) collega solo resistor22.13_t1 e non al nodo di massa/emettitori.\"},{\"type\":\"net_split\",\"description\":\"Il nodo visibile che unisce base di Q2, uscita di R12 e linea P3.1 e anche il montante comune in basso; nel JSON il lato base di Q2 e separato dal ramo P3.1/resistore R13-equivalente.\",\"image_evidence\":\"R12 va alla base di Q2; la linea P3.1 scende e si unisce con junction al montante che prosegue verso la base di Q2 e il nodo di massa comune.\",\"json_evidence\":\"integrated_circuit11.2_right_10 -> resistor22.13_t1 -> resistor22.13_t2 -> npn_transistor18.1_B/npn_transistor18.2_B, ma manca il collegamento dello stesso nodo a gnd9.6/gnd9.7 o al nodo di emitter comune.\"},{\"type\":\"extra_connection\",\"description\":\"Il JSON fonde tra loro due uscite di resistenza verso il display sinistro che nell'immagine risultano su segmenti distinti.\",\"image_evidence\":\"Sul display D1 le linee da R1 a R8 entrano su pin segmenti distinti a,b,c,d,e,f,g,h; non si vede un nodo che unisca due resistenze prima del display sul segmento superiore.\",\"json_evidence\":\"integrated_circuit11.3_left_1 è collegato sia a resistor22.11_t2 sia a resistor22.9_t2, creando una fusione R11/R9 sullo stesso pin del display.\"},{\"type\":\"extra_connection\",\"description\":\"Il JSON fonde due uscite di resistenza anche su un altro ingresso del display sinistro, non supportato chiaramente dall'immagine.\",\"image_evidence\":\"Nell'immagine ogni resistenza della batteria R1-R8 porta a un ingresso separato del display; non si vede unione esplicita tra due resistenze sul pin h del display D1.\",\"json_evidence\":\"integrated_circuit11.3_left_8 è collegato contemporaneamente a resistor22.4_t2 e resistor22.8_t2.\"}],\"minor_errors\":[{\"type\":\"terminal_identity_ambiguity\",\"description\":\"Le associazioni tra i singoli resistori orizzontali e i pin a..h dei display non sono tutte affidabili; parte del mapping sembra permutato ma con struttura generale corretta.\"},{\"type\":\"component_class_semantics\",\"description\":\"I display a sette segmenti sono modellati come Integrated_Circuit; semanticamente imperfetto ma topologicamente accettabile.\"}],\"missing_from_json\":[\"Collegamento del nodo comune P3.1 / emitter Q1 / emitter Q2 / massa come unico nodo condiviso visibile.\",\"Collegamento esplicito tra il nodo base di Q2 (uscita R12) e il montante comune inferiore, se si interpreta la giunzione visibile come unica rete.\"],\"extra_in_json\":[\"Fusione di due resistenze sul pin integrated_circuit11.3_left_1 del display D1.\",\"Fusione di due resistenze sul pin integrated_circuit11.3_left_8 del display D1.\"],\"wrong_graph_connections\":[{\"expected_from_image\":\"Nodo unico condiviso tra integrated_circuit11.2_right_10 (P3.1), npn_transistor18.1_E, npn_transistor18.2_E e massa comune inferiore\",\"found_in_json\":\"integrated_circuit11.2_right_10 collegato solo a resistor22.13_t1, con npn_transistor18.1_E e npn_transistor18.2_E separati su gnd9.6 e gnd9.7\",\"severity\":\"major\"},{\"expected_from_image\":\"integrated_circuit11.3_left_1 collegato a una sola uscita di resistore del gruppo segmenti\",\"found_in_json\":\"integrated_circuit11.3_left_1 collegato sia a resistor22.11_t2 sia a resistor22.9_t2\",\"severity\":\"major\"},{\"expected_from_image\":\"integrated_circuit11.3_left_8 collegato a una sola uscita di resistore del gruppo segmenti\",\"found_in_json\":\"integrated_circuit11.3_left_8 collegato sia a resistor22.4_t2 sia a resistor22.8_t2\",\"severity\":\"major\"}],\"uncertain_points\":[\"Il wiring locale attorno a Q2/P3.1/base Q2 e al montante inferiore e molto fitto; la presenza della junction rende probabile il nodo unico, ma alcuni tratti corti sono visivamente compressi.\",\"Il mapping esatto tra resistor22.4..22.11 e i resistori etichettati R1..R8 nell'immagine non e verificabile uno a uno senza ambiguita completa; valutato con permutazione topologica migliore.\",\"Il pin integrated_circuit11.1_left_1 (Vref/2) appare non connesso nel JSON e nell'immagine sembra anch'esso non cablato direttamente, quindi non trattato come errore.\"],\"short_explanation\":\"Il graph JSON cattura bene la struttura principale: potenziometro/ingresso ADC0804, bus D0-D7 verso AT89S51, reset RC, reti verso i due display e transistor di pilotaggio. Gli errori principali sono nella zona bassa destra, dove il nodo comune P3.1/emettitori/massa risulta spezzato, e in alcune fusioni non visibili tra uscite resistive e pin del display sinistro. Base comunque utile e in gran parte fedele.\"}"
+}

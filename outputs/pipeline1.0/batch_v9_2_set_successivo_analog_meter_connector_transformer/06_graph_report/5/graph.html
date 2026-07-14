@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Graph 5</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
+      color: #1f2d3a;
+    }
+    .page {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .topbar h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .links a {
+      text-decoration: none;
+      color: #144a7b;
+      background: #ffffff;
+      border: 1px solid #d8e1ea;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-weight: 600;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .summary-item {
+      background: rgba(255,255,255,0.88);
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .summary-item .k {
+      color: #5f7184;
+      font-size: 13px;
+    }
+    .summary-item .v {
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .panel-grid {
+      display: grid;
+      grid-template-columns: minmax(280px, 420px) 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+    .panel {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #d8e1ea;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 12px 24px rgba(27, 53, 82, 0.06);
+    }
+    .panel h2 {
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
+    .preview-image {
+      width: 100%;
+      display: block;
+      border-radius: 12px;
+      border: 1px solid #d8e1ea;
+      background: #fff;
+    }
+    .preview-missing {
+      min-height: 220px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      border: 1px dashed #c6d2de;
+      color: #6f8093;
+      background: #f9fbfd;
+    }
+    .graph-wrap {
+      overflow: hidden;
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      background: #f8fbff;
+      cursor: grab;
+      min-height: 720px;
+    }
+    .graph-wrap:active {
+      cursor: grabbing;
+    }
+    #graph-svg {
+      width: 100%;
+      height: 760px;
+      display: block;
+      user-select: none;
+    }
+    .node-label {
+      fill: #314457;
+      font-size: 11px;
+      font-weight: 600;
+      pointer-events: none;
+    }
+    .node-label.small {
+      font-size: 10px;
+    }
+    .legend {
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      font-size: 13px;
+      color: #55687d;
+    }
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .warning-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .warning-box {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .warning-box h3 {
+      margin: 0 0 10px 0;
+      font-size: 15px;
+    }
+    .warning-box p, .warning-box li {
+      color: #526274;
+      font-size: 13px;
+    }
+    details {
+      margin-top: 18px;
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+    }
+    pre {
+      margin: 14px 0 0 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+      color: #314457;
+    }
+    .note {
+      color: #5c6f82;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    @media (max-width: 980px) {
+      .panel-grid {
+        grid-template-columns: 1fr;
+      }
+      #graph-svg {
+        height: 600px;
+      }
+      .graph-wrap {
+        min-height: 560px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <h1>Graph 5</h1>
+      <div class="links">
+        <a href="5.json">JSON finale 05</a>
+        <a href="graph.png">Graph PNG</a>
+        <a href="../index.html">Batch index</a>
+      </div>
+    </div>
+
+    <div class="summary-grid"><div class="summary-item"><span class="k">Componenti</span><span class="v">12</span></div><div class="summary-item"><span class="k">Terminali</span><span class="v">23</span></div><div class="summary-item"><span class="k">Nodi elettrici</span><span class="v">8</span></div><div class="summary-item"><span class="k">Isolati</span><span class="v">0</span></div><div class="summary-item"><span class="k">Unmatched</span><span class="v">0</span></div><div class="summary-item"><span class="k">Suspicious</span><span class="v">0</span></div></div>
+
+    <div class="panel-grid">
+      <section class="panel">
+        <h2>Circuito</h2>
+        <img src="5.jpg" alt="Circuito 5" class="preview-image">
+        <p class="note">Il grafo sotto e costruito solo a partire dal JSON del passo 05. I nodi gialli sono le net ricostruite come connected components del campo <code>graph</code>.</p>
+      </section>
+
+      <section class="panel">
+        <h2>Graph interattivo</h2>
+        <div class="graph-wrap" id="graph-wrap"><svg id="graph-svg" viewBox="0 0 4668 980" xmlns="http://www.w3.org/2000/svg" aria-label="Graph"><line x1="2413.1" y1="110.0" x2="165.2" y2="260.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="165.2" y1="260.0" x2="165.2" y2="430.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="165.2" y1="430.0" x2="100.0" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="165.2" y1="430.0" x2="230.4" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="2413.1" y1="110.0" x2="576.1" y2="260.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="576.1" y1="260.0" x2="576.1" y2="430.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="576.1" y1="430.0" x2="510.9" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="576.1" y1="430.0" x2="641.3" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="2413.1" y1="110.0" x2="1146.7" y2="260.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="1146.7" y1="260.0" x2="987.0" y2="430.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="987.0" y1="430.0" x2="921.7" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="987.0" y1="430.0" x2="1052.2" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="1146.7" y1="260.0" x2="1306.5" y2="430.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="1306.5" y1="430.0" x2="1241.3" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="1306.5" y1="430.0" x2="1371.7" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="2413.1" y1="110.0" x2="1717.4" y2="260.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="1717.4" y1="260.0" x2="1717.4" y2="430.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="1717.4" y1="430.0" x2="1652.2" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="1717.4" y1="430.0" x2="1782.6" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="2413.1" y1="110.0" x2="2128.3" y2="260.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="2128.3" y1="260.0" x2="2128.3" y2="430.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="2128.3" y1="430.0" x2="2063.0" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="2128.3" y1="430.0" x2="2193.5" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="2413.1" y1="110.0" x2="2539.1" y2="260.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="2539.1" y1="260.0" x2="2539.1" y2="430.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="2539.1" y1="430.0" x2="2473.9" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="2539.1" y1="430.0" x2="2604.3" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="2413.1" y1="110.0" x2="2884.8" y2="260.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="2884.8" y1="260.0" x2="2884.8" y2="430.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="2884.8" y1="430.0" x2="2884.8" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="2413.1" y1="110.0" x2="3230.4" y2="260.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="3230.4" y1="260.0" x2="3230.4" y2="430.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="3230.4" y1="430.0" x2="3165.2" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="3230.4" y1="430.0" x2="3295.7" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="2413.1" y1="110.0" x2="3641.3" y2="260.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="3641.3" y1="260.0" x2="3641.3" y2="430.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="3641.3" y1="430.0" x2="3576.1" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="3641.3" y1="430.0" x2="3706.5" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="2413.1" y1="110.0" x2="4052.2" y2="260.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="4052.2" y1="260.0" x2="4052.2" y2="430.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="4052.2" y1="430.0" x2="3987.0" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="4052.2" y1="430.0" x2="4117.4" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="2413.1" y1="110.0" x2="4463.0" y2="260.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="4463.0" y1="260.0" x2="4463.0" y2="430.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="4463.0" y1="430.0" x2="4397.8" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="4463.0" y1="430.0" x2="4528.3" y2="620.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="100.0" y1="620.0" x2="305.4" y2="860.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="510.9" y1="620.0" x2="305.4" y2="860.0" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="230.4" y1="620.0" x2="978.3" y2="860.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="1052.2" y1="620.0" x2="978.3" y2="860.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="1652.2" y1="620.0" x2="978.3" y2="860.0" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="641.3" y1="620.0" x2="1208.7" y2="860.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="921.7" y1="620.0" x2="1208.7" y2="860.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="2063.0" y1="620.0" x2="1208.7" y2="860.0" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="1782.6" y1="620.0" x2="2950.0" y2="860.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="2604.3" y1="620.0" x2="2950.0" y2="860.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="3295.7" y1="620.0" x2="2950.0" y2="860.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="4117.4" y1="620.0" x2="2950.0" y2="860.0" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="2193.5" y1="620.0" x2="2776.5" y2="860.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="2473.9" y1="620.0" x2="2776.5" y2="860.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="1241.3" y1="620.0" x2="2776.5" y2="860.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="3576.1" y1="620.0" x2="2776.5" y2="860.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="4397.8" y1="620.0" x2="2776.5" y2="860.0" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="2884.8" y1="620.0" x2="2128.3" y2="860.0" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="1371.7" y1="620.0" x2="2128.3" y2="860.0" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="3165.2" y1="620.0" x2="3435.9" y2="860.0" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="3706.5" y1="620.0" x2="3435.9" y2="860.0" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="3987.0" y1="620.0" x2="4257.6" y2="860.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><line x1="4528.3" y1="620.0" x2="4257.6" y2="860.0" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><g class="node-group" data-node-type="root"><title>Circuito 5
+Componenti: 12
+Terminali: 23
+Nodi elettrici: 8</title><circle cx="2413.1" cy="110.0" r="38.0" fill="#f26a63" stroke="#d4534c" stroke-width="2"></circle><text x="2413.1" y="114.0" text-anchor="middle" class="node-label">5</text></g><g class="node-group" data-node-type="class"><title>Classe: Battery
+Componenti: 1</title><circle cx="165.2" cy="260.0" r="31.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="165.2" y="264.0" text-anchor="middle" class="node-label">Battery</text></g><g class="node-group" data-node-type="component"><title>Componente: battery2.1
+Classe: Battery
+Instance: 2.1</title><circle cx="165.2" cy="430.0" r="30.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="165.2" y="434.0" text-anchor="middle" class="node-label">2.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: battery2.1_positive
+Componente: battery2.1
+Nome: positive
+Posizione: top</title><circle cx="100.0" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="100.0" y="624.0" text-anchor="middle" class="node-label">positive</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: battery2.1_negative
+Componente: battery2.1
+Nome: negative
+Posizione: bottom</title><circle cx="230.4" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="230.4" y="624.0" text-anchor="middle" class="node-label">negative</text></g><g class="node-group" data-node-type="class"><title>Classe: Fuse
+Componenti: 1</title><circle cx="576.1" cy="260.0" r="31.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="576.1" y="264.0" text-anchor="middle" class="node-label">Fuse</text></g><g class="node-group" data-node-type="component"><title>Componente: fuse8.1
+Classe: Fuse
+Instance: 8.1</title><circle cx="576.1" cy="430.0" r="30.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="576.1" y="434.0" text-anchor="middle" class="node-label">8.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: fuse8.1_t1
+Componente: fuse8.1
+Nome: t1
+Posizione: left</title><circle cx="510.9" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="510.9" y="624.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: fuse8.1_t2
+Componente: fuse8.1
+Nome: t2
+Posizione: right</title><circle cx="641.3" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="641.3" y="624.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="class"><title>Classe: Variable_Resistor
+Componenti: 2</title><circle cx="1146.7" cy="260.0" r="31.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="1146.7" y="257.0" text-anchor="middle" class="node-label small">Variable</text><text x="1146.7" y="271.0" text-anchor="middle" class="node-label small">Resistor</text></g><g class="node-group" data-node-type="component"><title>Componente: variable_resistor30.1
+Classe: Variable_Resistor
+Instance: 30.1</title><circle cx="987.0" cy="430.0" r="30.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="987.0" y="434.0" text-anchor="middle" class="node-label">30.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: variable_resistor30.1_t1
+Componente: variable_resistor30.1
+Nome: t1
+Posizione: top</title><circle cx="921.7" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="921.7" y="624.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: variable_resistor30.1_t2
+Componente: variable_resistor30.1
+Nome: t2
+Posizione: bottom</title><circle cx="1052.2" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="1052.2" y="624.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: variable_resistor30.2
+Classe: Variable_Resistor
+Instance: 30.2</title><circle cx="1306.5" cy="430.0" r="30.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="1306.5" y="434.0" text-anchor="middle" class="node-label">30.2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: variable_resistor30.2_t1
+Componente: variable_resistor30.2
+Nome: t1
+Posizione: top</title><circle cx="1241.3" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="1241.3" y="624.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: variable_resistor30.2_t2
+Componente: variable_resistor30.2
+Nome: t2
+Posizione: bottom</title><circle cx="1371.7" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="1371.7" y="624.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="class"><title>Classe: Analog_Meter
+Componenti: 1</title><circle cx="1717.4" cy="260.0" r="31.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="1717.4" y="264.0" text-anchor="middle" class="node-label">Analog Meter</text></g><g class="node-group" data-node-type="component"><title>Componente: analog_meter0.1
+Classe: Analog_Meter
+Instance: 0.1</title><circle cx="1717.4" cy="430.0" r="30.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="1717.4" y="434.0" text-anchor="middle" class="node-label">0.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: analog_meter0.1_t1
+Componente: analog_meter0.1
+Nome: t1
+Posizione: bottom</title><circle cx="1652.2" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="1652.2" y="624.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: analog_meter0.1_t2
+Componente: analog_meter0.1
+Nome: t2
+Posizione: bottom</title><circle cx="1782.6" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="1782.6" y="624.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="class"><title>Classe: Switch
+Componenti: 1</title><circle cx="2128.3" cy="260.0" r="31.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="2128.3" y="264.0" text-anchor="middle" class="node-label">Switch</text></g><g class="node-group" data-node-type="component"><title>Componente: switch25.1
+Classe: Switch
+Instance: 25.1
+State: open</title><circle cx="2128.3" cy="430.0" r="30.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="2128.3" y="434.0" text-anchor="middle" class="node-label">25.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: switch25.1_t1
+Componente: switch25.1
+Nome: t1
+Posizione: left</title><circle cx="2063.0" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="2063.0" y="624.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: switch25.1_t2
+Componente: switch25.1
+Nome: t2
+Posizione: right</title><circle cx="2193.5" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="2193.5" y="624.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="class"><title>Classe: Memristor
+Componenti: 1</title><circle cx="2539.1" cy="260.0" r="31.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="2539.1" y="264.0" text-anchor="middle" class="node-label">Memristor</text></g><g class="node-group" data-node-type="component"><title>Componente: memristor14.1
+Classe: Memristor
+Instance: 14.1</title><circle cx="2539.1" cy="430.0" r="30.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="2539.1" y="434.0" text-anchor="middle" class="node-label">14.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: memristor14.1_t1
+Componente: memristor14.1
+Nome: t1
+Posizione: top</title><circle cx="2473.9" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="2473.9" y="624.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: memristor14.1_t2
+Componente: memristor14.1
+Nome: t2
+Posizione: bottom</title><circle cx="2604.3" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="2604.3" y="624.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="class"><title>Classe: GND
+Componenti: 1</title><circle cx="2884.8" cy="260.0" r="31.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="2884.8" y="264.0" text-anchor="middle" class="node-label">GND</text></g><g class="node-group" data-node-type="component"><title>Componente: gnd9.1
+Classe: GND
+Instance: 9.1</title><circle cx="2884.8" cy="430.0" r="30.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="2884.8" y="434.0" text-anchor="middle" class="node-label">9.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: gnd9.1_t1
+Componente: gnd9.1
+Nome: t1
+Posizione: right</title><circle cx="2884.8" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="2884.8" y="624.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="class"><title>Classe: Diode
+Componenti: 1</title><circle cx="3230.4" cy="260.0" r="31.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="3230.4" y="264.0" text-anchor="middle" class="node-label">Diode</text></g><g class="node-group" data-node-type="component"><title>Componente: diode7.1
+Classe: Diode
+Instance: 7.1</title><circle cx="3230.4" cy="430.0" r="30.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="3230.4" y="434.0" text-anchor="middle" class="node-label">7.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: diode7.1_anode
+Componente: diode7.1
+Nome: anode
+Posizione: top</title><circle cx="3165.2" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="3165.2" y="624.0" text-anchor="middle" class="node-label">anode</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: diode7.1_cathode
+Componente: diode7.1
+Nome: cathode
+Posizione: bottom</title><circle cx="3295.7" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="3295.7" y="624.0" text-anchor="middle" class="node-label">cathode</text></g><g class="node-group" data-node-type="class"><title>Classe: Trim_Capacitor
+Componenti: 1</title><circle cx="3641.3" cy="260.0" r="31.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="3641.3" y="257.0" text-anchor="middle" class="node-label small">Trim</text><text x="3641.3" y="271.0" text-anchor="middle" class="node-label small">Capacitor</text></g><g class="node-group" data-node-type="component"><title>Componente: trim_capacitor29.1
+Classe: Trim_Capacitor
+Instance: 29.1</title><circle cx="3641.3" cy="430.0" r="30.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="3641.3" y="434.0" text-anchor="middle" class="node-label">29.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: trim_capacitor29.1_t1
+Componente: trim_capacitor29.1
+Nome: t1
+Posizione: top</title><circle cx="3576.1" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="3576.1" y="624.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: trim_capacitor29.1_t2
+Componente: trim_capacitor29.1
+Nome: t2
+Posizione: bottom</title><circle cx="3706.5" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="3706.5" y="624.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="class"><title>Classe: Terminal
+Componenti: 1</title><circle cx="4052.2" cy="260.0" r="31.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="4052.2" y="264.0" text-anchor="middle" class="node-label">Terminal</text></g><g class="node-group" data-node-type="component"><title>Componente: terminal26.1
+Classe: Terminal
+Instance: 26.1</title><circle cx="4052.2" cy="430.0" r="30.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="4052.2" y="434.0" text-anchor="middle" class="node-label">26.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: terminal26.1_t1
+Componente: terminal26.1
+Nome: t1
+Posizione: top</title><circle cx="3987.0" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="3987.0" y="624.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: terminal26.1_t2
+Componente: terminal26.1
+Nome: t2
+Posizione: bottom</title><circle cx="4117.4" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="4117.4" y="624.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="class"><title>Classe: Lamp
+Componenti: 1</title><circle cx="4463.0" cy="260.0" r="31.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="4463.0" y="264.0" text-anchor="middle" class="node-label">Lamp</text></g><g class="node-group" data-node-type="component"><title>Componente: lamp13.1
+Classe: Lamp
+Instance: 13.1</title><circle cx="4463.0" cy="430.0" r="30.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="4463.0" y="434.0" text-anchor="middle" class="node-label">13.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: lamp13.1_t1
+Componente: lamp13.1
+Nome: t1
+Posizione: top</title><circle cx="4397.8" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="4397.8" y="624.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: lamp13.1_t2
+Componente: lamp13.1
+Nome: t2
+Posizione: bottom</title><circle cx="4528.3" cy="620.0" r="27.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="4528.3" y="624.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 1
+Terminali collegati: 2
+battery2.1_positive
+fuse8.1_t1</title><circle cx="305.4" cy="860.0" r="13.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="305.4" y="864.0" text-anchor="middle" class="node-label">1</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 2
+Terminali collegati: 3
+battery2.1_negative
+variable_resistor30.1_t2
+analog_meter0.1_t1</title><circle cx="978.3" cy="860.0" r="13.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="978.3" y="864.0" text-anchor="middle" class="node-label">2</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 3
+Terminali collegati: 3
+fuse8.1_t2
+variable_resistor30.1_t1
+switch25.1_t1</title><circle cx="1208.7" cy="860.0" r="13.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1208.7" y="864.0" text-anchor="middle" class="node-label">3</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 4
+Terminali collegati: 4
+analog_meter0.1_t2
+memristor14.1_t2
+diode7.1_cathode
+terminal26.1_t2</title><circle cx="2950.0" cy="860.0" r="13.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="2950.0" y="864.0" text-anchor="middle" class="node-label">4</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 5
+Terminali collegati: 5
+switch25.1_t2
+memristor14.1_t1
+variable_resistor30.2_t1
+trim_capacitor29.1_t1
+lamp13.1_t1</title><circle cx="2776.5" cy="860.0" r="13.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="2776.5" y="864.0" text-anchor="middle" class="node-label">5</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 6
+Terminali collegati: 2
+gnd9.1_t1
+variable_resistor30.2_t2</title><circle cx="2128.3" cy="860.0" r="13.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="2128.3" y="864.0" text-anchor="middle" class="node-label">6</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 7
+Terminali collegati: 2
+diode7.1_anode
+trim_capacitor29.1_t2</title><circle cx="3435.9" cy="860.0" r="13.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="3435.9" y="864.0" text-anchor="middle" class="node-label">7</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 8
+Terminali collegati: 2
+terminal26.1_t1
+lamp13.1_t2</title><circle cx="4257.6" cy="860.0" r="13.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="4257.6" y="864.0" text-anchor="middle" class="node-label">8</text></g></svg></div>
+        <div class="legend">
+          <span><i class="dot" style="background:#f26a63"></i> circuito</span>
+          <span><i class="dot" style="background:#dcc9a5"></i> classe</span>
+          <span><i class="dot" style="background:#85d68d"></i> componente</span>
+          <span><i class="dot" style="background:#f4abc7"></i> terminale</span>
+          <span><i class="dot" style="background:#ffd65a"></i> nodo elettrico</span>
+        </div>
+      </section>
+    </div>
+
+    <div class="warning-grid"><div class="warning-box"><h3>Unconnected Terminals</h3><p>Nessun elemento.</p></div><div class="warning-box"><h3>Unmatched Terminals</h3><p>Nessun elemento.</p></div><div class="warning-box"><h3>Suspicious Matches</h3><p>Nessun elemento.</p></div></div>
+
+    <details>
+      <summary>Mostra JSON finale completo</summary>
+      <pre>{
+  &quot;image_id&quot;: &quot;5&quot;,
+  &quot;image_name&quot;: &quot;5.jpg&quot;,
+  &quot;components&quot;: [
+    {
+      &quot;component_id&quot;: &quot;battery2.1&quot;,
+      &quot;instance_id&quot;: &quot;2.1&quot;,
+      &quot;class_name&quot;: &quot;Battery&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;battery2.1_positive&quot;,
+          &quot;name&quot;: &quot;positive&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;battery2.1_negative&quot;,
+          &quot;name&quot;: &quot;negative&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;fuse8.1&quot;,
+      &quot;instance_id&quot;: &quot;8.1&quot;,
+      &quot;class_name&quot;: &quot;Fuse&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;fuse8.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;fuse8.1_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;variable_resistor30.1&quot;,
+      &quot;instance_id&quot;: &quot;30.1&quot;,
+      &quot;class_name&quot;: &quot;Variable_Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;variable_resistor30.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;variable_resistor30.1_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;analog_meter0.1&quot;,
+      &quot;instance_id&quot;: &quot;0.1&quot;,
+      &quot;class_name&quot;: &quot;Analog_Meter&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;analog_meter0.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;analog_meter0.1_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;switch25.1&quot;,
+      &quot;instance_id&quot;: &quot;25.1&quot;,
+      &quot;class_name&quot;: &quot;Switch&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;switch25.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;switch25.1_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ],
+      &quot;state&quot;: &quot;open&quot;,
+      &quot;state_confidence&quot;: 0.95
+    },
+    {
+      &quot;component_id&quot;: &quot;memristor14.1&quot;,
+      &quot;instance_id&quot;: &quot;14.1&quot;,
+      &quot;class_name&quot;: &quot;Memristor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;memristor14.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;memristor14.1_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;gnd9.1&quot;,
+      &quot;instance_id&quot;: &quot;9.1&quot;,
+      &quot;class_name&quot;: &quot;GND&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;gnd9.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;variable_resistor30.2&quot;,
+      &quot;instance_id&quot;: &quot;30.2&quot;,
+      &quot;class_name&quot;: &quot;Variable_Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;variable_resistor30.2_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;variable_resistor30.2_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;diode7.1&quot;,
+      &quot;instance_id&quot;: &quot;7.1&quot;,
+      &quot;class_name&quot;: &quot;Diode&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;diode7.1_anode&quot;,
+          &quot;name&quot;: &quot;anode&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;diode7.1_cathode&quot;,
+          &quot;name&quot;: &quot;cathode&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;trim_capacitor29.1&quot;,
+      &quot;instance_id&quot;: &quot;29.1&quot;,
+      &quot;class_name&quot;: &quot;Trim_Capacitor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;trim_capacitor29.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;trim_capacitor29.1_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;terminal26.1&quot;,
+      &quot;instance_id&quot;: &quot;26.1&quot;,
+      &quot;class_name&quot;: &quot;Terminal&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;terminal26.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;terminal26.1_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;lamp13.1&quot;,
+      &quot;instance_id&quot;: &quot;13.1&quot;,
+      &quot;class_name&quot;: &quot;Lamp&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;lamp13.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;lamp13.1_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    }
+  ],
+  &quot;graph&quot;: {
+    &quot;analog_meter0.1_t1&quot;: [
+      &quot;battery2.1_negative&quot;,
+      &quot;variable_resistor30.1_t2&quot;
+    ],
+    &quot;analog_meter0.1_t2&quot;: [
+      &quot;diode7.1_cathode&quot;,
+      &quot;memristor14.1_t2&quot;,
+      &quot;terminal26.1_t2&quot;
+    ],
+    &quot;battery2.1_negative&quot;: [
+      &quot;analog_meter0.1_t1&quot;,
+      &quot;variable_resistor30.1_t2&quot;
+    ],
+    &quot;battery2.1_positive&quot;: [
+      &quot;fuse8.1_t1&quot;
+    ],
+    &quot;diode7.1_anode&quot;: [
+      &quot;trim_capacitor29.1_t2&quot;
+    ],
+    &quot;diode7.1_cathode&quot;: [
+      &quot;analog_meter0.1_t2&quot;,
+      &quot;memristor14.1_t2&quot;,
+      &quot;terminal26.1_t2&quot;
+    ],
+    &quot;fuse8.1_t1&quot;: [
+      &quot;battery2.1_positive&quot;
+    ],
+    &quot;fuse8.1_t2&quot;: [
+      &quot;switch25.1_t1&quot;,
+      &quot;variable_resistor30.1_t1&quot;
+    ],
+    &quot;gnd9.1_t1&quot;: [
+      &quot;variable_resistor30.2_t2&quot;
+    ],
+    &quot;lamp13.1_t1&quot;: [
+      &quot;memristor14.1_t1&quot;,
+      &quot;switch25.1_t2&quot;,
+      &quot;trim_capacitor29.1_t1&quot;,
+      &quot;variable_resistor30.2_t1&quot;
+    ],
+    &quot;lamp13.1_t2&quot;: [
+      &quot;terminal26.1_t1&quot;
+    ],
+    &quot;memristor14.1_t1&quot;: [
+      &quot;lamp13.1_t1&quot;,
+      &quot;switch25.1_t2&quot;,
+      &quot;trim_capacitor29.1_t1&quot;,
+      &quot;variable_resistor30.2_t1&quot;
+    ],
+    &quot;memristor14.1_t2&quot;: [
+      &quot;analog_meter0.1_t2&quot;,
+      &quot;diode7.1_cathode&quot;,
+      &quot;terminal26.1_t2&quot;
+    ],
+    &quot;switch25.1_t1&quot;: [
+      &quot;fuse8.1_t2&quot;,
+      &quot;variable_resistor30.1_t1&quot;
+    ],
+    &quot;switch25.1_t2&quot;: [
+      &quot;lamp13.1_t1&quot;,
+      &quot;memristor14.1_t1&quot;,
+      &quot;trim_capacitor29.1_t1&quot;,
+      &quot;variable_resistor30.2_t1&quot;
+    ],
+    &quot;terminal26.1_t1&quot;: [
+      &quot;lamp13.1_t2&quot;
+    ],
+    &quot;terminal26.1_t2&quot;: [
+      &quot;analog_meter0.1_t2&quot;,
+      &quot;diode7.1_cathode&quot;,
+      &quot;memristor14.1_t2&quot;
+    ],
+    &quot;trim_capacitor29.1_t1&quot;: [
+      &quot;lamp13.1_t1&quot;,
+      &quot;memristor14.1_t1&quot;,
+      &quot;switch25.1_t2&quot;,
+      &quot;variable_resistor30.2_t1&quot;
+    ],
+    &quot;trim_capacitor29.1_t2&quot;: [
+      &quot;diode7.1_anode&quot;
+    ],
+    &quot;variable_resistor30.1_t1&quot;: [
+      &quot;fuse8.1_t2&quot;,
+      &quot;switch25.1_t1&quot;
+    ],
+    &quot;variable_resistor30.1_t2&quot;: [
+      &quot;analog_meter0.1_t1&quot;,
+      &quot;battery2.1_negative&quot;
+    ],
+    &quot;variable_resistor30.2_t1&quot;: [
+      &quot;lamp13.1_t1&quot;,
+      &quot;memristor14.1_t1&quot;,
+      &quot;switch25.1_t2&quot;,
+      &quot;trim_capacitor29.1_t1&quot;
+    ],
+    &quot;variable_resistor30.2_t2&quot;: [
+      &quot;gnd9.1_t1&quot;
+    ]
+  },
+  &quot;warnings&quot;: {
+    &quot;unconnected_terminals&quot;: [],
+    &quot;unmatched_terminals&quot;: [],
+    &quot;suspicious_matches&quot;: []
+  }
+}</pre>
+    </details>
+  </div>
+
+  <script>
+    (() => {
+      const svg = document.getElementById("graph-svg");
+      const viewBox = svg.viewBox.baseVal;
+      let isDragging = false;
+      let startX = 0;
+      let startY = 0;
+      let startViewX = viewBox.x;
+      let startViewY = viewBox.y;
+
+      function pointFromEvent(event) {
+        const rect = svg.getBoundingClientRect();
+        return {
+          x: (event.clientX - rect.left) * (viewBox.width / rect.width),
+          y: (event.clientY - rect.top) * (viewBox.height / rect.height),
+        };
+      }
+
+      svg.addEventListener("wheel", (event) => {
+        event.preventDefault();
+        const scale = event.deltaY < 0 ? 0.92 : 1.08;
+        const point = pointFromEvent(event);
+        const newWidth = viewBox.width * scale;
+        const newHeight = viewBox.height * scale;
+        viewBox.x = point.x - (point.x - viewBox.x) * scale;
+        viewBox.y = point.y - (point.y - viewBox.y) * scale;
+        viewBox.width = Math.max(480, newWidth);
+        viewBox.height = Math.max(360, newHeight);
+      }, { passive: false });
+
+      svg.addEventListener("pointerdown", (event) => {
+        isDragging = true;
+        svg.setPointerCapture(event.pointerId);
+        startX = event.clientX;
+        startY = event.clientY;
+        startViewX = viewBox.x;
+        startViewY = viewBox.y;
+      });
+
+      svg.addEventListener("pointermove", (event) => {
+        if (!isDragging) return;
+        const rect = svg.getBoundingClientRect();
+        const dx = (event.clientX - startX) * (viewBox.width / rect.width);
+        const dy = (event.clientY - startY) * (viewBox.height / rect.height);
+        viewBox.x = startViewX - dx;
+        viewBox.y = startViewY - dy;
+      });
+
+      svg.addEventListener("pointerup", () => {
+        isDragging = false;
+      });
+
+      svg.addEventListener("pointerleave", () => {
+        isDragging = false;
+      });
+    })();
+  </script>
+</body>
+</html>

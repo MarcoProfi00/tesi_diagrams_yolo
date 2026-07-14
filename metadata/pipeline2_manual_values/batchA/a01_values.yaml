@@ -1,0 +1,47 @@
+circuit_id: a01
+
+supplies:
+  VCC:
+    terminal: connector5.1_pin1
+    type: dc
+    value: 5
+    unit: V
+    reference: 0
+    source: manual_from_image_label
+    label_text: "+5 V DC"
+
+components:
+  resistor22.1:
+    value: 1000
+    unit: ohm
+    source: manual_from_image_label
+    label_text: "1k"
+
+  resistor22.2:
+    value: 220
+    unit: ohm
+    source: manual_from_image_label
+    label_text: "220R"
+
+  led12.1:
+    model: LED_RED
+    source: manual_assumption
+
+  lamp13.1:
+    nominal_voltage: 5
+    equivalent_resistance: 50
+    unit: V
+    resistance_unit: ohm
+    source: manual_spice_annotation
+    label_text: "Lamp 5V; Req = 50 ohm"
+    spice: resistive_load
+
+  switch25.1:
+    state: open
+    source: graph_json_state
+
+nodes:
+  connector5.1_pin4:
+    label: GND
+    spice_node: 0
+    source: graph_json_gnd

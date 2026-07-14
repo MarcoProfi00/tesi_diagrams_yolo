@@ -1,0 +1,895 @@
+[
+  {
+    "metadata": {
+      "circuit": "b06",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\b06\\results_json\\b06_gpt-4.1-mini_20260605_115005.txt",
+      "model_under_test": "gpt-4.1-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 27.494,
+      "timestamp": "2026-06-05 11:59:42",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8845, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1211, output_tokens_details=OutputTokensDetails(reasoning_tokens=401), total_tokens=10056)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 2,
+        "hallucination_absence": 2
+      },
+      "total_score": 18,
+      "max_score": 21,
+      "normalized_score": 0.857,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Ingresso dell'amplificatore audio non collegato: operational_amplifier19.1_in1 risulta non connesso nel JSON, quindi il segnale rivelato/amplificato non arriva allo stadio finale",
+        "Possibile interruzione o collegamento mancante nella catena tra uscita dello stadio a transistor/potenziometro e ingresso dell'amplificatore finale",
+        "Eventuali guasti nel rivelatore AM, come diodo o circuito LC, sono secondari ma compatibili con assenza di stazioni"
+      ],
+      "model_primary_cause": "Ingresso non invertente dell'operational amplifier, operational_amplifier19.1_in1, non connesso",
+      "major_errors": [
+        "Interpreta l'assenza esplicita di altoparlante nel JSON come possibile causa, ma nello schema reale il carico audio è presente e nel JSON sembra probabilmente classificato come breaker3.1",
+        "Descrive il breaker come protezione dell'alimentazione, mentre dalla topologia è collegato all'uscita tramite C5 verso massa e corrisponde verosimilmente al trasduttore/altoparlante"
+      ],
+      "hallucinations": [
+        "Assenza di carico audio proposta come causa probabile, non pienamente supportata dallo schema reale",
+        "Breaker indicato come protezione dell'alimentazione, interpretazione non coerente con la sua posizione topologica"
+      ],
+      "missed_important_points": [
+        "Non evidenzia che il componente operational_amplifier19.1 nello schema reale è un LM386, quindi non un op-amp generico, anche se il modello non aveva datasheet e il JSON lo classifica come Operational_Amplifier",
+        "Non riconosce che il nodo mancante corrisponde probabilmente al collegamento del cursore del potenziometro/controllo volume verso l'ingresso dell'amplificatore audio"
+      ],
+      "strengths": [
+        "Usa correttamente il warning del JSON su operational_amplifier19.1_in1 non connesso",
+        "La diagnosi principale è coerente con il sintomo: radio alimentata ma senza segnale audio utile, solo fruscio debole",
+        "Ricostruisce in modo abbastanza corretto i blocchi principali: antenna, circuito LC, diodo rivelatore, transistor, amplificatore finale",
+        "Propone controlli pratici sensati su ingresso amplificatore, diodo, induttore, transistor e alimentazione"
+      ],
+      "short_explanation": "La risposta individua correttamente come causa principale il terminale operational_amplifier19.1_in1 non connesso, che nel JSON è un warning forte e spiega bene l'assenza di audio utile. L'analisi è utile e ben ancorata al grafo. Ci sono però alcune interpretazioni errate, in particolare il breaker trattato come protezione e la presunta assenza di altoparlante, mentre nello schema reale il carico audio esiste ed è probabilmente stato classificato male nel JSON."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "b06",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\b06\\results_json\\b06_gpt-4.1-nano_20260605_115031.txt",
+      "model_under_test": "gpt-4.1-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 28.623,
+      "timestamp": "2026-06-05 12:00:10",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8365, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1323, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=9688)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 1,
+        "cause_priority": 1,
+        "practical_checks": 2,
+        "hallucination_absence": 1
+      },
+      "total_score": 11,
+      "max_score": 21,
+      "normalized_score": 0.5238095238,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": false,
+      "expected_primary_causes": [
+        "Ingresso dell'amplificatore audio operational_amplifier19.1_in1 non collegato secondo il JSON, segnalato anche nei warning: il segnale audio demodulato non arriva all'amplificatore",
+        "Interruzione o mancata connessione nel percorso audio tra C4/R3 e ingresso LM386/op-amp",
+        "Possibile problema nel rivelatore RF o nel circuito accordato antenna-L1-C1-D1, ma meno prioritario rispetto al nodo di ingresso audio aperto"
+      ],
+      "model_primary_cause": "Mancanza o cattivo collegamento del carico/altoparlante o uscita audio non collegata",
+      "major_errors": [
+        "Non considera il warning esplicito del JSON: operational_amplifier19.1_in1 è non connesso, che è una causa molto forte e direttamente compatibile con il sintomo",
+        "Dà priorità all'assenza dell'altoparlante/carico, ma nel circuito reale l'altoparlante è presente e nel JSON sembra essere rappresentato dal componente breaker3.1 collegato al condensatore di uscita",
+        "Descrive come coerenti le connessioni tra stadio RF, transistor e amplificatore senza rilevare che il percorso verso l'ingresso dell'amplificatore è aperto"
+      ],
+      "hallucinations": [
+        "Assenza dell'altoparlante o del carico di uscita come causa principale, non supportata dallo schema reale e solo parzialmente suggerita dal JSON",
+        "Affermazione generica che il transistor riceve tensione senza verificare correttamente la polarizzazione dal grafo"
+      ],
+      "missed_important_points": [
+        "Il terminale operational_amplifier19.1_in1 è esplicitamente indicato come unconnected nel JSON",
+        "Il segnale demodulato passa da D1/C2/C3 verso Q1 e poi tramite C4/R3 dovrebbe arrivare all'amplificatore, ma nel JSON l'ingresso dell'amplificatore è aperto",
+        "Il sintomo 'si accende ma non riceve stazioni, solo fruscio debole' è molto coerente con un'interruzione del percorso audio verso l'amplificatore"
+      ],
+      "strengths": [
+        "Riconosce correttamente la funzione generale di ricevitore AM con antenna, circuito accordato, diodo rivelatore, transistor e amplificatore audio",
+        "Propone controlli pratici ragionevoli su alimentazione, diodo, transistor e uscita",
+        "Evita di usare datasheet inesistenti o parametri non forniti"
+      ],
+      "short_explanation": "La risposta è utile solo in parte: capisce il circuito a blocchi e suggerisce verifiche generiche, ma manca l'evidenza principale del JSON, cioè l'ingresso dell'amplificatore audio non collegato. La diagnosi prioritaria sull'altoparlante assente è debole e non coerente con lo schema reale, dove il carico di uscita è presente."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "b06",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\b06\\results_json\\b06_gpt-4o-mini_20260605_114842.txt",
+      "model_under_test": "gpt-4o-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 31.288,
+      "timestamp": "2026-06-05 12:00:42",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=7781, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1247, output_tokens_details=OutputTokensDetails(reasoning_tokens=421), total_tokens=9028)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 2,
+        "hallucination_absence": 2
+      },
+      "total_score": 14,
+      "max_score": 21,
+      "normalized_score": 0.6666666666666666,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": false,
+      "expected_primary_causes": [
+        "Ingresso dell'amplificatore audio operational_amplifier19.1_in1 scollegato secondo il warning JSON, quindi il segnale rivelato/amplificato non arriva allo stadio finale",
+        "Interruzione o collegamento mancante nel percorso tra C4/R3 e ingresso dell'amplificatore audio",
+        "Guasto nel rivelatore o circuito accordato antenna-L1-C1-diodo come causa secondaria possibile"
+      ],
+      "model_primary_cause": "Antenna malfunzionante o scollegata",
+      "major_errors": [
+        "La causa più evidenziata dal JSON, cioè operational_amplifier19.1_in1 scollegato, viene citata ma messa solo al quarto posto",
+        "Dà priorità a un guasto antenna senza evidenza specifica nel JSON",
+        "Non riconosce chiaramente che l'ingresso scollegato dell'amplificatore audio spiega molto bene radio accesa con solo debole fruscio"
+      ],
+      "hallucinations": [
+        "Descrive l'amplificatore come generico amplificatore operazionale, mentre nello schema reale è un LM386 audio amplifier; dal solo JSON è comprensibile, ma la funzione non è esattamente un op-amp generico",
+        "Afferma che l'uscita tramite polarized_capacitor20.5 fornisce il segnale, ma non considera che nel JSON il terminale negativo di quel condensatore va a breaker3.1_t1 e quindi al carico/altoparlante rappresentato in modo non ovvio"
+      ],
+      "missed_important_points": [
+        "Il warning 'unconnected_terminals: operational_amplifier19.1_in1' è l'indizio diagnostico più forte",
+        "Lo stadio audio ha l'ingresso in2 a massa e in1 aperto: in queste condizioni non può ricevere correttamente l'audio demodulato",
+        "Manca una verifica mirata di continuità/segnale tra il nodo dopo C4/R3 e l'ingresso dell'amplificatore",
+        "Non distingue bene tra front-end RF/demodulatore e stadio audio finale come punti di prova sequenziali"
+      ],
+      "strengths": [
+        "Identifica correttamente i blocchi principali: antenna, circuito LC, diodo rivelatore, transistor, amplificatore finale",
+        "Usa diversi collegamenti del JSON in modo esplicito",
+        "Propone controlli pratici sensati su antenna, diodo, induttore, transistor e ingressi dell'amplificatore",
+        "Nota effettivamente che operational_amplifier19.1_in1 è scollegato"
+      ],
+      "short_explanation": "La risposta è parzialmente utile perché comprende la struttura generale del ricevitore e cita il terminale in1 scollegato. Tuttavia non dà priorità all'evidenza più forte del JSON: l'ingresso dell'amplificatore audio è aperto, quindi lo stadio finale non riceve il segnale demodulato. La diagnosi principale sull'antenna è generica e meno supportata."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "b06",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\b06\\results_json\\b06_gpt-5-mini_20260605_115157.txt",
+      "model_under_test": "gpt-5-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 30.863,
+      "timestamp": "2026-06-05 12:01:12",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8889, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1302, output_tokens_details=OutputTokensDetails(reasoning_tokens=507), total_tokens=10191)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 16,
+      "max_score": 21,
+      "normalized_score": 0.7619,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Ingresso dell'amplificatore audio operational_amplifier19.1_in1 non connesso, indicato esplicitamente dal warning del JSON",
+        "Interruzione del percorso audio tra stadio transistor/controllo volume e ingresso amplificatore",
+        "Possibile guasto nel rivelatore a diodo o nel circuito accordato antenna-LC se la sezione audio risultasse funzionante"
+      ],
+      "model_primary_cause": "Problema al rilevatore / diodo rivelatore aperto o invertito",
+      "major_errors": [
+        "La causa più evidenziata dal JSON, cioè operational_amplifier19.1_in1 non connesso, viene riconosciuta ma relegata al terzo posto invece di essere trattata come sospetto principale.",
+        "Attribuisce eccessiva probabilità al diodo rivelatore senza una specifica evidenza di guasto nel JSON."
+      ],
+      "hallucinations": [
+        "Considera molti condensatori del percorso RF come elettrolitici/polarizzati problematici; questo deriva dalla classe JSON, ma nello schema reale C1, C2, C3 e C4 sono condensatori non polarizzati. Per un modello JSON-only è comprensibile, ma la conclusione è tecnicamente debole.",
+        "Descrive l'operational_amplifier19.1 come op-amp generico, mentre nello schema reale è un LM386 audio amplifier; dato l'input JSON-only non è un errore grave."
+      ],
+      "missed_important_points": [
+        "Non enfatizza abbastanza che con l'ingresso audio dell'amplificatore non collegato si può avere radio accesa, alimentazione presente e solo fruscio/debole rumore in uscita.",
+        "Non distingue chiaramente tra un problema RF/rivelazione e un problema di catena audio, proponendo molte cause senza sfruttare pienamente il warning strutturale del JSON."
+      ],
+      "strengths": [
+        "Usa correttamente il graph per descrivere alimentazione, massa, antenna, diodo, transistor e amplificatore.",
+        "Rileva il warning su operational_amplifier19.1_in1 non connesso e lo collega correttamente a un possibile mancato trasferimento del segnale audio.",
+        "Propone controlli pratici realistici: prova diodo, verifica alimentazione, misure su transistor, ispezione saldature e continuità.",
+        "Evita di inventare valori di tensione non presenti."
+      ],
+      "short_explanation": "La risposta è utile e ben strutturata, ma la priorità diagnostica non è ottimale: il JSON segnala esplicitamente l'ingresso dell'amplificatore non connesso, che è una causa molto forte per radio accesa ma nessuna stazione udibile. Il modello lo menziona, ma mette prima diodo e condensatori senza evidenza diretta. Buone le verifiche pratiche e l'uso del JSON, con alcune conclusioni deboli sui condensatori polarizzati."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "b06",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\b06\\results_json\\b06_gpt-5-nano_20260605_115118.txt",
+      "model_under_test": "gpt-5-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 33.527,
+      "timestamp": "2026-06-05 12:01:46",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9585, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1489, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=11074)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 3,
+        "practical_checks": 2,
+        "hallucination_absence": 1
+      },
+      "total_score": 15,
+      "max_score": 21,
+      "normalized_score": 0.7142857142857143,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "operational_amplifier19.1_in1 risulta non collegato nel JSON: l'ingresso audio dell'amplificatore non riceve il segnale demodulato",
+        "interruzione o mancato collegamento nella catena C4/R3 verso l'ingresso dell'amplificatore audio",
+        "problema nel front-end AM antenna-L1-C1-D1-C2-C3/Q1 che impedisce la demodulazione o il trasferimento del segnale"
+      ],
+      "model_primary_cause": "Ingresso operational_amplifier19.1_in1 non collegato",
+      "major_errors": [
+        "Interpreta il blocco operational_amplifier19.1 come un generico operazionale, mentre nello schema reale è un LM386/audio amplifier; tuttavia il JSON lo rappresenta come operational_amplifier e il modello non aveva l'immagine.",
+        "Suggerisce genericamente di collegare in1 a in2 o a un nodo di bias, ma nello schema reale l'ingresso deve ricevere il segnale tramite C4/potenziometro R3, mentre in2 è a massa.",
+        "Descrive il ricevitore come super-rigenerativo o a ricezione diretta, mentre lo schema è più coerente con una semplice radio AM a diodo rivelatore, transistor preamplificatore e LM386."
+      ],
+      "hallucinations": [
+        "Riferimenti a configurazioni super-regen non supportate dal circuito.",
+        "Menziona unmatched/suspicious_matches come warning potenziali, ma nel JSON tali liste sono vuote.",
+        "Parla di rete di uscita verso 'eventuale altoparlante' senza identificare chiaramente il carico Z1/breaker presente nel graph.",
+        "Alcune affermazioni sui collegamenti dell'ingresso dell'amplificatore sono contraddittorie: prima dice che gli ingressi sono collegati tramite reti, poi nota correttamente che in1 è unconnected."
+      ],
+      "missed_important_points": [
+        "Non riconosce che operational_amplifier19.1_in2 è collegato a massa, cosa plausibilmente corretta per un LM386, non necessariamente un guasto.",
+        "Non evidenzia chiaramente che l'uscita audio passa da operational_amplifier19.1_out a C5 e poi al carico Z1, rappresentato nel JSON come breaker3.1.",
+        "Non collega esplicitamente il terminale in1 non connesso alla probabile mancanza del collegamento dal potenziometro/controllo volume R3 verso l'ingresso audio."
+      ],
+      "strengths": [
+        "Usa correttamente il warning principale del JSON: operational_amplifier19.1_in1 non collegato.",
+        "La diagnosi primaria è coerente con il sintomo: radio alimentata ma assenza di segnale audio utile, solo debole fruscio.",
+        "Propone controlli pratici sensati su continuità, alimentazione, massa, front-end RF e polarizzazione.",
+        "Cita molti terminali reali del JSON e segue abbastanza bene la topologia fornita."
+      ],
+      "short_explanation": "La risposta individua correttamente come causa principale il terminale operational_amplifier19.1_in1 non collegato, che nel JSON è l'evidenza più forte e spiega bene l'assenza di stazioni in uscita. È utile anche nei controlli pratici. Tuttavia contiene alcune imprecisioni: tratta il blocco come un op-amp generico invece di un amplificatore audio tipo LM386, considera potenzialmente sospetto in2 a massa, e introduce descrizioni non supportate come super-rigenerativo. Nel complesso la diagnosi principale è corretta, ma la spiegazione circuitale non è perfetta."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "b06",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\b06\\results_json\\b06_gpt-5.4-mini_20260605_115244.txt",
+      "model_under_test": "gpt-5.4-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 27.296,
+      "timestamp": "2026-06-05 12:02:13",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8081, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1192, output_tokens_details=OutputTokensDetails(reasoning_tokens=453), total_tokens=9273)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9523809523809523,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Ingresso audio dell'amplificatore finale non collegato: operational_amplifier19.1_in1 risulta unconnected nel JSON",
+        "Interruzione del percorso del segnale rivelato/demodulato verso lo stadio audio",
+        "Collegamento mancante o errato tra condensatore di accoppiamento/controllo volume e ingresso dell'amplificatore"
+      ],
+      "model_primary_cause": "Ingresso audio dell'operazionale operational_amplifier19.1_in1 scollegato, quindi il segnale rivelato non entra nello stadio audio finale",
+      "major_errors": [],
+      "hallucinations": [
+        "Definisce l'operational_amplifier19.1 come operazionale audio finale; nel circuito reale è un LM386, ma dal JSON era classificato come Operational_Amplifier, quindi l'errore è lieve e comprensibile.",
+        "Cita altoparlante/cuffia reale come carico non chiaramente identificabile nel JSON; è plausibile dallo schema ma non direttamente disponibile al modello valutato."
+      ],
+      "missed_important_points": [
+        "Non evidenzia esplicitamente che il problema può corrispondere al cursore del potenziometro/controllo volume o al collegamento C4-R3-ingresso amplificatore mancante, anche se lo descrive in termini generali.",
+        "Non distingue che l'assenza di datasheet limita l'identificazione precisa dei pin dell'amplificatore."
+      ],
+      "strengths": [
+        "Usa correttamente il warning del JSON su operational_amplifier19.1_in1 non collegato.",
+        "Ricostruisce in modo coerente i blocchi del circuito: antenna/sintonia, diodo rivelatore, transistor, amplificazione audio e alimentazione.",
+        "La diagnosi principale è coerente con il sintomo: radio accesa ma assenza di stazioni e solo debole fruscio.",
+        "Propone controlli pratici utili su continuità, saldature, percorso del segnale rivelato e uscita audio.",
+        "Ordina bene le cause, dando priorità all'evidenza più forte presente nel JSON."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida: identifica come causa primaria il warning più rilevante del JSON, cioè l'ingresso dell'amplificatore audio scollegato, coerente con una radio alimentata ma senza segnale utile in uscita. Buona anche la ricostruzione funzionale e i controlli proposti. Le uniche imprecisioni sono lievi, legate alla classificazione generica dell'amplificatore e a qualche elemento di uscita non esplicitamente presente nel JSON."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "b06",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\b06\\results_json\\b06_gpt-5.4-nano_20260605_115224.txt",
+      "model_under_test": "gpt-5.4-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 38.421,
+      "timestamp": "2026-06-05 12:02:52",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9366, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1516, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10882)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 15,
+      "max_score": 21,
+      "normalized_score": 0.7142857142857143,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "mancato accoppiamento del segnale audio verso l'ingresso dell'amplificatore LM386/op-amp, in particolare il nodo di ingresso non correttamente connesso o potenziometro/collegamento R3 assente nel JSON",
+        "problema nello stadio RF/rivelatore: circuito accordato antenna-L1-C1, diodo D1, C2/C3 o collegamenti associati",
+        "guasto o errata polarizzazione dello stadio a transistor Q1 che amplifica il segnale rivelato"
+      ],
+      "model_primary_cause": "operational_amplifier19.1_in1 scollegato, con conseguente mancato funzionamento dell'op-amp",
+      "major_errors": [
+        "Dà priorità quasi assoluta al warning JSON sull'ingresso op-amp scollegato senza considerare che nello schema reale l'ingresso dell'LM386 è collegato tramite il potenziometro R3, quindi il warning deriva verosimilmente da una rappresentazione incompleta del potenziometro nel JSON.",
+        "Interpreta breaker3.1 come possibile elemento di muting o interruzione dell'uscita, mentre nello schema reale quel componente corrisponde verosimilmente all'altoparlante/trasduttore Z1 misclassificato nel JSON.",
+        "La priorità diagnostica non è ottimale per il sintomo 'nessuna stazione, solo fruscio': lo stadio di sintonia/rivelazione RF e il diodo vengono considerati solo dopo l'op-amp, l'uscita e il transistor."
+      ],
+      "hallucinations": [
+        "Menziona possibile 'oscillazione' o aggancio, poco supportato da questo semplice ricevitore AM a rivelazione diretta/supersemplice.",
+        "Parla di 'FM' e di rivelazione AM/FM, mentre lo schema è indicato come low cost AM radio.",
+        "Ipotizza un elemento di mute/rottura su breaker3.1 non supportato dallo schema reale."
+      ],
+      "missed_important_points": [
+        "Non identifica chiaramente il circuito accordato antenna-L1-C1 come primo blocco da sospettare per assenza di stazioni.",
+        "Non evidenzia che il condensatore variabile C1 o la bobina L1 determinano la sintonia e che un corto/apertura o collegamento errato impedirebbe di ricevere stazioni.",
+        "Non riconosce che il componente classificato come operational_amplifier è in realtà molto probabilmente un LM386/audio amplifier nello schema, anche se il JSON lo etichetta genericamente come op-amp.",
+        "Non distingue abbastanza tra errori reali del circuito e possibili limiti/misclassificazioni del JSON."
+      ],
+      "strengths": [
+        "Usa bene il JSON citando nodi e collegamenti specifici.",
+        "Individua correttamente il warning su operational_amplifier19.1_in1 come anomalia significativa nel grafo.",
+        "Propone controlli pratici utili: continuità, verifica diodo, transistor, antenna, induttore e condensatori di accoppiamento.",
+        "Riconosce correttamente la catena antenna/induttore/diodo/transistor/amplificatore come struttura generale del ricevitore."
+      ],
+      "short_explanation": "La risposta è utile e ben ancorata al JSON, ma la diagnosi principale è condizionata da un warning probabilmente dovuto a estrazione incompleta: nello schema reale l'ingresso dell'amplificatore audio è collegato tramite il potenziometro. Inoltre interpreta l'altoparlante come breaker/mute e mette troppo in basso le cause RF più coerenti con l'assenza di stazioni. Rimane comunque una risposta parzialmente valida perché propone verifiche concrete e include, anche se non con priorità ideale, diodo, transistor e circuito antenna/induttore."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "b06",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\b06\\results_json\\b06_gpt-5.4_20260605_115328.txt",
+      "model_under_test": "gpt-5.4",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 27.076,
+      "timestamp": "2026-06-05 12:03:19",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8872, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1074, output_tokens_details=OutputTokensDetails(reasoning_tokens=423), total_tokens=9946)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9523809523809523,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "ingresso audio dell'amplificatore finale scollegato",
+        "operational_amplifier19.1_in1 non connesso, corrispondente all'ingresso del LM386/potenziometro volume",
+        "interruzione o cablaggio errato tra C4/R3 e ingresso amplificatore audio"
+      ],
+      "model_primary_cause": "Lo stadio audio finale non riceve il segnale perché operational_amplifier19.1_in1 è completamente scollegato nel graph.",
+      "major_errors": [],
+      "hallucinations": [
+        "Attribuisce possibile anomalia al fatto che switch25.1_t1 e switch25.1_t2 non siano uniti nel graph, ma lo switch è marcato come closed e la mancata unione può essere solo una convenzione di modellazione del JSON.",
+        "Considera l'uscita/carico come potenzialmente incompleta perché non compare uno speaker nel JSON; è una deduzione utile dal solo JSON, ma non confermata come difetto primario."
+      ],
+      "missed_important_points": [],
+      "strengths": [
+        "Identifica correttamente la topologia generale di una radio AM semplice con circuito accordato, rivelatore a diodo, preamplificatore a transistor e amplificatore audio finale.",
+        "Usa bene il JSON e cita esplicitamente il warning sull'ingresso operational_amplifier19.1_in1 non connesso.",
+        "La causa principale proposta è coerente con il sintomo: radio accesa ma assenza di segnale audio utile, con solo debole fruscio.",
+        "Propone controlli pratici realistici su ingresso amplificatore, alimentazione, uscita audio e stadi RF/rivelatore.",
+        "Non inventa valori o pinout non disponibili nel datasheet, che è assente."
+      ],
+      "short_explanation": "La risposta è tecnicamente molto valida: individua come causa principale il collegamento mancante all'ingresso dell'amplificatore audio, evidenza forte nel JSON e coerente con il sintomo. Buona anche l'analisi dei blocchi e dei controlli pratici. Le uniche riserve riguardano alcune cause secondarie un po' speculative, in particolare lo switch chiuso non unito nel graph e l'uscita senza carico visibile nel JSON."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "b06",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\b06\\results_json_img\\b06_gpt-4.1-mini_20260605_115527.txt",
+      "model_under_test": "gpt-4.1-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 35.727,
+      "timestamp": "2026-06-05 12:03:55",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8472, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1543, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10015)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 1,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 12,
+      "max_score": 21,
+      "normalized_score": 0.5714285714,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Ingresso audio dell'amplificatore LM386/operazionale non collegato nel JSON: operational_amplifier19.1_in1 risulta flottante, quindi il segnale rivelato e amplificato dal transistor non arriva allo stadio finale",
+        "Possibile interruzione o errore nel percorso tra C4/R3 e ingresso LM386 pin 3, coerente con radio accesa ma assenza di stazioni",
+        "Possibili guasti nel front-end AM: antenna, circuito accordato L1-C1 o diodo rivelatore D1"
+      ],
+      "model_primary_cause": "Problemi nel circuito di sintonia L1/C1 o antenna",
+      "major_errors": [
+        "Non dà priorità al warning principale del JSON, cioè operational_amplifier19.1_in1 scollegato, che è una causa diretta e forte dell'assenza di audio utile in uscita.",
+        "Interpreta in modo confuso i pin dell'amplificatore: prima dice che in1/pin 2 è scollegato, poi che in1/pin 3 è scollegato.",
+        "Afferma che il transistor Q1 è un amplificatore RF, mentre nello schema, dopo il diodo rivelatore e C3, lavora più verosimilmente come stadio di amplificazione del segnale rivelato/audio.",
+        "Dichiara vari collegamenti 'corretti' senza verificarli adeguadamente rispetto al JSON, dove l'ingresso dell'amplificatore è effettivamente non connesso."
+      ],
+      "hallucinations": [
+        "Fa riferimento a un datasheet/pinout LM386 anche se il datasheet non era presente.",
+        "Assegna modelli e valori come AA119, 2N3904, LM386 e componenti Z1 basandosi sull'immagine, ma alcuni non sono presenti nel JSON strutturato.",
+        "Dice che il JSON riporta un induttore da 220uF, ma il JSON non contiene valori dei componenti.",
+        "Afferma che C1 e C6 sono indicati come condensatori elettrolitici/polari nel JSON; in realtà il JSON contiene condensatori polarizzati generici senza identificazione C1/C6 esplicita e non descrive un variabile da 365 pF."
+      ],
+      "missed_important_points": [
+        "Avrebbe dovuto indicare come prima verifica la continuità del percorso C4/R3 verso l'ingresso non invertente dell'amplificatore, perché nel graph operational_amplifier19.1_in1 è isolato.",
+        "Avrebbe dovuto distinguere meglio tra lo schema reale visibile e il graph JSON, segnalando che se il guasto simulato segue il JSON l'ingresso audio del finale è aperto.",
+        "Non evidenzia che il sintomo di debole fruscio con volume regolabile può essere compatibile con finale alimentato ma segnale audio non iniettato correttamente."
+      ],
+      "strengths": [
+        "Riconosce correttamente la funzione generale di ricevitore AM con antenna, circuito accordato, diodo rivelatore, stadio a transistor e amplificatore audio.",
+        "Propone controlli pratici utili su antenna, L1/C1, diodo, transistor, alimentazione e amplificatore.",
+        "Nota l'esistenza di una discrepanza tra JSON e immagine riguardo all'ingresso dell'amplificatore.",
+        "La lista di cause alternative è tecnicamente plausibile per un ricevitore AM che si accende ma non riceve stazioni."
+      ],
+      "short_explanation": "La risposta è utile come troubleshooting generale, ma non sfrutta correttamente l'evidenza più forte del JSON: l'ingresso dell'amplificatore operational_amplifier19.1_in1 è scollegato, possibile causa primaria dell'assenza di segnale audio. Inoltre ci sono confusioni sui pin LM386, alcune affermazioni non supportate dal datasheet assente e diverse assunzioni/hallucination sui valori o sui componenti."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "b06",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\b06\\results_json_img\\b06_gpt-4.1-nano_20260605_115545.txt",
+      "model_under_test": "gpt-4.1-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 33.378,
+      "timestamp": "2026-06-05 12:04:28",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8204, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1496, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=9700)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 1,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 2,
+        "hallucination_absence": 1
+      },
+      "total_score": 12,
+      "max_score": 21,
+      "normalized_score": 0.5714285714285714,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Ingresso audio dell'amplificatore LM386/operational_amplifier19.1_in1 non collegato secondo il JSON, quindi il segnale demodulato/preamplificato non arriva allo stadio finale",
+        "Collegamento mancante o non modellato tra il cursore del potenziometro/volume R3 e l'ingresso non invertente dell'amplificatore audio",
+        "Possibile problema nel rivelatore AM o nel circuito accordato antenna-L1-C1-D1 se l'amplificatore audio risultasse invece correttamente collegato"
+      ],
+      "model_primary_cause": "Connessione mancante all'ingresso dell'amplificatore LM386, indicata dal terminale operational_amplifier19.1_in1 non connesso nel JSON",
+      "major_errors": [
+        "Identifica l'ingresso scollegato come pin 2 del LM386, mentre nello schema il pin 2 è l'ingresso invertente collegato a massa e il segnale entra sul pin 3 tramite il potenziometro R3.",
+        "Non riconcilia correttamente il JSON con l'immagine: nell'immagine il pin 3 del LM386 è collegato al cursore del potenziometro R3, mentre nel JSON operational_amplifier19.1_in1 risulta non connesso, probabilmente per modellazione incompleta del potenziometro.",
+        "Descrive Q1 come amplificatore RF, ma nello schema è più coerente interpretarlo come stadio di amplificazione del segnale rivelato/audio dopo il diodo."
+      ],
+      "hallucinations": [
+        "Attribuisce valori e denominazioni come LM386, 2N3904, AA119 e S1 usando l'immagine, ma parla di datasheet/pin del LM386 senza datasheet fornito e con mappatura errata del pin di ingresso.",
+        "Indica L1 come 220uF, unità non appropriata per un induttore anche se riportata graficamente nello schema; sarebbe più plausibile 220uH.",
+        "Chiama S1 uscita audio, mentre nell'immagine l'uscita acustica è Z1 e S1 è l'interruttore di alimentazione."
+      ],
+      "missed_important_points": [
+        "Avrebbe dovuto evidenziare che il warning JSON sul terminale in1 non connesso è in tensione con l'immagine, dove il pin 3 sembra collegato al potenziometro R3.",
+        "Non menziona che nel JSON R3 è modellato come semplice resistore a due terminali, quindi manca il cursore del potenziometro che nello schema porta il segnale al pin 3 del LM386.",
+        "Non distingue chiaramente tra guasto reale del circuito e possibile errore di estrazione/modellazione del graph."
+      ],
+      "strengths": [
+        "Individua correttamente il warning più importante del JSON: operational_amplifier19.1_in1 non connesso.",
+        "Propone controlli pratici sensati su alimentazione, presenza del segnale, diodo rivelatore, transistor e collegamento verso l'amplificatore audio.",
+        "La priorità data alla mancanza del collegamento verso l'ingresso dell'amplificatore audio è coerente con il sintomo di radio accesa ma senza segnale udibile."
+      ],
+      "short_explanation": "La risposta è utile e centra la causa più forte presente nel JSON, cioè l'ingresso dell'amplificatore audio non collegato. Tuttavia contiene errori importanti di pinout del LM386, non riconcilia il fatto che nell'immagine il pin 3 appare collegato tramite il potenziometro R3, e introduce alcune imprecisioni su componenti e funzioni. Diagnosi quindi parzialmente corretta, ma non pienamente rigorosa."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "b06",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\b06\\results_json_img\\b06_gpt-4o-mini_20260605_115504.txt",
+      "model_under_test": "gpt-4o-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 28.21,
+      "timestamp": "2026-06-05 12:04:56",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=7885, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1268, output_tokens_details=OutputTokensDetails(reasoning_tokens=446), total_tokens=9153)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 3,
+        "practical_checks": 2,
+        "hallucination_absence": 2
+      },
+      "total_score": 16,
+      "max_score": 21,
+      "normalized_score": 0.7619047619,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Ingresso dell'amplificatore audio/LM386 non collegato nel JSON: operational_amplifier19.1_in1 risulta flottante, quindi il segnale demodulato non arriva allo stadio finale",
+        "Possibile interruzione nel percorso C4/R3 verso l'ingresso audio, coerente con radio accesa ma solo debole fruscio",
+        "Possibili problemi nel rivelatore AM o circuito antenna-LC-diodo, ma secondari rispetto all'evidenza del terminale di ingresso non connesso"
+      ],
+      "model_primary_cause": "Terminale in1 dell'amplificatore operativo disconnesso, da verificare e ricollegare",
+      "major_errors": [
+        "Descrive l'LM386 genericamente come amplificatore operazionale, mentre nello schema è un amplificatore audio; il JSON lo classifica come operational_amplifier, quindi l'errore è comprensibile ma tecnicamente impreciso",
+        "Afferma che nomi e valori dei componenti corrispondono al JSON, ma il JSON non contiene valori elettrici e alcuni dettagli provengono solo dall'immagine"
+      ],
+      "hallucinations": [
+        "Riferimento a C6 come possibile carico che influenza l'audio finale: C6 è più plausibilmente un condensatore di filtro/alimentazione, non il carico audio",
+        "Alcune frasi generiche su collegamenti visivamente corretti o ambigui non sono supportate in modo specifico"
+      ],
+      "missed_important_points": [
+        "Non esplicita chiaramente che nell'immagine il percorso audio dovrebbe passare da C4 al potenziometro R3 e poi al pin di ingresso dell'LM386, mentre nel JSON l'ingresso risulta aperto",
+        "Non menziona lo speaker/carico Z1 e il condensatore di uscita C5 come parte dello stadio audio",
+        "Non distingue bene tra guasto nel front-end RF/diodo rivelatore e guasto nello stadio audio, pur dando correttamente priorità all'ingresso scollegato"
+      ],
+      "strengths": [
+        "Identifica correttamente il warning principale del JSON: operational_amplifier19.1_in1 non collegato",
+        "La diagnosi principale è coerente con il sintomo: radio alimentata ma assenza di segnale utile in uscita",
+        "Propone controlli pratici ragionevoli su ingresso amplificatore, antenna, diodo e condensatori",
+        "Comprende in modo generale la struttura del ricevitore AM: antenna, rivelatore a diodo, transistor e amplificazione audio"
+      ],
+      "short_explanation": "La risposta coglie la causa più supportata dai dati: l'ingresso dell'amplificatore audio risulta non collegato nel JSON, condizione sufficiente a spiegare assenza di stazioni e solo fruscio. È però un po' generica, chiama l'LM386 operazionale, non ricostruisce con precisione il percorso C4/R3/ingresso e contiene alcune affermazioni non ben supportate."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "b06",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\b06\\results_json_img\\b06_gpt-5-mini_20260605_115702.txt",
+      "model_under_test": "gpt-5-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 29.711,
+      "timestamp": "2026-06-05 12:05:26",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8913, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1342, output_tokens_details=OutputTokensDetails(reasoning_tokens=503), total_tokens=10255)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9524,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Ingresso audio del LM386/pin 3 non collegato o interruzione nel percorso dal preamplificatore/transistor al finale audio, coerente con il warning JSON su operational_amplifier19.1_in1 non connesso",
+        "Collegamento mancante o errato del potenziometro/controllo volume tra C4 e ingresso LM386, visibile nell'immagine ma non rappresentato correttamente nel JSON",
+        "Guasto o interruzione nello stadio rivelatore/accoppiamento D1-C3-Q1 che impedisce al segnale demodulato di arrivare al finale"
+      ],
+      "model_primary_cause": "Ingresso del LM386 non collegato o cablaggio errato tra uscita del transistor e ingresso del LM386, evidenziato dal warning JSON su operational_amplifier19.1_in1 non connesso e dalla discrepanza con l'immagine",
+      "major_errors": [],
+      "hallucinations": [
+        "Alcuni dettagli pratici come riferimenti a PCB, saldature o sostituzioni specifiche non sono direttamente nel JSON, anche se sono ragionevoli come contesto diagnostico",
+        "Indica C3 come possibile elettrolitico/ceramico, mentre nello schema immagine è indicato come 100 nF non polarizzato; è un'imprecisione minore"
+      ],
+      "missed_important_points": [
+        "Non sottolinea esplicitamente che il JSON manca anche della rappresentazione del potenziometro/volume R3 come wiper verso l'ingresso LM386: questo è probabilmente il nodo realmente critico tra immagine e netlist",
+        "Non distingue in modo netto tra guasto simulato deducibile dal warning JSON e guasti generici plausibili dello stadio RF/audio"
+      ],
+      "strengths": [
+        "Identifica correttamente la discrepanza principale tra JSON e immagine: ingresso del finale audio non connesso nel JSON ma collegato nello schema",
+        "La causa primaria proposta è coerente con il sintomo di radio accesa con solo fruscio debole e nessuna stazione udibile",
+        "Buona comprensione dei blocchi funzionali: antenna, circuito LC, rivelatore a diodo, preamplificatore a transistor, finale LM386, condensatore di uscita e altoparlante",
+        "Propone controlli pratici realistici: continuità del percorso segnale, alimentazione LM386, verifica diodo, C3, Q1, C5 e altoparlante",
+        "Usa correttamente sia il JSON sia l'immagine, dichiarando la discrepanza invece di ignorarla"
+      ],
+      "short_explanation": "La risposta è tecnicamente solida: coglie il warning più importante del JSON, cioè l'ingresso del finale audio non collegato, e lo confronta correttamente con l'immagine dove il pin 3 del LM386 riceve il segnale tramite il controllo volume. La priorità diagnostica è appropriata e i controlli suggeriti sono utili. Ci sono solo piccole imprecisioni e qualche dettaglio generico non strettamente supportato, ma non compromettono la diagnosi principale."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "b06",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\b06\\results_json_img\\b06_gpt-5-nano_20260605_115611.txt",
+      "model_under_test": "gpt-5-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 32.911,
+      "timestamp": "2026-06-05 12:05:59",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9371, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1538, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10909)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 3,
+        "practical_checks": 2,
+        "hallucination_absence": 1
+      },
+      "total_score": 14,
+      "max_score": 21,
+      "normalized_score": 0.6666666667,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Ingresso audio dell'amplificatore LM386/op-amp non collegato secondo il JSON: operational_amplifier19.1_in1 è esplicitamente non connesso",
+        "Mancato trasferimento del segnale demodulato dal rivelatore/stadio transistor verso il controllo volume e l'ingresso dell'amplificatore",
+        "Possibile guasto o collegamento errato nel front-end AM: antenna, circuito accordato L1/C1, diodo D1, C2/C3, transistor Q1 o relativa polarizzazione"
+      ],
+      "model_primary_cause": "Ingresso LM386/op-amp in1 non collegato, quindi l'amplificatore non riceve il segnale audio demodulato",
+      "major_errors": [
+        "Descrive il transistor Q1 come parte della demodulazione RF in modo non preciso: nello schema la rivelazione principale è affidata al diodo D1, mentre Q1 è più plausibilmente uno stadio di preamplificazione/condizionamento audio o segnale rivelato.",
+        "Afferma che non vi sono grandi discrepanze tra JSON e immagine, ma il JSON non rappresenta correttamente il potenziometro/collegamento verso l'ingresso LM386 e segnala proprio un ingresso non connesso.",
+        "Tratta l'LM386 come se fosse pienamente definito dal JSON, mentre nel JSON è solo un generico Operational_Amplifier e il pinout LM386 deriva dall'immagine, non da un datasheet fornito."
+      ],
+      "hallucinations": [
+        "Uso di dettagli da datasheet/pinout LM386 pur non essendo presente un datasheet; alcuni pin sono visibili nell'immagine, ma la trattazione come informazione di datasheet non è supportata dalla traccia.",
+        "Riferimenti a 'LM386 input non-invertente' e pin specifici come se fossero mappati nel JSON, mentre il JSON usa solo in1/in2/aux1/aux2/out e non identifica direttamente i pin reali.",
+        "Menziona possibili collegamenti come 'tra C4 e LM386 in1' non presenti nel graph JSON: C4 è collegato a R3, mentre in1 risulta isolato."
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che nell'immagine il pin 3 del LM386 è collegato al cursore del potenziometro R3, mentre nel JSON tale cursore/connessione manca: questa discrepanza è centrale.",
+        "Non distingue abbastanza tra un difetto reale del circuito e un possibile errore di estrazione del JSON rispetto allo schema visivo.",
+        "Non nota che il JSON modella R3 come semplice resistore a due terminali, mentre nell'immagine è un potenziometro con cursore verso l'ingresso dell'LM386."
+      ],
+      "strengths": [
+        "Individua correttamente il warning principale del JSON: operational_amplifier19.1_in1 non collegato.",
+        "La causa primaria proposta è coerente con il sintomo: radio alimentata ma senza audio utile, solo fruscio debole.",
+        "Propone controlli pratici sensati: verifica continuità ingresso amplificatore, alimentazione, massa, presenza di segnale demodulato e front-end RF.",
+        "Ordina correttamente la disconnessione dell'ingresso dell'amplificatore come causa più probabile."
+      ],
+      "short_explanation": "La diagnosi principale è sostanzialmente corretta perché il JSON segnala esplicitamente l'ingresso dell'amplificatore non collegato, compatibile con assenza di stazioni in uscita. La risposta è utile e ben strutturata, ma contiene imprecisioni: usa informazioni tipo datasheet non fornite, non gestisce bene la discrepanza tra JSON e immagine sul potenziometro/ingresso LM386, e attribuisce in modo un po' confuso la demodulazione al transistor. Nel complesso è una risposta valida ma non impeccabile."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "b06",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\b06\\results_json_img\\b06_gpt-5.4-mini_20260605_115753.txt",
+      "model_under_test": "gpt-5.4-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 29.213,
+      "timestamp": "2026-06-05 12:06:28",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=8236, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1302, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=9538)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9524,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Ingresso non invertente dell'amplificatore audio/LM386 scollegato o interruzione del percorso R3-C4 verso il pin di ingresso",
+        "Interruzione o cablaggio errato del potenziometro R3/controllo volume",
+        "Guasto o collegamento errato nella sezione RF/rivelatore: antenna, L1, C1, D1, C2, C3, Q1"
+      ],
+      "model_primary_cause": "Ingresso audio del LM386 scollegato o interrotto, coerente con operational_amplifier19.1_in1 non connesso nel JSON",
+      "major_errors": [],
+      "hallucinations": [
+        "La risposta introduce designazioni e ruoli come LM386, Z1 altoparlante e valori/componenti leggibili dall'immagine ma non presenti nel JSON strutturato; tuttavia sono supportati dallo schema visivo.",
+        "Tratta il blocco come LM386 con pin 3, 2, 5, 6 senza datasheet dedicato, ma l'immagine lo indica chiaramente."
+      ],
+      "missed_important_points": [
+        "Poteva evidenziare più esplicitamente che il JSON rappresenta anche l'uscita verso l'altoparlante in modo anomalo tramite breaker3.1 e C5, anche se questo è meno coerente con il sintomo specifico rispetto all'ingresso scollegato."
+      ],
+      "strengths": [
+        "Individua correttamente la discrepanza principale tra JSON e immagine: operational_amplifier19.1_in1 risulta non connesso mentre nello schema dovrebbe ricevere il segnale tramite R3.",
+        "La diagnosi principale è coerente con il sintomo: radio alimentata ma solo fruscio debole se il finale audio non riceve segnale.",
+        "Ordina in modo sensato le cause, mettendo prima l'interruzione del percorso audio e poi la sezione RF/rivelatore.",
+        "Propone controlli pratici utili: continuità verso l'ingresso dell'amplificatore, verifica di R3, D1, Q1, L1/C1 e alimentazioni.",
+        "Usa bene sia JSON sia immagine, senza penalizzare il fatto che non esista un datasheet separato."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida: riconosce la radio AM a blocchi, usa correttamente il warning del JSON sull'ingresso non connesso dell'operazionale e lo confronta con l'immagine dove il segnale dovrebbe arrivare al pin di ingresso del LM386 tramite R3. La causa primaria proposta è molto plausibile e ben supportata. Le cause secondarie e i controlli pratici sono pertinenti. Le uniche lievi riserve riguardano l'uso di nomi, valori e pin del LM386 presi dall'immagine più che dal JSON, ma sono comunque coerenti con lo schema fornito."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "b06",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\b06\\results_json_img\\b06_gpt-5.4-nano_20260605_115732.txt",
+      "model_under_test": "gpt-5.4-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 32.342,
+      "timestamp": "2026-06-05 12:07:01",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9299, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1346, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=10645)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 16,
+      "max_score": 21,
+      "normalized_score": 0.7619047619,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "guasto o disconnessione nella sezione RF/accordo antenna-L1-C1",
+        "D1 AA119 guasto, invertito o con saldatura difettosa",
+        "Q1 2N3904 o relativa polarizzazione/coupling C3-C4 difettosi",
+        "percorso audio verso l'ingresso LM386/potenziometro interrotto, coerente anche con il warning JSON su un ingresso dell'amplificatore non connesso"
+      ],
+      "model_primary_cause": "Q1 2N3904 guasto o sezione RF/rivelazione non funzionante",
+      "major_errors": [
+        "Attribuisce a Q1 anche una funzione di oscillazione, mentre lo schema mostrato è più coerente con un ricevitore AM a rivelazione/accordo e amplificazione, non con un oscillatore locale.",
+        "Non dà sufficiente peso diagnostico al warning strutturato del JSON: operational_amplifier19.1_in1 risulta non connesso, che potrebbe spiegare molto direttamente assenza di segnale utile in uscita.",
+        "Tratta alcune discrepanze JSON/immagine in modo un po' incerto senza sfruttare pienamente la topologia disponibile."
+      ],
+      "hallucinations": [
+        "Riferimento a una sezione che 'non sta oscillando', non supportato dallo schema fornito.",
+        "Alcune affermazioni sui pin critici dell'LM386 sono plausibili dallo schema visivo ma non supportate da un datasheet, assente nel compito."
+      ],
+      "missed_important_points": [
+        "Il circuito di accordo L1-C1 e antenna è centrale: un'apertura della bobina, del variabile o del nodo antenna eliminerebbe quasi tutte le stazioni.",
+        "Il JSON segnala esplicitamente un ingresso dell'amplificatore operazionale/LM386 non connesso, possibile difetto molto rilevante.",
+        "Il modello non distingue chiaramente tra guasto di rivelazione RF e guasto del percorso audio C4-potenziometro-ingresso amplificatore."
+      ],
+      "strengths": [
+        "Identifica correttamente i blocchi principali: accordo/antenna, diodo rivelatore, transistor Q1 e amplificatore audio LM386.",
+        "Le cause proposte sono in gran parte tecnicamente plausibili per il sintomo di radio accesa ma senza stazioni.",
+        "Propone controlli pratici utili: test diodo, test transistor, continuità bobina, verifica antenna, saldature e alimentazione.",
+        "Usa sia immagine sia JSON e nota la discrepanza dell'ingresso non connesso."
+      ],
+      "short_explanation": "Risposta complessivamente utile e abbastanza coerente: individua correttamente front-end RF, D1, Q1, L1/C1 e percorso verso LM386 come aree probabili. Tuttavia introduce l'idea non supportata di oscillazione, non sfrutta abbastanza il warning JSON sull'ingresso amplificatore non connesso e la priorità delle cause non è perfetta. Buoni i controlli pratici."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "b06",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v2\\b06\\results_json_img\\b06_gpt-5.4_20260605_115850.txt",
+      "model_under_test": "gpt-5.4",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 38.754,
+      "timestamp": "2026-06-05 12:07:39",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=9902, input_tokens_details=InputTokensDetails(cached_tokens=4864), output_tokens=1618, output_tokens_details=OutputTokensDetails(reasoning_tokens=819), total_tokens=11520)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 3
+      },
+      "total_score": 17,
+      "max_score": 21,
+      "normalized_score": 0.8095,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": false,
+      "expected_primary_causes": [
+        "Ingresso non invertente del LM386/pin 3 non connesso secondo il JSON, quindi il segnale audio dal potenziometro R3 non arriva al finale",
+        "Interruzione nel percorso C4/R3 verso l'ingresso del LM386",
+        "Guasto nella catena di rivelazione RF D1/C3/Q1, se il collegamento al LM386 è invece realmente presente come in immagine"
+      ],
+      "model_primary_cause": "Problema nella sezione antenna/sintonia L1-C1-antenna o nel rivelatore D1",
+      "major_errors": [
+        "Ha riconosciuto il warning JSON sull'ingresso operational_amplifier19.1_in1 non connesso, ma lo ha trattato soprattutto come errore del JSON e non come possibile causa primaria del sintomo.",
+        "Ha dato priorità alla sezione RF/accordo nonostante l'evidenza strutturata più forte nel JSON sia l'ingresso del finale audio non collegato.",
+        "Il collegamento R3/cursore/pin 3 del LM386 viene considerato solo come quinta ipotesi, mentre rispetto al JSON sarebbe la verifica più immediata e probabilmente principale."
+      ],
+      "hallucinations": [],
+      "missed_important_points": [
+        "Il JSON non rappresenta un potenziometro completo con cursore: R3 è modellato come semplice resistore e l'ingresso in1 del blocco amplificatore resta isolato.",
+        "Se il pin 3/in1 del LM386 è davvero aperto, il finale può produrre solo rumore/fruscio interno e nessuna stazione, indipendentemente dalla corretta ricezione a monte.",
+        "La diagnosi avrebbe dovuto esplicitare che la discrepanza JSON-immagine è il punto critico da verificare sul circuito reale prima di sospettare antenna o taratura."
+      ],
+      "strengths": [
+        "Buona comprensione dei blocchi funzionali: circuito accordato, rivelatore, preamplificatore a transistor e finale audio.",
+        "Individua correttamente la discrepanza tra JSON e immagine sul nodo di ingresso del LM386.",
+        "Le cause proposte per antenna, L1/C1, D1, C3, Q1 e C4 sono tecnicamente plausibili per una radio AM muta o poco sensibile.",
+        "Propone controlli pratici utili: continuità bobina, verifica diodo, sostituzione condensatori, controllo polarizzazione Q1 e iniezione di segnale audio."
+      ],
+      "short_explanation": "La risposta è tecnicamente ricca e coerente con lo schema visivo, ma non sfrutta correttamente l'evidenza più forte del JSON: l'ingresso del finale audio risulta non connesso. Questa condizione spiegherebbe molto bene radio accesa con solo debole fruscio e nessuna stazione. Il modello la cita, ma la declassa troppo, preferendo una diagnosi RF possibile ma meno supportata dal graph."
+    }
+  }
+]

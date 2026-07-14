@@ -1,0 +1,1640 @@
+"""
+Genera un layout visuale semplice per il viewer della Pipeline 2.0.
+
+Lo step 14 legge `13_viewer_model.json` e produce `14_viewer_layout.json`.
+Il suo compito non e' ricostruire l'immagine originale, ma calcolare posizioni
+leggibili per componenti, nodi e rami a partire dal modello netlist-first.
+"""
+
+from __future__ import annotations
+
+import argparse
+from datetime import datetime
+import json
+import math
+import re
+from pathlib import Path
+from typing import Any
+
+from viewer_component_library import component_spec, normalize_component_type
+
+
+VIEWER_MODEL_NAME = "13_viewer_model.json"
+VIEWER_LAYOUT_NAME = "14_viewer_layout.json"
+
+
+def read_json(path: Path) -> dict[str, Any]:
+    """Legge un file JSON e restituisce un dizionario vuoto se non e' valido."""
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def write_json(path: Path, data: dict[str, Any]) -> None:
+    """Scrive un dizionario JSON in modo leggibile e stabile."""
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def component_label(component: dict[str, Any]) -> str:
+    """Restituisce una label compatta per un componente del viewer."""
+    if component.get("viewer_label") is not None:
+        return str(component.get("viewer_label") or "")
+    if component.get("viewer_kind") == "terminal":
+        return str(component.get("display_label") or component.get("id") or "")
+    kind = str(component.get("kind") or component.get("class_name") or "").lower()
+    value = str(component.get("value") or "")
+    if kind == "resistor":
+        return value or "R"
+    if kind == "diode":
+        return str(component.get("spice_name") or component.get("id") or "D")
+    if kind == "voltage_source":
+        return value or "V"
+    if "switch" in kind:
+        return "SW"
+    if "connector" in kind:
+        return str(component.get("id") or "J")
+    if "meter" in kind:
+        return str(component.get("display_label") or (component.get("parameters") or {}).get("label_text") or "METER")
+    return str(component.get("id") or kind or "component")
+
+
+def component_nodes(component: dict[str, Any]) -> list[str]:
+    """Estrae i nodi di un componente, gestendo sia liste sia mappe terminale-nodo."""
+    nodes = component.get("nodes") or []
+    if isinstance(nodes, dict):
+        return [str(value) for value in nodes.values()]
+    if isinstance(nodes, list):
+        return [str(value) for value in nodes]
+    return []
+
+
+def classify_component(component: dict[str, Any]) -> str:
+    """Classifica il componente in una categoria grafica semplice."""
+    if component.get("viewer_kind"):
+        return str(component["viewer_kind"])
+    kind = str(component.get("kind") or component.get("class_name") or "").lower()
+    component_id = str(component.get("id") or "").lower()
+    if "connector" in kind or "connector" in component_id:
+        return "connector"
+    if "switch" in kind or "switch" in component_id:
+        return "switch"
+    if component_id.startswith("gnd") or "ground" in kind:
+        return "ground"
+    if "meter" in kind or component.get("measurement_kind"):
+        return "analog_meter"
+    if kind == "voltage_source" and component.get("is_scenario_added"):
+        return "scenario_voltage_source"
+    if kind in {"resistor", "diode", "voltage_source", "current_source", "capacitor", "inductor"}:
+        return kind
+    return "structural"
+
+
+def collect_layout_components(model: dict[str, Any]) -> list[dict[str, Any]]:
+    """Unisce componenti SPICE e strutturali in una lista adatta al layout."""
+    items: list[dict[str, Any]] = []
+    geometry_component_ids = set(((model.get("geometry_seed") or {}).get("components") or {}).keys())
+    structural_ids = {
+        str(component.get("id") or "")
+        for component in model.get("structural_components") or []
+        if isinstance(component, dict)
+    }
+    connector_nodes = {
+        str(node_id)
+        for component in model.get("structural_components") or []
+        if isinstance(component, dict) and "connector" in str(component.get("class_name") or "").lower()
+        for node_id in component_nodes(component)
+    }
+    for source, is_structural in (
+        (model.get("netlist_components") or [], False),
+        (model.get("structural_components") or [], True),
+    ):
+        for component in source:
+            if not isinstance(component, dict):
+                continue
+            if component.get("viewer_kind") == "node_voltage_clamp":
+                # Il vincolo diagnostico viene annotato sul nodo, non disegnato come batteria.
+                continue
+            if component.get("viewer_proxy_for"):
+                # Lo strumento strutturale rappresenta gia' il suo equivalente numerico SPICE.
+                continue
+            if component.get("viewer_hidden_by_terminal"):
+                # Il terminale strutturale mostra gia' questa alimentazione sullo schema.
+                continue
+            source_id = str(component.get("source_component_id") or "")
+            represented_structural_id = source_id.removeprefix("scenario_")
+            if component.get("is_scenario_added") and represented_structural_id in structural_ids:
+                # Lo switch strutturale rappresenta gia' il resistore SPICE usato per chiuderlo.
+                continue
+            component_node_ids = set(component_nodes(component))
+            is_external_connector_source = (
+                component.get("kind") == "voltage_source"
+                and not component.get("is_scenario_added")
+                and source_id not in geometry_component_ids
+                and "0" in component_node_ids
+                and bool(component_node_ids & connector_nodes)
+            )
+            if is_external_connector_source:
+                # La sorgente sintetica e' gia' rappresentata dall'alimentazione esterna del connector.
+                continue
+            item = dict(component)
+            item["layout_kind"] = classify_component(component)
+            item["is_structural"] = is_structural
+            item["label"] = component_label(item)
+            item["nodes"] = component_nodes(component)
+            items.append(item)
+    return items
+
+
+def canvas_transform(geometry_seed: dict[str, Any]) -> dict[str, float]:
+    """Calcola la trasformazione uniforme usando il footprint reale delle bbox disponibili."""
+    image = geometry_seed.get("image") or {}
+    image_width = max(float(image.get("width") or 1), 1.0)
+    image_height = max(float(image.get("height") or 1), 1.0)
+    canvas_width = 1040.0
+    canvas_height = 620.0
+    margin = 48.0
+    bboxes = [
+        component.get("bbox")
+        for component in (geometry_seed.get("components") or {}).values()
+        if isinstance(component, dict) and isinstance(component.get("bbox"), list) and len(component["bbox"]) == 4
+    ]
+    if bboxes:
+        left = min(float(bbox[0]) for bbox in bboxes)
+        top = min(float(bbox[1]) for bbox in bboxes)
+        right = max(float(bbox[2]) for bbox in bboxes)
+        bottom = max(float(bbox[3]) for bbox in bboxes)
+        # Il margine e' espresso nello spazio immagine: evita simboli aderenti ai bordi del viewer.
+        footprint_padding = 64.0
+        source_left = max(0.0, left - footprint_padding)
+        source_top = max(0.0, top - footprint_padding)
+        source_right = min(image_width, right + footprint_padding)
+        source_bottom = min(image_height, bottom + footprint_padding)
+    else:
+        source_left, source_top = 0.0, 0.0
+        source_right, source_bottom = image_width, image_height
+    source_width = max(source_right - source_left, 1.0)
+    source_height = max(source_bottom - source_top, 1.0)
+    scale = min((canvas_width - 2 * margin) / source_width, (canvas_height - 2 * margin) / source_height)
+    offset_x = (canvas_width - source_width * scale) / 2 - source_left * scale
+    offset_y = (canvas_height - source_height * scale) / 2 - source_top * scale
+    return {
+        "scale": scale,
+        "offset_x": offset_x,
+        "offset_y": offset_y,
+        "canvas_width": canvas_width,
+        "canvas_height": canvas_height,
+        "source_left": source_left,
+        "source_top": source_top,
+        "source_width": source_width,
+        "source_height": source_height,
+    }
+
+
+def transform_point(x: Any, y: Any, transform: dict[str, float]) -> dict[str, float]:
+    """Converte una coordinata immagine nella coordinata equivalente del canvas."""
+    return {
+        "x": round(transform["offset_x"] + float(x) * transform["scale"], 2),
+        "y": round(transform["offset_y"] + float(y) * transform["scale"], 2),
+    }
+
+
+def visual_source_id(component: dict[str, Any]) -> str:
+    """Restituisce l'id Pipeline 1.0 associato a un componente del modello."""
+    return str(component.get("source_component_id") or component.get("id") or "")
+
+
+def normalize_orientation(value: Any) -> str:
+    """Riduce le orientazioni della Pipeline 1.0 alle varianti del renderer."""
+    orientation = str(value or "").lower()
+    if orientation in {"vertical", "up", "down"}:
+        return "vertical"
+    return "horizontal"
+
+
+def match_geometry_terminals(
+    component: dict[str, Any],
+    geometry_component: dict[str, Any],
+    transform: dict[str, float],
+) -> list[dict[str, Any]]:
+    """Associa i nodi del modello ai terminali geometrici dello stesso componente."""
+    geometry_terminals = geometry_component.get("terminals") or {}
+    matched: list[dict[str, Any]] = []
+    used_names: set[str] = set()
+
+    # La corrispondenza per nodo evita di dipendere dai nomi t1, anode o pin1.
+    for index, node_id in enumerate(component.get("nodes") or [], start=1):
+        selected_name = ""
+        selected: dict[str, Any] = {}
+        for name, terminal in geometry_terminals.items():
+            if name not in used_names and str(terminal.get("node_id") or "") == str(node_id):
+                selected_name = str(name)
+                selected = terminal
+                break
+        if not selected:
+            remaining = [(name, item) for name, item in geometry_terminals.items() if name not in used_names]
+            if remaining:
+                selected_name, selected = remaining[0]
+        if not selected:
+            continue
+        used_names.add(selected_name)
+        point = transform_point(selected.get("x"), selected.get("y"), transform)
+        matched.append(
+            {
+                "name": selected_name or f"t{index}",
+                "terminal_id": str(selected.get("id") or ""),
+                "node_id": str(node_id),
+                "relative_position": str(selected.get("relative_position") or ""),
+                **point,
+            }
+        )
+    return matched
+
+
+def standardize_terminals(
+    terminals: list[dict[str, Any]],
+    center: dict[str, float],
+    component_type: str,
+    orientation: str,
+) -> list[dict[str, Any]]:
+    """Porta i terminali sui punti di attacco standard del simbolo visuale."""
+    if not terminals:
+        return []
+    spec = component_spec(component_type, component_type, len(terminals))
+    center_x, center_y = float(center["x"]), float(center["y"])
+    standardized = [dict(terminal) for terminal in terminals]
+
+    if component_type == "connector":
+        # Tutti i connector usano pin centrati, equidistanti e indipendenti dalla bbox.
+        ordered = sorted(standardized, key=lambda item: float(item.get("y") or 0))
+        spacing = spec["pin_spacing"]
+        start_y = center_y - spacing * (len(ordered) - 1) / 2
+        for index, terminal in enumerate(ordered):
+            terminal["x"] = center_x
+            terminal["y"] = start_y + index * spacing
+            terminal["pin_number"] = index + 1
+        return ordered
+
+    if component_type == "ground":
+        standardized[0]["x"] = center_x
+        standardized[0]["y"] = center_y - spec["height"] / 2
+        return standardized[:1]
+
+    if len(standardized) == 2:
+        # I bipoli usano sempre la stessa lunghezza e rispettano l'ordine rilevato.
+        ordered = sorted(
+            standardized,
+            key=lambda item: float(item.get("y") or 0) if orientation == "vertical" else float(item.get("x") or 0),
+        )
+        if orientation == "vertical":
+            # Il simbolo viene ruotato dal renderer: la lunghezza elettrica resta `width`.
+            ordered[0].update({"x": center_x, "y": center_y - spec["width"] / 2})
+            ordered[1].update({"x": center_x, "y": center_y + spec["width"] / 2})
+        else:
+            ordered[0].update({"x": center_x - spec["width"] / 2, "y": center_y})
+            ordered[1].update({"x": center_x + spec["width"] / 2, "y": center_y})
+        return ordered
+
+    # I componenti multi-terminale mantengono il lato relativo attorno a un ingombro standard.
+    for terminal in standardized:
+        raw_x = float(terminal.get("x") or center_x)
+        raw_y = float(terminal.get("y") or center_y)
+        angle = math.atan2(raw_y - center_y, raw_x - center_x)
+        terminal["x"] = center_x + math.cos(angle) * spec["width"] / 2
+        terminal["y"] = center_y + math.sin(angle) * spec["height"] / 2
+    return standardized
+
+
+def move_component_to_lane(component: dict[str, Any], lane_y: float) -> None:
+    """Sposta un componente orizzontale e tutti i suoi terminali sulla corsia indicata."""
+    delta_y = lane_y - float(component.get("y") or lane_y)
+    component["y"] = lane_y
+    for terminal in component.get("terminals") or []:
+        terminal["y"] = float(terminal.get("y") or 0) + delta_y
+
+
+def align_horizontal_branches(positioned: dict[str, dict[str, Any]]) -> None:
+    """Propaga le quote dei pin connector lungo i rami di bipoli orizzontali."""
+    node_lanes: dict[str, float] = {}
+    for component in positioned.values():
+        if component.get("component_type") != "connector":
+            continue
+        for terminal in component.get("terminals") or []:
+            node_id = str(terminal.get("node_id") or "")
+            if node_id and node_id != "0":
+                node_lanes[node_id] = float(terminal["y"])
+
+    # Ogni passaggio estende la corsia oltre un componente appena allineato.
+    aligned: set[str] = set()
+    for _ in range(max(len(positioned), 1)):
+        changed = False
+        for component_id, component in positioned.items():
+            if component_id in aligned or component.get("orientation") != "horizontal":
+                continue
+            terminals = component.get("terminals") or []
+            if len(terminals) != 2:
+                continue
+            known_lanes = [node_lanes[str(item.get("node_id"))] for item in terminals if str(item.get("node_id")) in node_lanes]
+            if not known_lanes:
+                continue
+            lane_y = sum(known_lanes) / len(known_lanes)
+            move_component_to_lane(component, lane_y)
+            for terminal in terminals:
+                node_id = str(terminal.get("node_id") or "")
+                if node_id and node_id != "0":
+                    node_lanes.setdefault(node_id, lane_y)
+            aligned.add(component_id)
+            changed = True
+        if not changed:
+            break
+
+
+def connector_terminal_for_node(
+    positioned: dict[str, dict[str, Any]], node_id: str
+) -> dict[str, Any] | None:
+    """Trova il pin di connector associato al nodo, se presente nel layout."""
+    for component in positioned.values():
+        if component.get("component_type") != "connector":
+            continue
+        for terminal in component.get("terminals") or []:
+            if str(terminal.get("node_id") or "") == node_id:
+                return terminal
+    return None
+
+
+def ground_terminals(positioned: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    """Raccoglie i terminali delle masse disponibili come ancore visuali."""
+    return [
+        terminal
+        for component in positioned.values()
+        if component.get("component_type") == "ground"
+        for terminal in component.get("terminals") or []
+        if str(terminal.get("node_id") or "") == "0"
+    ]
+
+
+def positioned_component_nodes(component: dict[str, Any]) -> set[str]:
+    """Raccoglie i nodi presenti sui terminali di un componente gia' posizionato."""
+    return {
+        str(terminal.get("node_id") or "")
+        for terminal in component.get("terminals") or []
+        if terminal.get("node_id") is not None
+    }
+
+
+def find_parallel_reference(
+    positioned: dict[str, dict[str, Any]],
+    node_ids: list[str],
+    component_type: str,
+) -> tuple[str, dict[str, Any]] | None:
+    """Trova un bipolo esistente tra gli stessi nodi del componente scenario."""
+    target_nodes = set(node_ids)
+    if len(target_nodes) != 2:
+        return None
+    candidates = [
+        (component_id, component)
+        for component_id, component in positioned.items()
+        if component.get("component_type") == component_type
+        and len(component.get("terminals") or []) == 2
+        and positioned_component_nodes(component) == target_nodes
+        and component.get("placement") != "parallel_branch"
+    ]
+    return min(candidates, key=lambda item: str(item[0])) if candidates else None
+
+
+def parallel_branch_position(
+    reference_id: str,
+    reference: dict[str, Any],
+    node_ids: list[str],
+    positioned: dict[str, dict[str, Any]],
+    component_type: str,
+    canvas: tuple[float, float],
+) -> dict[str, Any]:
+    """Posiziona un nuovo bipolo su una corsia parallela libera rispetto al riferimento."""
+    orientation = str(reference.get("orientation") or "horizontal")
+    reference_x = float(reference.get("x") or 0)
+    reference_y = float(reference.get("y") or 0)
+    reference_terminals = {
+        str(terminal.get("node_id") or ""): terminal
+        for terminal in reference.get("terminals") or []
+    }
+    lane_offset = 78.0
+    candidates = (
+        [(reference_x, reference_y + lane_offset), (reference_x, reference_y - lane_offset)]
+        if orientation == "horizontal"
+        else [(reference_x + lane_offset, reference_y), (reference_x - lane_offset, reference_y)]
+    )
+    spec = component_spec(component_type, component_type, 2)
+    obstacles = [component_symbol_bounds(component) for component in positioned.values() if component is not reference]
+    canvas_width, canvas_height = canvas
+    scored: list[tuple[float, float, float]] = []
+    for candidate_x, candidate_y in candidates:
+        probe = {
+            "x": candidate_x,
+            "y": candidate_y,
+            "component_type": component_type,
+            "orientation": orientation,
+            "symbol_size": {"width": spec["width"], "height": spec["height"]},
+            "terminals": [],
+        }
+        bounds = component_symbol_bounds(probe)
+        overlap = sum(rectangle_overlap_area(bounds, obstacle) for obstacle in obstacles)
+        outside = max(0.0, 24.0 - bounds[0]) + max(0.0, bounds[2] - canvas_width + 24.0)
+        outside += max(0.0, 24.0 - bounds[1]) + max(0.0, bounds[3] - canvas_height + 24.0)
+        scored.append((overlap * 100_000.0 + outside * 100_000.0, candidate_x, candidate_y))
+    _, x, y = min(scored, key=lambda candidate: candidate[0])
+
+    terminals: list[dict[str, Any]] = []
+    for index, node_id in enumerate(node_ids, start=1):
+        source_terminal = reference_terminals.get(node_id) or {}
+        if orientation == "horizontal":
+            terminal_x = float(source_terminal.get("x") or reference_x)
+            terminal_y = y
+            relative_position = str(source_terminal.get("relative_position") or ("left" if index == 1 else "right"))
+        else:
+            terminal_x = x
+            terminal_y = float(source_terminal.get("y") or reference_y)
+            relative_position = str(source_terminal.get("relative_position") or ("top" if index == 1 else "bottom"))
+        terminals.append(
+            {
+                "name": f"t{index}",
+                "node_id": node_id,
+                "relative_position": relative_position,
+                "x": terminal_x,
+                "y": terminal_y,
+            }
+        )
+    return {
+        "x": x,
+        "y": y,
+        "orientation": orientation,
+        "terminals": terminals,
+        "placement": "parallel_branch",
+        "parallel_reference_id": reference_id,
+        "symbol_size": {"width": spec["width"], "height": spec["height"]},
+    }
+
+
+def component_visual_bounds(component: dict[str, Any]) -> tuple[float, float, float, float]:
+    """Stima il rettangolo occupato da simbolo e label di un componente."""
+    component_type = str(component.get("component_type") or "structural")
+    center_x = float(component.get("x") or 0)
+    center_y = float(component.get("y") or 0)
+    terminals = component.get("terminals") or []
+    if component_type == "connector" and terminals:
+        spec = component_spec("connector", "connector", len(terminals))
+        top = min(float(item["y"]) for item in terminals) - 36.0
+        bottom = max(float(item["y"]) for item in terminals) + 32.0
+        return center_x - spec["width"] / 2 - 12.0, top, center_x + spec["width"] / 2 + 12.0, bottom
+    if component_type == "ground" and terminals:
+        terminal_x = float(terminals[0].get("x") or center_x)
+        terminal_y = float(terminals[0].get("y") or center_y)
+        return terminal_x - 32.0, terminal_y - 8.0, terminal_x + 32.0, terminal_y + 40.0
+
+    size = component.get("symbol_size") or component_spec(component_type, component.get("layout_kind"), len(terminals))
+    width = float(size.get("width") or 68.0)
+    height = float(size.get("height") or 46.0)
+    if component.get("orientation") == "vertical":
+        width, height = height, width
+    left = center_x - width / 2 - 12.0
+    right = center_x + width / 2 + 12.0
+    top = center_y - height / 2 - 28.0
+    bottom = center_y + height / 2 + 12.0
+    if component.get("orientation") == "vertical":
+        if component.get("label_side") == "left":
+            left -= 64.0
+        else:
+            right += 64.0
+    return left, top, right, bottom
+
+
+def component_symbol_bounds(component: dict[str, Any]) -> tuple[float, float, float, float]:
+    """Restituisce l'ingombro del solo simbolo, senza considerare la sua label."""
+    component_type = str(component.get("component_type") or "structural")
+    center_x = float(component.get("x") or 0)
+    center_y = float(component.get("y") or 0)
+    terminals = component.get("terminals") or []
+    if component_type == "connector" and terminals:
+        spec = component_spec("connector", "connector", len(terminals))
+        top = min(float(item["y"]) for item in terminals) - 20.0
+        bottom = max(float(item["y"]) for item in terminals) + 20.0
+        return center_x - spec["width"] / 2, top, center_x + spec["width"] / 2, bottom
+    if component_type == "ground" and terminals:
+        terminal_x = float(terminals[0].get("x") or center_x)
+        terminal_y = float(terminals[0].get("y") or center_y)
+        return terminal_x - 26.0, terminal_y, terminal_x + 26.0, terminal_y + 30.0
+
+    size = component.get("symbol_size") or component_spec(component_type, component.get("layout_kind"), len(terminals))
+    width = float(size.get("width") or 68.0)
+    height = float(size.get("height") or 46.0)
+    if component.get("orientation") == "vertical":
+        width, height = height, width
+    return (
+        center_x - width / 2,
+        center_y - height / 2,
+        center_x + width / 2,
+        center_y + height / 2,
+    )
+
+
+def translate_component(component: dict[str, Any], delta_x: float, delta_y: float) -> None:
+    """Trasla simbolo e terminali insieme, preservando la geometria elettrica interna."""
+    component["x"] = float(component.get("x") or 0) + delta_x
+    component["y"] = float(component.get("y") or 0) + delta_y
+    for terminal in component.get("terminals") or []:
+        terminal["x"] = float(terminal.get("x") or 0) + delta_x
+        terminal["y"] = float(terminal.get("y") or 0) + delta_y
+
+
+def component_spacing_weight(component: dict[str, Any]) -> float:
+    """Assegna un peso basso agli elementi che conviene mantenere vicini alla bbox originale."""
+    component_type = str(component.get("component_type") or "")
+    if component_type in {"ground", "terminal"}:
+        return 0.2
+    if component_type == "connector":
+        return 0.45
+    return 1.0
+
+
+def relax_component_spacing(positioned: dict[str, dict[str, Any]]) -> None:
+    """Separa gli ingombri dei simboli mantenendo ordine relativo e orientamento estratti."""
+    items = [
+        component
+        for component in positioned.values()
+        if component.get("component_type") not in {"ground", "terminal"}
+    ]
+    clearance = 18.0
+    for _ in range(14):
+        moved = False
+        for index, first in enumerate(items):
+            for second in items[index + 1 :]:
+                first_bounds = component_symbol_bounds(first)
+                second_bounds = component_symbol_bounds(second)
+                first_expanded = (
+                    first_bounds[0] - clearance,
+                    first_bounds[1] - clearance,
+                    first_bounds[2] + clearance,
+                    first_bounds[3] + clearance,
+                )
+                second_expanded = (
+                    second_bounds[0] - clearance,
+                    second_bounds[1] - clearance,
+                    second_bounds[2] + clearance,
+                    second_bounds[3] + clearance,
+                )
+                overlap_x = min(first_expanded[2], second_expanded[2]) - max(first_expanded[0], second_expanded[0])
+                overlap_y = min(first_expanded[3], second_expanded[3]) - max(first_expanded[1], second_expanded[1])
+                if overlap_x <= 0 or overlap_y <= 0:
+                    continue
+
+                first_weight = component_spacing_weight(first)
+                second_weight = component_spacing_weight(second)
+                total_weight = max(first_weight + second_weight, 0.1)
+                if overlap_x <= overlap_y:
+                    direction = -1.0 if float(first.get("x") or 0) <= float(second.get("x") or 0) else 1.0
+                    first_shift = direction * overlap_x * (second_weight / total_weight) * 0.55
+                    second_shift = -direction * overlap_x * (first_weight / total_weight) * 0.55
+                    translate_component(first, first_shift, 0.0)
+                    translate_component(second, second_shift, 0.0)
+                else:
+                    direction = -1.0 if float(first.get("y") or 0) <= float(second.get("y") or 0) else 1.0
+                    first_shift = direction * overlap_y * (second_weight / total_weight) * 0.55
+                    second_shift = -direction * overlap_y * (first_weight / total_weight) * 0.55
+                    translate_component(first, 0.0, first_shift)
+                    translate_component(second, 0.0, second_shift)
+                moved = True
+        if not moved:
+            break
+
+
+def realign_parallel_branches(positioned: dict[str, dict[str, Any]]) -> None:
+    """Ripristina l'allineamento dei rami paralleli dopo la separazione dagli ostacoli."""
+    for component in positioned.values():
+        if component.get("placement") != "parallel_branch":
+            continue
+        reference = positioned.get(str(component.get("parallel_reference_id") or ""))
+        if not reference:
+            continue
+        reference_terminals = {
+            str(terminal.get("node_id") or ""): terminal
+            for terminal in reference.get("terminals") or []
+        }
+        if component.get("orientation") == "horizontal":
+            translate_component(component, float(reference.get("x") or 0) - float(component.get("x") or 0), 0.0)
+            for terminal in component.get("terminals") or []:
+                reference_terminal = reference_terminals.get(str(terminal.get("node_id") or ""))
+                if reference_terminal:
+                    terminal["x"] = float(reference_terminal.get("x") or terminal.get("x") or 0)
+        else:
+            translate_component(component, 0.0, float(reference.get("y") or 0) - float(component.get("y") or 0))
+            for terminal in component.get("terminals") or []:
+                reference_terminal = reference_terminals.get(str(terminal.get("node_id") or ""))
+                if reference_terminal:
+                    terminal["y"] = float(reference_terminal.get("y") or terminal.get("y") or 0)
+
+
+def realign_connector_bridges(positioned: dict[str, dict[str, Any]]) -> None:
+    """Riancora i link tra pin al connector dopo la separazione dei simboli."""
+    bridges = [
+        component
+        for component in positioned.values()
+        if component.get("placement") == "connector_bridge"
+    ]
+    for connector in positioned.values():
+        if connector.get("component_type") != "connector":
+            continue
+        connector_terminals = {
+            str(terminal.get("node_id") or ""): terminal
+            for terminal in connector.get("terminals") or []
+        }
+        matching = [
+            bridge
+            for bridge in bridges
+            if all(
+                str(terminal.get("node_id") or "") in connector_terminals
+                for terminal in bridge.get("terminals") or []
+            )
+        ]
+        matching.sort(key=lambda item: str(item.get("source_component_id") or ""))
+        connector_spec = component_spec("connector", "connector", len(connector_terminals))
+        for lane_index, bridge in enumerate(matching):
+            lane_x = float(connector.get("x") or 0) + connector_spec["width"] / 2 + 12.0 + lane_index * 12.0
+            for terminal in bridge.get("terminals") or []:
+                connector_terminal = connector_terminals.get(str(terminal.get("node_id") or ""))
+                if connector_terminal:
+                    terminal["x"] = lane_x
+                    terminal["y"] = float(connector_terminal.get("y") or 0)
+            terminals = bridge.get("terminals") or []
+            bridge["x"] = lane_x
+            if terminals:
+                bridge["y"] = sum(float(terminal.get("y") or 0) for terminal in terminals) / len(terminals)
+
+
+def align_near_perpendicular_leads(positioned: dict[str, dict[str, Any]]) -> None:
+    """Ripristina gli allineamenti verticali quasi esatti suggeriti dalle bbox."""
+    terminals_by_node: dict[str, list[tuple[str, dict[str, Any]]]] = {}
+    for component_id, component in positioned.items():
+        for terminal in component.get("terminals") or []:
+            node_id = str(terminal.get("node_id") or "")
+            if node_id:
+                terminals_by_node.setdefault(node_id, []).append((component_id, terminal))
+
+    proposed_x: dict[str, list[float]] = {}
+    for terminals in terminals_by_node.values():
+        for first_index, (first_id, first) in enumerate(terminals):
+            for second_id, second in terminals[first_index + 1 :]:
+                first_side = terminal_side(first)
+                second_side = terminal_side(second)
+                if {first_side, second_side} & {"top", "bottom"} == set():
+                    continue
+                if {first_side, second_side} & {"left", "right"} == set():
+                    continue
+                vertical_id, vertical_terminal = (
+                    (first_id, first) if first_side in {"top", "bottom"} else (second_id, second)
+                )
+                horizontal_terminal = second if vertical_terminal is first else first
+                if abs(float(vertical_terminal.get("x") or 0) - float(horizontal_terminal.get("x") or 0)) <= 20.0:
+                    # L'asse verticale si ferma sulla corsia esterna del terminale
+                    # laterale, lasciando un ultimo tratto orizzontale di 22 px.
+                    horizontal_direction = terminal_outward_direction(horizontal_terminal) or (0.0, 0.0)
+                    target_x = float(horizontal_terminal.get("x") or 0) + horizontal_direction[0] * 22.0
+                    proposed_x.setdefault(vertical_id, []).append(target_x)
+
+    for component_id, targets in proposed_x.items():
+        if not targets or max(targets) - min(targets) > 6.0:
+            continue
+        component = positioned.get(component_id)
+        if component:
+            target_x = sum(targets) / len(targets)
+            translate_component(component, target_x - float(component.get("x") or 0), 0.0)
+
+
+def rectangle_overlap_area(
+    first: tuple[float, float, float, float], second: tuple[float, float, float, float]
+) -> float:
+    """Calcola l'area comune tra due rettangoli del layout."""
+    overlap_x = max(0.0, min(first[2], second[2]) - max(first[0], second[0]))
+    overlap_y = max(0.0, min(first[3], second[3]) - max(first[1], second[1]))
+    return overlap_x * overlap_y
+
+
+def point_in_rectangle(point: tuple[float, float], rectangle: tuple[float, float, float, float]) -> bool:
+    """Verifica se un punto appartiene al rettangolo indicato."""
+    return rectangle[0] <= point[0] <= rectangle[2] and rectangle[1] <= point[1] <= rectangle[3]
+
+
+def orthogonal_segments(
+    start: tuple[float, float], end: tuple[float, float], horizontal_first: bool
+) -> list[tuple[tuple[float, float], tuple[float, float]]]:
+    """Scompone un collegamento ortogonale nei suoi due segmenti rettilinei."""
+    elbow = (end[0], start[1]) if horizontal_first else (start[0], end[1])
+    return [(start, elbow), (elbow, end)]
+
+
+def segment_crosses_rectangle(
+    segment: tuple[tuple[float, float], tuple[float, float]],
+    rectangle: tuple[float, float, float, float],
+) -> bool:
+    """Rileva l'attraversamento di un ostacolo da parte di un segmento ortogonale."""
+    start, end = segment
+    if point_in_rectangle(start, rectangle) or point_in_rectangle(end, rectangle):
+        return False
+    if abs(start[1] - end[1]) < 0.01:
+        low_x, high_x = sorted((start[0], end[0]))
+        return rectangle[1] <= start[1] <= rectangle[3] and high_x >= rectangle[0] and low_x <= rectangle[2]
+    low_y, high_y = sorted((start[1], end[1]))
+    return rectangle[0] <= start[0] <= rectangle[2] and high_y >= rectangle[1] and low_y <= rectangle[3]
+
+
+def segments_cross(
+    first: tuple[tuple[float, float], tuple[float, float]],
+    second: tuple[tuple[float, float], tuple[float, float]],
+) -> bool:
+    """Rileva un incrocio interno tra due segmenti ortogonali."""
+    first_horizontal = abs(first[0][1] - first[1][1]) < 0.01
+    second_horizontal = abs(second[0][1] - second[1][1]) < 0.01
+    if first_horizontal == second_horizontal:
+        return False
+    horizontal, vertical = (first, second) if first_horizontal else (second, first)
+    horizontal_x = sorted((horizontal[0][0], horizontal[1][0]))
+    vertical_y = sorted((vertical[0][1], vertical[1][1]))
+    crossing = (vertical[0][0], horizontal[0][1])
+    if crossing in first or crossing in second:
+        return False
+    return horizontal_x[0] < crossing[0] < horizontal_x[1] and vertical_y[0] < crossing[1] < vertical_y[1]
+
+
+def existing_wire_segments(
+    positioned: dict[str, dict[str, Any]],
+    node_centers: dict[str, tuple[float, float]],
+) -> list[tuple[tuple[float, float], tuple[float, float]]]:
+    """Stima i fili gia' presenti collegando i terminali ai centri dei nodi."""
+    segments: list[tuple[tuple[float, float], tuple[float, float]]] = []
+    for component in positioned.values():
+        for terminal in component.get("terminals") or []:
+            node_id = str(terminal.get("node_id") or "")
+            if not node_id or node_id == "0" or node_id not in node_centers:
+                continue
+            start = (float(terminal["x"]), float(terminal["y"]))
+            segments.extend(orthogonal_segments(start, node_centers[node_id], True))
+    return [segment for segment in segments if segment[0] != segment[1]]
+
+
+def source_candidate_score(
+    source: dict[str, Any],
+    routes: list[tuple[tuple[float, float], tuple[float, float]]],
+    obstacles: list[tuple[float, float, float, float]],
+    current_wires: list[tuple[tuple[float, float], tuple[float, float]]],
+    canvas: tuple[float, float],
+    preferred_side: float,
+    anchor_x: float,
+) -> float:
+    """Assegna un costo alla candidata privilegiando spazio libero e fili corti."""
+    bounds = component_visual_bounds(source)
+    width, height = canvas
+    score = 0.0
+    if bounds[0] < 24.0 or bounds[1] < 24.0 or bounds[2] > width - 24.0 or bounds[3] > height - 24.0:
+        score += 2_000_000.0
+    for obstacle in obstacles:
+        overlap = rectangle_overlap_area(bounds, obstacle)
+        if overlap > 0:
+            score += 500_000.0 + overlap * 250.0
+        score += sum(30_000.0 for segment in routes if segment_crosses_rectangle(segment, obstacle))
+    score += sum(4_000.0 for route in routes for wire in current_wires if segments_cross(route, wire))
+    score += sum(
+        abs(segment[1][0] - segment[0][0]) + abs(segment[1][1] - segment[0][1])
+        for segment in routes
+    )
+    if (float(source["x"]) - anchor_x) * preferred_side < 0:
+        score += 180.0
+    return score
+
+
+def scenario_source_candidates(
+    anchor: tuple[float, float], preferred_side: float, aligned_center_y: float
+) -> list[tuple[float, float]]:
+    """Genera una griglia compatta di posizioni candidate attorno al nodo alimentato."""
+    anchor_x, _ = anchor
+    horizontal_offsets = [preferred_side * value for value in (100.0, 150.0, 210.0, 270.0, 330.0)]
+    horizontal_offsets.extend([-preferred_side * value for value in (110.0, 170.0, 230.0)])
+    horizontal_offsets.append(0.0)
+    vertical_offsets = (-140.0, -70.0, 0.0, 70.0, 140.0)
+    return [
+        (round(anchor_x + offset_x, 2), round(aligned_center_y + offset_y, 2))
+        for offset_x in horizontal_offsets
+        for offset_y in vertical_offsets
+    ]
+
+
+def scenario_voltage_source_position(
+    component: dict[str, Any],
+    positioned: dict[str, dict[str, Any]],
+    node_centers: dict[str, tuple[float, float]],
+    canvas: tuple[float, float],
+) -> dict[str, Any] | None:
+    """Sceglie matematicamente una zona libera per una batteria scenario nodo-massa."""
+    nodes = [str(node_id) for node_id in component.get("nodes") or []]
+    if len(nodes) != 2 or "0" not in nodes:
+        return None
+    non_ground_node = next((node_id for node_id in nodes if node_id != "0"), "")
+    node_center = node_centers.get(non_ground_node)
+    if not non_ground_node or not node_center:
+        return None
+
+    connector_terminal = connector_terminal_for_node(positioned, non_ground_node)
+    anchor_x, anchor_y = (
+        (float(connector_terminal["x"]), float(connector_terminal["y"]))
+        if connector_terminal
+        else node_center
+    )
+    available_grounds = ground_terminals(positioned)
+    if not available_grounds:
+        return None
+
+    # Il lato opposto al pin e' solo una preferenza: il punteggio puo' scegliere altro.
+    relative_position = str((connector_terminal or {}).get("relative_position") or "").lower()
+    if relative_position == "right":
+        preferred_side = -1.0
+    elif relative_position == "left":
+        preferred_side = 1.0
+    else:
+        preferred_side = -1.0
+
+    obstacles = [component_visual_bounds(item) for item in positioned.values()]
+    obstacles.append((canvas[0] - 215.0, 14.0, canvas[0] - 15.0, 205.0))
+    current_wires = existing_wire_segments(positioned, node_centers)
+    spec = component_spec("scenario_voltage_source", "scenario_voltage_source", 2)
+    half_length = spec["width"] / 2
+    normal_is_positive = nodes[0] != "0"
+    aligned_center_y = anchor_y + half_length if normal_is_positive else anchor_y - half_length
+    best: dict[str, Any] | None = None
+    for candidate_x, candidate_y in scenario_source_candidates(
+        (anchor_x, anchor_y), preferred_side, aligned_center_y
+    ):
+        label_side = "left" if candidate_x < anchor_x else "right"
+        top = (candidate_x, candidate_y - half_length)
+        bottom = (candidate_x, candidate_y + half_length)
+        for ground in available_grounds:
+            ground_point = (float(ground["x"]), float(ground["y"]))
+            positive_target = (anchor_x, anchor_y) if nodes[0] != "0" else ground_point
+            negative_target = ground_point if nodes[1] == "0" else (anchor_x, anchor_y)
+            direct_cost = abs(top[0] - positive_target[0]) + abs(top[1] - positive_target[1])
+            direct_cost += abs(bottom[0] - negative_target[0]) + abs(bottom[1] - negative_target[1])
+            inverse_cost = abs(bottom[0] - positive_target[0]) + abs(bottom[1] - positive_target[1])
+            inverse_cost += abs(top[0] - negative_target[0]) + abs(top[1] - negative_target[1])
+            positive_point, negative_point = (top, bottom) if direct_cost <= inverse_cost else (bottom, top)
+            routes = orthogonal_segments(positive_target, positive_point, True)
+            routes.extend(orthogonal_segments(negative_point, negative_target, False))
+            source = {
+                "x": candidate_x,
+                "y": candidate_y,
+                "component_type": "scenario_voltage_source",
+                "layout_kind": "scenario_voltage_source",
+                "symbol_size": spec,
+                "orientation": "vertical",
+                "label_side": label_side,
+            }
+            score = source_candidate_score(
+                source,
+                routes,
+                obstacles,
+                current_wires,
+                canvas,
+                preferred_side,
+                anchor_x,
+            )
+            normal_terminal = positive_point if normal_is_positive else negative_point
+            # L'allineamento evita che il filo sembri entrare nel fianco della batteria.
+            score += abs(normal_terminal[1] - anchor_y) * 120.0
+            candidate = {
+                **source,
+                "terminals": [
+                    {"name": "positive", "node_id": nodes[0], "x": positive_point[0], "y": positive_point[1]},
+                    {"name": "negative", "node_id": nodes[1], "x": negative_point[0], "y": negative_point[1]},
+                ],
+                "placement": "scenario_supply_scored",
+                "placement_score": round(score, 2),
+            }
+            if best is None or score < float(best["placement_score"]):
+                best = candidate
+    return best
+
+
+def build_image_guided_components(
+    components: list[dict[str, Any]],
+    geometry_seed: dict[str, Any],
+    transform: dict[str, float],
+) -> tuple[dict[str, dict[str, Any]], list[str]]:
+    """Posiziona i componenti usando bbox e terminali della Pipeline 1.0."""
+    geometry_components = geometry_seed.get("components") or {}
+    positioned: dict[str, dict[str, Any]] = {}
+    warnings: list[str] = []
+    pending: list[dict[str, Any]] = []
+
+    for component in components:
+        component_id = str(component.get("id") or "")
+        source_id = visual_source_id(component)
+        geometry_component = geometry_components.get(source_id)
+        if not component_id:
+            continue
+        if not geometry_component:
+            pending.append(component)
+            continue
+        center = geometry_component.get("center") or {}
+        position = transform_point(center.get("x"), center.get("y"), transform)
+        orientation = normalize_orientation(geometry_component.get("estimated_orientation"))
+        visual_class_name = str(geometry_component.get("class_name") or component.get("layout_kind") or "structural")
+        component_type = normalize_component_type(visual_class_name, component.get("layout_kind"))
+        raw_terminals = match_geometry_terminals(component, geometry_component, transform)
+        terminals = standardize_terminals(raw_terminals, position, component_type, orientation)
+        spec = component_spec(component_type, component.get("layout_kind"), len(terminals))
+        positioned[component_id] = {
+            **position,
+            "source_component_id": source_id,
+            "layout_kind": component.get("layout_kind"),
+            "visual_class_name": visual_class_name,
+            "component_type": component_type,
+            "symbol_size": {"width": spec["width"], "height": spec["height"]},
+            "label": component.get("label"),
+            "orientation": orientation,
+            "terminals": terminals,
+            "state": (component.get("parameters") or {}).get("state") or geometry_component.get("state"),
+            "is_structural": bool(component.get("is_structural")),
+        }
+
+    align_horizontal_branches(positioned)
+
+    # I terminali gia' posizionati permettono di stimare il centro visuale di ogni nodo.
+    node_seed_points: dict[str, list[tuple[float, float]]] = {}
+    for positioned_component in positioned.values():
+        for terminal in positioned_component.get("terminals") or []:
+            node_id = str(terminal.get("node_id") or "")
+            if node_id:
+                node_seed_points.setdefault(node_id, []).append((float(terminal["x"]), float(terminal["y"])))
+    node_centers = {
+        node_id: (
+            sum(point[0] for point in points) / len(points),
+            sum(point[1] for point in points) / len(points),
+        )
+        for node_id, points in node_seed_points.items()
+        if points
+    }
+
+    # I componenti aggiunti dagli scenari non hanno bbox: vengono inseriti tra i nodi coinvolti.
+    for index, component in enumerate(pending):
+        component_id = str(component.get("id") or "")
+        component_node_ids = [str(node_id) for node_id in component.get("nodes") or []]
+        component_type = (
+            "scenario_voltage_source"
+            if component.get("layout_kind") == "scenario_voltage_source"
+            else normalize_component_type(
+                component.get("viewer_kind") or component.get("class_name") or component.get("kind"),
+                component.get("layout_kind"),
+            )
+        )
+        first_point = node_centers.get(component_node_ids[0]) if component_node_ids else None
+        second_point = node_centers.get(component_node_ids[1]) if len(component_node_ids) > 1 else None
+        terminals: list[dict[str, Any]] = []
+        connector_bridge: dict[str, Any] | None = None
+        parallel_reference = (
+            find_parallel_reference(positioned, component_node_ids, component_type)
+            if component.get("is_scenario_added") and component_type not in {"connection", "scenario_voltage_source"}
+            else None
+        )
+        parallel_branch = (
+            parallel_branch_position(
+                parallel_reference[0],
+                parallel_reference[1],
+                component_node_ids,
+                positioned,
+                component_type,
+                (float(transform["canvas_width"]), float(transform["canvas_height"])),
+            )
+            if parallel_reference
+            else None
+        )
+        scenario_source = (
+            scenario_voltage_source_position(
+                component,
+                positioned,
+                node_centers,
+                (float(transform["canvas_width"]), float(transform["canvas_height"])),
+            )
+            if component_type == "scenario_voltage_source"
+            else None
+        )
+        orientation = "horizontal"
+        placement = "scenario_or_fallback"
+        if scenario_source:
+            x = float(scenario_source["x"])
+            y = float(scenario_source["y"])
+            terminals = scenario_source["terminals"]
+            orientation = str(scenario_source["orientation"])
+            placement = str(scenario_source["placement"])
+            label_side = str(scenario_source["label_side"])
+            placement_score = float(scenario_source["placement_score"])
+        elif component_type == "connection" and len(component_node_ids) == 2:
+            for positioned_component in positioned.values():
+                if positioned_component.get("component_type") != "connector":
+                    continue
+                connector_terminals = {
+                    str(terminal.get("node_id") or ""): terminal
+                    for terminal in positioned_component.get("terminals") or []
+                }
+                if all(node_id in connector_terminals for node_id in component_node_ids):
+                    connector_bridge = {
+                        "component": positioned_component,
+                        "terminals": connector_terminals,
+                    }
+                    break
+
+        if scenario_source:
+            # La batteria scenario ha gia' terminali e posizione coerenti con il connector.
+            pass
+        elif connector_bridge:
+            # Un link tra pin dello stesso connector resta compatto e aderente al suo bordo.
+            connector = connector_bridge["component"]
+            connector_spec = component_spec("connector", "connector", len(connector.get("terminals") or []))
+            x = float(connector.get("x") or 0) + connector_spec["width"] / 2 + 12.0
+            first_y = float(connector_bridge["terminals"][component_node_ids[0]]["y"])
+            second_y = float(connector_bridge["terminals"][component_node_ids[1]]["y"])
+            y = (first_y + second_y) / 2
+            terminals = [
+                {"name": "t1", "node_id": component_node_ids[0], "x": x, "y": first_y},
+                {"name": "t2", "node_id": component_node_ids[1], "x": x, "y": second_y},
+            ]
+            orientation = "vertical"
+            placement = "connector_bridge"
+        elif parallel_branch:
+            # Un bipolo sugli stessi nodi eredita la geometria del ramo originale.
+            x = float(parallel_branch["x"])
+            y = float(parallel_branch["y"])
+            terminals = list(parallel_branch["terminals"])
+            orientation = str(parallel_branch["orientation"])
+            placement = str(parallel_branch["placement"])
+        elif first_point and second_point:
+            dx = second_point[0] - first_point[0]
+            dy = second_point[1] - first_point[1]
+            distance = max((dx * dx + dy * dy) ** 0.5, 1.0)
+            normal_x, normal_y = -dy / distance, dx / distance
+            offset = 34.0 + (index % 3) * 22.0
+            x = (first_point[0] + second_point[0]) / 2 + normal_x * offset
+            y = (first_point[1] + second_point[1]) / 2 + normal_y * offset
+            direction_x, direction_y = dx / distance, dy / distance
+            terminals = [
+                {"name": "t1", "node_id": component_node_ids[0], "x": x - direction_x * 34, "y": y - direction_y * 34},
+                {"name": "t2", "node_id": component_node_ids[1], "x": x + direction_x * 34, "y": y + direction_y * 34},
+            ]
+        else:
+            x = 520.0 + (index % 3 - 1) * 120.0
+            y = 310.0 + (index // 3) * 70.0
+        positioned[component_id] = {
+            "x": x,
+            "y": y,
+            "source_component_id": visual_source_id(component),
+            "layout_kind": component.get("layout_kind"),
+            "visual_class_name": component.get("class_name") or component.get("kind"),
+            "component_type": component_type,
+            "symbol_size": parallel_branch.get("symbol_size") if parallel_branch else None,
+            "label": component.get("label"),
+            "orientation": orientation,
+            "label_side": label_side if scenario_source else None,
+            "terminals": terminals,
+            "state": (component.get("parameters") or {}).get("state"),
+            "is_structural": bool(component.get("is_structural")),
+            "placement": placement,
+            "parallel_reference_id": parallel_branch.get("parallel_reference_id") if parallel_branch else None,
+            "placement_score": placement_score if scenario_source else None,
+        }
+        warnings.append(f"Geometria assente per {component_id}: applicato posizionamento tra nodi.")
+    # Le bbox definiscono la topologia; questa passata aggiunge lo spazio necessario ai simboli reali.
+    relax_component_spacing(positioned)
+    realign_parallel_branches(positioned)
+    return positioned, warnings
+
+
+def collect_node_points(positioned: dict[str, dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    """Raggruppa per nodo tutti i terminali geometrici disponibili."""
+    node_points: dict[str, list[dict[str, Any]]] = {}
+    for component_id, component in positioned.items():
+        for terminal in component.get("terminals") or []:
+            node_id = str(terminal.get("node_id") or "")
+            if not node_id:
+                continue
+            node_points.setdefault(node_id, []).append(
+                {
+                    "component_id": component_id,
+                    "terminal": terminal.get("name"),
+                    "terminal_id": terminal.get("terminal_id"),
+                    "relative_position": terminal.get("relative_position"),
+                    "x": terminal.get("x"),
+                    "y": terminal.get("y"),
+                    "is_structural": component.get("is_structural"),
+                    "component_type": component.get("component_type"),
+                    "orientation": component.get("orientation"),
+                    "placement": component.get("placement"),
+                    "parallel_reference_id": component.get("parallel_reference_id"),
+                }
+            )
+    return node_points
+
+
+def build_node_positions(model: dict[str, Any], node_points: dict[str, list[dict[str, Any]]]) -> dict[str, dict[str, Any]]:
+    """Calcola il punto di giunzione visuale di ogni nodo dalla media dei terminali."""
+    positions: dict[str, dict[str, Any]] = {}
+    for node in model.get("nodes") or []:
+        if not isinstance(node, dict):
+            continue
+        node_id = str(node.get("id") or "")
+        points = node_points.get(node_id) or []
+        if not points:
+            continue
+        positions[node_id] = {
+            "x": round(sum(float(point["x"]) for point in points) / len(points), 2),
+            "y": round(sum(float(point["y"]) for point in points) / len(points), 2),
+            "terminal_count": len(points),
+        }
+    return positions
+
+
+def compact_constraint_value(value: Any) -> str:
+    """Formatta il valore del vincolo lasciando leggibili anche forme SPICE complesse."""
+    text = str(value or "").strip()
+    match = re.fullmatch(r"([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*([A-Za-z]+)", text)
+    return f"{match.group(1)} {match.group(2)}" if match else text
+
+
+def build_node_constraints(
+    model: dict[str, Any],
+    node_positions: dict[str, dict[str, Any]],
+    component_positions: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Posiziona i vincoli diagnostici vicino ai nodi senza creare componenti fittizi."""
+    obstacles = [component_visual_bounds(component) for component in component_positions.values()]
+    obstacles.append((825.0, 14.0, 1025.0, 205.0))
+    constraints: list[dict[str, Any]] = []
+    badge_width, badge_height = 104.0, 28.0
+    candidate_offsets = ((72.0, -38.0), (-72.0, -38.0), (72.0, 38.0), (-72.0, 38.0), (0.0, -58.0), (0.0, 58.0))
+
+    for component in model.get("netlist_components") or []:
+        if not isinstance(component, dict) or component.get("viewer_kind") != "node_voltage_clamp":
+            continue
+        node_id = str(component.get("viewer_target_node") or "")
+        node_position = node_positions.get(node_id)
+        if not node_position:
+            continue
+        node_x = float(node_position["x"])
+        node_y = float(node_position["y"])
+        candidates: list[tuple[float, float, float, tuple[float, float, float, float]]] = []
+        for offset_x, offset_y in candidate_offsets:
+            label_x = node_x + offset_x
+            label_y = node_y + offset_y
+            bounds = (
+                label_x - badge_width / 2,
+                label_y - badge_height / 2,
+                label_x + badge_width / 2,
+                label_y + badge_height / 2,
+            )
+            overlap = sum(rectangle_overlap_area(bounds, obstacle) for obstacle in obstacles)
+            outside = max(0.0, 12.0 - bounds[0]) + max(0.0, bounds[2] - 1028.0)
+            outside += max(0.0, 12.0 - bounds[1]) + max(0.0, bounds[3] - 608.0)
+            score = overlap * 100.0 + outside * 10_000.0 + abs(offset_x) + abs(offset_y)
+            candidates.append((score, label_x, label_y, bounds))
+        _, label_x, label_y, selected_bounds = min(candidates, key=lambda candidate: candidate[0])
+        obstacles.append(selected_bounds)
+        constraints.append(
+            {
+                "source_component_id": str(component.get("id") or ""),
+                "node_id": node_id,
+                "value": compact_constraint_value(component.get("viewer_forced_value") or component.get("value")),
+                "x": round(node_x, 2),
+                "y": round(node_y, 2),
+                "label_x": round(label_x, 2),
+                "label_y": round(label_y, 2),
+            }
+        )
+    return constraints
+
+
+def connect_point_group(node_id: str, points: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Collega i terminali dello stesso nodo con un albero rettilineo minimo."""
+    if len(points) < 2:
+        return []
+
+    connections: list[dict[str, Any]] = []
+    parallel_points = [point for point in points if point.get("placement") == "parallel_branch"]
+    base_points = [point for point in points if point.get("placement") != "parallel_branch"]
+    for parallel_point in parallel_points:
+        reference_id = str(parallel_point.get("parallel_reference_id") or "")
+        reference_point = next(
+            (point for point in base_points if str(point.get("component_id") or "") == reference_id),
+            None,
+        )
+        if not reference_point:
+            base_points.append(parallel_point)
+            continue
+        connections.append(
+            {
+                "node_id": node_id,
+                "from": reference_point,
+                "to": parallel_point,
+                "kind": "electrical",
+                "placement": "parallel_branch_link",
+            }
+        )
+
+    if len(base_points) < 2:
+        return connections
+
+    # Prim sulla distanza Manhattan evita le lunghe stelle generate da un unico
+    # terminale e si accorda con i percorsi ortogonali usati dal renderer.
+    connected = [base_points[0]]
+    remaining = list(base_points[1:])
+    while remaining:
+        source, target = min(
+            (
+                (source_point, target_point)
+                for source_point in connected
+                for target_point in remaining
+            ),
+            key=lambda pair: (
+                abs(float(pair[0]["x"]) - float(pair[1]["x"]))
+                + abs(float(pair[0]["y"]) - float(pair[1]["y"])),
+                str(pair[0].get("component_id") or ""),
+                str(pair[1].get("component_id") or ""),
+            ),
+        )
+        distance = abs(float(source["x"]) - float(target["x"])) + abs(
+            float(source["y"]) - float(target["y"])
+        )
+        if distance > 0.5:
+            connections.append(
+                {
+                    "node_id": node_id,
+                    "from": source,
+                    "to": target,
+                    "kind": (
+                        "structural"
+                        if source.get("is_structural") and target.get("is_structural")
+                        else "electrical"
+                    ),
+                }
+            )
+        connected.append(target)
+        remaining.remove(target)
+    return connections
+
+
+def build_node_connections(
+    node_points: dict[str, list[dict[str, Any]]],
+    model: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Crea collegamenti terminale-terminale per ciascun nodo elettrico."""
+    connections: list[dict[str, Any]] = []
+    source_groups_by_node = {
+        str(node.get("id") or ""): node.get("source_groups") or []
+        for node in model.get("nodes") or []
+        if isinstance(node, dict)
+    }
+    for node_id, points in node_points.items():
+        source_groups = source_groups_by_node.get(node_id) or []
+        if node_id != "0" or not source_groups:
+            connections.extend(connect_point_group(node_id, points))
+            continue
+
+        # Le masse SPICE coincidono elettricamente, ma restano gruppi grafici separati.
+        points_by_terminal = {str(point.get("terminal_id") or ""): point for point in points}
+        grouped_terminal_ids: set[str] = set()
+        for source_group in source_groups:
+            group_points = [points_by_terminal[terminal_id] for terminal_id in source_group if terminal_id in points_by_terminal]
+            grouped_terminal_ids.update(str(terminal_id) for terminal_id in source_group)
+            connections.extend(connect_point_group(node_id, group_points))
+
+        # Terminali scenario non presenti nella base vengono collegati alla massa visuale piu' vicina.
+        ground_points = [point for point in points if str(point.get("component_id") or "").lower().startswith("gnd")]
+        for point in points:
+            if str(point.get("terminal_id") or "") in grouped_terminal_ids or not ground_points:
+                continue
+            nearest_ground = min(
+                ground_points,
+                key=lambda ground: (float(ground["x"]) - float(point["x"])) ** 2 + (float(ground["y"]) - float(point["y"])) ** 2,
+            )
+            if nearest_ground is not point:
+                connections.extend(connect_point_group(node_id, [point, nearest_ground]))
+    return connections
+
+
+def compact_route_points(points: list[tuple[float, float]]) -> list[tuple[float, float]]:
+    """Elimina punti duplicati e tratti consecutivi perfettamente allineati."""
+    compact: list[tuple[float, float]] = []
+    for point in points:
+        if compact and abs(compact[-1][0] - point[0]) < 0.01 and abs(compact[-1][1] - point[1]) < 0.01:
+            continue
+        compact.append(point)
+    changed = True
+    while changed and len(compact) >= 3:
+        changed = False
+        simplified = [compact[0]]
+        for index in range(1, len(compact) - 1):
+            previous = simplified[-1]
+            current = compact[index]
+            following = compact[index + 1]
+            same_x = (
+                abs(previous[0] - current[0]) < 0.01
+                and abs(current[0] - following[0]) < 0.01
+                and min(previous[1], following[1]) <= current[1] <= max(previous[1], following[1])
+            )
+            same_y = (
+                abs(previous[1] - current[1]) < 0.01
+                and abs(current[1] - following[1]) < 0.01
+                and min(previous[0], following[0]) <= current[0] <= max(previous[0], following[0])
+            )
+            if same_x or same_y:
+                changed = True
+                continue
+            simplified.append(current)
+        simplified.append(compact[-1])
+        compact = simplified
+    return compact
+
+
+def route_segments(points: list[tuple[float, float]]) -> list[tuple[tuple[float, float], tuple[float, float]]]:
+    """Trasforma una lista di punti ortogonali nei segmenti che la compongono."""
+    return [(first, second) for first, second in zip(points, points[1:]) if first != second]
+
+
+def route_score(
+    points: list[tuple[float, float]],
+    obstacles: list[tuple[float, float, float, float]],
+) -> float:
+    """Valuta un percorso premiando rette e una sola piega, ma evitando simboli."""
+    segments = route_segments(points)
+    length = sum(abs(end[0] - start[0]) + abs(end[1] - start[1]) for start, end in segments)
+    crossings = sum(
+        1
+        for segment in segments
+        for obstacle in obstacles
+        if segment_crosses_rectangle(segment, obstacle)
+    )
+    bends = max(len(segments) - 1, 0)
+    return crossings * 1_000_000.0 + bends * 34.0 + length
+
+
+def terminal_outward_direction(terminal: dict[str, Any]) -> tuple[float, float] | None:
+    """Restituisce la direzione esterna naturale del terminale sul simbolo disegnato."""
+    side = str(terminal.get("relative_position") or "").lower()
+    directions = {
+        "top": (0.0, -1.0),
+        "bottom": (0.0, 1.0),
+        "left": (-1.0, 0.0),
+        "right": (1.0, 0.0),
+    }
+    return directions.get(side)
+
+
+def terminal_side(terminal: dict[str, Any]) -> str:
+    """Normalizza il lato del terminale per scegliere una corsia di uscita coerente."""
+    side = str(terminal.get("relative_position") or "").lower()
+    return side if side in {"top", "bottom", "left", "right"} else ""
+
+
+def terminals_face_each_other(
+    start_point: tuple[float, float],
+    end_point: tuple[float, float],
+    start_direction: tuple[float, float] | None,
+    end_direction: tuple[float, float] | None,
+) -> bool:
+    """Verifica se due terminali allineati possono essere collegati da una retta naturale."""
+    if not start_direction or not end_direction:
+        return False
+    delta_x = end_point[0] - start_point[0]
+    delta_y = end_point[1] - start_point[1]
+    aligned = abs(delta_x) < 0.01 or abs(delta_y) < 0.01
+    if not aligned:
+        return False
+    start_points_to_end = start_direction[0] * delta_x + start_direction[1] * delta_y > 0
+    end_points_to_start = end_direction[0] * -delta_x + end_direction[1] * -delta_y > 0
+    return start_points_to_end and end_points_to_start
+
+
+def terminal_escape_point(
+    point: tuple[float, float], direction: tuple[float, float] | None
+) -> tuple[float, float]:
+    """Crea un breve tratto esterno al simbolo per mantenere leggibile l'ingresso del filo."""
+    if not direction:
+        return point
+    lead_length = 22.0
+    return point[0] + direction[0] * lead_length, point[1] + direction[1] * lead_length
+
+
+def route_connection(
+    connection: dict[str, Any],
+    positioned: dict[str, dict[str, Any]],
+) -> list[dict[str, float]]:
+    """Trova un percorso ortogonale corto tra due terminali, evitando gli altri simboli."""
+    start = connection.get("from") or {}
+    end = connection.get("to") or {}
+    start_point = (float(start.get("x") or 0), float(start.get("y") or 0))
+    end_point = (float(end.get("x") or 0), float(end.get("y") or 0))
+    start_direction = terminal_outward_direction(start)
+    end_direction = terminal_outward_direction(end)
+    start_side = terminal_side(start)
+    end_side = terminal_side(end)
+    start_escape = terminal_escape_point(start_point, start_direction)
+    end_escape = terminal_escape_point(end_point, end_direction)
+    endpoint_ids = {str(start.get("component_id") or ""), str(end.get("component_id") or "")}
+    obstacles = [
+        component_symbol_bounds(component)
+        for component_id, component in positioned.items()
+        if component_id not in endpoint_ids and component.get("component_type") not in {"ground", "terminal"}
+    ]
+    candidates: list[list[tuple[float, float]]] = []
+    start_component = positioned.get(str(start.get("component_id") or "")) or {}
+    end_component = positioned.get(str(end.get("component_id") or "")) or {}
+    connector_bridge_pair = (
+        {str(start_component.get("component_type") or ""), str(end_component.get("component_type") or "")}
+        == {"connector", "connection"}
+        and "connector_bridge" in {str(start_component.get("placement") or ""), str(end_component.get("placement") or "")}
+        and abs(start_point[1] - end_point[1]) < 0.01
+    )
+    if connector_bridge_pair:
+        # I pin e la dorsale adiacente sono gia' allineati: nessuna corsia di fuga.
+        candidates.append([start_point, end_point])
+    elif terminals_face_each_other(start_point, end_point, start_direction, end_direction):
+        candidates.append([start_point, end_point])
+    elif start_side and start_side == end_side and start_side in {"top", "bottom"}:
+        lane_y = min(start_point[1], end_point[1]) - 22.0 if start_side == "top" else max(start_point[1], end_point[1]) + 22.0
+        candidates.append([start_point, (start_point[0], lane_y), (end_point[0], lane_y), end_point])
+    elif start_side and start_side == end_side and start_side in {"left", "right"}:
+        lane_x = min(start_point[0], end_point[0]) - 22.0 if start_side == "left" else max(start_point[0], end_point[0]) + 22.0
+        candidates.append([start_point, (lane_x, start_point[1]), (lane_x, end_point[1]), end_point])
+    elif abs(start_escape[0] - end_escape[0]) < 0.01 or abs(start_escape[1] - end_escape[1]) < 0.01:
+        candidates.append([start_point, start_escape, end_escape, end_point])
+    candidates.extend(
+        [
+            [start_point, start_escape, (end_escape[0], start_escape[1]), end_escape, end_point],
+            [start_point, start_escape, (start_escape[0], end_escape[1]), end_escape, end_point],
+        ]
+    )
+
+    # Le corsie esterne sono un fallback: vengono usate solo se le due soluzioni a una piega incontrano un simbolo.
+    padding = 24.0
+    for obstacle in obstacles:
+        candidates.extend(
+            [
+                [start_point, start_escape, (start_escape[0], obstacle[1] - padding), (end_escape[0], obstacle[1] - padding), end_escape, end_point],
+                [start_point, start_escape, (start_escape[0], obstacle[3] + padding), (end_escape[0], obstacle[3] + padding), end_escape, end_point],
+                [start_point, start_escape, (obstacle[0] - padding, start_escape[1]), (obstacle[0] - padding, end_escape[1]), end_escape, end_point],
+                [start_point, start_escape, (obstacle[2] + padding, start_escape[1]), (obstacle[2] + padding, end_escape[1]), end_escape, end_point],
+            ]
+        )
+    compact_candidates = [compact_route_points(candidate) for candidate in candidates]
+    selected = min(compact_candidates, key=lambda candidate: route_score(candidate, obstacles))
+    return [{"x": round(point[0], 2), "y": round(point[1], 2)} for point in selected]
+
+
+def route_layout_connections(
+    connections: list[dict[str, Any]],
+    positioned: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Aggiunge a ogni collegamento il percorso preferito che il renderer deve seguire."""
+    for connection in connections:
+        connection["route"] = route_connection(connection, positioned)
+    return connections
+
+
+def relocate_overlapping_ground_symbols(
+    positioned: dict[str, dict[str, Any]],
+    model: dict[str, Any],
+) -> None:
+    """Sposta una massa fuori da un simbolo quando le bbox la collocano al suo interno."""
+    ground_groups = [
+        set(str(terminal_id) for terminal_id in group)
+        for node in model.get("nodes") or []
+        if isinstance(node, dict) and str(node.get("id") or "") == "0"
+        for group in node.get("source_groups") or []
+        if isinstance(group, list)
+    ]
+
+    for ground in positioned.values():
+        if ground.get("component_type") != "ground":
+            continue
+        terminal = (ground.get("terminals") or [{}])[0]
+        terminal_id = str(terminal.get("terminal_id") or "")
+        terminal_x = float(terminal.get("x") or ground.get("x") or 0)
+        terminal_y = float(terminal.get("y") or ground.get("y") or 0)
+        group = next((item for item in ground_groups if terminal_id in item), set())
+
+        for component_id, component in positioned.items():
+            if component is ground or component.get("component_type") == "ground":
+                continue
+            bounds = component_visual_bounds(component)
+            if not point_in_rectangle((terminal_x, terminal_y), bounds):
+                continue
+            contacts = [
+                candidate
+                for candidate in component.get("terminals") or []
+                if str(candidate.get("terminal_id") or "") in group
+            ]
+            if not contacts:
+                continue
+            contact = min(
+                contacts,
+                key=lambda candidate: (float(candidate.get("x") or 0) - terminal_x) ** 2
+                + (float(candidate.get("y") or 0) - terminal_y) ** 2,
+            )
+            side = str(contact.get("relative_position") or "bottom").lower()
+            contact_x = float(contact.get("x") or 0)
+            contact_y = float(contact.get("y") or 0)
+            if side == "top":
+                terminal_x, terminal_y = contact_x, bounds[1] - 10.0
+            elif side == "left":
+                terminal_x, terminal_y = bounds[0] - 10.0, contact_y
+            elif side == "right":
+                terminal_x, terminal_y = bounds[2] + 10.0, contact_y
+            else:
+                terminal_x, terminal_y = contact_x, bounds[3] + 10.0
+
+            # Una massa appena estratta dal primo simbolo puo' ricadere in un secondo.
+            for _ in range(3):
+                blockers = [
+                    component_visual_bounds(other)
+                    for other in positioned.values()
+                    if other is not ground and other.get("component_type") != "ground"
+                    and point_in_rectangle((terminal_x, terminal_y), component_visual_bounds(other))
+                ]
+                if not blockers:
+                    break
+                if side == "top":
+                    terminal_y = min(blocker[1] for blocker in blockers) - 10.0
+                elif side == "left":
+                    terminal_x = min(blocker[0] for blocker in blockers) - 10.0
+                elif side == "right":
+                    terminal_x = max(blocker[2] for blocker in blockers) + 10.0
+                else:
+                    terminal_y = max(blocker[3] for blocker in blockers) + 10.0
+
+            terminal["x"] = terminal_x
+            terminal["y"] = terminal_y
+            spec = component_spec("ground", "ground", 1)
+            ground["x"] = terminal_x
+            ground["y"] = terminal_y + float(spec["height"]) / 2
+            break
+
+
+def build_viewer_layout(run_dir: Path) -> dict[str, Any]:
+    """Costruisce il layout visuale a partire da `13_viewer_model.json`."""
+    run_dir = run_dir.resolve()
+    model = read_json(run_dir / VIEWER_MODEL_NAME)
+    components = collect_layout_components(model)
+    geometry_seed = model.get("geometry_seed") or {}
+    transform = canvas_transform(geometry_seed)
+    component_positions, warnings = build_image_guided_components(components, geometry_seed, transform)
+    relocate_overlapping_ground_symbols(component_positions, model)
+    align_near_perpendicular_leads(component_positions)
+    realign_connector_bridges(component_positions)
+    node_points = collect_node_points(component_positions)
+    node_positions = build_node_positions(model, node_points)
+    connections = route_layout_connections(build_node_connections(node_points, model), component_positions)
+    layout_status = "image_guided" if geometry_seed.get("status") == "loaded" else "fallback"
+    return {
+        "source_format": "pipeline2.0_viewer_layout",
+        "schema_version": 23,
+        "metadata": {
+            "run_dir": str(run_dir),
+            "source_model_path": str(run_dir / VIEWER_MODEL_NAME),
+            "generated_at": datetime.now().isoformat(timespec="seconds"),
+        },
+        "layout_status": layout_status,
+        "canvas": {"width": 1040, "height": 620, "grid": 40},
+        "transform": transform,
+        "components": component_positions,
+        "nodes": node_positions,
+        "node_constraints": build_node_constraints(model, node_positions, component_positions),
+        "connections": connections,
+        "warnings": warnings if model else [f"Viewer model mancante: {run_dir / VIEWER_MODEL_NAME}"],
+    }
+
+
+def write_viewer_layout(run_dir: Path) -> dict[str, Any]:
+    """Genera e salva `14_viewer_layout.json` nella cartella della run."""
+    layout = build_viewer_layout(run_dir)
+    write_json(run_dir / VIEWER_LAYOUT_NAME, layout)
+    return layout
+
+
+def main() -> None:
+    """Gestisce l'esecuzione da riga di comando dello step 14."""
+    parser = argparse.ArgumentParser(description="Genera il layout viewer Pipeline 2.0 per una cartella run.")
+    parser.add_argument("--run-dir", required=True, help="Cartella run che contiene 13_viewer_model.json.")
+    args = parser.parse_args()
+    layout = write_viewer_layout(Path(args.run_dir))
+    print(f"Scritto {Path(args.run_dir) / VIEWER_LAYOUT_NAME}")
+    print(f"Componenti posizionati: {len(layout.get('components') or {})}")
+
+
+if __name__ == "__main__":
+    main()

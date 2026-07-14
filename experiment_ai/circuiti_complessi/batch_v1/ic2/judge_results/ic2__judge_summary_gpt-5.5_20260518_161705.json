@@ -1,0 +1,899 @@
+[
+  {
+    "metadata": {
+      "circuit": "ic2",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic2\\results_json\\ic2_gpt-4.1-mini_20260518_123035.txt",
+      "model_under_test": "gpt-4.1-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 27.462,
+      "timestamp": "2026-05-18 16:10:36",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=24436, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1325, output_tokens_details=OutputTokensDetails(reasoning_tokens=423), total_tokens=25761)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 16,
+      "max_score": 21,
+      "normalized_score": 0.7619047619,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Difetto locale della cifra interessata: segmento LED interno guasto o pin/contatto del singolo display aperto",
+        "Interruzione o saldatura difettosa tra il bus segmenti condiviso e i pin a/b/c/d/e/f/g della sola cifra difettosa",
+        "Errore di multiplexing o pilotaggio software solo durante l'abilitazione di quella cifra",
+        "Problema sul transistor di abilitazione/common della cifra, più probabile se l'intera cifra è debole o spenta, non se mancano solo alcuni segmenti"
+      ],
+      "model_primary_cause": "Malfunzionamento o mancato pilotaggio del transistor di abilitazione della cifra multiplexata",
+      "major_errors": [
+        "La causa messa al primo posto, cioè il transistor/common cathode della cifra, spiega meglio una cifra interamente spenta o attenuata, non la mancanza selettiva di alcuni segmenti.",
+        "Non evidenzia con sufficiente forza che, essendo i segmenti condivisi tra le due cifre, un guasto su una resistenza o su una linea P0 comune dovrebbe influenzare entrambe le cifre, mentre un difetto su una sola cifra punta a display/pin/connessione locale."
+      ],
+      "hallucinations": [
+        "Parla di 'resistenze dei singoli segmenti verso quella cifra', ma nel circuito le resistenze dei segmenti sono condivise prima della diramazione verso entrambe le cifre.",
+        "In un punto suggerisce genericamente che P3.4-P3.7 pilotino anche segmenti/transistor, mentre dal JSON quei pin sono collegati ai segnali di controllo dell'ADC; i transistor delle cifre sono su P3.2 e P3.1."
+      ],
+      "missed_important_points": [
+        "Non propone esplicitamente come prima verifica di scambiare le due cifre/display o confrontare lo stesso segmento sulla cifra sana per distinguere display guasto da linea comune.",
+        "Non sottolinea abbastanza che un guasto su P0.x o su una resistenza R1-R8 dovrebbe far mancare lo stesso segmento su entrambe le cifre.",
+        "Non identifica come causa primaria il possibile guasto interno dei LED del display della sola cifra interessata."
+      ],
+      "strengths": [
+        "Comprende correttamente l'architettura generale ADC0804, AT89S51 e due display a 7 segmenti multiplexati.",
+        "Usa bene il JSON per ricostruire bus ADC, linee di controllo, segmenti condivisi e transistor di selezione.",
+        "Riconosce correttamente che VREF/2 non connesso può alterare la conversione ma non è causa diretta di segmenti mancanti su una sola cifra.",
+        "Propone controlli pratici utili con multimetro/oscilloscopio su basi dei transistor, common dei display e linee dei segmenti."
+      ],
+      "short_explanation": "Risposta tecnicamente utile e ben strutturata, con buona lettura del JSON. Tuttavia la priorità diagnostica non è ottimale: se su una sola cifra mancano solo alcuni segmenti, la causa più probabile è un difetto locale del display o dei collegamenti dei singoli segmenti di quella cifra, mentre il transistor di common causerebbe più verosimilmente una cifra intera spenta o debole. Include anche cause meno pertinenti come ADC e VREF, pur indicandole come meno probabili."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic2",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic2\\results_json\\ic2_gpt-4.1-nano_20260518_123150.txt",
+      "model_under_test": "gpt-4.1-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 29.733,
+      "timestamp": "2026-05-18 16:11:06",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=23648, input_tokens_details=InputTokensDetails(cached_tokens=19200), output_tokens=1511, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=25159)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 1,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 1,
+        "cause_priority": 0,
+        "practical_checks": 2,
+        "hallucination_absence": 1
+      },
+      "total_score": 8,
+      "max_score": 21,
+      "normalized_score": 0.381,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Interruzione o cattivo contatto sui collegamenti dei segmenti specifici della cifra difettosa, tra bus segmenti condiviso e pin del display",
+        "Display a 7 segmenti della cifra difettosa con LED interni o pin dei segmenti guasti",
+        "Saldature o piste difettose sui pin a-g/h della sola cifra interessata",
+        "Problema sul transistor/comune della cifra solo se l'intera cifra è spenta o molto debole, non tipicamente solo alcuni segmenti"
+      ],
+      "model_primary_cause": "Pin com dei display non collegati correttamente a massa o problema generale di alimentazione/massa",
+      "major_errors": [
+        "La priorità data al pin com non è coerente con il sintomo 'mancano alcuni segmenti su una sola cifra': un guasto del comune o del transistor di selezione tende a spegnere o indebolire l'intera cifra, non solo alcuni segmenti.",
+        "Indica di controllare connessioni tra P1.0-P1.7 e i segmenti, ma nel circuito P1.0-P1.7 sono collegati al bus dati D0-D7 dell'ADC; i segmenti sono pilotati da P0.0-P0.7 tramite resistenze.",
+        "Interpreta il warning 'integrated_circuit11.1_top_1' come possibile pin di segmento, ma è il pin 9 VREF/2 dell'ADC0804, non un pin del display.",
+        "Afferma che l'ingresso ADC pin 6 è collegato al segnale analogico, mentre dal JSON il pin 6 risulta nello stesso nodo di GND/pin 7/pin 8 e della resistenza; comunque questo non è pertinente al guasto dei segmenti."
+      ],
+      "hallucinations": [
+        "Possibile riferimento a un 'pin 9 del display' o a un terminale a-h non collegato derivato dal warning, non supportato dal JSON.",
+        "Collegamento dei segmenti a P1.0-P1.7, non supportato dal circuito.",
+        "Alimentazione e reset definiti come apparentemente corretti senza reale verifica completa dai soli terminali indicati."
+      ],
+      "missed_important_points": [
+        "Non evidenzia che i segmenti delle due cifre sono multiplexati e condividono lo stesso bus segmenti: se un segmento manca solo su una cifra, il driver MCU/resistenza comune è meno probabile rispetto al collegamento o LED interno della singola cifra.",
+        "Non distingue chiaramente tra guasto di segmenti individuali e guasto del comune/transistor di abilitazione della cifra.",
+        "Non usa correttamente la topologia P0.0-P0.7 -> resistenze -> segmenti condivisi e P3.2/P3.1 -> transistor di selezione."
+      ],
+      "strengths": [
+        "Comprende a grandi linee la struttura del circuito: ADC0804, AT89S51 e due display multiplexati.",
+        "Propone controlli pratici utili come verifica dei segmenti, resistenze, transistor di abilitazione e test del display.",
+        "Include tra le possibili cause segmenti scollegati o display difettoso, che sono compatibili con il sintomo."
+      ],
+      "short_explanation": "La risposta è parzialmente utile ma la causa prioritaria è mal scelta: il comune o il transistor della cifra spiegherebbero più facilmente una cifra intera spenta, non solo alcuni segmenti mancanti. La diagnosi avrebbe dovuto dare priorità ai collegamenti o LED interni dei segmenti della sola cifra difettosa, dato che i segmenti sono condivisi tra le due cifre. Ci sono inoltre errori di lettura del JSON, in particolare la confusione tra P1 dell'ADC e P0 dei segmenti, e l'interpretazione errata del warning sul pin 9 dell'ADC."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic2",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic2\\results_json\\ic2_gpt-4o-mini_20260518_122920.txt",
+      "model_under_test": "gpt-4o-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 27.685,
+      "timestamp": "2026-05-18 16:11:33",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=22920, input_tokens_details=InputTokensDetails(cached_tokens=19200), output_tokens=1360, output_tokens_details=OutputTokensDetails(reasoning_tokens=457), total_tokens=24280)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 1,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 1,
+        "cause_priority": 0,
+        "practical_checks": 2,
+        "hallucination_absence": 1
+      },
+      "total_score": 8,
+      "max_score": 21,
+      "normalized_score": 0.38095238095238093,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": false,
+      "expected_primary_causes": [
+        "Interruzione o cattivo contatto sui collegamenti dei segmenti della sola cifra interessata, tra bus segmenti condiviso e pin del display difettoso",
+        "Segmenti LED interni guasti nella cifra interessata",
+        "Problema sul comune della cifra o sul transistor di selezione relativo, se il difetto coinvolge l'intera cifra o causa luminosità anomala",
+        "Saldature, piste o pin del display difettoso da verificare localmente sulla cifra che perde segmenti"
+      ],
+      "model_primary_cause": "Collegamento del CS dell'ADC0804 non corretto, associato erroneamente al pin 9 non connesso",
+      "major_errors": [
+        "Identifica il pin 9 dell'ADC0804 come CS, ma da datasheet il pin 9 è VREF/2; CS è il pin 1 ed è rappresentato nel JSON come right_9 collegato al microcontrollore.",
+        "Attribuisce il warning integrated_circuit11.1_top_1 al chip select, mentre il warning riguarda VREF/2 lasciato aperto, condizione ammessa per range 0-5 V.",
+        "Dà priorità a problemi dell'ADC per un sintomo localizzato su una sola cifra del display, mentre un guasto ADC o bus dati produrrebbe valori errati su entrambe le cifre, non segmenti mancanti solo su una cifra.",
+        "Non sfrutta la topologia del display multiplexato: segmenti condivisi e comuni separati tramite transistor."
+      ],
+      "hallucinations": [
+        "Pin 9 dell'ADC0804 indicato come CS e definito critico per la selezione del convertitore.",
+        "Pin 10, 11, 12 dell'ADC0804 indicati come RD, WR, INTR nella sezione pin principali, mentre nel datasheet pin 10 è DGND e RD/WR/INTR sono pin 2/3/5."
+      ],
+      "missed_important_points": [
+        "Per segmenti mancanti su una sola cifra, la causa più coerente è un problema locale del display o dei collegamenti dei segmenti della cifra interessata.",
+        "Le linee dei segmenti sono condivise fra i due display; quindi un difetto sulle uscite P0 o sulle resistenze comuni tenderebbe a comparire su entrambe le cifre.",
+        "Il transistor di selezione della cifra va controllato, ma è più indicativo di cifra spenta/dim nel complesso che di soli alcuni segmenti mancanti.",
+        "Il pin VREF/2 aperto dell'ADC0804 non è necessariamente un guasto secondo il datasheet."
+      ],
+      "strengths": [
+        "Comprende a grandi linee la struttura ADC0804, AT89S51 e display multiplexati.",
+        "Riconosce la presenza dei transistor di selezione delle due cifre.",
+        "Propone alcuni controlli pratici generici su transistor, resistenze e porte del microcontrollore."
+      ],
+      "short_explanation": "La risposta è solo parzialmente utile: descrive correttamente l'architettura generale, ma la diagnosi principale è sbagliata perché confonde il pin 9 VREF/2 dell'ADC0804 con CS e dà priorità a un problema ADC non coerente con segmenti mancanti su una sola cifra. Il guasto più probabile è locale alla cifra/display, ai suoi pin di segmento, saldature o eventualmente al circuito di abilitazione della cifra."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic2",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic2\\results_json\\ic2_gpt-5-mini_20260518_125937.txt",
+      "model_under_test": "gpt-5-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 25.181,
+      "timestamp": "2026-05-18 16:11:59",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=24220, input_tokens_details=InputTokensDetails(cached_tokens=19200), output_tokens=1391, output_tokens_details=OutputTokensDetails(reasoning_tokens=506), total_tokens=25611)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 16,
+      "max_score": 21,
+      "normalized_score": 0.7619047619,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": false,
+      "expected_primary_causes": [
+        "Difetto locale della cifra interessata: segmenti LED interni guasti o pin/saldature dei segmenti aperti sul display",
+        "Interruzione o falso contatto tra bus segmenti condiviso e i pin della sola cifra guasta",
+        "Errore firmware/timing di multiplexing che applica un pattern segmenti errato solo durante l'abilitazione di quella cifra",
+        "Problema sulla linea comune/transistor di abilitazione solo se l'intera cifra è debole o instabile, non tipicamente se mancano solo alcuni segmenti"
+      ],
+      "model_primary_cause": "Transistor di abilitazione della cifra difettoso o relativo circuito di base",
+      "major_errors": [
+        "La causa principale proposta, cioè il transistor di abilitazione della cifra, spiega meglio una cifra completamente spenta o globalmente debole, non la mancanza di alcuni segmenti specifici su una sola cifra.",
+        "Le prime tre cause sono concentrate sulla selezione comune della cifra, mentre il sintomo indicato punta più direttamente a difetti locali dei singoli segmenti o dei loro pin/saldature sulla cifra interessata."
+      ],
+      "hallucinations": [
+        "La nota secondo cui il firmware potrebbe configurare P0 come push-pull è poco supportata per un AT89S51 standard: Port 0 è open-drain come indicato dal datasheet e richiede pull-up esterni se deve fornire un livello alto robusto."
+      ],
+      "missed_important_points": [
+        "Avrebbe dovuto dare priorità al controllo dei pin segmenti della sola cifra guasta, perché le linee a-g/DP sono condivise tra i due display.",
+        "Avrebbe dovuto distinguere più chiaramente tra 'alcuni segmenti mancanti' e 'intera cifra debole/spenta': sono sintomi con cause probabili diverse.",
+        "Il problema dei pull-up su Port 0, pur reale, avrebbe effetti comuni a entrambe le cifre e non è la causa primaria se il difetto è limitato a una sola cifra."
+      ],
+      "strengths": [
+        "Comprende correttamente la struttura generale: AT89S51, ADC0804, due display common cathode multiplexati, segmenti condivisi e transistor NPN di selezione cifra.",
+        "Usa bene il JSON per identificare collegamenti specifici tra P0.x, resistenze, segmenti, transistor e pin P3.1/P3.2.",
+        "Riconosce correttamente che l'ADC0804 non è direttamente coinvolto nel guasto dei segmenti del display.",
+        "Propone controlli pratici realistici con multimetro e oscilloscopio.",
+        "Include, anche se troppo in basso nella priorità, la possibilità di difetto locale del display o delle saldature."
+      ],
+      "short_explanation": "La risposta è tecnicamente ben strutturata e legge correttamente il circuito dal JSON, ma dà priorità al transistor di abilitazione della cifra. Per un sintomo di alcuni segmenti mancanti su una sola cifra, la diagnosi più probabile è invece un difetto locale dei segmenti della cifra, dei relativi pin o saldature; le linee segmento sono condivise, quindi un guasto sulle resistenze o su P0 influenzerebbe entrambe le cifre. La risposta resta utile per i controlli pratici, ma la priorità diagnostica non è ottimale."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic2",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic2\\results_json\\ic2_gpt-5-nano_20260518_123258.txt",
+      "model_under_test": "gpt-5-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 33.175,
+      "timestamp": "2026-05-18 16:12:32",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=24630, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1768, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=26398)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 1,
+        "datasheet_use": 1,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 2,
+        "hallucination_absence": 1
+      },
+      "total_score": 9,
+      "max_score": 21,
+      "normalized_score": 0.4285714286,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Interruzione o cattivo contatto sui pin/collegamenti dei segmenti della sola cifra difettosa, oppure segmenti LED interni guasti nel display interessato",
+        "Saldatura o collegamento aperto tra il bus segmenti condiviso e uno specifico pin a-g/h del display difettoso",
+        "Problema sul comune o sul transistor di selezione della cifra solo se l'intera cifra è spenta o molto debole, non tipicamente solo alcuni segmenti",
+        "Guasto software/multiplexing meno probabile, da verificare sui segnali di abilitazione P3.2/P3.1 e sulle uscite segmenti P0.0-P0.7"
+      ],
+      "model_primary_cause": "Perdita di continuità o cattivo collegamento in uno dei percorsi dei segmenti della cifra problematica",
+      "major_errors": [
+        "Attribuisce il pilotaggio dei display alla porta P1.x, mentre dal JSON e dallo schema i segmenti sono pilotati da P0.0-P0.7 tramite resistenze; P1.0-P1.7 è il bus dati dell'ADC0804.",
+        "Propone controlli di continuità da P1.x ai segmenti del display, tecnicamente sbagliati per questo circuito.",
+        "Indica P3.6/P3.7 come possibili linee di multiplexing, mentre nel circuito P3.6/P3.7 sono collegate a RD/CS dell'ADC e le abilitazioni display sono su P3.2 e P3.1 tramite R11/R12.",
+        "Non evidenzia chiaramente che le linee segmenti e le resistenze sono condivise tra le due cifre: un guasto su P0.x o su una resistenza R1-R8 normalmente farebbe mancare lo stesso segmento su entrambe le cifre, non su una sola."
+      ],
+      "hallucinations": [
+        "Riferimento a terminal26.x come comuni delle cifre, mentre nel JSON i comuni dei display sono integrated_circuit11.3_bottom_1 e integrated_circuit11.4_bottom_1 collegati ai collettori dei transistor.",
+        "Descrizione generica di 'pin di alimentazione del display' non presente come pin separato nel display a catodo comune.",
+        "Uso improprio di P1.x come percorso verso i segmenti dei display."
+      ],
+      "missed_important_points": [
+        "La diagnosi avrebbe dovuto distinguere tra guasto condiviso dei segmenti, che colpirebbe entrambe le cifre, e guasto locale alla singola cifra, che indica più probabilmente display, saldatura o collegamento del pin segmento specifico.",
+        "Non ha mappato correttamente i segmenti: P0.0-P0.7 passano attraverso resistor22.11, 22.9, 22.10, 22.5, 22.7, 22.6, 22.8, 22.4 verso i segmenti condivisi dei due display.",
+        "Non ha identificato correttamente i transistor di selezione: npn_transistor18.1 e npn_transistor18.2 con emettitore a GND, collettore al comune, basi pilotate da P3.2 e P3.1 tramite resistor22.12 e resistor22.13.",
+        "Non ha sfruttato il fatto che il warning sull'ADC VREF/2 non collegato è normale/ammissibile secondo datasheet e non rilevante per segmenti mancanti su una sola cifra."
+      ],
+      "strengths": [
+        "Ha compreso a grandi linee la presenza di ADC0804, AT89S51 e due display multiplexati a catodo comune.",
+        "La causa principale proposta, cioè un'interruzione o cattivo contatto su linee di segmento della cifra difettosa, è compatibile con il sintomo se intesa come guasto locale al display o al suo pin.",
+        "Suggerisce controlli pratici utili come misure di continuità, misura del comune durante il multiplexing e verifica delle resistenze/connessioni.",
+        "Riconosce che problemi di ADC o clock sono meno probabili per un difetto limitato ai segmenti di una sola cifra."
+      ],
+      "short_explanation": "Risposta parzialmente utile: individua correttamente come ipotesi generale un problema locale sui segmenti o sul comune della cifra difettosa, e propone controlli pratici sensati. Tuttavia commette errori topologici importanti leggendo il JSON: i display sono pilotati da P0.0-P0.7, non da P1.x; P1 è il bus ADC. Anche le linee di abilitazione sono P3.2/P3.1, non P3.6/P3.7. Inoltre non sottolinea abbastanza che le resistenze e le linee segmenti sono condivise, quindi un guasto a monte affliggerebbe entrambe le cifre, mentre il sintomo su una sola cifra punta soprattutto a display, pin, saldature o collegamenti locali."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic2",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic2\\results_json\\ic2_gpt-5.4-mini_20260518_130250.txt",
+      "model_under_test": "gpt-5.4-mini",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 17.457,
+      "timestamp": "2026-05-18 16:12:49",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=23398, input_tokens_details=InputTokensDetails(cached_tokens=19200), output_tokens=1042, output_tokens_details=OutputTokensDetails(reasoning_tokens=352), total_tokens=24440)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 3
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.952,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Difetto locale della cifra interessata: display a 7 segmenti guasto, pin non saldato o collegamento locale interrotto tra bus segmenti condiviso e quella cifra",
+        "Problema sul transistor di selezione o sul pilotaggio del comune della cifra difettosa, più probabile se la cifra è debole/intermittente globalmente",
+        "Interruzione o falso contatto su una linea segmento solo dopo la diramazione verso la cifra interessata"
+      ],
+      "model_primary_cause": "Difetto locale della cifra interessata: segmento LED interno guasto, pin del display non saldato o pista/interconnessione locale interrotta",
+      "major_errors": [],
+      "hallucinations": [],
+      "missed_important_points": [
+        "Non evidenzia che l'AT89S51 Port 0 è open-drain e in generale richiede pull-up o pilotaggio adeguato per pilotare segmenti common cathode; tuttavia questo difetto tenderebbe a coinvolgere entrambe le cifre, quindi non è la causa principale del sintomo specifico.",
+        "Non cita il warning del JSON su VREF/2 dell'ADC0804 non connesso, ma è poco rilevante per segmenti mancanti su una sola cifra."
+      ],
+      "strengths": [
+        "Comprende correttamente l'architettura ADC0804, AT89S51 e due display multiplexati.",
+        "Usa bene il JSON per riconoscere segmenti condivisi, comuni separati e transistor NPN di selezione.",
+        "Dà correttamente priorità a un guasto locale della cifra, coerente con il fatto che le linee dei segmenti sono condivise.",
+        "Distingue correttamente tra guasto di segmento locale e guasto di linea comune che influenzerebbe entrambe le cifre.",
+        "Propone controlli pratici sensati: continuità, forzatura segmenti, scambio display/transistor, routine di test."
+      ],
+      "short_explanation": "La risposta è tecnicamente solida: dal JSON identifica correttamente il multiplexing con segmenti condivisi e comuni separati, quindi conclude in modo coerente che segmenti mancanti su una sola cifra indicano soprattutto un problema locale del display o delle sue connessioni. Le priorità diagnostiche e i controlli pratici sono appropriati. L'unica omissione significativa è il tema del Port 0 open-drain dell'AT89S51, ma non è la causa più coerente con il sintomo su una sola cifra."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic2",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic2\\results_json\\ic2_gpt-5.4-nano_20260518_130225.txt",
+      "model_under_test": "gpt-5.4-nano",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 26.717,
+      "timestamp": "2026-05-18 16:13:16",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=24137, input_tokens_details=InputTokensDetails(cached_tokens=19200), output_tokens=1363, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=25500)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 17,
+      "max_score": 21,
+      "normalized_score": 0.8095238095238095,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "segmento LED interno guasto nella cifra interessata",
+        "pin o saldatura del segmento della singola cifra interrotto",
+        "collegamento tra bus segmenti condiviso e pin segmento della cifra difettosa aperto",
+        "problema sul comune/transistor di abilitazione della cifra solo se la cifra è globalmente debole o parzialmente accesa"
+      ],
+      "model_primary_cause": "Segmento/i della cifra difettosa non pilotato/i per resistore interrotto, pista interrotta o collegamento mancante su una o più linee segmento",
+      "major_errors": [
+        "La risposta non evidenzia abbastanza che le linee segmento e le resistenze sono condivise tra le due cifre: un resistore o una linea MCU-segmento interrotta normalmente farebbe mancare lo stesso segmento su entrambe le cifre, non solo su una.",
+        "Il transistor di abilitazione viene proposto come seconda causa probabile, ma un guasto del transistor/comune tende più a spegnere o attenuare l'intera cifra, non solo alcuni segmenti specifici."
+      ],
+      "hallucinations": [
+        "Il suggerimento di collegare o verificare VREF/2 anche 'a massa' è potenzialmente fuorviante per l'ADC0804: dal datasheet il pin 9 può essere lasciato aperto per fondo scala 0-5 V; il warning JSON non è una causa plausibile del difetto dei segmenti."
+      ],
+      "missed_important_points": [
+        "Avrebbe dovuto dare maggiore priorità al display stesso o alle saldature/pin dei segmenti della sola cifra difettosa, dato che i segmenti sono multiplexati e condivisi.",
+        "Avrebbe potuto indicare che se il medesimo segmento manca su entrambe le cifre allora la causa si sposta verso resistenza/uscita P0.x del microcontrollore, mentre se manca solo su una cifra è più probabile il display o il collegamento locale di quella cifra."
+      ],
+      "strengths": [
+        "Comprende correttamente la struttura generale: ADC0804, AT89S51, due display a 7 segmenti multiplexati con transistor NPN sui comuni.",
+        "Usa bene il JSON per citare collegamenti specifici tra microcontrollore, resistenze, segmenti, comuni e transistor.",
+        "Riconosce correttamente che il pin VREF/2 non connesso dell'ADC non spiega il sintomo dei segmenti mancanti.",
+        "Propone controlli pratici utili: continuità, verifica resistenze, saldature, test transistor e prova diretta dei segmenti."
+      ],
+      "short_explanation": "La risposta è complessivamente utile e tecnicamente coerente: identifica correttamente il display multiplexato e orienta la diagnosi verso segmenti, collegamenti locali, display e transistor. Il limite principale è che considera troppo probabile un resistore o una linea segmento comune interrotta, che in questo schema dovrebbe influenzare entrambe le cifre; per una sola cifra sono più probabili pin/saldature/display della cifra interessata. Buoni i controlli pratici e l'uso del JSON."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic2",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic2\\results_json\\ic2_gpt-5.4_20260518_130352.txt",
+      "model_under_test": "gpt-5.4",
+      "input_type": "JSON + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 18.803,
+      "timestamp": "2026-05-18 16:13:35",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=24520, input_tokens_details=InputTokensDetails(cached_tokens=19200), output_tokens=1025, output_tokens_details=OutputTokensDetails(reasoning_tokens=320), total_tokens=25545)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 3
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9523809524,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Difetto locale della cifra interessata: segmento LED interno guasto, pin del display saldato male o contatto difettoso",
+        "Interruzione/saldatura difettosa tra il bus segmenti condiviso e i pin segmento della sola cifra difettosa",
+        "Problema sul comune o transistor di selezione della cifra, più probabile se l'intera cifra è debole o instabile"
+      ],
+      "model_primary_cause": "Problema locale alla cifra difettosa: display guasto, pin saldato male, pista interrotta o segmento LED interno guasto",
+      "major_errors": [],
+      "hallucinations": [],
+      "missed_important_points": [
+        "Il problema sul transistor di selezione o sul comune tende più tipicamente a influenzare tutta la cifra o la luminosità globale, non solo alcuni segmenti, anche se resta una verifica utile",
+        "Non evidenzia che, essendo Port 0 open-drain, l'assenza di pull-up renderebbe il pilotaggio dei segmenti una criticità generale su entrambe le cifre più che un difetto localizzato"
+      ],
+      "strengths": [
+        "Comprende correttamente la struttura del circuito: ADC0804, AT89S51 e due display a 7 segmenti multiplexati",
+        "Usa bene il JSON per ricostruire i collegamenti dei segmenti condivisi e dei transistor di selezione",
+        "Deduce correttamente che un guasto su una sola cifra è più coerente con un difetto locale del display o delle sue connessioni, non con le linee segmento comuni",
+        "Propone controlli pratici pertinenti: continuità sui segmenti, verifica del display, controllo del transistor e del comune",
+        "Nota correttamente che l'ADC0804 e il pin VREF/2 non spiegano direttamente segmenti mancanti su una sola cifra",
+        "Riconosce correttamente la criticità di Port 0 open-drain, ma la classifica come meno coerente con il sintomo specifico"
+      ],
+      "short_explanation": "La risposta è tecnicamente solida e ben supportata dal JSON: identifica correttamente che i segmenti sono condivisi tra le due cifre, quindi segmenti mancanti solo su una cifra indicano soprattutto un problema locale del display, dei suoi pin o delle saldature. Le verifiche suggerite sono utili e realistiche. L'unico limite minore è che il transistor/comune viene trattato come causa di segmenti mancanti, mentre più spesso causerebbe una cifra intera debole o assente."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic2",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic2\\results_json_img\\ic2_gpt-4.1-mini_20260518_160359.txt",
+      "model_under_test": "gpt-4.1-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 32.39,
+      "timestamp": "2026-05-18 16:14:07",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=23503, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1661, output_tokens_details=OutputTokensDetails(reasoning_tokens=605), total_tokens=25164)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 15,
+      "max_score": 21,
+      "normalized_score": 0.7142857142857143,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": false,
+      "expected_primary_causes": [
+        "Difetto del display della cifra interessata, con uno o più LED/segmenti interni aperti",
+        "Interruzione, saldatura fredda o falso contatto sui collegamenti dei segmenti solo tra bus segmenti condiviso e la cifra difettosa",
+        "Problema di cablaggio specifico sui pin a-g/h della cifra difettosa",
+        "Errore software di multiplexing o tabella segmenti diversa per una sola cifra",
+        "Problema sul transistor/comune della cifra solo se l'intera cifra è debole, intermittente o parzialmente alimentata, non come causa primaria di singoli segmenti mancanti"
+      ],
+      "model_primary_cause": "Guasto o errato pilotaggio del transistor di selezione della cifra difettosa",
+      "major_errors": [
+        "Ha dato priorità al transistor di selezione della cifra, che normalmente causerebbe lo spegnimento o la luminosità anomala dell'intera cifra, non la mancanza selettiva di alcuni segmenti.",
+        "Ha indicato come causa probabile le resistenze R1-R8, ma nello schema i segmenti e le resistenze sono condivisi dalle due cifre; una resistenza o una linea P0.x aperta dovrebbe far mancare lo stesso segmento su entrambe le cifre, non solo su una.",
+        "Non ha evidenziato abbastanza che, essendo i segmenti multiplexati in comune, il guasto più coerente con una sola cifra riguarda il display stesso o i collegamenti locali dei segmenti della cifra difettosa."
+      ],
+      "hallucinations": [
+        "Afferma che reset e clock del microcontrollore sembrano corretti, ma il circuito fornito non mostra chiaramente un clock quarzo/oscillatore dell'AT89S51.",
+        "Afferma che l'ingresso analogico dell'ADC0804 sembra correttamente connesso, mentre dal JSON il pin 6 VIN+ risulta sullo stesso nodo di GND/pin 7/pin 8; comunque questo punto non è centrale per il sintomo sui segmenti.",
+        "Introduce riferimenti a Q1/Q2 2N2222 e valori da 100 ohm ricavati dall'immagine, non dal JSON; sono visibili nello schema, quindi non è grave dato che il modello aveva anche l'immagine."
+      ],
+      "missed_important_points": [
+        "Non ha sfruttato pienamente la topologia: le linee segmento P0.0-P0.7 tramite resistenze sono comuni a entrambi i display.",
+        "Non ha distinto chiaramente tra guasti che colpirebbero entrambe le cifre e guasti specifici di una sola cifra.",
+        "Il difetto interno del display o il collegamento locale dei segmenti della sola cifra difettosa dovevano essere tra le prime cause."
+      ],
+      "strengths": [
+        "Comprende correttamente l'architettura generale: ADC0804, AT89S51, display a 7 segmenti multiplexati e transistor di selezione dei comuni.",
+        "Riconosce correttamente che VREF/2 dell'ADC0804 può essere lasciato aperto per il range 0-5 V.",
+        "Propone controlli pratici utili: misure sui transistor di selezione, continuità delle resistenze/segmenti, segnali P0.x e P3.1/P3.2.",
+        "Include tra le cause possibili il display guasto e problemi di cablaggio, anche se con priorità non ottimale."
+      ],
+      "short_explanation": "La risposta è utile e mostra buona comprensione del circuito, ma la priorità diagnostica non è ottimale. Poiché le linee dei segmenti e le resistenze sono condivise tra le due cifre, un guasto su P0.x o su una resistenza dovrebbe colpire entrambe le cifre. Se mancano alcuni segmenti su una sola cifra, le cause più probabili sono il display di quella cifra o i collegamenti locali dei suoi pin segmento. Il transistor di selezione può spiegare una cifra spenta o debole, ma non è la causa primaria più coerente per singoli segmenti mancanti."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic2",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic2\\results_json_img\\ic2_gpt-4.1-nano_20260518_160447.txt",
+      "model_under_test": "gpt-4.1-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 28.729,
+      "timestamp": "2026-05-18 16:14:36",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=23559, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=1396, output_tokens_details=OutputTokensDetails(reasoning_tokens=482), total_tokens=24955)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 2,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 2,
+        "hallucination_absence": 1
+      },
+      "total_score": 11,
+      "max_score": 21,
+      "normalized_score": 0.5238,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Interruzione, saldatura difettosa o collegamento errato tra il bus segmenti condiviso e i pin dei segmenti della sola cifra interessata",
+        "Segmenti LED interni guasti nella cifra interessata",
+        "Pin del display della cifra interessata danneggiati o non correttamente connessi",
+        "Problema sul comune/transistor della cifra solo se il difetto riguarda luminosità o abilitazione complessiva della cifra, non singoli segmenti"
+      ],
+      "model_primary_cause": "Collegamento non corretto o transistor di switching guasto/mal pilotato della cifra",
+      "major_errors": [
+        "Dà priorità al transistor di multiplexing come causa principale, ma un guasto sul comune o sul transistor della cifra tenderebbe a spegnere o attenuare l'intera cifra, non solo alcuni segmenti.",
+        "Indica collegamenti tra P1.x e segmenti del display, mentre nello schema/JSON i segmenti sono pilotati da P0.x tramite resistenze; P1.x è collegata al bus dati dell'ADC.",
+        "Non sfrutta correttamente la topologia dei display: i segmenti sono condivisi tra le due cifre, quindi un guasto sulle linee comuni P0/resistenze dovrebbe influenzare entrambe le cifre, non una sola."
+      ],
+      "hallucinations": [
+        "Riferimento a Q1/Q2 2N2222 non presente esplicitamente nel JSON, anche se visibile nello schema.",
+        "Affermazione che l'oscillatore del microcontrollore sia indicato e presumibilmente corretto, mentre nel JSON non sono presenti i collegamenti XTAL.",
+        "Affermazione generica che tutti i componenti principali siano alimentati correttamente senza discutere alcune incongruenze o omissioni del JSON.",
+        "Menzione di ADC1104, probabilmente refuso per ADC0804."
+      ],
+      "missed_important_points": [
+        "Non evidenzia che, essendo le linee dei segmenti condivise tra le due cifre, un problema limitato a una sola cifra punta più verso il display stesso o i collegamenti locali dei pin segmento di quella cifra.",
+        "Non distingue chiaramente tra difetto di segmenti singoli e difetto del comune/transistor di selezione.",
+        "Non propone di confrontare lo stesso segmento sulla cifra funzionante e su quella difettosa durante il multiplexing.",
+        "Non segnala che un problema su P0.x o su una resistenza serie comune dovrebbe comparire su entrambe le cifre."
+      ],
+      "strengths": [
+        "Comprende la struttura generale ADC0804 + AT89S51 + display multiplexati.",
+        "Riconosce correttamente la presenza di transistor di selezione sui comuni dei display.",
+        "Propone controlli pratici utili come verifica dei segmenti, dei collegamenti e delle tensioni sui transistor.",
+        "Include tra le possibili cause i segmenti LED guasti e le interruzioni di cablaggio, che sono coerenti con il sintomo."
+      ],
+      "short_explanation": "La risposta è utile ma la priorità diagnostica non è ottimale. Per segmenti mancanti solo su una cifra, la causa più probabile è un guasto locale del display o dei collegamenti dei segmenti di quella cifra, non il transistor del comune, che normalmente comprometterebbe tutta la cifra. Inoltre il modello confonde P1 con P0 per il pilotaggio dei display e non sfrutta bene il fatto che le linee segmento sono condivise."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic2",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic2\\results_json_img\\ic2_gpt-4o-mini_20260518_160147.txt",
+      "model_under_test": "gpt-4o-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 31.827,
+      "timestamp": "2026-05-18 16:15:08",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=23021, input_tokens_details=InputTokensDetails(cached_tokens=19200), output_tokens=1542, output_tokens_details=OutputTokensDetails(reasoning_tokens=504), total_tokens=24563)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 1,
+        "json_image_use": 1,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 2,
+        "hallucination_absence": 1
+      },
+      "total_score": 10,
+      "max_score": 21,
+      "normalized_score": 0.47619047619047616,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Interruzione o falso contatto sui collegamenti dei segmenti della sola cifra interessata, tra bus segmenti condiviso e pin del display difettoso",
+        "Segmenti LED interni della cifra interessata danneggiati",
+        "Saldature o piste difettose sui pin a-g/h del display interessato",
+        "Problema sul transistor di abilitazione o sul comune della cifra solo se l'intera cifra è spenta o molto debole, non solo alcuni segmenti"
+      ],
+      "model_primary_cause": "Collegamento interrotto tra microcontrollore e display",
+      "major_errors": [
+        "Attribuisce inizialmente P0.0-P0.7 ai dati da ADC, mentre nel JSON e nel circuito D0-D7 dell'ADC sono collegati a P1.0-P1.7; P0 pilota i segmenti dei display.",
+        "Indica P3.6 come WR e P3.7 come RD in modo non coerente con il JSON: nel circuito CS, RD, WR, INTR sono collegati rispettivamente a P3.7, P3.6, P3.5, P3.4.",
+        "Considera il pin VREF/2 non connesso dell'ADC come possibile causa del difetto sui segmenti, ma questo al massimo influenza la scala di conversione, non la mancanza di alcuni segmenti su una sola cifra.",
+        "Non sfrutta la caratteristica fondamentale del multiplexing: i segmenti sono condivisi tra le due cifre, quindi se il difetto è solo su una cifra sono più sospetti il display specifico o i collegamenti locali verso quella cifra, non le linee MCU/resistenze comuni."
+      ],
+      "hallucinations": [
+        "Afferma che VCC di tutte le IC è collegato a +5 V come richiesto, ma nel JSON i terminali di alimentazione sono generici e l'asserzione non è completamente verificabile dai nomi dei terminali.",
+        "Afferma una verifica visiva di nomi e valori coerenti senza usare dettagli specifici dell'immagine in modo diagnostico.",
+        "Introduce un generico 'disallineamento tra JSON e immagine' senza evidenza reale utile al guasto."
+      ],
+      "missed_important_points": [
+        "Il guasto su una sola cifra con segmenti mancanti punta soprattutto a pin/saldature/LED interni della cifra interessata, perché le linee dei segmenti e le resistenze sono condivise tra D1 e D2.",
+        "Il transistor di selezione della cifra comune catodo va controllato principalmente se tutta la cifra manca o è debole, non come prima causa per soli alcuni segmenti.",
+        "Il pin VREF/2 dell'ADC0804 lasciato aperto è previsto dal datasheet per range 0-5 V e non spiega segmenti mancanti.",
+        "Non propone un confronto pratico tra la cifra sana e quella guasta attivando lo stesso pattern per distinguere bus comune da display/piste locali."
+      ],
+      "strengths": [
+        "Comprende la struttura generale ADC0804 -> AT89S51 -> display a 7 segmenti.",
+        "Riconosce correttamente che D0-D7 dell'ADC sono collegati a P1.0-P1.7 in una parte della risposta.",
+        "Propone controlli pratici ragionevoli su collegamenti, resistenze e display.",
+        "Include tra le cause plausibili collegamenti interrotti e display danneggiato, che sono coerenti con il sintomo."
+      ],
+      "short_explanation": "La risposta è parzialmente utile perché individua cause plausibili come collegamenti interrotti o segmenti del display danneggiati. Tuttavia è troppo generica, commette errori sui pin P0/P1 e sui segnali RD/WR/CS, e dà peso a problemi dell'ADC/VREF che non spiegano segmenti mancanti su una sola cifra. La diagnosi avrebbe dovuto prioritizzare i collegamenti locali o il display della cifra interessata, dato che le linee dei segmenti sono condivise nel multiplexing."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic2",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic2\\results_json_img\\ic2_gpt-5-mini_20260518_160706.txt",
+      "model_under_test": "gpt-5-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 23.371,
+      "timestamp": "2026-05-18 16:15:31",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=24269, input_tokens_details=InputTokensDetails(cached_tokens=19200), output_tokens=1062, output_tokens_details=OutputTokensDetails(reasoning_tokens=455), total_tokens=25331)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9523809523809523,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Guasto interno o pin/saldatura difettosa dei segmenti della singola cifra interessata",
+        "Interruzione locale nella diramazione tra nodo segmento condiviso e pin del display difettoso",
+        "Problema sul comune/transistor di selezione della cifra, meno probabile se mancano solo alcuni segmenti"
+      ],
+      "model_primary_cause": "Contatto/saldatura difettosa sui pin segmento del display difettoso o traccia staccata locale",
+      "major_errors": [],
+      "hallucinations": [
+        "L'affermazione che non vi siano altre discrepanze significative è un po' assertiva; alcuni dettagli generali del circuito non sono discussi, ma non impattano la diagnosi del sintomo."
+      ],
+      "missed_important_points": [],
+      "strengths": [
+        "Comprende correttamente che i segmenti delle due cifre sono condivisi e che i catodi comuni sono multiplexati tramite transistor NPN.",
+        "Distingue correttamente tra guasti comuni alle linee segmento, che colpirebbero entrambe le cifre, e guasti locali alla singola cifra.",
+        "Prioritizza cause realistiche: display difettoso, saldature/pin/tracce locali, collegamento del comune e transistor di selezione.",
+        "Usa correttamente JSON e immagine per mappare P0.x, resistenze, display e transistor.",
+        "Propone controlli pratici efficaci: scambio dei display, continuità, misura del comune, test diretto dei segmenti.",
+        "Riconosce che il pin VREF/2 dell'ADC non connesso non spiega direttamente segmenti mancanti."
+      ],
+      "short_explanation": "La risposta è tecnicamente molto coerente: identifica che, essendo i segmenti condivisi tra le due cifre, la mancanza di alcuni segmenti su una sola cifra punta soprattutto a difetto locale del display, saldature, pin o diramazioni verso quella cifra. Le verifiche proposte sono pratiche e ben ordinate. Minime imprecisioni non compromettono la diagnosi."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic2",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic2\\results_json_img\\ic2_gpt-5-nano_20260518_160549.txt",
+      "model_under_test": "gpt-5-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 28.714,
+      "timestamp": "2026-05-18 16:16:00",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=24758, input_tokens_details=InputTokensDetails(cached_tokens=19200), output_tokens=1528, output_tokens_details=OutputTokensDetails(reasoning_tokens=475), total_tokens=26286)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 2,
+        "datasheet_use": 1,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 2,
+        "practical_checks": 3,
+        "hallucination_absence": 1
+      },
+      "total_score": 13,
+      "max_score": 21,
+      "normalized_score": 0.619,
+      "verdict": "Parziale",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Interruzione, saldatura fredda o contatto difettoso sui collegamenti dei segmenti tra la cifra funzionante e la cifra difettosa",
+        "Segmenti LED interni guasti nella singola cifra del display",
+        "Problema sul transistor di selezione o sul collegamento del comune della cifra, se il difetto coinvolge l'intera cifra o produce accensione debole/irregolare",
+        "Errore di multiplexing o firmware nella fase di abilitazione della cifra interessata"
+      ],
+      "model_primary_cause": "Linea di segmenti non collegata correttamente alla seconda cifra, per traccia aperta o saldatura fredda sul segmento interessato",
+      "major_errors": [
+        "Attribuisce in più punti il pilotaggio dei segmenti a P1.x, mentre dal JSON e dallo schema i segmenti sono pilotati da P0.0-P0.7; P1.0-P1.7 è collegata al bus dati dell'ADC0804.",
+        "Parla di verificare che D0-D7 siano collegati alla seconda cifra o al bus della seconda cifra: nel circuito D0-D7 vanno al microcontrollore, non direttamente ai display.",
+        "Indica come causa probabile resistenze di limitazione aperte solo per la cifra interessata, ma nello schema le resistenze dei segmenti sono condivise tra le due cifre; una resistenza aperta prima del nodo comune tipicamente spegnerebbe quel segmento su entrambe le cifre, non solo su una.",
+        "Include cause legate a VREF/2, clock ADC e rete RC come possibili spiegazioni dei segmenti mancanti su una sola cifra, ma sono molto poco pertinenti al sintomo specifico."
+      ],
+      "hallucinations": [
+        "Riferimento a una mappatura D0-D7 verso la seconda cifra, non supportata dal circuito.",
+        "Uso di P1.x come uscite dedicate ai segmenti, contrario al JSON e allo schema.",
+        "Resistenze di limitazione separate per la singola cifra difettosa, mentre nel circuito sono condivise sulle linee dei segmenti."
+      ],
+      "missed_important_points": [
+        "Non evidenzia chiaramente che i segmenti delle due cifre sono collegati in parallelo sugli stessi nodi dopo le resistenze, quindi un guasto a monte della diramazione dovrebbe influenzare entrambe le cifre.",
+        "Non cita esplicitamente il possibile guasto interno dei segmenti LED della cifra difettosa.",
+        "Non distingue abbastanza tra difetto di singoli segmenti e difetto del comune/transistor, che normalmente influenza tutta la cifra o la luminosità complessiva.",
+        "Non sfrutta il dettaglio che P0 dell'AT89S51 è open-drain e richiede condizioni di pilotaggio/pull-up adeguate, anche se questo sarebbe più un problema generale che di una sola cifra."
+      ],
+      "strengths": [
+        "La causa principale proposta, cioè interruzione o saldatura difettosa sui collegamenti dei segmenti della cifra interessata, è coerente con il sintomo.",
+        "Riconosce correttamente la presenza di due display common cathode multiplexati con transistor di abilitazione.",
+        "Propone controlli pratici utili: continuità dei segmenti, verifica del comune della cifra e misura del segnale di base del transistor.",
+        "Nota correttamente che il pin VREF/2 dell'ADC risulta non connesso e che ciò non spiega direttamente segmenti mancanti su una sola cifra."
+      ],
+      "short_explanation": "La risposta è utile e la diagnosi principale è sostanzialmente corretta: se una sola cifra perde alcuni segmenti, la prima verifica è la continuità/saldatura dei collegamenti dei segmenti verso quella cifra o il display stesso. Tuttavia contiene diversi errori topologici importanti: confonde P1 con P0 per il pilotaggio dei segmenti, introduce una relazione inesistente tra D0-D7 dell'ADC e la seconda cifra, e considera resistenze condivise come se fossero specifiche della cifra. Inoltre dà spazio a cause ADC/clock/VREF poco pertinenti al sintomo."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic2",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic2\\results_json_img\\ic2_gpt-5.4-mini_20260518_160830.txt",
+      "model_under_test": "gpt-5.4-mini",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 23.649,
+      "timestamp": "2026-05-18 16:16:24",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=23123, input_tokens_details=InputTokensDetails(cached_tokens=19200), output_tokens=1209, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=24332)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 3
+      },
+      "total_score": 20,
+      "max_score": 21,
+      "normalized_score": 0.9523809524,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "Collegamento locale interrotto o saldatura difettosa sui pin dei segmenti della cifra interessata",
+        "Segmenti interni guasti nel display della cifra interessata",
+        "Problema sul comune/transistor di selezione della cifra se l'intera cifra appare debole o instabile",
+        "Linea segmento/resistenza comune guasta, meno probabile se il difetto è presente su una sola cifra"
+      ],
+      "model_primary_cause": "Guasto o collegamento interrotto sul display della cifra interessata, inclusi pista, pin, saldatura o segmenti interni del display",
+      "major_errors": [],
+      "hallucinations": [],
+      "missed_important_points": [
+        "Non evidenzia che, dal JSON, VIN+ dell'ADC risulta collegato alla stessa rete di GND/VIN-/AGND, anche se questo non è direttamente rilevante per il sintomo sui segmenti di una sola cifra.",
+        "Non discute il fatto che Port 0 dell'AT89S51 è open-drain e normalmente richiede pull-up, ma correttamente non lo considera causa primaria perché il difetto è limitato a una sola cifra."
+      ],
+      "strengths": [
+        "Comprende correttamente la struttura a blocchi ADC0804, AT89S51 e due display multiplexati common cathode.",
+        "Riconosce correttamente che le linee dei segmenti sono condivise tra le due cifre.",
+        "Dà priorità corretta a un guasto locale del display o dei collegamenti della cifra interessata.",
+        "Distingue bene tra guasti locali a una cifra e guasti sul bus segmenti comune, che normalmente colpirebbero entrambe le cifre.",
+        "Propone controlli pratici sensati: continuità, sostituzione/scambio display, verifica transistor di selezione e segnali di multiplexing.",
+        "Nota correttamente che VREF/2 non connesso sull'ADC non spiega direttamente segmenti mancanti su una sola cifra."
+      ],
+      "short_explanation": "La risposta è tecnicamente coerente con JSON e immagine: i segmenti sono condivisi tra i due display, quindi segmenti mancanti solo su una cifra indicano con alta probabilità un problema locale del display, dei suoi pin o delle connessioni verso quella cifra. Le alternative sono ordinate in modo corretto e i controlli suggeriti sono utili. L'uso del datasheet è sufficiente ma non molto approfondito; non ci sono errori rilevanti."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic2",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic2\\results_json_img\\ic2_gpt-5.4-nano_20260518_160741.txt",
+      "model_under_test": "gpt-5.4-nano",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 24.64,
+      "timestamp": "2026-05-18 16:16:48",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=23986, input_tokens_details=InputTokensDetails(cached_tokens=19200), output_tokens=1285, output_tokens_details=OutputTokensDetails(reasoning_tokens=438), total_tokens=25271)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 2,
+        "json_image_use": 2,
+        "diagnostic_accuracy": 2,
+        "cause_priority": 1,
+        "practical_checks": 3,
+        "hallucination_absence": 2
+      },
+      "total_score": 15,
+      "max_score": 21,
+      "normalized_score": 0.7142857142857143,
+      "verdict": "Parziale",
+      "top1_correct": false,
+      "top3_contains_correct": false,
+      "expected_primary_causes": [
+        "Difetto del display della cifra interessata, con segmenti LED interni aperti o pin dei segmenti non saldati/interrotti",
+        "Interruzione o cattivo contatto tra le linee segmento condivise e i pin dei segmenti della sola cifra difettosa",
+        "Saldature o piste difettose sui pin a-g/h del display interessato",
+        "Problema sul comune/transistor della cifra solo se l'intera cifra è debole, instabile o parzialmente alimentata, ma non è la causa più tipica di alcuni segmenti mancanti"
+      ],
+      "model_primary_cause": "Transistor di selezione della cifra difettoso o non correttamente saturo",
+      "major_errors": [
+        "La priorità diagnostica non è ottimale: con segmenti condivisi tra le due cifre, se mancano solo alcuni segmenti su una sola cifra è più probabile un guasto del display o dei collegamenti dei singoli segmenti della cifra, non del transistor comune.",
+        "Un difetto del transistor di selezione o del pin com tende più spesso a spegnere o attenuare l'intera cifra, non solo alcuni segmenti specifici."
+      ],
+      "hallucinations": [
+        "La risposta afferma che nell'immagine il pin 9 VREF/2 dell'ADC0804 sembra collegato a una rete di riferimento, mentre nello schema è indicato come 'No connection' ed è coerente con il warning JSON di terminale non connesso."
+      ],
+      "missed_important_points": [
+        "Avrebbe dovuto mettere come causa principale i pin/LED/saldature dei segmenti della cifra difettosa, dato che le linee segmento sono condivise tra le due cifre.",
+        "Non distingue abbastanza tra difetto di comune/transistor, che coinvolgerebbe tutta la cifra, e difetto di singoli segmenti, che punta al display o ai collegamenti locali dei segmenti."
+      ],
+      "strengths": [
+        "Comprende correttamente la struttura generale: ADC0804, AT89S51 e due display multiplexati a catodo comune tramite transistor NPN.",
+        "Usa molti riferimenti corretti al JSON per transistor, collettori, basi, resistenze e linee condivise dei segmenti.",
+        "Propone controlli pratici utili su transistor, basi, comune e test della cifra con il numero 8.",
+        "Riconosce correttamente che un problema ADC/VREF/clock produrrebbe più probabilmente valori errati e non segmenti mancanti su una sola cifra."
+      ],
+      "short_explanation": "Risposta tecnicamente utile e ben strutturata, ma la diagnosi principale è probabilmente mal priorizzata. Poiché i segmenti delle due cifre sono condivisi, un guasto delle linee segmento comuni dovrebbe apparire su entrambe; se mancano solo alcuni segmenti su una sola cifra, la causa più probabile è il display o i collegamenti locali dei segmenti di quella cifra. Il modello invece mette al primo posto il transistor/comune, che di solito comprometterebbe tutta la cifra. Buoni i controlli pratici, ma c'è anche una lettura errata del pin VREF/2 nell'immagine."
+    }
+  },
+  {
+    "metadata": {
+      "circuit": "ic2",
+      "evaluated_file": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1\\ic2\\results_json_img\\ic2_gpt-5.4_20260518_160934.txt",
+      "model_under_test": "gpt-5.4",
+      "input_type": "JSON + immagine + datasheet",
+      "judge_model": "gpt-5.5",
+      "judge_latency_seconds": 16.395,
+      "timestamp": "2026-05-18 16:17:05",
+      "parsed_ok": true
+    },
+    "judge_usage": "ResponseUsage(input_tokens=24365, input_tokens_details=InputTokensDetails(cached_tokens=19200), output_tokens=862, output_tokens_details=OutputTokensDetails(reasoning_tokens=293), total_tokens=25227)",
+    "judge_result": {
+      "scores": {
+        "circuit_understanding": 3,
+        "datasheet_use": 3,
+        "json_image_use": 3,
+        "diagnostic_accuracy": 3,
+        "cause_priority": 3,
+        "practical_checks": 3,
+        "hallucination_absence": 3
+      },
+      "total_score": 21,
+      "max_score": 21,
+      "normalized_score": 1.0,
+      "verdict": "Sì",
+      "top1_correct": true,
+      "top3_contains_correct": true,
+      "expected_primary_causes": [
+        "interruzione, saldatura fredda o falso contatto sui pin dei segmenti della singola cifra difettosa",
+        "display a 7 segmenti guasto internamente sulla cifra interessata",
+        "problema sul comune della cifra o sul transistor di selezione relativo, più probabile se la cifra è fioca o instabile"
+      ],
+      "model_primary_cause": "Collegamento interrotto o saldatura difettosa sui pin dei segmenti della cifra difettosa",
+      "major_errors": [],
+      "hallucinations": [],
+      "missed_important_points": [],
+      "strengths": [
+        "Comprende correttamente la topologia multiplexata dei due display.",
+        "Identifica correttamente che le linee dei segmenti sono condivise tra le due cifre, mentre i comuni sono separati tramite transistor.",
+        "Deduce correttamente che segmenti mancanti su una sola cifra indicano più probabilmente un guasto locale al display o ai suoi collegamenti.",
+        "Usa in modo coerente JSON, immagine e datasheet, inclusa la nota su Port 0 open-drain dell'AT89S51.",
+        "Distingue bene tra cause probabili del difetto specifico e criticità generali non direttamente compatibili con il sintomo.",
+        "Propone controlli pratici utili: continuità, saldature, test dei segmenti, verifica del comune e confronto tra transistor."
+      ],
+      "short_explanation": "La risposta è tecnicamente corretta e ben supportata. Il modello riconosce che i segmenti delle due cifre sono in parallelo e che quindi un guasto sulle linee comuni o sulle resistenze di segmento colpirebbe entrambe le cifre. La diagnosi principale, cioè un problema locale sul display difettoso, sui suoi pin o sulle saldature, è la più coerente con il sintomo. Buona anche la priorità delle cause e la proposta di verifiche pratiche."
+    }
+  }
+]

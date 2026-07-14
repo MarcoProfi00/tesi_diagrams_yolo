@@ -1,0 +1,82 @@
+{
+  "metadata": {
+    "circuit_id": "c10",
+    "batch": "C2",
+    "batch_dir": "batchC2",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\images\\c10.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC2\\json\\c10.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "c10.jpg",
+    "json_file": "c10.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:34:16",
+    "judge_latency_seconds": 13.2,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=21777, input_tokens_details=InputTokensDetails(cached_tokens=3840), output_tokens=740, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=22517)",
+  "judge_result": {
+    "circuit_id": "c10",
+    "batch": "C2",
+    "image_file": "c10.jpg",
+    "json_file": "c10.json",
+    "image_graph_fidelity_score": 92,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 22,
+      "graph_connections": 51,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 1,
+      "minor": 2
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "missing_component_terminal_connection",
+        "description": "Il microfono M1 visibile nell'immagine non compare come componente nel JSON; di conseguenza manca il collegamento topologico del nodo M1 superiore con C1, R5 e il ramo inferiore a GND.",
+        "image_evidence": "Nella parte bassa sinistra è visibile il simbolo M1 MIC con un terminale superiore connesso al nodo comune con C1 bottom, R5 left e un terminale inferiore a massa.",
+        "json_evidence": "Nel campo components non esiste alcun componente di classe Microphone/Speaker/Terminal equivalente per M1; nel graph non esiste alcun endpoint che rappresenti quel nodo."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "terminal_semantics_missing",
+        "description": "I terminali del LED e del diodo sono modellati con polarità semantiche; la corrispondenza appare plausibile ma l'orientazione grafica è piccola e non completamente verificabile con certezza assoluta."
+      },
+      {
+        "type": "auxiliary_visibility_gap",
+        "description": "Le etichette/testi +4V DC, N/C e valori componenti non sono rappresentati nel graph, ma non alterano la topologia terminale-terminale principale."
+      }
+    ],
+    "missing_from_json": [
+      "Componente M1 MIC con nodo superiore collegato a C1, R5 e al terminale microfono verso GND"
+    ],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "Nodo M1 superiore collegato a polarized_capacitor20.8_positive e resistor22.9_t2 (e al terminale superiore del microfono M1)",
+        "found_in_json": "polarized_capacitor20.8_positive risulta non connesso; resistor22.9_t2 è collegato solo a polarized_capacitor20.6_positive e switch25.1_t1",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "Il mapping tra resistor22.1/resistor22.2/resistor22.3 e le resistenze R1/R2/R3 è risolvibile topologicamente e non genera errore certo.",
+      "La polarità del LED D1 e dello zener D2 è visibile ma piuttosto piccola; non emergono inversioni certe nel graph oltre alle connessioni già coerenti.",
+      "Il contatto dello switch S5 è rappresentato come switch chiuso tra il ramo di alimentazione e il terminale +4V; l'immagine mostra un interruttore inserito in serie e la connettività adottata nel JSON è plausibile."
+    ],
+    "short_explanation": "Il field graph riproduce molto bene quasi tutti i collegamenti visibili tra i due IC, pulsanti, rete LED/zener, altoparlanti, condensatori e resistenze. L’unica omissione topologica rilevante è il microfono M1 con il suo nodo condiviso con C1 e R5, lasciando anche polarized_capacitor20.8_positive non connesso. Per il resto la struttura terminale-terminale è fedele all’immagine."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c10\",\"batch\":\"C2\",\"image_file\":\"c10.jpg\",\"json_file\":\"c10.json\",\"image_graph_fidelity_score\":92,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":22,\"graph_connections\":51,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":1,\"minor\":2},\"critical_errors\":[],\"major_errors\":[{\"type\":\"missing_component_terminal_connection\",\"description\":\"Il microfono M1 visibile nell'immagine non compare come componente nel JSON; di conseguenza manca il collegamento topologico del nodo M1 superiore con C1, R5 e il ramo inferiore a GND.\",\"image_evidence\":\"Nella parte bassa sinistra è visibile il simbolo M1 MIC con un terminale superiore connesso al nodo comune con C1 bottom, R5 left e un terminale inferiore a massa.\",\"json_evidence\":\"Nel campo components non esiste alcun componente di classe Microphone/Speaker/Terminal equivalente per M1; nel graph non esiste alcun endpoint che rappresenti quel nodo.\"}],\"minor_errors\":[{\"type\":\"terminal_semantics_missing\",\"description\":\"I terminali del LED e del diodo sono modellati con polarità semantiche; la corrispondenza appare plausibile ma l'orientazione grafica è piccola e non completamente verificabile con certezza assoluta.\"},{\"type\":\"auxiliary_visibility_gap\",\"description\":\"Le etichette/testi +4V DC, N/C e valori componenti non sono rappresentati nel graph, ma non alterano la topologia terminale-terminale principale.\"}],\"missing_from_json\":[\"Componente M1 MIC con nodo superiore collegato a C1, R5 e al terminale microfono verso GND\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"Nodo M1 superiore collegato a polarized_capacitor20.8_positive e resistor22.9_t2 (e al terminale superiore del microfono M1)\",\"found_in_json\":\"polarized_capacitor20.8_positive risulta non connesso; resistor22.9_t2 è collegato solo a polarized_capacitor20.6_positive e switch25.1_t1\",\"severity\":\"major\"}],\"uncertain_points\":[\"Il mapping tra resistor22.1/resistor22.2/resistor22.3 e le resistenze R1/R2/R3 è risolvibile topologicamente e non genera errore certo.\",\"La polarità del LED D1 e dello zener D2 è visibile ma piuttosto piccola; non emergono inversioni certe nel graph oltre alle connessioni già coerenti.\",\"Il contatto dello switch S5 è rappresentato come switch chiuso tra il ramo di alimentazione e il terminale +4V; l'immagine mostra un interruttore inserito in serie e la connettività adottata nel JSON è plausibile.\"],\"short_explanation\":\"Il field graph riproduce molto bene quasi tutti i collegamenti visibili tra i due IC, pulsanti, rete LED/zener, altoparlanti, condensatori e resistenze. L’unica omissione topologica rilevante è il microfono M1 con il suo nodo condiviso con C1 e R5, lasciando anche polarized_capacitor20.8_positive non connesso. Per il resto la struttura terminale-terminale è fedele all’immagine.\"}"
+}

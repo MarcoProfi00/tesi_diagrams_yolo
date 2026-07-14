@@ -1,0 +1,78 @@
+{
+  "metadata": {
+    "circuit_id": "c05",
+    "batch": "C1",
+    "batch_dir": "batchC1",
+    "image_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\images\\c05.jpg",
+    "json_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\batchC1\\json\\c05.json",
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\verify_json_img\\prompt.txt",
+    "classes_yaml_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\class_terminals_v1.yaml",
+    "image_file": "c05.jpg",
+    "json_file": "c05.json",
+    "prompt_file": "prompt.txt",
+    "classes_yaml_file": "class_terminals_v1.yaml",
+    "prompt_sha256": "19f1ee29c0c6922dee303ac77ebb6d39133327859473113aaad908c034efb2ac",
+    "classes_yaml_sha256": "7e5491a8cdf08705fd2679be440ebf737accb951e5f54af17c549e998909dca7",
+    "judge_model": "gpt-5.4",
+    "timestamp": "2026-06-04 16:32:20",
+    "judge_latency_seconds": 14.177,
+    "input_json_valid": true,
+    "input_json_error": null,
+    "parsed_ok": true,
+    "parse_error": null
+  },
+  "judge_usage": "ResponseUsage(input_tokens=18936, input_tokens_details=InputTokensDetails(cached_tokens=0), output_tokens=669, output_tokens_details=OutputTokensDetails(reasoning_tokens=0), total_tokens=19605)",
+  "judge_result": {
+    "circuit_id": "c05",
+    "batch": "C1",
+    "image_file": "c05.jpg",
+    "json_file": "c05.json",
+    "image_graph_fidelity_score": 95,
+    "decision": "VERY_HIGH",
+    "usable_as_graph_base": true,
+    "scores": {
+      "components": 10,
+      "terminals_pins": 23,
+      "graph_connections": 53,
+      "visible_semantics": 9
+    },
+    "error_counts": {
+      "critical": 0,
+      "major": 1,
+      "minor": 1
+    },
+    "critical_errors": [],
+    "major_errors": [
+      {
+        "type": "missing_connection",
+        "description": "Il terminale superiore di resistor22.2 risulta lasciato scollegato nel graph, ma nell'immagine il resistore superiore da 1k collega chiaramente +Vcc al nodo comune con pin 7 del 555 e con il resistore da 100k.",
+        "image_evidence": "Nel lato sinistro del 555 si vede il resistore da 1k tra +Vcc e il nodo etichettato 7 (DIS), nodo condiviso anche con l'estremo superiore del resistore da 100k.",
+        "json_evidence": "resistor22.2_t1 è vuoto in graph e warnings.unconnected_terminals contiene \"resistor22.2_t1\"; resistor22.2_t2 è collegato a integrated_circuit11.1_left_1 e resistor22.1_t1."
+      }
+    ],
+    "minor_errors": [
+      {
+        "type": "semantic_node_label_omission",
+        "description": "Le connessioni a +Vcc non sono rappresentate come endpoint espliciti nel graph; topologicamente il resto resta coerente, quindi l'impatto è minore."
+      }
+    ],
+    "missing_from_json": [
+      "Connessione del terminale libero di resistor22.2 al nodo +Vcc visibile in alto a sinistra"
+    ],
+    "extra_in_json": [],
+    "wrong_graph_connections": [
+      {
+        "expected_from_image": "resistor22.2_t1 collegato al nodo +Vcc (estremo superiore del resistore da 1k)",
+        "found_in_json": "resistor22.2_t1 non collegato",
+        "severity": "major"
+      }
+    ],
+    "uncertain_points": [
+      "I simboli +Vcc sono etichette di alimentazione/nodo e non componenti espliciti nel JSON; non vengono quindi trattati come errori topologici completi oltre alla connessione mancante del resistore superiore.",
+      "Il mapping tra i sette resistori serie e i segmenti a-g può essere permutato, ma il JSON usa un'associazione coerente con le etichette visibili dei pin del 4026 e del display.",
+      "Il graph collega tra loro pin 4 e 8 del 555 e pin 3 e 16 del 4026 senza introdurre endpoint di alimentazione separati; nell'immagine tali pin condividono effettivamente lo stesso nodo con +Vcc."
+    ],
+    "short_explanation": "Il graph è molto fedele ai collegamenti visibili: nodi del 555, accoppiamento 555->4026, masse del 4026 e rete dei sette segmenti risultano corretti. L'unico errore topologico rilevante è il terminale superiore del resistore da 1k lasciato scollegato invece che connesso a +Vcc."
+  },
+  "raw_model_output": "{\"circuit_id\":\"c05\",\"batch\":\"C1\",\"image_file\":\"c05.jpg\",\"json_file\":\"c05.json\",\"image_graph_fidelity_score\":95,\"decision\":\"VERY_HIGH\",\"usable_as_graph_base\":true,\"scores\":{\"components\":10,\"terminals_pins\":23,\"graph_connections\":53,\"visible_semantics\":9},\"error_counts\":{\"critical\":0,\"major\":1,\"minor\":1},\"critical_errors\":[],\"major_errors\":[{\"type\":\"missing_connection\",\"description\":\"Il terminale superiore di resistor22.2 risulta lasciato scollegato nel graph, ma nell'immagine il resistore superiore da 1k collega chiaramente +Vcc al nodo comune con pin 7 del 555 e con il resistore da 100k.\",\"image_evidence\":\"Nel lato sinistro del 555 si vede il resistore da 1k tra +Vcc e il nodo etichettato 7 (DIS), nodo condiviso anche con l'estremo superiore del resistore da 100k.\",\"json_evidence\":\"resistor22.2_t1 è vuoto in graph e warnings.unconnected_terminals contiene \\\"resistor22.2_t1\\\"; resistor22.2_t2 è collegato a integrated_circuit11.1_left_1 e resistor22.1_t1.\"}],\"minor_errors\":[{\"type\":\"semantic_node_label_omission\",\"description\":\"Le connessioni a +Vcc non sono rappresentate come endpoint espliciti nel graph; topologicamente il resto resta coerente, quindi l'impatto è minore.\"}],\"missing_from_json\":[\"Connessione del terminale libero di resistor22.2 al nodo +Vcc visibile in alto a sinistra\"],\"extra_in_json\":[],\"wrong_graph_connections\":[{\"expected_from_image\":\"resistor22.2_t1 collegato al nodo +Vcc (estremo superiore del resistore da 1k)\",\"found_in_json\":\"resistor22.2_t1 non collegato\",\"severity\":\"major\"}],\"uncertain_points\":[\"I simboli +Vcc sono etichette di alimentazione/nodo e non componenti espliciti nel JSON; non vengono quindi trattati come errori topologici completi oltre alla connessione mancante del resistore superiore.\",\"Il mapping tra i sette resistori serie e i segmenti a-g può essere permutato, ma il JSON usa un'associazione coerente con le etichette visibili dei pin del 4026 e del display.\",\"Il graph collega tra loro pin 4 e 8 del 555 e pin 3 e 16 del 4026 senza introdurre endpoint di alimentazione separati; nell'immagine tali pin condividono effettivamente lo stesso nodo con +Vcc.\"],\"short_explanation\":\"Il graph è molto fedele ai collegamenti visibili: nodi del 555, accoppiamento 555->4026, masse del 4026 e rete dei sette segmenti risultano corretti. L'unico errore topologico rilevante è il terminale superiore del resistore da 1k lasciato scollegato invece che connesso a +Vcc.\"}"
+}

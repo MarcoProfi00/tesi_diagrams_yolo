@@ -1,0 +1,1713 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{PAGE_TITLE}}</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --line: #d9dee7;
+      --text: #1f2933;
+      --muted: #6b7280;
+      --accent: #2563eb;
+      --accent-soft: #f8f1e7;
+      --chat-bg: #f7faff;
+      --chat-shell: #fcfdff;
+      --chat-user: #e8f1ff;
+      --chat-system: #fff8ef;
+      --agent-border: #e7d6bf;
+      --user-border: #bfd5f6;
+      --ok: #0f766e;
+      --warn: #b45309;
+      --bad: #b91c1c;
+      --code: #111827;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-size: 14px;
+    }
+    header {
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      border-bottom: 1px solid var(--line);
+      background: var(--panel);
+    }
+    header h1 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 650;
+    }
+    header .meta {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .layout {
+      height: calc(100vh - 56px);
+      display: grid;
+      grid-template-columns: 230px minmax(360px, 1fr) minmax(360px, 420px);
+      min-width: 0;
+    }
+    aside, main, .chat {
+      min-height: 0;
+      overflow: auto;
+    }
+    aside {
+      border-right: 1px solid var(--line);
+      background: #fbfcfe;
+      padding: 14px;
+    }
+    .run-item {
+      display: block;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
+      color: inherit;
+      text-decoration: none;
+    }
+    .run-item:hover {
+      border-color: #9fb4f6;
+    }
+    .run-item.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.12);
+    }
+    .run-item strong { display: block; margin-bottom: 4px; }
+    .run-item span { color: var(--muted); font-size: 12px; }
+    .run-item span.ok { color: var(--ok); }
+    .run-item span.warn { color: var(--warn); }
+    .run-item span.bad { color: var(--bad); }
+    .run-item small {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.25;
+    }
+    .run-item small.ok { color: var(--ok); }
+    .run-item small.warn { color: var(--warn); }
+    .run-item small.bad { color: var(--bad); }
+    .muted-run {
+      opacity: 0.75;
+    }
+    main {
+      padding: 18px;
+    }
+    .title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+    .title-row h2 {
+      margin: 0 0 4px;
+      font-size: 20px;
+    }
+    .title-row p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .status-card {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 8px;
+      padding: 10px;
+      min-height: 58px;
+    }
+    .status-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 5px;
+    }
+    .status-card strong {
+      font-size: 14px;
+      overflow-wrap: anywhere;
+    }
+    .status-card.ok { border-left: 4px solid var(--ok); }
+    .status-card.warn { border-left: 4px solid var(--warn); }
+    .status-card.bad { border-left: 4px solid var(--bad); }
+    .artifact {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    .artifact summary {
+      cursor: pointer;
+      padding: 11px 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      font-weight: 600;
+    }
+    .artifact summary small {
+      color: var(--muted);
+      font-weight: 400;
+      overflow-wrap: anywhere;
+      text-align: right;
+    }
+    pre {
+      margin: 0;
+      padding: 12px;
+      border-top: 1px solid var(--line);
+      background: var(--code);
+      color: #e5e7eb;
+      overflow: auto;
+      max-height: 360px;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .plot-wrap {
+      border-top: 1px solid var(--line);
+      padding: 12px;
+      background: #f9fafb;
+    }
+    .image-wrap {
+      border-top: 1px solid var(--line);
+      padding: 12px;
+      background: #f9fafb;
+      overflow: auto;
+    }
+    .image-wrap img {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      height: auto;
+      border: 1px solid var(--line);
+      background: white;
+    }
+    .image-missing {
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .plot-wrap img {
+      display: block;
+      max-width: 100%;
+      border: 1px solid var(--line);
+      background: white;
+    }
+    .viewer-wrap {
+      border-top: 1px solid var(--line);
+      background: #071321;
+      overflow: hidden;
+    }
+    .viewer-toolbar {
+      display: flex;
+      align-items: center;
+      padding: 8px 10px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+      background: #07111f;
+    }
+    .viewer-toolbar-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 2px;
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      border-radius: 10px;
+      background: rgba(8, 15, 28, 0.55);
+    }
+    .viewer-toolbar button {
+      min-width: 38px;
+      height: 32px;
+      padding: 0 10px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      border-radius: 6px;
+      background: rgba(15, 23, 42, 0.72);
+      color: #e2e8f0;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .viewer-toolbar button:hover {
+      border-color: rgba(125, 211, 252, 0.65);
+      background: rgba(30, 41, 59, 0.88);
+    }
+    .viewer-toolbar .viewer-zoom-readout {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 56px;
+      height: 32px;
+      padding: 0 10px;
+      color: #cbd5e1;
+      font-size: 12px;
+      font-weight: 650;
+      text-align: center;
+      border-radius: 6px;
+      background: rgba(15, 23, 42, 0.52);
+    }
+    .viewer-canvas {
+      padding: 14px;
+      min-height: 540px;
+      overflow: hidden;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+      background-color: #071321;
+      background-image:
+        linear-gradient(rgba(38, 75, 111, 0.24) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(38, 75, 111, 0.24) 1px, transparent 1px),
+        linear-gradient(rgba(29, 57, 86, 0.18) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(29, 57, 86, 0.18) 1px, transparent 1px);
+      background-size: 200px 200px, 200px 200px, 40px 40px, 40px 40px;
+      background-position: 14px 14px;
+    }
+    .viewer-canvas.is-dragging {
+      cursor: grabbing;
+    }
+    .viewer-missing {
+      color: #cbd5e1;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .viewer-svg {
+      display: block;
+      width: 100%;
+      min-width: 760px;
+      max-height: 520px;
+      font-family: "Segoe UI", Arial, sans-serif;
+      transform-origin: 0 0;
+      will-change: transform;
+      background: transparent;
+    }
+    .viewer-scopes {
+      border-top: 1px solid rgba(148, 163, 184, 0.18);
+      background: #050d17;
+    }
+    .viewer-scope-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 48px;
+      padding: 8px 12px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+      flex-wrap: wrap;
+    }
+    .viewer-scope-toolbar button,
+    .viewer-scope-toolbar select {
+      height: 32px;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      border-radius: 5px;
+      background: #0b1728;
+      color: #dbeafe;
+      font-size: 12px;
+    }
+    .viewer-scope-toolbar button {
+      width: 36px;
+      padding: 0;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .viewer-scope-toolbar select {
+      padding: 0 8px;
+    }
+    .viewer-scope-time {
+      min-width: 72px;
+      color: #e2e8f0;
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+    }
+    .viewer-scope-slider {
+      flex: 1 1 220px;
+      min-width: 150px;
+      accent-color: #38bdf8;
+    }
+    .viewer-scope-keys {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-left: auto;
+      color: #94a3b8;
+      font-size: 11px;
+    }
+    .viewer-scope-key {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .viewer-scope-key i {
+      display: inline-block;
+      width: 16px;
+      height: 2px;
+      background: #38bdf8;
+    }
+    .viewer-scope-key i.is-base {
+      background: #94a3b8;
+    }
+    .viewer-scope-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1px;
+      background: rgba(148, 163, 184, 0.16);
+    }
+    .viewer-scope-panel {
+      min-width: 0;
+      padding: 10px 12px 12px;
+      background: #07111f;
+    }
+    .viewer-scope-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+      min-height: 22px;
+      color: #f8fafc;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .viewer-scope-metric {
+      color: #94a3b8;
+      font-size: 10px;
+      font-weight: 600;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    .viewer-scope-canvas {
+      display: block;
+      width: 100%;
+      height: 142px;
+    }
+    .viewer-bg { fill: #07111f; }
+    .grid-minor path {
+      stroke: rgba(59, 130, 246, 0.075);
+      stroke-width: 1;
+      fill: none;
+    }
+    .grid-major path {
+      stroke: rgba(125, 211, 252, 0.13);
+      stroke-width: 1;
+      fill: none;
+    }
+    .wire {
+      fill: none;
+      stroke-width: 3.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: url(#viewerGlow);
+    }
+    .wire-flow {
+      fill: none;
+      stroke: #e6ff32;
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 7 13;
+      opacity: 0.86;
+      animation: viewer-flow 0.7s linear infinite;
+      pointer-events: none;
+    }
+    .component-flow {
+      fill: none;
+      stroke: #e6ff32 !important;
+      stroke-width: 2.6 !important;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 6 10;
+      opacity: 0.88;
+      animation: viewer-flow 0.7s linear infinite;
+      filter: url(#viewerCurrentGlow);
+      pointer-events: none;
+    }
+    .wire-inactive {
+      stroke: #dbeafe !important;
+      stroke-width: 3;
+      stroke-dasharray: 8 8;
+      opacity: 0.72;
+      filter: none;
+    }
+    .wire-structural {
+      stroke: #cbd5e1 !important;
+      stroke-width: 2.5;
+      stroke-dasharray: 7 9;
+      opacity: 0.52;
+      filter: none;
+    }
+    @keyframes viewer-flow {
+      to { stroke-dashoffset: -20; }
+    }
+    .scenario-wire {
+      fill: none;
+      stroke: #ffb020;
+      stroke-width: 4;
+      stroke-dasharray: 9 7;
+      stroke-linecap: round;
+      filter: url(#viewerGlow);
+    }
+    .scenario-label {
+      fill: #ffd38a;
+      font-size: 13px;
+      font-weight: 650;
+    }
+    .component path,
+    .component circle,
+    .component rect,
+    .connector rect,
+    .connector circle,
+    .ground path {
+      fill: none;
+      stroke: #f8fafc;
+      stroke-width: 3.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .component.switch circle {
+      fill: #07111f;
+    }
+    .component.switch path.switch-blade {
+      stroke: #f8fafc;
+      stroke-width: 4;
+      filter: none;
+    }
+    .component.switch path.switch-closed-link {
+      fill: none;
+      stroke: #f8fafc !important;
+      stroke-width: 3.5 !important;
+      stroke-linecap: round;
+      stroke-dasharray: none !important;
+      filter: none !important;
+    }
+    .component.switch path.switch-guide {
+      stroke: #cbd5e1 !important;
+      stroke-width: 2.5;
+      stroke-dasharray: 7 9;
+      opacity: 0.52;
+      filter: none;
+    }
+    .component.switch.closed path.switch-terminal {
+      stroke: #f8fafc;
+      stroke-width: 3.5;
+      opacity: 0.95;
+    }
+    .led-halo {
+      fill: #ef4444;
+      opacity: 0.18;
+      filter: url(#viewerLedGlow);
+      pointer-events: none;
+    }
+    .led-on path.led-body {
+      stroke: #fecaca;
+      filter: url(#viewerLedGlow);
+    }
+    .led-rays path {
+      stroke: #ff4d4d !important;
+      stroke-width: 2.6 !important;
+      opacity: 0.92;
+      filter: url(#viewerLedGlow);
+    }
+    .connector rect {
+      stroke-width: 4;
+      stroke: #f1f5f9;
+      fill: rgba(15, 23, 42, 0.56);
+    }
+    .connector circle {
+      fill: #080b0f;
+      stroke-width: 4;
+    }
+    .connector text,
+    .component text,
+    .node-labels text,
+    .viewer-badges text,
+    .viewer-current text {
+      fill: #f8fafc;
+      font-size: 15px;
+      font-weight: 650;
+    }
+    .component-label {
+      fill: #f8fafc;
+      font-size: 12px !important;
+      font-weight: 650 !important;
+    }
+    .component-value {
+      fill: #cbd5e1;
+      font-size: 11px !important;
+      font-weight: 600 !important;
+    }
+    .component-label.center,
+    .component-value.center {
+      text-anchor: middle;
+    }
+    .node-chip rect {
+      fill: rgba(8, 11, 15, 0.72);
+      stroke: rgba(203, 213, 225, 0.22);
+      stroke-width: 1;
+    }
+    .node-chip text {
+      fill: #e2e8f0;
+      font-size: 11px !important;
+      font-weight: 650 !important;
+    }
+    .node-chip.compact rect {
+      fill: rgba(15, 23, 42, 0.58);
+      stroke: rgba(148, 163, 184, 0.18);
+    }
+    .node-chip.compact text {
+      fill: #cbd5e1;
+      font-size: 10px !important;
+    }
+    .viewer-current text {
+      font-size: 14px;
+    }
+    .viewer-badges text {
+      fill: #a8b3c2;
+      font-size: 13px;
+    }
+    .viewer-current text {
+      fill: #9fb0c3;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .viewer-muted {
+      fill: #a8b3c2 !important;
+      font-size: 12px !important;
+      font-weight: 500 !important;
+    }
+    .viewer-legend rect.panel {
+      fill: rgba(3, 10, 22, 0.74);
+      stroke: rgba(148, 163, 184, 0.24);
+      stroke-width: 1;
+    }
+    .viewer-legend text {
+      fill: #dbeafe;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .viewer-legend .legend-title {
+      fill: #f8fafc;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .comparison-wrap {
+      border-top: 1px solid var(--line);
+      padding: 12px;
+      overflow: auto;
+      background: #f9fafb;
+    }
+    .outcome-banner {
+      display: grid;
+      gap: 4px;
+      margin-bottom: 10px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: white;
+    }
+    .outcome-banner strong {
+      font-size: 14px;
+    }
+    .outcome-banner span,
+    .outcome-banner small {
+      color: var(--muted);
+      line-height: 1.35;
+    }
+    .outcome-banner.ok { border-left: 4px solid var(--ok); }
+    .outcome-banner.warn { border-left: 4px solid var(--warn); }
+    .outcome-banner.bad { border-left: 4px solid var(--bad); }
+    .comparison-wrap table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      border: 1px solid var(--line);
+      font-size: 12px;
+    }
+    .comparison-wrap th,
+    .comparison-wrap td {
+      padding: 8px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      white-space: nowrap;
+    }
+    .comparison-wrap th {
+      color: var(--muted);
+      font-weight: 650;
+      background: #f3f4f6;
+    }
+    .chat {
+      border-left: 1px solid var(--line);
+      background: linear-gradient(180deg, var(--chat-bg) 0%, #f9fbff 100%);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: 12px;
+    }
+    .chat-header {
+      padding: 14px 14px 12px;
+      border: 1px solid #d7e4fb;
+      border-bottom: 0;
+      border-radius: 14px 14px 0 0;
+      background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.06);
+    }
+    .chat-header h2 {
+      margin: 0 0 6px;
+      font-size: 17px;
+      font-weight: 650;
+    }
+    .chat-header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .chat-header-copy {
+      display: grid;
+      gap: 8px;
+    }
+    .chat-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .chat-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border: 1px solid #dbe6f8;
+      border-radius: 999px;
+      background: #f3f7ff;
+      color: #35507a;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .chat-clear {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.88);
+      color: var(--muted);
+      padding: 7px 11px;
+      font-size: 12px;
+      white-space: nowrap;
+      align-self: flex-start;
+    }
+    .chat-clear:hover {
+      background: #eef2ff;
+      color: var(--accent);
+    }
+    .messages {
+      padding: 14px;
+      overflow: auto;
+      overflow-x: hidden;
+      border-left: 1px solid #d7e4fb;
+      border-right: 1px solid #d7e4fb;
+      background: var(--chat-shell);
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+    }
+    .message {
+      border-radius: 12px;
+      padding: 11px 12px;
+      margin-bottom: 12px;
+      line-height: 1.45;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .message.agent {
+      background: var(--accent-soft);
+      border: 1px solid var(--agent-border);
+      margin-right: 28px;
+    }
+    .message.user {
+      background: var(--chat-user);
+      border: 1px solid var(--user-border);
+      margin-left: 28px;
+    }
+    .message.debug {
+      background: var(--chat-system);
+      border: 1px solid #fed7aa;
+      color: #7c2d12;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12px;
+      white-space: normal;
+      border-left-width: 4px;
+      margin-right: 16px;
+    }
+    .message.debug details {
+      max-width: 100%;
+    }
+    .message.debug summary {
+      cursor: pointer;
+      font-family: "Segoe UI", Arial, sans-serif;
+      font-weight: 650;
+    }
+    .message.debug pre {
+      margin-top: 8px;
+      border: 0;
+      border-radius: 6px;
+      max-height: 140px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    .message-content > :first-child { margin-top: 0; }
+    .message-content > :last-child { margin-bottom: 0; }
+    .message-content h2,
+    .message-content h3 {
+      margin: 12px 0 6px;
+      font-size: 15px;
+      line-height: 1.25;
+    }
+    .message-content p {
+      margin: 0 0 8px;
+    }
+    .message-content ul,
+    .message-content ol {
+      margin: 0 0 10px 20px;
+      padding: 0;
+    }
+    .message-content li {
+      margin: 4px 0;
+    }
+    .message-content code {
+      padding: 1px 4px;
+      border-radius: 4px;
+      background: rgba(15, 23, 42, 0.08);
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 0.9em;
+      overflow-wrap: anywhere;
+    }
+    .message-content pre {
+      margin: 8px 0;
+      padding: 10px;
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      border-radius: 6px;
+      background: #0f172a;
+      color: #e5e7eb;
+      overflow: auto;
+      max-height: 220px;
+      white-space: pre;
+    }
+    .message-content pre code {
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      font-size: 12px;
+      overflow-wrap: normal;
+      word-break: normal;
+    }
+    .typing {
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+      min-height: 20px;
+    }
+    .typing-line {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .typing span {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #64748b;
+      animation: typing-bounce 1s infinite ease-in-out;
+    }
+    .typing span:nth-child(2) { animation-delay: 0.15s; }
+    .typing span:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes typing-bounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.45; }
+      40% { transform: translateY(-5px); opacity: 1; }
+    }
+    .chat-form {
+      border: 1px solid #d7e4fb;
+      border-top: 0;
+      border-radius: 0 0 14px 14px;
+      background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    }
+    .chat-actions {
+      display: grid;
+      grid-template-columns: 118px minmax(0, 1fr);
+      gap: 8px;
+      align-items: center;
+    }
+    .chat-actions select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: white;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    textarea {
+      width: 100%;
+      min-height: 74px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 11px 12px;
+      font-family: inherit;
+      font-size: 14px;
+      background: white;
+      line-height: 1.45;
+    }
+    textarea:focus,
+    .chat-actions select:focus {
+      outline: none;
+      border-color: #93b4f8;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
+    }
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 10px 12px;
+      background: var(--accent);
+      color: white;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    button:hover { filter: brightness(0.96); }
+    button:disabled,
+    textarea:disabled {
+      cursor: not-allowed;
+      opacity: 0.65;
+    }
+    @media (max-width: 1180px) {
+      .layout {
+        grid-template-columns: 190px minmax(320px, 1fr) minmax(340px, 390px);
+      }
+    }
+    @media (max-width: 900px) {
+      header {
+        height: auto;
+        min-height: 56px;
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 4px;
+        padding: 10px 14px;
+      }
+      .layout {
+        height: auto;
+        min-height: calc(100vh - 76px);
+        display: flex;
+        flex-direction: column;
+      }
+      aside {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .chat {
+        min-height: 520px;
+        border-left: 0;
+        border-top: 1px solid var(--line);
+        padding: 0;
+      }
+      .chat-actions {
+        grid-template-columns: 1fr;
+      }
+      .message.agent,
+      .message.user,
+      .message.debug {
+        margin-left: 0;
+        margin-right: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Pipeline 2.0 Chat diagnostica</h1>
+    <div class="meta">{{HEADER_META}}</div>
+  </header>
+  <div class="layout">
+    <aside>
+      {{RUN_SELECTOR}}
+    </aside>
+    <main>
+      <div class="title-row">
+        <div>
+          <h2>{{ACTIVE_RUN_TITLE}}</h2>
+          <p>{{OUTPUT_DIR}}</p>
+        </div>
+      </div>
+      <section class="status-grid">
+        {{STATUS_CARDS}}
+      </section>
+      <section>
+        {{IMAGE_SECTION}}
+      </section>
+      <section>
+        {{ARTIFACTS}}
+      </section>
+    </main>
+    <section class="chat">
+      <div class="chat-header">
+        <div class="chat-header-copy">
+          <div>
+            <h2>Chat diagnostica</h2>
+            <p>Descrivi il sintomo e l'agente analizzera gli output SPICE e gli scenari gia eseguiti.</p>
+          </div>
+          <div class="chat-badges">
+            <span class="chat-badge">Run: {{ACTIVE_RUN_ID}}</span>
+            <span class="chat-badge">Massimo 5 scenari</span>
+            <span class="chat-badge">Selettore esperimento</span>
+          </div>
+        </div>
+        <button class="chat-clear" id="clearChatButton" type="button">Pulisci</button>
+      </div>
+      <div class="messages" id="messages">
+      </div>
+      <form class="chat-form" id="chatForm">
+        <textarea id="chatInput" placeholder="Esempio: Perche il LED non si accende?"></textarea>
+        <div class="chat-actions">
+          <select id="modelSelect">
+            {{MODEL_OPTIONS}}
+          </select>
+          <button type="submit">Invia</button>
+        </div>
+      </form>
+    </section>
+  </div>
+  <script>
+    const form = document.getElementById("chatForm");
+    const input = document.getElementById("chatInput");
+    const messages = document.getElementById("messages");
+    const modelSelect = document.getElementById("modelSelect");
+    const submitButton = form.querySelector("button");
+    const clearChatButton = document.getElementById("clearChatButton");
+    const chatStorageKey = "{{CHAT_STORAGE_KEY}}";
+    const modelStorageKey = "{{MODEL_STORAGE_KEY}}";
+    const defaultChatModel = "{{DEFAULT_CHAT_MODEL}}";
+    const activeRunId = "{{ACTIVE_RUN_ID}}";
+    const serverChatHistory = {{SERVER_CHAT_HISTORY_JSON}};
+    const serverChatHistoryEnabled = {{SERVER_CHAT_HISTORY_ENABLED}};
+    const welcomeMessage = "Descrivi il sintomo del circuito e analizzero gli output correnti della pipeline.";
+    let chatHistory = [];
+
+    function escapeHtml(text) {
+      return text
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function renderInlineMarkdown(text) {
+      let safe = escapeHtml(text);
+      safe = safe.replace(/`([^`]+)`/g, "<code>$1</code>");
+      safe = safe.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+      safe = safe.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+      return safe;
+    }
+
+    function cleanupAgentText(text) {
+      let cleaned = String(text || "").replace(/\r\n/g, "\n");
+      const mojibakeReplacements = [
+        ["Ã¨", "è"],
+        ["Ã©", "é"],
+        ["Ã ", "à"],
+        ["Ã¹", "ù"],
+        ["Ã¬", "ì"],
+        ["Ã²", "ò"],
+        ["â€™", "’"],
+        ["â€˜", "‘"],
+        ["â€œ", "“"],
+        ["â€", "”"],
+        ["â€“", "–"],
+        ["â€”", "—"],
+        ["Â°", "°"],
+        ["Â", ""],
+      ];
+
+      for (const [source, target] of mojibakeReplacements) {
+        cleaned = cleaned.replaceAll(source, target);
+      }
+
+      const patterns = [
+        /\n*Scenario tecnico recuperato:\s*\n\s*```json\s*[\s\S]*?```/gi,
+        /\n*#{0,6}\s*\d+\.\s*\*?Blocco tecnico per pipeline\*?\s*\n\s*```json\s*[\s\S]*?```/gi,
+        /\n*#{0,6}\s*Blocco tecnico per pipeline\s*\n\s*```json\s*[\s\S]*?```/gi,
+      ];
+
+      for (const pattern of patterns) {
+        cleaned = cleaned.replace(pattern, "");
+      }
+
+      cleaned = cleaned.replace(/\n{3,}/g, "\n\n").trim();
+      return cleaned;
+    }
+
+    function flushParagraph(lines, htmlParts) {
+      if (!lines.length) return;
+      htmlParts.push("<p>" + renderInlineMarkdown(lines.join(" ")) + "</p>");
+      lines.length = 0;
+    }
+
+    function renderMarkdown(text) {
+      // Renderer Markdown volutamente piccolo: basta per risposte agente, liste e codice.
+      const lines = text.replace(/\r\n/g, "\n").split("\n");
+      const htmlParts = [];
+      const paragraph = [];
+      let inCode = false;
+      let codeLines = [];
+      let inList = false;
+      let listType = "";
+
+      function closeList() {
+        if (!inList) return;
+        htmlParts.push("</" + listType + ">");
+        inList = false;
+        listType = "";
+      }
+
+      for (const rawLine of lines) {
+        const line = rawLine.trimEnd();
+
+        if (line.trim().startsWith("```")) {
+          if (inCode) {
+            htmlParts.push("<pre><code>" + escapeHtml(codeLines.join("\n")) + "</code></pre>");
+            codeLines = [];
+            inCode = false;
+          } else {
+            flushParagraph(paragraph, htmlParts);
+            closeList();
+            inCode = true;
+          }
+          continue;
+        }
+
+        if (inCode) {
+          codeLines.push(rawLine);
+          continue;
+        }
+
+        if (!line.trim()) {
+          flushParagraph(paragraph, htmlParts);
+          closeList();
+          continue;
+        }
+
+        const heading = line.match(/^(#{1,3})\s+(.+)$/);
+        if (heading) {
+          flushParagraph(paragraph, htmlParts);
+          closeList();
+          const level = heading[1].length === 1 ? "h2" : "h3";
+          htmlParts.push("<" + level + ">" + renderInlineMarkdown(heading[2]) + "</" + level + ">");
+          continue;
+        }
+
+        const unordered = line.match(/^\s*[-*]\s+(.+)$/);
+        const ordered = line.match(/^\s*\d+\.\s+(.+)$/);
+        if (unordered || ordered) {
+          flushParagraph(paragraph, htmlParts);
+          const currentType = unordered ? "ul" : "ol";
+          if (!inList || listType !== currentType) {
+            closeList();
+            htmlParts.push("<" + currentType + ">");
+            inList = true;
+            listType = currentType;
+          }
+          htmlParts.push("<li>" + renderInlineMarkdown((unordered || ordered)[1]) + "</li>");
+          continue;
+        }
+
+        closeList();
+        paragraph.push(line.trim());
+      }
+
+      if (inCode) {
+        htmlParts.push("<pre><code>" + escapeHtml(codeLines.join("\n")) + "</code></pre>");
+      }
+      flushParagraph(paragraph, htmlParts);
+      closeList();
+      return htmlParts.join("");
+    }
+
+    function saveChatHistory() {
+      localStorage.setItem(chatStorageKey, JSON.stringify(chatHistory));
+    }
+
+    function loadChatHistory() {
+      try {
+        const rawHistory = localStorage.getItem(chatStorageKey);
+        const parsed = rawHistory ? JSON.parse(rawHistory) : [];
+        chatHistory = Array.isArray(parsed) ? parsed : [];
+      } catch (error) {
+        chatHistory = [];
+      }
+    }
+
+    function loadChatModel() {
+      try {
+        const savedModel = localStorage.getItem(modelStorageKey);
+        const hasOption = Array.from(modelSelect.options).some((option) => option.value === savedModel);
+        if (savedModel && hasOption) {
+          modelSelect.value = savedModel;
+        } else {
+          modelSelect.value = defaultChatModel;
+        }
+      } catch (error) {
+        modelSelect.value = defaultChatModel;
+      }
+    }
+
+    function saveChatModel() {
+      localStorage.setItem(modelStorageKey, modelSelect.value);
+    }
+
+    function addMessage(kind, text, options = {}) {
+      const node = document.createElement("div");
+      node.className = "message " + kind;
+      const normalizedText = kind === "agent" && !options.html ? cleanupAgentText(text) : text;
+      if (options.html) {
+        node.innerHTML = text;
+      } else if (kind === "agent") {
+        const content = document.createElement("div");
+        content.className = "message-content";
+        content.innerHTML = renderMarkdown(normalizedText);
+        node.appendChild(content);
+      } else {
+        node.textContent = normalizedText;
+      }
+      messages.appendChild(node);
+      messages.scrollTop = messages.scrollHeight;
+      if (!options.temporary && kind !== "debug") {
+        chatHistory.push({kind, text: normalizedText});
+        saveChatHistory();
+      }
+      return node;
+    }
+
+    function restoreMessages() {
+      messages.innerHTML = "";
+      if (serverChatHistoryEnabled && Array.isArray(serverChatHistory) && serverChatHistory.length) {
+        chatHistory = serverChatHistory.map((item) => ({
+          kind: item && item.kind ? item.kind : "agent",
+          text: item && typeof item.text === "string" ? item.text : ""
+        })).filter((item) => item.text);
+        saveChatHistory();
+      } else {
+        loadChatHistory();
+      }
+      if (!chatHistory.length) {
+        addMessage("agent", welcomeMessage);
+        return;
+      }
+
+      const restoredHistory = [...chatHistory];
+      chatHistory = [];
+      for (const item of restoredHistory) {
+        if (!item || !item.kind || typeof item.text !== "string") continue;
+        addMessage(item.kind, item.text);
+      }
+    }
+
+    function addTypingMessage(label = "L'agente sta analizzando") {
+      return addMessage(
+        "agent",
+        '<div class="typing-line"><span>' + escapeHtml(label) + '</span><div class="typing" aria-label="' + escapeHtml(label) + '"><span></span><span></span><span></span></div></div>',
+        {html: true, temporary: true}
+      );
+    }
+
+    function addDebugMessage(debugItems) {
+      if (!debugItems || !debugItems.length) return;
+      const debugText = escapeHtml(debugItems.join("\n"));
+      addMessage(
+        "debug",
+        "<details><summary>Dettagli esecuzione</summary><pre>" + debugText + "</pre></details>",
+        {html: true, temporary: true}
+      );
+    }
+
+    // Inizializza zoom, pan e reset per ogni viewer circuito presente nella pagina.
+    function setupCircuitViewers() {
+      const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+      document.querySelectorAll(".viewer-wrap").forEach((viewer) => {
+        const canvas = viewer.querySelector(".viewer-canvas");
+        const svg = viewer.querySelector(".viewer-svg");
+        const readout = viewer.querySelector(".viewer-zoom-readout");
+        if (!canvas || !svg) return;
+
+        const state = {
+          scale: 1,
+          x: 0,
+          y: 0,
+          dragging: false,
+          lastX: 0,
+          lastY: 0
+        };
+
+        // Applica la trasformazione corrente allo SVG e aggiorna la percentuale.
+        function applyTransform() {
+          svg.style.transform = "translate(" + state.x + "px, " + state.y + "px) scale(" + state.scale + ")";
+          const minorGrid = 40 * state.scale;
+          const majorGrid = 200 * state.scale;
+          const gridX = 14 + state.x;
+          const gridY = 14 + state.y;
+          canvas.style.backgroundSize =
+            majorGrid + "px " + majorGrid + "px, " +
+            majorGrid + "px " + majorGrid + "px, " +
+            minorGrid + "px " + minorGrid + "px, " +
+            minorGrid + "px " + minorGrid + "px";
+          canvas.style.backgroundPosition = gridX + "px " + gridY + "px";
+          if (readout) {
+            readout.textContent = Math.round(state.scale * 100) + "%";
+          }
+        }
+
+        // Esegue lo zoom mantenendo fermo il punto sotto il cursore o il centro.
+        function zoomAt(nextScale, originX, originY) {
+          const previousScale = state.scale;
+          state.scale = clamp(nextScale, 0.45, 3.5);
+          const factor = state.scale / previousScale;
+          state.x = originX - (originX - state.x) * factor;
+          state.y = originY - (originY - state.y) * factor;
+          applyTransform();
+        }
+
+        viewer.querySelectorAll("[data-viewer-action]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const rect = canvas.getBoundingClientRect();
+            const originX = rect.width / 2;
+            const originY = rect.height / 2;
+            const action = button.dataset.viewerAction;
+            if (action === "zoom-in") {
+              zoomAt(state.scale * 1.18, originX, originY);
+            } else if (action === "zoom-out") {
+              zoomAt(state.scale / 1.18, originX, originY);
+            } else if (action === "reset") {
+              state.scale = 1;
+              state.x = 0;
+              state.y = 0;
+              applyTransform();
+            }
+          });
+        });
+
+        canvas.addEventListener("wheel", (event) => {
+          event.preventDefault();
+          const rect = canvas.getBoundingClientRect();
+          const originX = event.clientX - rect.left;
+          const originY = event.clientY - rect.top;
+          const zoomFactor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
+          zoomAt(state.scale * zoomFactor, originX, originY);
+        }, {passive: false});
+
+        canvas.addEventListener("pointerdown", (event) => {
+          state.dragging = true;
+          state.lastX = event.clientX;
+          state.lastY = event.clientY;
+          canvas.classList.add("is-dragging");
+          canvas.setPointerCapture(event.pointerId);
+        });
+
+        canvas.addEventListener("pointermove", (event) => {
+          if (!state.dragging) return;
+          state.x += event.clientX - state.lastX;
+          state.y += event.clientY - state.lastY;
+          state.lastX = event.clientX;
+          state.lastY = event.clientY;
+          applyTransform();
+        });
+
+        // Chiude il trascinamento e rilascia il pointer capture se necessario.
+        function endDrag(event) {
+          state.dragging = false;
+          canvas.classList.remove("is-dragging");
+          if (event && canvas.hasPointerCapture(event.pointerId)) {
+            canvas.releasePointerCapture(event.pointerId);
+          }
+        }
+
+        canvas.addEventListener("pointerup", endDrag);
+        canvas.addEventListener("pointercancel", endDrag);
+        canvas.addEventListener("dblclick", () => {
+          state.scale = 1;
+          state.x = 0;
+          state.y = 0;
+          applyTransform();
+        });
+
+        applyTransform();
+      });
+    }
+
+    // Inizializza gli oscilloscopi TRAN usando esclusivamente i dati preparati dallo step 13.
+    function setupTransientScopes() {
+      document.querySelectorAll(".viewer-scopes").forEach((scope) => {
+        if (scope.dataset.scopeReady === "1") return;
+        const dataNode = scope.querySelector(".viewer-scope-data");
+        const grid = scope.querySelector(".viewer-scope-grid");
+        if (!dataNode || !grid) return;
+
+        let payload;
+        try {
+          payload = JSON.parse(dataNode.textContent || "{}");
+        } catch (error) {
+          return;
+        }
+        const selected = Array.isArray(payload.selected) ? payload.selected : [];
+        const current = payload.current || {time: [], series: {}};
+        const base = payload.base || {time: [], series: {}};
+        if (!selected.length || !Array.isArray(current.time) || !current.time.length) return;
+
+        scope.dataset.scopeReady = "1";
+        const playButton = scope.querySelector(".viewer-scope-play");
+        const slider = scope.querySelector(".viewer-scope-slider");
+        const timeLabel = scope.querySelector(".viewer-scope-time");
+        const windowSelect = scope.querySelector(".viewer-scope-window");
+        const displaySelect = scope.querySelector(".viewer-scope-display");
+        const speedSelect = scope.querySelector(".viewer-scope-speed");
+        const panels = [];
+        const state = {
+          playing: true,
+          progress: 0,
+          previousFrame: null,
+          windowMode: "full",
+          displayMode: "centered",
+          speed: 1
+        };
+
+        // Formatta tensioni molto diverse senza perdere leggibilita nei pannelli compatti.
+        function formatVoltage(value) {
+          const absolute = Math.abs(value);
+          if (absolute >= 1) return value.toFixed(3).replace(/0+$/, "").replace(/\.$/, "") + " V";
+          if (absolute >= 1e-3) return (value * 1e3).toFixed(2).replace(/0+$/, "").replace(/\.$/, "") + " mV";
+          return (value * 1e6).toFixed(2).replace(/0+$/, "").replace(/\.$/, "") + " uV";
+        }
+
+        // Restituisce gli estremi temporali della finestra completa o a regime stabile.
+        function timeBounds() {
+          const minimum = Number(current.time[0]);
+          const maximum = Number(current.time[current.time.length - 1]);
+          const steadyStart = Number(payload.steady_start);
+          return {
+            minimum: state.windowMode === "steady" && Number.isFinite(steadyStart) ? steadyStart : minimum,
+            maximum: maximum
+          };
+        }
+
+        // Trova il campione piu vicino a un istante rispettando timestep non uniformi.
+        function nearestIndex(times, target) {
+          let low = 0;
+          let high = times.length - 1;
+          while (low < high) {
+            const middle = Math.floor((low + high) / 2);
+            if (Number(times[middle]) < target) low = middle + 1;
+            else high = middle;
+          }
+          if (low > 0 && Math.abs(Number(times[low - 1]) - target) < Math.abs(Number(times[low]) - target)) {
+            return low - 1;
+          }
+          return low;
+        }
+
+        // Estrae valori e media limitandosi alla finestra temporale corrente.
+        function windowSeries(times, values, bounds) {
+          const samples = [];
+          for (let index = 0; index < times.length && index < values.length; index += 1) {
+            const time = Number(times[index]);
+            if (time >= bounds.minimum && time <= bounds.maximum) {
+              samples.push({time, value: Number(values[index])});
+            }
+          }
+          const mean = samples.length
+            ? samples.reduce((sum, sample) => sum + sample.value, 0) / samples.length
+            : 0;
+          return {samples, mean};
+        }
+
+        // Disegna una serie usando il tempo reale e interrompendola al cursore se richiesto.
+        function drawTrace(context, samples, color, width, bounds, yMinimum, yMaximum, mean, stopTime) {
+          const drawable = samples.filter((sample) => stopTime === null || sample.time <= stopTime);
+          if (drawable.length < 2) return;
+          const canvasWidth = context.canvas.width;
+          const canvasHeight = context.canvas.height;
+          const timeSpan = Math.max(bounds.maximum - bounds.minimum, 1e-12);
+          const valueSpan = Math.max(yMaximum - yMinimum, 1e-12);
+          context.beginPath();
+          drawable.forEach((sample, index) => {
+            const shownValue = state.displayMode === "centered" ? sample.value - mean : sample.value;
+            const x = ((sample.time - bounds.minimum) / timeSpan) * canvasWidth;
+            const y = canvasHeight - ((shownValue - yMinimum) / valueSpan) * canvasHeight;
+            if (index === 0) context.moveTo(x, y);
+            else context.lineTo(x, y);
+          });
+          context.strokeStyle = color;
+          context.lineWidth = width;
+          context.lineJoin = "round";
+          context.lineCap = "round";
+          context.stroke();
+        }
+
+        // Disegna griglia, tracce, cursore e metriche di un singolo oscilloscopio.
+        function drawPanel(panel, cursorTime) {
+          const canvas = panel.canvas;
+          const rect = canvas.getBoundingClientRect();
+          const ratio = window.devicePixelRatio || 1;
+          const nextWidth = Math.max(Math.round(rect.width * ratio), 1);
+          const nextHeight = Math.max(Math.round(rect.height * ratio), 1);
+          if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
+            canvas.width = nextWidth;
+            canvas.height = nextHeight;
+          }
+          const context = canvas.getContext("2d");
+          if (!context) return;
+          const bounds = timeBounds();
+          const currentWindow = windowSeries(current.time, current.series[panel.quantity] || [], bounds);
+          const baseWindow = windowSeries(base.time || [], (base.series || {})[panel.quantity] || [], bounds);
+          const shownValues = [];
+          currentWindow.samples.forEach((sample) => shownValues.push(
+            state.displayMode === "centered" ? sample.value - currentWindow.mean : sample.value
+          ));
+          baseWindow.samples.forEach((sample) => shownValues.push(
+            state.displayMode === "centered" ? sample.value - baseWindow.mean : sample.value
+          ));
+          let yMinimum = shownValues.length ? Math.min(...shownValues) : -1;
+          let yMaximum = shownValues.length ? Math.max(...shownValues) : 1;
+          const padding = Math.max((yMaximum - yMinimum) * 0.12, 1e-9);
+          yMinimum -= padding;
+          yMaximum += padding;
+
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          context.strokeStyle = "rgba(148, 163, 184, 0.18)";
+          context.lineWidth = 1;
+          for (let index = 1; index < 4; index += 1) {
+            const x = canvas.width * index / 4;
+            context.beginPath();
+            context.moveTo(x, 0);
+            context.lineTo(x, canvas.height);
+            context.stroke();
+          }
+          for (let index = 1; index < 3; index += 1) {
+            const y = canvas.height * index / 3;
+            context.beginPath();
+            context.moveTo(0, y);
+            context.lineTo(canvas.width, y);
+            context.stroke();
+          }
+
+          drawTrace(context, baseWindow.samples, "#94a3b8", 1.5 * ratio, bounds, yMinimum, yMaximum, baseWindow.mean, null);
+          context.globalAlpha = 0.32;
+          drawTrace(context, currentWindow.samples, "#38bdf8", 1.6 * ratio, bounds, yMinimum, yMaximum, currentWindow.mean, null);
+          context.globalAlpha = 1;
+          drawTrace(context, currentWindow.samples, "#38bdf8", 2.2 * ratio, bounds, yMinimum, yMaximum, currentWindow.mean, cursorTime);
+
+          const cursorX = ((cursorTime - bounds.minimum) / Math.max(bounds.maximum - bounds.minimum, 1e-12)) * canvas.width;
+          context.strokeStyle = "rgba(248, 250, 252, 0.82)";
+          context.lineWidth = 1 * ratio;
+          context.beginPath();
+          context.moveTo(cursorX, 0);
+          context.lineTo(cursorX, canvas.height);
+          context.stroke();
+
+          const values = currentWindow.samples.map((sample) => sample.value);
+          const vpp = values.length ? Math.max(...values) - Math.min(...values) : 0;
+          const sampleIndex = nearestIndex(current.time, cursorTime);
+          const instant = Number((current.series[panel.quantity] || [0])[sampleIndex] || 0);
+          panel.metric.textContent = "Vpp " + formatVoltage(vpp) + " | " + formatVoltage(instant);
+        }
+
+        // Aggiorna tutti i pannelli e il tempo mostrato con un unico cursore comune.
+        function renderScopes() {
+          const bounds = timeBounds();
+          const cursorTime = bounds.minimum + state.progress * (bounds.maximum - bounds.minimum);
+          if (slider) slider.value = String(Math.round(state.progress * 1000));
+          if (timeLabel) timeLabel.textContent = "t = " + (cursorTime * 1000).toFixed(2) + " ms";
+          panels.forEach((panel) => drawPanel(panel, cursorTime));
+        }
+
+        // Sincronizza play e pausa con le animazioni del circuito equivalente.
+        function syncCircuitAnimation() {
+          const viewer = scope.closest(".viewer-wrap");
+          if (!viewer) return;
+          viewer.querySelectorAll(".wire.active,.wire.transient,.component-flow,.transistor-flow,.led-glow,.lamp-glow,.battery-glow").forEach((element) => {
+            element.style.animationPlayState = state.playing ? "running" : "paused";
+          });
+          if (playButton) {
+            playButton.innerHTML = state.playing ? "&#10074;&#10074;" : "&#9654;";
+          }
+        }
+
+        // Avanza il cursore con una durata leggibile indipendente dalla durata SPICE.
+        function animate(timestamp) {
+          if (state.previousFrame === null) state.previousFrame = timestamp;
+          const elapsed = timestamp - state.previousFrame;
+          state.previousFrame = timestamp;
+          if (state.playing) {
+            state.progress = (state.progress + elapsed * state.speed / 8000) % 1;
+            renderScopes();
+          }
+          window.requestAnimationFrame(animate);
+        }
+
+        selected.forEach((quantity) => {
+          if (!current.series || !Array.isArray(current.series[quantity])) return;
+          const panel = document.createElement("section");
+          panel.className = "viewer-scope-panel";
+          panel.innerHTML = '<div class="viewer-scope-heading"><span>' + quantity + '</span><span class="viewer-scope-metric"></span></div><canvas class="viewer-scope-canvas"></canvas>';
+          grid.appendChild(panel);
+          panels.push({
+            quantity,
+            canvas: panel.querySelector("canvas"),
+            metric: panel.querySelector(".viewer-scope-metric")
+          });
+        });
+
+        if (playButton) {
+          playButton.addEventListener("click", () => {
+            state.playing = !state.playing;
+            state.previousFrame = null;
+            syncCircuitAnimation();
+            renderScopes();
+          });
+        }
+        if (slider) {
+          slider.addEventListener("input", () => {
+            state.progress = Number(slider.value) / 1000;
+            state.playing = false;
+            syncCircuitAnimation();
+            renderScopes();
+          });
+        }
+        if (windowSelect) {
+          windowSelect.addEventListener("change", () => {
+            state.windowMode = windowSelect.value;
+            state.progress = 0;
+            renderScopes();
+          });
+        }
+        if (displaySelect) {
+          displaySelect.addEventListener("change", () => {
+            state.displayMode = displaySelect.value;
+            renderScopes();
+          });
+        }
+        if (speedSelect) {
+          speedSelect.addEventListener("change", () => {
+            state.speed = Number(speedSelect.value) || 1;
+          });
+        }
+        if (window.ResizeObserver) {
+          const observer = new ResizeObserver(renderScopes);
+          panels.forEach((panel) => observer.observe(panel.canvas));
+        }
+
+        syncCircuitAnimation();
+        renderScopes();
+        window.requestAnimationFrame(animate);
+      });
+    }
+
+    function setLoading(isLoading) {
+      input.disabled = isLoading;
+      modelSelect.disabled = isLoading;
+      submitButton.disabled = isLoading;
+      submitButton.textContent = isLoading ? "Invio..." : "Invia";
+    }
+
+    function isScenarioRequest(text) {
+      const normalized = text.toLowerCase().replace(/_/g, " ");
+      const executionPattern = /\b(?:esegui|eseguire|lancia|avvia|run|execute|testa|prova|applica|facciamo|vai|procedi)\b(?:\s+(?:pure|per favore|lo|la|il|uno|un|questo|questa|please))*\s+scenario\s*\d+\b/i;
+      if (executionPattern.test(normalized)) {
+        return true;
+      }
+
+      const latestScenarioPattern = /\b(?:esegui|eseguire|lancia|avvia|run|execute|testa|prova|applica|facciamo|vai|procedi)\b(?:\s+(?:pure|per favore|lo|la|il|uno|un|questo|questa|please))*\s+(?:l['’]?\s*ultimo|ultimo|quest['’]?\s*ultimo|questo\s+ultimo|ultimo\s+scenario|ultimo\s+proposto|scenario\s+appena\s+proposto|scenario\s+proposto|scenario\s+piu\s+recente|questo\s+scenario|quello\s+appena\s+proposto)\b/i;
+      if (latestScenarioPattern.test(normalized)) {
+        return true;
+      }
+
+      const ordinalPattern = /\b(?:esegui|eseguire|lancia|avvia|run|execute|testa|prova|applica|facciamo|vai|procedi)\b(?:\s+(?:pure|per favore|lo|la|il|uno|un|questo|questa|please))*\s+\b(?:primo|prima|secondo|seconda|terzo|terza|quarto|quarta|quinto|quinta)\b/i;
+      return ordinalPattern.test(normalized);
+    }
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      addMessage("user", text);
+      input.value = "";
+      setLoading(true);
+      const scenarioRequest = isScenarioRequest(text);
+      const typingNode = addTypingMessage(scenarioRequest ? "Sto eseguendo lo scenario" : "L'agente sta analizzando");
+
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({message: text, model: modelSelect.value, active_run: activeRunId})
+        });
+        const data = await response.json();
+        typingNode.remove();
+        addMessage("agent", data.reply || "Nessuna risposta restituita.");
+        addDebugMessage(data.debug);
+        if (data.active_run) {
+          setTimeout(() => {
+            window.location.href = "/?run=" + encodeURIComponent(data.active_run);
+          }, 900);
+        }
+      } catch (error) {
+        typingNode.remove();
+        addMessage("agent", "Richiesta chat non riuscita. Controlla il terminale del server locale.");
+      } finally {
+        setLoading(false);
+        input.focus();
+      }
+    });
+
+    clearChatButton.addEventListener("click", async () => {
+      chatHistory = [];
+      localStorage.removeItem(chatStorageKey);
+      if (serverChatHistoryEnabled) {
+        try {
+          await fetch("/api/chat-history/clear", {method: "POST"});
+        } catch (error) {
+          // Keep the UI responsive even if local clear succeeds but server clear fails.
+        }
+      }
+      messages.innerHTML = "";
+      addMessage("agent", welcomeMessage);
+      input.focus();
+    });
+
+    modelSelect.addEventListener("change", saveChatModel);
+
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        form.requestSubmit();
+      }
+    });
+
+    loadChatModel();
+    restoreMessages();
+    setupCircuitViewers();
+    setupTransientScopes();
+  </script>
+</body>
+</html>

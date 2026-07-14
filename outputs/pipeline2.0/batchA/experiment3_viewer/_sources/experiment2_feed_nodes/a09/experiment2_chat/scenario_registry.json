@@ -1,0 +1,473 @@
+{
+  "source_format": "pipeline2.0_experiment2_scenario_registry",
+  "batch_name": "batchA",
+  "experiment_name": "experiment2_feed_nodes",
+  "circuit_id": "a09",
+  "created_at": "2026-07-07T17:30:13",
+  "updated_at": "2026-07-07T17:45:14",
+  "max_executable_scenarios": 5,
+  "next_scenario_number": 8,
+  "last_added_scenario_id": "scenario_7",
+  "proposals": [
+    {
+      "proposal_id": "proposal_1",
+      "created_at": "2026-07-07T17:30:13",
+      "source_agent_response": "outputs\\pipeline2.0\\batchA\\experiment2_feed_nodes\\a09\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_1",
+        "scenario_2",
+        "scenario_3"
+      ]
+    },
+    {
+      "proposal_id": "proposal_2",
+      "created_at": "2026-07-07T17:32:41",
+      "source_agent_response": "outputs\\pipeline2.0\\batchA\\experiment2_feed_nodes\\a09\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_4"
+      ]
+    },
+    {
+      "proposal_id": "proposal_3",
+      "created_at": "2026-07-07T17:35:55",
+      "source_agent_response": "outputs\\pipeline2.0\\batchA\\experiment2_feed_nodes\\a09\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_5"
+      ]
+    },
+    {
+      "proposal_id": "proposal_4",
+      "created_at": "2026-07-07T17:38:41",
+      "source_agent_response": "outputs\\pipeline2.0\\batchA\\experiment2_feed_nodes\\a09\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_6"
+      ]
+    },
+    {
+      "proposal_id": "proposal_5",
+      "created_at": "2026-07-07T17:43:35",
+      "source_agent_response": "outputs\\pipeline2.0\\batchA\\experiment2_feed_nodes\\a09\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_7"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_number": 1,
+      "scenario_id": "scenario_1",
+      "title": "Chiudere lo switch della lampada",
+      "hypothesis": "La lampada non si accende perché switch25.1 è aperto e interrompe il ramo verso N006.",
+      "actions": [
+        {
+          "type": "close_switch",
+          "target": "switch25.1"
+        }
+      ],
+      "analysis": "op",
+      "compare": [
+        "v(N004)",
+        "v(N006)",
+        "i(Rlamp13_1)"
+      ],
+      "rerun_from": "06",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_1",
+      "execution_path": null,
+      "created_at": "2026-07-07T17:30:13",
+      "updated_at": "2026-07-07T17:30:13",
+      "signature": "{\"actions\": [{\"target\": \"switch25.1\", \"type\": \"close_switch\"}], \"analysis\": \"op\", \"compare\": [\"v(N004)\", \"v(N006)\", \"i(Rlamp13_1)\"], \"hypothesis\": \"La lampada non si accende perché switch25.1 è aperto e interrompe il ramo verso N006.\", \"title\": \"Chiudere lo switch della lampada\"}",
+      "scenario": {
+        "scenario_id": "scenario_1",
+        "title": "Chiudere lo switch della lampada",
+        "hypothesis": "La lampada non si accende perché switch25.1 è aperto e interrompe il ramo verso N006.",
+        "actions": [
+          {
+            "type": "close_switch",
+            "target": "switch25.1"
+          }
+        ],
+        "rerun_from": "06",
+        "analysis": "op",
+        "compare": [
+          "v(N004)",
+          "v(N006)",
+          "i(Rlamp13_1)"
+        ]
+      }
+    },
+    {
+      "scenario_number": 2,
+      "scenario_id": "scenario_2",
+      "title": "Alimentare l'ingresso del ramo LED",
+      "hypothesis": "Il LED non si accende perché N005 non è pilotato nel circuito base.",
+      "actions": [
+        {
+          "type": "drive_node_voltage",
+          "target": "N005",
+          "value": "9V"
+        }
+      ],
+      "analysis": "op",
+      "compare": [
+        "v(N005)",
+        "v(N007)",
+        "i(Rresistor22_1)"
+      ],
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 2,
+      "original_scenario_id": "scenario_2",
+      "execution_path": null,
+      "created_at": "2026-07-07T17:30:13",
+      "updated_at": "2026-07-07T17:30:13",
+      "signature": "{\"actions\": [{\"target\": \"N005\", \"type\": \"drive_node_voltage\", \"value\": \"9V\"}], \"analysis\": \"op\", \"compare\": [\"v(N005)\", \"v(N007)\", \"i(Rresistor22_1)\"], \"hypothesis\": \"Il LED non si accende perché N005 non è pilotato nel circuito base.\", \"title\": \"Alimentare l'ingresso del ramo LED\"}",
+      "scenario": {
+        "scenario_id": "scenario_2",
+        "title": "Alimentare l'ingresso del ramo LED",
+        "hypothesis": "Il LED non si accende perché N005 non è pilotato nel circuito base.",
+        "actions": [
+          {
+            "type": "drive_node_voltage",
+            "target": "N005",
+            "value": "9V"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N005)",
+          "v(N007)",
+          "i(Rresistor22_1)"
+        ]
+      }
+    },
+    {
+      "scenario_number": 3,
+      "scenario_id": "scenario_3",
+      "title": "Alimentare l'ingresso dello switch della lampada",
+      "hypothesis": "La lampada non si accende perché il nodo N004 non riceve alimentazione nel circuito base.",
+      "actions": [
+        {
+          "type": "drive_node_voltage",
+          "target": "N004",
+          "value": "9V"
+        }
+      ],
+      "analysis": "op",
+      "compare": [
+        "v(N004)",
+        "v(N006)",
+        "i(Rlamp13_1)"
+      ],
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 3,
+      "original_scenario_id": "scenario_3",
+      "execution_path": null,
+      "created_at": "2026-07-07T17:30:13",
+      "updated_at": "2026-07-07T17:30:13",
+      "signature": "{\"actions\": [{\"target\": \"N004\", \"type\": \"drive_node_voltage\", \"value\": \"9V\"}], \"analysis\": \"op\", \"compare\": [\"v(N004)\", \"v(N006)\", \"i(Rlamp13_1)\"], \"hypothesis\": \"La lampada non si accende perché il nodo N004 non riceve alimentazione nel circuito base.\", \"title\": \"Alimentare l'ingresso dello switch della lampada\"}",
+      "scenario": {
+        "scenario_id": "scenario_3",
+        "title": "Alimentare l'ingresso dello switch della lampada",
+        "hypothesis": "La lampada non si accende perché il nodo N004 non riceve alimentazione nel circuito base.",
+        "actions": [
+          {
+            "type": "drive_node_voltage",
+            "target": "N004",
+            "value": "9V"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N004)",
+          "v(N006)",
+          "i(Rlamp13_1)"
+        ]
+      }
+    },
+    {
+      "scenario_number": 4,
+      "scenario_id": "scenario_4",
+      "title": "Propagare N003 verso l’ingresso del ramo LED",
+      "hypothesis": "Il ramo LED e inattivo perche il nodo alimentato N003 non raggiunge il nodo di ingresso PWR_LED_INPUT N005.",
+      "actions": [
+        {
+          "type": "feed_nodes_from_source_node",
+          "source_node": "N003",
+          "target_nodes": [
+            "N005"
+          ],
+          "resistance": "1m"
+        }
+      ],
+      "analysis": "op",
+      "compare": [
+        "v(N003)",
+        "v(N005)",
+        "v(N007)",
+        "i(vbattery2_1#branch)"
+      ],
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "resolved_candidate",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_2",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_1",
+      "execution_path": "outputs\\pipeline2.0\\batchA\\experiment2_feed_nodes\\a09\\scenarios\\scenario_4",
+      "created_at": "2026-07-07T17:32:41",
+      "updated_at": "2026-07-07T17:33:28",
+      "signature": "{\"actions\": [{\"resistance\": \"1m\", \"source_node\": \"N003\", \"target_nodes\": [\"N005\"], \"type\": \"feed_nodes_from_source_node\"}], \"analysis\": \"op\", \"compare\": [\"v(N003)\", \"v(N005)\", \"v(N007)\", \"i(vbattery2_1#branch)\"], \"hypothesis\": \"Il ramo LED e inattivo perche il nodo alimentato N003 non raggiunge il nodo di ingresso PWR_LED_INPUT N005.\", \"title\": \"Propagare N003 verso l’ingresso del ramo LED\"}",
+      "scenario": {
+        "scenario_id": "scenario_4",
+        "title": "Propagare N003 verso l’ingresso del ramo LED",
+        "hypothesis": "Il ramo LED e inattivo perche il nodo alimentato N003 non raggiunge il nodo di ingresso PWR_LED_INPUT N005.",
+        "actions": [
+          {
+            "type": "feed_nodes_from_source_node",
+            "source_node": "N003",
+            "target_nodes": [
+              "N005"
+            ],
+            "resistance": "1m"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N003)",
+          "v(N005)",
+          "v(N007)",
+          "i(vbattery2_1#branch)"
+        ]
+      }
+    },
+    {
+      "scenario_number": 5,
+      "scenario_id": "scenario_5",
+      "title": "Propagare N003 verso l’ingresso del ramo lampada",
+      "hypothesis": "Il ramo lampada e inattivo perche il nodo alimentato N003 non raggiunge il nodo di ingresso SW2_INPUT N004.",
+      "actions": [
+        {
+          "type": "feed_nodes_from_source_node",
+          "source_node": "N003",
+          "target_nodes": [
+            "N004"
+          ],
+          "resistance": "1m"
+        }
+      ],
+      "analysis": "op",
+      "compare": [
+        "v(N003)",
+        "v(N004)",
+        "v(N006)",
+        "i(vbattery2_1#branch)"
+      ],
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_3",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_5",
+      "execution_path": "outputs\\pipeline2.0\\batchA\\experiment2_feed_nodes\\a09\\scenarios\\scenario_5",
+      "created_at": "2026-07-07T17:35:55",
+      "updated_at": "2026-07-07T17:37:22",
+      "signature": "{\"actions\": [{\"resistance\": \"1m\", \"source_node\": \"N003\", \"target_nodes\": [\"N004\"], \"type\": \"feed_nodes_from_source_node\"}], \"analysis\": \"op\", \"compare\": [\"v(N003)\", \"v(N004)\", \"v(N006)\", \"i(vbattery2_1#branch)\"], \"hypothesis\": \"Il ramo lampada e inattivo perche il nodo alimentato N003 non raggiunge il nodo di ingresso SW2_INPUT N004.\", \"title\": \"Propagare N003 verso l’ingresso del ramo lampada\"}",
+      "scenario": {
+        "scenario_id": "scenario_5",
+        "title": "Propagare N003 verso l’ingresso del ramo lampada",
+        "hypothesis": "Il ramo lampada e inattivo perche il nodo alimentato N003 non raggiunge il nodo di ingresso SW2_INPUT N004.",
+        "actions": [
+          {
+            "type": "feed_nodes_from_source_node",
+            "source_node": "N003",
+            "target_nodes": [
+              "N004"
+            ],
+            "resistance": "1m"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N003)",
+          "v(N004)",
+          "v(N006)",
+          "i(vbattery2_1#branch)"
+        ]
+      }
+    },
+    {
+      "scenario_number": 6,
+      "scenario_id": "scenario_6",
+      "title": "Alimentare N004 e chiudere switch25.1",
+      "hypothesis": "Il ramo lampada resta inattivo nonostante N004 sia alimentato perche switch25.1 e aperto e impedisce il passaggio da N004 a N006.",
+      "actions": [
+        {
+          "type": "feed_nodes_from_source_node",
+          "source_node": "N003",
+          "target_nodes": [
+            "N004"
+          ],
+          "resistance": "1m"
+        },
+        {
+          "type": "close_switch",
+          "target": "switch25.1"
+        }
+      ],
+      "analysis": "op",
+      "compare": [
+        "v(N003)",
+        "v(N004)",
+        "v(N006)",
+        "i(vbattery2_1#branch)"
+      ],
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_4",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_6",
+      "execution_path": "outputs\\pipeline2.0\\batchA\\experiment2_feed_nodes\\a09\\scenarios\\scenario_6",
+      "created_at": "2026-07-07T17:38:41",
+      "updated_at": "2026-07-07T17:39:49",
+      "signature": "{\"actions\": [{\"resistance\": \"1m\", \"source_node\": \"N003\", \"target_nodes\": [\"N004\"], \"type\": \"feed_nodes_from_source_node\"}, {\"target\": \"switch25.1\", \"type\": \"close_switch\"}], \"analysis\": \"op\", \"compare\": [\"v(N003)\", \"v(N004)\", \"v(N006)\", \"i(vbattery2_1#branch)\"], \"hypothesis\": \"Il ramo lampada resta inattivo nonostante N004 sia alimentato perche switch25.1 e aperto e impedisce il passaggio da N004 a N006.\", \"title\": \"Alimentare N004 e chiudere switch25.1\"}",
+      "scenario": {
+        "scenario_id": "scenario_6",
+        "title": "Alimentare N004 e chiudere switch25.1",
+        "hypothesis": "Il ramo lampada resta inattivo nonostante N004 sia alimentato perche switch25.1 e aperto e impedisce il passaggio da N004 a N006.",
+        "actions": [
+          {
+            "type": "feed_nodes_from_source_node",
+            "source_node": "N003",
+            "target_nodes": [
+              "N004"
+            ],
+            "resistance": "1m"
+          },
+          {
+            "type": "close_switch",
+            "target": "switch25.1"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N003)",
+          "v(N004)",
+          "v(N006)",
+          "i(vbattery2_1#branch)"
+        ]
+      }
+    },
+    {
+      "scenario_number": 7,
+      "scenario_id": "scenario_7",
+      "title": "Alimentare insieme i rami LED e lampada",
+      "hypothesis": "Entrambi i rami diventano attivi se il nodo alimentato N003 viene propagato sia a N005 sia a N004, e se switch25.1 viene chiuso per completare il percorso verso N006.",
+      "actions": [
+        {
+          "type": "feed_nodes_from_source_node",
+          "source_node": "N003",
+          "target_nodes": [
+            "N005"
+          ],
+          "resistance": "1m"
+        },
+        {
+          "type": "feed_nodes_from_source_node",
+          "source_node": "N003",
+          "target_nodes": [
+            "N004"
+          ],
+          "resistance": "1m"
+        },
+        {
+          "type": "close_switch",
+          "target": "switch25.1"
+        }
+      ],
+      "analysis": "op",
+      "compare": [
+        "v(N003)",
+        "v(N005)",
+        "v(N007)",
+        "v(N004)",
+        "v(N006)",
+        "i(vbattery2_1#branch)"
+      ],
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_5",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_7",
+      "execution_path": "outputs\\pipeline2.0\\batchA\\experiment2_feed_nodes\\a09\\scenarios\\scenario_7",
+      "created_at": "2026-07-07T17:43:35",
+      "updated_at": "2026-07-07T17:45:14",
+      "signature": "{\"actions\": [{\"resistance\": \"1m\", \"source_node\": \"N003\", \"target_nodes\": [\"N005\"], \"type\": \"feed_nodes_from_source_node\"}, {\"resistance\": \"1m\", \"source_node\": \"N003\", \"target_nodes\": [\"N004\"], \"type\": \"feed_nodes_from_source_node\"}, {\"target\": \"switch25.1\", \"type\": \"close_switch\"}], \"analysis\": \"op\", \"compare\": [\"v(N003)\", \"v(N005)\", \"v(N007)\", \"v(N004)\", \"v(N006)\", \"i(vbattery2_1#branch)\"], \"hypothesis\": \"Entrambi i rami diventano attivi se il nodo alimentato N003 viene propagato sia a N005 sia a N004, e se switch25.1 viene chiuso per completare il percorso verso N006.\", \"title\": \"Alimentare insieme i rami LED e lampada\"}",
+      "scenario": {
+        "scenario_id": "scenario_7",
+        "title": "Alimentare insieme i rami LED e lampada",
+        "hypothesis": "Entrambi i rami diventano attivi se il nodo alimentato N003 viene propagato sia a N005 sia a N004, e se switch25.1 viene chiuso per completare il percorso verso N006.",
+        "actions": [
+          {
+            "type": "feed_nodes_from_source_node",
+            "source_node": "N003",
+            "target_nodes": [
+              "N005"
+            ],
+            "resistance": "1m"
+          },
+          {
+            "type": "feed_nodes_from_source_node",
+            "source_node": "N003",
+            "target_nodes": [
+              "N004"
+            ],
+            "resistance": "1m"
+          },
+          {
+            "type": "close_switch",
+            "target": "switch25.1"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N003)",
+          "v(N005)",
+          "v(N007)",
+          "v(N004)",
+          "v(N006)",
+          "i(vbattery2_1#branch)"
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Collegare l'uscita dello switch al ramo LED-resistenza",
+  "hypothesis": "Dopo la chiusura di switch25.1, i rami finali restano spenti perché N002 non è elettricamente continuo con N003.",
+  "actions": [
+    {
+      "type": "connect_nodes",
+      "from": "N002",
+      "to": "N003",
+      "resistance": "1m"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N002)",
+    "v(N003)",
+    "v(N005)",
+    "i(vbattery2_1#branch)"
+  ]
+}

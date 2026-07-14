@@ -1,0 +1,61 @@
+IC: TDA1516BQ
+
+Descrizione:
+Il TDA1516BQ è un amplificatore audio integrato in classe B per autoradio.
+Può essere usato sia come amplificatore stereo 2 x 12 W, sia come amplificatore mono BTL da circa 24 W.
+Nel circuito considerato è usato in configurazione BTL per pilotare uno speaker da 4 ohm.
+
+Pin principali:
+- Pin 1: input 1 / ingresso amplificatore 1
+- Pin 2: INV, ingresso invertente
+- Pin 3: GND1, massa segnale
+- Pin 4: Vref, tensione di riferimento interna
+- Pin 5: OUT1, uscita 1
+- Pin 6: BS1, bootstrap 1
+- Pin 7: GND2, massa di potenza / substrate
+- Pin 8: BS2, bootstrap 2
+- Pin 9: OUT2, uscita 2
+- Pin 10: VP, alimentazione positiva
+- Pin 11: M/SS, mute / stand-by switch
+- Pin 12: RR, ripple rejection
+- Pin 13: input 2 / ingresso amplificatore 2
+
+Alimentazione:
+- Tensione operativa VP: circa 6 V - 18 V.
+- Valore tipico nel datasheet: 14.4 V.
+- Pin 10 deve essere collegato alla tensione positiva di alimentazione.
+- Pin 3 e pin 7 devono essere collegati a massa.
+
+Configurazione BTL:
+- In modalità BTL lo speaker deve essere collegato tra le due uscite dell’integrato.
+- Lo speaker da 4 ohm va collegato tra pin 5 (OUT1) e pin 9 (OUT2).
+- Lo speaker non deve essere collegato tra uscita e GND.
+
+Pin di controllo mute / stand-by:
+- Pin 11: M/SS.
+- ON: pin 11 circa >= 8.5 V.
+- Mute: pin 11 circa 3.0 V - 6.4 V.
+- Stand-by: pin 11 circa 0 V - 2 V.
+- Se pin 11 non è nello stato ON, l’amplificatore può non produrre audio.
+
+Ingressi audio:
+- Il segnale audio arriva agli ingressi dell’amplificatore tramite condensatore di accoppiamento.
+- In configurazione BTL il circuito applicativo usa gli ingressi per generare il segnale differenziale interno.
+- Se il segnale audio non arriva correttamente agli ingressi, non ci sarà uscita sullo speaker.
+
+Collegamenti attesi nel circuito:
+- Pin 10 collegato alla tensione positiva.
+- Pin 3 e pin 7 collegati a GND.
+- Pin 5 e pin 9 collegati ai due terminali dello speaker K1.
+- Pin 11 portato allo stato ON tramite switch o rete di controllo.
+- Ingresso audio collegato tramite condensatore di accoppiamento.
+- Condensatori di filtro/disaccoppiamento collegati tra alimentazione e massa.
+
+Controlli diagnostici utili:
+- Misurare la tensione sul pin 10 rispetto a GND.
+- Verificare la continuità dei pin 3 e 7 verso GND.
+- Misurare la tensione sul pin 11: deve essere nello stato ON per avere audio.
+- Verificare che lo speaker K1 sia collegato tra pin 5 e pin 9.
+- Verificare che nessun terminale dello speaker sia collegato a GND.
+- Verificare che il segnale audio arrivi all’ingresso tramite il condensatore di accoppiamento.
+- Verificare eventuali cortocircuiti sulle uscite pin 5 e pin 9 verso GND o alimentazione.

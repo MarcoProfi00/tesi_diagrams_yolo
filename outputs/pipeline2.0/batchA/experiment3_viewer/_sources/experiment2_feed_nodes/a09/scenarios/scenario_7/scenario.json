@@ -1,0 +1,37 @@
+{
+  "scenario_id": "scenario_7",
+  "title": "Alimentare insieme i rami LED e lampada",
+  "hypothesis": "Entrambi i rami diventano attivi se il nodo alimentato N003 viene propagato sia a N005 sia a N004, e se switch25.1 viene chiuso per completare il percorso verso N006.",
+  "actions": [
+    {
+      "type": "feed_nodes_from_source_node",
+      "source_node": "N003",
+      "target_nodes": [
+        "N005"
+      ],
+      "resistance": "1m"
+    },
+    {
+      "type": "feed_nodes_from_source_node",
+      "source_node": "N003",
+      "target_nodes": [
+        "N004"
+      ],
+      "resistance": "1m"
+    },
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N003)",
+    "v(N005)",
+    "v(N007)",
+    "v(N004)",
+    "v(N006)",
+    "i(vbattery2_1#branch)"
+  ]
+}

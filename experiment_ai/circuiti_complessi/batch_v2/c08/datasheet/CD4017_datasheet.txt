@@ -1,0 +1,46 @@
+IC: CD4017 / CD4017B
+
+Descrizione:
+Il CD4017 e' un contatore decade Johnson CMOS con dieci uscite decodificate. Ad ogni impulso di clock valido, una sola uscita tra Q0 e Q9 va attiva in sequenza. E' usato per sequenziatori, giochi di luci, divisori di frequenza e circuiti che devono attivare uscite una alla volta.
+
+Pin principali:
+- Pin 16: VDD, alimentazione positiva.
+- Pin 8: VSS / GND.
+- Pin 14: CLOCK. Ingresso degli impulsi di conteggio.
+- Pin 13: CLOCK INHIBIT / ENABLE. Se nello stato di blocco, impedisce il conteggio.
+- Pin 15: RESET. Se attivo, riporta il contatore allo stato iniziale Q0.
+- Pin 12: CARRY OUT. Uscita di riporto/divisione per collegare piu' contatori o ottenere un segnale a frequenza ridotta.
+
+Uscite decodificate:
+- Pin 3: Q0.
+- Pin 2: Q1.
+- Pin 4: Q2.
+- Pin 7: Q3.
+- Pin 10: Q4.
+- Pin 1: Q5.
+- Pin 5: Q6.
+- Pin 6: Q7.
+- Pin 9: Q8.
+- Pin 11: Q9.
+
+Funzionamento:
+- Il contatore avanza di uno stato a ogni fronte valido sul pin CLOCK.
+- Solo una uscita Q e' attiva per volta.
+- RESET deve essere inattivo durante il conteggio normale; se resta attivo il contatore rimane bloccato su Q0.
+- CLOCK INHIBIT deve essere nello stato che permette il conteggio; se blocca il clock, le uscite non avanzano.
+- Gli ingressi CMOS non devono restare flottanti.
+
+Uso con LED o transistor:
+- Le uscite Q possono pilotare LED o basi di transistor tramite resistenze adeguate.
+- Se una uscita pilota un transistor, il transistor puo' accendere uno o piu' LED o carichi esterni.
+- Un errore su una singola uscita Q, resistenza o transistor puo' bloccare solo un gruppo di LED.
+- Un errore su clock, reset, inhibit, alimentazione o massa puo' bloccare l'intera sequenza.
+
+Controlli diagnostici utili:
+- Verificare VDD sul pin 16 e GND sul pin 8.
+- Verificare che il pin CLOCK riceva impulsi puliti.
+- Verificare che RESET pin 15 non sia bloccato attivo.
+- Verificare che CLOCK INHIBIT pin 13 non stia bloccando il conteggio.
+- Controllare se le uscite Q0-Q9 cambiano stato in sequenza.
+- Se la sequenza non parte, controllare prima clock, reset, inhibit e alimentazione.
+- Se solo alcune uscite non funzionano, controllare la relativa uscita Q, resistenza, transistor, LED e collegamenti.
