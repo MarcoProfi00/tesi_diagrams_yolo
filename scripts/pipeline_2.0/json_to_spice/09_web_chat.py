@@ -45,6 +45,14 @@ from urllib.parse import unquote, urlparse
 from agent_readonly.openai_runner import write_agent_response
 from agent_readonly.preview_builder import write_agent_input_preview
 from agent_readonly.prompt_builder import write_agent_prompt
+from viewer_core.contracts import (
+    VIEWER_LAYOUT_NAME,
+    VIEWER_LAYOUT_SCHEMA_VERSION,
+    VIEWER_MODEL_NAME,
+    VIEWER_MODEL_SCHEMA_VERSION,
+    VIEWER_RENDER_VERSION,
+    VIEWER_SVG_NAME,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -1289,9 +1297,9 @@ def load_step15_module() -> Any:
 
 def load_or_build_viewer_model(run_dir: Path) -> dict[str, Any]:
     """Legge o genera `13_viewer_model.json` senza bloccare la web chat."""
-    model_path = run_dir / "13_viewer_model.json"
+    model_path = run_dir / VIEWER_MODEL_NAME
     model = read_json_safe(model_path)
-    if model and int(model.get("schema_version") or 0) >= 10:
+    if model and int(model.get("schema_version") or 0) >= VIEWER_MODEL_SCHEMA_VERSION:
         return model
     step13 = load_step13_module()
     built = step13.write_viewer_model(run_dir)
@@ -1300,9 +1308,9 @@ def load_or_build_viewer_model(run_dir: Path) -> dict[str, Any]:
 
 def load_or_build_viewer_layout(run_dir: Path) -> dict[str, Any]:
     """Legge o genera `14_viewer_layout.json` nel formato generale corrente."""
-    layout_path = run_dir / "14_viewer_layout.json"
+    layout_path = run_dir / VIEWER_LAYOUT_NAME
     layout = read_json_safe(layout_path)
-    if layout and int(layout.get("schema_version") or 0) >= 29:
+    if layout and int(layout.get("schema_version") or 0) >= VIEWER_LAYOUT_SCHEMA_VERSION:
         return layout
     step14 = load_step14_module()
     built = step14.write_viewer_layout(run_dir)
@@ -1311,13 +1319,13 @@ def load_or_build_viewer_layout(run_dir: Path) -> dict[str, Any]:
 
 def load_or_build_viewer_svg(run_dir: Path) -> str:
     """Legge o genera `15_viewer.svg` senza inserire logica grafica nella web chat."""
-    svg_path = run_dir / "15_viewer.svg"
-    model_path = run_dir / "13_viewer_model.json"
-    layout_path = run_dir / "14_viewer_layout.json"
+    svg_path = run_dir / VIEWER_SVG_NAME
+    model_path = run_dir / VIEWER_MODEL_NAME
+    layout_path = run_dir / VIEWER_LAYOUT_NAME
     dependencies = [path for path in (model_path, layout_path) if path.exists()]
     if svg_path.exists() and dependencies and svg_path.stat().st_mtime >= max(path.stat().st_mtime for path in dependencies):
         svg = svg_path.read_text(encoding="utf-8")
-        if 'data-viewer-version="9"' in svg:
+        if f'data-viewer-version="{VIEWER_RENDER_VERSION}"' in svg:
             return svg
     step15 = load_step15_module()
     svg = step15.write_viewer_svg(run_dir)

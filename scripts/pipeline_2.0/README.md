@@ -330,6 +330,7 @@ scenarios/<scenario_id>/
 
 - calcola posizione, terminali e route ortogonali dei componenti;
 - usa bbox/orientamenti come seed e include fallback per componenti scenario;
+- riserva una fascia destra stabile per la legenda, separata dal circuito;
 - salva `14_viewer_layout.json`.
 
 ### 15_render_viewer_svg.py
@@ -338,6 +339,22 @@ scenarios/<scenario_id>/
 - usa un vocabolario comune di simboli e stati elettrici;
 - rappresenta rami attivi, segnali variabili, switch, componenti scenario,
   LED/lampade e attraversamenti senza giunzione.
+
+Implementazione interna:
+
+```text
+json_to_spice/viewer_core/
+|-- contracts.py          nomi e versioni degli artefatti
+|-- json_io.py            lettura e scrittura JSON condivisa
+|-- component_library.py  vocabolario generale dei componenti
+|-- model_builder.py      implementazione dello step 13
+|-- layout_builder.py     implementazione dello step 14
+|-- svg_renderer.py       implementazione dello step 15
+`-- svg_styles.py         CSS e animazioni incorporati nell'SVG
+```
+
+Gli script `13`, `14` e `15` restano entry point CLI piccoli e stabili. Il file
+storico `viewer_component_library.py` resta un wrapper di compatibilita.
 
 ## Primitive scenario oggi supportate
 

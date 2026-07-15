@@ -643,6 +643,7 @@ Ruolo:
 - normalizza bbox e terminali sul canvas viewer;
 - assegna posizioni a componenti, nodi, pin e connessioni;
 - calcola routes e fallback per componenti scenario senza bbox;
+- riserva una fascia destra stabile per la legenda del viewer;
 - prepara la separazione tra modello elettrico e coordinate SVG.
 
 Output:
@@ -687,6 +688,22 @@ Principio:
 - `14` descrive dove posizionarlo;
 - `15` descrive come disegnarlo;
 - `09` deve solo mostrare il viewer della run selezionata.
+
+Struttura interna condivisa:
+
+```text
+viewer_core/contracts.py          contratti e versioni degli artefatti
+viewer_core/json_io.py            I/O JSON comune
+viewer_core/component_library.py  catalogo dei componenti
+viewer_core/model_builder.py      logica del modello
+viewer_core/layout_builder.py     geometria e routing
+viewer_core/svg_renderer.py       simboli e composizione SVG
+viewer_core/svg_styles.py         CSS e animazioni SVG
+```
+
+I file `13_build_viewer_model.py`, `14_build_viewer_layout.py` e
+`15_render_viewer_svg.py` sono gli entry point pubblici. Questa separazione
+alleggerisce i comandi senza cambiare artefatti, CLI o integrazione web.
 
 Copertura Experiment 3:
 
