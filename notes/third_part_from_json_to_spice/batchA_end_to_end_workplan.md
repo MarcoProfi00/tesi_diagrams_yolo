@@ -281,10 +281,11 @@ Il viewer e disponibile per base run e scenario run e:
 - mostra componenti strutturali, rami attivi, stati switch e modifiche scenario;
 - viene generato automaticamente dalla web chat anche dopo uno scenario nuovo.
 
-## Prossimo blocco: Esperimento 3.1
+## Esperimento 3.1 concluso
 
-Il prossimo test e ripartire da workspace puliti, far proporre gli scenari
-all'agente ed eseguirli dalla chat, verificando il ciclo completo:
+La validazione da workspace puliti ha coperto `a01`, `a02`, `a04`-`a10`, con
+18 run scenario. Per ogni run sono stati verificati proposta agente,
+esecuzione controllata, simulazione ngspice, confronto e viewer scenario.
 
 ```text
 agente propone scenario
@@ -294,7 +295,8 @@ agente propone scenario
 -> confronto e chat restano coerenti
 ```
 
-Solo dopo questa validazione ha senso aprire Experiment 4, dedicato
+Il ciclo `agente -> scenario -> SPICE -> viewer -> confronto -> nuova risposta`
+e quindi validato sul Batch A. Il prossimo blocco e Experiment 4, dedicato
 all'automazione controllata multi-scenario.
 
 ## Cosa non fare adesso
@@ -303,15 +305,15 @@ Per non far deragliare il progetto:
 
 - non riaprire artificialmente Experiment 2 sul Batch A senza una nuova
   domanda sperimentale forte;
-- non dichiarare Experiment 4 gia validato: Experiment 3.1 deve prima provare
-  il flusso con scenari proposti da zero;
+- non dichiarare Experiment 4 gia validato: Experiment 3.1 ha provato il
+  flusso manuale guidato, non il ciclo autonomo multi-scenario;
 - non complicare il runner con troppe primitive nuove non ancora motivate;
 - non moltiplicare documenti paralleli con stati diversi;
 - non costruire il viewer assumendo una sola topologia fissa per circuito.
 
 ## Checklist pratica
 
-Il progetto Batch A e pronto per Experiment 3.1 se:
+Il progetto Batch A e pronto per Experiment 4 se:
 
 - [x] Esperimento 1 documentato
 - [x] Esperimento 2 documentato
@@ -321,8 +323,9 @@ Il progetto Batch A e pronto per Experiment 3.1 se:
 - [x] documento agente aggiornato
 - [x] viewer generale per base run e scenari disponibili
 - [x] integrazione `13/14/15` nella web chat
-- [ ] workspace puliti e protocollo di validazione 3.1 definiti
-- [ ] primo circuito rieseguito con scenario proposto dall'agente
+- [x] workspace puliti e protocollo di validazione 3.1 definiti
+- [x] nove circuiti rieseguiti con scenari proposti dall'agente
+- [x] 18 viewer scenario generati automaticamente e verificati
 
 ## Sintesi finale
 
@@ -333,14 +336,14 @@ baseline chiusa
 -> scenari forti consolidati
 -> risultati documentati e confrontabili
 -> viewer generale concluso
--> prossimo passo = Experiment 3.1 end-to-end
--> passo successivo = automazione agentica
+-> validazione 3.1 end-to-end conclusa
+-> prossimo passo = automazione agentica controllata
 ```
 
 Frase guida:
 
 ```text
 Batch A non e piu il luogo in cui capire se la Pipeline 2.0 esiste;
-e il luogo in cui validare il ciclo agente -> scenario -> viewer prima
+e il luogo in cui il ciclo agente -> scenario -> viewer e stato validato prima
 dell'automazione.
 ```

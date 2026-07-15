@@ -625,8 +625,10 @@ Lo stato attuale va letto cosi:
 - la web chat `09`, l'agente `11` e gli scenari `12` sono attivi;
 - il viewer `13-15` e integrato nella web chat per base run e scenari;
 - gli esperimenti si gestiscono con root separate;
-- il prossimo grande blocco e Experiment 3.1: validazione pulita del flusso
-  agente -> scenario -> viewer.
+- Experiment 3.1 ha validato sul Batch A il flusso pulito
+  agente -> scenario -> viewer;
+- il prossimo grande blocco e Experiment 4: automazione controllata
+  multi-scenario dell'agente.
 
 ## Sintesi finale
 

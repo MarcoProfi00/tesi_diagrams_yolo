@@ -818,18 +818,20 @@ Quando l'utente esegue uno scenario, la sequenza effettiva e:
 -> pagina ricaricata sulla run scenario
 ```
 
-## Prossimo test: Experiment 3.1
+## Experiment 3.1 concluso
 
-Il prossimo lavoro non e costruire un secondo viewer. E validare da workspace
-puliti l'intero ciclo agente -> proposta scenario -> esecuzione -> viewer.
+La validazione da workspace puliti ha confermato l'intero ciclo
+agente -> proposta scenario -> esecuzione -> viewer.
 
-Per ogni circuito scelto, il test deve verificare che:
+Risultati sul Batch A:
 
-- l'agente proponga uno `scenario.json` nuovo e valido;
-- la chat esegua la run senza scenari pre-caricati;
-- il viewer della nuova run venga creato automaticamente;
-- sidebar, confronto e risposta dell'agente restino allineati;
-- eventuali correzioni restino generalizzabili e non specifiche del circuito.
+- coperti `a01`, `a02`, `a04`-`a10`, con `a03` escluso per il limite noto;
+- 18 run scenario create dalla conversazione e simulate separatamente;
+- ogni run ha generato o aggiornato `13_viewer_model.json`,
+  `14_viewer_layout.json` e `15_viewer.svg`;
+- sidebar, confronto, viewer e risposta successiva dell'agente sono rimasti
+  allineati anche per scenari topologici;
+- le correzioni emerse sono state mantenute generali nel router e nel renderer.
 
 La sessione file-based e stata estesa a `experiment3_1`: la nuova root usa
 `experiment_chat/`, mentre le root `experiment2*` mantengono

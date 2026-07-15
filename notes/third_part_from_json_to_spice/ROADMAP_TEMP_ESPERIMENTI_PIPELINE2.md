@@ -630,9 +630,9 @@ equivalente leggibile, generale e coerente con la netlist simulata.
 
 ## Esperimento 3.1 - Validazione end-to-end agente e viewer
 
-Stato: prossimo lavoro.
+Stato: concluso sul Batch A.
 
-Obiettivo:
+Obiettivo raggiunto:
 
 ripartire da workspace puliti per ogni circuito, chiedere la diagnosi
 all'agente, far proporre scenari nuovi ed eseguirli dalla web chat, verificando
@@ -651,13 +651,17 @@ base run pulita
 -> agente interpreta scenario_comparison.json
 ```
 
-Regole:
+Esito:
 
-- nessun riuso degli scenari gia preparati per Experiment 2/3;
-- ogni proposta deve essere riproducibile come `scenario.json`;
-- controllare sia scenari non topologici sia topologici;
-- registrare per ogni circuito se viewer, confronto e chat restano coerenti;
-- correggere solo regole generali emerse dalla validazione.
+- validati `a01`, `a02`, `a04`-`a10`; `a03` resta escluso per il noto limite
+  topologico/SPICE;
+- eseguite 18 run scenario, tutte con viewer della run effettivamente simulata;
+- verificate proposte agente, scenario registry, esecuzione controllata,
+  confronto base/scenario, sidebar e risposta successiva dell'agente;
+- verificati scenari non topologici e topologici, inclusi switch chiusi,
+  continuita, feed di nodi, sorgenti e resistenze aggiunte;
+- le correzioni emerse dal viewer sono rimaste regole generali di layout e
+  rendering, senza eccezioni legate a un singolo circuito.
 
 Sessione interattiva:
 
@@ -669,7 +673,7 @@ Sessione interattiva:
 
 ## Esperimento 4 - Automazione agentica
 
-Stato: futuro, dopo viewer generale Batch A e primitive scenario consolidate.
+Stato: prossimo lavoro, dopo la validazione conclusa di Experiment 3.1.
 
 Obiettivo:
 
@@ -730,14 +734,13 @@ Regole:
 
 Step essenziali:
 
-1. completare Experiment 3.1 sulla generazione end-to-end di scenari e viewer;
-2. aggiungere parser leggero per comandi scenario diretti;
-3. validare nodi/componenti richiesti contro `03_node_map.json`,
+1. aggiungere parser leggero per comandi scenario diretti;
+2. validare nodi/componenti richiesti contro `03_node_map.json`,
    `06_component_rules.json` e `07_netlist.cir`;
-4. eseguire lo scenario con `12_controlled_scenarios.py`;
-5. generare il viewer scenario con gli step `13/14/15`;
-6. far leggere all'agente `scenario_comparison.json` e viewer disponibile;
-7. valutare il ciclo autonomo su tutti i circuiti Batch A.
+3. eseguire lo scenario con `12_controlled_scenarios.py`;
+4. generare il viewer scenario con gli step `13/14/15`;
+5. far leggere all'agente `scenario_comparison.json` e viewer disponibile;
+6. valutare il ciclo autonomo su tutti i circuiti Batch A.
 
 ## Valutazione trasversale degli esperimenti
 

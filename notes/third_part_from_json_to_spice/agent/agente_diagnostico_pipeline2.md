@@ -2300,9 +2300,9 @@ Prossimi esperimenti:
 
 3. **Esperimento 3.1 - validazione end-to-end agente e viewer**
 
-   Stato: prossimo lavoro.
+   Stato: concluso sul Batch A.
 
-   Obiettivo: ripartire da workspace puliti, chiedere la diagnosi all'agente,
+   Obiettivo raggiunto: ripartire da workspace puliti, chiedere la diagnosi all'agente,
    eseguire gli scenari che propone e verificare che chat, runner, confronto e
    viewer scenario restino coerenti senza scenari pre-caricati.
 
@@ -2310,14 +2310,18 @@ Prossimi esperimenti:
    `experiment3_1` nella cartella `experiment_chat/`; le root `experiment2*`
    mantengono la cartella storica `experiment2_chat/`.
 
+   Copertura: `a01`, `a02`, `a04`-`a10`, per 18 run scenario; `a03` resta
+   escluso per il limite topologico/SPICE gia documentato. Ogni run ha prodotto
+   il confronto e il viewer della netlist effettivamente simulata.
+
 4. **Esperimento 4 - automazione agentica degli scenari**
 
    Obiettivo: far eseguire all'agente piu scenari in sequenza, entro un limite
    controllato, per provare a risolvere o localizzare il problema.
 
-   Questa fase non parte finche Experiment 3.1 non ha validato il ciclo
-   completo con scenari nuovi proposti dall'agente. Il viewer e gia
-   un'evidenza leggibile accanto a netlist, stdout ngspice e confronto scenario.
+   Experiment 3.1 ha validato il ciclo manuale guidato con scenari nuovi
+   proposti dall'agente. Il viewer e gia un'evidenza leggibile accanto a
+   netlist, stdout ngspice e confronto scenario.
 
    Flusso desiderato:
 
