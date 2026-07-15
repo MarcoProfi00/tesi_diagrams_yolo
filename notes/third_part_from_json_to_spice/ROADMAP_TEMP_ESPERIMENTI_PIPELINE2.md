@@ -723,11 +723,23 @@ Il browser deve richiedere una iterazione alla volta, mostrare l'avanzamento e
 permettere l'arresto manuale. Lo stato persistente e
 `experiment_chat/autonomous_diagnosis.json`.
 
+La presentazione `AGENT` e ora distinta dalle bolle della modalita `CHAT`:
+
+- riepilogo di run, scenari e decisioni;
+- piano derivato dallo stato reale del controller;
+- timeline di ipotesi, primitive, esito SPICE ed evidenze;
+- riconoscimento uniforme di confronti OP e TRAN;
+- collegamenti a viewer e grafici nella run centrale;
+- conclusione separata in causa, correzione verificata e prove disponibili.
+
+Questa vista e costruita da `autonomous_agent/presentation.py` usando gli
+artefatti della sessione e non contiene regole specifiche per Batch A.
+
 Decisioni strutturate dell'agente:
 
 ```json
 {"decision":"run_scenarios","reason":"...","scenarios":[{}]}
-{"decision":"stop","final_status":"resolved|localized|partially_localized|topology_issue|inconclusive","reason":"...","final_answer":"..."}
+{"decision":"stop","final_status":"resolved|localized|partially_localized|topology_issue|inconclusive","reason":"...","final_answer":"...","final_cause":"...","verified_correction":"..."}
 ```
 
 `resolved_candidate` prodotto dallo step 12 resta un esito tecnico del
@@ -770,6 +782,18 @@ continuita generica. Le due primitive non possono descrivere la stessa
 relazione nella stessa decisione. `add_resistor_between_nodes` resta distinta,
 perche rappresenta un accoppiamento resistivo con valore significativo.
 
+Per obiettivi che richiedono di attivare, spegnere o mantenere attivo un
+componente, ogni scenario deve confrontare anche una misura diretta del
+componente tramite il nome emesso in `07_netlist.cir`, per esempio
+`i(Rlamp13_1)` o `i(Dled12_1)`. Le tensioni dei nodi restano utili per
+localizzare la causa, ma da sole non dimostrano lo stato del componente.
+
+Le decisioni autonome dichiarano inoltre un oggetto `expect` che assegna a
+ogni misura decisiva il comportamento atteso, per esempio `activated` per il
+carico da accendere e `unchanged` per il LED da preservare. Il comparatore usa
+questi criteri per distinguere una correzione verificata da una variazione
+generica. Gli scenari precedenti senza `expect` restano compatibili.
+
 ### Implementazione essenziale
 
 1. preparare `experiment4/chat/` e `experiment4/agent/` dalla stessa base
@@ -788,8 +812,10 @@ Script/moduli implementati:
 
 ```text
 scenario_runtime.py
+scenario_expectations.py
 16_autonomous_diagnosis.py
 autonomous_agent/
+autonomous_agent/presentation.py
 ```
 
 Guardrail implementati:

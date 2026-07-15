@@ -1,19 +1,26 @@
 {
-  "title": "Alimenta il ramo lampada dal +5V tramite il nodo gia alimentato N001",
-  "hypothesis": "N002 e il punto di ingresso del ramo lampada ma non e connesso a VCC; collegando N002 a N001 la lampada dovrebbe accendersi mentre il LED resta acceso perche il suo ramo originale non viene alterato.",
+  "title": "Alimenta il ramo lampada portando N002 a VCC",
+  "hypothesis": "La lampada è spenta perché il nodo N002, ingresso del ramo Rresistor22_1-Rlamp13_1, non è collegato alla sorgente da 5 V. Alimentando N002 dal nodo N001 già attivo, la corrente dovrebbe fluire in Rresistor22_1 e Rlamp13_1 accendendo la lampada, mentre il LED deve restare acceso.",
   "actions": [
     {
-      "type": "connect_nodes",
-      "from": "N001",
-      "to": "N002",
-      "resistance": "1m"
+      "type": "feed_nodes_from_source_node",
+      "source_node": "N001",
+      "target_nodes": [
+        "N002"
+      ]
     }
   ],
   "compare": [
-    "v(N001)",
-    "v(N002)",
+    "i(Rlamp13_1)",
+    "i(Dled12_1)",
     "v(N004)",
-    "v(N005)"
+    "v(N002)"
   ],
+  "expect": {
+    "i(Rlamp13_1)": "activated",
+    "i(Dled12_1)": "unchanged",
+    "v(N004)": "increased",
+    "v(N002)": "changed"
+  },
   "scenario_id": "agent_scenario_1"
 }

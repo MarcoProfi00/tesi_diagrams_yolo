@@ -6,6 +6,8 @@ import json
 import re
 from typing import Any
 
+from scenario_expectations import ALLOWED_EXPECTATIONS
+
 
 ALLOWED_ACTION_TYPES = frozenset(
     {
@@ -121,6 +123,33 @@ def validate_scenario(scenario: Any, scenario_index: int) -> dict[str, Any]:
     normalized["compare"] = [str(item).strip() for item in compare if str(item).strip()]
     if not normalized["compare"]:
         raise AutonomousDecisionError(f"Scenario {scenario_index}: compare non contiene grandezze valide")
+
+    expectations = scenario.get("expect")
+    if not isinstance(expectations, dict) or not expectations:
+        raise AutonomousDecisionError(
+            f"Scenario {scenario_index}: expect deve contenere almeno un criterio di successo"
+        )
+    compare_names = {quantity.lower(): quantity for quantity in normalized["compare"]}
+    normalized_expectations: dict[str, str] = {}
+    for raw_quantity, raw_expectation in expectations.items():
+        quantity = str(raw_quantity or "").strip()
+        expectation = str(raw_expectation or "").strip().lower()
+        canonical_quantity = compare_names.get(quantity.lower())
+        if canonical_quantity is None:
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: la grandezza attesa '{quantity}' non e presente in compare"
+            )
+        if expectation not in ALLOWED_EXPECTATIONS:
+            allowed = ", ".join(sorted(ALLOWED_EXPECTATIONS))
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: aspettativa non valida '{expectation}'; usa {allowed}"
+            )
+        normalized_expectations[canonical_quantity] = expectation
+    if all(expectation == "unchanged" for expectation in normalized_expectations.values()):
+        raise AutonomousDecisionError(
+            f"Scenario {scenario_index}: expect deve verificare almeno un effetto oltre alle grandezze preservate"
+        )
+    normalized["expect"] = normalized_expectations
     normalized["actions"] = [
         validate_action(action, scenario_index, action_index)
         for action_index, action in enumerate(actions, start=1)
@@ -178,6 +207,8 @@ def validate_decision(data: dict[str, Any], remaining_budget: int) -> dict[str, 
     if decision == "stop":
         final_status = str(data.get("final_status") or "").strip()
         final_answer = str(data.get("final_answer") or "").strip()
+        final_cause = str(data.get("final_cause") or "").strip()
+        verified_correction = str(data.get("verified_correction") or "").strip()
         if final_status not in FINAL_STATUSES:
             raise AutonomousDecisionError(f"final_status non valido: '{final_status}'")
         if not final_answer:
@@ -187,6 +218,8 @@ def validate_decision(data: dict[str, Any], remaining_budget: int) -> dict[str, 
             "reason": reason,
             "final_status": final_status,
             "final_answer": final_answer,
+            "final_cause": final_cause,
+            "verified_correction": verified_correction,
         }
 
     if decision != "run_scenarios":

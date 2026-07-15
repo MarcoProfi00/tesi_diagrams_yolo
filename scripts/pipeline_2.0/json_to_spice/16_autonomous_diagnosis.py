@@ -66,9 +66,8 @@ def main() -> None:
             ngspice_executable=args.ngspice_executable,
         )
 
-    print(json.dumps(summarize_state(state), indent=2, ensure_ascii=False))
+    print(json.dumps(summarize_state(state, output_dir), indent=2, ensure_ascii=False))
 
 
 if __name__ == "__main__":
     main()
-

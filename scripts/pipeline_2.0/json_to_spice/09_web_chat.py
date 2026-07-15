@@ -75,6 +75,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 WEB_CHAT_DIR = Path(__file__).resolve().parent / "web_chat"
 TEMPLATE_DIR = WEB_CHAT_DIR / "templates"
 INDEX_TEMPLATE = TEMPLATE_DIR / "index.html"
+AGENT_VIEW_STYLE = WEB_CHAT_DIR / "agent_view.css"
+AGENT_VIEW_SCRIPT = WEB_CHAT_DIR / "agent_view.js"
 STEP10_PATH = Path(__file__).resolve().parent / "10_build_diagnostic_context.py"
 STEP13_PATH = Path(__file__).resolve().parent / "13_build_viewer_model.py"
 STEP14_PATH = Path(__file__).resolve().parent / "14_build_viewer_layout.py"
@@ -1687,8 +1689,21 @@ def render_page(
     server_chat_history_items = build_server_chat_history_items(output_dir, batch, circuit, experiment)
     chat_history_enabled = is_experiment2_history_enabled(experiment)
     chat_panel_title = "Agent diagnostico" if workspace_mode == "agent" else "Chat diagnostica"
+    chat_panel_description = (
+        "Segui ipotesi, test controllati ed evidenze prodotte dalla diagnosi autonoma."
+        if workspace_mode == "agent"
+        else "Descrivi il sintomo e l'agente analizzera gli output SPICE e gli scenari gia eseguiti."
+    )
     workspace_label = "AGENT" if workspace_mode == "agent" else "CHAT"
+    layout_mode_class = " agent-layout" if workspace_mode == "agent" else ""
+    chat_mode_class = " agent-workspace" if workspace_mode == "agent" else ""
     chat_actions_class = " agent-mode" if workspace_mode == "agent" else ""
+    agent_header_status = (
+        '<span class="agent-header-status neutral" id="agentHeaderStatus">'
+        '<i aria-hidden="true"></i><span>Pronto</span></span>'
+        if workspace_mode == "agent"
+        else ""
+    )
     agent_stop_button = (
         '<button class="agent-stop" id="stopAgentButton" type="button">Stop</button>'
         if workspace_mode == "agent"
@@ -1698,6 +1713,11 @@ def render_page(
         "Descrivi il sintomo: l'agente eseguira test controllati fino alla conclusione o al limite di sicurezza."
         if workspace_mode == "agent"
         else "Descrivi il sintomo del circuito e analizzero gli output correnti della pipeline."
+    )
+    chat_input_placeholder = (
+        "Descrivi il comportamento desiderato per il circuito..."
+        if workspace_mode == "agent"
+        else "Esempio: Perche il LED non si accende?"
     )
 
     if active_run == "base":
@@ -1745,14 +1765,21 @@ def render_page(
         template,
         {
             "PAGE_TITLE": html.escape(f"Pipeline 2.0 Diagnostic Chat - {circuit}"),
+            "AGENT_VIEW_STYLES": read_text_safe(AGENT_VIEW_STYLE),
+            "AGENT_VIEW_SCRIPT": read_text_safe(AGENT_VIEW_SCRIPT),
             "HEADER_META": html.escape(header_meta),
             "WORKSPACE_SWITCH": render_workspace_switch(workspace_mode, available_workspace_modes),
             "ACTIVE_WORKSPACE_MODE": html.escape(workspace_mode or ""),
             "CHAT_PANEL_TITLE": html.escape(chat_panel_title),
+            "CHAT_PANEL_DESCRIPTION": html.escape(chat_panel_description),
             "WORKSPACE_LABEL": html.escape(workspace_label),
+            "LAYOUT_MODE_CLASS": layout_mode_class,
+            "CHAT_MODE_CLASS": chat_mode_class,
             "CHAT_ACTIONS_CLASS": chat_actions_class,
+            "AGENT_HEADER_STATUS": agent_header_status,
             "AGENT_STOP_BUTTON": agent_stop_button,
             "WELCOME_MESSAGE": html.escape(welcome_message),
+            "CHAT_INPUT_PLACEHOLDER": html.escape(chat_input_placeholder),
             "CHAT_STORAGE_KEY": html.escape(chat_storage_key),
             "MODEL_STORAGE_KEY": html.escape(model_storage_key),
             "DEFAULT_CHAT_MODEL": html.escape(CHAT_MODEL),
@@ -2417,7 +2444,10 @@ class WebChatHandler(BaseHTTPRequestHandler):
                 self.send_text(403, "AGENT workspace required")
                 return
             body = json.dumps(
-                summarize_autonomous_state(read_autonomous_state(self.server.output_dir)),
+                summarize_autonomous_state(
+                    read_autonomous_state(self.server.output_dir),
+                    self.server.output_dir,
+                ),
                 ensure_ascii=False,
             )
             self.send_text(200, body, "application/json; charset=utf-8")
@@ -2558,7 +2588,7 @@ class WebChatHandler(BaseHTTPRequestHandler):
                 self.send_text(400, body, "application/json; charset=utf-8")
                 return
 
-            summary = summarize_autonomous_state(state)
+            summary = summarize_autonomous_state(state, self.server.output_dir)
             append_experiment2_chat_event(
                 output_dir=self.server.output_dir,
                 batch=self.server.batch,

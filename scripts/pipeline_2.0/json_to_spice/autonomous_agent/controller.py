@@ -18,6 +18,7 @@ from scenario_runtime import (
 
 from .contracts import ALLOWED_ACTION_TYPES, AutonomousDecisionError, parse_and_validate_decision
 from .prompt_builder import build_autonomous_prompt, write_autonomous_prompt
+from .presentation import build_agent_view
 from .state_store import (
     MAX_AGENT_DECISIONS,
     MAX_EXECUTABLE_SCENARIOS,
@@ -147,6 +148,8 @@ def complete_with_guardrail(
         "Il ciclo autonomo si e fermato per un limite di sicurezza. "
         "Le evidenze raccolte restano disponibili, ma non consentono una conclusione affidabile."
     )
+    state["final_cause"] = ""
+    state["verified_correction"] = ""
     state["stop_reason"] = reason
     write_state(output_dir, state)
     return state
@@ -217,6 +220,8 @@ def run_iteration(
             state["final_status"] = decision["final_status"]
             state["final_reason"] = decision["reason"]
             state["final_answer"] = decision["final_answer"]
+            state["final_cause"] = decision.get("final_cause") or ""
+            state["verified_correction"] = decision.get("verified_correction") or ""
             state["stop_reason"] = "agent_stop"
             state.setdefault("iterations", []).append(iteration)
             write_state(output_dir, state)
@@ -263,7 +268,7 @@ def clear_diagnosis(output_dir: Path) -> bool:
         return clear_state(output_dir)
 
 
-def summarize_state(state: dict[str, Any]) -> dict[str, Any]:
+def summarize_state(state: dict[str, Any], output_dir: Path | None = None) -> dict[str, Any]:
     """Riduce lo stato ai campi necessari al frontend della web chat."""
     status = str(state.get("status") or "idle")
     iterations = state.get("iterations") if isinstance(state.get("iterations"), list) else []
@@ -309,4 +314,5 @@ def summarize_state(state: dict[str, Any]) -> dict[str, Any]:
         "final_status": state.get("final_status"),
         "final_reason": state.get("final_reason"),
         "stop_reason": state.get("stop_reason"),
+        "agent_view": build_agent_view(state, output_dir),
     }

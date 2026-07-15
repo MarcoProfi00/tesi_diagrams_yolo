@@ -20,6 +20,7 @@ Versione attuale minimale:
 - salva `12_controlled_scenarios.json`;
 - aggiorna `scenario_status.json`;
 - crea `scenario_comparison.json` quando esistono i dati per il confronto;
+- verifica gli eventuali criteri espliciti dichiarati in `expect`;
 - esegue ngspice solo se richiesto con `--run-spice`.
 
 Esempio di azione supportata:
@@ -56,6 +57,8 @@ import json
 import re
 from pathlib import Path
 from typing import Any
+
+from scenario_expectations import COMPARISON_TOLERANCE, expectation_matches
 
 
 NETLIST_NAME = "07_netlist.cir"
@@ -1017,11 +1020,17 @@ def classify_change(base_value: float | None, scenario_value: float | None) -> s
     """Classifica una variazione semplice tra base e scenario."""
     if base_value is None or scenario_value is None:
         return "missing"
-    if abs(base_value) < 1e-12 and abs(scenario_value) >= 1e-12:
+    if (
+        abs(base_value) < COMPARISON_TOLERANCE
+        and abs(scenario_value) >= COMPARISON_TOLERANCE
+    ):
         return "activated"
-    if abs(base_value) >= 1e-12 and abs(scenario_value) < 1e-12:
+    if (
+        abs(base_value) >= COMPARISON_TOLERANCE
+        and abs(scenario_value) < COMPARISON_TOLERANCE
+    ):
         return "deactivated"
-    if abs(scenario_value - base_value) < 1e-12:
+    if abs(scenario_value - base_value) < COMPARISON_TOLERANCE:
         return "unchanged"
     return "changed"
 
@@ -1041,8 +1050,44 @@ def evaluate_diagnostic_outcome(
     changed = int(summary.get("changed_count") or 0)
     activated = int(summary.get("activated_count") or 0)
     missing = int(summary.get("missing_count") or 0)
+    expected = int(summary.get("expected_count") or 0)
+    expectations_met = int(summary.get("expectations_met_count") or 0)
+    expectations_missing = int(summary.get("expectations_missing_count") or 0)
 
-    if requested == 0:
+    if expected > 0 and expectations_missing > 0:
+        status = "partially_resolved"
+        technical_label = "Partially resolved"
+        label = "Criteri verificati solo in parte"
+        reason = (
+            "Almeno una misura necessaria ai criteri di successo non e disponibile "
+            "negli output SPICE dello scenario."
+        )
+        stop_automation = False
+    elif expected > 0 and expectations_met == expected:
+        status = "resolved_candidate"
+        technical_label = "Candidate resolved"
+        label = "Criteri di successo soddisfatti"
+        reason = (
+            "Tutti i comportamenti attesi dichiarati dallo scenario sono "
+            "verificati dagli output SPICE."
+        )
+        stop_automation = True
+    elif expected > 0 and expectations_met == 0:
+        status = "not_resolved"
+        technical_label = "Not resolved"
+        label = "Criteri di successo non soddisfatti"
+        reason = (
+            "Nessuno dei comportamenti attesi dichiarati dallo scenario e "
+            "stato verificato."
+        )
+        stop_automation = False
+    elif expected > 0:
+        status = "partially_resolved"
+        technical_label = "Partially resolved"
+        label = "Criteri verificati solo in parte"
+        reason = "Solo una parte dei comportamenti attesi dichiarati dallo scenario e stata verificata."
+        stop_automation = False
+    elif requested == 0:
         status = "unknown"
         technical_label = "Outcome unknown"
         label = "Esito non determinabile"
@@ -1136,11 +1181,24 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
     requested = scenario.get("compare") or []
     if not isinstance(requested, list):
         requested = []
+    raw_expectations = scenario.get("expect") or {}
+    expectations = (
+        {
+            quantity_lookup_key(str(quantity)): str(expectation).strip().lower()
+            for quantity, expectation in raw_expectations.items()
+        }
+        if isinstance(raw_expectations, dict)
+        else {}
+    )
 
     quantities: list[dict[str, Any]] = []
     activated = 0
     changed = 0
     missing = 0
+    expected = 0
+    expectations_met = 0
+    expectations_failed = 0
+    expectations_missing = 0
 
     for item in requested:
         quantity = normalize_quantity_name(str(item))
@@ -1177,6 +1235,23 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
         if change == "missing":
             missing += 1
 
+        expectation = expectations.get(quantity_lookup_key(quantity))
+        expectation_met = None
+        if expectation:
+            expected += 1
+            expectation_met = expectation_matches(
+                expectation,
+                base_value,
+                scenario_value,
+                change,
+            )
+            if expectation_met is True:
+                expectations_met += 1
+            elif expectation_met is False:
+                expectations_failed += 1
+            else:
+                expectations_missing += 1
+
         quantities.append(
             {
                 "quantity": quantity,
@@ -1184,6 +1259,8 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
                 "scenario_value": scenario_value,
                 "delta": delta,
                 "change": change,
+                "expectation": expectation,
+                "expectation_met": expectation_met,
                 "metric": lookup_key,
                 "base_details": base_details,
                 "scenario_details": scenario_details,
@@ -1195,6 +1272,10 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
         "changed_count": changed,
         "activated_count": activated,
         "missing_count": missing,
+        "expected_count": expected,
+        "expectations_met_count": expectations_met,
+        "expectations_failed_count": expectations_failed,
+        "expectations_missing_count": expectations_missing,
     }
     diagnostic_outcome = evaluate_diagnostic_outcome(summary, analysis=analysis)
 

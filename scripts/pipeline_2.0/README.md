@@ -748,7 +748,22 @@ autonomous_agent/contracts.py
 autonomous_agent/prompt_builder.py
 autonomous_agent/state_store.py
 autonomous_agent/controller.py
+autonomous_agent/presentation.py
+web_chat/agent_view.css
+web_chat/agent_view.js
 ```
+
+La modalita `AGENT` usa una vista separata dalla chat tradizionale. Il
+presenter costruisce `agent_view` a partire dallo stato persistente e dagli
+artefatti reali delle run; il frontend mostra obiettivo, contatori, piano,
+strumenti, timeline dei test, evidenze OP/TRAN e conclusione. Viewer e grafici
+restano nel pannello centrale della run selezionata. La modalita `CHAT`
+continua a usare cronologia e messaggi precedenti senza passare da questa
+presentazione.
+
+Le nuove conclusioni possono separare `final_cause` e
+`verified_correction`; `final_answer` resta disponibile per sintesi e
+compatibilita con gli stati gia salvati.
 
 Guardrail della prima versione:
 

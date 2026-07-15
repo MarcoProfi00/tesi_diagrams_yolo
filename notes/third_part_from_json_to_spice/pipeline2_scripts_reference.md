@@ -970,9 +970,23 @@ Moduli implementati:
 
 ```text
 scenario_runtime.py          # runtime condiviso per creare ed eseguire scenari
+scenario_expectations.py     # criteri attesi condivisi tra contratto e confronto
 16_autonomous_diagnosis.py   # una decisione/iterazione autonoma per chiamata
 autonomous_agent/            # contratto, prompt, stato e controller separati
 ```
+
+Dentro `autonomous_agent/`, `presentation.py` mantiene separata la UI dalla
+logica decisionale. Produce il contratto generale `agent_view` leggendo stato,
+`scenario.json`, `scenario_comparison.json`, output SPICE, viewer e presenza
+del CSV transitorio. Non contiene condizioni per batch o circuiti specifici.
+
+In `AGENT` la colonna destra mostra una dashboard persistente con avanzamento,
+timeline dei test, azioni, evidenze e conclusione. I pulsanti delle schede
+selezionano la run nel pannello centrale, dove rimangono viewer e grafici
+`.tran`. In `CHAT` restano invariati renderer delle risposte, cronologia ed
+esecuzione manuale degli scenari. Stili e renderer della dashboard vivono in
+`web_chat/agent_view.css` e `web_chat/agent_view.js`, separati dal template
+HTML generale.
 
 Il runtime condiviso riusa gli step esistenti `10`-`15` ed e l'unica
 implementazione del percorso:
@@ -1011,6 +1025,16 @@ Guardrail implementati:
   allo stesso feed nella medesima decisione;
 - `add_resistor_between_nodes` non viene assimilata a questi collegamenti,
   perche modella un accoppiamento resistivo distinto;
+- quando l'obiettivo attiva, spegne o mantiene attivo un componente, `compare`
+  deve includere una misura diretta `i(NOME_SPICE)` o `p(NOME_SPICE)` per il
+  target e per gli eventuali componenti da preservare;
+- i nomi delle misure dirette vengono ricavati da `07_netlist.cir`; le sole
+  tensioni di nodo non bastano a dichiarare una correzione verificata;
+- le nuove proposte autonome associano a `compare` un oggetto `expect`, per
+  esempio `{"i(Rload)":"activated","i(Dled)":"unchanged"}`;
+- `scenario_comparison.json` verifica ogni aspettativa e classifica lo scenario
+  sui criteri soddisfatti; gli scenari storici senza `expect` mantengono la
+  valutazione precedente;
 - ogni decisione contiene al massimo 2 scenari e il ciclo al massimo 6
   decisioni del modello;
 - le run vengono eseguite in sequenza e sempre dalla base.
@@ -1038,6 +1062,7 @@ prepare_experiment_outputs.py
 15_render_viewer_svg.py
 16_autonomous_diagnosis.py
 scenario_runtime.py
+scenario_expectations.py
 ```
 
 Presenti ma non ancora integrati nel flusso reale:

@@ -92,6 +92,16 @@
       grid-template-columns: 230px minmax(360px, 1fr) minmax(360px, 420px);
       min-width: 0;
     }
+    .layout.agent-layout {
+      grid-template-columns: 200px minmax(0, 1fr) 480px;
+    }
+    .layout.agent-layout main {
+      padding-right: 16px;
+      padding-left: 16px;
+    }
+    .layout.agent-layout .viewer-svg {
+      min-width: 0;
+    }
     aside, main, .chat {
       min-height: 0;
       overflow: auto;
@@ -902,6 +912,7 @@
       background: #fff;
       color: #b91c1c;
     }
+    {{AGENT_VIEW_STYLES}}
     .chat-actions select {
       width: 100%;
       border: 1px solid var(--line);
@@ -946,9 +957,17 @@
       cursor: not-allowed;
       opacity: 0.65;
     }
+    @media (max-width: 1400px) {
+      .layout.agent-layout {
+        grid-template-columns: 185px minmax(0, 1fr) 430px;
+      }
+    }
     @media (max-width: 1180px) {
       .layout {
         grid-template-columns: 190px minmax(320px, 1fr) minmax(340px, 390px);
+      }
+      .layout.agent-layout {
+        grid-template-columns: 175px minmax(0, 1fr) 400px;
       }
     }
     @media (max-width: 900px) {
@@ -979,6 +998,9 @@
       .chat-actions {
         grid-template-columns: 1fr;
       }
+      .chat-actions.agent-mode {
+        grid-template-columns: 1fr;
+      }
       .message.agent,
       .message.user,
       .message.debug {
@@ -996,7 +1018,7 @@
     </div>
     <div class="meta">{{HEADER_META}}</div>
   </header>
-  <div class="layout">
+  <div class="layout{{LAYOUT_MODE_CLASS}}">
     <aside>
       {{RUN_SELECTOR}}
     </aside>
@@ -1017,17 +1039,18 @@
         {{ARTIFACTS}}
       </section>
     </main>
-    <section class="chat">
+    <section class="chat{{CHAT_MODE_CLASS}}">
       <div class="chat-header">
         <div class="chat-header-copy">
           <div>
             <h2>{{CHAT_PANEL_TITLE}}</h2>
-            <p>Descrivi il sintomo e l'agente analizzera gli output SPICE e gli scenari gia eseguiti.</p>
+            <p>{{CHAT_PANEL_DESCRIPTION}}</p>
           </div>
           <div class="chat-badges">
             <span class="chat-badge">Run: {{ACTIVE_RUN_ID}}</span>
             <span class="chat-badge">Massimo 5 scenari</span>
             <span class="chat-badge">Modalita: {{WORKSPACE_LABEL}}</span>
+            {{AGENT_HEADER_STATUS}}
           </div>
         </div>
         <button class="chat-clear" id="clearChatButton" type="button">Pulisci</button>
@@ -1035,7 +1058,7 @@
       <div class="messages" id="messages">
       </div>
       <form class="chat-form" id="chatForm">
-        <textarea id="chatInput" placeholder="Esempio: Perche il LED non si accende?"></textarea>
+        <textarea id="chatInput" placeholder="{{CHAT_INPUT_PLACEHOLDER}}"></textarea>
         <div class="chat-actions{{CHAT_ACTIONS_CLASS}}">
           <select id="modelSelect">
             {{MODEL_OPTIONS}}
@@ -1053,6 +1076,7 @@
     const modelSelect = document.getElementById("modelSelect");
     const submitButton = form.querySelector("button");
     const stopAgentButton = document.getElementById("stopAgentButton");
+    const agentHeaderStatus = document.getElementById("agentHeaderStatus");
     const clearChatButton = document.getElementById("clearChatButton");
     const chatStorageKey = "{{CHAT_STORAGE_KEY}}";
     const modelStorageKey = "{{MODEL_STORAGE_KEY}}";
@@ -1072,7 +1096,7 @@
     }
 
     function escapeHtml(text) {
-      return text
+      return String(text ?? "")
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;")
@@ -1308,6 +1332,7 @@
       );
     }
 
+    {{AGENT_VIEW_SCRIPT}}
     // Inizializza zoom, pan e reset per ogni viewer circuito presente nella pagina.
     function setupCircuitViewers() {
       const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
@@ -1740,19 +1765,17 @@
 
     async function runNextAgentIteration() {
       if (!agentLoopActive) return;
-      const typingNode = addTypingMessage("L'agente confronta le evidenze e decide il prossimo test");
+      showAgentActivity("L'agente confronta le evidenze e decide il prossimo test");
       try {
         const data = await requestAgentEndpoint("/api/agent/step");
-        typingNode.remove();
-        addMessage("agent", data.reply || "Iterazione autonoma completata.");
+        renderAgentState(data);
         if (data.continue && agentLoopActive) {
           setTimeout(runNextAgentIteration, 500);
         } else {
           finishAgentLoop(data);
         }
       } catch (error) {
-        typingNode.remove();
-        addMessage("agent", error.message || "Il ciclo autonomo si e fermato per errore.");
+        showAgentError(error.message || "Il ciclo autonomo si e fermato per errore.");
         finishAgentLoop({last_active_run: activeRunId});
       }
     }
@@ -1761,22 +1784,20 @@
       agentLoopActive = true;
       setLoading(true);
       if (stopAgentButton) stopAgentButton.disabled = false;
-      const typingNode = addTypingMessage("L'agente analizza la base run e prepara il primo test");
+      showAgentActivity("L'agente analizza la base run e prepara il primo test");
       try {
         const data = await requestAgentEndpoint("/api/agent/start", {
           message: text,
           model: modelSelect.value
         });
-        typingNode.remove();
-        addMessage("agent", data.reply || "Prima iterazione autonoma completata.");
+        renderAgentState(data);
         if (data.continue && agentLoopActive) {
           setTimeout(runNextAgentIteration, 500);
         } else {
           finishAgentLoop(data);
         }
       } catch (error) {
-        typingNode.remove();
-        addMessage("agent", error.message || "Avvio della diagnosi autonoma non riuscito.");
+        showAgentError(error.message || "Avvio della diagnosi autonoma non riuscito.");
         finishAgentLoop({last_active_run: activeRunId});
       }
     }
@@ -1785,7 +1806,6 @@
       event.preventDefault();
       const text = input.value.trim();
       if (!text) return;
-      addMessage("user", text);
       input.value = "";
 
       if (activeWorkspaceMode === "agent") {
@@ -1793,6 +1813,7 @@
         return;
       }
 
+      addMessage("user", text);
       setLoading(true);
       const scenarioRequest = isScenarioRequest(text);
       const typingNode = addTypingMessage(scenarioRequest ? "Sto eseguendo lo scenario" : "L'agente sta analizzando");
@@ -1828,28 +1849,29 @@
         stopAgentButton.disabled = true;
         try {
           const data = await requestAgentEndpoint("/api/agent/stop");
-          addMessage("agent", data.reply || "Ciclo autonomo fermato.");
+          renderAgentState(data);
         } catch (error) {
-          addMessage("agent", error.message || "Arresto del ciclo non riuscito.");
+          showAgentError(error.message || "Arresto del ciclo non riuscito.");
         }
         setLoading(false);
         input.focus();
       });
     }
 
-    async function resumeAgentLoopIfNeeded() {
+    async function initializeAgentWorkspace() {
       if (activeWorkspaceMode !== "agent") return;
       try {
         const response = await fetch(workspaceUrl("/api/agent/state"));
         const data = await response.json();
+        renderAgentState(data);
         if (data.status !== "running") return;
         agentLoopActive = true;
         setLoading(true);
         if (stopAgentButton) stopAgentButton.disabled = false;
-        addMessage("agent", "Riprendo la diagnosi autonoma dallo stato salvato.");
+        showAgentActivity("Riprendo la diagnosi autonoma dallo stato salvato");
         setTimeout(runNextAgentIteration, 300);
       } catch (error) {
-        addMessage("agent", "Non riesco a rileggere lo stato autonomo salvato.");
+        showAgentError("Non riesco a rileggere lo stato autonomo salvato.");
       }
     }
 
@@ -1870,7 +1892,11 @@
         return;
       }
       messages.innerHTML = "";
-      addMessage("agent", welcomeMessage);
+      if (activeWorkspaceMode === "agent") {
+        renderAgentState({agent_view: {status: "idle", status_label: "Pronto", status_tone: "neutral"}});
+      } else {
+        addMessage("agent", welcomeMessage);
+      }
       input.focus();
     });
 
@@ -1884,8 +1910,11 @@
     });
 
     loadChatModel();
-    restoreMessages();
-    resumeAgentLoopIfNeeded();
+    if (activeWorkspaceMode === "agent") {
+      initializeAgentWorkspace();
+    } else {
+      restoreMessages();
+    }
     setupCircuitViewers();
     setupTransientScopes();
   </script>

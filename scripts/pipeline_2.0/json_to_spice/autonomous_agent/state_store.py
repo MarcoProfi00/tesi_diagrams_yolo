@@ -39,6 +39,8 @@ def create_state(output_dir: Path, symptom: str, model: str) -> dict[str, Any]:
         "final_status": None,
         "final_reason": None,
         "final_answer": None,
+        "final_cause": None,
+        "verified_correction": None,
         "stop_reason": None,
         "last_active_run": "base",
         "created_at": timestamp,

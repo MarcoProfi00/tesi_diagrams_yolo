@@ -12,15 +12,35 @@ Il LED è già acceso, ma la lampada è spenta. Individua la causa ed esegui gli
 - Usa soltanto queste primitive: add_resistor_between_nodes, add_voltage_source_between_nodes, change_component_value, change_source_value, close_switch, connect_nodes, drive_node_voltage, feed_nodes_from_source_node.
 - Ogni scenario deve essere self-contained e partire dalla base run.
 - Puoi proporre al massimo 2 scenari indipendenti.
-- Budget residuo: 3 run scenario.
+- Budget residuo: 4 run scenario.
 - Se il budget e zero devi restituire decision=stop.
 - Non usare resolved_candidate come prova automatica di soluzione definitiva.
 - Distingui una soluzione da una semplice localizzazione della causa.
 - Ogni scenario deve avere una lista compare non vuota con grandezze osservabili.
 - Per scenari con piu rami o uscite, includi in compare almeno una grandezza per ciascuno.
+- Se l'obiettivo richiede di attivare o spegnere un componente, includi in compare
+  almeno una misura diretta del componente, preferendo i(NOME_SPICE).
+- Se l'obiettivo richiede di mantenere invariato un altro componente, includi in
+  compare anche una sua misura diretta: le sole tensioni di nodo non ne verificano lo stato.
+- Ricava NOME_SPICE dalla netlist 07_netlist.cir; non usare l'id Graph JSON dentro i(...) o p(...).
+- Richiedi p(NOME_SPICE) soltanto se la potenza dello stesso dispositivo e gia
+  disponibile negli output ngspice forniti; non aggiungere misure ridondanti.
+- Ogni scenario deve avere un oggetto expect non vuoto. Le chiavi devono essere
+  grandezze presenti in compare e i valori ammessi sono: activated, deactivated,
+  changed, unchanged, increased, decreased, magnitude_increased,
+  magnitude_decreased, nonzero.
+- Usa expect per descrivere sia l'effetto cercato sia i vincoli da preservare,
+  per esempio corrente del target activated e corrente del componente protetto unchanged.
+- Per una run .tran usa le tracce disponibili e confronta almeno l'uscita o il ramo
+  direttamente coinvolto nell'obiettivo, oltre agli eventuali nodi intermedi.
+- Non dichiarare verified_correction se i confronti non misurano direttamente sia
+  il componente target sia gli eventuali componenti che devono restare attivi.
 - Preferisci modifiche minime su componenti, valori e collegamenti gia esistenti.
 - Usa nuove sorgenti o nuovi rami resistivi solo quando le evidenze tecniche li giustificano.
 - Usa feed_nodes_from_source_node solo da un nodo che gli output mostrano gia alimentato.
+- Usa connect_nodes per una ipotesi di continuita mancante senza attribuire a un nodo il ruolo di sorgente.
+- Non proporre connect_nodes e feed_nodes_from_source_node sulla stessa relazione tra nodi nella stessa decisione.
+- Considera add_resistor_between_nodes una ipotesi distinta: aggiunge un vero accoppiamento resistivo, non un filo quasi ideale.
 
 ## Schema delle azioni consentite
 - drive_node_voltage: type, target, value
@@ -33,11 +53,11 @@ Il LED è già acceso, ma la lampada è spenta. Individua la causa ed esegui gli
 - add_resistor_between_nodes: type, from, to, value
 
 ## Formati ammessi
-{"decision":"run_scenarios","reason":"...","scenarios":[{"title":"...","hypothesis":"...","actions":[{"type":"close_switch","target":"...","resistance":"1m"}],"compare":["v(NODE_ID)"]}]}
+{"decision":"run_scenarios","reason":"...","scenarios":[{"title":"...","hypothesis":"...","actions":[{"type":"close_switch","target":"...","resistance":"1m"}],"compare":["i(RTARGET)","i(DPROTECTED)"],"expect":{"i(RTARGET)":"activated","i(DPROTECTED)":"unchanged"}}]}
 
 oppure
 
-{"decision":"stop","reason":"...","final_status":"resolved|localized|partially_localized|topology_issue|inconclusive","final_answer":"..."}
+{"decision":"stop","reason":"...","final_status":"resolved|localized|partially_localized|topology_issue|inconclusive","final_answer":"Sintesi breve della conclusione.","final_cause":"Causa tecnica individuata, senza ripetizioni.","verified_correction":"Correzione verificata dagli scenari, oppure stringa vuota se non verificata."}
 
 ## Decisioni e risultati precedenti
 ```json
@@ -46,45 +66,32 @@ oppure
     "decision_number": 1,
     "decision": {
       "decision": "run_scenarios",
-      "reason": "La base run mostra che il LED e alimentato correttamente da N001 tramite resistor22.2 (N005=0.7318 V, corrente sorgente circa 19.4 mA), mentre il ramo lampada non riceve alcuna alimentazione: N004=0 V e N002=0 V. La causa piu probabile e che il ramo lampada sia scollegato dal +5 V e che il nodo N002 debba essere alimentato dal connettore o da un nodo gia alimentato. Servono scenari minimi per verificare e risolvere mantenendo acceso anche il LED.",
+      "reason": "Dalla base run il LED è effettivamente acceso: i(Dled12_1)≈19.4 mA e N005≈0.732 V tramite Rresistor22_2 da VVCC. La lampada è spenta perché il suo ramo non è alimentato: N004=0 V e i(Rlamp13_1)=0, mentre anche N002=0 V, quindi il resistore Rresistor22_1 collega la lampada a un nodo flottante/non alimentato. La causa più probabile è l’assenza di alimentazione su N002, che dovrebbe essere portato al nodo già alimentato N001 per accendere la lampada senza alterare il ramo LED. Propongo un solo scenario minimo e self-contained che alimenta N002 dal nodo sorgente già noto come attivo.",
       "scenarios": [
         {
-          "title": "Alimenta il ramo lampada dal +5V tramite il nodo gia alimentato N001",
-          "hypothesis": "N002 e il punto di ingresso del ramo lampada ma non e connesso a VCC; collegando N002 a N001 la lampada dovrebbe accendersi mentre il LED resta acceso perche il suo ramo originale non viene alterato.",
-          "actions": [
-            {
-              "type": "connect_nodes",
-              "from": "N001",
-              "to": "N002",
-              "resistance": "1m"
-            }
-          ],
-          "compare": [
-            "v(N001)",
-            "v(N002)",
-            "v(N004)",
-            "v(N005)"
-          ]
-        },
-        {
-          "title": "Alimenta il ramo lampada direttamente dal nodo sorgente gia alimentato",
-          "hypothesis": "Se il problema e solo l'assenza di distribuzione dell'alimentazione verso il ramo lampada, feed dal nodo gia alimentato N001 al nodo N002 dovrebbe accendere la lampada senza spegnere il LED, confermando la localizzazione del guasto come mancata alimentazione del ramo lampada.",
+          "title": "Alimenta il ramo lampada portando N002 a VCC",
+          "hypothesis": "La lampada è spenta perché il nodo N002, ingresso del ramo Rresistor22_1-Rlamp13_1, non è collegato alla sorgente da 5 V. Alimentando N002 dal nodo N001 già attivo, la corrente dovrebbe fluire in Rresistor22_1 e Rlamp13_1 accendendo la lampada, mentre il LED deve restare acceso.",
           "actions": [
             {
               "type": "feed_nodes_from_source_node",
               "source_node": "N001",
               "target_nodes": [
                 "N002"
-              ],
-              "resistance": "1m"
+              ]
             }
           ],
           "compare": [
-            "v(N001)",
-            "v(N002)",
+            "i(Rlamp13_1)",
+            "i(Dled12_1)",
             "v(N004)",
-            "v(N005)"
-          ]
+            "v(N002)"
+          ],
+          "expect": {
+            "i(Rlamp13_1)": "activated",
+            "i(Dled12_1)": "unchanged",
+            "v(N004)": "increased",
+            "v(N002)": "changed"
+          }
         }
       ]
     },
@@ -103,19 +110,23 @@ oppure
         "spice_exit_code": 0,
         "comparison_summary": {
           "requested_count": 4,
-          "changed_count": 2,
-          "activated_count": 2,
-          "missing_count": 0
+          "changed_count": 3,
+          "activated_count": 3,
+          "missing_count": 0,
+          "expected_count": 4,
+          "expectations_met_count": 4,
+          "expectations_failed_count": 0,
+          "expectations_missing_count": 0
         },
         "diagnostic_outcome": {
-          "status": "partially_resolved",
-          "technical_label": "Partially resolved",
-          "label": "Ipotesi confermata sul ramo testato",
-          "reason": "Lo scenario modifica il comportamento del circuito in modo utile, ma l'evidenza resta locale o non abbastanza forte per fermarsi automaticamente.",
-          "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
-          "stop_automation": false,
-          "confidence": "low",
-          "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
+          "status": "resolved_candidate",
+          "technical_label": "Candidate resolved",
+          "label": "Criteri di successo soddisfatti",
+          "reason": "Tutti i comportamenti attesi dichiarati dallo scenario sono verificati dagli output SPICE.",
+          "user_message": "Lo scenario fornisce una conferma forte dell'ipotesi testata.",
+          "stop_automation": true,
+          "confidence": "medium",
+          "next_step": "Ci sono gia evidenze forti per fermarsi qui e passare alla conclusione diagnostica."
         },
         "viewer": {
           "model": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a01\\scenarios\\agent_scenario_1\\run\\13_viewer_model.json",
@@ -124,38 +135,6 @@ oppure
         },
         "viewer_error": null,
         "executed_scenarios_count": 1
-      },
-      {
-        "scenario_id": "agent_scenario_2",
-        "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a01\\scenarios\\agent_scenario_2",
-        "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a01\\scenarios\\agent_scenario_2\\run",
-        "status": "spice_success",
-        "spice_executed": true,
-        "spice_status": "success",
-        "spice_exit_code": 0,
-        "comparison_summary": {
-          "requested_count": 4,
-          "changed_count": 2,
-          "activated_count": 2,
-          "missing_count": 0
-        },
-        "diagnostic_outcome": {
-          "status": "partially_resolved",
-          "technical_label": "Partially resolved",
-          "label": "Ipotesi confermata sul ramo testato",
-          "reason": "Lo scenario modifica il comportamento del circuito in modo utile, ma l'evidenza resta locale o non abbastanza forte per fermarsi automaticamente.",
-          "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
-          "stop_automation": false,
-          "confidence": "low",
-          "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
-        },
-        "viewer": {
-          "model": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a01\\scenarios\\agent_scenario_2\\run\\13_viewer_model.json",
-          "layout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a01\\scenarios\\agent_scenario_2\\run\\14_viewer_layout.json",
-          "svg": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a01\\scenarios\\agent_scenario_2\\run\\15_viewer.svg"
-        },
-        "viewer_error": null,
-        "executed_scenarios_count": 2
       }
     ]
   }
@@ -842,24 +821,28 @@ Current ngspice program size =   15.273 MB.
     {
       "scenario_dir": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a01\\scenarios\\agent_scenario_1",
       "scenario_id": "agent_scenario_1",
-      "title": "Alimenta il ramo lampada dal +5V tramite il nodo gia alimentato N001",
+      "title": "Alimenta il ramo lampada portando N002 a VCC",
       "status": "spice_success",
       "spice_status": "success",
       "diagnostic_outcome": {
-        "status": "partially_resolved",
-        "technical_label": "Partially resolved",
-        "label": "Ipotesi confermata sul ramo testato",
-        "reason": "Lo scenario modifica il comportamento del circuito in modo utile, ma l'evidenza resta locale o non abbastanza forte per fermarsi automaticamente.",
-        "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
-        "stop_automation": false,
-        "confidence": "low",
-        "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
+        "status": "resolved_candidate",
+        "technical_label": "Candidate resolved",
+        "label": "Criteri di successo soddisfatti",
+        "reason": "Tutti i comportamenti attesi dichiarati dallo scenario sono verificati dagli output SPICE.",
+        "user_message": "Lo scenario fornisce una conferma forte dell'ipotesi testata.",
+        "stop_automation": true,
+        "confidence": "medium",
+        "next_step": "Ci sono gia evidenze forti per fermarsi qui e passare alla conclusione diagnostica."
       },
       "comparison_summary": {
         "requested_count": 4,
-        "changed_count": 2,
-        "activated_count": 2,
-        "missing_count": 0
+        "changed_count": 3,
+        "activated_count": 3,
+        "missing_count": 0,
+        "expected_count": 4,
+        "expectations_met_count": 4,
+        "expectations_failed_count": 0,
+        "expectations_missing_count": 0
       },
       "artifacts": {
         "scenario_definition": {
@@ -883,124 +866,54 @@ Current ngspice program size =   15.273 MB.
           "role": "Base-vs-scenario comparison used to evaluate the scenario."
         }
       }
-    },
-    {
-      "scenario_dir": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a01\\scenarios\\agent_scenario_2",
-      "scenario_id": "agent_scenario_2",
-      "title": "Alimenta il ramo lampada direttamente dal nodo sorgente gia alimentato",
-      "status": "spice_success",
-      "spice_status": "success",
-      "diagnostic_outcome": {
-        "status": "partially_resolved",
-        "technical_label": "Partially resolved",
-        "label": "Ipotesi confermata sul ramo testato",
-        "reason": "Lo scenario modifica il comportamento del circuito in modo utile, ma l'evidenza resta locale o non abbastanza forte per fermarsi automaticamente.",
-        "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
-        "stop_automation": false,
-        "confidence": "low",
-        "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
-      },
-      "comparison_summary": {
-        "requested_count": 4,
-        "changed_count": 2,
-        "activated_count": 2,
-        "missing_count": 0
-      },
-      "artifacts": {
-        "scenario_definition": {
-          "available": true,
-          "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a01\\scenarios\\agent_scenario_2\\scenario.json",
-          "role": "Scenario selected by the user and saved before execution."
-        },
-        "scenario_status": {
-          "available": true,
-          "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a01\\scenarios\\agent_scenario_2\\scenario_status.json",
-          "role": "Current scenario status, SPICE status and diagnostic outcome."
-        },
-        "controlled_scenario_report": {
-          "available": true,
-          "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a01\\scenarios\\agent_scenario_2\\12_controlled_scenarios.json",
-          "role": "Report produced by the controlled scenario runner."
-        },
-        "scenario_comparison": {
-          "available": true,
-          "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a01\\scenarios\\agent_scenario_2\\scenario_comparison.json",
-          "role": "Base-vs-scenario comparison used to evaluate the scenario."
-        }
-      }
     }
   ],
   "scenario_outcome_summary": {
     "available": true,
     "best_scenario_id": "agent_scenario_1",
-    "best_outcome_status": "partially_resolved",
-    "best_stop_automation": false,
+    "best_outcome_status": "resolved_candidate",
+    "best_stop_automation": true,
     "interpretation_rule": "If a user asks which scenario resolves the problem, prefer the scenario with outcome_status='resolved_candidate' and stop_automation=true. Partially resolved scenarios are supporting diagnostics, not the main solution.",
     "scenarios": [
       {
         "scenario_id": "agent_scenario_1",
-        "title": "Alimenta il ramo lampada dal +5V tramite il nodo gia alimentato N001",
+        "title": "Alimenta il ramo lampada portando N002 a VCC",
         "status": "spice_success",
         "spice_status": "success",
-        "outcome_status": "partially_resolved",
-        "outcome_label": "Ipotesi confermata sul ramo testato",
-        "outcome_technical_label": "Partially resolved",
-        "outcome_reason": "Lo scenario modifica il comportamento del circuito in modo utile, ma l'evidenza resta locale o non abbastanza forte per fermarsi automaticamente.",
-        "stop_automation": false,
+        "outcome_status": "resolved_candidate",
+        "outcome_label": "Criteri di successo soddisfatti",
+        "outcome_technical_label": "Candidate resolved",
+        "outcome_reason": "Tutti i comportamenti attesi dichiarati dallo scenario sono verificati dagli output SPICE.",
+        "stop_automation": true,
         "comparison_summary": {
           "requested_count": 4,
-          "changed_count": 2,
-          "activated_count": 2,
-          "missing_count": 0
+          "changed_count": 3,
+          "activated_count": 3,
+          "missing_count": 0,
+          "expected_count": 4,
+          "expectations_met_count": 4,
+          "expectations_failed_count": 0,
+          "expectations_missing_count": 0
         },
         "quantity_summary": {
           "changed": [
-            "v(N002)",
-            "v(N004)"
+            "i(Rlamp13_1)",
+            "v(N004)",
+            "v(N002)"
           ],
           "unchanged": [
-            "v(N001)",
-            "v(N005)"
+            "i(Dled12_1)"
           ],
           "missing": []
         },
-        "score": 22
-      },
-      {
-        "scenario_id": "agent_scenario_2",
-        "title": "Alimenta il ramo lampada direttamente dal nodo sorgente gia alimentato",
-        "status": "spice_success",
-        "spice_status": "success",
-        "outcome_status": "partially_resolved",
-        "outcome_label": "Ipotesi confermata sul ramo testato",
-        "outcome_technical_label": "Partially resolved",
-        "outcome_reason": "Lo scenario modifica il comportamento del circuito in modo utile, ma l'evidenza resta locale o non abbastanza forte per fermarsi automaticamente.",
-        "stop_automation": false,
-        "comparison_summary": {
-          "requested_count": 4,
-          "changed_count": 2,
-          "activated_count": 2,
-          "missing_count": 0
-        },
-        "quantity_summary": {
-          "changed": [
-            "v(N002)",
-            "v(N004)"
-          ],
-          "unchanged": [
-            "v(N001)",
-            "v(N005)"
-          ],
-          "missing": []
-        },
-        "score": 22
+        "score": 183
       }
     ]
   },
   "scenario_budget": {
     "max_executable_scenarios": 5,
-    "executed_scenarios_count": 2,
-    "remaining_executable_scenarios": 3,
+    "executed_scenarios_count": 1,
+    "remaining_executable_scenarios": 4,
     "budget_exhausted": false,
     "last_scenario_available": false,
     "policy": "At most 5 scenarios can be executed for the same circuit. When only one scenario remains, the agent should propose a single final scenario. When no scenario remains, the agent must stop proposing new scenarios and provide a final diagnostic conclusion."
