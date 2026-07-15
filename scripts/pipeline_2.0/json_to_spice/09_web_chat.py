@@ -36,15 +36,31 @@ import mimetypes
 import os
 import re
 import shutil
+import threading
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from agent_readonly.openai_runner import write_agent_response
 from agent_readonly.preview_builder import write_agent_input_preview
 from agent_readonly.prompt_builder import write_agent_prompt
+from autonomous_agent.controller import (
+    AutonomousControllerError,
+    clear_diagnosis,
+    read_state as read_autonomous_state,
+    run_iteration as run_autonomous_iteration,
+    start_diagnosis as start_autonomous_diagnosis,
+    stop_diagnosis as stop_autonomous_diagnosis,
+    summarize_state as summarize_autonomous_state,
+)
+from scenario_runtime import (
+    ScenarioRuntimeError,
+    count_executed_scenarios,
+    execute_scenario as execute_shared_scenario,
+    scenario_signature,
+)
 from viewer_core.contracts import (
     VIEWER_LAYOUT_NAME,
     VIEWER_LAYOUT_SCHEMA_VERSION,
@@ -60,7 +76,6 @@ WEB_CHAT_DIR = Path(__file__).resolve().parent / "web_chat"
 TEMPLATE_DIR = WEB_CHAT_DIR / "templates"
 INDEX_TEMPLATE = TEMPLATE_DIR / "index.html"
 STEP10_PATH = Path(__file__).resolve().parent / "10_build_diagnostic_context.py"
-STEP12_PATH = Path(__file__).resolve().parent / "12_controlled_scenarios.py"
 STEP13_PATH = Path(__file__).resolve().parent / "13_build_viewer_model.py"
 STEP14_PATH = Path(__file__).resolve().parent / "14_build_viewer_layout.py"
 STEP15_PATH = Path(__file__).resolve().parent / "15_render_viewer_svg.py"
@@ -84,27 +99,11 @@ CHAT_RESPONSE_NAME = "11_agent_response_chat.md"
 MAX_EXECUTABLE_SCENARIOS = 5
 EXPERIMENT2_CHAT_DIRNAME = "experiment2_chat"
 INTERACTIVE_CHAT_DIRNAME = "experiment_chat"
-INTERACTIVE_HISTORY_EXPERIMENTS = {"experiment3_1"}
+INTERACTIVE_HISTORY_EXPERIMENTS = {"experiment3_1", "experiment4"}
 CHAT_HISTORY_JSON_NAME = "chat_history.json"
 CHAT_HISTORY_MD_NAME = "chat_history.md"
 SCENARIO_REGISTRY_JSON_NAME = "scenario_registry.json"
 SCENARIO_REGISTRY_MD_NAME = "scenario_registry.md"
-
-SCENARIO_BASE_FILES = [
-    "01_graph.json",
-    "02_normalized_circuit.json",
-    "03_node_map.json",
-    "04_values_bound.json",
-    "06_component_rules.json",
-    "07_netlist.cir",
-    "07_spice_emit_report.json",
-    "08_spice_run.json",
-    "08_ngspice_stdout.txt",
-    "08_ngspice_stderr.txt",
-    "08_tran.csv",
-    "08_tran_plot.png",
-    "08_tran_plot.svg",
-]
 
 SCENARIO_WORD_TO_INDEX = {
     "primo": 1,
@@ -705,13 +704,15 @@ def next_proposal_id(registry: dict[str, Any]) -> str:
 
 
 def registered_scenario_signature(scenario: dict[str, Any]) -> str:
-    """Firma semplice per evitare di registrare duplicati identici."""
+    """Firma uno scenario con la stessa logica tecnica usata dal runtime."""
+    actions = scenario.get("actions")
+    if isinstance(actions, list) and actions:
+        return scenario_signature({"actions": actions})
+
+    # Le proposte non eseguibili restano distinte tramite il loro significato.
     comparable = {
         "title": scenario.get("title"),
         "hypothesis": scenario.get("hypothesis"),
-        "actions": scenario.get("actions") or [],
-        "analysis": scenario.get("analysis"),
-        "compare": scenario.get("compare") or [],
     }
     return json.dumps(comparable, sort_keys=True, ensure_ascii=False)
 
@@ -739,10 +740,13 @@ def register_experiment2_scenarios_from_response(
     if not extracted:
         return {"added": [], "summary": ""}
 
+    # Ricalcola anche le firme dei registry precedenti al formato action-only.
     existing_signatures = {
-        str(item.get("signature"))
+        registered_scenario_signature(
+            item.get("scenario") if isinstance(item.get("scenario"), dict) else item
+        )
         for item in registry.get("scenarios", [])
-        if isinstance(item, dict) and item.get("signature")
+        if isinstance(item, dict)
     }
     proposal_id = next_proposal_id(registry)
     proposal = {
@@ -1155,13 +1159,26 @@ def outcome_status_class(status: str) -> str:
     return "neutral"
 
 
-def render_run_selector(output_dir: Path, active_run: str) -> str:
+def append_workspace_mode(url: str, workspace_mode: str | None) -> str:
+    """Aggiunge la modalita workspace a un URL interno della web chat."""
+    if not workspace_mode:
+        return url
+    separator = "&" if "?" in url else "?"
+    return f"{url}{separator}mode={workspace_mode}"
+
+
+def render_run_selector(
+    output_dir: Path,
+    active_run: str,
+    workspace_mode: str | None = None,
+) -> str:
     """Crea la sidebar con base run e scenari disponibili."""
     base_status = build_status(output_dir)
     base_active = " active" if active_run == "base" else ""
+    base_url = append_workspace_mode("/", workspace_mode)
     sections = [
         f"""
-        <a class="run-item{base_active}" href="/">
+        <a class="run-item{base_active}" href="{html.escape(base_url)}">
           <strong>Base run</strong>
           <span>{html.escape(str(base_status["spice_status"]))}</span>
         </a>
@@ -1183,9 +1200,13 @@ def render_run_selector(output_dir: Path, active_run: str) -> str:
     for scenario in scenarios:
         scenario_active = " active" if active_run == scenario["id"] else ""
         state_class = run_status_class(scenario["status"])
+        scenario_url = append_workspace_mode(
+            f"/?run={html.escape(scenario['id'])}",
+            workspace_mode,
+        )
         sections.append(
             f"""
-            <a class="run-item scenario-run{scenario_active}" href="/?run={html.escape(scenario["id"])}">
+            <a class="run-item scenario-run{scenario_active}" href="{scenario_url}">
               <strong>{html.escape(scenario["scenario_id"])}</strong>
               <span class="{state_class}">{html.escape(scenario["status"])}</span>
               <small>{html.escape(scenario["title"])}</small>
@@ -1239,9 +1260,14 @@ def render_artifact_sections(artifact_dir: Path, artifacts: list[tuple[str, str,
     return "\n".join(sections)
 
 
-def render_artifacts(output_dir: Path, plot_url: str = "/artifact/08_tran_plot.png") -> str:
+def render_artifacts(
+    output_dir: Path,
+    plot_url: str = "/artifact/08_tran_plot.png",
+    workspace_mode: str | None = None,
+) -> str:
     """Crea i pannelli richiudibili con gli artefatti della pipeline."""
     sections: list[str] = [render_artifact_sections(output_dir, ARTIFACTS)]
+    plot_url = append_workspace_mode(plot_url, workspace_mode)
 
     plot_path = output_dir / "08_tran_plot.png"
     if plot_path.exists():
@@ -1512,7 +1538,11 @@ def render_comparison_summary(scenario_dir: Path) -> str:
     """
 
 
-def render_scenario_content(output_dir: Path, scenario_name: str) -> dict[str, str]:
+def render_scenario_content(
+    output_dir: Path,
+    scenario_name: str,
+    workspace_mode: str | None = None,
+) -> dict[str, str]:
     """Renderizza titolo, stato e artefatti per una scenario run."""
     if not is_safe_scenario_name(scenario_name):
         return {
@@ -1542,6 +1572,7 @@ def render_scenario_content(output_dir: Path, scenario_name: str) -> dict[str, s
     run_artifacts = render_artifacts(
         run_dir,
         plot_url=f"/scenario-artifact/{html.escape(scenario_name)}/run/08_tran_plot.png",
+        workspace_mode=workspace_mode,
     )
 
     return {
@@ -1553,7 +1584,12 @@ def render_scenario_content(output_dir: Path, scenario_name: str) -> dict[str, s
     }
 
 
-def render_image_section(batch: str, circuit: str, output_dir: Path) -> str:
+def render_image_section(
+    batch: str,
+    circuit: str,
+    output_dir: Path,
+    workspace_mode: str | None = None,
+) -> str:
     """Crea il pannello con l'immagine originale del circuito."""
     image_path = find_input_image_path(batch, circuit, output_dir)
     if image_path is None:
@@ -1569,6 +1605,7 @@ def render_image_section(batch: str, circuit: str, output_dir: Path) -> str:
         </details>
         """
 
+    image_url = append_workspace_mode("/input-image", workspace_mode)
     return f"""
     <details class="artifact" open>
       <summary>
@@ -1576,7 +1613,7 @@ def render_image_section(batch: str, circuit: str, output_dir: Path) -> str:
         <small>{html.escape(project_relative(image_path))}</small>
       </summary>
       <div class="image-wrap">
-        <img src="/input-image" alt="Original circuit image">
+        <img src="{html.escape(image_url)}" alt="Original circuit image">
       </div>
     </details>
     """
@@ -1602,29 +1639,66 @@ def fill_template(template: str, values: dict[str, str]) -> str:
     return rendered
 
 
+def render_workspace_switch(
+    active_mode: str | None,
+    available_modes: tuple[str, ...],
+) -> str:
+    """Crea lo switch CHAT/AGENT quando il server espone piu workspace."""
+    if len(available_modes) < 2:
+        return ""
+
+    items: list[str] = []
+    for mode in available_modes:
+        active_class = " active" if mode == active_mode else ""
+        label = "AGENT" if mode == "agent" else mode.upper()
+        items.append(
+            f'<a class="workspace-tab{active_class}" href="/?mode={html.escape(mode)}">'
+            f"{html.escape(label)}</a>"
+        )
+    return '<nav class="workspace-switch" aria-label="Modalita diagnostica">' + "".join(items) + "</nav>"
+
+
 def render_page(
     batch: str,
     circuit: str,
     output_dir: Path,
     active_run: str = "base",
     experiment: str | None = None,
+    workspace_mode: str | None = None,
+    available_workspace_modes: tuple[str, ...] = (),
 ) -> str:
     """Renderizza la pagina HTML principale usando il template esterno."""
     template = read_text_safe(INDEX_TEMPLATE)
     active_run = active_run if active_run else "base"
     circuit_label = f"{batch} / {experiment} / {circuit}" if experiment else f"{batch} / {circuit}"
+    if workspace_mode:
+        circuit_label = f"{batch} / {experiment} / {workspace_mode} / {circuit}"
+    workspace_storage_suffix = f"_{workspace_mode}" if workspace_mode else ""
     chat_storage_key = (
-        f"pipeline2_chat_{batch}_{experiment}_{circuit}"
+        f"pipeline2_chat_{batch}_{experiment}_{circuit}{workspace_storage_suffix}"
         if experiment
         else f"pipeline2_chat_{batch}_{circuit}"
     )
     model_storage_key = (
-        f"pipeline2_chat_model_{batch}_{experiment}_{circuit}"
+        f"pipeline2_chat_model_{batch}_{experiment}_{circuit}{workspace_storage_suffix}"
         if experiment
         else f"pipeline2_chat_model_{batch}_{circuit}"
     )
     server_chat_history_items = build_server_chat_history_items(output_dir, batch, circuit, experiment)
     chat_history_enabled = is_experiment2_history_enabled(experiment)
+    chat_panel_title = "Agent diagnostico" if workspace_mode == "agent" else "Chat diagnostica"
+    workspace_label = "AGENT" if workspace_mode == "agent" else "CHAT"
+    chat_actions_class = " agent-mode" if workspace_mode == "agent" else ""
+    agent_stop_button = (
+        '<button class="agent-stop" id="stopAgentButton" type="button">Stop</button>'
+        if workspace_mode == "agent"
+        else ""
+    )
+    welcome_message = (
+        "Descrivi il sintomo: l'agente eseguira test controllati fino alla conclusione o al limite di sicurezza."
+        if workspace_mode == "agent"
+        else "Descrivi il sintomo del circuito e analizzero gli output correnti della pipeline."
+    )
 
     if active_run == "base":
         status = build_status(output_dir)
@@ -1633,20 +1707,38 @@ def render_page(
         title = "Base run"
         subtitle = project_relative(output_dir)
         status_cards = render_status_cards(status)
-        image_section = render_viewer_section(output_dir) + render_image_section(batch, circuit, output_dir)
-        artifacts = render_artifacts(output_dir)
+        image_section = render_viewer_section(output_dir) + render_image_section(
+            batch,
+            circuit,
+            output_dir,
+            workspace_mode,
+        )
+        artifacts = render_artifacts(output_dir, workspace_mode=workspace_mode)
     else:
         available_scenarios = {scenario["id"] for scenario in list_scenario_runs(output_dir)}
         if active_run not in available_scenarios:
-            return render_page(batch, circuit, output_dir, active_run="base", experiment=experiment)
-        scenario_content = render_scenario_content(output_dir, active_run)
+            return render_page(
+                batch,
+                circuit,
+                output_dir,
+                active_run="base",
+                experiment=experiment,
+                workspace_mode=workspace_mode,
+                available_workspace_modes=available_workspace_modes,
+            )
+        scenario_content = render_scenario_content(output_dir, active_run, workspace_mode)
         scenario_state = read_scenario_status(output_dir / "scenarios" / active_run).get("status") or "not available"
         header_meta = f"{circuit_label} - {active_run} - {scenario_state}"
         title = scenario_content["title"]
         subtitle = scenario_content.get("subtitle") or scenario_content["output_dir"]
         status_cards = scenario_content["status_cards"]
         scenario_run_dir = output_dir / "scenarios" / active_run / "run"
-        image_section = render_viewer_section(scenario_run_dir) + render_image_section(batch, circuit, output_dir)
+        image_section = render_viewer_section(scenario_run_dir) + render_image_section(
+            batch,
+            circuit,
+            output_dir,
+            workspace_mode,
+        )
         artifacts = scenario_content["artifacts"]
 
     return fill_template(
@@ -1654,6 +1746,13 @@ def render_page(
         {
             "PAGE_TITLE": html.escape(f"Pipeline 2.0 Diagnostic Chat - {circuit}"),
             "HEADER_META": html.escape(header_meta),
+            "WORKSPACE_SWITCH": render_workspace_switch(workspace_mode, available_workspace_modes),
+            "ACTIVE_WORKSPACE_MODE": html.escape(workspace_mode or ""),
+            "CHAT_PANEL_TITLE": html.escape(chat_panel_title),
+            "WORKSPACE_LABEL": html.escape(workspace_label),
+            "CHAT_ACTIONS_CLASS": chat_actions_class,
+            "AGENT_STOP_BUTTON": agent_stop_button,
+            "WELCOME_MESSAGE": html.escape(welcome_message),
             "CHAT_STORAGE_KEY": html.escape(chat_storage_key),
             "MODEL_STORAGE_KEY": html.escape(model_storage_key),
             "DEFAULT_CHAT_MODEL": html.escape(CHAT_MODEL),
@@ -1661,7 +1760,7 @@ def render_page(
             "SERVER_CHAT_HISTORY_JSON": json_for_html(server_chat_history_items),
             "SERVER_CHAT_HISTORY_ENABLED": "true" if chat_history_enabled else "false",
             "MODEL_OPTIONS": render_model_options(CHAT_MODEL),
-            "RUN_SELECTOR": render_run_selector(output_dir, active_run),
+            "RUN_SELECTOR": render_run_selector(output_dir, active_run, workspace_mode),
             "ACTIVE_RUN_TITLE": html.escape(title),
             "OUTPUT_DIR": html.escape(subtitle),
             "STATUS_CARDS": status_cards,
@@ -1676,17 +1775,6 @@ def load_step10_module() -> Any:
     spec = importlib.util.spec_from_file_location("pipeline2_step10", STEP10_PATH)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"Unable to load step 10 from {STEP10_PATH}")
-
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-def load_step12_module() -> Any:
-    """Carica lo step 12 anche se il file inizia con un numero."""
-    spec = importlib.util.spec_from_file_location("pipeline2_step12", STEP12_PATH)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Unable to load step 12 from {STEP12_PATH}")
 
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -1925,126 +2013,13 @@ def safe_scenario_dir_name(scenario_id: str) -> str:
 
 
 def count_existing_scenario_dirs(output_dir: Path) -> int:
-    """Conta quante cartelle scenario esistono gia per il circuito."""
-    scenarios_root = output_dir / "scenarios"
-    if not scenarios_root.exists() or not scenarios_root.is_dir():
-        return 0
-    return sum(1 for path in scenarios_root.iterdir() if path.is_dir())
+    """Conta le run scenario realmente eseguite, non le sole cartelle."""
+    return count_executed_scenarios(output_dir)
 
 
 def is_safe_scenario_name(name: str) -> bool:
     """Accetta solo nomi scenario semplici usabili come directory locali."""
     return bool(re.fullmatch(r"[A-Za-z0-9_.-]+", name)) and name not in {".", ".."}
-
-
-def prepare_scenario_folder(
-    output_dir: Path,
-    selected: dict[str, Any],
-    requested_index: int | str,
-    response_path: Path,
-) -> dict[str, Path]:
-    """
-    Prepara la cartella dello scenario senza eseguirlo.
-
-    Questo e lo step 2: salviamo solo i metadati necessari alla futura
-    esecuzione controllata, senza modificare la base run e senza chiamare SPICE.
-    """
-    fallback_id = "scenario_latest" if requested_index == "latest" else f"scenario_{requested_index}"
-    scenario_id = str(selected.get("scenario_id") or fallback_id)
-    scenario_dir = output_dir / "scenarios" / safe_scenario_dir_name(scenario_id)
-    scenario_dir.mkdir(parents=True, exist_ok=True)
-
-    scenario_path = scenario_dir / "scenario.json"
-    status_path = scenario_dir / "scenario_status.json"
-    scenario_payload = {
-        key: value
-        for key, value in selected.items()
-        if not str(key).startswith("_registry_")
-    }
-
-    status = {
-        "status": "prepared",
-        "stage": "scenario_folder_created",
-        "message": "Scenario selected and saved. No pipeline files were modified and SPICE was not executed.",
-        "scenario_id": scenario_id,
-        "requested_index": requested_index,
-        "base_output_dir": project_relative(output_dir),
-        "source_agent_response": project_relative(response_path),
-        "scenario_file": project_relative(scenario_path),
-        "created_or_updated_at": datetime.now().isoformat(timespec="seconds"),
-        "next_step": "Implement controlled scenario execution in 12_controlled_scenarios.py.",
-    }
-
-    scenario_path.write_text(json.dumps(scenario_payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    status_path.write_text(json.dumps(status, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-
-    return {
-        "scenario_dir": scenario_dir,
-        "scenario_path": scenario_path,
-        "status_path": status_path,
-    }
-
-
-def copy_base_run_for_scenario(output_dir: Path, scenario_dir: Path) -> dict[str, Any]:
-    """
-    Crea le cartelle base_snapshot e run dello scenario.
-
-    base_snapshot conserva una copia degli output originali 01-08.
-    run contiene la copia che in futuro potra essere modificata dallo scenario.
-    """
-    base_snapshot_dir = scenario_dir / "base_snapshot"
-    run_dir = scenario_dir / "run"
-    base_snapshot_dir.mkdir(parents=True, exist_ok=True)
-    run_dir.mkdir(parents=True, exist_ok=True)
-
-    copied_files: list[str] = []
-    missing_files: list[str] = []
-
-    for filename in SCENARIO_BASE_FILES:
-        source_path = output_dir / filename
-        if not source_path.exists() or not source_path.is_file():
-            missing_files.append(filename)
-            continue
-
-        shutil.copy2(source_path, base_snapshot_dir / filename)
-        shutil.copy2(source_path, run_dir / filename)
-        copied_files.append(filename)
-
-    manifest = {
-        "status": "copied",
-        "message": "Base run copied into base_snapshot and run. No scenario action was applied.",
-        "base_output_dir": project_relative(output_dir),
-        "base_snapshot_dir": project_relative(base_snapshot_dir),
-        "run_dir": project_relative(run_dir),
-        "copied_files": copied_files,
-        "missing_optional_files": missing_files,
-        "created_or_updated_at": datetime.now().isoformat(timespec="seconds"),
-    }
-    manifest_path = scenario_dir / "scenario_copy_manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-
-    return {
-        "base_snapshot_dir": base_snapshot_dir,
-        "run_dir": run_dir,
-        "manifest_path": manifest_path,
-        "copied_files": copied_files,
-        "missing_files": missing_files,
-    }
-
-
-def apply_controlled_scenario(
-    scenario_dir: Path,
-    run_spice: bool = True,
-    ngspice_executable: str | None = None,
-) -> dict[str, Any]:
-    """Chiama lo step 12 per applicare le azioni supportate ed eseguire SPICE."""
-    step12 = load_step12_module()
-    report = step12.apply_scenario(
-        scenario_dir,
-        run_spice=run_spice,
-        ngspice_executable=ngspice_executable,
-    )
-    return report if isinstance(report, dict) else {}
 
 
 def build_scenario_result_explanation(
@@ -2119,16 +2094,30 @@ def build_scenario_result_explanation(
                 *changed_lines,
             ]
         )
-    lines.extend(
-        [
-            "",
-            (
-                "Interpretazione pratica: il comportamento osservato nello scenario spiega il sintomo meglio della run base, quindi per ora non serve continuare automaticamente con altri scenari."
-                if stop_automation
-                else "Interpretazione pratica: il comportamento osservato nello scenario aggiunge evidenza utile rispetto alla run base, ma non chiude ancora da solo la diagnosi."
-            ),
-        ]
+    practical_sentence = {
+        "resolved_candidate": (
+            "Interpretazione pratica: il comportamento osservato spiega il sintomo "
+            "meglio della run base e fornisce evidenza sufficiente per fermare i test automatici."
+            if stop_automation
+            else "Interpretazione pratica: il comportamento osservato supporta fortemente l'ipotesi testata."
+        ),
+        "partially_resolved": (
+            "Interpretazione pratica: lo scenario aggiunge evidenza utile sul ramo testato, "
+            "ma non chiude ancora da solo la diagnosi."
+        ),
+        "not_resolved": (
+            "Interpretazione pratica: lo scenario non supporta l'ipotesi testata; "
+            "conviene valutare un'ipotesi diversa usando le evidenze gia raccolte."
+        ),
+        "unknown": (
+            "Interpretazione pratica: il confronto resta inconcludente e non permette "
+            "di confermare o escludere l'ipotesi testata."
+        ),
+    }.get(
+        outcome_status,
+        "Interpretazione pratica: il risultato richiede ancora una valutazione diagnostica mirata.",
     )
+    lines.extend(["", practical_sentence])
     return "\n".join(lines)
 
 
@@ -2230,34 +2219,51 @@ def handle_scenario_request(
             ],
         }
 
-    scenario_paths = prepare_scenario_folder(
-        output_dir=output_dir,
-        selected=selected,
-        requested_index=requested_index,
-        response_path=response_path,
-    )
-    copy_result = copy_base_run_for_scenario(
-        output_dir=output_dir,
-        scenario_dir=scenario_paths["scenario_dir"],
-    )
-    apply_report = apply_controlled_scenario(
-        scenario_paths["scenario_dir"],
-        run_spice=True,
-        ngspice_executable=ngspice_executable,
-    )
-    viewer_model_path = copy_result["run_dir"] / "13_viewer_model.json"
-    viewer_layout_path = copy_result["run_dir"] / "14_viewer_layout.json"
-    viewer_debug = ""
+    scenario_payload = {
+        key: value
+        for key, value in selected.items()
+        if not str(key).startswith("_registry_")
+    }
     try:
-        load_or_build_viewer_model(copy_result["run_dir"])
-        load_or_build_viewer_layout(copy_result["run_dir"])
-        load_or_build_viewer_svg(copy_result["run_dir"])
-        viewer_debug = (
-            f"Viewer model: {project_relative(viewer_model_path)}; "
-            f"layout: {project_relative(viewer_layout_path)}"
+        runtime_result = execute_shared_scenario(
+            output_dir=output_dir,
+            scenario=scenario_payload,
+            ngspice_executable=ngspice_executable,
+            source_label="guided_chat",
+            reject_duplicates=True,
         )
-    except Exception as exc:
-        viewer_debug = f"Generazione viewer fallita: {exc}"
+    except ScenarioRuntimeError as exc:
+        return {
+            "reply": f"Lo scenario non e stato eseguito: {exc}",
+            "debug": [f"Scenario runtime rejected: {exc}"],
+        }
+
+    scenario_dir = Path(str(runtime_result["scenario_dir"]))
+    run_dir = Path(str(runtime_result["run_dir"]))
+    # Ricostruisce i percorsi prodotti dal runtime condiviso per la risposta CHAT.
+    scenario_paths = {
+        "scenario_dir": scenario_dir,
+        "scenario_path": scenario_dir / "scenario.json",
+        "status_path": scenario_dir / "scenario_status.json",
+    }
+    copy_manifest = read_json_safe(scenario_dir / "scenario_copy_manifest.json")
+    copy_result = {
+        "base_snapshot_dir": scenario_dir / "base_snapshot",
+        "run_dir": run_dir,
+        "manifest_path": scenario_dir / "scenario_copy_manifest.json",
+        "copied_files": list(copy_manifest.get("copied_files") or []),
+    }
+    apply_report = read_json_safe(scenario_dir / "12_controlled_scenarios.json")
+    viewer_data = runtime_result.get("viewer") if isinstance(runtime_result.get("viewer"), dict) else {}
+    viewer_model_path = Path(str(viewer_data.get("model") or run_dir / VIEWER_MODEL_NAME))
+    viewer_layout_path = Path(str(viewer_data.get("layout") or run_dir / VIEWER_LAYOUT_NAME))
+    viewer_svg_path = Path(str(viewer_data.get("svg") or run_dir / VIEWER_SVG_NAME))
+    viewer_debug = (
+        f"Viewer model: {project_relative(Path(str(viewer_data.get('model'))))}; "
+        f"layout: {project_relative(Path(str(viewer_data.get('layout'))))}"
+        if viewer_data
+        else f"Generazione viewer fallita: {runtime_result.get('viewer_error') or 'output non disponibile'}"
+    )
     applied_actions = apply_report.get("applied_actions") or []
     failed_actions = apply_report.get("failed_actions") or []
     unsupported_actions = apply_report.get("unsupported_actions") or []
@@ -2347,6 +2353,7 @@ def handle_scenario_request(
             project_relative(scenario_paths["scenario_dir"] / "scenario_comparison.json"),
             project_relative(viewer_model_path),
             project_relative(viewer_layout_path),
+            project_relative(viewer_svg_path),
         ],
         "used_image": False,
         "debug": [
@@ -2402,7 +2409,19 @@ class WebChatHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         """Serve pagina HTML principale e artefatti statici della run."""
         parsed = urlparse(self.path)
+        workspace_mode = self.server.bind_request_workspace(parsed.query)
         path = parsed.path
+
+        if path == "/api/agent/state":
+            if workspace_mode != "agent":
+                self.send_text(403, "AGENT workspace required")
+                return
+            body = json.dumps(
+                summarize_autonomous_state(read_autonomous_state(self.server.output_dir)),
+                ensure_ascii=False,
+            )
+            self.send_text(200, body, "application/json; charset=utf-8")
+            return
 
         if path == "/":
             query = parsed.query
@@ -2417,6 +2436,8 @@ class WebChatHandler(BaseHTTPRequestHandler):
                 self.server.output_dir,
                 active_run=active_run,
                 experiment=self.server.experiment,
+                workspace_mode=workspace_mode,
+                available_workspace_modes=self.server.available_workspace_modes,
             )
             self.send_text(200, page, "text/html; charset=utf-8")
             return
@@ -2481,6 +2502,78 @@ class WebChatHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         """Riceve messaggi chat e restituisce una risposta placeholder."""
         parsed = urlparse(self.path)
+        workspace_mode = self.server.bind_request_workspace(parsed.query)
+
+        if parsed.path.startswith("/api/agent/"):
+            if workspace_mode != "agent":
+                self.send_text(403, "AGENT workspace required")
+                return
+            content_length = int(self.headers.get("Content-Length") or 0)
+            raw_body = self.rfile.read(content_length) if content_length else b"{}"
+            try:
+                payload = json.loads(raw_body.decode("utf-8"))
+            except json.JSONDecodeError:
+                payload = {}
+            if not isinstance(payload, dict):
+                payload = {}
+
+            try:
+                if parsed.path == "/api/agent/start":
+                    symptom = str(payload.get("message") or "").strip()
+                    model = normalize_chat_model(str(payload.get("model") or "").strip() or None)
+                    start_autonomous_diagnosis(self.server.output_dir, symptom, model)
+                    append_experiment2_chat_event(
+                        output_dir=self.server.output_dir,
+                        batch=self.server.batch,
+                        circuit=self.server.circuit,
+                        experiment=self.server.experiment,
+                        role="user",
+                        content=symptom,
+                        model=None,
+                        selected_run="base",
+                        used_image=False,
+                    )
+                    state = run_autonomous_iteration(
+                        output_dir=self.server.output_dir,
+                        batch=self.server.batch,
+                        circuit=self.server.circuit,
+                        experiment=str(self.server.experiment or "experiment4"),
+                        ngspice_executable=self.server.ngspice_executable,
+                    )
+                elif parsed.path == "/api/agent/step":
+                    state = run_autonomous_iteration(
+                        output_dir=self.server.output_dir,
+                        batch=self.server.batch,
+                        circuit=self.server.circuit,
+                        experiment=str(self.server.experiment or "experiment4"),
+                        ngspice_executable=self.server.ngspice_executable,
+                    )
+                elif parsed.path == "/api/agent/stop":
+                    state = stop_autonomous_diagnosis(self.server.output_dir)
+                else:
+                    self.send_text(404, "Not found")
+                    return
+            except AutonomousControllerError as exc:
+                body = json.dumps({"status": "error", "continue": False, "reply": str(exc)}, ensure_ascii=False)
+                self.send_text(400, body, "application/json; charset=utf-8")
+                return
+
+            summary = summarize_autonomous_state(state)
+            append_experiment2_chat_event(
+                output_dir=self.server.output_dir,
+                batch=self.server.batch,
+                circuit=self.server.circuit,
+                experiment=self.server.experiment,
+                role="system" if parsed.path == "/api/agent/stop" else "assistant",
+                content=str(summary.get("reply") or ""),
+                model=str(state.get("model") or "") or None,
+                selected_run=str(summary.get("last_active_run") or "base"),
+                used_image=False,
+            )
+            body = json.dumps(summary, ensure_ascii=False)
+            self.send_text(200, body, "application/json; charset=utf-8")
+            return
+
         if parsed.path == "/api/chat-history/clear":
             clear_result = clear_experiment2_session_state(
                 output_dir=self.server.output_dir,
@@ -2488,6 +2581,8 @@ class WebChatHandler(BaseHTTPRequestHandler):
                 circuit=self.server.circuit,
                 experiment=self.server.experiment,
             )
+            if workspace_mode == "agent":
+                clear_result["autonomous_state_cleared"] = clear_diagnosis(self.server.output_dir)
             body = json.dumps(clear_result, ensure_ascii=False)
             self.send_text(200, body, "application/json; charset=utf-8")
             return
@@ -2667,13 +2762,45 @@ class WebChatServer(ThreadingHTTPServer):
         output_dir: Path,
         experiment: str | None = None,
         ngspice_executable: str | None = None,
+        workspace_dirs: dict[str, Path] | None = None,
+        default_workspace_mode: str | None = None,
     ) -> None:
+        """Inizializza il server e gli eventuali workspace selezionabili."""
         super().__init__(server_address, handler_class)
         self.batch = batch
         self.circuit = circuit
         self.experiment = experiment
-        self.output_dir = output_dir
+        self._default_output_dir = output_dir
+        self.workspace_dirs = dict(workspace_dirs or {})
+        self.default_workspace_mode = default_workspace_mode
+        self._request_workspace = threading.local()
         self.ngspice_executable = ngspice_executable
+
+    @property
+    def output_dir(self) -> Path:
+        """Restituisce la root associata alla richiesta HTTP corrente."""
+        return getattr(self._request_workspace, "output_dir", self._default_output_dir)
+
+    @property
+    def available_workspace_modes(self) -> tuple[str, ...]:
+        """Elenca in ordine stabile le modalita offerte dalla pagina."""
+        return tuple(self.workspace_dirs.keys())
+
+    def bind_request_workspace(self, query: str) -> str | None:
+        """Associa la richiesta corrente al workspace indicato nell'URL."""
+        if not self.workspace_dirs:
+            self._request_workspace.output_dir = self._default_output_dir
+            self._request_workspace.mode = None
+            return None
+
+        requested_mode = str((parse_qs(query).get("mode") or [""])[0]).strip().lower()
+        selected_mode = requested_mode if requested_mode in self.workspace_dirs else self.default_workspace_mode
+        if selected_mode not in self.workspace_dirs:
+            selected_mode = next(iter(self.workspace_dirs))
+
+        self._request_workspace.output_dir = self.workspace_dirs[selected_mode]
+        self._request_workspace.mode = selected_mode
+        return selected_mode
 
 
 def parse_args() -> argparse.Namespace:
@@ -2711,7 +2838,22 @@ def main() -> None:
     if args.variant and not args.experiment:
         raise SystemExit("--variant requires --experiment.")
 
-    output_dir = build_output_dir(args.batch, args.circuit, args.experiment, args.variant)
+    workspace_dirs: dict[str, Path] = {}
+    default_workspace_mode: str | None = None
+    if args.experiment == "experiment4" and not args.variant:
+        workspace_dirs = {
+            "chat": build_output_dir(args.batch, args.circuit, args.experiment, "chat"),
+            "agent": build_output_dir(args.batch, args.circuit, args.experiment, "agent"),
+        }
+        default_workspace_mode = "chat"
+        missing_workspaces = [mode for mode, path in workspace_dirs.items() if not path.is_dir()]
+        if missing_workspaces:
+            raise SystemExit(
+                "Missing Experiment 4 workspace(s): " + ", ".join(missing_workspaces)
+            )
+        output_dir = workspace_dirs[default_workspace_mode]
+    else:
+        output_dir = build_output_dir(args.batch, args.circuit, args.experiment, args.variant)
 
     if not output_dir.exists():
         raise SystemExit(f"Pipeline 2.0 output directory not found: {output_dir}")
@@ -2726,14 +2868,20 @@ def main() -> None:
         experiment=args.experiment,
         output_dir=output_dir,
         ngspice_executable=args.ngspice_executable,
+        workspace_dirs=workspace_dirs,
+        default_workspace_mode=default_workspace_mode,
     )
 
     url = f"http://{args.host}:{args.port}/"
+    if default_workspace_mode:
+        url += f"?mode={default_workspace_mode}"
     print(f"Pipeline 2.0 diagnostic web chat: {url}")
     if args.experiment:
         print(f"Experiment: {args.experiment}")
     if args.variant:
         print(f"Variant: {args.variant}")
+    if workspace_dirs:
+        print(f"Workspace modes: {', '.join(workspace_dirs)}")
     print(f"Output directory: {output_dir}")
     print("Press Ctrl+C to stop the temporary local server.")
 

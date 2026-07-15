@@ -9,6 +9,11 @@ Questo helper crea una root separata per esperimenti, per esempio:
 
 outputs/pipeline2.0/<batch>/experiment2/<circuit>/
 
+Puo anche creare varianti indipendenti dello stesso esperimento:
+
+outputs/pipeline2.0/<batch>/experiment4/chat/<circuit>/
+outputs/pipeline2.0/<batch>/experiment4/agent/<circuit>/
+
 La copia e volutamente non distruttiva: i file gia presenti nella destinazione
 non vengono sovrascritti.
 """
@@ -46,9 +51,17 @@ def source_circuit_dir(batch: str, circuit: str, source_experiment: str | None =
     return PIPELINE2_ROOT / batch / circuit
 
 
-def destination_circuit_dir(batch: str, experiment: str, circuit: str) -> Path:
-    """Restituisce la cartella circuito dell'esperimento destinazione."""
-    return PIPELINE2_ROOT / batch / experiment / circuit
+def destination_circuit_dir(
+    batch: str,
+    experiment: str,
+    circuit: str,
+    destination_variant: str | None = None,
+) -> Path:
+    """Restituisce la cartella circuito, includendo l'eventuale variante."""
+    experiment_dir = PIPELINE2_ROOT / batch / experiment
+    if destination_variant:
+        experiment_dir = experiment_dir / destination_variant
+    return experiment_dir / circuit
 
 
 def should_copy_base_file(path: Path) -> bool:
@@ -124,11 +137,17 @@ def prepare_circuit(
     circuit: str,
     mode: str,
     source_experiment: str | None,
+    destination_variant: str | None,
     dry_run: bool,
 ) -> dict[str, Any]:
     """Prepara una cartella circuito dentro un esperimento."""
     source_dir = source_circuit_dir(batch, circuit, source_experiment)
-    destination_dir = destination_circuit_dir(batch, experiment, circuit)
+    destination_dir = destination_circuit_dir(
+        batch,
+        experiment,
+        circuit,
+        destination_variant,
+    )
 
     if not source_dir.exists() or not source_dir.is_dir():
         raise FileNotFoundError(f"Source circuit directory not found: {source_dir}")
@@ -147,6 +166,7 @@ def prepare_circuit(
         "circuit": circuit,
         "mode": mode,
         "source_experiment": source_experiment,
+        "destination_variant": destination_variant,
         "source_dir": str(source_dir),
         "destination_dir": str(destination_dir),
         "copied_count": len(copy_result["copied"]),
@@ -180,6 +200,14 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional source experiment. Default source is outputs/pipeline2.0/<batch>/<circuit>/.",
     )
+    parser.add_argument(
+        "--destination-variant",
+        default=None,
+        help=(
+            "Optional destination subfolder, for example chat or agent. "
+            "The output becomes <batch>/<experiment>/<variant>/<circuit>/."
+        ),
+    )
     parser.add_argument("--dry-run", action="store_true", help="Print planned work without copying files.")
     return parser.parse_args()
 
@@ -195,6 +223,8 @@ def main() -> None:
         require_safe_name(label, value)
     if args.source_experiment:
         require_safe_name("source_experiment", args.source_experiment)
+    if args.destination_variant:
+        require_safe_name("destination_variant", args.destination_variant)
 
     results: list[dict[str, Any]] = []
     for circuit in args.circuits:
@@ -204,11 +234,13 @@ def main() -> None:
             circuit=circuit,
             mode=args.mode,
             source_experiment=args.source_experiment,
+            destination_variant=args.destination_variant,
             dry_run=args.dry_run,
         )
         results.append(result)
         print(
-            f"{args.batch}/{args.experiment}/{circuit}: "
+            f"{args.batch}/{args.experiment}/"
+            f"{f'{args.destination_variant}/' if args.destination_variant else ''}{circuit}: "
             f"copied={result['copied_count']} skipped={result['skipped_existing_count']} "
             f"mode={args.mode}"
         )
@@ -216,6 +248,7 @@ def main() -> None:
     summary = {
         "batch": args.batch,
         "experiment": args.experiment,
+        "destination_variant": args.destination_variant,
         "mode": args.mode,
         "circuits": args.circuits,
         "dry_run": args.dry_run,

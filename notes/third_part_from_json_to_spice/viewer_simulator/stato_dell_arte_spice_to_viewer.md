@@ -565,7 +565,7 @@ In termini di esperimenti:
 - `Experiment 1`: diagnosi con scenari iniziali;
 - `Experiment 2`: scenari piu potenti e modifiche controllate della netlist;
 - `Experiment 3`: viewer/simulatore visuale grounded sulla netlist della run;
-- `Experiment 4`: automazione agentica degli scenari.
+- `Experiment 4`: confronto tra chat guidata e agente autonomo controllato.
 
 In questa progressione, Experiment 3 ha un ruolo molto chiaro:
 

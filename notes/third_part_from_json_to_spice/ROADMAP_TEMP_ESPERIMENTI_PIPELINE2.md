@@ -673,74 +673,153 @@ Sessione interattiva:
 
 ## Esperimento 4 - Automazione agentica
 
-Stato: prossimo lavoro, dopo la validazione conclusa di Experiment 3.1.
+Stato: prima versione implementata; validazione OpenAI sul Batch A da eseguire.
 
 Obiettivo:
 
-far eseguire all'agente piu scenari in sequenza, entro un limite controllato,
-per arrivare a una diagnosi finale o a una localizzazione del problema.
+confrontare il flusso guidato attuale con un agente che propone, esegue e
+confronta scenari in autonomia controllata, fino a una conclusione o al limite
+di 5 scenari.
 
-Prima di questa fase devono essere stabili:
+### Due modalita separate
 
-- viewer base run e viewer scenario per tutti i circuiti Batch A;
-- generazione viewer separata da `09_web_chat.py`;
-- primitive scenario gia validate in `12_controlled_scenarios.py`;
-- confronto base/scenario leggibile dall'agente.
+La stessa web app deve offrire due modalita selezionabili:
 
-Flusso desiderato:
+- `CHAT`: flusso guidato gia validato, con conferma umana prima dello scenario;
+- `AGENT`: ciclo autonomo, con massimo due scenari indipendenti per decisione.
+
+Le due modalita non condividono chat, registry, scenari, run selezionata o stato
+diagnostico. Condividono soltanto la stessa base tecnica iniziale `01-08`.
+
+Struttura prevista:
+
+```text
+outputs/pipeline2.0/batchA/experiment4/
+|-- chat/<circuit>/
+`-- agent/<circuit>/
+```
+
+Ogni workspace mantiene base run, viewer, `experiment_chat/` e `scenarios/`
+indipendenti. La pagina cambia interamente contesto quando si passa da `CHAT`
+a `AGENT`.
+
+### Ciclo autonomo
+
+Flusso implementato:
 
 ```text
 sintomo utente
--> agente propone scenario
--> pipeline crea run scenario
--> pipeline esegue ngspice
--> pipeline crea viewer dello scenario
--> pipeline crea scenario_comparison.json
--> agente legge il confronto
--> agente decide se fermarsi o proporre altro
--> massimo 5 scenari
+-> agente sceglie stop oppure uno/due scenari
+-> pipeline valida scenario e budget
+-> runner condiviso crea ed esegue la run
+-> 13/14/15 generano il viewer della run
+-> agente legge contesto e scenario_comparison.json aggiornati
+-> agente decide stop oppure iterazione successiva
+-> massimo 5 run scenario realmente eseguite
 -> conclusione finale
 ```
 
-Modalita da supportare:
+Il browser deve richiedere una iterazione alla volta, mostrare l'avanzamento e
+permettere l'arresto manuale. Lo stato persistente e
+`experiment_chat/autonomous_diagnosis.json`.
 
-- diagnosi guidata: l'utente descrive il sintomo e l'agente propone scenari;
-- comando diretto: l'utente chiede "chiudi lo switch", "aggiungi una resistenza",
-  "collega due nodi" o "aggiungi una sorgente";
-- ciclo autonomo controllato: l'agente propone, esegue, confronta e decide se
-  fermarsi o continuare.
+Decisioni strutturate dell'agente:
 
-Primitive operative iniziali:
+```json
+{"decision":"run_scenarios","reason":"...","scenarios":[{}]}
+{"decision":"stop","final_status":"resolved|localized|partially_localized|topology_issue|inconclusive","reason":"...","final_answer":"..."}
+```
+
+`resolved_candidate` prodotto dallo step 12 resta un esito tecnico del
+confronto: non basta da solo a dichiarare risolto il sintomo dell'utente.
+
+### Regole e arresto
+
+- l'agente non modifica direttamente netlist o output;
+- ogni proposta passa dalla validazione della pipeline;
+- base run e workspace dell'altra modalita restano immutati;
+- scenari duplicati o non validi non consumano il budget;
+- il budget conta soltanto run con SPICE realmente eseguito;
+- il ciclo termina per conclusione sufficiente, budget esaurito, assenza di
+  scenari validi, errore non recuperabile o arresto utente;
+- una conclusione deve distinguere `resolved` da `localized`.
+
+`09`, `10` e `12` contano ora in modo coerente soltanto gli scenari realmente
+eseguiti.
+
+### Primitive autonome
+
+Primitive operative abilitate:
 
 - `close_switch`;
 - `connect_nodes`;
-- `feed_nodes_from_source_node`;
-- `add_voltage_source_between_nodes`;
-- `add_resistor_between_nodes`;
 - `drive_node_voltage`;
 - `change_component_value`;
-- `change_source_value`.
+- `change_source_value`;
+- `feed_nodes_from_source_node`;
+- `add_voltage_source_between_nodes`;
+- `add_resistor_between_nodes`.
 
-Regole:
+L'agente deve preferire modifiche minime su componenti e collegamenti
+esistenti. Nuove sorgenti o nuovi rami resistivi sono ammessi solo quando
+l'ipotesi e sostenuta dagli output tecnici della run corrente.
 
-- l'agente non modifica file direttamente;
-- la pipeline valida sempre lo scenario;
-- ogni scenario deve essere tracciabile;
-- ogni comando diretto viene tradotto in uno `scenario.json` riproducibile;
-- la base run non viene mai modificata;
-- se uno scenario risolve o localizza abbastanza il problema, l'agente si ferma;
-- se il budget finisce, l'agente produce una conclusione finale;
-- se serve correggere il Graph JSON, l'agente deve dichiararlo esplicitamente.
+`feed_nodes_from_source_node` va usata quando un nodo e gia misurato come
+alimentato e deve alimentare altri rami. `connect_nodes` resta il test di una
+continuita generica. Le due primitive non possono descrivere la stessa
+relazione nella stessa decisione. `add_resistor_between_nodes` resta distinta,
+perche rappresenta un accoppiamento resistivo con valore significativo.
 
-Step essenziali:
+### Implementazione essenziale
 
-1. aggiungere parser leggero per comandi scenario diretti;
-2. validare nodi/componenti richiesti contro `03_node_map.json`,
-   `06_component_rules.json` e `07_netlist.cir`;
-3. eseguire lo scenario con `12_controlled_scenarios.py`;
-4. generare il viewer scenario con gli step `13/14/15`;
-5. far leggere all'agente `scenario_comparison.json` e viewer disponibile;
-6. valutare il ciclo autonomo su tutti i circuiti Batch A.
+1. preparare `experiment4/chat/` e `experiment4/agent/` dalla stessa base
+   `experiment3_1`, senza scenari pre-caricati;
+2. estrarre da `09_web_chat.py` un runtime scenario condiviso dal flusso
+   guidato e da quello autonomo;
+3. correggere e centralizzare conteggio budget, validazione e firma duplicati;
+4. aggiungere controller e stato persistente del ciclo autonomo;
+5. usare il selettore `CHAT` / `AGENT` gia collegato ai due workspace;
+6. validare prima `a01`, poi `a01`, `a02`, `a04`-`a10` con stesso sintomo,
+   modello e budget nelle due modalita;
+7. aggiungere solo dopo il ciclo base il parser dei comandi diretti, riusando lo
+   stesso runtime.
+
+Script/moduli implementati:
+
+```text
+scenario_runtime.py
+16_autonomous_diagnosis.py
+autonomous_agent/
+```
+
+Guardrail implementati:
+
+- massimo 2 scenari per decisione, entrambi dalla base run;
+- esecuzione sequenziale per evitare concorrenza ngspice inutile;
+- massimo 5 run scenario e massimo 6 decisioni agentiche;
+- un solo retry per JSON malformato;
+- whitelist rigida delle otto primitive gia implementate e validate dal
+  runner controllato;
+- firma duplicati, stop manuale e persistenza file-based;
+- nessun database.
+
+### Valutazione Experiment 4
+
+Per ogni prova vanno salvati almeno:
+
+```text
+interaction_mode: chat | agent
+model
+symptom
+executed_scenario_count
+scenario_primitives
+stop_reason
+final_diagnosis_category
+human_notes
+```
+
+Il confronto tra le due modalita deve usare lo stesso circuito, sintomo,
+modello e budget.
 
 ## Valutazione trasversale degli esperimenti
 
@@ -864,7 +943,7 @@ della diagnosi quando aumentano le capacita dell'agente.
 Esperimento 1 = baseline Batch A chiusa
 Esperimento 2 = scenari piu potenti e netlist editing controllato
 Esperimento 3 = viewer visuale basato sulla netlist della run selezionata
-Esperimento 4 = agente che prova scenari in autonomia controllata
+Esperimento 4 = confronto CHAT vs AGENT con scenari autonomi controllati
 Valutazione = metriche comuni, CSV/JSON aggregati e grafici finali
 ```
 

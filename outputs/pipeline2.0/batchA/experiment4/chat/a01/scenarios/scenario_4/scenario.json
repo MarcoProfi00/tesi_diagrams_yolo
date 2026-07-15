@@ -1,0 +1,24 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Propagare il +5V esistente anche al ramo lampada",
+  "hypothesis": "The lamp branch is off because N002 is not powered, while N001 is already powered. Feeding N002 from N001 should energize lamp and keep LED powered in the same run.",
+  "actions": [
+    {
+      "type": "feed_nodes_from_source_node",
+      "source_node": "N001",
+      "target_nodes": [
+        "N002"
+      ],
+      "resistance": "1m"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N001)",
+    "v(N002)",
+    "v(N004)",
+    "v(N005)",
+    "i(Rlamp13_1)"
+  ]
+}

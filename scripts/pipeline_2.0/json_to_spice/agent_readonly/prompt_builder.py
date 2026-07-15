@@ -286,6 +286,7 @@ def build_next_scenario_answer_format() -> list[str]:
         "",
         "5. **Blocco tecnico per pipeline**",
         "   Includi un blocco JSON breve con `scenario_id`, `title`, `hypothesis`, `actions`, `rerun_from`, `analysis`, `compare`.",
+        "   Se lo scenario coinvolge piu rami, carichi o uscite, inserisci in `compare` almeno una grandezza osservabile per ciascuno di essi.",
         "   Usa solo primitive supportate: scenari elettrici / di pilotaggio (`drive_node_voltage`, `add_voltage_source_between_nodes`, `change_source_value`, `change_component_value`, `close_switch`) e scenari topologici controllati (`connect_nodes`, `add_resistor_between_nodes`, `feed_nodes_from_source_node`).",
         "   Non usare `unknown` nei valori.",
         "",

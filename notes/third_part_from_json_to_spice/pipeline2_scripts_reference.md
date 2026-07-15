@@ -220,6 +220,15 @@ Comando tipico:
 python scripts\pipeline_2.0\prepare_experiment_outputs.py --batch batchA --experiment experiment2 --circuits a01 a02 a03 --mode base-only
 ```
 
+Variante di destinazione:
+
+```powershell
+python scripts\pipeline_2.0\prepare_experiment_outputs.py --batch batchA --experiment experiment4 --destination-variant chat --source-experiment experiment3_1 --circuits a01 a02 a04 a05 a06 a07 a08 a09 a10 --mode base-only
+```
+
+`--destination-variant` aggiunge una sottocartella tra esperimento e circuito.
+La copia resta non distruttiva e il manifest registra anche la variante scelta.
+
 ## Pipeline tecnica 01-08
 
 ## 01_io.py
@@ -491,7 +500,7 @@ Nota importante:
 
 `08_spice_run.py` non interpreta la diagnosi. Esegue e salva.
 
-## Layer diagnostico, interattivo e viewer 09-15
+## Layer diagnostico, interattivo, viewer e autonomo 09-16
 
 ## 09_web_chat.py
 
@@ -558,7 +567,12 @@ Input:
 ```text
 outputs/pipeline2.0/<batch>/<circuit>/
 outputs/pipeline2.0/<batch>/<experiment>/<circuit>/
+outputs/pipeline2.0/<batch>/<experiment>/<variant>/<circuit>/
 ```
+
+L'opzione `--variant` e disponibile da CLI e richiede `--experiment`.
+Con Experiment 4, se `--variant` non viene specificato, la stessa pagina
+espone lo switch dinamico tra i workspace separati `chat` e `agent`.
 
 Output:
 
@@ -935,6 +949,72 @@ utente sceglie uno scenario
 -> agente puo leggere il nuovo esito
 ```
 
+## Experiment 4 - automazione implementata
+
+Questa sezione descrive la prima versione implementata, ancora da validare con
+il modello OpenAI su tutto il Batch A.
+
+La stessa web app seleziona due workspace indipendenti:
+
+```text
+experiment4/chat/<circuit>
+experiment4/agent/<circuit>
+```
+
+`09_web_chat.py` risolve il percorso `<experiment>/<variant>/<circuito>`. Per
+Experiment 4, quando viene avviato senza `--variant`, espone nella stessa
+sessione server lo switch tra `chat` e `agent`, mantenendo separati
+conversazione, registry, scenari e run selezionata. Non usa un database.
+
+Moduli implementati:
+
+```text
+scenario_runtime.py          # runtime condiviso per creare ed eseguire scenari
+16_autonomous_diagnosis.py   # una decisione/iterazione autonoma per chiamata
+autonomous_agent/            # contratto, prompt, stato e controller separati
+```
+
+Il runtime condiviso riusa gli step esistenti `10`-`15` ed e l'unica
+implementazione del percorso:
+
+```text
+scenario validato
+-> copia run separata
+-> 12_controlled_scenarios.py
+-> ngspice
+-> scenario_comparison.json
+-> 13/14/15
+-> aggiornamento context, registry e history
+```
+
+Il controller autonomo accetta soltanto decisioni strutturate
+`run_scenarios` o `stop`, esegue una iterazione alla volta e salva lo stato
+in `experiment_chat/autonomous_diagnosis.json`.
+
+Guardrail implementati:
+
+- il budget conta soltanto scenari con SPICE realmente eseguito;
+- scenari non validi o duplicati non consumano budget;
+- `resolved_candidate` dello step 12 non equivale automaticamente a sintomo
+  risolto;
+- il ciclo termina per stop motivato, limite di 5 run, assenza di azioni valide,
+  errore non recuperabile o arresto utente;
+- la base run e il workspace dell'altra modalita non vengono modificati.
+- sono ammesse le otto primitive controllate `drive_node_voltage`,
+  `change_source_value`, `change_component_value`, `close_switch`,
+  `connect_nodes`, `feed_nodes_from_source_node`,
+  `add_voltage_source_between_nodes` e `add_resistor_between_nodes`;
+- nuove sorgenti e nuovi rami vengono richiesti al modello soltanto in
+  presenza di evidenze tecniche che li rendono diagnosticamente motivati;
+- `feed_nodes_from_source_node` e riservata alla propagazione da un nodo gia
+  alimentato; `connect_nodes` testa continuita generica e non puo sovrapporsi
+  allo stesso feed nella medesima decisione;
+- `add_resistor_between_nodes` non viene assimilata a questi collegamenti,
+  perche modella un accoppiamento resistivo distinto;
+- ogni decisione contiene al massimo 2 scenari e il ciclo al massimo 6
+  decisioni del modello;
+- le run vengono eseguite in sequenza e sempre dalla base.
+
 ## Stato attuale degli script
 
 Implementati e usati davvero:
@@ -956,6 +1036,8 @@ prepare_experiment_outputs.py
 13_build_viewer_model.py
 14_build_viewer_layout.py
 15_render_viewer_svg.py
+16_autonomous_diagnosis.py
+scenario_runtime.py
 ```
 
 Presenti ma non ancora integrati nel flusso reale:
@@ -969,7 +1051,7 @@ Non fanno parte dello stato attuale di riferimento:
 - `09_summarize_spice.py` non va piu considerato uno step reale della pipeline
   corrente;
 - il riferimento ufficiale oggi e la catena `01-08` + `10` per la parte base e
-  `09-15` per il layer diagnostico, interattivo e viewer.
+  `09-16` per il layer diagnostico, interattivo, viewer e autonomo.
 
 ## Quando aggiornare questo file
 
@@ -1000,5 +1082,5 @@ prepare_experiment_outputs.py separa gli esperimenti;
 Questa distinzione e importante per tutta la tesi:
 
 - `01-08` costruiscono i fatti elettrici;
-- `09-15` permettono di interrogarli, testarli, visualizzarli e confrontarli
+- `09-16` permettono di interrogarli, testarli, visualizzarli e confrontarli
   senza perdere la base run originale.

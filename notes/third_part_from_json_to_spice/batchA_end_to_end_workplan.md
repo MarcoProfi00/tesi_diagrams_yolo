@@ -94,7 +94,7 @@ Qui vive la sequenza ufficiale degli esperimenti:
 - Esperimento 2 = scenari piu potenti / netlist editing controllato
 - Esperimento 3 = viewer / simulatore visuale
 - Esperimento 3.1 = validazione end-to-end agente -> scenario -> viewer
-- Esperimento 4 = automazione agentica
+- Esperimento 4 = confronto CHAT vs AGENT con automazione controllata
 
 ### 2. Documento agente
 
@@ -295,9 +295,21 @@ agente propone scenario
 -> confronto e chat restano coerenti
 ```
 
-Il ciclo `agente -> scenario -> SPICE -> viewer -> confronto -> nuova risposta`
-e quindi validato sul Batch A. Il prossimo blocco e Experiment 4, dedicato
-all'automazione controllata multi-scenario.
+Il ciclo guidato `agente -> scenario -> SPICE -> viewer -> confronto -> nuova
+risposta` e validato sul Batch A. Experiment 4 estende questa base con
+l'automazione controllata multi-scenario.
+
+Experiment 4 usa due workspace indipendenti sotto la stessa root:
+
+```text
+experiment4/chat/<circuit>
+experiment4/agent/<circuit>
+```
+
+`chat` mantiene il controllo umano gia validato; `agent` esegue un ciclo
+autonomo, una iterazione alla volta, entro lo stesso budget massimo di 5 run.
+Le due modalita partono dalla stessa base `01-08`, ma non condividono
+conversazione, registry, scenari, viewer scenario o stato autonomo.
 
 ## Cosa non fare adesso
 
@@ -305,8 +317,8 @@ Per non far deragliare il progetto:
 
 - non riaprire artificialmente Experiment 2 sul Batch A senza una nuova
   domanda sperimentale forte;
-- non dichiarare Experiment 4 gia validato: Experiment 3.1 ha provato il
-  flusso manuale guidato, non il ciclo autonomo multi-scenario;
+- non dichiarare Experiment 4 gia validato sul Batch A finche il ciclo
+  autonomo non viene provato con il modello reale sui casi previsti;
 - non complicare il runner con troppe primitive nuove non ancora motivate;
 - non moltiplicare documenti paralleli con stati diversi;
 - non costruire il viewer assumendo una sola topologia fissa per circuito.
@@ -326,6 +338,12 @@ Il progetto Batch A e pronto per Experiment 4 se:
 - [x] workspace puliti e protocollo di validazione 3.1 definiti
 - [x] nove circuiti rieseguiti con scenari proposti dall'agente
 - [x] 18 viewer scenario generati automaticamente e verificati
+- [x] workspace `chat` e `agent` preparati dalla stessa base
+- [x] server unico e switch `CHAT` / `AGENT` collegati ai due workspace
+- [x] runtime scenario condiviso estratto dalla web chat
+- [x] budget basato soltanto su run SPICE realmente eseguite
+- [x] controller autonomo e stato persistente implementati
+- [ ] confronto CHAT vs AGENT validato sul Batch A
 
 ## Sintesi finale
 

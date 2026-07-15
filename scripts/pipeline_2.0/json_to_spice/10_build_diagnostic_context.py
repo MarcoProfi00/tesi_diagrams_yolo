@@ -254,6 +254,8 @@ def build_executed_scenarios(
         status = read_json_safe(scenario_dir / "scenario_status.json")
         comparison = read_json_safe(scenario_dir / "scenario_comparison.json")
         report = read_json_safe(scenario_dir / "12_controlled_scenarios.json")
+        if not (status.get("spice_executed") or report.get("spice_executed")):
+            continue
         outcome = status.get("diagnostic_outcome") or comparison.get("diagnostic_outcome") or {}
         summary = status.get("comparison_summary") or comparison.get("summary") or {}
 

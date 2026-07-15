@@ -82,11 +82,22 @@ def write_json(path: Path, data: dict[str, Any]) -> None:
 
 
 def count_scenarios_for_circuit(scenario_dir: Path) -> int:
-    """Conta quante cartelle scenario esistono per il circuito corrente."""
+    """Conta le run scenario per cui SPICE e stato realmente avviato."""
     scenarios_root = scenario_dir.parent
     if not scenarios_root.exists() or not scenarios_root.is_dir():
         return 0
-    return sum(1 for path in scenarios_root.iterdir() if path.is_dir())
+
+    executed = 0
+    for path in scenarios_root.iterdir():
+        if not path.is_dir():
+            continue
+        report_path = path / REPORT_NAME
+        status_path = path / STATUS_NAME
+        report = read_json(report_path) if report_path.exists() else {}
+        status = read_json(status_path) if status_path.exists() else {}
+        if report.get("spice_executed") or status.get("spice_executed"):
+            executed += 1
+    return executed
 
 
 def load_step08_module() -> Any:

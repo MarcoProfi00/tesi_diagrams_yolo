@@ -356,6 +356,31 @@ json_to_spice/viewer_core/
 Gli script `13`, `14` e `15` restano entry point CLI piccoli e stabili. Il file
 storico `viewer_component_library.py` resta un wrapper di compatibilita.
 
+### scenario_runtime.py
+
+- e il percorso tecnico condiviso da `CHAT` e `AGENT`;
+- valida forma e whitelist delle azioni;
+- rifiuta scenari duplicati;
+- conta soltanto le run SPICE realmente eseguite;
+- copia la base, richiama `12`, esegue ngspice e genera `13-15`;
+- non sceglie autonomamente gli scenari.
+
+### 16_autonomous_diagnosis.py
+
+- espone da CLI `start`, `step` e `stop` del ciclo autonomo;
+- esegue una sola decisione per chiamata;
+- usa i moduli separati in `autonomous_agent/`;
+- salva lo stato in `experiment_chat/autonomous_diagnosis.json`.
+
+Il backend della web chat usa lo stesso controller tramite le API locali:
+
+```text
+/api/agent/start
+/api/agent/step
+/api/agent/stop
+/api/agent/state
+```
+
 ## Primitive scenario oggi supportate
 
 Scenari elettrici / di pilotaggio:
@@ -427,6 +452,23 @@ Congelare uno stato completo:
 python scripts\pipeline_2.0\prepare_experiment_outputs.py --batch batchA --experiment experiment1 --circuits a01 a02 a03 a04 a05 a06 a07 a08 a09 a10 --mode full
 ```
 
+Preparare una variante interna a un esperimento:
+
+```powershell
+python scripts\pipeline_2.0\prepare_experiment_outputs.py --batch <batch> --experiment <experiment> --destination-variant <variant> --source-experiment <source_experiment> --circuits <circuits> --mode base-only
+```
+
+Base di Experiment 4:
+
+```powershell
+python scripts\pipeline_2.0\prepare_experiment_outputs.py --batch batchA --experiment experiment4 --destination-variant chat --source-experiment experiment3_1 --circuits a01 a02 a04 a05 a06 a07 a08 a09 a10 --mode base-only
+python scripts\pipeline_2.0\prepare_experiment_outputs.py --batch batchA --experiment experiment4 --destination-variant agent --source-experiment experiment3_1 --circuits a01 a02 a04 a05 a06 a07 a08 a09 a10 --mode base-only
+```
+
+Queste copie contengono soltanto gli artefatti tecnici `01-08`, inclusa la
+base run ngspice gia eseguita. Contesto `10`, chat, scenari e viewer vengono
+creati separatamente dentro ciascuna variante.
+
 ## Aprire la web chat locale
 
 Root standard:
@@ -440,6 +482,31 @@ Root esperimento:
 ```powershell
 python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch <batch> --experiment <experiment> --circuit <circuit>
 ```
+
+Variante interna a una root esperimento:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch <batch> --experiment <experiment> --variant <variant> --circuit <circuit>
+```
+
+La variante risolve gli output in
+`outputs/pipeline2.0/<batch>/<experiment>/<variant>/<circuit>/`.
+
+Experiment 4 espone entrambe le varianti con un solo comando:
+
+```powershell
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experiment experiment4 --circuit a01 --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+```
+
+Lo switch `CHAT` / `AGENT` nella barra superiore cambia l'intero workspace:
+
+```text
+CHAT  -> outputs/pipeline2.0/batchA/experiment4/chat/a01/
+AGENT -> outputs/pipeline2.0/batchA/experiment4/agent/a01/
+```
+
+History, registry, scenari, viewer e artefatti generati restano separati. Non
+serve un database: lo stato persistente vive nei file di ciascun workspace.
 
 Con ngspice per eseguire scenari dalla chat:
 
@@ -644,8 +711,71 @@ Lo stato attuale va letto cosi:
 - gli esperimenti si gestiscono con root separate;
 - Experiment 3.1 ha validato sul Batch A il flusso pulito
   agente -> scenario -> viewer;
-- il prossimo grande blocco e Experiment 4: automazione controllata
-  multi-scenario dell'agente.
+- Experiment 4 contiene la prima implementazione del confronto tra flusso
+  guidato e automazione controllata multi-scenario.
+
+Architettura di base di Experiment 4:
+
+```text
+outputs/pipeline2.0/batchA/experiment4/
+|-- chat/<circuit>/
+`-- agent/<circuit>/
+```
+
+La web app offre due modalita selezionabili:
+
+- `CHAT`: proposta agente ed esecuzione confermata dall'utente;
+- `AGENT`: ciclo autonomo controllato, con avanzamento e arresto manuale.
+
+Le modalita condividono la stessa base tecnica iniziale, ma mantengono
+separati chat, registry, scenari, viewer e stato diagnostico. Routing, switch,
+runtime e prima versione del controller autonomo sono implementati.
+
+Il runtime comune centralizza:
+
+- creazione e validazione dello scenario;
+- esecuzione dello step 12 e di ngspice;
+- generazione viewer `13/14/15`;
+- aggiornamento di registry, history e contesto diagnostico;
+- conteggio del budget e rilevamento dei duplicati.
+
+Moduli implementati:
+
+```text
+scenario_runtime.py
+16_autonomous_diagnosis.py
+autonomous_agent/contracts.py
+autonomous_agent/prompt_builder.py
+autonomous_agent/state_store.py
+autonomous_agent/controller.py
+```
+
+Guardrail della prima versione:
+
+- primitive autonome ammesse: `drive_node_voltage`, `change_source_value`,
+  `change_component_value`, `close_switch`, `connect_nodes`,
+  `feed_nodes_from_source_node`, `add_voltage_source_between_nodes`,
+  `add_resistor_between_nodes`;
+- l'agente preferisce modifiche minime e usa nuove sorgenti o rami soltanto
+  quando sono giustificati dalle evidenze tecniche;
+- `feed_nodes_from_source_node` distribuisce una alimentazione gia misurata,
+  mentre `connect_nodes` testa una continuita mancante generica; non possono
+  essere proposti sulla stessa relazione nella stessa decisione;
+- `add_resistor_between_nodes` resta una ipotesi separata di accoppiamento
+  resistivo reale;
+- massimo 2 scenari indipendenti nella stessa decisione, eseguiti in sequenza;
+- massimo 5 run SPICE scenario per diagnosi;
+- massimo 6 decisioni del modello, inclusa la conclusione finale;
+- un solo retry se la risposta JSON non rispetta il contratto;
+- scenari non validi o duplicati non consumano budget;
+- pulsante `Stop` e stato persistente riprendibile.
+
+La macchina a stati e il runtime sono stati verificati con decisioni
+controllate e una vera run ngspice. Resta da validare il comportamento del
+modello OpenAI sui circuiti Batch A.
+
+I comandi diretti in linguaggio naturale verranno affrontati dopo il ciclo
+autonomo di base e riuseranno lo stesso runtime.
 
 ## Sintesi finale
 
