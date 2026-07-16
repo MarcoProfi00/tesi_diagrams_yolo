@@ -58,7 +58,13 @@ import re
 from pathlib import Path
 from typing import Any
 
-from scenario_expectations import COMPARISON_TOLERANCE, expectation_matches
+from scenario_expectations import (
+    COMPARISON_TOLERANCE,
+    MIN_MEANINGFUL_RELATIVE_CHANGE,
+    expectation_is_meaningful_improvement,
+    expectation_matches,
+    relative_change_ratio,
+)
 
 
 NETLIST_NAME = "07_netlist.cir"
@@ -1038,6 +1044,7 @@ def classify_change(base_value: float | None, scenario_value: float | None) -> s
 def evaluate_diagnostic_outcome(
     summary: dict[str, int],
     analysis: str = "op",
+    intent: str = "correction",
 ) -> dict[str, Any]:
     """
     Valuta in modo prudente se uno scenario sembra risolvere il problema.
@@ -1053,6 +1060,7 @@ def evaluate_diagnostic_outcome(
     expected = int(summary.get("expected_count") or 0)
     expectations_met = int(summary.get("expectations_met_count") or 0)
     expectations_missing = int(summary.get("expectations_missing_count") or 0)
+    meaningful_improvements = int(summary.get("meaningful_improvement_count") or 0)
 
     if expected > 0 and expectations_missing > 0:
         status = "partially_resolved"
@@ -1061,6 +1069,20 @@ def evaluate_diagnostic_outcome(
         reason = (
             "Almeno una misura necessaria ai criteri di successo non e disponibile "
             "negli output SPICE dello scenario."
+        )
+        stop_automation = False
+    elif (
+        intent == "correction"
+        and expected > 0
+        and expectations_met == expected
+        and meaningful_improvements == 0
+    ):
+        status = "partially_resolved"
+        technical_label = "Improvement too small"
+        label = "Variazione non ancora significativa"
+        reason = (
+            "I criteri direzionali sono soddisfatti, ma nessun effetto correttivo "
+            f"raggiunge la soglia relativa del {MIN_MEANINGFUL_RELATIVE_CHANGE:.0%}."
         )
         stop_automation = False
     elif expected > 0 and expectations_met == expected:
@@ -1139,6 +1161,17 @@ def evaluate_diagnostic_outcome(
         )
         stop_automation = False
 
+    # Un test diagnostico puo confermare una causa, ma non rappresenta una correzione.
+    if intent == "diagnostic" and stop_automation:
+        status = "partially_resolved"
+        technical_label = "Diagnostic hypothesis confirmed"
+        label = "Ipotesi diagnostica confermata"
+        reason = (
+            "I criteri dichiarati dal test diagnostico sono soddisfatti, ma lo "
+            "scenario non applica una correzione del sintomo utente."
+        )
+        stop_automation = False
+
     user_message = {
         "resolved_candidate": "Lo scenario fornisce una conferma forte dell'ipotesi testata.",
         "partially_resolved": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
@@ -1170,6 +1203,7 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
     base_output_dir = Path(status.get("base_output_dir") or scenario_dir.parent.parent)
     run_dir = scenario_dir / "run"
     analysis = str(scenario.get("analysis") or "op").strip().lower()
+    intent = str(scenario.get("intent") or "correction").strip().lower()
 
     base_values = parse_ngspice_stdout(base_output_dir / "08_ngspice_stdout.txt")
     scenario_values = parse_ngspice_stdout(run_dir / "08_ngspice_stdout.txt")
@@ -1199,6 +1233,7 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
     expectations_met = 0
     expectations_failed = 0
     expectations_missing = 0
+    meaningful_improvements = 0
 
     for item in requested:
         quantity = normalize_quantity_name(str(item))
@@ -1237,6 +1272,8 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
 
         expectation = expectations.get(quantity_lookup_key(quantity))
         expectation_met = None
+        meaningful_improvement = False
+        relative_change = relative_change_ratio(base_value, scenario_value)
         if expectation:
             expected += 1
             expectation_met = expectation_matches(
@@ -1247,6 +1284,14 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
             )
             if expectation_met is True:
                 expectations_met += 1
+                meaningful_improvement = expectation_is_meaningful_improvement(
+                    expectation,
+                    base_value,
+                    scenario_value,
+                    change,
+                )
+                if meaningful_improvement:
+                    meaningful_improvements += 1
             elif expectation_met is False:
                 expectations_failed += 1
             else:
@@ -1261,6 +1306,8 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
                 "change": change,
                 "expectation": expectation,
                 "expectation_met": expectation_met,
+                "relative_change": relative_change,
+                "meaningful_improvement": meaningful_improvement,
                 "metric": lookup_key,
                 "base_details": base_details,
                 "scenario_details": scenario_details,
@@ -1276,13 +1323,46 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
         "expectations_met_count": expectations_met,
         "expectations_failed_count": expectations_failed,
         "expectations_missing_count": expectations_missing,
+        "meaningful_improvement_count": meaningful_improvements,
     }
-    diagnostic_outcome = evaluate_diagnostic_outcome(summary, analysis=analysis)
+
+    gain_config = scenario.get("gain") if isinstance(scenario.get("gain"), dict) else {}
+    gain_input = quantity_lookup_key(str(gain_config.get("input") or ""))
+    gain_output = quantity_lookup_key(str(gain_config.get("output") or ""))
+    base_gain = None
+    scenario_gain = None
+    if gain_input and gain_output:
+        base_input = (base_tran_metrics.get(gain_input) or {}).get("vpp")
+        base_output = (base_tran_metrics.get(gain_output) or {}).get("vpp")
+        scenario_input = (scenario_tran_metrics.get(gain_input) or {}).get("vpp")
+        scenario_output = (scenario_tran_metrics.get(gain_output) or {}).get("vpp")
+        if base_input is not None and abs(base_input) >= COMPARISON_TOLERANCE and base_output is not None:
+            base_gain = abs(base_output / base_input)
+        if (
+            scenario_input is not None
+            and abs(scenario_input) >= COMPARISON_TOLERANCE
+            and scenario_output is not None
+        ):
+            scenario_gain = abs(scenario_output / scenario_input)
+
+    gain_comparison = {
+        "input": gain_config.get("input"),
+        "output": gain_config.get("output"),
+        "base_gain": base_gain,
+        "scenario_gain": scenario_gain,
+        "relative_change": relative_change_ratio(base_gain, scenario_gain),
+    } if gain_config else None
+    diagnostic_outcome = evaluate_diagnostic_outcome(
+        summary,
+        analysis=analysis,
+        intent=intent,
+    )
 
     comparison = {
         "source_format": "pipeline2.0_scenario_comparison",
         "scenario_id": scenario.get("scenario_id"),
         "scenario_title": scenario.get("title"),
+        "scenario_intent": intent,
         "base_output_dir": str(base_output_dir),
         "scenario_run_dir": str(run_dir),
         "base_stdout": str(base_output_dir / "08_ngspice_stdout.txt"),
@@ -1291,6 +1371,7 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
         "scenario_stderr": str(run_dir / "08_ngspice_stderr.txt"),
         "quantities": quantities,
         "summary": summary,
+        "gain_comparison": gain_comparison,
         "diagnostic_outcome": diagnostic_outcome,
         "created_or_updated_at": datetime.now().isoformat(timespec="seconds"),
     }

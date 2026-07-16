@@ -1,0 +1,25 @@
+{
+  "title": "Verifica continuita mancante tra positivo batteria e ramo resistivo",
+  "hypothesis": "Il circuito non reagisce perche il resistore e collegato al negativo della batteria invece che al positivo tramite il connettore; collegando N002 a N004 si chiude un percorso reale di corrente e la batteria deve erogare corrente.",
+  "actions": [
+    {
+      "type": "connect_nodes",
+      "from": "N002",
+      "to": "N004",
+      "resistance": "1m"
+    }
+  ],
+  "compare": [
+    "i(Vbattery2_1)",
+    "i(Rresistor22_1)",
+    "v(N004)",
+    "v(N001)"
+  ],
+  "expect": {
+    "i(Vbattery2_1)": "nonzero",
+    "i(Rresistor22_1)": "nonzero",
+    "v(N004)": "changed",
+    "v(N001)": "unchanged"
+  },
+  "scenario_id": "agent_scenario_1"
+}

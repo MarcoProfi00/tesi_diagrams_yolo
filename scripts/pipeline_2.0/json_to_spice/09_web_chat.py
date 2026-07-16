@@ -1688,7 +1688,7 @@ def render_page(
     )
     server_chat_history_items = build_server_chat_history_items(output_dir, batch, circuit, experiment)
     chat_history_enabled = is_experiment2_history_enabled(experiment)
-    chat_panel_title = "Agent diagnostico" if workspace_mode == "agent" else "Chat diagnostica"
+    chat_panel_title = "Agente diagnostico" if workspace_mode == "agent" else "Chat diagnostica"
     chat_panel_description = (
         "Segui ipotesi, test controllati ed evidenze prodotte dalla diagnosi autonoma."
         if workspace_mode == "agent"

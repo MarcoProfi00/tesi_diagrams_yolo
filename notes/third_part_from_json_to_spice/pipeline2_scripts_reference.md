@@ -1032,10 +1032,29 @@ Guardrail implementati:
   tensioni di nodo non bastano a dichiarare una correzione verificata;
 - le nuove proposte autonome associano a `compare` un oggetto `expect`, per
   esempio `{"i(Rload)":"activated","i(Dled)":"unchanged"}`;
+- ogni scenario autonomo dichiara obbligatoriamente `analysis: "op"` oppure
+  `analysis: "tran"`; nel secondo caso le tensioni vengono confrontate sul
+  Vpp ricavato da `08_tran.csv`;
+- ogni scenario autonomo dichiara `intent: "correction"` oppure
+  `intent: "diagnostic"`; un test diagnostico puo confermare un'ipotesi ma non
+  produrre lo stop risolutivo;
+- in analisi `tran`, correnti e potenze prive di una traccia CSV possono
+  restare in `compare` come osservazioni OP, ma non in `expect`;
+- `expect: unchanged` e accettato solo se il sintomo chiede esplicitamente di
+  preservare un altro componente o comportamento;
+- `final_status: resolved` richiede una `verified_correction` non vuota;
+- lo stop correttivo richiede almeno un effetto relativo del 10% oppure una
+  vera attivazione/disattivazione; variazioni minori restano parziali;
+- per sintomi di amplificazione, una correzione dichiara
+  `gain: {"input":"v(NODO_IN)","output":"v(NODO_OUT)"}` e lo step 12 salva
+  il guadagno base e scenario calcolato sui rispettivi Vpp;
+- `i(Q...)` non viene accettata come misura diretta di un BJT: per osservare
+  il ramo si usa una corrente disponibile, tipicamente quella della resistenza
+  di collettore o di emettitore;
 - `scenario_comparison.json` verifica ogni aspettativa e classifica lo scenario
   sui criteri soddisfatti; gli scenari storici senza `expect` mantengono la
   valutazione precedente;
-- ogni decisione contiene al massimo 2 scenari e il ciclo al massimo 6
+- ogni decisione contiene al massimo 2 scenari e il ciclo al massimo 8
   decisioni del modello;
 - le run vengono eseguite in sequenza e sempre dalla base.
 

@@ -1,0 +1,695 @@
+{
+  "source_format": "pipeline2.0_viewer_model",
+  "schema_version": 10,
+  "metadata": {
+    "circuit_id": "a02",
+    "run_type": "scenario",
+    "scenario_id": "agent_scenario_2",
+    "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a02\\scenarios\\agent_scenario_2\\run",
+    "source_netlist_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a02\\scenarios\\agent_scenario_2\\run\\07_netlist.cir",
+    "generated_at": "2026-07-16T10:09:10"
+  },
+  "nodes": [
+    {
+      "id": "0",
+      "label": "GND",
+      "is_ground": true,
+      "voltage_op": 0.0,
+      "terminals": [
+        "capacitor4.1_t2",
+        "connector5.1_pin4",
+        "gnd9.1_t1",
+        "gnd9.2_t1",
+        "gnd9.3_t1",
+        "switch25.1_t2"
+      ],
+      "terminal_count": 6,
+      "source_groups": [
+        [
+          "capacitor4.1_t2",
+          "gnd9.2_t1"
+        ],
+        [
+          "connector5.1_pin4",
+          "gnd9.1_t1"
+        ],
+        [
+          "gnd9.3_t1",
+          "switch25.1_t2"
+        ]
+      ]
+    },
+    {
+      "id": "N001",
+      "label": "N001",
+      "is_ground": false,
+      "voltage_op": -2.52852,
+      "terminals": [
+        "battery2.1_negative",
+        "resistor22.1_t1",
+        "switch25.1_t1"
+      ],
+      "terminal_count": 3,
+      "source_groups": []
+    },
+    {
+      "id": "N002",
+      "label": "N002",
+      "is_ground": false,
+      "voltage_op": 2.47148,
+      "terminals": [
+        "battery2.1_positive",
+        "connector5.1_pin1"
+      ],
+      "terminal_count": 2,
+      "source_groups": []
+    },
+    {
+      "id": "N003",
+      "label": "N003",
+      "is_ground": false,
+      "voltage_op": 0.0,
+      "terminals": [
+        "capacitor4.1_t1",
+        "connector5.1_pin3"
+      ],
+      "terminal_count": 2,
+      "source_groups": []
+    },
+    {
+      "id": "N004",
+      "label": "N004",
+      "is_ground": false,
+      "voltage_op": 2.47148,
+      "terminals": [
+        "connector5.1_pin2",
+        "resistor22.1_t2"
+      ],
+      "terminal_count": 2,
+      "source_groups": []
+    }
+  ],
+  "netlist_components": [
+    {
+      "id": "Vbattery2_1",
+      "spice_name": "Vbattery2_1",
+      "kind": "voltage_source",
+      "nodes": [
+        "N002",
+        "N001"
+      ],
+      "value": "DC 5",
+      "model": null,
+      "source_component_id": "battery2.1",
+      "is_scenario_added": false,
+      "source_line": "Vbattery2_1 N002 N001 DC 5",
+      "line_number": 4,
+      "class_name": "Battery",
+      "parameters": {
+        "type": "dc",
+        "value": 5,
+        "unit": "V",
+        "source": "manual_from_vcc_label",
+        "label_text": "VCC +5 V DC"
+      },
+      "display_label": "VCC +5 V DC"
+    },
+    {
+      "id": "Ccapacitor4_1",
+      "spice_name": "Ccapacitor4_1",
+      "kind": "capacitor",
+      "nodes": [
+        "N003",
+        "0"
+      ],
+      "value": "100n",
+      "model": null,
+      "source_component_id": "capacitor4.1",
+      "is_scenario_added": false,
+      "source_line": "Ccapacitor4_1 N003 0 100n",
+      "line_number": 5,
+      "class_name": "Capacitor",
+      "parameters": {
+        "value": 100,
+        "unit": "nF",
+        "source": "manual_from_image_label",
+        "label_text": "100nF"
+      },
+      "display_label": "100nF"
+    },
+    {
+      "id": "Rresistor22_1",
+      "spice_name": "Rresistor22_1",
+      "kind": "resistor",
+      "nodes": [
+        "N001",
+        "N004"
+      ],
+      "value": "10000",
+      "model": null,
+      "source_component_id": "resistor22.1",
+      "is_scenario_added": false,
+      "source_line": "Rresistor22_1 N001 N004 10000",
+      "line_number": 6,
+      "class_name": "Resistor",
+      "parameters": {
+        "value": 10000,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "10k"
+      },
+      "display_label": "10k"
+    },
+    {
+      "id": "RSCENARIO_ADD_N002_N004",
+      "spice_name": "RSCENARIO_ADD_N002_N004",
+      "kind": "resistor",
+      "nodes": [
+        "N002",
+        "N004"
+      ],
+      "value": "1m",
+      "model": null,
+      "source_component_id": null,
+      "is_scenario_added": true,
+      "source_line": "RSCENARIO_ADD_N002_N004 N002 N004 1m",
+      "line_number": 9
+    }
+  ],
+  "structural_components": [
+    {
+      "id": "connector5.1",
+      "class_name": "Connector",
+      "nodes": {
+        "pin1": "N002",
+        "pin2": "N004",
+        "pin3": "N003",
+        "pin4": "0"
+      },
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "parameters": {},
+      "display_label": null,
+      "measurement_kind": null,
+      "measurement_value": null,
+      "measurement_unit": null,
+      "strategy": null,
+      "reason": "Connector used for nodes, labels, and external interfaces."
+    },
+    {
+      "id": "gnd9.1",
+      "class_name": "GND",
+      "nodes": {
+        "t1": "0"
+      },
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "parameters": {},
+      "display_label": null,
+      "measurement_kind": null,
+      "measurement_value": null,
+      "measurement_unit": null,
+      "strategy": null,
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    {
+      "id": "gnd9.2",
+      "class_name": "GND",
+      "nodes": {
+        "t1": "0"
+      },
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "parameters": {},
+      "display_label": null,
+      "measurement_kind": null,
+      "measurement_value": null,
+      "measurement_unit": null,
+      "strategy": null,
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    {
+      "id": "gnd9.3",
+      "class_name": "GND",
+      "nodes": {
+        "t1": "0"
+      },
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "parameters": {},
+      "display_label": null,
+      "measurement_kind": null,
+      "measurement_value": null,
+      "measurement_unit": null,
+      "strategy": null,
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    {
+      "id": "switch25.1",
+      "class_name": "Switch",
+      "nodes": {
+        "t1": "N001",
+        "t2": "0"
+      },
+      "status": "spice_ready",
+      "spice_support": "simplified",
+      "parameters": {
+        "state": "open",
+        "state_source": "graph_json_state",
+        "state_confidence": 0.95,
+        "source": "graph_json_state",
+        "label_text": "SENSE"
+      },
+      "display_label": "SENSE",
+      "measurement_kind": null,
+      "measurement_value": null,
+      "measurement_unit": null,
+      "strategy": "open_circuit",
+      "reason": null
+    }
+  ],
+  "directives": [
+    {
+      "line_number": 10,
+      "directive": ".op"
+    },
+    {
+      "line_number": 11,
+      "directive": ".end"
+    }
+  ],
+  "measurements": {
+    "node_voltages": {
+      "N004": 2.47148,
+      "N003": 0.0,
+      "N001": -2.52852,
+      "N002": 2.47148,
+      "0": 0.0
+    },
+    "branch_currents": {
+      "VBATTERY2_1#BRANCH": -0.0005,
+      "CAP": 0.0,
+      "CJ": 0.0,
+      "CJSW": 0.0,
+      "DEFW": 1e-05,
+      "DEFL": 0.0,
+      "NARROW": 0.0,
+      "SHORT": 0.0,
+      "DEL": 0.0,
+      "TC1": 0.0,
+      "TC2": 0.0,
+      "DI": 0.0,
+      "THICK": 0.0,
+      "BV_MAX": 1e+99,
+      "RSH": 0.0,
+      "TCE": 0.0,
+      "L": 1e-05,
+      "KF": 0.0,
+      "AF": 0.0,
+      "R": 0.0,
+      "LF": 1.0,
+      "WF": 1.0,
+      "EF": 1.0
+    },
+    "device_currents": {
+      "CCAPACITOR4_1": 0.0,
+      "RSCENARIO_ADD_N002_N0": 0.0005,
+      "RRESISTOR22_1": -0.0005,
+      "VBATTERY2_1": -0.0005
+    },
+    "status": "loaded"
+  },
+  "transient": {
+    "status": "missing",
+    "component_activity": {},
+    "selected_traces": [],
+    "steady_start": 0.0,
+    "base_traces": {
+      "time": [],
+      "series": {}
+    }
+  },
+  "geometry_seed": {
+    "status": "loaded",
+    "source_files": {
+      "terminal_estimates": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline1.0\\batchA\\03_estimate_terminals\\a02.json",
+      "terminal_graph": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline1.0\\batchA\\05_build_terminal_graph\\a02.json"
+    },
+    "image": {
+      "id": "a02",
+      "path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\data\\batchA\\a02.png",
+      "width": 583,
+      "height": 1157
+    },
+    "components": {
+      "gnd9.1": {
+        "component_id": "gnd9.1",
+        "instance_id": "9.1",
+        "class_name": "GND",
+        "bbox": [
+          21.58,
+          834.17,
+          108.24,
+          891.9
+        ],
+        "center": {
+          "x": 64.91,
+          "y": 863.035
+        },
+        "estimated_orientation": "up",
+        "terminals": {
+          "t1": {
+            "id": "gnd9.1_t1",
+            "name": "t1",
+            "relative_position": "top",
+            "x": 64.91,
+            "y": 830.17,
+            "node_id": "0"
+          }
+        },
+        "state": null
+      },
+      "battery2.1": {
+        "component_id": "battery2.1",
+        "instance_id": "2.1",
+        "class_name": "Battery",
+        "bbox": [
+          7.89,
+          176.54,
+          126.11,
+          248.89
+        ],
+        "center": {
+          "x": 67.0,
+          "y": 212.71499999999997
+        },
+        "estimated_orientation": "vertical",
+        "terminals": {
+          "negative": {
+            "id": "battery2.1_negative",
+            "name": "negative",
+            "relative_position": "top",
+            "x": 67.0,
+            "y": 172.54,
+            "node_id": "N001"
+          },
+          "positive": {
+            "id": "battery2.1_positive",
+            "name": "positive",
+            "relative_position": "bottom",
+            "x": 67.0,
+            "y": 252.89,
+            "node_id": "N002"
+          }
+        },
+        "state": null
+      },
+      "connector5.1": {
+        "component_id": "connector5.1",
+        "instance_id": "5.1",
+        "class_name": "Connector",
+        "bbox": [
+          143.96,
+          348.85,
+          248.93,
+          858.24
+        ],
+        "center": {
+          "x": 196.445,
+          "y": 603.5450000000001
+        },
+        "estimated_orientation": "vertical",
+        "terminals": {
+          "pin1": {
+            "id": "connector5.1_pin1",
+            "name": "pin1",
+            "relative_position": "left",
+            "x": 139.96,
+            "y": 406.87,
+            "node_id": "N002"
+          },
+          "pin2": {
+            "id": "connector5.1_pin2",
+            "name": "pin2",
+            "relative_position": "right",
+            "x": 252.93,
+            "y": 537.02,
+            "node_id": "N004"
+          },
+          "pin3": {
+            "id": "connector5.1_pin3",
+            "name": "pin3",
+            "relative_position": "right",
+            "x": 252.93,
+            "y": 667.12,
+            "node_id": "N003"
+          },
+          "pin4": {
+            "id": "connector5.1_pin4",
+            "name": "pin4",
+            "relative_position": "left",
+            "x": 139.96,
+            "y": 797.22,
+            "node_id": "0"
+          }
+        },
+        "state": null
+      },
+      "resistor22.1": {
+        "component_id": "resistor22.1",
+        "instance_id": "22.1",
+        "class_name": "Resistor",
+        "bbox": [
+          278.51,
+          260.49,
+          373.02,
+          420.1
+        ],
+        "center": {
+          "x": 325.765,
+          "y": 340.295
+        },
+        "estimated_orientation": "vertical",
+        "terminals": {
+          "t1": {
+            "id": "resistor22.1_t1",
+            "name": "t1",
+            "relative_position": "top",
+            "x": 325.76,
+            "y": 256.49,
+            "node_id": "N001"
+          },
+          "t2": {
+            "id": "resistor22.1_t2",
+            "name": "t2",
+            "relative_position": "bottom",
+            "x": 325.76,
+            "y": 424.1,
+            "node_id": "N004"
+          }
+        },
+        "state": null
+      },
+      "gnd9.2": {
+        "component_id": "gnd9.2",
+        "instance_id": "9.2",
+        "class_name": "GND",
+        "bbox": [
+          311.12,
+          1092.64,
+          393.78,
+          1153.58
+        ],
+        "center": {
+          "x": 352.45,
+          "y": 1123.1100000000001
+        },
+        "estimated_orientation": "up",
+        "terminals": {
+          "t1": {
+            "id": "gnd9.2_t1",
+            "name": "t1",
+            "relative_position": "top",
+            "x": 352.45,
+            "y": 1088.64,
+            "node_id": "0"
+          }
+        },
+        "state": null
+      },
+      "capacitor4.1": {
+        "component_id": "capacitor4.1",
+        "instance_id": "4.1",
+        "class_name": "Capacitor",
+        "bbox": [
+          307.31,
+          828.33,
+          397.64,
+          895.21
+        ],
+        "center": {
+          "x": 352.475,
+          "y": 861.77
+        },
+        "estimated_orientation": "vertical",
+        "terminals": {
+          "t1": {
+            "id": "capacitor4.1_t1",
+            "name": "t1",
+            "relative_position": "top",
+            "x": 352.48,
+            "y": 824.33,
+            "node_id": "N003"
+          },
+          "t2": {
+            "id": "capacitor4.1_t2",
+            "name": "t2",
+            "relative_position": "bottom",
+            "x": 352.48,
+            "y": 899.21,
+            "node_id": "0"
+          }
+        },
+        "state": null
+      },
+      "switch25.1": {
+        "component_id": "switch25.1",
+        "instance_id": "25.1",
+        "class_name": "Switch",
+        "bbox": [
+          353.74,
+          82.65,
+          510.04,
+          176.48
+        ],
+        "center": {
+          "x": 431.89,
+          "y": 129.565
+        },
+        "estimated_orientation": "horizontal",
+        "terminals": {
+          "t1": {
+            "id": "switch25.1_t1",
+            "name": "t1",
+            "relative_position": "left",
+            "x": 350.0,
+            "y": 146.0,
+            "node_id": "N001"
+          },
+          "t2": {
+            "id": "switch25.1_t2",
+            "name": "t2",
+            "relative_position": "right",
+            "x": 514.0,
+            "y": 146.0,
+            "node_id": "0"
+          }
+        },
+        "state": "open"
+      },
+      "gnd9.3": {
+        "component_id": "gnd9.3",
+        "instance_id": "9.3",
+        "class_name": "GND",
+        "bbox": [
+          490.4,
+          337.93,
+          574.43,
+          398.15
+        ],
+        "center": {
+          "x": 532.415,
+          "y": 368.03999999999996
+        },
+        "estimated_orientation": "up",
+        "terminals": {
+          "t1": {
+            "id": "gnd9.3_t1",
+            "name": "t1",
+            "relative_position": "top",
+            "x": 532.41,
+            "y": 333.93,
+            "node_id": "0"
+          }
+        },
+        "state": null
+      }
+    },
+    "terminal_graph": {
+      "battery2.1_negative": [
+        "resistor22.1_t1",
+        "switch25.1_t1"
+      ],
+      "battery2.1_positive": [
+        "connector5.1_pin1"
+      ],
+      "capacitor4.1_t1": [
+        "connector5.1_pin3"
+      ],
+      "capacitor4.1_t2": [
+        "gnd9.2_t1"
+      ],
+      "connector5.1_pin1": [
+        "battery2.1_positive"
+      ],
+      "connector5.1_pin2": [
+        "resistor22.1_t2"
+      ],
+      "connector5.1_pin3": [
+        "capacitor4.1_t1"
+      ],
+      "connector5.1_pin4": [
+        "gnd9.1_t1"
+      ],
+      "gnd9.1_t1": [
+        "connector5.1_pin4"
+      ],
+      "gnd9.2_t1": [
+        "capacitor4.1_t2"
+      ],
+      "gnd9.3_t1": [
+        "switch25.1_t2"
+      ],
+      "resistor22.1_t1": [
+        "battery2.1_negative",
+        "switch25.1_t1"
+      ],
+      "resistor22.1_t2": [
+        "connector5.1_pin2"
+      ],
+      "switch25.1_t1": [
+        "battery2.1_negative",
+        "resistor22.1_t1"
+      ],
+      "switch25.1_t2": [
+        "gnd9.3_t1"
+      ]
+    }
+  },
+  "scenario": {
+    "title": "Verifica correzione funzionale con accoppiamento resistivo minimo tra N002 e N004",
+    "hypothesis": "La causa del mancato funzionamento e l'assenza di continuita elettrica tra il positivo della batteria N002 e il nodo del carico N004; inserendo un collegamento resistivo molto basso tra questi nodi il circuito deve diventare alimentato e il resistore deve assorbire corrente.",
+    "actions": [
+      {
+        "type": "add_resistor_between_nodes",
+        "from": "N002",
+        "to": "N004",
+        "value": "1m"
+      }
+    ],
+    "compare": [
+      "i(Vbattery2_1)",
+      "i(Rresistor22_1)",
+      "v(N004)",
+      "v(N001)"
+    ],
+    "expect": {
+      "i(Vbattery2_1)": "nonzero",
+      "i(Rresistor22_1)": "nonzero",
+      "v(N004)": "changed",
+      "v(N001)": "unchanged"
+    },
+    "scenario_id": "agent_scenario_2"
+  },
+  "warnings": []
+}

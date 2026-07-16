@@ -31,9 +31,15 @@ function normalizeAgentView(payload) {
 }
 
 // Disegna il piano operativo usando soltanto gli stati calcolati dal backend.
-function renderAgentPlan(steps) {
+function renderAgentPlan(steps, sessionStatus) {
   if (!steps.length) return "";
-  const labels = {completed: "Completato", active: "In corso", waiting: "In attesa"};
+  // Distingue gli step in coda da quelli non necessari dopo una conclusione anticipata.
+  const labels = {
+    completed: "Completato",
+    active: "In corso",
+    waiting: sessionStatus === "completed" ? "Non necessario" :
+      (sessionStatus === "running" ? "In coda" : "Da avviare")
+  };
   const rows = steps.map((step, index) => {
     const status = step.status || "waiting";
     const marker = status === "completed" ? "&#10003;" : String(index + 1);
@@ -192,7 +198,7 @@ function renderAgentState(payload) {
   const error = view.lastError ? '<div class="agent-error">' + escapeHtml(view.lastError) + '</div>' : '';
 
   messages.innerHTML = '<div class="agent-dashboard">' + overview + objective +
-    renderAgentPlan(view.steps) + renderAgentCapabilities(view.capabilities) +
+    renderAgentPlan(view.steps, view.status) + renderAgentCapabilities(view.capabilities) +
     timeline + diagnosis + renderAgentFinal(view.final) + error + '</div>';
   messages.scrollTop = 0;
 }
@@ -203,7 +209,11 @@ function showAgentActivity(label) {
   const dashboard = messages.querySelector(".agent-dashboard");
   const live = document.createElement("div");
   live.className = "agent-live-state";
-  live.textContent = label;
+  live.setAttribute("role", "status");
+  live.setAttribute("aria-live", "polite");
+  live.innerHTML = '<span class="agent-live-kicker">Operazione in corso</span>' +
+    '<strong></strong>';
+  live.querySelector("strong").textContent = label;
   if (dashboard) {
     const previous = dashboard.querySelector(".agent-live-state");
     if (previous) previous.remove();

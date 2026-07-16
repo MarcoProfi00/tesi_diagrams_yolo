@@ -2349,7 +2349,7 @@ Prossimi esperimenti:
    Contratto minimo della decisione:
 
    ```json
-   {"decision":"run_scenarios","reason":"...","scenarios":[{}]}
+   {"decision":"run_scenarios","reason":"...","scenarios":[{"intent":"correction|diagnostic","analysis":"op|tran"}]}
    {"decision":"stop","final_status":"resolved|localized|partially_localized|topology_issue|inconclusive","reason":"...","final_answer":"..."}
    ```
 
@@ -2387,7 +2387,21 @@ Prossimi esperimenti:
    Regole di arresto:
 
    - massimo 5 run scenario realmente eseguite;
-   - massimo 2 scenari indipendenti per decisione e 6 decisioni complessive;
+   - massimo 2 scenari indipendenti per decisione e 8 decisioni complessive;
+   - campo `analysis` obbligatorio: `op` per il punto di lavoro DC e `tran`
+     per ampiezza, guadagno, frequenza e forme d'onda;
+   - campo `intent` obbligatorio: `correction` per migliorare il sintomo e
+     `diagnostic` per isolare o confermare una causa;
+   - uno scenario `diagnostic` non puo arrestare il ciclo come risolto;
+   - in `tran`, correnti e potenze senza traccia CSV non sono criteri `expect`;
+   - `unchanged` e ammesso soltanto per un vincolo di preservazione richiesto
+     esplicitamente dall'utente;
+   - `final_status=resolved` richiede una correzione verificata non vuota;
+   - una correzione richiede almeno un miglioramento relativo del 10% oppure
+     una vera attivazione/disattivazione;
+   - per sintomi di amplificazione, gli scenari correttivi dichiarano
+     `gain.input` e `gain.output`, entrambi presenti in `compare`, per misurare
+     `Vpp(output) / Vpp(input)`;
    - un solo retry per una risposta JSON non valida;
    - stop quando il problema e risolto o sufficientemente localizzato;
    - stop se non esistono scenari validi nuovi;

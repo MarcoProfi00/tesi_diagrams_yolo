@@ -30,6 +30,7 @@ FINAL_STATUSES = frozenset(
         "inconclusive",
     }
 )
+ALLOWED_SCENARIO_INTENTS = frozenset({"correction", "diagnostic"})
 MAX_SCENARIOS_PER_DECISION = 2
 MAX_ACTIONS_PER_SCENARIO = 5
 ACTION_REQUIRED_FIELDS = {
@@ -102,7 +103,12 @@ def validate_action(action: Any, scenario_index: int, action_index: int) -> dict
     return dict(action)
 
 
-def validate_scenario(scenario: Any, scenario_index: int) -> dict[str, Any]:
+def validate_scenario(
+    scenario: Any,
+    scenario_index: int,
+    allow_unchanged_expectations: bool = True,
+    require_gain_comparison: bool = False,
+) -> dict[str, Any]:
     """Valida uno scenario self-contained proposto dall'agente."""
     if not isinstance(scenario, dict):
         raise AutonomousDecisionError(f"Scenario {scenario_index}: oggetto JSON richiesto")
@@ -117,12 +123,66 @@ def validate_scenario(scenario: Any, scenario_index: int) -> dict[str, Any]:
     normalized = dict(scenario)
     normalized["title"] = str(scenario.get("title") or f"Scenario autonomo {scenario_index}").strip()
     normalized["hypothesis"] = str(scenario.get("hypothesis") or "").strip()
+    intent = str(scenario.get("intent") or "").strip().lower()
+    if intent not in ALLOWED_SCENARIO_INTENTS:
+        raise AutonomousDecisionError(
+            f"Scenario {scenario_index}: intent deve essere 'correction' oppure 'diagnostic'"
+        )
+    normalized["intent"] = intent
+    analysis = str(scenario.get("analysis") or "").strip().lower()
+    if analysis not in {"op", "tran"}:
+        raise AutonomousDecisionError(
+            f"Scenario {scenario_index}: analysis deve essere 'op' oppure 'tran'"
+        )
+    normalized["analysis"] = analysis
     compare = scenario.get("compare")
     if not isinstance(compare, list) or not compare:
         raise AutonomousDecisionError(f"Scenario {scenario_index}: compare non puo essere vuoto")
     normalized["compare"] = [str(item).strip() for item in compare if str(item).strip()]
     if not normalized["compare"]:
         raise AutonomousDecisionError(f"Scenario {scenario_index}: compare non contiene grandezze valide")
+    for quantity in normalized["compare"]:
+        if re.fullmatch(r"i\(\s*[Qq][^)]+\s*\)", quantity):
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: la corrente diretta BJT '{quantity}' non e "
+                "disponibile; usa la corrente di una resistenza di collettore o emettitore"
+            )
+
+    gain = scenario.get("gain")
+    if require_gain_comparison and intent == "correction":
+        if not isinstance(gain, dict):
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: una correzione del sintomo di "
+                "amplificazione richiede gain con input e output"
+            )
+        gain_input = str(gain.get("input") or "").strip()
+        gain_output = str(gain.get("output") or "").strip()
+        compare_lookup = {quantity.lower(): quantity for quantity in normalized["compare"]}
+        canonical_input = compare_lookup.get(gain_input.lower())
+        canonical_output = compare_lookup.get(gain_output.lower())
+        if canonical_input is None or canonical_output is None:
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: gain.input e gain.output devono essere presenti in compare"
+            )
+        if canonical_input.lower() == canonical_output.lower():
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: gain.input e gain.output devono essere grandezze distinte"
+            )
+        if not all(
+            re.fullmatch(r"v\([^)]+\)", quantity, flags=re.IGNORECASE)
+            for quantity in (canonical_input, canonical_output)
+        ):
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: gain.input e gain.output devono essere tensioni v(NODO)"
+            )
+        if analysis != "tran":
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: il confronto di guadagno richiede analysis='tran'"
+            )
+        normalized["gain"] = {
+            "input": canonical_input,
+            "output": canonical_output,
+        }
 
     expectations = scenario.get("expect")
     if not isinstance(expectations, dict) or not expectations:
@@ -143,6 +203,17 @@ def validate_scenario(scenario: Any, scenario_index: int) -> dict[str, Any]:
             allowed = ", ".join(sorted(ALLOWED_EXPECTATIONS))
             raise AutonomousDecisionError(
                 f"Scenario {scenario_index}: aspettativa non valida '{expectation}'; usa {allowed}"
+            )
+        if analysis == "tran" and re.match(r"^[ip]\s*\(", canonical_quantity, flags=re.IGNORECASE):
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: in analysis='tran' la grandezza "
+                f"'{canonical_quantity}' puo restare in compare come osservazione OP, "
+                "ma non puo essere un criterio expect senza una traccia transitoria"
+            )
+        if expectation == "unchanged" and not allow_unchanged_expectations:
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: expect='unchanged' e consentito soltanto "
+                "quando il sintomo chiede esplicitamente di preservare un altro comportamento"
             )
         normalized_expectations[canonical_quantity] = expectation
     if all(expectation == "unchanged" for expectation in normalized_expectations.values()):
@@ -197,7 +268,14 @@ def validate_connect_feed_distinction(scenarios: list[dict[str, Any]]) -> None:
                 seen_pairs[pair] = (action_type, scenario_index, action_index)
 
 
-def validate_decision(data: dict[str, Any], remaining_budget: int) -> dict[str, Any]:
+def validate_decision(
+    data: dict[str, Any],
+    remaining_budget: int,
+    require_first_scenario: bool = False,
+    require_verified_resolution: bool = False,
+    allow_unchanged_expectations: bool = True,
+    require_gain_comparison: bool = False,
+) -> dict[str, Any]:
     """Valida e normalizza una decisione `run_scenarios` oppure `stop`."""
     decision = str(data.get("decision") or "").strip()
     reason = str(data.get("reason") or "").strip()
@@ -205,6 +283,14 @@ def validate_decision(data: dict[str, Any], remaining_budget: int) -> dict[str, 
         raise AutonomousDecisionError("reason e obbligatorio")
 
     if decision == "stop":
+        if require_first_scenario:
+            raise AutonomousDecisionError(
+                "Prima della conclusione serve almeno uno scenario controllato eseguito"
+            )
+        if require_verified_resolution:
+            raise AutonomousDecisionError(
+                "Prima della conclusione serve una correzione verificata da uno scenario SPICE"
+            )
         final_status = str(data.get("final_status") or "").strip()
         final_answer = str(data.get("final_answer") or "").strip()
         final_cause = str(data.get("final_cause") or "").strip()
@@ -213,6 +299,10 @@ def validate_decision(data: dict[str, Any], remaining_budget: int) -> dict[str, 
             raise AutonomousDecisionError(f"final_status non valido: '{final_status}'")
         if not final_answer:
             raise AutonomousDecisionError("final_answer e obbligatorio per stop")
+        if final_status == "resolved" and not verified_correction:
+            raise AutonomousDecisionError(
+                "verified_correction e obbligatorio quando final_status='resolved'"
+            )
         return {
             "decision": "stop",
             "reason": reason,
@@ -234,7 +324,12 @@ def validate_decision(data: dict[str, Any], remaining_budget: int) -> dict[str, 
     if len(scenarios) > maximum:
         raise AutonomousDecisionError(f"Sono consentiti al massimo {maximum} scenari in questa decisione")
     normalized_scenarios = [
-        validate_scenario(scenario, index)
+        validate_scenario(
+            scenario,
+            index,
+            allow_unchanged_expectations=allow_unchanged_expectations,
+            require_gain_comparison=require_gain_comparison,
+        )
         for index, scenario in enumerate(scenarios, start=1)
     ]
     validate_connect_feed_distinction(normalized_scenarios)
@@ -245,6 +340,20 @@ def validate_decision(data: dict[str, Any], remaining_budget: int) -> dict[str, 
     }
 
 
-def parse_and_validate_decision(response_text: str, remaining_budget: int) -> dict[str, Any]:
+def parse_and_validate_decision(
+    response_text: str,
+    remaining_budget: int,
+    require_first_scenario: bool = False,
+    require_verified_resolution: bool = False,
+    allow_unchanged_expectations: bool = True,
+    require_gain_comparison: bool = False,
+) -> dict[str, Any]:
     """Converte il testo del modello in una decisione autonoma valida."""
-    return validate_decision(extract_json_object(response_text), remaining_budget)
+    return validate_decision(
+        extract_json_object(response_text),
+        remaining_budget,
+        require_first_scenario=require_first_scenario,
+        require_verified_resolution=require_verified_resolution,
+        allow_unchanged_expectations=allow_unchanged_expectations,
+        require_gain_comparison=require_gain_comparison,
+    )

@@ -1765,7 +1765,7 @@
 
     async function runNextAgentIteration() {
       if (!agentLoopActive) return;
-      showAgentActivity("L'agente confronta le evidenze e decide il prossimo test");
+      showAgentActivity("Confronto evidenze e scelta del prossimo test");
       try {
         const data = await requestAgentEndpoint("/api/agent/step");
         renderAgentState(data);
@@ -1784,7 +1784,7 @@
       agentLoopActive = true;
       setLoading(true);
       if (stopAgentButton) stopAgentButton.disabled = false;
-      showAgentActivity("L'agente analizza la base run e prepara il primo test");
+      showAgentActivity("Analisi della base run e preparazione del primo test");
       try {
         const data = await requestAgentEndpoint("/api/agent/start", {
           message: text,
@@ -1868,7 +1868,7 @@
         agentLoopActive = true;
         setLoading(true);
         if (stopAgentButton) stopAgentButton.disabled = false;
-        showAgentActivity("Riprendo la diagnosi autonoma dallo stato salvato");
+        showAgentActivity("Ripresa della diagnosi dallo stato salvato");
         setTimeout(runNextAgentIteration, 300);
       } catch (error) {
         showAgentError("Non riesco a rileggere lo stato autonomo salvato.");

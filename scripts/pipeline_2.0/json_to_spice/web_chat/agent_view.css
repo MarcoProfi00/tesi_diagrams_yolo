@@ -73,22 +73,42 @@
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 10px 12px;
-  border: 1px solid #bfdbfe;
+  padding: 11px 12px;
+  border: 1px solid #93c5fd;
   border-radius: 8px;
-  background: #eff6ff;
+  background: #f0f7ff;
   color: #1d4ed8;
   font-size: 13px;
-  font-weight: 650;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.08);
 }
 .agent-live-state::before {
   content: "";
+  flex: 0 0 auto;
   width: 8px;
   height: 8px;
   border: 2px solid #93c5fd;
   border-top-color: #2563eb;
   border-radius: 50%;
   animation: agent-spinner 0.8s linear infinite;
+}
+.agent-live-kicker {
+  flex: 0 0 auto;
+  padding-right: 9px;
+  border-right: 1px solid #93c5fd;
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.agent-live-state strong {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+  color: #1e3a8a;
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 @keyframes agent-spinner { to { transform: rotate(360deg); } }
 .agent-overview {
@@ -221,6 +241,7 @@
   border-color: #2563eb;
   background: #eff6ff;
   color: #1d4ed8;
+  animation: agent-plan-active-ring 1.25s ease-in-out infinite;
 }
 .agent-step-state {
   color: #8491a3;
@@ -228,6 +249,10 @@
 }
 .agent-plan-step.completed .agent-step-state { color: #059669; }
 .agent-plan-step.active .agent-step-state { color: #2563eb; }
+@keyframes agent-plan-active-ring {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.08); }
+  50% { box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.18); }
+}
 .agent-timeline {
   display: grid;
   gap: 16px;

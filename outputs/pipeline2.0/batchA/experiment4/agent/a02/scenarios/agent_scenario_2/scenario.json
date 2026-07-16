@@ -1,0 +1,25 @@
+{
+  "title": "Verifica correzione funzionale con accoppiamento resistivo minimo tra N002 e N004",
+  "hypothesis": "La causa del mancato funzionamento e l'assenza di continuita elettrica tra il positivo della batteria N002 e il nodo del carico N004; inserendo un collegamento resistivo molto basso tra questi nodi il circuito deve diventare alimentato e il resistore deve assorbire corrente.",
+  "actions": [
+    {
+      "type": "add_resistor_between_nodes",
+      "from": "N002",
+      "to": "N004",
+      "value": "1m"
+    }
+  ],
+  "compare": [
+    "i(Vbattery2_1)",
+    "i(Rresistor22_1)",
+    "v(N004)",
+    "v(N001)"
+  ],
+  "expect": {
+    "i(Vbattery2_1)": "nonzero",
+    "i(Rresistor22_1)": "nonzero",
+    "v(N004)": "changed",
+    "v(N001)": "unchanged"
+  },
+  "scenario_id": "agent_scenario_2"
+}

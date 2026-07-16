@@ -10,7 +10,7 @@ from typing import Any
 
 STATE_NAME = "autonomous_diagnosis.json"
 MAX_EXECUTABLE_SCENARIOS = 5
-MAX_AGENT_DECISIONS = 6
+MAX_AGENT_DECISIONS = 8
 
 
 def now_iso() -> str:

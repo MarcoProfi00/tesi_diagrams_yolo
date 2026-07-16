@@ -417,7 +417,7 @@ def build_agent_view(state: dict[str, Any], output_dir: Path | None = None) -> d
         "active_run": str(state.get("last_active_run") or "base"),
         "counters": {
             "decisions": decisions,
-            "max_decisions": int(state.get("max_agent_decisions") or 6),
+            "max_decisions": int(state.get("max_agent_decisions") or 8),
             "scenarios": scenarios,
             "max_scenarios": int(state.get("max_executable_scenarios") or 5),
         },

@@ -1,0 +1,28 @@
+{
+  "title": "Aumentare l'ampiezza della sorgente per verificare se il circuito sta gia amplificando un ingresso troppo piccolo",
+  "hypothesis": "L'uscita assoluta sembra debole non per assenza di amplificazione, ma perche la sorgente d'ingresso e impostata a soli 10 mV; aumentando l'ingresso, l'uscita dovrebbe aumentare in modo apprezzabile se lo stadio funziona.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vsignal_source23_1",
+      "value": "SIN(0 0.1 100)"
+    }
+  ],
+  "compare": [
+    "v(N002)",
+    "v(N003)",
+    "v(N005)",
+    "v(N006)"
+  ],
+  "expect": {
+    "v(N002)": "magnitude_increased",
+    "v(N006)": "magnitude_increased"
+  },
+  "gain": {
+    "input": "v(N002)",
+    "output": "v(N006)"
+  },
+  "scenario_id": "agent_scenario_1"
+}

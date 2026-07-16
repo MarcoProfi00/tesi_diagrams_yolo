@@ -794,6 +794,17 @@ carico da accendere e `unchanged` per il LED da preservare. Il comparatore usa
 questi criteri per distinguere una correzione verificata da una variazione
 generica. Gli scenari precedenti senza `expect` restano compatibili.
 
+Ogni nuovo scenario AGENT dichiara anche `intent: correction | diagnostic`.
+Solo una `correction` puo produrre uno stop risolutivo; un test `diagnostic`
+puo confermare la causa ma richiede una successiva correzione verificata.
+`unchanged` e ammesso solo quando il sintomo chiede esplicitamente di
+preservare un comportamento. In `tran`, correnti e potenze senza traccia CSV
+restano osservazioni OP e non possono essere criteri `expect`.
+Una correzione richiede inoltre almeno un miglioramento relativo del 10% o
+una vera attivazione/disattivazione. Per sintomi di amplificazione, gli
+scenari correttivi dichiarano ingresso e uscita nel blocco `gain`, e il
+confronto salva il rapporto `Vpp(output) / Vpp(input)`.
+
 ### Implementazione essenziale
 
 1. preparare `experiment4/chat/` e `experiment4/agent/` dalla stessa base
@@ -822,11 +833,20 @@ Guardrail implementati:
 
 - massimo 2 scenari per decisione, entrambi dalla base run;
 - esecuzione sequenziale per evitare concorrenza ngspice inutile;
-- massimo 5 run scenario e massimo 6 decisioni agentiche;
+- massimo 5 run scenario e massimo 8 decisioni agentiche;
 - un solo retry per JSON malformato;
 - whitelist rigida delle otto primitive gia implementate e validate dal
   runner controllato;
 - firma duplicati, stop manuale e persistenza file-based;
+- le decisioni aggiuntive lasciano due tentativi di recupero per proposte
+  rifiutate senza aumentare il budget delle simulazioni SPICE;
+- gli scenari AGENT distinguono obbligatoriamente `op` e `tran`; per sintomi
+  dinamici il confronto usa il Vpp delle tracce CSV e non il valore DC `.op`;
+- gli scenari distinguono obbligatoriamente test `diagnostic` e modifiche
+  `correction`; solo queste ultime possono fermare il ciclo come risolte;
+- `final_status=resolved` richiede una `verified_correction` non vuota;
+- una variazione inferiore al 10% resta evidenza utile ma non arresta il ciclo;
+- le correzioni di guadagno confrontano esplicitamente ingresso e uscita;
 - nessun database.
 
 ### Valutazione Experiment 4

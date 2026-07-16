@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import json
 from pathlib import Path
+import re
 import threading
 from typing import Any, Callable
 
@@ -88,12 +89,60 @@ def write_raw_response(output_dir: Path, response_text: str, decision_number: in
     return path
 
 
+def has_verified_resolution(state: dict[str, Any]) -> bool:
+    """Riconosce uno scenario che ha soddisfatto i criteri SPICE dichiarati."""
+    for iteration in state.get("iterations") or []:
+        if not isinstance(iteration, dict):
+            continue
+        for result in iteration.get("scenario_results") or []:
+            if not isinstance(result, dict):
+                continue
+            outcome = result.get("diagnostic_outcome") or {}
+            if (
+                outcome.get("status") == "resolved_candidate"
+                and bool(outcome.get("stop_automation"))
+            ):
+                return True
+    return False
+
+
+def symptom_requests_preservation(symptom: str) -> bool:
+    """Rileva se l'obiettivo chiede esplicitamente di preservare un comportamento."""
+    normalized = str(symptom or "").strip().lower()
+    preservation_patterns = (
+        r"\bmanten\w*",
+        r"\bpreserv\w*",
+        r"\bsenza\s+(?:spegnere|disattivare|alterare|modificare)",
+        r"\b(?:resti|resta|rimanga|rimane)\s+(?:acces\w*|attiv\w*|invariat\w*)",
+        r"\b(?:keep|maintain|preserve)\w*",
+        r"\bremain\w*\s+(?:on|active|unchanged)",
+        r"\bwithout\s+(?:turning\s+off|disabling|changing)",
+    )
+    return any(re.search(pattern, normalized) for pattern in preservation_patterns)
+
+
+def symptom_requires_gain_comparison(symptom: str) -> bool:
+    """Riconosce obiettivi che richiedono un confronto tra ingresso e uscita."""
+    normalized = str(symptom or "").strip().lower()
+    gain_patterns = (
+        r"\bamplific\w*",
+        r"\bguadagn\w*",
+        r"\bgain\b",
+        r"\bamplification\b",
+    )
+    return any(re.search(pattern, normalized) for pattern in gain_patterns)
+
+
 def request_valid_decision(
     output_dir: Path,
     prompt: str,
     model: str,
     decision_number: int,
     remaining_budget: int,
+    require_first_scenario: bool,
+    require_verified_resolution: bool,
+    allow_unchanged_expectations: bool,
+    require_gain_comparison: bool,
     provider: DecisionProvider,
 ) -> tuple[dict[str, Any], list[str]]:
     """Richiede una decisione e consente un solo tentativo di correzione JSON."""
@@ -106,7 +155,14 @@ def request_valid_decision(
         response_path = write_raw_response(output_dir, response_text, decision_number, attempt)
         response_paths.append(str(response_path))
         try:
-            return parse_and_validate_decision(response_text, remaining_budget), response_paths
+            return parse_and_validate_decision(
+                response_text,
+                remaining_budget,
+                require_first_scenario=require_first_scenario,
+                require_verified_resolution=require_verified_resolution,
+                allow_unchanged_expectations=allow_unchanged_expectations,
+                require_gain_comparison=require_gain_comparison,
+            ), response_paths
         except AutonomousDecisionError as exc:
             last_error = exc
             if attempt == 1:
@@ -177,6 +233,18 @@ def run_iteration(
 
         executed_count = count_executed_scenarios(output_dir)
         remaining_budget = max(0, MAX_EXECUTABLE_SCENARIOS - executed_count)
+        # Experiment 4 richiede una verifica SPICE prima di accettare una diagnosi finale.
+        require_first_scenario = executed_count == 0 and remaining_budget > 0
+        # Con budget disponibile non basta localizzare il guasto: serve una correzione misurata.
+        require_verified_resolution = remaining_budget > 0 and not has_verified_resolution(state)
+        # I vincoli invarianti sono ammessi solo quando fanno parte dell'obiettivo utente.
+        allow_unchanged_expectations = symptom_requests_preservation(
+            str(state.get("symptom") or "")
+        )
+        # I sintomi di amplificazione richiedono una misura esplicita del guadagno.
+        require_gain_comparison = symptom_requires_gain_comparison(
+            str(state.get("symptom") or "")
+        )
         state["executed_scenarios_count"] = executed_count
 
         refresh_diagnostic_context(
@@ -197,6 +265,10 @@ def run_iteration(
                 model=str(state.get("model") or "gpt-5.4"),
                 decision_number=decision_number,
                 remaining_budget=remaining_budget,
+                require_first_scenario=require_first_scenario,
+                require_verified_resolution=require_verified_resolution,
+                allow_unchanged_expectations=allow_unchanged_expectations,
+                require_gain_comparison=require_gain_comparison,
                 provider=provider or default_decision_provider,
             )
         except Exception as exc:

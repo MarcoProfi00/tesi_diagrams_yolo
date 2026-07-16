@@ -202,6 +202,12 @@ def execute_scenario(
     if errors:
         raise ScenarioRuntimeError("; ".join(errors))
 
+    analysis = str(scenario.get("analysis") or "op").strip().lower()
+    if analysis == "tran" and not (output_dir / "08_tran.csv").exists():
+        raise ScenarioRuntimeError(
+            "Scenario tran non eseguibile: la base run non contiene 08_tran.csv"
+        )
+
     executed_count = count_executed_scenarios(output_dir)
     if executed_count >= MAX_EXECUTABLE_SCENARIOS:
         raise ScenarioRuntimeError("Budget esaurito: massimo 5 run scenario eseguite")
