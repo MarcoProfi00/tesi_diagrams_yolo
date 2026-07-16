@@ -364,6 +364,8 @@ def render_analog_meter(component: dict[str, Any], position: dict[str, Any]) -> 
         ratio = min(max((value - lower) / max(upper - lower, 1e-12), 0.0), 1.0)
         needle_angle = -150.0 + ratio * 120.0
         reading = format_engineering_value(value, "V")
+        if str(component.get("measurement_mode") or "").lower() == "tran_vpp":
+            reading += "pp"
         active = abs(value) >= 0.05
     glow = '<rect class="meter-glow" x="-48" y="-40" width="96" height="80" rx="8"/>' if active else ""
     if active:
@@ -533,12 +535,64 @@ def battery_polarity_axis(position: dict[str, Any]) -> tuple[float, float]:
     return positive_x, -positive_x
 
 
+def render_led_glow(profile: dict[str, Any] | None, active: bool) -> str:
+    """Disegna un alone LED statico o sincronizzato con il profilo TRAN."""
+    if profile:
+        state = str(profile.get("state") or "off")
+        if state == "off":
+            return ""
+        if state == "steady_on":
+            tooltip = "LED acceso in modo continuo secondo il transitorio SPICE"
+            return (
+                '<ellipse class="led-glow led-steady" cx="0" cy="0" rx="42" ry="30">'
+                f'<title>{escape(tooltip)}</title></ellipse>'
+            )
+
+        duration = max(0.8, float(profile.get("playback_duration_s") or 1.25))
+        duty_cycle = min(0.8, max(0.12, float(profile.get("display_duty_cycle") or 0.12)))
+        fade_end = min(0.98, duty_cycle + 0.02)
+        frequency = profile.get("frequency_hz")
+        actual_duty = float(profile.get("duty_cycle") or 0.0) * 100.0
+        if frequency is not None:
+            tooltip = (
+                f"LED: lampeggio misurato dal transitorio, {format_number(frequency)} Hz, "
+                f"duty cycle {format_number(actual_duty)}%. Riproduzione rallentata."
+            )
+        else:
+            pulse_count = int(profile.get("pulse_count") or 1)
+            pulse_label = (
+                "un impulso irregolare misurato"
+                if pulse_count == 1
+                else f"{pulse_count} impulsi irregolari misurati"
+            )
+            tooltip = (
+                f"LED: {pulse_label} dal transitorio, acceso per il "
+                f"{format_number(actual_duty)}% della finestra. Riproduzione rallentata."
+            )
+        return (
+            '<ellipse class="led-glow led-transient-profile" cx="0" cy="0" rx="42" ry="30" opacity="0.08">'
+            f'<title>{escape(tooltip)}</title>'
+            '<animate attributeName="opacity" values="0.08;0.48;0.48;0.08;0.08" '
+            f'keyTimes="0;0.02;{format_number(duty_cycle)};{format_number(fade_end)};1" '
+            f'dur="{format_number(duration)}s" repeatCount="indefinite"/>'
+            '</ellipse>'
+        )
+
+    if not active:
+        return ""
+    return (
+        '<ellipse class="led-glow led-steady" cx="0" cy="0" rx="42" ry="30">'
+        '<title>LED attivo; profilo transitorio non disponibile</title></ellipse>'
+    )
+
+
 def render_two_terminal_symbol(
     component_id: str,
     component: dict[str, Any],
     position: dict[str, Any],
     steady_ids: set[str],
     transient_ids: set[str],
+    led_profiles: dict[str, dict[str, Any]],
 ) -> str:
     """Disegna un componente a due terminali usando il vocabolario SVG comune."""
     center_x, center_y, angle, length = two_terminal_geometry(position)
@@ -567,7 +621,7 @@ def render_two_terminal_symbol(
     elif "inductor" in visual_class:
         body = f'<path d="M{-half} 0 H{-half + 10} C{-half + 18} -20 {-half + 30} -20 {-half + 30} 0 C{-half + 38} -20 {-half + 50} -20 {-half + 50} 0 C{-half + 58} -20 {half - 10} -20 {half - 10} 0 H{half}"/>'
     elif "led" in visual_class or "diode" in visual_class:
-        glow = '<ellipse class="led-glow" cx="0" cy="0" rx="42" ry="30"/>' if active and "led" in visual_class else ""
+        glow = render_led_glow(led_profiles.get(component_id), active) if "led" in visual_class else ""
         rays = '<path class="led-rays" d="M5 -20 L17 -34 M20 -16 L32 -30"/>' if "led" in visual_class else ""
         body = f'{glow}<path d="M{-half} 0 H-18 M-18 -18 L18 0 L-18 18 Z M18 -20 V20 M18 0 H{half}"/>{rays}'
         flow_path = f'M{-half} 0 H{half}'
@@ -973,6 +1027,7 @@ def render_components(
 ) -> str:
     """Renderizza ogni componente scegliendo il simbolo dal vocabolario comune."""
     indexed = model_components(model)
+    led_profiles = (model.get("transient") or {}).get("led_profiles") or {}
     label_placements = vertical_label_placements(layout, indexed)
     rendered: list[str] = []
     for component_id, position in (layout.get("components") or {}).items():
@@ -1013,6 +1068,7 @@ def render_components(
                 position,
                 steady_ids,
                 transient_ids,
+                led_profiles,
             )
         if component.get("is_scenario_added"):
             # Il colore rende visibile l'origine senza una label testuale ingombrante.

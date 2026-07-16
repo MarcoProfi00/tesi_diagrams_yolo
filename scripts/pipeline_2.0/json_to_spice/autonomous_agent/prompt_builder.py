@@ -64,34 +64,67 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
 - Se il budget e zero devi restituire decision=stop.
 - Prima di una conclusione diagnostica devi eseguire almeno uno scenario controllato
   quando il budget e disponibile: la sola base run localizza un sospetto, ma non lo verifica.
-- Con budget disponibile puoi restituire decision=stop solo dopo uno scenario con
-  diagnostic_outcome.status=resolved_candidate e stop_automation=true: fino ad allora
-  continua con il prossimo test controllato piu informativo.
+- Con budget disponibile usa final_status="resolved" solo dopo uno scenario con
+  diagnostic_outcome.status=resolved_candidate e stop_automation=true.
+- Puoi invece fermarti con final_status="localized" dopo uno scenario diagnostico
+  forte che verifica la causa ma non rappresenta una riparazione del circuito.
+- Se il sintomo utente richiede esplicitamente di correggere, risolvere, attivare,
+  disattivare o ripristinare un comportamento, `localized` non basta finche resta
+  budget: esegui un'altra correzione distinta e sostenuta dagli artefatti.
+- Se uno scenario migliora il sintomo ma viola un vincolo richiesto (per esempio
+  perde regolarita, spegne un componente da preservare o degrada l'uscita), trattalo
+  come evidenza diagnostica e non come correzione finale.
+- Non consumare altro budget per trasformare una localizzazione gia verificata in
+  una correzione topologica inventata o non sostenuta dagli artefatti.
 - Non usare resolved_candidate come prova automatica di soluzione definitiva.
 - Distingui una soluzione da una semplice localizzazione della causa.
 - Ogni scenario deve dichiarare analysis="op" oppure analysis="tran".
 - Ogni scenario deve dichiarare intent="correction" oppure intent="diagnostic".
 - Usa intent="correction" soltanto per una modifica che mira a migliorare o
   risolvere direttamente il sintomo utente.
+- Se una modifica mira direttamente a correggere il sintomo, dichiarala subito
+  con intent="correction": non eseguire prima la stessa modifica come test
+  diagnostico per poi tentare di ripeterla.
 - Usa intent="diagnostic" per isolare o confermare una causa, compresi i test
   che riducono intenzionalmente una risposta o disattivano un comportamento.
 - Uno scenario diagnostic puo confermare un'ipotesi, ma non puo giustificare
   final_status="resolved" ne arrestare il ciclo come correzione verificata.
 - Usa analysis="tran" per ampiezza, Vpp, guadagno, frequenza, forma d'onda e
   qualsiasi sintomo dinamico. Usa analysis="op" soltanto per il punto di lavoro DC.
-- Con analysis="tran" le tensioni in compare vengono valutate sul Vpp di
-  08_tran.csv, non sul valore DC riportato da .op.
-- Con analysis="tran" usa in expect soltanto tensioni presenti in 08_tran.csv.
-  Correnti e potenze possono restare in compare come osservazioni OP, ma non
-  sono criteri di successo transitori finche non esiste la relativa traccia CSV.
+- Con analysis="tran" puoi dichiarare la mappa opzionale `measure` per scegliere
+  la misura di ogni grandezza: `tran_vpp` per una tensione letta da 08_tran.csv,
+  `op` per tensioni, correnti o potenze lette dal punto di lavoro.
+- Se `measure` non e presente resta valido il comportamento standard: le tensioni
+  sono confrontate sul Vpp, mentre correnti e potenze restano osservazioni OP.
+- In uno scenario misto puoi usare una corrente come criterio expect soltanto
+  dichiarandola esplicitamente con `measure: {{"i(R...)":"op"}}`.
+- Un voltmetro VAC, un segnale AC o una tensione alternata devono essere verificati
+  con analysis="tran" e `tran_vpp`: un valore DC non dimostra il funzionamento AC.
 - Per sintomi di amplificazione o guadagno, ogni scenario con intent="correction" deve includere
   `gain: {{"input":"v(NODO_IN)","output":"v(NODO_OUT)"}}`; entrambe le
   tensioni devono essere presenti in compare. Valuta il guadagno come
   Vpp(output) / Vpp(input), senza confondere due nodi entrambi di uscita.
 - Prima di attribuire un'uscita assoluta debole a un guasto, verifica se il
   circuito sta gia amplificando un ingresso molto piccolo.
+- Per sintomi di distorsione, clipping, saturazione o segnale poco pulito,
+  ogni scenario transitorio deve dichiarare quality="thd" e il blocco gain
+  deve identificare ingresso e uscita.
+- La pipeline calcola la THD sulle armoniche 2-5 nelle ultime tre oscillazioni
+  complete della sorgente SIN. Una correzione e risolutiva soltanto se la THD
+  diminuisce almeno del 20%, scende sotto il 10% e il guadagno fondamentale
+  non viene annullato.
+- Se la metrica THD non e disponibile o resta sopra soglia, considera lo
+  scenario parziale e continua con un test diverso, per esempio sul bias.
 - Ogni scenario deve avere una lista compare non vuota con grandezze osservabili.
 - Per scenari con piu rami o uscite, includi in compare almeno una grandezza per ciascuno.
+- Se il sintomo combina un obiettivo AC/VAC e lo stato di un LED o di una
+  lampada, ogni scenario deve verificarli insieme: usa un test misto con
+  `tran_vpp` sul segnale e una misura diretta `op` sul componente.
+- Due scenari separati che attivano un solo target ciascuno non verificano il
+  funzionamento simultaneo: prima di fermarti esegui una singola run self-contained
+  con entrambi gli stimoli e con entrambi i criteri soddisfatti.
+- In questo caso non usare l'inattivita intenzionale di uno dei due target come
+  prova sufficiente: lo scenario deve applicare gli stimoli indipendenti adatti.
 - Se l'obiettivo richiede di attivare o spegnere un componente, includi in compare
   almeno una misura diretta del componente, preferendo i(NOME_SPICE).
 - Se l'obiettivo richiede di mantenere invariato un altro componente, includi in
@@ -124,6 +157,14 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
   proporre come chiusura del circuito un cammino che termina soltanto su un condensatore.
 - Per una run .tran usa le tracce disponibili e confronta almeno l'uscita o il ramo
   direttamente coinvolto nell'obiettivo, oltre agli eventuali nodi intermedi.
+- Per obiettivi che chiedono lampeggio, periodicita, regolarita, duty cycle o durata
+  di accensione, ogni scenario deve dichiarare `temporal_expect`.
+  Questo blocco usa il profilo transitorio del componente nel viewer: `target`,
+  `required_state` opzionale, `require_regular_period` opzionale,
+  `min_duty_cycle` opzionale tra 0 e 1 e `min_relative_duty_increase` opzionale.
+- Scegli soglie coerenti con il sintomo: per esempio un lampeggio chiaramente visibile
+  puo richiedere stato `blinking`, periodicita regolare e un duty cycle minimo.
+  Se un test aumenta il duty cycle ma perde la periodicita richiesta, non e risolutivo.
 - Non dichiarare verified_correction se i confronti non misurano direttamente sia
   il componente target sia gli eventuali componenti che devono restare attivi.
 - Se final_status="resolved", verified_correction deve descrivere la correzione
@@ -132,6 +173,11 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
 - Usa nuove sorgenti o nuovi rami resistivi solo quando le evidenze tecniche li giustificano.
 - Usa feed_nodes_from_source_node solo da un nodo che gli output mostrano gia alimentato.
 - Usa connect_nodes per una ipotesi di continuita mancante senza attribuire a un nodo il ruolo di sorgente.
+- I pin distinti dello stesso connector rappresentano reti funzionali separate finche
+  gli artefatti non dimostrano una continuita prevista. Se alimentano rami diversi,
+  verifica prima ciascun ramo con la sorgente appropriata e non collegarli per comodita.
+- Un pin collegato soltanto a uno switch verso massa non diventa un ingresso di
+  alimentazione senza un'evidenza esplicita nella node map, nella netlist o nelle label.
 - Non proporre connect_nodes e feed_nodes_from_source_node sulla stessa relazione tra nodi nella stessa decisione.
 - Considera add_resistor_between_nodes una ipotesi distinta: aggiunge un vero accoppiamento resistivo, non un filo quasi ideale.
 - Non riproporre azioni gia presenti nella cronologia cambiando soltanto titolo,
@@ -152,7 +198,7 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
 - add_resistor_between_nodes: type, from, to, value
 
 ## Formati ammessi
-{{"decision":"run_scenarios","reason":"...","scenarios":[{{"title":"...","hypothesis":"...","intent":"correction","analysis":"op","actions":[{{"type":"close_switch","target":"...","resistance":"1m"}}],"compare":["i(RTARGET)"],"expect":{{"i(RTARGET)":"activated"}}}}]}}
+{{"decision":"run_scenarios","reason":"...","scenarios":[{{"title":"...","hypothesis":"...","intent":"correction","analysis":"tran","actions":[{{"type":"change_component_value","target":"Rtarget","value":"10k"}}],"compare":["v(NOUT)"],"expect":{{"v(NOUT)":"magnitude_increased"}},"temporal_expect":{{"target":"Dled1","required_state":"blinking","require_regular_period":true,"min_duty_cycle":0.10}}}}]}}
 
 oppure
 

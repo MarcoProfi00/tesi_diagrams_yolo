@@ -951,8 +951,9 @@ utente sceglie uno scenario
 
 ## Experiment 4 - automazione implementata
 
-Questa sezione descrive la prima versione implementata, ancora da validare con
-il modello OpenAI su tutto il Batch A.
+Questa sezione descrive la prima versione implementata e validata in una prima
+passata OpenAI su `a01`, `a02` e `a04`-`a10`; `a03` resta escluso per il noto
+limite topologico/SPICE.
 
 La stessa web app seleziona due workspace indipendenti:
 
@@ -1011,6 +1012,9 @@ Guardrail implementati:
 - scenari non validi o duplicati non consumano budget;
 - `resolved_candidate` dello step 12 non equivale automaticamente a sintomo
   risolto;
+- se l'utente chiede esplicitamente una correzione, l'agente non puo chiudere
+  con la sola causa localizzata finche resta budget e non esiste una correzione
+  verificata;
 - il ciclo termina per stop motivato, limite di 5 run, assenza di azioni valide,
   errore non recuperabile o arresto utente;
 - la base run e il workspace dell'altra modalita non vengono modificati.
@@ -1035,25 +1039,53 @@ Guardrail implementati:
 - ogni scenario autonomo dichiara obbligatoriamente `analysis: "op"` oppure
   `analysis: "tran"`; nel secondo caso le tensioni vengono confrontate sul
   Vpp ricavato da `08_tran.csv`;
+- la mappa opzionale `measure` puo scegliere per ogni voce di `compare` la
+  metrica `op` oppure `tran_vpp`, quindi un singolo scenario puo verificare
+  insieme un segnale AC e correnti o tensioni DC su altri rami;
 - ogni scenario autonomo dichiara `intent: "correction"` oppure
   `intent: "diagnostic"`; un test diagnostico puo confermare un'ipotesi ma non
-  produrre lo stop risolutivo;
+  produrre lo stop risolutivo senza criteri espliciti di correzione;
 - in analisi `tran`, correnti e potenze prive di una traccia CSV possono
-  restare in `compare` come osservazioni OP, ma non in `expect`;
+  entrare in `expect` soltanto se dichiarate come `op` nella mappa `measure`;
+- i sintomi che nominano esplicitamente AC o VAC impongono a una correzione
+  almeno una misura `tran_vpp`; il solo punto di lavoro DC non e sufficiente;
+- quando il sintomo riguarda l'accensione di un LED o di una lampada, almeno
+  una loro corrente o potenza diretta deve comparire anche in `expect`;
+- se il sintomo combina AC/VAC e LED/lampada, il contratto richiede nello stesso
+  scenario sia `tran_vpp` sia una misura diretta `op` del componente;
 - `expect: unchanged` e accettato solo se il sintomo chiede esplicitamente di
   preservare un altro componente o comportamento;
 - `final_status: resolved` richiede una `verified_correction` non vuota;
+- `final_status: localized` puo terminare dopo una conferma diagnostica forte,
+  anche quando non esiste una riparazione fisica verificata;
 - lo stop correttivo richiede almeno un effetto relativo del 10% oppure una
   vera attivazione/disattivazione; variazioni minori restano parziali;
 - per sintomi di amplificazione, una correzione dichiara
   `gain: {"input":"v(NODO_IN)","output":"v(NODO_OUT)"}` e lo step 12 salva
   il guadagno base e scenario calcolato sui rispettivi Vpp;
+- per distorsione o clipping con sorgente SIN, lo scenario dichiara
+  quality=thd; transient_signal_quality.py analizza le ultime tre oscillazioni
+  complete e calcola fondamentale, guadagno e THD sulle armoniche 2-5;
+- lo stop richiede riduzione THD di almeno il 20%, THD finale al massimo del
+  10% e conservazione del guadagno fondamentale;
 - `i(Q...)` non viene accettata come misura diretta di un BJT: per osservare
   il ramo si usa una corrente disponibile, tipicamente quella della resistenza
   di collettore o di emettitore;
 - `scenario_comparison.json` verifica ogni aspettativa e classifica lo scenario
   sui criteri soddisfatti; gli scenari storici senza `expect` mantengono la
   valutazione precedente;
+- pin diversi dello stesso connector sono trattati come reti funzionali
+  distinte finche gli artefatti non forniscono una ragione elettrica per unirli;
+- nel viewer una sorgente scenario `SIN(...)`, `PULSE(...)` o equivalente usa
+  il simbolo `signal_source`; soltanto una sorgente DC usa il simbolo batteria;
+- i meter AC leggono il Vpp differenziale da `08_tran.csv`, mostrando stato
+  attivo e valore `Vpp` anche quando il punto di lavoro medio vale zero;
+- per sintomi di lampeggio, regolarita, duty cycle o durata di accensione, lo
+  scenario dichiara `temporal_expect`; `scenario_runtime.py` confronta i
+  profili transitori del viewer e richiede che stato, periodicita e soglie di
+  duty siano soddisfatti prima di confermare una correzione;
+- una sequenza temporale tra componenti richiede ancora un'estensione futura:
+  oggi non viene verificata se la base contiene solo `.op` e manca `08_tran.csv`;
 - ogni decisione contiene al massimo 2 scenari e il ciclo al massimo 8
   decisioni del modello;
 - le run vengono eseguite in sequenza e sempre dalla base.
@@ -1082,6 +1114,7 @@ prepare_experiment_outputs.py
 16_autonomous_diagnosis.py
 scenario_runtime.py
 scenario_expectations.py
+transient_signal_quality.py
 ```
 
 Presenti ma non ancora integrati nel flusso reale:

@@ -106,6 +106,62 @@ def has_verified_resolution(state: dict[str, Any]) -> bool:
     return False
 
 
+def scenario_verifies_joint_objective(
+    scenario: dict[str, Any],
+    result: dict[str, Any],
+) -> bool:
+    """Verifica che segnale variabile e componente siano attivi nella stessa run."""
+    measurements = scenario.get("measure") or {}
+    expectations = scenario.get("expect") or {}
+    if not isinstance(measurements, dict) or not isinstance(expectations, dict):
+        return False
+
+    positive_effects = {
+        "activated",
+        "changed",
+        "increased",
+        "magnitude_increased",
+        "nonzero",
+    }
+    has_variable_signal = any(
+        str(measurements.get(quantity) or "").strip().lower() == "tran_vpp"
+        and str(expectation or "").strip().lower() in positive_effects
+        for quantity, expectation in expectations.items()
+    )
+    has_direct_component = any(
+        re.match(r"^[ip]\s*\(", str(quantity), flags=re.IGNORECASE)
+        and str(measurements.get(quantity) or "").strip().lower() == "op"
+        and str(expectation or "").strip().lower() in positive_effects
+        for quantity, expectation in expectations.items()
+    )
+    summary = result.get("comparison_summary") or {}
+    expectations_met = int(summary.get("expectations_met_count") or 0)
+    expectations_failed = int(summary.get("expectations_failed_count") or 0)
+    expectations_missing = int(summary.get("expectations_missing_count") or 0)
+    return (
+        has_variable_signal
+        and has_direct_component
+        and expectations_met >= 2
+        and expectations_failed == 0
+        and expectations_missing == 0
+    )
+
+
+def has_verified_joint_objective(state: dict[str, Any]) -> bool:
+    """Cerca una singola run che verifichi insieme le due parti dell'obiettivo."""
+    for iteration in state.get("iterations") or []:
+        if not isinstance(iteration, dict):
+            continue
+        decision = iteration.get("decision") or {}
+        scenarios = decision.get("scenarios") or []
+        results = iteration.get("scenario_results") or []
+        for scenario, result in zip(scenarios, results):
+            if isinstance(scenario, dict) and isinstance(result, dict):
+                if scenario_verifies_joint_objective(scenario, result):
+                    return True
+    return False
+
+
 def symptom_requests_preservation(symptom: str) -> bool:
     """Rileva se l'obiettivo chiede esplicitamente di preservare un comportamento."""
     normalized = str(symptom or "").strip().lower()
@@ -121,6 +177,27 @@ def symptom_requests_preservation(symptom: str) -> bool:
     return any(re.search(pattern, normalized) for pattern in preservation_patterns)
 
 
+def symptom_requests_correction(symptom: str) -> bool:
+    """Rileva se l'utente richiede anche una correzione, non la sola diagnosi."""
+    normalized = str(symptom or "").strip().lower()
+    correction_patterns = (
+        r"\brisol\w*",
+        r"\bcorregg\w*",
+        r"\bripar\w*",
+        r"\bripristin\w*",
+        r"\baccend\w*",
+        r"\battiv\w*",
+        r"\bspegn\w*",
+        r"\bdisattiv\w*",
+        r"\bfix\w*",
+        r"\bcorrect\w*",
+        r"\brepair\w*",
+        r"\brestore\w*",
+        r"\bturn\s+(?:on|off)\b",
+    )
+    return any(re.search(pattern, normalized) for pattern in correction_patterns)
+
+
 def symptom_requires_gain_comparison(symptom: str) -> bool:
     """Riconosce obiettivi che richiedono un confronto tra ingresso e uscita."""
     normalized = str(symptom or "").strip().lower()
@@ -133,6 +210,69 @@ def symptom_requires_gain_comparison(symptom: str) -> bool:
     return any(re.search(pattern, normalized) for pattern in gain_patterns)
 
 
+def symptom_requires_quality_analysis(symptom: str) -> bool:
+    """Riconosce sintomi che richiedono una misura esplicita della distorsione."""
+    normalized = str(symptom or "").strip().lower()
+    quality_patterns = (
+        r"\bdistors\w*",
+        r"\bclipp\w*",
+        r"\bsatur\w*",
+        r"\bdeformat\w*",
+        r"\bpoco\s+pulit\w*",
+        r"\bnon\s+linear\w*",
+    )
+    return any(re.search(pattern, normalized) for pattern in quality_patterns)
+
+
+def symptom_requires_variable_signal_measurement(symptom: str) -> bool:
+    """Riconosce obiettivi che nominano esplicitamente una misura alternata o VAC."""
+    normalized = str(symptom or "").strip().lower()
+    variable_signal_patterns = (
+        r"\bvac\b",
+        r"\bvoltmetro\s+(?:ac|alternat\w*)\b",
+        r"\btensione\s+alternat\w*\b",
+        r"\bsegnale\s+(?:ac|alternat\w*|sinusoidal\w*)\b",
+        r"\balternating\s+(?:voltage|signal)\b",
+    )
+    return any(re.search(pattern, normalized) for pattern in variable_signal_patterns)
+
+
+def symptom_requires_direct_component_measurement(symptom: str) -> bool:
+    """Rileva obiettivi che chiedono esplicitamente lo stato di LED o lampade."""
+    normalized = str(symptom or "").strip().lower()
+    component_patterns = (
+        r"\bled\b",
+        r"\blampad\w*\b",
+        r"\blamp\b",
+    )
+    state_patterns = (
+        r"\baccend\w*\b",
+        r"\bspen\w*\b",
+        r"\battiv\w*\b",
+        r"\bdisattiv\w*\b",
+        r"\b(?:on|off)\b",
+    )
+    return (
+        any(re.search(pattern, normalized) for pattern in component_patterns)
+        and any(re.search(pattern, normalized) for pattern in state_patterns)
+    )
+
+
+def symptom_requires_temporal_expectation(symptom: str) -> bool:
+    """Rileva obiettivi che richiedono stato, regolarita o durata nel tempo."""
+    normalized = str(symptom or "").strip().lower()
+    temporal_patterns = (
+        r"\blampegg\w*",
+        r"\bblink\w*",
+        r"\bduty\s*cycle\b",
+        r"\bperiodic\w*",
+        r"\bregolar\w*",
+        r"\bfinestra\s+di\s+accensione\b",
+        r"\bdurata\s+(?:dell'|di\s+)?accensione\b",
+    )
+    return any(re.search(pattern, normalized) for pattern in temporal_patterns)
+
+
 def request_valid_decision(
     output_dir: Path,
     prompt: str,
@@ -141,8 +281,14 @@ def request_valid_decision(
     remaining_budget: int,
     require_first_scenario: bool,
     require_verified_resolution: bool,
+    require_verified_correction: bool,
     allow_unchanged_expectations: bool,
     require_gain_comparison: bool,
+    require_quality_analysis: bool,
+    require_variable_signal_measurement: bool,
+    require_direct_component_measurement: bool,
+    require_joint_objective_verification: bool,
+    require_temporal_expectation: bool,
     provider: DecisionProvider,
 ) -> tuple[dict[str, Any], list[str]]:
     """Richiede una decisione e consente un solo tentativo di correzione JSON."""
@@ -160,8 +306,14 @@ def request_valid_decision(
                 remaining_budget,
                 require_first_scenario=require_first_scenario,
                 require_verified_resolution=require_verified_resolution,
+                require_verified_correction=require_verified_correction,
                 allow_unchanged_expectations=allow_unchanged_expectations,
                 require_gain_comparison=require_gain_comparison,
+                require_quality_analysis=require_quality_analysis,
+                require_variable_signal_measurement=require_variable_signal_measurement,
+                require_direct_component_measurement=require_direct_component_measurement,
+                require_joint_objective_verification=require_joint_objective_verification,
+                require_temporal_expectation=require_temporal_expectation,
             ), response_paths
         except AutonomousDecisionError as exc:
             last_error = exc
@@ -235,14 +387,43 @@ def run_iteration(
         remaining_budget = max(0, MAX_EXECUTABLE_SCENARIOS - executed_count)
         # Experiment 4 richiede una verifica SPICE prima di accettare una diagnosi finale.
         require_first_scenario = executed_count == 0 and remaining_budget > 0
-        # Con budget disponibile non basta localizzare il guasto: serve una correzione misurata.
+        # Solo lo stato resolved richiede una correzione misurata; una causa puo essere localizzata.
         require_verified_resolution = remaining_budget > 0 and not has_verified_resolution(state)
+        # Se l'utente chiede anche una correzione, la sola localizzazione non chiude il ciclo.
+        require_verified_correction = (
+            remaining_budget > 0
+            and symptom_requests_correction(str(state.get("symptom") or ""))
+            and not has_verified_resolution(state)
+        )
         # I vincoli invarianti sono ammessi solo quando fanno parte dell'obiettivo utente.
         allow_unchanged_expectations = symptom_requests_preservation(
             str(state.get("symptom") or "")
         )
         # I sintomi di amplificazione richiedono una misura esplicita del guadagno.
         require_gain_comparison = symptom_requires_gain_comparison(
+            str(state.get("symptom") or "")
+        )
+        # Distorsione e clipping richiedono una metrica transitoria dedicata.
+        require_quality_analysis = symptom_requires_quality_analysis(
+            str(state.get("symptom") or "")
+        )
+        # Un obiettivo VAC deve essere verificato sull'ampiezza transitoria, non sul solo punto DC.
+        require_variable_signal_measurement = symptom_requires_variable_signal_measurement(
+            str(state.get("symptom") or "")
+        )
+        # LED e lampade richiedono una prova diretta della corrente o potenza del ramo.
+        require_direct_component_measurement = symptom_requires_direct_component_measurement(
+            str(state.get("symptom") or "")
+        )
+        # Un obiettivo composto resta aperto finche una singola run non verifica entrambi i target.
+        require_joint_objective_verification = (
+            remaining_budget > 0
+            and require_variable_signal_measurement
+            and require_direct_component_measurement
+            and not has_verified_joint_objective(state)
+        )
+        # Un obiettivo temporale richiede una soglia esplicita sul profilo del componente.
+        require_temporal_expectation = symptom_requires_temporal_expectation(
             str(state.get("symptom") or "")
         )
         state["executed_scenarios_count"] = executed_count
@@ -267,8 +448,14 @@ def run_iteration(
                 remaining_budget=remaining_budget,
                 require_first_scenario=require_first_scenario,
                 require_verified_resolution=require_verified_resolution,
+                require_verified_correction=require_verified_correction,
                 allow_unchanged_expectations=allow_unchanged_expectations,
                 require_gain_comparison=require_gain_comparison,
+                require_quality_analysis=require_quality_analysis,
+                require_variable_signal_measurement=require_variable_signal_measurement,
+                require_direct_component_measurement=require_direct_component_measurement,
+                require_joint_objective_verification=require_joint_objective_verification,
+                require_temporal_expectation=require_temporal_expectation,
                 provider=provider or default_decision_provider,
             )
         except Exception as exc:

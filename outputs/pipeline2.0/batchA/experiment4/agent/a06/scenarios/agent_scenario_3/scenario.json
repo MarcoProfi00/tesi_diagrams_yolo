@@ -1,0 +1,31 @@
+{
+  "title": "Ridurre moderatamente l'ampiezza della sorgente sinusoidale per migliorare direttamente la linearita",
+  "hypothesis": "Lo stadio a emettitore comune viene pilotato troppo forte dalla sorgente SIN da 1 V di ampiezza; una riduzione moderata dell'ampiezza di ingresso dovrebbe diminuire la distorsione di uscita mantenendo comunque amplificazione utile.",
+  "intent": "correction",
+  "analysis": "tran",
+  "quality": "thd",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "signal_source23.1",
+      "value": "SIN(0 0.1 100)"
+    }
+  ],
+  "compare": [
+    "v(N006)",
+    "v(N005)",
+    "v(N002)",
+    "v(N003)"
+  ],
+  "gain": {
+    "input": "v(N006)",
+    "output": "v(N005)"
+  },
+  "expect": {
+    "v(N006)": "magnitude_decreased",
+    "v(N005)": "nonzero",
+    "v(N002)": "changed",
+    "v(N003)": "changed"
+  },
+  "scenario_id": "agent_scenario_3"
+}

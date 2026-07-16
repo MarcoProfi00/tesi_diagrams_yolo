@@ -21,6 +21,7 @@ from .contracts import (
     VIEWER_MODEL_NAME,
 )
 from .json_io import read_json, write_json
+from .model_builder import is_variable_voltage_source
 
 
 # Il canvas mantiene proporzioni stabili e riserva una fascia per la legenda.
@@ -85,6 +86,8 @@ def classify_component(component: dict[str, Any]) -> str:
         return "ground"
     if "meter" in kind or component.get("measurement_kind"):
         return "analog_meter"
+    if is_variable_voltage_source(component):
+        return "signal_source"
     if kind == "voltage_source" and component.get("is_scenario_added"):
         return "scenario_voltage_source"
     if kind in {"resistor", "diode", "voltage_source", "current_source", "capacitor", "inductor"}:
@@ -1038,7 +1041,7 @@ def scenario_voltage_source_position(
     node_centers: dict[str, tuple[float, float]],
     canvas: tuple[float, float],
 ) -> dict[str, Any] | None:
-    """Sceglie matematicamente una zona libera per una batteria scenario nodo-massa."""
+    """Sceglie una zona libera per una sorgente scenario collegata tra nodo e massa."""
     nodes = [str(node_id) for node_id in component.get("nodes") or []]
     if len(nodes) != 2 or "0" not in nodes:
         return None
@@ -1069,7 +1072,8 @@ def scenario_voltage_source_position(
     obstacles = [component_visual_bounds(item) for item in positioned.values()]
     obstacles.append(legend_obstacle_bounds())
     current_wires = existing_wire_segments(positioned, node_centers)
-    spec = component_spec("scenario_voltage_source", "scenario_voltage_source", 2)
+    component_type = "signal_source" if is_variable_voltage_source(component) else "scenario_voltage_source"
+    spec = component_spec(component_type, component_type, 2)
     half_length = spec["width"] / 2
     normal_is_positive = nodes[0] != "0"
     aligned_center_y = anchor_y + half_length if normal_is_positive else anchor_y - half_length
@@ -1094,8 +1098,8 @@ def scenario_voltage_source_position(
             source = {
                 "x": candidate_x,
                 "y": candidate_y,
-                "component_type": "scenario_voltage_source",
-                "layout_kind": "scenario_voltage_source",
+                "component_type": component_type,
+                "layout_kind": component_type,
                 "symbol_size": spec,
                 "orientation": "vertical",
                 "label_side": label_side,
@@ -1191,8 +1195,8 @@ def build_image_guided_components(
         component_id = str(component.get("id") or "")
         component_node_ids = [str(node_id) for node_id in component.get("nodes") or []]
         component_type = (
-            "scenario_voltage_source"
-            if component.get("layout_kind") == "scenario_voltage_source"
+            str(component.get("layout_kind"))
+            if component.get("layout_kind") in {"scenario_voltage_source", "signal_source"}
             else normalize_component_type(
                 component.get("viewer_kind") or component.get("class_name") or component.get("kind"),
                 component.get("layout_kind"),
@@ -1204,7 +1208,7 @@ def build_image_guided_components(
         connector_bridge: dict[str, Any] | None = None
         parallel_reference = (
             find_parallel_reference(positioned, component_node_ids, component_type)
-            if component.get("is_scenario_added") and component_type not in {"connection", "scenario_voltage_source"}
+            if component.get("is_scenario_added") and component_type not in {"connection", "scenario_voltage_source", "signal_source"}
             else None
         )
         parallel_branch = (
@@ -1226,7 +1230,7 @@ def build_image_guided_components(
                 node_centers,
                 (float(transform["canvas_width"]), float(transform["canvas_height"])),
             )
-            if component_type == "scenario_voltage_source"
+            if component_type in {"scenario_voltage_source", "signal_source"}
             else None
         )
         orientation = "horizontal"

@@ -1,0 +1,31 @@
+{
+  "title": "Ridurre la sorgente sinusoidale a 20 mV per cercare la soglia di funzionamento quasi lineare",
+  "hypothesis": "La distorsione residua e ancora dovuta principalmente a un ingresso troppo grande rispetto alla regione lineare dello stadio con emettitore bypassato; abbassando l'ampiezza della sorgente a 20 mV il transistor dovrebbe restare piu vicino al funzionamento lineare e la THD dell'uscita potrebbe scendere sotto il 10% senza annullare del tutto l'amplificazione.",
+  "intent": "correction",
+  "analysis": "tran",
+  "quality": "thd",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "signal_source23.1",
+      "value": "SIN(0 0.02 100)"
+    }
+  ],
+  "compare": [
+    "v(N006)",
+    "v(N005)",
+    "v(N002)",
+    "v(N003)"
+  ],
+  "gain": {
+    "input": "v(N006)",
+    "output": "v(N005)"
+  },
+  "expect": {
+    "v(N006)": "magnitude_decreased",
+    "v(N005)": "nonzero",
+    "v(N002)": "changed",
+    "v(N003)": "changed"
+  },
+  "scenario_id": "agent_scenario_5"
+}

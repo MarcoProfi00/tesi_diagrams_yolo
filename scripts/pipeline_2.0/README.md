@@ -711,8 +711,9 @@ Lo stato attuale va letto cosi:
 - gli esperimenti si gestiscono con root separate;
 - Experiment 3.1 ha validato sul Batch A il flusso pulito
   agente -> scenario -> viewer;
-- Experiment 4 contiene la prima implementazione del confronto tra flusso
-  guidato e automazione controllata multi-scenario.
+- Experiment 4 contiene il confronto tra flusso guidato e automazione
+  controllata multi-scenario, validato in prima passata su `a01`, `a02` e
+  `a04`-`a10`; `a03` resta escluso per il limite topologico/SPICE noto.
 
 Architettura di base di Experiment 4:
 
@@ -780,14 +781,28 @@ Guardrail della prima versione:
   resistivo reale;
 - massimo 2 scenari indipendenti nella stessa decisione, eseguiti in sequenza;
 - massimo 5 run SPICE scenario per diagnosi;
-- massimo 6 decisioni del modello, inclusa la conclusione finale;
+- massimo 8 decisioni del modello, inclusa la conclusione finale;
 - un solo retry se la risposta JSON non rispetta il contratto;
 - scenari non validi o duplicati non consumano budget;
+- se l'utente richiede una correzione, l'agente non chiude come sola causa
+  localizzata finche resta budget e manca una correzione verificata;
+- per lampeggio, regolarita, duty cycle o durata di accensione, gli scenari
+  `.tran` dichiarano `temporal_expect`: il runtime confronta i profili viewer
+  base/scenario prima di accettare lo stop risolutivo;
 - pulsante `Stop` e stato persistente riprendibile.
 
 La macchina a stati e il runtime sono stati verificati con decisioni
-controllate e una vera run ngspice. Resta da validare il comportamento del
-modello OpenAI sui circuiti Batch A.
+controllate e con la prima passata OpenAI su `a01`, `a02` e `a04`-`a10`.
+Le sequenze temporali tra componenti restano un'estensione futura: richiedono
+una `.tran` aggiungibile dallo scenario e profili temporali anche per lampade.
+
+## Prossima fase: Experiment 5 / Batch B
+
+Experiment 5 usera il Batch B come prova di generalizzazione. Per ogni circuito
+si prepara prima la base fino a `01-08` e il viewer, poi si prova `CHAT` con le
+primitive esistenti e infine `AGENT` sugli stessi sintomi. Nuove primitive o
+simboli viewer saranno aggiunti solo quando il limite e ricorrente e generale,
+mai per adattare la pipeline a un singolo circuito.
 
 I comandi diretti in linguaggio naturale verranno affrontati dopo il ciclo
 autonomo di base e riuseranno lo stesso runtime.

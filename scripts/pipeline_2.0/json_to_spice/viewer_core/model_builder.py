@@ -14,6 +14,7 @@ import csv
 from datetime import datetime
 import re
 from pathlib import Path
+from statistics import median
 from typing import Any
 
 from .contracts import (
@@ -26,6 +27,9 @@ from .json_io import read_json, write_json
 
 TRANSIENT_VARIATION_EPSILON = 1e-5
 MAX_TRANSIENT_VIEWER_SAMPLES = 800
+LED_FORWARD_THRESHOLD_V = 0.6
+LED_PLAYBACK_SLOWDOWN = 10.0
+LED_PERIOD_RELATIVE_TOLERANCE = 0.15
 
 
 def normalize_node(node: str) -> str:
@@ -46,6 +50,14 @@ def spice_kind(name: str) -> str:
         "D": "diode",
         "Q": "bjt",
     }.get(prefix, "unknown")
+
+
+def is_variable_voltage_source(component: dict[str, Any]) -> bool:
+    """Riconosce una sorgente di segnale dalla forma d'onda dichiarata in SPICE."""
+    if str(component.get("kind") or "").lower() != "voltage_source":
+        return False
+    value = str(component.get("value") or "").strip()
+    return bool(re.match(r"^(?:SIN|PULSE|PWL|EXP|SFFM|AM)\s*\(", value, flags=re.IGNORECASE))
 
 
 def expected_node_count(name: str) -> int:
@@ -269,6 +281,127 @@ def component_transient_activity(
     return activity
 
 
+def is_led_component(component: dict[str, Any]) -> bool:
+    """Riconosce i LED distinguendoli dai diodi privi di emissione luminosa."""
+    source_id = str(component.get("source_component_id") or "").lower()
+    return str(component.get("kind") or "").lower() == "diode" and source_id.startswith("led")
+
+
+def led_on_durations(
+    times: list[float],
+    states: list[bool],
+    rising_indices: list[int],
+) -> list[float]:
+    """Misura la durata di ogni impulso acceso che inizia nel transitorio."""
+    durations: list[float] = []
+    for rising_index in rising_indices:
+        falling_index = next(
+            (
+                index
+                for index in range(rising_index + 1, len(states))
+                if not states[index]
+            ),
+            None,
+        )
+        if falling_index is not None:
+            durations.append(max(0.0, times[falling_index] - times[rising_index]))
+    return durations
+
+
+def led_transient_profiles(
+    components: list[dict[str, Any]],
+    times: list[float],
+    node_series: dict[str, list[float]],
+) -> dict[str, dict[str, Any]]:
+    """Ricava lampeggio e duty cycle dei LED dalle tensioni ai loro terminali."""
+    profiles: dict[str, dict[str, Any]] = {}
+    if len(times) < 2:
+        return profiles
+
+    time_window = max(0.0, times[-1] - times[0])
+    for component in components:
+        if not is_led_component(component):
+            continue
+        component_id = str(component.get("id") or "")
+        nodes = [normalize_node(node_id) for node_id in component.get("nodes") or []]
+        if not component_id or len(nodes) < 2:
+            continue
+        anode_values = node_series.get(nodes[0])
+        cathode_values = node_series.get(nodes[1])
+        if not anode_values or not cathode_values:
+            continue
+
+        forward_voltages = [
+            anode - cathode
+            for anode, cathode in zip(anode_values, cathode_values)
+        ]
+        states = [voltage >= LED_FORWARD_THRESHOLD_V for voltage in forward_voltages]
+        if not states:
+            continue
+        rising_indices = [
+            index
+            for index, state in enumerate(states)
+            if state and (index == 0 or not states[index - 1])
+        ]
+        on_fraction = sum(states) / len(states)
+        periods = [
+            times[current] - times[previous]
+            for previous, current in zip(rising_indices, rising_indices[1:])
+            if times[current] > times[previous]
+        ]
+        period_candidate = median(periods) if periods else None
+        regular_period = bool(
+            period_candidate
+            and len(periods) >= 2
+            and all(
+                abs(current_period - period_candidate) / period_candidate
+                <= LED_PERIOD_RELATIVE_TOLERANCE
+                for current_period in periods
+            )
+        )
+        period = period_candidate if regular_period else None
+        durations = led_on_durations(times, states, rising_indices)
+        duty_cycle = (
+            min(1.0, max(0.0, median(durations) / period))
+            if period and durations
+            else on_fraction
+        )
+
+        if not any(states):
+            state = "off"
+        elif all(states):
+            state = "steady_on"
+        elif period:
+            state = "blinking"
+        else:
+            state = "transient_pulse"
+
+        reference_duration = period if period else time_window
+        playback_duration = min(6.0, max(0.8, reference_duration * LED_PLAYBACK_SLOWDOWN))
+        # La radice quadrata mantiene visibili gli impulsi brevi senza rendere
+        # uguali duty cycle reali molto diversi tra loro.
+        display_duty_cycle = min(0.8, 0.08 + 0.8 * (duty_cycle ** 0.5))
+        profiles[component_id] = {
+            "status": "measured",
+            "state": state,
+            "threshold_v": LED_FORWARD_THRESHOLD_V,
+            "anode_node": nodes[0],
+            "cathode_node": nodes[1],
+            "on_fraction": on_fraction,
+            "duty_cycle": duty_cycle,
+            "display_duty_cycle": display_duty_cycle,
+            "regular_period": regular_period,
+            "period_s": period,
+            "frequency_hz": (1.0 / period) if period else None,
+            "playback_duration_s": playback_duration,
+            "playback_slowdown": LED_PLAYBACK_SLOWDOWN,
+            "pulse_count": len(rising_indices),
+            "voltage_min": min(forward_voltages),
+            "voltage_max": max(forward_voltages),
+        }
+    return profiles
+
+
 def downsample_indices(sample_count: int, maximum: int) -> list[int]:
     """Seleziona indici equidistanti preservando primo e ultimo campione."""
     if sample_count <= maximum:
@@ -351,6 +484,7 @@ def parse_transient_csv(
         "time_end": times[-1] if times else None,
         "node_activity": node_activity,
         "component_activity": component_transient_activity(components, node_series),
+        "led_profiles": led_transient_profiles(components, times, node_series),
         "traces": build_transient_traces(times, node_series),
     }
 
@@ -439,10 +573,37 @@ def measurement_voltage(
         return None
 
 
+def transient_measurement_voltage(
+    nodes: dict[str, Any],
+    transient: dict[str, Any],
+) -> float | None:
+    """Calcola il Vpp differenziale di un voltmetro usando le tracce transitorie."""
+    ordered_nodes = [normalize_node(node_id) for node_id in nodes.values()]
+    if len(ordered_nodes) < 2:
+        return None
+    series = ((transient.get("traces") or {}).get("series") or {})
+
+    def node_series(node_id: str) -> list[float] | None:
+        """Restituisce la traccia del nodo, usando una massa implicita a zero."""
+        if node_id == "0":
+            sample_count = len(next(iter(series.values()), []))
+            return [0.0] * sample_count
+        values = series.get(f"v({node_id})")
+        return values if isinstance(values, list) else None
+
+    first = node_series(ordered_nodes[0])
+    second = node_series(ordered_nodes[1])
+    if not first or not second or len(first) != len(second):
+        return None
+    differential = [float(left) - float(right) for left, right in zip(first, second)]
+    return max(differential) - min(differential) if differential else None
+
+
 def build_structural_components(
     node_map: dict[str, Any],
     rules: dict[str, Any],
     measurements: dict[str, Any],
+    transient: dict[str, Any],
 ) -> list[dict[str, Any]]:
     """Costruisce componenti strutturali e strumenti di misura non emessi in SPICE."""
     terminal_nodes = node_map.get("component_terminal_nodes") or {}
@@ -463,7 +624,17 @@ def build_structural_components(
         parameters = dict(rule.get("parameters") or {})
         nodes = terminal_nodes.get(component_id) or rule.get("nodes") or {}
         measurement_kind = str(rule.get("measurement_kind") or parameters.get("kind") or "").lower()
-        reading = measurement_voltage(nodes, measurements) if measurement_kind == "voltage" or parameters.get("kind") == "voltmeter" else None
+        is_voltage_meter = measurement_kind == "voltage" or parameters.get("kind") == "voltmeter"
+        measured_quantity = str(parameters.get("measured_quantity") or "").strip().lower()
+        transient_reading = (
+            transient_measurement_voltage(nodes, transient)
+            if is_voltage_meter and measured_quantity in {"voltage_ac", "ac_voltage", "vac"}
+            else None
+        )
+        reading = transient_reading if transient_reading is not None else (
+            measurement_voltage(nodes, measurements) if is_voltage_meter else None
+        )
+        measurement_mode = "tran_vpp" if transient_reading is not None else "op"
         structural.append(
             {
                 "id": component_id,
@@ -476,6 +647,7 @@ def build_structural_components(
                 "measurement_kind": measurement_kind or None,
                 "measurement_value": reading,
                 "measurement_unit": "V" if reading is not None else None,
+                "measurement_mode": measurement_mode if is_voltage_meter else None,
                 "strategy": rule.get("strategy"),
                 "reason": rule.get("reason"),
             }
@@ -916,7 +1088,7 @@ def build_viewer_model(run_dir: Path) -> dict[str, Any]:
     if scenario:
         components = apply_scenario_component_roles(components, scenario)
         components = mark_scenario_modified_components(components, scenario, scenario_dir)
-    structural_components = build_structural_components(node_map, rules, measurements)
+    structural_components = build_structural_components(node_map, rules, measurements, transient)
     # Un fusibile chiuso, o un altro equivalente semplificato, resta nella
     # netlist per la simulazione ma deve avere un solo simbolo nel viewer.
     structural_components = remove_emitted_simplified_duplicates(structural_components, components)
@@ -959,4 +1131,3 @@ def write_viewer_model(run_dir: Path) -> dict[str, Any]:
     model = build_viewer_model(run_dir)
     write_json(run_dir / VIEWER_MODEL_NAME, model)
     return model
-

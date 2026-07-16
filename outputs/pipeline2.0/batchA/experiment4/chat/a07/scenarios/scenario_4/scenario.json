@@ -1,0 +1,27 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Propagare PWR verso il punto di misura VAC",
+  "hypothesis": "VAC remains inactive because N001 is not electrically reached by the supply that already activates N002; powering N002 and adding continuity from N002 to N001 should activate the measured node if that path is the missing condition.",
+  "actions": [
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N002",
+      "negative": "0",
+      "value": "5V"
+    },
+    {
+      "type": "connect_nodes",
+      "from": "N002",
+      "to": "N001",
+      "resistance": "1m"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N001)",
+    "v(N002)",
+    "v(N004)",
+    "i(Rresistor22_1)"
+  ]
+}

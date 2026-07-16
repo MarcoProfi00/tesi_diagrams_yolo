@@ -1,0 +1,2047 @@
+# Pipeline 2.0 - agente diagnostico autonomo controllato
+
+Sei il controller diagnostico di una pipeline Graph JSON -> SPICE/ngspice.
+Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
+
+## Sintomo utente
+Il circuito amplifica, ma l’uscita mi sembra troppo distorta o poco pulita. Individua la causa ed esegui gli scenari necessari per migliorare il segnale di uscita.
+
+## Vincoli obbligatori
+- Rispondi con un solo oggetto JSON valido, senza Markdown o testo esterno.
+- Non inventare nodi, componenti, valori o risultati.
+- Usa soltanto queste primitive: add_resistor_between_nodes, add_voltage_source_between_nodes, change_component_value, change_source_value, close_switch, connect_nodes, drive_node_voltage, feed_nodes_from_source_node.
+- Ogni scenario deve essere self-contained e partire dalla base run.
+- Puoi proporre al massimo 2 scenari indipendenti.
+- Budget residuo: 1 run scenario.
+- Se il budget e zero devi restituire decision=stop.
+- Prima di una conclusione diagnostica devi eseguire almeno uno scenario controllato
+  quando il budget e disponibile: la sola base run localizza un sospetto, ma non lo verifica.
+- Con budget disponibile puoi restituire decision=stop solo dopo uno scenario con
+  diagnostic_outcome.status=resolved_candidate e stop_automation=true: fino ad allora
+  continua con il prossimo test controllato piu informativo.
+- Non usare resolved_candidate come prova automatica di soluzione definitiva.
+- Distingui una soluzione da una semplice localizzazione della causa.
+- Ogni scenario deve dichiarare analysis="op" oppure analysis="tran".
+- Ogni scenario deve dichiarare intent="correction" oppure intent="diagnostic".
+- Usa intent="correction" soltanto per una modifica che mira a migliorare o
+  risolvere direttamente il sintomo utente.
+- Usa intent="diagnostic" per isolare o confermare una causa, compresi i test
+  che riducono intenzionalmente una risposta o disattivano un comportamento.
+- Uno scenario diagnostic puo confermare un'ipotesi, ma non puo giustificare
+  final_status="resolved" ne arrestare il ciclo come correzione verificata.
+- Usa analysis="tran" per ampiezza, Vpp, guadagno, frequenza, forma d'onda e
+  qualsiasi sintomo dinamico. Usa analysis="op" soltanto per il punto di lavoro DC.
+- Con analysis="tran" le tensioni in compare vengono valutate sul Vpp di
+  08_tran.csv, non sul valore DC riportato da .op.
+- Con analysis="tran" usa in expect soltanto tensioni presenti in 08_tran.csv.
+  Correnti e potenze possono restare in compare come osservazioni OP, ma non
+  sono criteri di successo transitori finche non esiste la relativa traccia CSV.
+- Per sintomi di amplificazione o guadagno, ogni scenario con intent="correction" deve includere
+  `gain: {"input":"v(NODO_IN)","output":"v(NODO_OUT)"}`; entrambe le
+  tensioni devono essere presenti in compare. Valuta il guadagno come
+  Vpp(output) / Vpp(input), senza confondere due nodi entrambi di uscita.
+- Prima di attribuire un'uscita assoluta debole a un guasto, verifica se il
+  circuito sta gia amplificando un ingresso molto piccolo.
+- Per sintomi di distorsione, clipping, saturazione o segnale poco pulito,
+  ogni scenario transitorio deve dichiarare quality="thd" e il blocco gain
+  deve identificare ingresso e uscita.
+- La pipeline calcola la THD sulle armoniche 2-5 nelle ultime tre oscillazioni
+  complete della sorgente SIN. Una correzione e risolutiva soltanto se la THD
+  diminuisce almeno del 20%, scende sotto il 10% e il guadagno fondamentale
+  non viene annullato.
+- Se la metrica THD non e disponibile o resta sopra soglia, considera lo
+  scenario parziale e continua con un test diverso, per esempio sul bias.
+- Ogni scenario deve avere una lista compare non vuota con grandezze osservabili.
+- Per scenari con piu rami o uscite, includi in compare almeno una grandezza per ciascuno.
+- Se l'obiettivo richiede di attivare o spegnere un componente, includi in compare
+  almeno una misura diretta del componente, preferendo i(NOME_SPICE).
+- Se l'obiettivo richiede di mantenere invariato un altro componente, includi in
+  compare anche una sua misura diretta: le sole tensioni di nodo non ne verificano lo stato.
+- Ricava NOME_SPICE dalla netlist 07_netlist.cir; non usare l'id Graph JSON dentro i(...) o p(...).
+- Non richiedere i(Q...) per un transistor BJT: questa misura diretta non e
+  disponibile nel confronto corrente. Usa la corrente di una resistenza sul
+  collettore o sull'emettitore come misura osservabile del ramo.
+- Richiedi p(NOME_SPICE) soltanto se la potenza dello stesso dispositivo e gia
+  disponibile negli output ngspice forniti; non aggiungere misure ridondanti.
+- Ogni scenario deve avere un oggetto expect non vuoto. Le chiavi devono essere
+  grandezze presenti in compare e i valori ammessi sono: activated, deactivated,
+  changed, unchanged, increased, decreased, magnitude_increased,
+  magnitude_decreased, nonzero.
+- Inserisci in expect soltanto i comportamenti indispensabili per verificare
+  l'obiettivo o preservare componenti richiesti dall'utente. Le altre misure
+  possono restare in compare come osservazioni senza aspettativa.
+- Una variazione direzionale minima non dimostra una correzione: per fermare
+  il ciclo serve almeno un miglioramento relativo del 10%, oppure una vera
+  attivazione/disattivazione del comportamento richiesto.
+- Usa expect per descrivere sia l'effetto cercato sia i vincoli da preservare,
+  per esempio corrente del target activated e corrente del componente protetto unchanged.
+- Usa unchanged soltanto se il sintomo utente chiede esplicitamente di mantenere
+  o preservare un altro componente o comportamento; altrimenti ometti quel
+  vincolo e lascia la grandezza soltanto in compare.
+- Se ngspice segnala nodi flottanti o matrice singolare, non usare la tensione
+  assoluta di quei nodi come vincolo unchanged: il riferimento comune puo traslare.
+  Preferisci correnti dirette e variazioni strettamente legate all'obiettivo.
+- In analisi .op un condensatore non fornisce un percorso conduttivo DC: non
+  proporre come chiusura del circuito un cammino che termina soltanto su un condensatore.
+- Per una run .tran usa le tracce disponibili e confronta almeno l'uscita o il ramo
+  direttamente coinvolto nell'obiettivo, oltre agli eventuali nodi intermedi.
+- Non dichiarare verified_correction se i confronti non misurano direttamente sia
+  il componente target sia gli eventuali componenti che devono restare attivi.
+- Se final_status="resolved", verified_correction deve descrivere la correzione
+  realmente verificata da uno scenario con intent="correction".
+- Preferisci modifiche minime su componenti, valori e collegamenti gia esistenti.
+- Usa nuove sorgenti o nuovi rami resistivi solo quando le evidenze tecniche li giustificano.
+- Usa feed_nodes_from_source_node solo da un nodo che gli output mostrano gia alimentato.
+- Usa connect_nodes per una ipotesi di continuita mancante senza attribuire a un nodo il ruolo di sorgente.
+- Non proporre connect_nodes e feed_nodes_from_source_node sulla stessa relazione tra nodi nella stessa decisione.
+- Considera add_resistor_between_nodes una ipotesi distinta: aggiunge un vero accoppiamento resistivo, non un filo quasi ideale.
+- Non riproporre azioni gia presenti nella cronologia cambiando soltanto titolo,
+  aspettative o un valore quasi identico: uno scenario duplicato non produce nuova evidenza.
+- Non usare add_resistor_between_nodes con pochi milliohm per imitare connect_nodes.
+  Usalo per un vero ramo resistivo plausibile, come bias, pull-up, pull-down o shunt.
+- Dopo uno scenario rifiutato come duplicato scegli una relazione, un componente
+  o una ipotesi fisica realmente diversa.
+
+## Schema delle azioni consentite
+- drive_node_voltage: type, target, value
+- change_source_value: type, target, value
+- change_component_value: type, target, value
+- close_switch: type, target, resistance opzionale
+- connect_nodes: type, from, to, resistance opzionale
+- feed_nodes_from_source_node: type, source_node, target_nodes, resistance opzionale
+- add_voltage_source_between_nodes: type, positive, negative, value
+- add_resistor_between_nodes: type, from, to, value
+
+## Formati ammessi
+{"decision":"run_scenarios","reason":"...","scenarios":[{"title":"...","hypothesis":"...","intent":"correction","analysis":"op","actions":[{"type":"close_switch","target":"...","resistance":"1m"}],"compare":["i(RTARGET)"],"expect":{"i(RTARGET)":"activated"}}]}
+
+oppure
+
+{"decision":"stop","reason":"...","final_status":"resolved|localized|partially_localized|topology_issue|inconclusive","final_answer":"Sintesi breve della conclusione.","final_cause":"Causa tecnica individuata, senza ripetizioni.","verified_correction":"Correzione verificata dagli scenari, oppure stringa vuota se non verificata."}
+
+## Decisioni e risultati precedenti
+```json
+[
+  {
+    "decision_number": 1,
+    "decision": {
+      "decision": "run_scenarios",
+      "reason": "La base run mostra un forte sospetto di bias non ottimale: il transistor e quasi spento in .op (vbe≈0.117 V, ic molto piccolo), mentre l'ingresso sinusoidale ha ampiezza 1 V e puo spingere il transistor in conduzione solo per parte del ciclo, causando distorsione per clipping/asimmetria. Serve almeno uno scenario controllato transitorio per verificare se una piccola correzione del partitore di base riduce la THD senza annullare il guadagno.",
+      "scenarios": [
+        {
+          "title": "Aumentare leggermente la polarizzazione di base riducendo Rresistor22_3",
+          "hypothesis": "La distorsione deriva soprattutto da una polarizzazione di base troppo bassa; diminuendo la resistenza base-massa da 47 kOhm si alza il punto di lavoro, si porta il transistor piu vicino alla regione attiva per tutto il ciclo e si riduce la distorsione d'uscita.",
+          "intent": "correction",
+          "analysis": "tran",
+          "quality": "thd",
+          "actions": [
+            {
+              "type": "change_component_value",
+              "target": "resistor22.3",
+              "value": "33k"
+            }
+          ],
+          "compare": [
+            "v(N006)",
+            "v(N005)",
+            "v(N002)",
+            "v(N003)"
+          ],
+          "gain": {
+            "input": "v(N006)",
+            "output": "v(N005)"
+          },
+          "expect": {
+            "v(N002)": "changed",
+            "v(N003)": "changed",
+            "v(N005)": "magnitude_increased",
+            "v(N006)": "nonzero"
+          }
+        }
+      ]
+    },
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\experiment_chat\\autonomous_prompt_1.md",
+    "response_paths": [
+      "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\experiment_chat\\autonomous_response_1_attempt_1.txt"
+    ],
+    "scenario_results": [
+      {
+        "scenario_id": "agent_scenario_1",
+        "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_1",
+        "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_1\\run",
+        "status": "spice_success",
+        "spice_executed": true,
+        "spice_status": "success",
+        "spice_exit_code": 0,
+        "comparison_summary": {
+          "requested_count": 4,
+          "changed_count": 4,
+          "activated_count": 0,
+          "missing_count": 0,
+          "expected_count": 4,
+          "expectations_met_count": 4,
+          "expectations_failed_count": 0,
+          "expectations_missing_count": 0,
+          "meaningful_improvement_count": 1,
+          "quality_required": true,
+          "quality_available": true,
+          "quality_improved": false,
+          "quality_acceptable": false,
+          "quality_output_preserved": true,
+          "base_thd": 0.8302119023357514,
+          "scenario_thd": 0.8334762635511467
+        },
+        "diagnostic_outcome": {
+          "status": "partially_resolved",
+          "technical_label": "Distortion not improved",
+          "label": "Distorsione non migliorata abbastanza",
+          "reason": "La THD dell'uscita non diminuisce almeno del 20% rispetto alla base (83.0% -> 83.3%).",
+          "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+          "stop_automation": false,
+          "confidence": "low",
+          "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
+        },
+        "viewer": {
+          "model": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_1\\run\\13_viewer_model.json",
+          "layout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_1\\run\\14_viewer_layout.json",
+          "svg": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_1\\run\\15_viewer.svg"
+        },
+        "viewer_error": null,
+        "executed_scenarios_count": 1
+      }
+    ]
+  },
+  {
+    "decision_number": 2,
+    "decision": {
+      "decision": "run_scenarios",
+      "reason": "Il primo tentativo di aumentare leggermente la polarizzazione di base non ha ridotto la THD, quindi il sospetto di base troppo bassa resta non verificato come causa principale. Dalla base .op il transistor risulta invece gia ben polarizzato in regione attiva (N002=3.664 V, N003=3.024 V, N004=6.763 V), mentre il segnale di ingresso e molto grande: la sorgente fornisce 1 V di ampiezza su N006, valore elevato per uno stadio a emettitore comune bypassato, che puo facilmente portare lo stadio fuori dalla zona quasi-lineare anche con bias corretto. Il test piu informativo ora e ridurre l'ampiezza di ingresso per verificare se la distorsione dipende soprattutto da overdrive del segnale applicato.",
+      "scenarios": [
+        {
+          "title": "Ridurre l'ampiezza della sorgente sinusoidale per verificare overdrive in ingresso",
+          "hypothesis": "La distorsione elevata e causata principalmente da un ingresso troppo ampio per la linearita dello stadio; riducendo l'ampiezza della sorgente SIN il transistor resta piu vicino alla regione lineare e la THD dell'uscita dovrebbe diminuire sensibilmente senza annullare il guadagno.",
+          "intent": "diagnostic",
+          "analysis": "tran",
+          "quality": "thd",
+          "actions": [
+            {
+              "type": "change_source_value",
+              "target": "signal_source23.1",
+              "value": "SIN(0 0.2 100)"
+            }
+          ],
+          "compare": [
+            "v(N006)",
+            "v(N005)",
+            "v(N002)",
+            "v(N003)"
+          ],
+          "gain": {
+            "input": "v(N006)",
+            "output": "v(N005)"
+          },
+          "expect": {
+            "v(N006)": "magnitude_decreased",
+            "v(N005)": "nonzero",
+            "v(N002)": "changed",
+            "v(N003)": "changed"
+          }
+        }
+      ]
+    },
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\experiment_chat\\autonomous_prompt_2.md",
+    "response_paths": [
+      "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\experiment_chat\\autonomous_response_2_attempt_1.txt"
+    ],
+    "scenario_results": [
+      {
+        "scenario_id": "agent_scenario_2",
+        "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_2",
+        "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_2\\run",
+        "status": "spice_success",
+        "spice_executed": true,
+        "spice_status": "success",
+        "spice_exit_code": 0,
+        "comparison_summary": {
+          "requested_count": 4,
+          "changed_count": 4,
+          "activated_count": 0,
+          "missing_count": 0,
+          "expected_count": 4,
+          "expectations_met_count": 4,
+          "expectations_failed_count": 0,
+          "expectations_missing_count": 0,
+          "meaningful_improvement_count": 1,
+          "quality_required": true,
+          "quality_available": true,
+          "quality_improved": true,
+          "quality_acceptable": false,
+          "quality_output_preserved": true,
+          "base_thd": 0.8302119023357514,
+          "scenario_thd": 0.5397573371971582
+        },
+        "diagnostic_outcome": {
+          "status": "partially_resolved",
+          "technical_label": "Diagnostic hypothesis confirmed",
+          "label": "Ipotesi diagnostica confermata",
+          "reason": "I criteri dichiarati dal test diagnostico sono soddisfatti, ma lo scenario non applica una correzione del sintomo utente.",
+          "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+          "stop_automation": false,
+          "confidence": "low",
+          "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
+        },
+        "viewer": {
+          "model": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_2\\run\\13_viewer_model.json",
+          "layout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_2\\run\\14_viewer_layout.json",
+          "svg": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_2\\run\\15_viewer.svg"
+        },
+        "viewer_error": null,
+        "executed_scenarios_count": 2
+      }
+    ]
+  },
+  {
+    "decision_number": 3,
+    "decision": {
+      "decision": "run_scenarios",
+      "reason": "Il test diagnostico ha confermato che la causa dominante della distorsione e l'overdrive dell'ingresso: riducendo l'ampiezza della sorgente la THD migliora in modo netto (da 83.0% a 54.0%), mentre la correzione di bias non ha aiutato. Il prossimo test piu informativo e quindi una correzione diretta e minima della sorgente d'ingresso, per verificare se una riduzione meno drastica dell'ampiezza migliora davvero la pulizia dell'uscita preservando meglio il guadagno utile.",
+      "scenarios": [
+        {
+          "title": "Ridurre moderatamente l'ampiezza della sorgente sinusoidale per migliorare direttamente la linearita",
+          "hypothesis": "Lo stadio a emettitore comune viene pilotato troppo forte dalla sorgente SIN da 1 V di ampiezza; una riduzione moderata dell'ampiezza di ingresso dovrebbe diminuire la distorsione di uscita mantenendo comunque amplificazione utile.",
+          "intent": "correction",
+          "analysis": "tran",
+          "quality": "thd",
+          "actions": [
+            {
+              "type": "change_source_value",
+              "target": "signal_source23.1",
+              "value": "SIN(0 0.1 100)"
+            }
+          ],
+          "compare": [
+            "v(N006)",
+            "v(N005)",
+            "v(N002)",
+            "v(N003)"
+          ],
+          "gain": {
+            "input": "v(N006)",
+            "output": "v(N005)"
+          },
+          "expect": {
+            "v(N006)": "magnitude_decreased",
+            "v(N005)": "nonzero",
+            "v(N002)": "changed",
+            "v(N003)": "changed"
+          }
+        }
+      ]
+    },
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\experiment_chat\\autonomous_prompt_3.md",
+    "response_paths": [
+      "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\experiment_chat\\autonomous_response_3_attempt_1.txt"
+    ],
+    "scenario_results": [
+      {
+        "scenario_id": "agent_scenario_3",
+        "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_3",
+        "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_3\\run",
+        "status": "spice_success",
+        "spice_executed": true,
+        "spice_status": "success",
+        "spice_exit_code": 0,
+        "comparison_summary": {
+          "requested_count": 4,
+          "changed_count": 4,
+          "activated_count": 0,
+          "missing_count": 0,
+          "expected_count": 4,
+          "expectations_met_count": 4,
+          "expectations_failed_count": 0,
+          "expectations_missing_count": 0,
+          "meaningful_improvement_count": 1,
+          "quality_required": true,
+          "quality_available": true,
+          "quality_improved": true,
+          "quality_acceptable": false,
+          "quality_output_preserved": true,
+          "base_thd": 0.8302119023357514,
+          "scenario_thd": 0.35007611300098507
+        },
+        "diagnostic_outcome": {
+          "status": "partially_resolved",
+          "technical_label": "Residual distortion",
+          "label": "Distorsione ridotta ma ancora elevata",
+          "reason": "La THD migliora, ma resta sopra la soglia del 10% richiesta per una correzione risolutiva (83.0% -> 35.0%).",
+          "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+          "stop_automation": false,
+          "confidence": "low",
+          "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
+        },
+        "viewer": {
+          "model": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_3\\run\\13_viewer_model.json",
+          "layout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_3\\run\\14_viewer_layout.json",
+          "svg": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_3\\run\\15_viewer.svg"
+        },
+        "viewer_error": null,
+        "executed_scenarios_count": 3
+      }
+    ]
+  },
+  {
+    "decision_number": 4,
+    "decision": {
+      "decision": "run_scenarios",
+      "reason": "I test precedenti hanno gia confermato con evidenza controllata che la causa dominante della distorsione e l'overdrive della sorgente di ingresso: riducendo l'ampiezza della SIN la THD scende da 83.0% a 35.0%, mentre la modifica di bias non ha aiutato. Tuttavia nessuna correzione provata ha ancora portato la THD sotto il 10%, quindi non e possibile concludere. Il prossimo test piu informativo e una correzione diretta piu incisiva sulla stessa causa gia localizzata, con ampiezza ancora minore, per verificare se l'uscita diventa abbastanza pulita mantenendo guadagno non nullo.",
+      "scenarios": [
+        {
+          "title": "Ridurre ulteriormente l'ampiezza della sorgente sinusoidale per cercare una correzione verificata della distorsione",
+          "hypothesis": "La distorsione residua resta dovuta principalmente a un pilotaggio ancora troppo elevato per la zona quasi-lineare dello stadio; portando l'ampiezza della sorgente da 1 V a 50 mV il transistor dovrebbe lavorare piu vicino alla regione lineare e la THD dell'uscita potrebbe scendere sotto la soglia richiesta senza annullare l'amplificazione.",
+          "intent": "correction",
+          "analysis": "tran",
+          "quality": "thd",
+          "actions": [
+            {
+              "type": "change_source_value",
+              "target": "signal_source23.1",
+              "value": "SIN(0 0.05 100)"
+            }
+          ],
+          "compare": [
+            "v(N006)",
+            "v(N005)",
+            "v(N002)",
+            "v(N003)"
+          ],
+          "gain": {
+            "input": "v(N006)",
+            "output": "v(N005)"
+          },
+          "expect": {
+            "v(N006)": "magnitude_decreased",
+            "v(N005)": "nonzero",
+            "v(N002)": "changed",
+            "v(N003)": "changed"
+          }
+        }
+      ]
+    },
+    "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\experiment_chat\\autonomous_prompt_4.md",
+    "response_paths": [
+      "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\experiment_chat\\autonomous_response_4_attempt_1.txt",
+      "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\experiment_chat\\autonomous_response_4_attempt_2.txt"
+    ],
+    "scenario_results": [
+      {
+        "scenario_id": "agent_scenario_4",
+        "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_4",
+        "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_4\\run",
+        "status": "spice_success",
+        "spice_executed": true,
+        "spice_status": "success",
+        "spice_exit_code": 0,
+        "comparison_summary": {
+          "requested_count": 4,
+          "changed_count": 4,
+          "activated_count": 0,
+          "missing_count": 0,
+          "expected_count": 4,
+          "expectations_met_count": 4,
+          "expectations_failed_count": 0,
+          "expectations_missing_count": 0,
+          "meaningful_improvement_count": 1,
+          "quality_required": true,
+          "quality_available": true,
+          "quality_improved": true,
+          "quality_acceptable": false,
+          "quality_output_preserved": true,
+          "base_thd": 0.8302119023357514,
+          "scenario_thd": 0.22378114322681902
+        },
+        "diagnostic_outcome": {
+          "status": "partially_resolved",
+          "technical_label": "Residual distortion",
+          "label": "Distorsione ridotta ma ancora elevata",
+          "reason": "La THD migliora, ma resta sopra la soglia del 10% richiesta per una correzione risolutiva (83.0% -> 22.4%).",
+          "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+          "stop_automation": false,
+          "confidence": "low",
+          "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
+        },
+        "viewer": {
+          "model": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_4\\run\\13_viewer_model.json",
+          "layout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_4\\run\\14_viewer_layout.json",
+          "svg": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_4\\run\\15_viewer.svg"
+        },
+        "viewer_error": null,
+        "executed_scenarios_count": 4
+      }
+    ]
+  }
+]
+```
+
+## Evidenze tecniche correnti
+## 03_node_map.json
+```text
+{
+  "circuit_id": "a06",
+  "source_format": "pipeline2.0_node_map",
+  "nodes": [
+    {
+      "node_id": "0",
+      "kind": "ground",
+      "terminals": [
+        "capacitor4.2_t2",
+        "gnd9.1_t1",
+        "gnd9.2_t1",
+        "gnd9.3_t1",
+        "gnd9.4_t1",
+        "resistor22.3_t2",
+        "resistor22.6_t2",
+        "signal_source23.1_t2"
+      ],
+      "terminal_count": 8,
+      "source_groups": [
+        [
+          "capacitor4.2_t2",
+          "gnd9.3_t1"
+        ],
+        [
+          "gnd9.1_t1",
+          "signal_source23.1_t2"
+        ],
+        [
+          "gnd9.2_t1",
+          "resistor22.3_t2"
+        ],
+        [
+          "gnd9.4_t1",
+          "resistor22.6_t2"
+        ]
+      ]
+    },
+    {
+      "node_id": "N001",
+      "kind": "normal",
+      "terminals": [
+        "capacitor4.1_t1",
+        "resistor22.1_t2"
+      ],
+      "terminal_count": 2
+    },
+    {
+      "node_id": "N002",
+      "kind": "normal",
+      "terminals": [
+        "capacitor4.1_t2",
+        "npn_transistor18.1_B",
+        "resistor22.2_t2",
+        "resistor22.3_t1"
+      ],
+      "terminal_count": 4
+    },
+    {
+      "node_id": "N003",
+      "kind": "normal",
+      "terminals": [
+        "capacitor4.2_t1",
+        "npn_transistor18.1_E",
+        "resistor22.5_t1"
+      ],
+      "terminal_count": 3
+    },
+    {
+      "node_id": "N004",
+      "kind": "normal",
+      "terminals": [
+        "capacitor4.3_t1",
+        "npn_transistor18.1_C",
+        "resistor22.4_t2"
+      ],
+      "terminal_count": 3
+    },
+    {
+      "node_id": "N005",
+      "kind": "normal",
+      "terminals": [
+        "capacitor4.3_t2",
+        "resistor22.6_t1",
+        "terminal26.3_t1"
+      ],
+      "terminal_count": 3
+    },
+    {
+      "node_id": "N006",
+      "kind": "normal",
+      "terminals": [
+        "resistor22.1_t1",
+        "signal_source23.1_t1"
+      ],
+      "terminal_count": 2
+    },
+    {
+      "node_id": "N007",
+      "kind": "normal",
+      "terminals": [
+        "resistor22.2_t1",
+        "resistor22.4_t1",
+        "terminal26.1_t1"
+      ],
+      "terminal_count": 3
+    },
+    {
+      "node_id": "N008",
+      "kind": "normal",
+      "terminals": [
+        "resistor22.5_t2",
+        "terminal26.2_t1"
+      ],
+      "terminal_count": 2
+    }
+  ],
+  "terminal_to_node": {
+    "capacitor4.1_t1": "N001",
+    "capacitor4.1_t2": "N002",
+    "capacitor4.2_t1": "N003",
+    "capacitor4.2_t2": "0",
+    "capacitor4.3_t1": "N004",
+    "capacitor4.3_t2": "N005",
+    "gnd9.1_t1": "0",
+    "gnd9.2_t1": "0",
+    "gnd9.3_t1": "0",
+    "gnd9.4_t1": "0",
+    "npn_transistor18.1_B": "N002",
+    "npn_transistor18.1_C": "N004",
+    "npn_transistor18.1_E": "N003",
+    "resistor22.1_t1": "N006",
+    "resistor22.1_t2": "N001",
+    "resistor22.2_t1": "N007",
+    "resistor22.2_t2": "N002",
+    "resistor22.3_t1": "N002",
+    "resistor22.3_t2": "0",
+    "resistor22.4_t1": "N007",
+    "resistor22.4_t2": "N004",
+    "resistor22.5_t1": "N003",
+    "resistor22.5_t2": "N008",
+    "resistor22.6_t1": "N005",
+    "resistor22.6_t2": "0",
+    "signal_source23.1_t1": "N006",
+    "signal_source23.1_t2": "0",
+    "terminal26.1_t1": "N007",
+    "terminal26.2_t1": "N008",
+    "terminal26.3_t1": "N005"
+  },
+  "component_terminal_nodes": {
+    "capacitor4.1": {
+      "t1": "N001",
+      "t2": "N002"
+    },
+    "capacitor4.2": {
+      "t1": "N003",
+      "t2": "0"
+    },
+    "capacitor4.3": {
+      "t1": "N004",
+      "t2": "N005"
+    },
+    "gnd9.1": {
+      "t1": "0"
+    },
+    "gnd9.2": {
+      "t1": "0"
+    },
+    "gnd9.3": {
+      "t1": "0"
+    },
+    "gnd9.4": {
+      "t1": "0"
+    },
+    "npn_transistor18.1": {
+      "B": "N002",
+      "C": "N004",
+      "E": "N003"
+    },
+    "resistor22.1": {
+      "t1": "N006",
+      "t2": "N001"
+    },
+    "resistor22.2": {
+      "t1": "N007",
+      "t2": "N002"
+    },
+    "resistor22.3": {
+      "t1": "N002",
+      "t2": "0"
+    },
+    "resistor22.4": {
+      "t1": "N007",
+      "t2": "N004"
+    },
+    "resistor22.5": {
+      "t1": "N003",
+      "t2": "N008"
+    },
+    "resistor22.6": {
+      "t1": "N005",
+      "t2": "0"
+    },
+    "signal_source23.1": {
+      "t1": "N006",
+      "t2": "0"
+    },
+    "terminal26.1": {
+      "t1": "N007"
+    },
+    "terminal26.2": {
+      "t1": "N008"
+    },
+    "terminal26.3": {
+      "t1": "N005"
+    }
+  },
+  "warnings": {
+    "ground_groups_count": 4,
+    "multiple_ground_groups_merged_as_node_0": true,
+    "singleton_nodes": [],
+    "original_warnings": {
+      "unconnected_terminals": [],
+      "unmatched_terminals": [],
+      "suspicious_matches": []
+    },
+    "normalization_warnings": []
+  },
+  "stats": {
+    "nodes_count": 9,
+    "normal_nodes_count": 8,
+    "ground_nodes_count": 1,
+    "ground_groups_count": 4,
+    "terminal_to_node_count": 30,
+    "singleton_nodes_count": 0
+  }
+}
+
+```
+
+## 06_component_rules.json
+```text
+{
+  "circuit_id": "a06",
+  "source_format": "pipeline2.0_component_rules",
+  "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\pipeline2_manual_values\\batchA\\a06_values.yaml",
+  "spice_classes_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\pipeline2_spice_classes.yaml",
+  "supplies": {
+    "VCC": {
+      "status": "spice_ready",
+      "spice_prefix": "V",
+      "emit_as": "independent_voltage_source",
+      "nodes": [
+        "N007",
+        "0"
+      ],
+      "parameters": {
+        "terminal": "terminal26.1_t1",
+        "value": 12,
+        "unit": "V",
+        "reference": 0,
+        "type": "dc",
+        "source": "manual_from_image_label",
+        "label_text": "VCC 12 V",
+        "node": "N007"
+      }
+    },
+    "VEE": {
+      "status": "spice_ready",
+      "spice_prefix": "V",
+      "emit_as": "independent_voltage_source",
+      "nodes": [
+        "N008",
+        "0"
+      ],
+      "parameters": {
+        "terminal": "terminal26.2_t1",
+        "value": 0,
+        "unit": "V",
+        "reference": 0,
+        "type": "dc",
+        "source": "manual_from_image_label",
+        "label_text": "VEE 0 V",
+        "node": "N008"
+      }
+    }
+  },
+  "components": {
+    "capacitor4.1": {
+      "class_name": "Capacitor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "C",
+      "emit_as": "capacitor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N001",
+        "N002"
+      ],
+      "parameters": {
+        "value": 1,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "Cc1 1 uF"
+      }
+    },
+    "capacitor4.2": {
+      "class_name": "Capacitor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "C",
+      "emit_as": "capacitor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N003",
+        "0"
+      ],
+      "parameters": {
+        "value": 100,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "CE 100 uF"
+      }
+    },
+    "capacitor4.3": {
+      "class_name": "Capacitor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "C",
+      "emit_as": "capacitor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N004",
+        "N005"
+      ],
+      "parameters": {
+        "value": 10,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "Cc2 10 uF"
+      }
+    },
+    "gnd9.1": {
+      "class_name": "GND",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    "gnd9.2": {
+      "class_name": "GND",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    "gnd9.3": {
+      "class_name": "GND",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    "gnd9.4": {
+      "class_name": "GND",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    "npn_transistor18.1": {
+      "class_name": "NPN_Transistor",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "Q",
+      "emit_as": "bjt_npn",
+      "node_order": [
+        "C",
+        "B",
+        "E"
+      ],
+      "nodes": [
+        "N004",
+        "N002",
+        "N003"
+      ],
+      "parameters": {
+        "model": "2N2222",
+        "source": "manual_assumption",
+        "label_text": "NPN transistor"
+      }
+    },
+    "resistor22.1": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N006",
+        "N001"
+      ],
+      "parameters": {
+        "value": 1,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "Rs 1 kOhm"
+      }
+    },
+    "resistor22.2": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N007",
+        "N002"
+      ],
+      "parameters": {
+        "value": 100,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "100 kOhm"
+      }
+    },
+    "resistor22.3": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N002",
+        "0"
+      ],
+      "parameters": {
+        "value": 47,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "47 kOhm"
+      }
+    },
+    "resistor22.4": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N007",
+        "N004"
+      ],
+      "parameters": {
+        "value": 6.8,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "6.8 kOhm"
+      }
+    },
+    "resistor22.5": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N003",
+        "N008"
+      ],
+      "parameters": {
+        "value": 3.9,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "3.9 kOhm"
+      }
+    },
+    "resistor22.6": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N005",
+        "0"
+      ],
+      "parameters": {
+        "value": 10,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "RL 10 kOhm"
+      }
+    },
+    "signal_source23.1": {
+      "class_name": "Signal_Source",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "V",
+      "emit_as": "independent_voltage_source",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N006",
+        "0"
+      ],
+      "parameters": {
+        "type": "sin",
+        "waveform": "sin",
+        "value": 1,
+        "unit": "V",
+        "offset": 0,
+        "amplitude": 1,
+        "frequency": 100,
+        "frequency_unit": "Hz",
+        "source": "manual_from_image_label",
+        "label_text": "vs AC 1",
+        "note": "Frequency not shown in the image; 100 Hz is assumed for transient simulation."
+      }
+    },
+    "terminal26.1": {
+      "class_name": "Terminal",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "External terminal/label; useful for nodes and interface handling."
+    },
+    "terminal26.2": {
+      "class_name": "Terminal",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "External terminal/label; useful for nodes and interface handling."
+    },
+    "terminal26.3": {
+      "class_name": "Terminal",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "External terminal/label; useful for nodes and interface handling."
+    }
+  },
+  "simulation": {
+    "analyses": [
+      "op",
+      "tran"
+    ],
+    "tran": {
+      "step": "0.1ms",
+      "stop": "50ms"
+    }
+  },
+  "stats": {
+    "components_total": 18,
+    "spice_ready_components": 11,
+    "not_emitted_components": 7,
+    "measurement_components": 0,
+    "missing_components": 0,
+    "unsupported_components": 0,
+    "pin_aware_components": 0,
+    "invalid_components": 0,
+    "supplies_ready_count": 2
+  }
+}
+
+```
+
+## 07_netlist.cir
+```text
+* pipeline2.0 netlist
+* circuit: a06
+
+VVCC N007 0 DC 12
+VVEE N008 0 DC 0
+Ccapacitor4_1 N001 N002 1u
+Ccapacitor4_2 N003 0 100u
+Ccapacitor4_3 N004 N005 10u
+Qnpn_transistor18_1 N004 N002 N003 2N2222
+Rresistor22_1 N006 N001 1k
+Rresistor22_2 N007 N002 100k
+Rresistor22_3 N002 0 47k
+Rresistor22_4 N007 N004 6.8k
+Rresistor22_5 N003 N008 3.9k
+Rresistor22_6 N005 0 10k
+Vsignal_source23_1 N006 0 SIN(0 1 100)
+
+.model 2N2222 NPN(IS=14.34f BF=255.9 VAF=74.03 IKF=0.2847 ISE=14.34f NE=1.307 BR=6.092 NR=1.005 VAR=11.96 IKR=0.0 ISC=0.0 NC=2 RB=10 RC=1 RE=0.1 CJE=22.01p VJE=0.75 MJE=0.377 CJC=7.306p VJC=0.75 MJC=0.3416 TF=411.1p TR=46.91n)
+
+.op
+.save all
+.tran 0.1ms 50ms
+
+.control
+set wr_singlescale
+set wr_vecnames
+run
+wrdata 08_tran.csv time v(N001) v(N002) v(N003) v(N004) v(N005) v(N006) v(N007) v(N008)
+.endc
+.end
+
+```
+
+## 07_spice_emit_report.json
+```text
+{
+  "circuit_id": "a06",
+  "source_format": "pipeline2.0_spice_emit_report",
+  "emitted_elements": 13,
+  "skipped_elements": 7,
+  "skipped_components": [
+    "gnd9.1",
+    "gnd9.2",
+    "gnd9.3",
+    "gnd9.4",
+    "terminal26.1",
+    "terminal26.2",
+    "terminal26.3"
+  ],
+  "informational_skips": [
+    "gnd9.1: structural component not emitted",
+    "gnd9.2: structural component not emitted",
+    "gnd9.3: structural component not emitted",
+    "gnd9.4: structural component not emitted",
+    "terminal26.1: structural component not emitted",
+    "terminal26.2: structural component not emitted",
+    "terminal26.3: structural component not emitted"
+  ],
+  "measurement_points": [],
+  "analyses": [
+    "op",
+    "tran"
+  ],
+  "transient_export": {
+    "path": "08_tran.csv",
+    "nodes": [
+      "N001",
+      "N002",
+      "N003",
+      "N004",
+      "N005",
+      "N006",
+      "N007",
+      "N008"
+    ]
+  },
+  "models": [
+    "2N2222"
+  ],
+  "warnings": []
+}
+
+```
+
+## 08_ngspice_stdout.txt
+```text
+
+Note: No compatibility mode selected!
+
+
+Circuit: * pipeline2.0 netlist
+
+Doing analysis at TEMP = 27.000000 and TNOM = 27.000000
+
+Using SPARSE 1.3 as Direct Linear Solver
+
+No. of Data Rows : 1
+
+Initial Transient Solution
+--------------------------
+
+Node                                   Voltage
+----                                   -------
+n007                                        12
+n008                                         0
+n001                                         0
+n002                                     3.664
+n003                                   3.02446
+n004                                   6.76332
+n005                                         0
+n006                                         0
+vsignal_source23_1#branch                    0
+vvee#branch                        0.000775502
+vvcc#branch                        -0.00085346
+
+
+No. of Data Rows : 513
+Doing analysis at TEMP = 27.000000 and TNOM = 27.000000
+
+Using SPARSE 1.3 as Direct Linear Solver
+
+No. of Data Rows : 1
+
+Initial Transient Solution
+--------------------------
+
+Node                                   Voltage
+----                                   -------
+n007                                        12
+n008                                         0
+n001                                         0
+n002                                     3.664
+n003                                   3.02446
+n004                                   6.76332
+n005                                         0
+n006                                         0
+vsignal_source23_1#branch                    0
+vvee#branch                        0.000775502
+vvcc#branch                        -0.00085346
+
+
+No. of Data Rows : 513
+	Node                                  Voltage
+	----                                  -------
+	----	-------
+	n006                             0.000000e+00
+	n005                             0.000000e+00
+	n004                             6.763323e+00
+	n003                             3.024458e+00
+	n002                             3.664000e+00
+	n001                             0.000000e+00
+	n008                             0.000000e+00
+	n007                             1.200000e+01
+
+	Source	Current
+	------	-------
+
+	vvcc#branch                      -8.53460e-04
+	vvee#branch                      7.755021e-04
+	vsignal_source23_1#branch        0.000000e+00
+
+ BJT models (Bipolar Junction Transistor)
+      model                2n2222
+
+       type                   npn
+       tnom                    27
+         is             1.434e-14
+        ibe                     0
+        ibc                     0
+         bf                 255.9
+         nf                     1
+        vaf                 74.03
+        ikf                0.2847
+        ise             1.434e-14
+         ne                 1.307
+         br                 6.092
+         nr                 1.005
+        var                 11.96
+        ikr                     0
+        isc                     0
+         nc                     2
+         rb                    10
+        irb                     0
+        rbm                    10
+         re                   0.1
+         rc                     1
+        cje             2.201e-11
+        vje                  0.75
+        mje                 0.377
+         tf             4.111e-10
+        xtf                     0
+        vtf                     0
+        itf                     0
+        ptf                     0
+        cjc             7.306e-12
+        vjc                  0.75
+        mjc                0.3416
+       xcjc                     1
+         tr             4.691e-08
+        cjs                     0
+        vjs                  0.75
+        mjs                     0
+        xtb                     0
+         eg                  1.11
+        xti                     3
+         fc                   0.5
+         kf                     0
+         af                     0
+        iss                     0
+         ns                     1
+        rco                  0.01
+         vo                    10
+      gamma                 1e-11
+        qco                     0
+       tlev                     0
+      tlevc                     0
+       tbf1                     0
+       tbf2                     0
+       tbr1                     0
+       tbr2                     0
+      tikf1                     0
+      tikf2                     0
+      tikr1                     0
+      tikr2                     0
+      tirb1                     0
+      tirb2                     0
+       tnc1                     0
+       tnc2                     0
+       tne1                     0
+       tne2                     0
+       tnf1                     0
+       tnf2                     0
+       tnr1                     0
+       tnr2                     0
+       trb1                     0
+       trb2                     0
+       trc1                     0
+       trc2                     0
+       tre1                     0
+       tre2                     0
+       trm1                     0
+       trm2                     0
+      tvaf1                     0
+      tvaf2                     0
+      tvar1                     0
+      tvar2                     0
+        ctc                     0
+        cte                     0
+        cts                     0
+       tvjc                     0
+       tvje                     0
+       tvjs                     0
+      titf1                     0
+      titf2                     0
+       ttf1                     0
+       ttf2                     0
+       ttr1                     0
+       ttr2                     0
+      tmje1                     0
+      tmje2                     0
+      tmjc1                     0
+      tmjc2                     0
+      tmjs1                     0
+      tmjs2                     0
+       tns1                     0
+       tns2                     0
+        nkf                   0.5
+       tis1                     0
+       tis2                     0
+      tise1                     0
+      tise2                     0
+      tisc1                     0
+      tisc2                     0
+      tiss1                     0
+      tiss2                     0
+   quasimod                     0
+         vg                 1.206
+         cn                  2.42
+          d                  0.87
+    vbe_max                 1e+99
+    vbc_max                 1e+99
+    vce_max                 1e+99
+     pd_max                 1e+99
+     ic_max                 1e+99
+     ib_max                 1e+99
+     te_max                 1e+99
+       rth0                     0
+
+ Capacitor models (Fixed capacitor)
+      model                     C
+
+        cap                     0
+         cj                     0
+       cjsw                     0
+       defw                 1e-05
+       defl                     0
+     narrow                     0
+      short                     0
+        del                     0
+        tc1                     0
+        tc2                     0
+         di                     0
+      thick                     0
+     bv_max                 1e+99
+
+ Resistor models (Simple linear resistor)
+      model                     R
+
+        rsh                     0
+     narrow                     0
+      short                     0
+        tc1                     0
+        tc2                     0
+        tce                     0
+       defw                 1e-05
+          l                 1e-05
+         kf                     0
+         af                     0
+          r                     0
+     bv_max                 1e+99
+         lf                     1
+         wf                     1
+         ef                     1
+
+ BJT: Bipolar Junction Transistor
+     device   qnpn_transistor18_1
+      model                2n2222
+         ic           5.22697e-07
+         ib          -4.41586e-07
+         ie           -8.1121e-08
+        vbe              0.117031
+        vbc              -7.10683
+         gm           5.54364e-11
+        gpi           9.29591e-07
+        gmu           1.29741e-07
+         gx                   0.1
+         go           1.78726e-14
+        cpi           2.34637e-11
+        cmu            3.2748e-12
+        cbx                     0
+       csub                     0
+
+ Capacitor: Fixed capacitor
+     device         ccapacitor4_3         ccapacitor4_2         ccapacitor4_1
+      model                     C                     C                     C
+capacitance                 1e-05                0.0001                 1e-06
+      dtemp                     0                     0                     0
+     bv_max                 1e+99                 1e+99                 1e+99
+          i           0.000276985          -0.000740712          -2.64208e-05
+          p            0.00203393           -0.00213998           7.87259e-05
+
+ Resistor: Simple linear resistor
+     device         rresistor22_6         rresistor22_5         rresistor22_4
+      model                     R                     R                     R
+ resistance                 10000                  3900                  6800
+         ac                 10000                  3900                  6800
+      dtemp                     0                     0                     0
+     bv_max                 1e+99                 1e+99                 1e+99
+      noisy                     1                     1                     1
+          i           0.000276985           0.000740793           0.000277508
+          p           0.000767207            0.00214022           0.000523672
+
+ Resistor: Simple linear resistor
+     device         rresistor22_3         rresistor22_2         rresistor22_1
+      model                     R                     R                     R
+ resistance                 47000                100000                  1000
+         ac                 47000                100000                  1000
+      dtemp                     0                     0                     0
+     bv_max                 1e+99                 1e+99                 1e+99
+      noisy                     1                     1                     1
+          i           6.39599e-05           8.99388e-05          -2.64208e-05
+          p           0.000192271           0.000808899           6.98057e-07
+
+ Vsource: Independent voltage source
+     device    vsignal_source23_1                  vvee                  vvcc
+         dc                     0                     0                    12
+      acmag                     0                     0                     0
+      pulse                     0         -         -
+                                1                    
+                              100                    
+        sin                     0         -         -
+                                1                    
+                              100                    
+        exp                     0         -         -
+                                1                    
+                              100                    
+        pwl                     0         -         -
+                                1                    
+                              100                    
+       sffm                     0         -         -
+                                1                    
+                              100                    
+         am                     0         -         -
+                                1                    
+                              100                    
+    trnoise                     0         -         -
+                                1                    
+                              100                    
+   trrandom                     0         -         -
+                                1                    
+                              100                    
+    portnum                     0                     0                     0
+         z0                     0                     0                     0
+        pwr                     0                     0                     0
+       freq                     0                     0                     0
+      phase                     0                     0                     0
+          i           2.64208e-05           0.000740793          -0.000367447
+          p          -3.23561e-20                     0           -0.00440936
+
+
+Total analysis time (seconds) = 0.0092702
+
+Total elapsed time (seconds) = 0.083 
+
+Total DRAM available = 32239.535 MB.
+DRAM currently available = 16364.188 MB.
+Maximum ngspice program size =   15.562 MB.
+Current ngspice program size =   15.562 MB.
+
+
+```
+
+## 08_ngspice_stderr.txt
+```text
+
+```
+
+## 10_diagnostic_context.json
+```text
+{
+  "source_format": "pipeline2.0_diagnostic_context_manifest",
+  "batch_name": "batchA",
+  "experiment_name": "experiment4",
+  "circuit_id": "a06",
+  "user_problem": "Il circuito amplifica, ma l’uscita mi sembra troppo distorta o poco pulita. Individua la causa ed esegui gli scenari necessari per migliorare il segnale di uscita.",
+  "pipeline2_output_dir": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06",
+  "summary": {
+    "spice_status": "success",
+    "spice_exit_code": 0,
+    "spice_message": "ngspice completed successfully.",
+    "emitted_elements": 13,
+    "skipped_elements": 7,
+    "emit_warnings_count": 0,
+    "skipped_components_count": 7,
+    "node_count": 9,
+    "ground_groups_count": 4,
+    "singleton_nodes_count": 0,
+    "bound_components": 11,
+    "missing_components": 0,
+    "unsupported_components": 0,
+    "spice_ready_components": 11,
+    "rules_missing_components": 0,
+    "has_tran_csv": true,
+    "has_tran_plot": true
+  },
+  "artifacts": {
+    "graph": {
+      "step": "01",
+      "available": true,
+      "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\01_graph.json",
+      "role": "Graph JSON copied from Pipeline 1.0."
+    },
+    "normalized_circuit": {
+      "step": "02",
+      "available": true,
+      "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\02_normalized_circuit.json",
+      "role": "Normalized circuit representation used by Pipeline 2.0."
+    },
+    "node_map": {
+      "step": "03",
+      "available": true,
+      "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\03_node_map.json",
+      "role": "Maps component terminals to SPICE node names."
+    },
+    "values_bound": {
+      "step": "04",
+      "available": true,
+      "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\04_values_bound.json",
+      "role": "Values and labels bound to graph components."
+    },
+    "component_rules": {
+      "step": "06",
+      "available": true,
+      "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\06_component_rules.json",
+      "role": "SPICE conversion rules for each component."
+    },
+    "netlist": {
+      "step": "07",
+      "available": true,
+      "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\07_netlist.cir",
+      "role": "Generated SPICE netlist."
+    },
+    "spice_emit_report": {
+      "step": "07",
+      "available": true,
+      "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\07_spice_emit_report.json",
+      "role": "Report of emitted, skipped and warning components."
+    },
+    "spice_run": {
+      "step": "08",
+      "available": true,
+      "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\08_spice_run.json",
+      "role": "Structured ngspice execution report."
+    },
+    "ngspice_stdout": {
+      "step": "08",
+      "available": true,
+      "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\08_ngspice_stdout.txt",
+      "role": "Raw ngspice stdout log."
+    },
+    "ngspice_stderr": {
+      "step": "08",
+      "available": true,
+      "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\08_ngspice_stderr.txt",
+      "role": "Raw ngspice stderr log."
+    },
+    "tran_csv": {
+      "step": "08",
+      "available": true,
+      "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\08_tran.csv",
+      "role": "Clean transient CSV, when .tran data is available."
+    },
+    "tran_plot_png": {
+      "step": "08",
+      "available": true,
+      "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\08_tran_plot.png",
+      "role": "Transient plot PNG, when generated."
+    },
+    "tran_plot_svg": {
+      "step": "08",
+      "available": false,
+      "path": null,
+      "role": "Transient plot SVG fallback, when generated."
+    }
+  },
+  "executed_scenarios": [
+    {
+      "scenario_dir": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_1",
+      "scenario_id": "agent_scenario_1",
+      "title": "Aumentare leggermente la polarizzazione di base riducendo Rresistor22_3",
+      "status": "spice_success",
+      "spice_status": "success",
+      "diagnostic_outcome": {
+        "status": "partially_resolved",
+        "technical_label": "Distortion not improved",
+        "label": "Distorsione non migliorata abbastanza",
+        "reason": "La THD dell'uscita non diminuisce almeno del 20% rispetto alla base (83.0% -> 83.3%).",
+        "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+        "stop_automation": false,
+        "confidence": "low",
+        "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
+      },
+      "comparison_summary": {
+        "requested_count": 4,
+        "changed_count": 4,
+        "activated_count": 0,
+        "missing_count": 0,
+        "expected_count": 4,
+        "expectations_met_count": 4,
+        "expectations_failed_count": 0,
+        "expectations_missing_count": 0,
+        "meaningful_improvement_count": 1,
+        "quality_required": true,
+        "quality_available": true,
+        "quality_improved": false,
+        "quality_acceptable": false,
+        "quality_output_preserved": true,
+        "base_thd": 0.8302119023357514,
+        "scenario_thd": 0.8334762635511467
+      },
+      "artifacts": {
+        "scenario_definition": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_1\\scenario.json",
+          "role": "Scenario selected by the user and saved before execution."
+        },
+        "scenario_status": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_1\\scenario_status.json",
+          "role": "Current scenario status, SPICE status and diagnostic outcome."
+        },
+        "controlled_scenario_report": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_1\\12_controlled_scenarios.json",
+          "role": "Report produced by the controlled scenario runner."
+        },
+        "scenario_comparison": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_1\\scenario_comparison.json",
+          "role": "Base-vs-scenario comparison used to evaluate the scenario."
+        }
+      }
+    },
+    {
+      "scenario_dir": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_2",
+      "scenario_id": "agent_scenario_2",
+      "title": "Ridurre l'ampiezza della sorgente sinusoidale per verificare overdrive in ingresso",
+      "status": "spice_success",
+      "spice_status": "success",
+      "diagnostic_outcome": {
+        "status": "partially_resolved",
+        "technical_label": "Diagnostic hypothesis confirmed",
+        "label": "Ipotesi diagnostica confermata",
+        "reason": "I criteri dichiarati dal test diagnostico sono soddisfatti, ma lo scenario non applica una correzione del sintomo utente.",
+        "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+        "stop_automation": false,
+        "confidence": "low",
+        "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
+      },
+      "comparison_summary": {
+        "requested_count": 4,
+        "changed_count": 4,
+        "activated_count": 0,
+        "missing_count": 0,
+        "expected_count": 4,
+        "expectations_met_count": 4,
+        "expectations_failed_count": 0,
+        "expectations_missing_count": 0,
+        "meaningful_improvement_count": 1,
+        "quality_required": true,
+        "quality_available": true,
+        "quality_improved": true,
+        "quality_acceptable": false,
+        "quality_output_preserved": true,
+        "base_thd": 0.8302119023357514,
+        "scenario_thd": 0.5397573371971582
+      },
+      "artifacts": {
+        "scenario_definition": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_2\\scenario.json",
+          "role": "Scenario selected by the user and saved before execution."
+        },
+        "scenario_status": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_2\\scenario_status.json",
+          "role": "Current scenario status, SPICE status and diagnostic outcome."
+        },
+        "controlled_scenario_report": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_2\\12_controlled_scenarios.json",
+          "role": "Report produced by the controlled scenario runner."
+        },
+        "scenario_comparison": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_2\\scenario_comparison.json",
+          "role": "Base-vs-scenario comparison used to evaluate the scenario."
+        }
+      }
+    },
+    {
+      "scenario_dir": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_3",
+      "scenario_id": "agent_scenario_3",
+      "title": "Ridurre moderatamente l'ampiezza della sorgente sinusoidale per migliorare direttamente la linearita",
+      "status": "spice_success",
+      "spice_status": "success",
+      "diagnostic_outcome": {
+        "status": "partially_resolved",
+        "technical_label": "Residual distortion",
+        "label": "Distorsione ridotta ma ancora elevata",
+        "reason": "La THD migliora, ma resta sopra la soglia del 10% richiesta per una correzione risolutiva (83.0% -> 35.0%).",
+        "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+        "stop_automation": false,
+        "confidence": "low",
+        "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
+      },
+      "comparison_summary": {
+        "requested_count": 4,
+        "changed_count": 4,
+        "activated_count": 0,
+        "missing_count": 0,
+        "expected_count": 4,
+        "expectations_met_count": 4,
+        "expectations_failed_count": 0,
+        "expectations_missing_count": 0,
+        "meaningful_improvement_count": 1,
+        "quality_required": true,
+        "quality_available": true,
+        "quality_improved": true,
+        "quality_acceptable": false,
+        "quality_output_preserved": true,
+        "base_thd": 0.8302119023357514,
+        "scenario_thd": 0.35007611300098507
+      },
+      "artifacts": {
+        "scenario_definition": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_3\\scenario.json",
+          "role": "Scenario selected by the user and saved before execution."
+        },
+        "scenario_status": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_3\\scenario_status.json",
+          "role": "Current scenario status, SPICE status and diagnostic outcome."
+        },
+        "controlled_scenario_report": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_3\\12_controlled_scenarios.json",
+          "role": "Report produced by the controlled scenario runner."
+        },
+        "scenario_comparison": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_3\\scenario_comparison.json",
+          "role": "Base-vs-scenario comparison used to evaluate the scenario."
+        }
+      }
+    },
+    {
+      "scenario_dir": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_4",
+      "scenario_id": "agent_scenario_4",
+      "title": "Ridurre ulteriormente l'ampiezza della sorgente sinusoidale per cercare una correzione verificata della distorsione",
+      "status": "spice_success",
+      "spice_status": "success",
+      "diagnostic_outcome": {
+        "status": "partially_resolved",
+        "technical_label": "Residual distortion",
+        "label": "Distorsione ridotta ma ancora elevata",
+        "reason": "La THD migliora, ma resta sopra la soglia del 10% richiesta per una correzione risolutiva (83.0% -> 22.4%).",
+        "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+        "stop_automation": false,
+        "confidence": "low",
+        "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
+      },
+      "comparison_summary": {
+        "requested_count": 4,
+        "changed_count": 4,
+        "activated_count": 0,
+        "missing_count": 0,
+        "expected_count": 4,
+        "expectations_met_count": 4,
+        "expectations_failed_count": 0,
+        "expectations_missing_count": 0,
+        "meaningful_improvement_count": 1,
+        "quality_required": true,
+        "quality_available": true,
+        "quality_improved": true,
+        "quality_acceptable": false,
+        "quality_output_preserved": true,
+        "base_thd": 0.8302119023357514,
+        "scenario_thd": 0.22378114322681902
+      },
+      "artifacts": {
+        "scenario_definition": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_4\\scenario.json",
+          "role": "Scenario selected by the user and saved before execution."
+        },
+        "scenario_status": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_4\\scenario_status.json",
+          "role": "Current scenario status, SPICE status and diagnostic outcome."
+        },
+        "controlled_scenario_report": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_4\\12_controlled_scenarios.json",
+          "role": "Report produced by the controlled scenario runner."
+        },
+        "scenario_comparison": {
+          "available": true,
+          "path": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_4\\scenario_comparison.json",
+          "role": "Base-vs-scenario comparison used to evaluate the scenario."
+        }
+      }
+    }
+  ],
+  "scenario_outcome_summary": {
+    "available": true,
+    "best_scenario_id": "agent_scenario_1",
+    "best_outcome_status": "partially_resolved",
+    "best_stop_automation": false,
+    "interpretation_rule": "If a user asks which scenario resolves the problem, prefer the scenario with outcome_status='resolved_candidate' and stop_automation=true. Partially resolved scenarios are supporting diagnostics, not the main solution.",
+    "scenarios": [
+      {
+        "scenario_id": "agent_scenario_1",
+        "title": "Aumentare leggermente la polarizzazione di base riducendo Rresistor22_3",
+        "status": "spice_success",
+        "spice_status": "success",
+        "outcome_status": "partially_resolved",
+        "outcome_label": "Distorsione non migliorata abbastanza",
+        "outcome_technical_label": "Distortion not improved",
+        "outcome_reason": "La THD dell'uscita non diminuisce almeno del 20% rispetto alla base (83.0% -> 83.3%).",
+        "stop_automation": false,
+        "comparison_summary": {
+          "requested_count": 4,
+          "changed_count": 4,
+          "activated_count": 0,
+          "missing_count": 0,
+          "expected_count": 4,
+          "expectations_met_count": 4,
+          "expectations_failed_count": 0,
+          "expectations_missing_count": 0,
+          "meaningful_improvement_count": 1,
+          "quality_required": true,
+          "quality_available": true,
+          "quality_improved": false,
+          "quality_acceptable": false,
+          "quality_output_preserved": true,
+          "base_thd": 0.8302119023357514,
+          "scenario_thd": 0.8334762635511467
+        },
+        "quantity_summary": {
+          "changed": [
+            "v(N006)",
+            "v(N005)",
+            "v(N002)",
+            "v(N003)"
+          ],
+          "unchanged": [],
+          "missing": []
+        },
+        "score": 24
+      },
+      {
+        "scenario_id": "agent_scenario_2",
+        "title": "Ridurre l'ampiezza della sorgente sinusoidale per verificare overdrive in ingresso",
+        "status": "spice_success",
+        "spice_status": "success",
+        "outcome_status": "partially_resolved",
+        "outcome_label": "Ipotesi diagnostica confermata",
+        "outcome_technical_label": "Diagnostic hypothesis confirmed",
+        "outcome_reason": "I criteri dichiarati dal test diagnostico sono soddisfatti, ma lo scenario non applica una correzione del sintomo utente.",
+        "stop_automation": false,
+        "comparison_summary": {
+          "requested_count": 4,
+          "changed_count": 4,
+          "activated_count": 0,
+          "missing_count": 0,
+          "expected_count": 4,
+          "expectations_met_count": 4,
+          "expectations_failed_count": 0,
+          "expectations_missing_count": 0,
+          "meaningful_improvement_count": 1,
+          "quality_required": true,
+          "quality_available": true,
+          "quality_improved": true,
+          "quality_acceptable": false,
+          "quality_output_preserved": true,
+          "base_thd": 0.8302119023357514,
+          "scenario_thd": 0.5397573371971582
+        },
+        "quantity_summary": {
+          "changed": [
+            "v(N006)",
+            "v(N005)",
+            "v(N002)",
+            "v(N003)"
+          ],
+          "unchanged": [],
+          "missing": []
+        },
+        "score": 24
+      },
+      {
+        "scenario_id": "agent_scenario_3",
+        "title": "Ridurre moderatamente l'ampiezza della sorgente sinusoidale per migliorare direttamente la linearita",
+        "status": "spice_success",
+        "spice_status": "success",
+        "outcome_status": "partially_resolved",
+        "outcome_label": "Distorsione ridotta ma ancora elevata",
+        "outcome_technical_label": "Residual distortion",
+        "outcome_reason": "La THD migliora, ma resta sopra la soglia del 10% richiesta per una correzione risolutiva (83.0% -> 35.0%).",
+        "stop_automation": false,
+        "comparison_summary": {
+          "requested_count": 4,
+          "changed_count": 4,
+          "activated_count": 0,
+          "missing_count": 0,
+          "expected_count": 4,
+          "expectations_met_count": 4,
+          "expectations_failed_count": 0,
+          "expectations_missing_count": 0,
+          "meaningful_improvement_count": 1,
+          "quality_required": true,
+          "quality_available": true,
+          "quality_improved": true,
+          "quality_acceptable": false,
+          "quality_output_preserved": true,
+          "base_thd": 0.8302119023357514,
+          "scenario_thd": 0.35007611300098507
+        },
+        "quantity_summary": {
+          "changed": [
+            "v(N006)",
+            "v(N005)",
+            "v(N002)",
+            "v(N003)"
+          ],
+          "unchanged": [],
+          "missing": []
+        },
+        "score": 24
+      },
+      {
+        "scenario_id": "agent_scenario_4",
+        "title": "Ridurre ulteriormente l'ampiezza della sorgente sinusoidale per cercare una correzione verificata della distorsione",
+        "status": "spice_success",
+        "spice_status": "success",
+        "outcome_status": "partially_resolved",
+        "outcome_label": "Distorsione ridotta ma ancora elevata",
+        "outcome_technical_label": "Residual distortion",
+        "outcome_reason": "La THD migliora, ma resta sopra la soglia del 10% richiesta per una correzione risolutiva (83.0% -> 22.4%).",
+        "stop_automation": false,
+        "comparison_summary": {
+          "requested_count": 4,
+          "changed_count": 4,
+          "activated_count": 0,
+          "missing_count": 0,
+          "expected_count": 4,
+          "expectations_met_count": 4,
+          "expectations_failed_count": 0,
+          "expectations_missing_count": 0,
+          "meaningful_improvement_count": 1,
+          "quality_required": true,
+          "quality_available": true,
+          "quality_improved": true,
+          "quality_acceptable": false,
+          "quality_output_preserved": true,
+          "base_thd": 0.8302119023357514,
+          "scenario_thd": 0.22378114322681902
+        },
+        "quantity_summary": {
+          "changed": [
+            "v(N006)",
+            "v(N005)",
+            "v(N002)",
+            "v(N003)"
+          ],
+          "unchanged": [],
+          "missing": []
+        },
+        "score": 24
+      }
+    ]
+  },
+  "scenario_budget": {
+    "max_executable_scenarios": 5,
+    "executed_scenarios_count": 4,
+    "remaining_executable_scenarios": 1,
+    "budget_exhausted": false,
+    "last_scenario_available": true,
+    "policy": "At most 5 scenarios can be executed for the same circuit. When only one scenario remains, the agent should propose a single final scenario. When no scenario remains, the agent must stop proposing new scenarios and provide a final diagnostic conclusion."
+  },
+  "image_access": {
+    "included_by_default": false,
+    "can_be_requested": true,
+    "path": "data\\batchA\\a06.jpg",
+    "policy": "Only request the image if structured outputs suggest that the Graph JSON may be incomplete or wrong."
+  },
+  "agent_mode": "graph_grounded_readonly",
+  "agent_rules": [
+    "Treat this file as a manifest, not as the full diagnostic evidence.",
+    "Load the referenced artifacts needed for the answer.",
+    "Use graph, node map, component rules, netlist, stdout and stderr as evidence.",
+    "If executed_scenarios are available, use them as evidence for questions about scenario outcomes.",
+    "Do not invent values, connections, models or simulation results.",
+    "Do not use the image unless image_access is explicitly requested.",
+    "If Graph JSON inconsistency is suspected, explain which structured outputs suggest it.",
+    "In read-only mode, do not modify netlists and do not execute scenarios.",
+    "Never exceed 5 executed scenarios for the same circuit.",
+    "When the scenario budget is exhausted, stop proposing new scenarios and provide a final diagnostic conclusion."
+  ]
+}
+
+```

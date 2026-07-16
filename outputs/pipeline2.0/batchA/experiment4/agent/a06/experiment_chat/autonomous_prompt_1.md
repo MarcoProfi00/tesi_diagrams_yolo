@@ -42,6 +42,15 @@ Il circuito amplifica, ma l’uscita mi sembra troppo distorta o poco pulita. In
   Vpp(output) / Vpp(input), senza confondere due nodi entrambi di uscita.
 - Prima di attribuire un'uscita assoluta debole a un guasto, verifica se il
   circuito sta gia amplificando un ingresso molto piccolo.
+- Per sintomi di distorsione, clipping, saturazione o segnale poco pulito,
+  ogni scenario transitorio deve dichiarare quality="thd" e il blocco gain
+  deve identificare ingresso e uscita.
+- La pipeline calcola la THD sulle armoniche 2-5 nelle ultime tre oscillazioni
+  complete della sorgente SIN. Una correzione e risolutiva soltanto se la THD
+  diminuisce almeno del 20%, scende sotto il 10% e il guadagno fondamentale
+  non viene annullato.
+- Se la metrica THD non e disponibile o resta sopra soglia, considera lo
+  scenario parziale e continua con un test diverso, per esempio sul bias.
 - Ogni scenario deve avere una lista compare non vuota con grandezze osservabili.
 - Per scenari con piu rami o uscite, includi in compare almeno una grandezza per ciascuno.
 - Se l'obiettivo richiede di attivare o spegnere un componente, includi in compare

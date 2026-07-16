@@ -1,0 +1,20 @@
+{
+  "scenario_id": "scenario_1",
+  "title": "Alimentare il ramo PWR dal connettore",
+  "hypothesis": "The LED branch is inactive because node N002, labeled PWR, is not driven in the base netlist.",
+  "actions": [
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N002",
+      "negative": "0",
+      "value": "5V"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N002)",
+    "v(N004)",
+    "i(Rresistor22_1)"
+  ]
+}

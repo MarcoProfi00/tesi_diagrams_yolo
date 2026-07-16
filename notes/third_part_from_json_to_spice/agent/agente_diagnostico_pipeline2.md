@@ -2316,8 +2316,8 @@ Prossimi esperimenti:
 
 4. **Esperimento 4 - automazione agentica degli scenari**
 
-   Stato: prima versione implementata; validazione OpenAI sul Batch A da
-   eseguire.
+   Stato: implementata e validata in una prima passata OpenAI su `a01`, `a02`
+   e `a04`-`a10`; `a03` resta escluso per il noto limite topologico/SPICE.
 
    Obiettivo: confrontare due modalita selezionabili nella stessa web app:
 
@@ -2392,21 +2392,53 @@ Prossimi esperimenti:
      per ampiezza, guadagno, frequenza e forme d'onda;
    - campo `intent` obbligatorio: `correction` per migliorare il sintomo e
      `diagnostic` per isolare o confermare una causa;
-   - uno scenario `diagnostic` non puo arrestare il ciclo come risolto;
-   - in `tran`, correnti e potenze senza traccia CSV non sono criteri `expect`;
+   - una richiesta esplicita di correzione non puo chiudere come sola
+     `localized` finche resta budget; una run che dichiara e soddisfa i
+     criteri della correzione puo essere promossa senza rieseguire azioni
+     duplicate;
+   - la mappa opzionale `measure` seleziona `op` oppure `tran_vpp` per ogni
+     grandezza in `compare`, consentendo test misti nello stesso scenario;
+   - in `tran`, correnti e potenze possono essere criteri `expect` soltanto
+     quando `measure` le dichiara esplicitamente come misure `op`;
+   - un obiettivo AC/VAC richiede almeno una tensione misurata come `tran_vpp`:
+     una tensione DC non dimostra il funzionamento di un voltmetro AC;
+   - se il sintomo riguarda lo stato di un LED o di una lampada, una correzione
+     richiede anche una corrente o potenza diretta tra i criteri `expect`;
+   - se lo stesso sintomo combina AC/VAC e LED/lampada, anche i test diagnostici
+     devono verificare entrambi nello stesso scenario misto;
    - `unchanged` e ammesso soltanto per un vincolo di preservazione richiesto
      esplicitamente dall'utente;
    - `final_status=resolved` richiede una correzione verificata non vuota;
+   - `final_status=localized` puo chiudere il ciclo dopo un test diagnostico
+     forte, senza inventare una riparazione per consumare il budget residuo;
    - una correzione richiede almeno un miglioramento relativo del 10% oppure
      una vera attivazione/disattivazione;
+   - per lampeggio, periodicita, regolarita, duty cycle o durata di accensione,
+     ogni scenario `tran` dichiara `temporal_expect`; il runtime confronta i
+     profili viewer base/scenario e non accetta come risolutivo un test che
+     viola la periodicita richiesta;
    - per sintomi di amplificazione, gli scenari correttivi dichiarano
      `gain.input` e `gain.output`, entrambi presenti in `compare`, per misurare
      `Vpp(output) / Vpp(input)`;
+   - per distorsione e clipping con sorgente SIN, gli scenari transitori
+     dichiarano quality=thd; la pipeline usa le ultime tre oscillazioni,
+     fondamentale e armoniche 2-5;
+   - una correzione della distorsione richiede riduzione THD di almeno il 20%,
+     THD finale non superiore al 10% e guadagno fondamentale non annullato;
+   - pin distinti dello stesso connector restano reti separate salvo evidenza
+     topologica esplicita; non vengono collegati solo per attivare due funzioni;
+   - un pin collegato soltanto a uno switch verso massa non viene reinterpretato
+     come ingresso di alimentazione senza evidenze tecniche esplicite;
    - un solo retry per una risposta JSON non valida;
    - stop quando il problema e risolto o sufficientemente localizzato;
    - stop se non esistono scenari validi nuovi;
    - stop per errore non recuperabile o richiesta utente;
    - conclusione obbligatoria quando termina il budget.
+
+   Limite noto: le sequenze temporali tra componenti non sono ancora
+   verificabili quando la base run contiene solo `.op`. Serviranno una `.tran`
+   aggiungibile dallo scenario, profili per lampade e un criterio di ordine
+   temporale tra componenti.
 
    `resolved_candidate` dello step 12 e soltanto un'indicazione tecnica. La
    decisione finale deve restare semantica e distinguere una soluzione reale da
@@ -2461,6 +2493,27 @@ sintomo utente
 La prossima validazione non deve cambiare continuamente il prompt circuito per
 circuito. Deve invece misurare quanto bene lo stesso schema generale regge su
 piu casi, usando i report Batch A come riferimento.
+
+## Esperimento 5 - Generalizzazione Batch B
+
+Il passo successivo e applicare la stessa pipeline al Batch B senza partire da
+nuove regole per circuito.
+
+Ordine operativo:
+
+1. costruire le base run Batch B fino agli artefatti `01-08` e al viewer;
+2. leggere per ogni circuito immagine, Graph JSON, node map, netlist e output
+   SPICE per classificare i bisogni reali;
+3. provare prima `CHAT` con le primitive gia abilitate;
+4. introdurre una nuova primitiva soltanto se il limite e ricorrente e
+   generalizzabile come trasformazione netlist;
+5. eseguire `AGENT` sugli stessi sintomi e confrontare run, decisioni, evidenze
+   e conclusione con la modalita guidata.
+
+Il viewer resta lo stesso sistema run-aware: non deve essere ridisegnato per
+Batch B. Nuovi simboli o layout sono ammessi solo se rappresentano una classe
+di componenti riusabile. Le sequenze temporali tra componenti restano una fase
+successiva, distinta dalla prima generalizzazione Batch B.
 
 ## Limiti da dichiarare
 

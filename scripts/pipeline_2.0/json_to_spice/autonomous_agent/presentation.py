@@ -133,11 +133,17 @@ def build_evidence_item(item: dict[str, Any]) -> dict[str, Any]:
     quantity = str(item.get("quantity") or item.get("metric") or "Grandezza")
     metric = str(item.get("metric") or quantity)
     unit = engineering_unit(quantity, metric)
-    is_transient = bool(item.get("base_details") or item.get("scenario_details")) or ".vpp" in metric.lower()
+    measurement = str(item.get("measurement") or "").strip().lower()
+    is_transient = (
+        measurement == "tran_vpp"
+        or bool(item.get("base_details") or item.get("scenario_details"))
+        or ".vpp" in metric.lower()
+    )
     expectation = str(item.get("expectation") or "").strip().lower()
     return {
         "quantity": quantity,
         "metric": metric,
+        "measurement": measurement or ("tran_vpp" if is_transient else "op"),
         "analysis": "tran" if is_transient else "op",
         "base_value": item.get("base_value"),
         "scenario_value": item.get("scenario_value"),
@@ -259,6 +265,7 @@ def build_scenario_view(
         "evidence_count": len(evidence),
         "has_more_evidence": len(evidence) > MAX_VISIBLE_EVIDENCE,
         "has_transient": transient_available or any(item.get("analysis") == "tran" for item in evidence),
+        "quality_comparison": comparison.get("quality_comparison"),
         "viewer_available": viewer_available,
         "outcome_status": str(outcome.get("status") or "unknown"),
         "outcome_label": str(outcome.get("label") or "Esito da valutare"),

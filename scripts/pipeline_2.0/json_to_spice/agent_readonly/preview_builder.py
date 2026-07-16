@@ -201,6 +201,7 @@ def build_agent_input_preview(
                     f"- Outcome: `{outcome.get('status')}`",
                     f"- Stop automation: `{outcome.get('stop_automation')}`",
                     f"- Comparison: `{summary_data.get('changed_count')}/{summary_data.get('requested_count')}` changed",
+                    f"- LED profiles: `{json.dumps(scenario.get('led_profiles') or {}, ensure_ascii=False)}`",
                     "",
                 ]
             )

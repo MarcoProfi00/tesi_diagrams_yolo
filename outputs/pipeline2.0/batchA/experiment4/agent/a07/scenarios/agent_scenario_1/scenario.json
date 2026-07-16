@@ -1,0 +1,37 @@
+{
+  "title": "Alimentazione separata dei rami VAC e LED per verificare assenza di sorgenti sui due nodi di ingresso",
+  "hypothesis": "Il sintomo dipende dalla mancanza di eccitazione esterna sui due rami funzionalmente separati del connettore: N001 per il voltmetro VAC e N002 per il LED tramite Rresistor22_1. Applicando una sorgente AC a N001 e una sorgente DC a N002, il VAC deve diventare non nullo e il LED deve condurre contemporaneamente.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N001",
+      "negative": "0",
+      "value": "SIN(0 5 50)"
+    },
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N002",
+      "negative": "0",
+      "value": "5V"
+    }
+  ],
+  "compare": [
+    "v(N001)",
+    "v(N002)",
+    "v(N004)",
+    "i(Rresistor22_1)"
+  ],
+  "measure": {
+    "v(N001)": "tran_vpp",
+    "v(N002)": "tran_vpp",
+    "v(N004)": "tran_vpp",
+    "i(Rresistor22_1)": "op"
+  },
+  "expect": {
+    "v(N001)": "activated",
+    "i(Rresistor22_1)": "activated"
+  },
+  "scenario_id": "agent_scenario_1"
+}

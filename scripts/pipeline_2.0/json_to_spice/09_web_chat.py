@@ -732,7 +732,7 @@ def register_experiment2_scenarios_from_response(
     experiment: str | None,
     response_text: str,
 ) -> dict[str, Any] | None:
-    """Estrae gli scenari da una risposta agente e li accoda al registry."""
+    """Registra solo gli scenari con azioni tecniche realmente eseguibili."""
     registry = read_experiment2_scenario_registry(output_dir, batch, circuit, experiment)
     chat_dir = build_experiment2_chat_dir(output_dir, experiment)
     if registry is None or chat_dir is None:
@@ -763,6 +763,10 @@ def register_experiment2_scenarios_from_response(
     for local_index, raw_scenario in enumerate(extracted, start=1):
         scenario = normalize_human_text(json.dumps(unescape_html_entities(raw_scenario), ensure_ascii=False))
         scenario = json.loads(scenario)
+        if not scenario_is_executable(scenario):
+            # Una conclusione o un dato mancante non deve occupare un numero
+            # scenario ne' essere suggerito come comando eseguibile.
+            continue
         signature = registered_scenario_signature(scenario)
         if signature in existing_signatures:
             continue

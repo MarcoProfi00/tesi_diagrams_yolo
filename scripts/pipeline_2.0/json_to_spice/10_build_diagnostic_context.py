@@ -28,6 +28,7 @@ from pathlib import Path
 from typing import Any
 
 MAX_EXECUTABLE_SCENARIOS = 5
+VIEWER_MODEL_FILENAME = "13_viewer_model.json"
 
 
 ARTIFACTS = {
@@ -219,7 +220,31 @@ def build_summary(output_dir: Path) -> dict[str, Any]:
         "rules_missing_components": (component_rules.get("stats") or {}).get("missing_components"),
         "has_tran_csv": (output_dir / "08_tran.csv").exists(),
         "has_tran_plot": (output_dir / "08_tran_plot.png").exists() or (output_dir / "08_tran_plot.svg").exists(),
+        "led_profiles": build_led_profile_summary(output_dir),
     }
+
+
+def build_led_profile_summary(run_dir: Path) -> dict[str, dict[str, Any]]:
+    """Estrae dal viewer solo le metriche LED utili alla diagnosi temporale."""
+    model = read_json_safe(run_dir / VIEWER_MODEL_FILENAME)
+    profiles = ((model.get("transient") or {}).get("led_profiles") or {})
+    compact: dict[str, dict[str, Any]] = {}
+    for component_id, profile in profiles.items():
+        if not isinstance(profile, dict):
+            continue
+        compact[str(component_id)] = {
+            "state": profile.get("state"),
+            "regular_period": profile.get("regular_period"),
+            "frequency_hz": profile.get("frequency_hz"),
+            "duty_cycle": profile.get("duty_cycle"),
+            "on_fraction": profile.get("on_fraction"),
+            "pulse_count": profile.get("pulse_count"),
+            "voltage_min": profile.get("voltage_min"),
+            "voltage_max": profile.get("voltage_max"),
+            "anode_node": profile.get("anode_node"),
+            "cathode_node": profile.get("cathode_node"),
+        }
+    return compact
 
 
 def build_agent_rules() -> list[str]:
@@ -277,6 +302,7 @@ def build_executed_scenarios(
                 "spice_status": status.get("spice_status") or report.get("spice_status"),
                 "diagnostic_outcome": outcome,
                 "comparison_summary": summary,
+                "led_profiles": build_led_profile_summary(scenario_dir / "run"),
                 "artifacts": artifacts,
             }
         )
@@ -342,6 +368,9 @@ def build_scenario_outcome_summary(
         stop_automation = bool(outcome.get("stop_automation"))
         outcome_status = outcome.get("status")
 
+        meaningful_improvements = int(comparison_summary.get("meaningful_improvement_count") or 0)
+        expectations_met = int(comparison_summary.get("expectations_met_count") or 0)
+        quality_improved = bool(comparison_summary.get("quality_improved"))
         score = 0
         if stop_automation:
             score += 100
@@ -349,7 +378,19 @@ def build_scenario_outcome_summary(
             score += 80
         elif outcome_status == "partially_resolved":
             score += 20
-        score += int(comparison_summary.get("changed_count") or 0)
+        score += meaningful_improvements * 10
+        score += expectations_met * 5
+        if quality_improved:
+            score += 10
+
+        # `changed_count` dimostra una differenza numerica, non un miglioramento.
+        ranking_verified = bool(
+            stop_automation
+            or outcome_status == "resolved_candidate"
+            or meaningful_improvements
+            or expectations_met
+            or quality_improved
+        )
 
         compact = {
             "scenario_id": scenario.get("scenario_id"),
@@ -363,11 +404,13 @@ def build_scenario_outcome_summary(
             "stop_automation": stop_automation,
             "comparison_summary": comparison_summary,
             "quantity_summary": summarize_changed_quantities(comparison),
+            "led_profiles": scenario.get("led_profiles") or {},
+            "ranking_verified": ranking_verified,
             "score": score,
         }
         scenarios.append(compact)
 
-        if best is None or score > int(best.get("score") or 0):
+        if ranking_verified and (best is None or score > int(best.get("score") or 0)):
             best = compact
 
     return {
@@ -375,10 +418,12 @@ def build_scenario_outcome_summary(
         "best_scenario_id": best.get("scenario_id") if best else None,
         "best_outcome_status": best.get("outcome_status") if best else None,
         "best_stop_automation": best.get("stop_automation") if best else None,
+        "ranking_status": "verified_best" if best else "no_verified_best",
         "interpretation_rule": (
             "If a user asks which scenario resolves the problem, prefer the scenario "
             "with outcome_status='resolved_candidate' and stop_automation=true. "
-            "Partially resolved scenarios are supporting diagnostics, not the main solution."
+            "Partially resolved scenarios without verified expectations are supporting "
+            "diagnostics and must not be ranked only by changed_count."
         ),
         "scenarios": scenarios,
     }

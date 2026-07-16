@@ -42,6 +42,15 @@ Il circuito amplifica, ma l’uscita mi sembra troppo distorta o poco pulita. In
   Vpp(output) / Vpp(input), senza confondere due nodi entrambi di uscita.
 - Prima di attribuire un'uscita assoluta debole a un guasto, verifica se il
   circuito sta gia amplificando un ingresso molto piccolo.
+- Per sintomi di distorsione, clipping, saturazione o segnale poco pulito,
+  ogni scenario transitorio deve dichiarare quality="thd" e il blocco gain
+  deve identificare ingresso e uscita.
+- La pipeline calcola la THD sulle armoniche 2-5 nelle ultime tre oscillazioni
+  complete della sorgente SIN. Una correzione e risolutiva soltanto se la THD
+  diminuisce almeno del 20%, scende sotto il 10% e il guadagno fondamentale
+  non viene annullato.
+- Se la metrica THD non e disponibile o resta sopra soglia, considera lo
+  scenario parziale e continua con un test diverso, per esempio sul bias.
 - Ogni scenario deve avere una lista compare non vuota con grandezze osservabili.
 - Per scenari con piu rami o uscite, includi in compare almeno una grandezza per ciascuno.
 - Se l'obiettivo richiede di attivare o spegnere un componente, includi in compare
@@ -117,24 +126,25 @@ oppure
     "decision_number": 1,
     "decision": {
       "decision": "run_scenarios",
-      "reason": "La base run localizza un sospetto forte di distorsione da sovraguida: la sorgente e di ampiezza 1 V, il transistor e polarizzato molto debolmente in DC (vbe circa 0.117 V nel report operativo), quindi l'amplificatore puo risultare non lineare o quasi interdetto per gran parte del ciclo. Prima di concludere serve un test controllato che verifichi se riducendo l'ampiezza di ingresso il segnale di uscita diventa piu pulito e il guadagno resta presente.",
+      "reason": "La base run mostra un forte sospetto di bias non ottimale: il transistor e quasi spento in .op (vbe≈0.117 V, ic molto piccolo), mentre l'ingresso sinusoidale ha ampiezza 1 V e puo spingere il transistor in conduzione solo per parte del ciclo, causando distorsione per clipping/asimmetria. Serve almeno uno scenario controllato transitorio per verificare se una piccola correzione del partitore di base riduce la THD senza annullare il guadagno.",
       "scenarios": [
         {
-          "title": "Riduzione controllata dell'ampiezza di ingresso per verificare sovraguida",
-          "hypothesis": "L'uscita appare distorta soprattutto perche l'ingresso sinusoidale da 1 V e troppo grande per il punto di lavoro attuale del BJT; riducendo l'ampiezza della sorgente dovrebbe diminuire la distorsione e l'uscita su N005 dovrebbe restare amplificata ma meno compressa.",
+          "title": "Aumentare leggermente la polarizzazione di base riducendo Rresistor22_3",
+          "hypothesis": "La distorsione deriva soprattutto da una polarizzazione di base troppo bassa; diminuendo la resistenza base-massa da 47 kOhm si alza il punto di lavoro, si porta il transistor piu vicino alla regione attiva per tutto il ciclo e si riduce la distorsione d'uscita.",
           "intent": "correction",
           "analysis": "tran",
+          "quality": "thd",
           "actions": [
             {
-              "type": "change_source_value",
-              "target": "signal_source23.1",
-              "value": "SIN(0 100m 100)"
+              "type": "change_component_value",
+              "target": "resistor22.3",
+              "value": "33k"
             }
           ],
           "compare": [
             "v(N006)",
-            "v(N004)",
             "v(N005)",
+            "v(N002)",
             "v(N003)"
           ],
           "gain": {
@@ -142,10 +152,10 @@ oppure
             "output": "v(N005)"
           },
           "expect": {
-            "v(N006)": "magnitude_decreased",
-            "v(N005)": "changed",
-            "v(N004)": "changed",
-            "v(N003)": "changed"
+            "v(N002)": "changed",
+            "v(N003)": "changed",
+            "v(N005)": "magnitude_increased",
+            "v(N006)": "nonzero"
           }
         }
       ]
@@ -172,17 +182,24 @@ oppure
           "expectations_met_count": 4,
           "expectations_failed_count": 0,
           "expectations_missing_count": 0,
-          "meaningful_improvement_count": 1
+          "meaningful_improvement_count": 1,
+          "quality_required": true,
+          "quality_available": true,
+          "quality_improved": false,
+          "quality_acceptable": false,
+          "quality_output_preserved": true,
+          "base_thd": 0.8302119023357514,
+          "scenario_thd": 0.8334762635511467
         },
         "diagnostic_outcome": {
-          "status": "resolved_candidate",
-          "technical_label": "Candidate resolved",
-          "label": "Criteri di successo soddisfatti",
-          "reason": "Tutti i comportamenti attesi dichiarati dallo scenario sono verificati dagli output SPICE.",
-          "user_message": "Lo scenario fornisce una conferma forte dell'ipotesi testata.",
-          "stop_automation": true,
-          "confidence": "medium",
-          "next_step": "Ci sono gia evidenze forti per fermarsi qui e passare alla conclusione diagnostica."
+          "status": "partially_resolved",
+          "technical_label": "Distortion not improved",
+          "label": "Distorsione non migliorata abbastanza",
+          "reason": "La THD dell'uscita non diminuisce almeno del 20% rispetto alla base (83.0% -> 83.3%).",
+          "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+          "stop_automation": false,
+          "confidence": "low",
+          "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
         },
         "viewer": {
           "model": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_1\\run\\13_viewer_model.json",
@@ -1335,18 +1352,18 @@ Current ngspice program size =   15.562 MB.
     {
       "scenario_dir": "outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a06\\scenarios\\agent_scenario_1",
       "scenario_id": "agent_scenario_1",
-      "title": "Riduzione controllata dell'ampiezza di ingresso per verificare sovraguida",
+      "title": "Aumentare leggermente la polarizzazione di base riducendo Rresistor22_3",
       "status": "spice_success",
       "spice_status": "success",
       "diagnostic_outcome": {
-        "status": "resolved_candidate",
-        "technical_label": "Candidate resolved",
-        "label": "Criteri di successo soddisfatti",
-        "reason": "Tutti i comportamenti attesi dichiarati dallo scenario sono verificati dagli output SPICE.",
-        "user_message": "Lo scenario fornisce una conferma forte dell'ipotesi testata.",
-        "stop_automation": true,
-        "confidence": "medium",
-        "next_step": "Ci sono gia evidenze forti per fermarsi qui e passare alla conclusione diagnostica."
+        "status": "partially_resolved",
+        "technical_label": "Distortion not improved",
+        "label": "Distorsione non migliorata abbastanza",
+        "reason": "La THD dell'uscita non diminuisce almeno del 20% rispetto alla base (83.0% -> 83.3%).",
+        "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+        "stop_automation": false,
+        "confidence": "low",
+        "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
       },
       "comparison_summary": {
         "requested_count": 4,
@@ -1357,7 +1374,14 @@ Current ngspice program size =   15.562 MB.
         "expectations_met_count": 4,
         "expectations_failed_count": 0,
         "expectations_missing_count": 0,
-        "meaningful_improvement_count": 1
+        "meaningful_improvement_count": 1,
+        "quality_required": true,
+        "quality_available": true,
+        "quality_improved": false,
+        "quality_acceptable": false,
+        "quality_output_preserved": true,
+        "base_thd": 0.8302119023357514,
+        "scenario_thd": 0.8334762635511467
       },
       "artifacts": {
         "scenario_definition": {
@@ -1386,20 +1410,20 @@ Current ngspice program size =   15.562 MB.
   "scenario_outcome_summary": {
     "available": true,
     "best_scenario_id": "agent_scenario_1",
-    "best_outcome_status": "resolved_candidate",
-    "best_stop_automation": true,
+    "best_outcome_status": "partially_resolved",
+    "best_stop_automation": false,
     "interpretation_rule": "If a user asks which scenario resolves the problem, prefer the scenario with outcome_status='resolved_candidate' and stop_automation=true. Partially resolved scenarios are supporting diagnostics, not the main solution.",
     "scenarios": [
       {
         "scenario_id": "agent_scenario_1",
-        "title": "Riduzione controllata dell'ampiezza di ingresso per verificare sovraguida",
+        "title": "Aumentare leggermente la polarizzazione di base riducendo Rresistor22_3",
         "status": "spice_success",
         "spice_status": "success",
-        "outcome_status": "resolved_candidate",
-        "outcome_label": "Criteri di successo soddisfatti",
-        "outcome_technical_label": "Candidate resolved",
-        "outcome_reason": "Tutti i comportamenti attesi dichiarati dallo scenario sono verificati dagli output SPICE.",
-        "stop_automation": true,
+        "outcome_status": "partially_resolved",
+        "outcome_label": "Distorsione non migliorata abbastanza",
+        "outcome_technical_label": "Distortion not improved",
+        "outcome_reason": "La THD dell'uscita non diminuisce almeno del 20% rispetto alla base (83.0% -> 83.3%).",
+        "stop_automation": false,
         "comparison_summary": {
           "requested_count": 4,
           "changed_count": 4,
@@ -1409,19 +1433,26 @@ Current ngspice program size =   15.562 MB.
           "expectations_met_count": 4,
           "expectations_failed_count": 0,
           "expectations_missing_count": 0,
-          "meaningful_improvement_count": 1
+          "meaningful_improvement_count": 1,
+          "quality_required": true,
+          "quality_available": true,
+          "quality_improved": false,
+          "quality_acceptable": false,
+          "quality_output_preserved": true,
+          "base_thd": 0.8302119023357514,
+          "scenario_thd": 0.8334762635511467
         },
         "quantity_summary": {
           "changed": [
             "v(N006)",
-            "v(N004)",
             "v(N005)",
+            "v(N002)",
             "v(N003)"
           ],
           "unchanged": [],
           "missing": []
         },
-        "score": 184
+        "score": 24
       }
     ]
   },

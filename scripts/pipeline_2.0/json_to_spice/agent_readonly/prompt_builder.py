@@ -329,6 +329,7 @@ def build_final_conclusion_on_request_answer_format() -> list[str]:
         "Usa come evidenza principale gli scenari gia eseguiti e la base run.",
         "Non proporre automaticamente un nuovo scenario in questa risposta.",
         "Proponi un ulteriore scenario solo se e davvero l'unico test decisivo rimasto e dichiaralo esplicitamente come ultimo possibile passo utile.",
+        "Se decidi di fermarti, non includere alcun blocco JSON scenario e non usare `actions: []` come segnaposto.",
         "Rispondi in Markdown usando esattamente queste sezioni:",
         "",
         "1. **Stato degli scenari eseguiti**",
@@ -464,10 +465,13 @@ def build_prompt_operating_rules() -> list[str]:
         "If a next scenario needs an enabling condition demonstrated by an earlier scenario, include that enabling action again in the new scenario JSON.",
         "If the user asks what to try next after executed scenarios, propose the next most informative scenario based on scenario_comparison.json.",
         "If the user explicitly asks for a final conclusion, a final diagnosis, a summary of executed scenarios, or whether it makes sense to stop, switch to final-conclusion mode instead of default next-scenario mode.",
+        "For LED blinking symptoms, use `led_profiles` as primary temporal evidence: compare state, regular_period, frequency_hz, duty_cycle, on_fraction and pulse_count.",
+        "Do not claim that a pulse-regularity metric is missing when `led_profiles` is available.",
         "In final-conclusion mode, use the executed scenarios and their comparisons as the primary evidence, together with the base run.",
         "In final-conclusion mode, do not automatically generate another scenario just because the budget is not exhausted.",
         "In final-conclusion mode, suggest one more scenario only if it is clearly the single remaining decisive test and explain why the already executed scenarios are not enough without it.",
         "In final-conclusion mode, if the executed evidence already points to a structural limit, a topological ambiguity, or an inconclusive but bounded diagnosis, say that clearly instead of forcing another electrical scenario.",
+        "When final-conclusion mode does not identify a decisive executable test, do not output a scenario JSON block and do not create a placeholder scenario with an empty actions array.",
         "If one executed scenario already changed the nodes, branches or currents most closely tied to the user symptom, prefer extending that proven direction before proposing a weaker exploratory source-value change.",
         "Prefer a minimal combined scenario built around the strongest symptom-linked evidence before proposing a generic source-value variation, unless the source itself is the strongest evidence-backed hypothesis.",
         "Prefer `change_component_value` when the hypothesis can be tested by varying the value of an already emitted resistor, capacitor, inductor or equivalent simple component.",
@@ -577,6 +581,9 @@ def build_executed_scenario_index(executed_scenarios: list[dict[str, Any]]) -> l
             f"stop_automation=`{outcome.get('stop_automation')}`, "
             f"changed=`{summary.get('changed_count')}/{summary.get('requested_count')}`"
         )
+        led_profiles = scenario.get("led_profiles") or {}
+        if led_profiles:
+            lines.append(f"  LED profiles: `{json.dumps(led_profiles, ensure_ascii=False)}`")
     return lines
 
 
@@ -591,7 +598,9 @@ def build_scenario_outcome_summary_section(summary: dict[str, Any]) -> list[str]
         "```",
         "",
         "Interpretation rule for scenario questions:",
-        "- The best scenario is the one indicated by `best_scenario_id`, unless direct evidence contradicts it.",
+        "- Use `best_scenario_id` only when `ranking_status` is `verified_best`.",
+        "- If `ranking_status` is `no_verified_best`, compare direct symptom-linked evidence instead of inventing a winner.",
+        "- `changed_count` alone proves only a numerical difference, not an improvement.",
         "- A `resolved_candidate` with `stop_automation=true` is the main resolving candidate.",
         "- `partially_resolved` scenarios can confirm supporting hypotheses but should not be presented as the scenario that solved the problem when a resolved candidate exists.",
     ]

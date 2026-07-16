@@ -189,6 +189,195 @@ def generate_scenario_viewer(run_dir: Path) -> dict[str, str]:
     }
 
 
+def load_transient_component_profile(run_dir: Path, target: str) -> dict[str, Any]:
+    """Legge il profilo transitorio di un componente dal modello viewer della run."""
+    model = read_json_safe(run_dir / VIEWER_MODEL_NAME)
+    transient = model.get("transient") if isinstance(model.get("transient"), dict) else {}
+    profiles = transient.get("led_profiles") if isinstance(transient.get("led_profiles"), dict) else {}
+    profile = profiles.get(target)
+    return profile if isinstance(profile, dict) else {}
+
+
+def evaluate_temporal_expectation(
+    base_profile: dict[str, Any],
+    scenario_profile: dict[str, Any],
+    expectation: dict[str, Any],
+) -> dict[str, Any]:
+    """Valuta criteri temporali dichiarati confrontando base run e scenario."""
+    target = str(expectation.get("target") or "")
+    if not base_profile or not scenario_profile:
+        return {
+            "target": target,
+            "available": False,
+            "met": False,
+            "reason": "Profilo transitorio del componente non disponibile nella base run o nello scenario.",
+            "base_profile": base_profile,
+            "scenario_profile": scenario_profile,
+            "conditions": [],
+        }
+
+    conditions: list[dict[str, Any]] = []
+    required_state = expectation.get("required_state")
+    if required_state is not None:
+        actual = str(scenario_profile.get("state") or "")
+        conditions.append(
+            {
+                "criterion": "required_state",
+                "expected": required_state,
+                "actual": actual,
+                "met": actual == required_state,
+            }
+        )
+
+    required_regular = expectation.get("require_regular_period")
+    if required_regular is not None:
+        actual = bool(scenario_profile.get("regular_period"))
+        conditions.append(
+            {
+                "criterion": "require_regular_period",
+                "expected": required_regular,
+                "actual": actual,
+                "met": actual is required_regular,
+            }
+        )
+
+    scenario_duty = scenario_profile.get("duty_cycle")
+    base_duty = base_profile.get("duty_cycle")
+    minimum_duty = expectation.get("min_duty_cycle")
+    if minimum_duty is not None:
+        conditions.append(
+            {
+                "criterion": "min_duty_cycle",
+                "expected": minimum_duty,
+                "actual": scenario_duty,
+                "met": isinstance(scenario_duty, (int, float)) and scenario_duty >= minimum_duty,
+            }
+        )
+
+    minimum_relative_increase = expectation.get("min_relative_duty_increase")
+    if minimum_relative_increase is not None:
+        relative_increase = None
+        relative_increase_met = False
+        if isinstance(base_duty, (int, float)) and isinstance(scenario_duty, (int, float)):
+            if abs(base_duty) > 1e-12:
+                relative_increase = (scenario_duty - base_duty) / abs(base_duty)
+                relative_increase_met = relative_increase >= minimum_relative_increase
+            elif scenario_duty > base_duty:
+                relative_increase_met = True
+        conditions.append(
+            {
+                "criterion": "min_relative_duty_increase",
+                "expected": minimum_relative_increase,
+                "actual": relative_increase,
+                "met": relative_increase_met,
+            }
+        )
+
+    return {
+        "target": target,
+        "available": True,
+        "met": bool(conditions) and all(bool(item.get("met")) for item in conditions),
+        "reason": "Criteri temporali verificati." if conditions and all(
+            bool(item.get("met")) for item in conditions
+        ) else "Almeno un criterio temporale non e soddisfatto.",
+        "base_profile": base_profile,
+        "scenario_profile": scenario_profile,
+        "conditions": conditions,
+    }
+
+
+def update_report_with_temporal_expectation(
+    output_dir: Path,
+    scenario_dir: Path,
+    scenario: dict[str, Any],
+    report: dict[str, Any],
+    step12: Any,
+) -> dict[str, Any]:
+    """Integra l'esito scenario con i criteri temporali dichiarati dall'agente."""
+    expectation = scenario.get("temporal_expect")
+    if not isinstance(expectation, dict) or not report.get("spice_executed"):
+        return report
+
+    base_model_path = output_dir / VIEWER_MODEL_NAME
+    if not base_model_path.exists():
+        write_viewer_model(output_dir)
+
+    run_dir = scenario_dir / "run"
+    evaluation = evaluate_temporal_expectation(
+        load_transient_component_profile(output_dir, str(expectation.get("target") or "")),
+        load_transient_component_profile(run_dir, str(expectation.get("target") or "")),
+        expectation,
+    )
+    comparison_path = scenario_dir / "scenario_comparison.json"
+    comparison = read_json_safe(comparison_path)
+    if not comparison:
+        return report
+
+    summary = comparison.get("summary") if isinstance(comparison.get("summary"), dict) else {}
+    summary["temporal_required"] = True
+    summary["temporal_available"] = bool(evaluation.get("available"))
+    summary["temporal_met"] = bool(evaluation.get("met"))
+    comparison["summary"] = summary
+    comparison["temporal_expectation"] = evaluation
+
+    outcome = comparison.get("diagnostic_outcome")
+    outcome = dict(outcome) if isinstance(outcome, dict) else {}
+    expected = int(summary.get("expected_count") or 0)
+    expectations_met = int(summary.get("expectations_met_count") or 0)
+    meaningful = int(summary.get("meaningful_improvement_count") or 0)
+    quality_blocks_resolution = bool(summary.get("quality_required")) and not (
+        bool(summary.get("quality_available"))
+        and bool(summary.get("quality_improved"))
+        and bool(summary.get("quality_acceptable"))
+        and bool(summary.get("quality_output_preserved"))
+    )
+
+    if not evaluation.get("available"):
+        outcome.update(
+            {
+                "status": "partially_resolved",
+                "technical_label": "Transient profile unavailable",
+                "label": "Profilo transitorio non disponibile",
+                "reason": str(evaluation.get("reason")),
+                "stop_automation": False,
+                "confidence": "low",
+                "next_step": "Serve un altro scenario oppure una misura transitoria disponibile.",
+            }
+        )
+    elif not evaluation.get("met"):
+        outcome.update(
+            {
+                "status": "partially_resolved",
+                "technical_label": "Temporal criteria not satisfied",
+                "label": "Criteri temporali non soddisfatti",
+                "reason": str(evaluation.get("reason")),
+                "stop_automation": False,
+                "confidence": "low",
+                "next_step": "Il comportamento temporale non soddisfa ancora l'obiettivo: prova un'altra correzione.",
+            }
+        )
+    elif expected > 0 and expectations_met == expected and meaningful > 0 and not quality_blocks_resolution:
+        outcome.update(
+            {
+                "status": "resolved_candidate",
+                "technical_label": "Transient correction verified",
+                "label": "Criteri elettrici e temporali soddisfatti",
+                "reason": "Le aspettative elettriche e il profilo transitorio richiesto sono verificati.",
+                "stop_automation": True,
+                "confidence": "medium",
+                "next_step": "La correzione e verificata: puoi passare alla conclusione diagnostica.",
+            }
+        )
+
+    comparison["diagnostic_outcome"] = outcome
+    report["comparison_summary"] = summary
+    report["diagnostic_outcome"] = outcome
+    write_json(comparison_path, comparison)
+    write_json(scenario_dir / "12_controlled_scenarios.json", report)
+    step12.update_status_file(scenario_dir, report)
+    return report
+
+
 def execute_scenario(
     output_dir: Path,
     scenario: dict[str, Any],
@@ -255,6 +444,14 @@ def execute_scenario(
         viewer = generate_scenario_viewer(copy_result["run_dir"])
     except Exception as exc:  # Il risultato SPICE resta valido anche senza viewer.
         viewer_error = str(exc)
+
+    report = update_report_with_temporal_expectation(
+        output_dir=output_dir,
+        scenario_dir=scenario_dir,
+        scenario=payload,
+        report=report,
+        step12=step12,
+    )
 
     return {
         "scenario_id": scenario_id,

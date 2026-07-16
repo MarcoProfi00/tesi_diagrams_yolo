@@ -65,6 +65,7 @@ from scenario_expectations import (
     expectation_matches,
     relative_change_ratio,
 )
+from transient_signal_quality import analyze_sine_quality, compare_sine_quality
 
 
 NETLIST_NAME = "07_netlist.cir"
@@ -1042,7 +1043,7 @@ def classify_change(base_value: float | None, scenario_value: float | None) -> s
 
 
 def evaluate_diagnostic_outcome(
-    summary: dict[str, int],
+    summary: dict[str, Any],
     analysis: str = "op",
     intent: str = "correction",
 ) -> dict[str, Any]:
@@ -1061,6 +1062,13 @@ def evaluate_diagnostic_outcome(
     expectations_met = int(summary.get("expectations_met_count") or 0)
     expectations_missing = int(summary.get("expectations_missing_count") or 0)
     meaningful_improvements = int(summary.get("meaningful_improvement_count") or 0)
+    quality_required = bool(summary.get("quality_required"))
+    quality_available = bool(summary.get("quality_available"))
+    quality_improved = bool(summary.get("quality_improved"))
+    quality_acceptable = bool(summary.get("quality_acceptable"))
+    quality_output_preserved = bool(summary.get("quality_output_preserved"))
+    base_thd = summary.get("base_thd")
+    scenario_thd = summary.get("scenario_thd")
 
     if expected > 0 and expectations_missing > 0:
         status = "partially_resolved"
@@ -1069,6 +1077,43 @@ def evaluate_diagnostic_outcome(
         reason = (
             "Almeno una misura necessaria ai criteri di successo non e disponibile "
             "negli output SPICE dello scenario."
+        )
+        stop_automation = False
+    elif intent == "correction" and quality_required and not quality_available:
+        status = "partially_resolved"
+        technical_label = "Signal quality unavailable"
+        label = "Qualita del segnale non misurabile"
+        reason = (
+            "La correzione riguarda la distorsione, ma non e stato possibile "
+            "calcolare la THD su oscillazioni complete della sorgente SIN."
+        )
+        stop_automation = False
+    elif intent == "correction" and quality_required and not quality_improved:
+        status = "partially_resolved"
+        technical_label = "Distortion not improved"
+        label = "Distorsione non migliorata abbastanza"
+        reason = (
+            "La THD dell'uscita non diminuisce almeno del 20% rispetto alla base "
+            f"({float(base_thd):.1%} -> {float(scenario_thd):.1%})."
+        )
+        stop_automation = False
+    elif intent == "correction" and quality_required and not quality_acceptable:
+        status = "partially_resolved"
+        technical_label = "Residual distortion"
+        label = "Distorsione ridotta ma ancora elevata"
+        reason = (
+            "La THD migliora, ma resta sopra la soglia del 10% richiesta per "
+            f"una correzione risolutiva ({float(base_thd):.1%} -> "
+            f"{float(scenario_thd):.1%})."
+        )
+        stop_automation = False
+    elif intent == "correction" and quality_required and not quality_output_preserved:
+        status = "partially_resolved"
+        technical_label = "Output not preserved"
+        label = "Segnale utile non preservato"
+        reason = (
+            "La distorsione diminuisce, ma il guadagno fondamentale o la "
+            "componente utile dell'uscita risultano troppo ridotti."
         )
         stop_automation = False
     elif (
@@ -1224,6 +1269,15 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
         if isinstance(raw_expectations, dict)
         else {}
     )
+    raw_measurements = scenario.get("measure") or {}
+    measurements = (
+        {
+            quantity_lookup_key(str(quantity)): str(measurement).strip().lower()
+            for quantity, measurement in raw_measurements.items()
+        }
+        if isinstance(raw_measurements, dict)
+        else {}
+    )
 
     quantities: list[dict[str, Any]] = []
     activated = 0
@@ -1237,13 +1291,16 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
 
     for item in requested:
         quantity = normalize_quantity_name(str(item))
+        measurement = measurements.get(quantity_lookup_key(quantity))
         if is_stderr_quantity(quantity):
             lookup_key = "stderr.warning_count"
             base_value = base_stderr_warning_count
             scenario_value = scenario_stderr_warning_count
             base_details: dict[str, Any] = {}
             scenario_details: dict[str, Any] = {}
-        elif analysis == "tran" and is_voltage_quantity(quantity):
+        elif measurement == "tran_vpp" or (
+            measurement is None and analysis == "tran" and is_voltage_quantity(quantity)
+        ):
             lookup_key = quantity_lookup_key(quantity)
             base_metric_set = base_tran_metrics.get(lookup_key) or {}
             scenario_metric_set = scenario_tran_metrics.get(lookup_key) or {}
@@ -1309,6 +1366,9 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
                 "relative_change": relative_change,
                 "meaningful_improvement": meaningful_improvement,
                 "metric": lookup_key,
+                "measurement": measurement or (
+                    "tran_vpp" if analysis == "tran" and is_voltage_quantity(quantity) else "op"
+                ),
                 "base_details": base_details,
                 "scenario_details": scenario_details,
             }
@@ -1352,6 +1412,45 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
         "scenario_gain": scenario_gain,
         "relative_change": relative_change_ratio(base_gain, scenario_gain),
     } if gain_config else None
+
+    quality_requested = str(scenario.get("quality") or "").strip().lower() == "thd"
+    quality_comparison: dict[str, Any] | None = None
+    if quality_requested and gain_config:
+        input_quantity = str(gain_config.get("input") or "")
+        output_quantity = str(gain_config.get("output") or "")
+        base_quality = analyze_sine_quality(
+            base_output_dir / "08_tran.csv",
+            base_output_dir / NETLIST_NAME,
+            input_quantity,
+            output_quantity,
+        )
+        scenario_quality = analyze_sine_quality(
+            run_dir / "08_tran.csv",
+            run_dir / NETLIST_NAME,
+            input_quantity,
+            output_quantity,
+        )
+        quality_comparison = compare_sine_quality(base_quality, scenario_quality)
+
+    summary["quality_required"] = quality_requested
+    summary["quality_available"] = bool(
+        quality_comparison and quality_comparison.get("available")
+    )
+    summary["quality_improved"] = bool(
+        quality_comparison and quality_comparison.get("improved")
+    )
+    summary["quality_acceptable"] = bool(
+        quality_comparison and quality_comparison.get("acceptable")
+    )
+    summary["quality_output_preserved"] = bool(
+        quality_comparison and quality_comparison.get("output_preserved")
+    )
+    summary["base_thd"] = (
+        quality_comparison.get("base_thd") if quality_comparison else None
+    )
+    summary["scenario_thd"] = (
+        quality_comparison.get("scenario_thd") if quality_comparison else None
+    )
     diagnostic_outcome = evaluate_diagnostic_outcome(
         summary,
         analysis=analysis,
@@ -1372,6 +1471,7 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
         "quantities": quantities,
         "summary": summary,
         "gain_comparison": gain_comparison,
+        "quality_comparison": quality_comparison,
         "diagnostic_outcome": diagnostic_outcome,
         "created_or_updated_at": datetime.now().isoformat(timespec="seconds"),
     }

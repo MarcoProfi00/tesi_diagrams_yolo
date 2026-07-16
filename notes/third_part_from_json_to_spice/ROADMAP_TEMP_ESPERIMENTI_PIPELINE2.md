@@ -673,7 +673,8 @@ Sessione interattiva:
 
 ## Esperimento 4 - Automazione agentica
 
-Stato: prima versione implementata; validazione OpenAI sul Batch A da eseguire.
+Stato: implementata e validata in una prima passata OpenAI su `a01`, `a02`
+e `a04`-`a10`; `a03` resta escluso per il noto limite topologico/SPICE.
 
 Obiettivo:
 
@@ -795,15 +796,37 @@ questi criteri per distinguere una correzione verificata da una variazione
 generica. Gli scenari precedenti senza `expect` restano compatibili.
 
 Ogni nuovo scenario AGENT dichiara anche `intent: correction | diagnostic`.
-Solo una `correction` puo produrre uno stop risolutivo; un test `diagnostic`
-puo confermare la causa ma richiede una successiva correzione verificata.
+Una modifica che mira direttamente al sintomo deve essere una `correction`.
+Un test `diagnostic` puo confermare la causa, ma non basta a chiudere un
+obiettivo che richiede esplicitamente una riparazione: con budget residuo
+l'agente deve cercare una correzione verificata. Se un test iniziale dichiara
+esplicitamente i criteri dell'obiettivo e li soddisfa, il runtime lo promuove
+senza ripetere la stessa azione come scenario duplicato.
 `unchanged` e ammesso solo quando il sintomo chiede esplicitamente di
 preservare un comportamento. In `tran`, correnti e potenze senza traccia CSV
-restano osservazioni OP e non possono essere criteri `expect`.
+restano osservazioni OP, oppure diventano criteri `expect` se la mappa
+opzionale `measure` le seleziona esplicitamente come `op`. La stessa mappa
+permette di verificare nello scenario una tensione `tran_vpp` insieme a
+grandezze DC. Gli obiettivi AC/VAC richiedono almeno una misura `tran_vpp`.
+Gli obiettivi sullo stato di LED o lampade richiedono inoltre una corrente o
+potenza diretta tra i criteri di successo della correzione.
+Quando lo stesso sintomo combina AC/VAC e LED/lampada, ogni test verifica
+insieme i due obiettivi con una misura mista `tran_vpp` + `op`.
 Una correzione richiede inoltre almeno un miglioramento relativo del 10% o
 una vera attivazione/disattivazione. Per sintomi di amplificazione, gli
 scenari correttivi dichiarano ingresso e uscita nel blocco `gain`, e il
 confronto salva il rapporto `Vpp(output) / Vpp(input)`.
+
+Per lampeggio, periodicita, regolarita, duty cycle o durata di accensione, lo
+scenario `tran` dichiara anche `temporal_expect`. Il runtime confronta i
+profili del viewer della base e della scenario run: stato del componente,
+periodicita e soglie di duty cycle. Un miglioramento elettrico che perde una
+periodicita richiesta resta parziale e non puo produrre `resolved_candidate`.
+
+Limite noto: non sono ancora supportate sequenze temporali tra componenti,
+per esempio "LED acceso prima, poi lampada lampeggiante", quando la base run
+ha solo `.op`. Serviranno una `.tran` aggiungibile dallo scenario, profili
+temporali per lampade e un criterio di ordine tra profili.
 
 ### Implementazione essenziale
 
@@ -814,8 +837,8 @@ confronto salva il rapporto `Vpp(output) / Vpp(input)`.
 3. correggere e centralizzare conteggio budget, validazione e firma duplicati;
 4. aggiungere controller e stato persistente del ciclo autonomo;
 5. usare il selettore `CHAT` / `AGENT` gia collegato ai due workspace;
-6. validare prima `a01`, poi `a01`, `a02`, `a04`-`a10` con stesso sintomo,
-   modello e budget nelle due modalita;
+6. validare `a01`, `a02`, `a04`-`a10` con stesso sintomo, modello e budget
+   nelle due modalita; completato nella prima passata Batch A;
 7. aggiungere solo dopo il ciclo base il parser dei comandi diretti, riusando lo
    stesso runtime.
 
@@ -824,6 +847,7 @@ Script/moduli implementati:
 ```text
 scenario_runtime.py
 scenario_expectations.py
+transient_signal_quality.py
 16_autonomous_diagnosis.py
 autonomous_agent/
 autonomous_agent/presentation.py
@@ -842,11 +866,28 @@ Guardrail implementati:
   rifiutate senza aumentare il budget delle simulazioni SPICE;
 - gli scenari AGENT distinguono obbligatoriamente `op` e `tran`; per sintomi
   dinamici il confronto usa il Vpp delle tracce CSV e non il valore DC `.op`;
+- gli scenari misti possono scegliere `op` o `tran_vpp` per singola grandezza
+  tramite `measure`, senza separare artificialmente rami DC e uscite AC;
+- pin distinti dello stesso connector non vengono uniti senza un'evidenza
+  topologica esplicita negli artefatti;
+- il viewer distingue automaticamente sorgenti DC e forme `SIN`/`PULSE`, e i
+  meter AC ricavano attivita e lettura Vpp dalle tracce transitorie;
 - gli scenari distinguono obbligatoriamente test `diagnostic` e modifiche
-  `correction`; solo queste ultime possono fermare il ciclo come risolte;
+  `correction`; una richiesta esplicita di correzione non puo chiudere come
+  sola localizzazione finche resta budget;
+- i sintomi temporali richiedono `temporal_expect`; stato, periodicita e duty
+  cycle del profilo viewer devono soddisfare le soglie dichiarate prima dello
+  stop risolutivo;
 - `final_status=resolved` richiede una `verified_correction` non vuota;
+- una causa confermata puo terminare come `localized` senza forzare una
+  correzione topologica non sostenuta dagli artefatti;
 - una variazione inferiore al 10% resta evidenza utile ma non arresta il ciclo;
 - le correzioni di guadagno confrontano esplicitamente ingresso e uscita;
+- per sorgenti SIN, i sintomi di distorsione usano la THD sulle armoniche
+  2-5 nelle ultime tre oscillazioni complete;
+- una correzione della distorsione richiede almeno il 20% di riduzione della
+  THD, THD finale non superiore al 10% e guadagno fondamentale preservato;
+- forme d'onda non supportate restano parziali e non producono stop automatico;
 - nessun database.
 
 ### Valutazione Experiment 4
@@ -866,6 +907,39 @@ human_notes
 
 Il confronto tra le due modalita deve usare lo stesso circuito, sintomo,
 modello e budget.
+
+## Esperimento 5 - Generalizzazione sul Batch B
+
+Stato: pianificato; da avviare dopo la chiusura documentale di Experiment 4.
+
+Obiettivo: verificare che pipeline, viewer, scenari controllati e modalita
+`CHAT` / `AGENT` funzionino su circuiti non usati per progettare le regole del
+Batch A.
+
+Protocollo essenziale:
+
+1. preparare per ogni circuito del Batch B la base run fino a `01-08` e il
+   viewer della base;
+2. studiare immagini, Graph JSON, node map, regole componenti, netlist e
+   risultati SPICE prima di modificare il codice;
+3. riusare inizialmente le otto primitive scenario gia disponibili e validare
+   prima il flusso `CHAT`;
+4. aggiungere una nuova primitiva soltanto se un limite compare in piu casi e
+   puo essere espresso come operazione generale sulla netlist;
+5. ripetere sugli stessi sintomi il flusso `AGENT`, confrontando numero di
+   run, decisioni, esito SPICE, viewer e conclusione;
+6. registrare gli esiti nella griglia di valutazione comune Batch A vs Batch B.
+
+Regole metodologiche:
+
+- non ricostruire il viewer per singolo circuito: si riusano `13-15` e il loro
+  vocabolario componenti, intervenendo solo su lacune generali;
+- non introdurre scenari cuciti su un solo schema; una nuova azione deve avere
+  semantica netlist chiara, validazione, confronto e rappresentazione viewer;
+- `a03` non definisce una regola per Batch B: eventuali problemi Graph/immagine
+  vanno classificati separatamente da un problema delle primitive scenario;
+- le sequenze temporali tra componenti restano fuori dal primo giro Batch B
+  finche non verra progettata l'estensione `.tran` dedicata.
 
 ## Valutazione trasversale degli esperimenti
 
@@ -990,6 +1064,7 @@ Esperimento 1 = baseline Batch A chiusa
 Esperimento 2 = scenari piu potenti e netlist editing controllato
 Esperimento 3 = viewer visuale basato sulla netlist della run selezionata
 Esperimento 4 = confronto CHAT vs AGENT con scenari autonomi controllati
+Esperimento 5 = generalizzazione controllata su Batch B
 Valutazione = metriche comuni, CSV/JSON aggregati e grafici finali
 ```
 
