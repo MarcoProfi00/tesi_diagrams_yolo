@@ -9,6 +9,7 @@ from typing import Any
 COMPONENT_SPECS: dict[str, dict[str, float]] = {
     "resistor": {"width": 92.0, "height": 34.0},
     "capacitor": {"width": 58.0, "height": 48.0},
+    "polarized_capacitor": {"width": 58.0, "height": 48.0},
     "inductor": {"width": 92.0, "height": 38.0},
     "diode": {"width": 82.0, "height": 46.0},
     "led": {"width": 82.0, "height": 52.0},
@@ -16,6 +17,7 @@ COMPONENT_SPECS: dict[str, dict[str, float]] = {
     "switch": {"width": 84.0, "height": 44.0},
     "battery": {"width": 92.0, "height": 58.0},
     "scenario_voltage_source": {"width": 92.0, "height": 58.0},
+    "dc_supply": {"width": 62.0, "height": 62.0},
     "voltage_source": {"width": 62.0, "height": 62.0},
     "current_source": {"width": 62.0, "height": 62.0},
     "signal_source": {"width": 62.0, "height": 62.0},
@@ -41,7 +43,9 @@ def normalize_component_type(class_name: Any, layout_kind: Any = "") -> str:
         "transistor": "npn_transistor",
         "npn_transistor": "npn_transistor",
         "analogmeter": "analog_meter",
+        "polarized_capacitor": "polarized_capacitor",
         "scenario_voltage_source": "scenario_voltage_source",
+        "dc_supply": "dc_supply",
         "signal_generator": "signal_source",
         "source": "signal_source",
     }

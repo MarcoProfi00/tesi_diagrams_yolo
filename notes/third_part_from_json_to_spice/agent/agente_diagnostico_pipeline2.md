@@ -836,6 +836,7 @@ Primitive attualmente supportate da `12_controlled_scenarios.py`:
 ```text
 Scenari elettrici / di pilotaggio:
 - drive_node_voltage
+- set_initial_node_voltage
 - add_voltage_source_between_nodes
 - change_source_value
 - change_component_value
@@ -866,6 +867,22 @@ Questa azione viene tradotta nella netlist scenario in:
 
 ```spice
 VSCENARIO_N002 N002 0 DC 5
+```
+
+`set_initial_node_voltage` e una primitiva diversa: e valida soltanto con
+`analysis: "tran"` e inserisce `.ic V(NODO)=valore` nella copia della netlist
+scenario. Non aggiunge una sorgente permanente, non usa `UIC` e non modifica
+topologia, valori o alimentazione. L'agente la usa soltanto per verificare un
+possibile equilibrio iniziale artificialmente simmetrico.
+
+Esempio:
+
+```json
+{
+  "type": "set_initial_node_voltage",
+  "target": "N004",
+  "value": "0.5V"
+}
 ```
 
 `add_voltage_source_between_nodes` aggiunge invece una sorgente tra due nodi
@@ -1260,10 +1277,14 @@ Primitive attualmente implementate nella Pipeline 2.0:
 
 ```text
 drive_node_voltage
+set_initial_node_voltage
 change_source_value
 change_component_value
 close_switch
 connect_nodes
+feed_nodes_from_source_node
+add_voltage_source_between_nodes
+add_resistor_between_nodes
 ```
 
 Questa e la lista controllata corrente. Per adesso l'agente puo proporre uno
@@ -2103,6 +2124,10 @@ scelta scenario -> copia base/run -> modifica netlist scenario -> ngspice scenar
 -> scenario_comparison.json.
 ```
 
+Il ciclo include anche `set_initial_node_voltage` per le sole run `tran`:
+aggiunge una direttiva `.ic` alla copia scenario senza creare una sorgente
+permanente e senza modificare la base run.
+
 Implementato anche il rientro dei risultati scenario nell'agente:
 
 ```text
@@ -2363,9 +2388,10 @@ Prossimi esperimenti:
 
    ```text
    close_switch
-   connect_nodes
-   drive_node_voltage
-   change_component_value
+connect_nodes
+drive_node_voltage
+set_initial_node_voltage
+change_component_value
    change_source_value
    feed_nodes_from_source_node
    add_voltage_source_between_nodes

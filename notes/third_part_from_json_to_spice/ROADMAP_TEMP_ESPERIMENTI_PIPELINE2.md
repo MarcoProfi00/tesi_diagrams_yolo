@@ -859,7 +859,7 @@ Guardrail implementati:
 - esecuzione sequenziale per evitare concorrenza ngspice inutile;
 - massimo 5 run scenario e massimo 8 decisioni agentiche;
 - un solo retry per JSON malformato;
-- whitelist rigida delle otto primitive gia implementate e validate dal
+- whitelist rigida delle nove primitive gia implementate e validate dal
   runner controllato;
 - firma duplicati, stop manuale e persistenza file-based;
 - le decisioni aggiuntive lasciano due tentativi di recupero per proposte
@@ -910,7 +910,8 @@ modello e budget.
 
 ## Esperimento 5 - Generalizzazione sul Batch B
 
-Stato: pianificato; da avviare dopo la chiusura documentale di Experiment 4.
+Stato: in corso sul Batch B; b02 ha base run SPICE e primo scenario CHAT
+validati.
 
 Obiettivo: verificare che pipeline, viewer, scenari controllati e modalita
 `CHAT` / `AGENT` funzionino su circuiti non usati per progettare le regole del
@@ -922,7 +923,7 @@ Protocollo essenziale:
    viewer della base;
 2. studiare immagini, Graph JSON, node map, regole componenti, netlist e
    risultati SPICE prima di modificare il codice;
-3. riusare inizialmente le otto primitive scenario gia disponibili e validare
+3. riusare inizialmente le nove primitive scenario gia disponibili e validare
    prima il flusso `CHAT`;
 4. aggiungere una nuova primitiva soltanto se un limite compare in piu casi e
    puo essere espresso come operazione generale sulla netlist;

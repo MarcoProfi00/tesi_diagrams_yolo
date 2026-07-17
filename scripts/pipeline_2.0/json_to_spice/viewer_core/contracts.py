@@ -11,6 +11,8 @@ VIEWER_MODEL_NAME = "13_viewer_model.json"
 VIEWER_LAYOUT_NAME = "14_viewer_layout.json"
 VIEWER_SVG_NAME = "15_viewer.svg"
 
-VIEWER_MODEL_SCHEMA_VERSION = 12
-VIEWER_LAYOUT_SCHEMA_VERSION = 30
-VIEWER_RENDER_VERSION = 11
+# Le revisioni forzano il ricalcolo di base run e scenari quando cambia la
+# semantica visuale di alimentazioni o condensatori polarizzati.
+VIEWER_MODEL_SCHEMA_VERSION = 15
+VIEWER_LAYOUT_SCHEMA_VERSION = 33
+VIEWER_RENDER_VERSION = 14

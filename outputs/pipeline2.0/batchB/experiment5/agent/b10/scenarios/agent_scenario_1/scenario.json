@@ -1,0 +1,24 @@
+{
+  "title": "Verifica chiusura switch verso B",
+  "hypothesis": "Se la lettura quasi nulla su B e normale per interruttore aperto, allora chiudendo switch25.1 il nodo B/N002 deve aumentare nettamente rispetto alla base run.",
+  "intent": "diagnostic",
+  "analysis": "op",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    }
+  ],
+  "compare": [
+    "v(N002)",
+    "v(N005)",
+    "i(Rresistor22_1)",
+    "i(Rresistor22_2)"
+  ],
+  "expect": {
+    "v(N002)": "magnitude_increased",
+    "i(Rresistor22_1)": "nonzero",
+    "i(Rresistor22_2)": "decreased"
+  },
+  "scenario_id": "agent_scenario_1"
+}

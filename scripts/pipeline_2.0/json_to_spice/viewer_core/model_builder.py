@@ -28,6 +28,7 @@ from .json_io import read_json, write_json
 TRANSIENT_VARIATION_EPSILON = 1e-5
 MAX_TRANSIENT_VIEWER_SAMPLES = 800
 LED_FORWARD_THRESHOLD_V = 0.6
+LED_BRANCH_SIGNAL_MIN_SPAN_V = 0.5
 LED_PLAYBACK_SLOWDOWN = 10.0
 LED_PERIOD_RELATIVE_TOLERANCE = 0.15
 
@@ -102,6 +103,49 @@ def enrich_components_with_rules(
                 item["viewer_proxy_for"] = source_id
                 item["viewer_role"] = "simulation_measurement_proxy"
         enriched.append(item)
+    return enriched
+
+
+def enrich_manual_dc_supplies(
+    components: list[dict[str, Any]],
+    rules: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Rende esplicite nel viewer le sorgenti DC aggiunte dal file valori."""
+    supplies = rules.get("supplies") or {}
+    enriched = [dict(component) for component in components]
+    for supply_name, supply in supplies.items():
+        if not isinstance(supply, dict):
+            continue
+        parameters = supply.get("parameters") if isinstance(supply.get("parameters"), dict) else supply
+        if str(parameters.get("type") or "").strip().lower() != "dc":
+            continue
+
+        expected_name = f"V{supply_name}".lower()
+        supply_nodes = {normalize_node(node) for node in supply.get("nodes") or []}
+        source = next(
+            (item for item in enriched if str(item.get("spice_name") or "").lower() == expected_name),
+            None,
+        )
+        if source is None and supply_nodes:
+            source = next(
+                (
+                    item for item in enriched
+                    if item.get("kind") == "voltage_source"
+                    and {normalize_node(node) for node in item.get("nodes") or []} == supply_nodes
+                ),
+                None,
+            )
+        if source is None:
+            continue
+
+        # La sorgente resta un simbolo DC circolare; l'origine OCR serve solo
+        # a evitare una seconda label esterna, non cambia la netlist SPICE.
+        is_ocr_label = str(parameters.get("source") or "").strip().lower() == "manual_from_image_label"
+        source["viewer_kind"] = "dc_supply"
+        source["viewer_role"] = "manual_ocr_dc_supply" if is_ocr_label else "manual_dc_supply"
+        source["parameters"] = dict(parameters)
+        source["display_label"] = str(parameters.get("label_text") or supply_name)
+        source["supply_name"] = str(supply_name)
     return enriched
 
 
@@ -308,12 +352,84 @@ def led_on_durations(
     return durations
 
 
+def led_branch_control_signal(
+    led_component: dict[str, Any],
+    components: list[dict[str, Any]],
+    node_series: dict[str, list[float]],
+) -> dict[str, Any] | None:
+    """
+    Ricava un segnale del ramo LED quando il solo diodo ha un modello troppo semplice.
+
+    Un LED in serie a una resistenza puo' conservare una piccola caduta diretta
+    anche quando il ramo e' quasi spento. Se al suo anodo o catodo e' collegata
+    una resistenza variabile verso un nodo remoto, la tensione dell'intero ramo
+    e' una misura piu fedele della commutazione. La scelta e' topologica e non
+    dipende da identificatori, circuiti o batch specifici.
+    """
+    led_nodes = [normalize_node(node_id) for node_id in led_component.get("nodes") or []]
+    if len(led_nodes) < 2:
+        return None
+    anode_node, cathode_node = led_nodes[:2]
+    anode_values = node_series.get(anode_node)
+    cathode_values = node_series.get(cathode_node)
+    if not anode_values or not cathode_values:
+        return None
+
+    cathode_candidates: list[dict[str, Any]] = []
+    anode_candidates: list[dict[str, Any]] = []
+    for candidate in components:
+        if candidate is led_component or str(candidate.get("kind") or "").lower() != "resistor":
+            continue
+        candidate_nodes = [normalize_node(node_id) for node_id in candidate.get("nodes") or []]
+        if len(candidate_nodes) != 2:
+            continue
+
+        remote_node: str | None = None
+        signal_values: list[float] | None = None
+        side: str | None = None
+        if cathode_node in candidate_nodes and anode_node not in candidate_nodes:
+            remote_node = candidate_nodes[1] if candidate_nodes[0] == cathode_node else candidate_nodes[0]
+            remote_values = node_series.get(remote_node)
+            if remote_values:
+                signal_values = [anode - remote for anode, remote in zip(anode_values, remote_values)]
+                side = "cathode"
+        elif anode_node in candidate_nodes and cathode_node not in candidate_nodes:
+            remote_node = candidate_nodes[1] if candidate_nodes[0] == anode_node else candidate_nodes[0]
+            remote_values = node_series.get(remote_node)
+            if remote_values:
+                signal_values = [remote - cathode for remote, cathode in zip(remote_values, cathode_values)]
+                side = "anode"
+        if not signal_values or remote_node is None or side is None:
+            continue
+
+        span = max(signal_values) - min(signal_values)
+        candidate_data = {
+            "values": signal_values,
+            "span": span,
+            "series_component_id": str(candidate.get("id") or ""),
+            "control_node": remote_node,
+            "series_side": side,
+        }
+        if side == "cathode":
+            cathode_candidates.append(candidate_data)
+        else:
+            anode_candidates.append(candidate_data)
+
+    # Il lato catodo e' preferito: in una catena VCC -> LED -> R -> carico
+    # evita di scambiare una resistenza di bias con la resistenza in serie LED.
+    candidates = cathode_candidates or anode_candidates
+    best_candidate = max(candidates, key=lambda item: float(item["span"]), default=None)
+    if best_candidate is None or float(best_candidate["span"]) < LED_BRANCH_SIGNAL_MIN_SPAN_V:
+        return None
+    return best_candidate
+
+
 def led_transient_profiles(
     components: list[dict[str, Any]],
     times: list[float],
     node_series: dict[str, list[float]],
 ) -> dict[str, dict[str, Any]]:
-    """Ricava lampeggio e duty cycle dei LED dalle tensioni ai loro terminali."""
+    """Ricava lampeggio e duty cycle LED da diodo o ramo serie misurato."""
     profiles: dict[str, dict[str, Any]] = {}
     if len(times) < 2:
         return profiles
@@ -336,6 +452,16 @@ def led_transient_profiles(
             for anode, cathode in zip(anode_values, cathode_values)
         ]
         states = [voltage >= LED_FORWARD_THRESHOLD_V for voltage in forward_voltages]
+        profile_method = "terminal_forward_voltage"
+        threshold_v = LED_FORWARD_THRESHOLD_V
+        branch_control = led_branch_control_signal(component, components, node_series)
+        if branch_control is not None:
+            branch_values = list(branch_control["values"])
+            # Il punto medio e' relativo al ramo osservato: evita di imporre una
+            # soglia assoluta a LED con modelli o alimentazioni differenti.
+            threshold_v = (min(branch_values) + max(branch_values)) / 2.0
+            states = [value >= threshold_v for value in branch_values]
+            profile_method = "series_branch_voltage"
         if not states:
             continue
         rising_indices = [
@@ -350,14 +476,20 @@ def led_transient_profiles(
             if times[current] > times[previous]
         ]
         period_candidate = median(periods) if periods else None
+        coherent_periods = [
+            current_period
+            for current_period in periods
+            if period_candidate
+            and abs(current_period - period_candidate) / period_candidate
+            <= LED_PERIOD_RELATIVE_TOLERANCE
+        ]
         regular_period = bool(
             period_candidate
-            and len(periods) >= 2
-            and all(
-                abs(current_period - period_candidate) / period_candidate
-                <= LED_PERIOD_RELATIVE_TOLERANCE
-                for current_period in periods
-            )
+            and len(coherent_periods) >= 2
+            # La prima semionda puo' essere intenzionalmente diversa per una
+            # condizione iniziale; il resto del transitorio deve restare quasi
+            # interamente periodico prima di dichiarare il lampeggio regolare.
+            and len(coherent_periods) / len(periods) >= 0.75
         )
         period = period_candidate if regular_period else None
         durations = led_on_durations(times, states, rising_indices)
@@ -384,7 +516,8 @@ def led_transient_profiles(
         profiles[component_id] = {
             "status": "measured",
             "state": state,
-            "threshold_v": LED_FORWARD_THRESHOLD_V,
+            "threshold_v": threshold_v,
+            "profile_method": profile_method,
             "anode_node": nodes[0],
             "cathode_node": nodes[1],
             "on_fraction": on_fraction,
@@ -399,6 +532,16 @@ def led_transient_profiles(
             "voltage_min": min(forward_voltages),
             "voltage_max": max(forward_voltages),
         }
+        if branch_control is not None:
+            profiles[component_id].update(
+                {
+                    "branch_signal_min": min(branch_control["values"]),
+                    "branch_signal_max": max(branch_control["values"]),
+                    "series_component_id": branch_control["series_component_id"],
+                    "control_node": branch_control["control_node"],
+                    "series_side": branch_control["series_side"],
+                }
+            )
     return profiles
 
 
@@ -516,10 +659,20 @@ def select_transient_quantities(
         ),
         key=lambda item: (-item[1], item[0]),
     )
-    return [
+    variable_traces = [
         available[f"v({node_id})".lower()]
         for node_id, span in ranked_nodes
         if span >= TRANSIENT_VARIATION_EPSILON and f"v({node_id})".lower() in available
+    ][:3]
+    if variable_traces:
+        return variable_traces
+
+    # Una run perfettamente simmetrica puo' avere solo tracce piatte. Il
+    # grafico resta comunque informativo e non deve sparire dalla web chat.
+    return [
+        available[f"v({node_id})".lower()]
+        for node_id, _span in ranked_nodes
+        if f"v({node_id})".lower() in available
     ][:3]
 
 
@@ -1081,6 +1234,7 @@ def build_viewer_model(run_dir: Path) -> dict[str, Any]:
     rules = read_json(run_dir / "06_component_rules.json")
     components, directives, warnings = parse_netlist(run_dir / NETLIST_NAME)
     components = enrich_components_with_rules(components, rules)
+    components = enrich_manual_dc_supplies(components, rules)
     measurements = parse_ngspice_stdout(run_dir / "08_ngspice_stdout.txt")
     transient = parse_transient_csv(run_dir / "08_tran.csv", components)
     scenario = read_json(scenario_dir / "scenario.json") if scenario_dir else None

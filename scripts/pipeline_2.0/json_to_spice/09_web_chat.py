@@ -61,6 +61,7 @@ from scenario_runtime import (
     execute_scenario as execute_shared_scenario,
     scenario_signature,
 )
+from scenario_expectations import ALLOWED_EXPECTATIONS
 from viewer_core.contracts import (
     VIEWER_LAYOUT_NAME,
     VIEWER_LAYOUT_SCHEMA_VERSION,
@@ -101,7 +102,9 @@ CHAT_RESPONSE_NAME = "11_agent_response_chat.md"
 MAX_EXECUTABLE_SCENARIOS = 5
 EXPERIMENT2_CHAT_DIRNAME = "experiment2_chat"
 INTERACTIVE_CHAT_DIRNAME = "experiment_chat"
-INTERACTIVE_HISTORY_EXPERIMENTS = {"experiment3_1", "experiment4"}
+# Experiment 5 riusa le sessioni isolate di CHAT/AGENT gia validate in Experiment 4.
+INTERACTIVE_HISTORY_EXPERIMENTS = {"experiment3_1", "experiment4", "experiment5"}
+MULTI_WORKSPACE_EXPERIMENTS = {"experiment4", "experiment5"}
 CHAT_HISTORY_JSON_NAME = "chat_history.json"
 CHAT_HISTORY_MD_NAME = "chat_history.md"
 SCENARIO_REGISTRY_JSON_NAME = "scenario_registry.json"
@@ -720,9 +723,21 @@ def registered_scenario_signature(scenario: dict[str, Any]) -> str:
 
 
 def scenario_is_executable(scenario: dict[str, Any]) -> bool:
-    """Uno scenario e eseguibile da step 12 solo se contiene azioni."""
+    """Accetta scenari con azioni e criteri `expect` direttamente verificabili."""
     actions = scenario.get("actions")
-    return isinstance(actions, list) and bool(actions)
+    expectations = scenario.get("expect")
+    compared = {
+        str(item).strip().lower()
+        for item in scenario.get("compare") or []
+        if str(item).strip()
+    }
+    if not isinstance(actions, list) or not actions or not isinstance(expectations, dict) or not expectations:
+        return False
+    return all(
+        str(quantity).strip().lower() in compared
+        and str(expectation).strip().lower() in ALLOWED_EXPECTATIONS
+        for quantity, expectation in expectations.items()
+    )
 
 
 def register_experiment2_scenarios_from_response(
@@ -2874,7 +2889,8 @@ def main() -> None:
 
     workspace_dirs: dict[str, Path] = {}
     default_workspace_mode: str | None = None
-    if args.experiment == "experiment4" and not args.variant:
+    # CHAT e AGENT devono leggere due copie indipendenti della stessa base 01-08.
+    if args.experiment in MULTI_WORKSPACE_EXPERIMENTS and not args.variant:
         workspace_dirs = {
             "chat": build_output_dir(args.batch, args.circuit, args.experiment, "chat"),
             "agent": build_output_dir(args.batch, args.circuit, args.experiment, "agent"),

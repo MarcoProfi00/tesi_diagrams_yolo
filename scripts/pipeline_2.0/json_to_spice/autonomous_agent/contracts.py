@@ -12,6 +12,7 @@ from scenario_expectations import ALLOWED_EXPECTATIONS
 ALLOWED_ACTION_TYPES = frozenset(
     {
         "drive_node_voltage",
+        "set_initial_node_voltage",
         "change_source_value",
         "change_component_value",
         "close_switch",
@@ -36,6 +37,7 @@ MAX_SCENARIOS_PER_DECISION = 2
 MAX_ACTIONS_PER_SCENARIO = 5
 ACTION_REQUIRED_FIELDS = {
     "drive_node_voltage": ("target", "value"),
+    "set_initial_node_voltage": ("target", "value"),
     "change_source_value": ("target", "value"),
     "change_component_value": ("target", "value"),
     "close_switch": ("target",),

@@ -8,7 +8,7 @@ Versione attuale minimale:
 
 - legge `scenario.json`;
 - lavora sulla netlist copiata in `run/07_netlist.cir`;
-- supporta le azioni generali `drive_node_voltage`,
+- supporta le azioni generali `drive_node_voltage`, `set_initial_node_voltage`,
   `add_voltage_source_between_nodes`, `connect_nodes`,
   `add_resistor_between_nodes`,
   `feed_nodes_from_source_node`, `change_source_value`,
@@ -237,6 +237,87 @@ def insert_or_replace_netlist_element(netlist_text: str, element_name: str, elem
 
     lines.insert(insert_at, element_line)
     return "\n".join(lines) + "\n", "inserted"
+
+
+def insert_or_replace_initial_node_voltage(netlist_text: str, node: str, voltage: str) -> tuple[str, str, str]:
+    """
+    Inserisce oppure aggiorna una condizione iniziale generata dalla pipeline.
+
+    Le condizioni sono mantenute in una sola direttiva ``.ic`` identificata da
+    un commento dedicato. In questo modo piu azioni possono inizializzare nodi
+    diversi senza modificare eventuali direttive ``.ic`` gia presenti nella
+    netlist originale. La direttiva non aggiunge ``UIC``: ngspice calcola prima
+    un punto operativo coerente con il vincolo e lo rilascia nel transitorio.
+    """
+    marker = "* pipeline2 scenario initial conditions"
+    lines = netlist_text.splitlines()
+    marker_index = next(
+        (index for index, line in enumerate(lines) if line.strip().lower() == marker),
+        None,
+    )
+    assignment = f"V({node})={voltage}"
+
+    if marker_index is not None and marker_index + 1 < len(lines):
+        directive_index = marker_index + 1
+        directive = lines[directive_index].strip()
+        if directive.lower().startswith(".ic "):
+            assignments = directive[3:].strip().split()
+            target_pattern = re.compile(rf"^v\(\s*{re.escape(node)}\s*\)=", flags=re.IGNORECASE)
+            replaced = False
+            for index, existing in enumerate(assignments):
+                if target_pattern.match(existing):
+                    assignments[index] = assignment
+                    replaced = True
+                    break
+            if not replaced:
+                assignments.append(assignment)
+            lines[directive_index] = ".ic " + " ".join(assignments)
+            return "\n".join(lines) + "\n", "updated", lines[directive_index]
+
+    insert_at = len(lines)
+    for index, line in enumerate(lines):
+        stripped = line.strip().lower()
+        if stripped in {".op", ".end"} or stripped.startswith((".tran", ".ac", ".dc", ".control")):
+            insert_at = index
+            break
+
+    directive = f".ic {assignment}"
+    lines[insert_at:insert_at] = [marker, directive]
+    return "\n".join(lines) + "\n", "inserted", directive
+
+
+def apply_set_initial_node_voltage(
+    action: dict[str, Any],
+    run_dir: Path,
+    netlist_text: str,
+) -> tuple[str, dict[str, Any]]:
+    """
+    Imposta la tensione iniziale di un nodo per una simulazione transitoria.
+
+    L'azione emette solo ``.ic V(nodo)=valore`` nella netlist dello scenario:
+    non altera la topologia, non crea una sorgente permanente e non richiede
+    alcun simbolo aggiuntivo nel viewer.
+    """
+    node_map = read_json(run_dir / "03_node_map.json")
+    target_node = validate_node_target(action.get("target"), node_map)
+    voltage = normalize_spice_dc_value(action.get("value"))
+    updated_netlist, operation, directive = insert_or_replace_initial_node_voltage(
+        netlist_text,
+        target_node,
+        voltage,
+    )
+
+    result = {
+        "status": "applied",
+        "type": "set_initial_node_voltage",
+        "target": target_node,
+        "value": action.get("value"),
+        "normalized_dc_value": voltage,
+        "inserted_line": directive,
+        "operation": operation,
+        "spice_executed": False,
+    }
+    return updated_netlist, result
 
 
 def apply_drive_node_voltage(
@@ -773,6 +854,7 @@ def apply_change_component_value_action(
 
 ACTION_HANDLERS = {
     "drive_node_voltage": apply_drive_node_voltage,
+    "set_initial_node_voltage": apply_set_initial_node_voltage,
     "add_voltage_source_between_nodes": apply_add_voltage_source_between_nodes,
     "connect_nodes": apply_connect_nodes,
     "add_resistor_between_nodes": apply_add_resistor_between_nodes,
@@ -1523,6 +1605,9 @@ def apply_scenario(
                     "reason": "Action type is not supported in the current minimal version.",
                 })
                 continue
+
+            if action_type == "set_initial_node_voltage" and str(scenario.get("analysis") or "").strip().lower() != "tran":
+                raise ValueError("set_initial_node_voltage richiede analysis='tran'")
 
             netlist_text, result = handler(action, run_dir, netlist_text)
             result["index"] = index

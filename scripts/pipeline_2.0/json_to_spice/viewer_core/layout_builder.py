@@ -36,7 +36,7 @@ VIEWER_CONTENT_WIDTH = VIEWER_LEGEND_LEFT - VIEWER_LEGEND_CLEARANCE
 
 def legend_obstacle_bounds() -> tuple[float, float, float, float]:
     """Restituisce l'ingombro riservato alla legenda per placement e routing."""
-    return (VIEWER_LEGEND_LEFT - 10.0, 14.0, VIEWER_CANVAS_WIDTH - 15.0, 205.0)
+    return (VIEWER_LEGEND_LEFT - 10.0, 14.0, VIEWER_CANVAS_WIDTH - 15.0, 364.0)
 
 
 def component_label(component: dict[str, Any]) -> str:
@@ -77,7 +77,12 @@ def classify_component(component: dict[str, Any]) -> str:
     if component.get("viewer_kind"):
         return str(component["viewer_kind"])
     kind = str(component.get("kind") or component.get("class_name") or "").lower()
+    class_name = str(component.get("class_name") or "").lower()
     component_id = str(component.get("id") or "").lower()
+    # La netlist usa sempre il prefisso C: la classe originale conserva la
+    # polarita necessaria per scegliere il simbolo corretto nel viewer.
+    if class_name == "polarized_capacitor":
+        return "polarized_capacitor"
     if "connector" in kind or "connector" in component_id:
         return "connector"
     if "switch" in kind or "switch" in component_id:
@@ -1458,6 +1463,23 @@ def connect_point_group(node_id: str, points: list[dict[str, Any]]) -> list[dict
 
     # Prim sulla distanza Manhattan evita le lunghe stelle generate da un unico
     # terminale e si accorda con i percorsi ortogonali usati dal renderer.
+    # Quando il nodo ha altri terminali disponibili, il ramo di un condensatore
+    # non parte direttamente da una sorgente: la stessa topologia resta intatta,
+    # ma il filo non affianca inutilmente il simbolo circolare della sorgente.
+    source_types = {"current_source", "voltage_source", "signal_source", "dc_supply", "battery"}
+
+    def source_capacitor_branch_penalty(first: dict[str, Any], second: dict[str, Any]) -> float:
+        if len(base_points) <= 2:
+            return 0.0
+        first_type = str(first.get("component_type") or "").lower()
+        second_type = str(second.get("component_type") or "").lower()
+        is_source_capacitor_pair = (
+            first_type in source_types and "capacitor" in second_type
+        ) or (
+            second_type in source_types and "capacitor" in first_type
+        )
+        return 140.0 if is_source_capacitor_pair else 0.0
+
     connected = [base_points[0]]
     remaining = list(base_points[1:])
     while remaining:
@@ -1469,7 +1491,8 @@ def connect_point_group(node_id: str, points: list[dict[str, Any]]) -> list[dict
             ),
             key=lambda pair: (
                 abs(float(pair[0]["x"]) - float(pair[1]["x"]))
-                + abs(float(pair[0]["y"]) - float(pair[1]["y"])),
+                + abs(float(pair[0]["y"]) - float(pair[1]["y"]))
+                + source_capacitor_branch_penalty(pair[0], pair[1]),
                 str(pair[0].get("component_id") or ""),
                 str(pair[1].get("component_id") or ""),
             ),

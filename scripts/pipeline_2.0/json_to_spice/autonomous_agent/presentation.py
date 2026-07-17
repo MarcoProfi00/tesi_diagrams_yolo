@@ -33,6 +33,7 @@ FINAL_STATUS_PRESENTATION = {
 
 ACTION_LABELS = {
     "drive_node_voltage": "Forza tensione sul nodo",
+    "set_initial_node_voltage": "Imposta tensione iniziale del nodo",
     "change_source_value": "Modifica valore della sorgente",
     "change_component_value": "Modifica valore del componente",
     "close_switch": "Chiude lo switch",
@@ -177,7 +178,7 @@ def build_action_summary(action: dict[str, Any]) -> dict[str, str]:
     action_type = str(action.get("type") or "unknown")
     label = ACTION_LABELS.get(action_type, action_type)
 
-    if action_type in {"drive_node_voltage", "change_source_value", "change_component_value"}:
+    if action_type in {"drive_node_voltage", "set_initial_node_voltage", "change_source_value", "change_component_value"}:
         detail = f"{action.get('target', '?')} = {action.get('value', '?')}"
     elif action_type == "close_switch":
         detail = str(action.get("target") or "?")

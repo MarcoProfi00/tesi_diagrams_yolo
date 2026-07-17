@@ -1,0 +1,22 @@
+{
+  "scenario_id": "scenario_1",
+  "title": "Chiudere lo switch riconosciuto",
+  "hypothesis": "The open switch25.1 may be preventing the branch around N004 and N005 from affecting node N002.",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    }
+  ],
+  "rerun_from": "06",
+  "analysis": "op",
+  "compare": [
+    "v(N002)",
+    "v(N004)",
+    "v(N005)",
+    "i(vvoltage_source31_1#branch)"
+  ],
+  "expect": {
+    "v(N002)": "increased"
+  }
+}

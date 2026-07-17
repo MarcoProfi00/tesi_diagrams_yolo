@@ -305,6 +305,7 @@ Output:
 - modifica soltanto `run/07_netlist.cir`;
 - puo eseguire ngspice sulla run scenario;
 - crea confronto base vs scenario.
+- puo inserire condizioni iniziali transitorie senza aggiungere componenti.
 
 Struttura scenario:
 
@@ -387,6 +388,7 @@ Scenari elettrici / di pilotaggio:
 
 ```text
 drive_node_voltage
+set_initial_node_voltage
 add_voltage_source_between_nodes
 change_source_value
 change_component_value
@@ -406,6 +408,11 @@ Nota importante:
 ```text
 la base run non viene mai modificata
 ```
+
+`set_initial_node_voltage` e disponibile solo con `analysis: "tran"`: emette
+`.ic V(NODO)=valore` nella netlist scenario, non aggiunge una sorgente
+permanente e non usa `UIC`. Serve per verificare un possibile equilibrio
+iniziale artificiosamente simmetrico, non per alimentare il circuito.
 
 Ogni scenario parte sempre dalla base run. Non resta attivo automaticamente lo
 scenario precedente.
@@ -768,7 +775,7 @@ compatibilita con gli stati gia salvati.
 
 Guardrail della prima versione:
 
-- primitive autonome ammesse: `drive_node_voltage`, `change_source_value`,
+- primitive autonome ammesse: `drive_node_voltage`, `set_initial_node_voltage`, `change_source_value`,
   `change_component_value`, `close_switch`, `connect_nodes`,
   `feed_nodes_from_source_node`, `add_voltage_source_between_nodes`,
   `add_resistor_between_nodes`;
@@ -779,6 +786,8 @@ Guardrail della prima versione:
   essere proposti sulla stessa relazione nella stessa decisione;
 - `add_resistor_between_nodes` resta una ipotesi separata di accoppiamento
   resistivo reale;
+- `set_initial_node_voltage` e riservata a scenari `tran` che verificano una
+  perturbazione iniziale; non modifica topologia, valori o alimentazione;
 - massimo 2 scenari indipendenti nella stessa decisione, eseguiti in sequenza;
 - massimo 5 run SPICE scenario per diagnosi;
 - massimo 8 decisioni del modello, inclusa la conclusione finale;

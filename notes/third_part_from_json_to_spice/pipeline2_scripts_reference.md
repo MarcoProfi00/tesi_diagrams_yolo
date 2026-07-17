@@ -869,6 +869,7 @@ Primitive oggi supportate:
 ```text
 Scenari elettrici / di pilotaggio:
 - drive_node_voltage
+- set_initial_node_voltage
 - add_voltage_source_between_nodes
 - change_source_value
 - change_component_value
@@ -884,6 +885,8 @@ Responsabilita aggiuntive:
 
 - valida i nodi richiesti dallo scenario;
 - normalizza valori SPICE;
+- per `set_initial_node_voltage` richiede `analysis: "tran"` ed emette una
+  direttiva `.ic` senza sorgenti permanenti ne `UIC`;
 - limita il budget a massimo `5` scenari eseguibili per circuito;
 - crea `scenario_comparison.json`;
 - classifica automaticamente l'esito con categorie come:
@@ -1018,7 +1021,8 @@ Guardrail implementati:
 - il ciclo termina per stop motivato, limite di 5 run, assenza di azioni valide,
   errore non recuperabile o arresto utente;
 - la base run e il workspace dell'altra modalita non vengono modificati.
-- sono ammesse le otto primitive controllate `drive_node_voltage`,
+- sono ammesse le nove primitive controllate `drive_node_voltage`,
+  `set_initial_node_voltage`,
   `change_source_value`, `change_component_value`, `close_switch`,
   `connect_nodes`, `feed_nodes_from_source_node`,
   `add_voltage_source_between_nodes` e `add_resistor_between_nodes`;
@@ -1029,6 +1033,9 @@ Guardrail implementati:
   allo stesso feed nella medesima decisione;
 - `add_resistor_between_nodes` non viene assimilata a questi collegamenti,
   perche modella un accoppiamento resistivo distinto;
+- `set_initial_node_voltage` verifica un possibile equilibrio iniziale
+  simmetrico soltanto in `tran`: non e una sorgente di alimentazione e non
+  cambia il circuito della base run;
 - quando l'obiettivo attiva, spegne o mantiene attivo un componente, `compare`
   deve includere una misura diretta `i(NOME_SPICE)` o `p(NOME_SPICE)` per il
   target e per gli eventuali componenti da preservare;

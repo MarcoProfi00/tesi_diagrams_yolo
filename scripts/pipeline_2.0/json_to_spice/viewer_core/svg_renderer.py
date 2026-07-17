@@ -19,6 +19,12 @@ from .json_io import read_json
 from .svg_styles import render_svg_style_blocks
 
 
+# Soglie visuali generali: non cambiano la simulazione, ma distinguono zero,
+# leakage e corrente continua misurata in modo leggibile.
+MIN_NUMERICAL_CURRENT_A = 1e-15
+LEAKAGE_CURRENT_MAX_A = 1e-11
+
+
 def format_number(value: Any) -> str:
     """Formatta un valore numerico senza aggiungere precisione inutile."""
     try:
@@ -77,19 +83,39 @@ def measured_component_current(component_id: str, measurements: dict[str, Any]) 
     return None
 
 
-def component_activity_ids(model: dict[str, Any]) -> tuple[set[str], set[str]]:
-    """Separa i componenti con corrente OP da quelli variabili nel transitorio."""
+def declared_current_source_value(component: dict[str, Any]) -> float | None:
+    """Legge il valore DC di una sorgente di corrente non esportata da ngspice."""
+    if str(component.get("kind") or "").lower() != "current_source":
+        return None
+    match = re.search(r"\bDC\s+([^\s()]+)", str(component.get("value") or ""), flags=re.IGNORECASE)
+    return parse_spice_scalar(match.group(1)) if match else None
+
+
+def component_display_current(component: dict[str, Any], measurements: dict[str, Any]) -> float | None:
+    """Preferisce la misura OP; per una sorgente ideale usa il suo valore DC noto."""
+    measured = measured_component_current(str(component.get("id") or ""), measurements)
+    return measured if measured is not None else declared_current_source_value(component)
+
+
+def component_activity_ids(model: dict[str, Any]) -> tuple[set[str], set[str], set[str]]:
+    """Classifica i rami OP in corrente continua, leakage e transitorio."""
     measurements = model.get("measurements") or {}
     components = [item for item in model.get("netlist_components") or [] if isinstance(item, dict)]
     steady_ids: set[str] = set()
+    leakage_ids: set[str] = set()
     transient_ids: set[str] = set()
     active_nodes: set[str] = set()
 
-    # Le misure dirette sono la fonte primaria per stabilire l'attivita' del ramo.
+    # Le misure dirette sono la fonte primaria; le sorgenti ideali di corrente
+    # usano il loro valore DC solo quando ngspice non le riporta nel parser OP.
     for component in components:
         component_id = str(component.get("id") or "")
-        current = measured_component_current(component_id, measurements)
-        if current is not None and abs(current) > 1e-6:
+        current = component_display_current(component, measurements)
+        if current is None or abs(current) <= MIN_NUMERICAL_CURRENT_A:
+            continue
+        if abs(current) < LEAKAGE_CURRENT_MAX_A:
+            leakage_ids.add(component_id)
+        else:
             steady_ids.add(component_id)
             active_nodes.update(str(node_id) for node_id in component.get("nodes") or [])
 
@@ -107,13 +133,14 @@ def component_activity_ids(model: dict[str, Any]) -> tuple[set[str], set[str]]:
         is_diode = component.get("kind") == "diode" or source_id.startswith("led")
         if is_diode and bool((nodes - {"0"}) & active_nodes):
             steady_ids.add(component_id)
-    return steady_ids, transient_ids
+    return steady_ids, leakage_ids, transient_ids
 
 
 def electrical_class(
     kind: str,
     connection: dict[str, Any],
     steady_ids: set[str],
+    leakage_ids: set[str],
     transient_ids: set[str],
     voltages: dict[str, float | None],
 ) -> str:
@@ -122,6 +149,7 @@ def electrical_class(
         return "wire guide"
     endpoints = {str((connection.get(side) or {}).get("component_id") or "") for side in ("from", "to")}
     has_steady = bool(endpoints & steady_ids)
+    has_leakage = bool(endpoints & leakage_ids)
     has_transient = bool(endpoints & transient_ids)
     if has_steady and has_transient:
         return "wire mixed"
@@ -129,6 +157,8 @@ def electrical_class(
         return "wire transient"
     if has_steady:
         return "wire active"
+    if has_leakage:
+        return "wire leakage"
     node_id = str(connection.get("node_id") or "")
     return "wire energized" if node_is_active(node_id, voltages) else "wire idle"
 
@@ -236,6 +266,7 @@ def render_connections(
     layout: dict[str, Any],
     model: dict[str, Any],
     steady_ids: set[str],
+    leakage_ids: set[str],
     transient_ids: set[str],
     voltages: dict[str, float | None],
 ) -> str:
@@ -265,6 +296,7 @@ def render_connections(
                 str(connection.get("kind") or "electrical"),
                 connection,
                 steady_ids,
+                leakage_ids,
                 transient_ids,
                 voltages,
             )
@@ -302,6 +334,12 @@ def component_value(component: dict[str, Any], position: dict[str, Any]) -> str:
         return signal_source_value(component)
     parameters = component.get("parameters") or {}
     component_type = str(position.get("component_type") or "").lower()
+    if component_type == "dc_supply":
+        label = str(component.get("display_label") or component.get("supply_name") or "DC")
+        value = parameters.get("value")
+        unit = str(parameters.get("unit") or "V")
+        formatted = f"{value:g} {unit}" if isinstance(value, (int, float)) else str(value or "").strip()
+        return f"{label} {formatted}".strip()
     if component_type == "fuse" and component.get("display_label"):
         return str(component["display_label"])
     if component.get("is_scenario_modified") and component_type in {"resistor", "capacitor", "inductor"}:
@@ -404,9 +442,29 @@ def component_label_lines(component: dict[str, Any], position: dict[str, Any]) -
     component_type = str(position.get("component_type") or "").lower()
     if component_type == "signal_source":
         return signal_source_label_lines(component)
+    if component_type in {"voltage_source", "current_source"}:
+        display_label = str(component.get("display_label") or "").strip()
+        if display_label:
+            manual_match = re.match(r"^(.+?)\s+assunto\s*:\s*(.+)$", display_label, flags=re.IGNORECASE)
+            return [manual_match.group(1).strip(), manual_match.group(2).strip()] if manual_match else [display_label]
+    if component_type == "dc_supply":
+        parameters = component.get("parameters") or {}
+        label = str(component.get("display_label") or component.get("supply_name") or "DC")
+        value = parameters.get("value")
+        unit = str(parameters.get("unit") or "V")
+        formatted = f"{value:g} {unit}" if isinstance(value, (int, float)) else str(value or "").strip()
+        if component.get("viewer_role") == "manual_ocr_dc_supply":
+            # Il valore e' l'unica label esterna della sorgente dedotta da OCR.
+            return [formatted] if formatted else []
+        return [line for line in (label, formatted) if line]
     label = component_value(component, position).strip()
     if not label:
         return []
+    # Le note metodologiche appartengono al YAML e agli artefatti, non alla
+    # label grafica: nel viewer restano solo riferimento e valore elettrico.
+    manual_match = re.match(r"^(.+?)\s+assunto\s*:\s*(.+)$", label, flags=re.IGNORECASE)
+    if manual_match:
+        return [manual_match.group(1).strip(), manual_match.group(2).strip()]
     if str(position.get("component_type") or "").lower() == "scenario_voltage_source":
         # Il colore del simbolo identifica gia' lo scenario: basta mostrare il valore elettrico.
         return [label]
@@ -535,6 +593,24 @@ def battery_polarity_axis(position: dict[str, Any]) -> tuple[float, float]:
     return positive_x, -positive_x
 
 
+def current_source_arrow_axis(position: dict[str, Any]) -> tuple[float, float]:
+    """Restituisce inizio e fine della freccia secondo l'ordine SPICE della corrente."""
+    terminals = position.get("terminals") or []
+    from_aliases = {"current_from", "from", "source", "in"}
+    from_index = next(
+        (
+            index
+            for index, terminal in enumerate(terminals[:2])
+            if str(terminal.get("name") or "").strip().lower() in from_aliases
+        ),
+        0,
+    )
+    # Il primo terminale del bipolo e' sul semiasse locale negativo: la freccia
+    # interna punta quindi dal terminale `current_from` a `current_to`.
+    direction = 1.0 if from_index == 0 else -1.0
+    return -13.0 * direction, 13.0 * direction
+
+
 def render_led_glow(profile: dict[str, Any] | None, active: bool) -> str:
     """Disegna un alone LED statico o sincronizzato con il profilo TRAN."""
     if profile:
@@ -591,6 +667,7 @@ def render_two_terminal_symbol(
     component: dict[str, Any],
     position: dict[str, Any],
     steady_ids: set[str],
+    leakage_ids: set[str],
     transient_ids: set[str],
     led_profiles: dict[str, dict[str, Any]],
 ) -> str:
@@ -599,6 +676,7 @@ def render_two_terminal_symbol(
     half = max(24.0, min(length / 2, 62.0))
     visual_class = str(position.get("component_type") or position.get("visual_class_name") or position.get("layout_kind") or "").lower()
     active = component_id in steady_ids or component_id in transient_ids
+    leakage = component_id in leakage_ids
     transient = component_id in transient_ids
     stroke_class = "symbol"
     label_lines = component_label_lines(component, position)
@@ -615,6 +693,26 @@ def render_two_terminal_symbol(
     elif visual_class == "resistor":
         flow_path = f'M{-half} 0 H-36 L-30 -14 L-18 14 L-6 -14 L6 14 L18 -14 L30 14 L36 0 H{half}'
         body = f'<path d="{flow_path}"/>'
+    elif visual_class == "polarized_capacitor":
+        # La piastra diritta e il segno + seguono sempre il terminale positive
+        # del Graph JSON; la piastra opposta e curva e porta il segno -.
+        positive_x, negative_x = battery_polarity_axis(position)
+        positive_plate_x = -8.0 if positive_x < 0 else 8.0
+        negative_plate_x = -positive_plate_x
+        # La curva deve rivolgersi verso la piastra diritta: `|(` quando e' a
+        # destra e `)|` quando e' a sinistra, senza alterare la polarita.
+        curve_x = negative_plate_x - (12.0 if negative_plate_x > 0 else -12.0)
+        flow_path = f'M{-half} 0 H-8 M8 0 H{half}'
+        body = (
+            f'<path d="M{-half} 0 H-8 '
+            f'M{format_number(negative_plate_x)} -20 Q{format_number(curve_x)} 0 {format_number(negative_plate_x)} 20 '
+            f'M{format_number(positive_plate_x)} -20 V20 '
+            f'M8 0 H{half}"/>'
+            f'<text class="battery-polarity positive" x="{format_number(positive_x)}" y="5" '
+            f'transform="rotate({format_number(-angle)} {format_number(positive_x)} 0)">+</text>'
+            f'<text class="battery-polarity" x="{format_number(negative_x)}" y="5" '
+            f'transform="rotate({format_number(-angle)} {format_number(negative_x)} 0)">-</text>'
+        )
     elif "capacitor" in visual_class:
         flow_path = f'M{-half} 0 H-8 M-8 -20 V20 M8 -20 V20 M8 0 H{half}'
         body = f'<path d="{flow_path}"/>'
@@ -636,6 +734,28 @@ def render_two_terminal_symbol(
             '<path class="source-wave" d="M-16 0 C-11 -12 -5 -12 0 0 C5 12 11 12 16 0"/>'
         )
         flow_path = f'M{-half} 0 H-25 M-16 0 C-11 -12 -5 -12 0 0 C5 12 11 12 16 0 M25 0 H{half}'
+    elif visual_class in {"dc_supply", "voltage_source"}:
+        positive_x, negative_x = battery_polarity_axis(position)
+        body = (
+            f'<path d="M{-half} 0 H-25 M25 0 H{half}"/>'
+            '<circle cx="0" cy="0" r="25"/>'
+            f'<text class="battery-polarity positive" x="{format_number(positive_x)}" y="5" '
+            f'transform="rotate({format_number(-angle)} {format_number(positive_x)} 0)">+</text>'
+            f'<text class="battery-polarity" x="{format_number(negative_x)}" y="5" '
+            f'transform="rotate({format_number(-angle)} {format_number(negative_x)} 0)">-</text>'
+        )
+        flow_path = f'M{-half} 0 H-25' if active else ""
+    elif visual_class == "current_source":
+        arrow_start, arrow_end = current_source_arrow_axis(position)
+        arrow_head_x = arrow_end - (8.0 if arrow_end > 0 else -8.0)
+        body = (
+            f'<path d="M{-half} 0 H-25 M25 0 H{half}"/>'
+            '<circle cx="0" cy="0" r="25"/>'
+            f'<path d="M{format_number(arrow_start)} 0 H{format_number(arrow_end)} '
+            f'M{format_number(arrow_head_x)} -8 L{format_number(arrow_end)} 0 '
+            f'L{format_number(arrow_head_x)} 8"/>'
+        )
+        flow_path = f'M{-half} 0 H-25 M25 0 H{half}' if active else ""
     elif visual_class in {"battery", "scenario_voltage_source"}:
         is_scenario_source = visual_class == "scenario_voltage_source"
         positive_x, negative_x = battery_polarity_axis(position)
@@ -670,14 +790,20 @@ def render_two_terminal_symbol(
             label_y = center_y + 4 + float(position.get("label_offset_y") or 0)
             label_anchor = "end" if label_side == "left" else "start"
     else:
-        label_x = center_x
-        label_y = center_y - 31
+        label_side = str(position.get("label_side") or "top")
+        label_height = max(len(label_lines), 1) * 14.0
+        direction = 1.0 if label_side == "bottom" else -1.0
+        symbol_height = float((position.get("symbol_size") or {}).get("height") or 46.0)
+        label_x = center_x + float(position.get("label_offset_x") or 0)
+        label_y = center_y + direction * (symbol_height / 2 + label_height / 2 + 8.0)
         label_anchor = "middle"
     label_svg = render_component_label(label_lines, label_x, label_y, label_anchor)
     mixed = component_id in steady_ids and component_id in transient_ids
-    if active and flow_path:
+    if (active or leakage) and flow_path:
         if mixed:
             flow_svg = f'<path class="component-flow mixed-signal" d="{flow_path}"/>'
+        elif leakage:
+            flow_svg = f'<path class="component-flow leakage" d="{flow_path}"/>'
         else:
             flow_class = "component-flow transient" if transient else "component-flow"
             flow_svg = f'<path class="{flow_class}" d="{flow_path}"/>'
@@ -1000,6 +1126,55 @@ def vertical_label_placements(
         )
         placements[component_id] = {"side": side, "offset_x": offset_x, "offset_y": offset_y}
         placed_labels.append(selected_box)
+
+    # Per i bipoli orizzontali si sceglie sopra o sotto valutando ingombri di
+    # simboli, fili e label gia' assegnate. Cosi la lettura non dipende da un
+    # circuito o da coordinate fissate a mano.
+    horizontal_types = {
+        "resistor", "capacitor", "inductor", "diode", "lamp", "fuse",
+        "switch", "voltage_source", "current_source", "signal_source",
+    }
+    for component_id, position in components.items():
+        if position.get("orientation") == "vertical":
+            continue
+        component_type = str(position.get("component_type") or "").lower()
+        if component_type not in horizontal_types:
+            continue
+        lines = component_label_lines(indexed.get(component_id) or {}, position)
+        if not lines:
+            continue
+        text_width = max(len(line) for line in lines) * 7.2 + 4.0
+        text_height = max(len(lines), 1) * 14.0 + 4.0
+        center_x = float(position.get("x") or 0)
+        center_y = float(position.get("y") or 0)
+        symbol_height = float((position.get("symbol_size") or {}).get("height") or 46.0)
+        candidates: list[tuple[float, str, float, tuple[float, float, float, float]]] = []
+        for side, direction in (("top", -1.0), ("bottom", 1.0)):
+            label_y = center_y + direction * (symbol_height / 2 + text_height / 2 + 8.0)
+            for offset_x in (0.0, -38.0, 38.0, -76.0, 76.0):
+                label_x = center_x + offset_x
+                box = (
+                    label_x - text_width / 2,
+                    label_y - text_height / 2,
+                    label_x + text_width / 2,
+                    label_y + text_height / 2,
+                )
+                symbol_overlap = sum(
+                    rectangles_overlap(box, obstacle)
+                    for other_id, obstacle in obstacles.items()
+                    if other_id != component_id
+                )
+                label_overlap = sum(rectangles_overlap(box, other) for other in placed_labels)
+                fixed_label_overlap = sum(rectangles_overlap(box, other) for other in fixed_label_obstacles)
+                wire_overlap = sum(rectangles_overlap(box, wire) for wire in wire_obstacles)
+                score = symbol_overlap * 80.0 + label_overlap * 30.0 + fixed_label_overlap * 100.0 + wire_overlap * 12.0
+                candidates.append((score, side, offset_x, box))
+        _, side, offset_x, selected_box = min(
+            candidates,
+            key=lambda candidate: (candidate[0], 0 if candidate[1] == "top" else 1, abs(candidate[2])),
+        )
+        placements[component_id] = {"side": side, "offset_x": offset_x, "offset_y": 0.0}
+        placed_labels.append(selected_box)
     return placements
 
 
@@ -1023,6 +1198,7 @@ def render_components(
     model: dict[str, Any],
     layout: dict[str, Any],
     steady_ids: set[str],
+    leakage_ids: set[str],
     transient_ids: set[str],
 ) -> str:
     """Renderizza ogni componente scegliendo il simbolo dal vocabolario comune."""
@@ -1067,6 +1243,7 @@ def render_components(
                 component,
                 position,
                 steady_ids,
+                leakage_ids,
                 transient_ids,
                 led_profiles,
             )
@@ -1156,7 +1333,7 @@ def render_node_badges(model: dict[str, Any], layout: dict[str, Any]) -> str:
         if isinstance(position, dict)
     ]
     # I badge non devono mai occupare la fascia grafica destinata alla legenda.
-    component_bounds.append((legend_x - 10.0, 14.0, legend_x + 190.0, 218.0))
+    component_bounds.append((legend_x - 10.0, 14.0, legend_x + 190.0, 372.0))
     occupied: list[tuple[float, float, float, float]] = []
     rendered: list[str] = []
     for node in model.get("nodes") or []:
@@ -1192,8 +1369,8 @@ def render_node_badges(model: dict[str, Any], layout: dict[str, Any]) -> str:
 
 
 def render_legend(x: float, y: float) -> str:
-    """Disegna la legenda nella posizione libera dichiarata dal layout."""
-    return f'''<g class="legend" transform="translate({format_number(x)} {format_number(y)})"><rect width="180" height="220" rx="6"/><text class="legend-title" x="14" y="22">Legenda</text><path class="wire energized" d="M14 42 H54"/><text x="68" y="46">tensione presente</text><path class="wire active" d="M14 68 H54"/><text x="68" y="72">corrente continua</text><path class="wire transient" d="M14 94 H54"/><text x="68" y="98">segnale variabile</text><path class="wire mixed-signal" d="M14 120 H54"/><text x="68" y="124">DC + segnale</text><path class="wire idle" d="M14 146 H54"/><text x="68" y="150">ramo fermo</text><path class="wire guide" d="M14 172 H54"/><text x="68" y="176">collegamento guida</text><circle class="constraint-node" cx="34" cy="200" r="5"/><text x="68" y="204">vincolo scenario</text></g>'''
+    """Disegna legende distinte per stati elettrici e classi di corrente."""
+    return f'''<g class="legend" transform="translate({format_number(x)} {format_number(y)})"><rect width="180" height="188" rx="6"/><text class="legend-title" x="14" y="22">Stati</text><path class="wire energized" d="M14 42 H54"/><text x="68" y="46">tensione presente</text><path class="wire active" d="M14 68 H54"/><text x="68" y="72">corrente DC</text><path class="wire transient" d="M14 94 H54"/><text x="68" y="98">segnale variabile</text><path class="wire mixed-signal" d="M14 120 H54"/><text x="68" y="124">DC + segnale</text><path class="wire idle" d="M14 146 H54"/><text x="68" y="150">nessuna corrente</text><circle class="constraint-node" cx="34" cy="170" r="5"/><text x="68" y="174">vincolo scenario</text></g><g class="legend" transform="translate({format_number(x)} {format_number(y + 202.0)})"><rect width="180" height="138" rx="6"/><text class="legend-title" x="14" y="22">Correnti</text><path class="wire active" d="M14 46 H54"/><text x="68" y="50">DC: ≥ 10 pA</text><path class="wire leakage" d="M14 72 H54"/><text x="68" y="76">leakage: 0-10 pA</text><path class="wire idle" d="M14 98 H54"/><text x="68" y="102">0 A: fermo</text><text x="14" y="124">fonte: OP SPICE / DC</text></g>'''
 
 
 def render_svg(model: dict[str, Any], layout: dict[str, Any]) -> str:
@@ -1205,11 +1382,11 @@ def render_svg(model: dict[str, Any], layout: dict[str, Any]) -> str:
     legend_x = float(legend.get("x") or width - 205)
     legend_y = float(legend.get("y") or 24)
     voltages = node_voltages(model)
-    steady_ids, transient_ids = component_activity_ids(model)
+    steady_ids, leakage_ids, transient_ids = component_activity_ids(model)
     return f'''<svg class="viewer-svg" data-viewer-version="{VIEWER_RENDER_VERSION}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" aria-label="Circuito equivalente dalla netlist SPICE">
 {render_svg_style_blocks()}
-<g class="connections">{render_connections(layout, model, steady_ids, transient_ids, voltages)}</g>
-<g class="components">{render_components(model, layout, steady_ids, transient_ids)}</g>
+<g class="connections">{render_connections(layout, model, steady_ids, leakage_ids, transient_ids, voltages)}</g>
+<g class="components">{render_components(model, layout, steady_ids, leakage_ids, transient_ids)}</g>
 <g class="node-badges">{render_node_badges(model, layout)}</g>
 <g class="node-constraints">{render_node_constraints(layout)}</g>
 {render_legend(legend_x, legend_y)}

@@ -189,6 +189,7 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
 
 ## Schema delle azioni consentite
 - drive_node_voltage: type, target, value
+- set_initial_node_voltage: type, target, value (solo analysis=tran; condizione iniziale senza sorgente permanente e senza UIC)
 - change_source_value: type, target, value
 - change_component_value: type, target, value
 - close_switch: type, target, resistance opzionale

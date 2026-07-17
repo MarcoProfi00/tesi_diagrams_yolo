@@ -26,6 +26,9 @@ from typing import Any
 VALUE_REQUIRED = {
     "Resistor": ("value",),
     "Capacitor": ("value",),
+    # I condensatori polarizzati usano la stessa primitiva SPICE C, ma il
+    # Graph JSON ne conserva la polarita come informazione semantica.
+    "Polarized_Capacitor": ("value",),
     "Battery": ("value",),
     "Voltage_Source": ("value",),
     "Current_Source": ("value",),
