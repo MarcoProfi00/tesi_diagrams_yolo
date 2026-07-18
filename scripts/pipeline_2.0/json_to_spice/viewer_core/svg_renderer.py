@@ -190,9 +190,40 @@ def routed_path(connection: dict[str, Any], start: dict[str, Any], end: dict[str
     ]
     if len(points) < 2:
         return orthogonal_path(start, end)
+    bridges_by_segment: dict[int, list[dict[str, Any]]] = {}
+    for bridge in connection.get("wire_bridges") or []:
+        if isinstance(bridge, dict):
+            bridges_by_segment.setdefault(int(bridge.get("segment_index") or 0), []).append(bridge)
+
     commands = [f"M{format_number(points[0][0])} {format_number(points[0][1])}"]
-    for previous, current in zip(points, points[1:]):
+    bridge_radius = 6.0
+    for segment_index, (previous, current) in enumerate(zip(points, points[1:])):
         command = "H" if abs(previous[1] - current[1]) < 0.01 else "V"
+        segment_bridges = bridges_by_segment.get(segment_index) or []
+        if command == "H":
+            direction = 1.0 if current[0] >= previous[0] else -1.0
+            segment_bridges.sort(key=lambda item: float(item.get("x") or 0) * direction)
+            for bridge in segment_bridges:
+                crossing_x = float(bridge.get("x") or 0)
+                lead_x = crossing_x - direction * bridge_radius
+                exit_x = crossing_x + direction * bridge_radius
+                commands.append(f"H{format_number(lead_x)}")
+                commands.append(
+                    f"Q{format_number(crossing_x)} {format_number(previous[1] - bridge_radius)} "
+                    f"{format_number(exit_x)} {format_number(previous[1])}"
+                )
+        else:
+            direction = 1.0 if current[1] >= previous[1] else -1.0
+            segment_bridges.sort(key=lambda item: float(item.get("y") or 0) * direction)
+            for bridge in segment_bridges:
+                crossing_y = float(bridge.get("y") or 0)
+                lead_y = crossing_y - direction * bridge_radius
+                exit_y = crossing_y + direction * bridge_radius
+                commands.append(f"V{format_number(lead_y)}")
+                commands.append(
+                    f"Q{format_number(previous[0] + bridge_radius)} {format_number(crossing_y)} "
+                    f"{format_number(previous[0])} {format_number(exit_y)}"
+                )
         coordinate = current[0] if command == "H" else current[1]
         commands.append(f"{command}{format_number(coordinate)}")
     return " ".join(commands)
@@ -342,7 +373,10 @@ def component_value(component: dict[str, Any], position: dict[str, Any]) -> str:
         return f"{label} {formatted}".strip()
     if component_type == "fuse" and component.get("display_label"):
         return str(component["display_label"])
-    if component.get("is_scenario_modified") and component_type in {"resistor", "capacitor", "inductor"}:
+    capacitor_types = {
+        "capacitor", "polarized_capacitor", "variable_capacitor", "variable_polarized_capacitor"
+    }
+    if component.get("is_scenario_modified") and component_type in {"resistor", "inductor", *capacitor_types}:
         display_label = str(component.get("display_label") or "").strip()
         reference = display_label.split()[0] if display_label else ""
         raw_value = str(component.get("value") or component.get("scenario_value") or "").strip()
@@ -350,9 +384,9 @@ def component_value(component: dict[str, Any], position: dict[str, Any]) -> str:
         units = {"resistor": "Ohm", "capacitor": "F", "inductor": "H"}
         current_value = format_engineering_value(numeric_value, units[component_type]) if numeric_value is not None else raw_value
         return f"{reference} {current_value}".strip()
-    if component_type in {"capacitor", "resistor"} and component.get("display_label"):
+    if component_type in {"resistor", *capacitor_types} and component.get("display_label"):
         return str(component["display_label"])
-    if component_type in {"battery", "capacitor", "resistor"} and parameters.get("value") is not None:
+    if component_type in {"battery", "resistor", *capacitor_types} and parameters.get("value") is not None:
         value = parameters.get("value")
         unit = str(parameters.get("unit") or "")
         return f"{value:g} {unit}" if isinstance(value, (int, float)) else f"{value} {unit}".strip()
@@ -440,6 +474,10 @@ def render_analog_meter(component: dict[str, Any], position: dict[str, Any]) -> 
 def component_label_lines(component: dict[str, Any], position: dict[str, Any]) -> list[str]:
     """Divide riferimento e valore su due righe quando la label li contiene."""
     component_type = str(position.get("component_type") or "").lower()
+    if component_type in {"antenna", "headset", "variable_capacitor", "variable_polarized_capacitor"}:
+        label = str(component.get("viewer_label") or position.get("label") or component_type).strip()
+        value = str(component.get("viewer_value") or "").strip()
+        return [line for line in (label, value) if line]
     if component_type == "signal_source":
         return signal_source_label_lines(component)
     if component_type in {"voltage_source", "current_source"}:
@@ -469,7 +507,10 @@ def component_label_lines(component: dict[str, Any], position: dict[str, Any]) -
         # Il colore del simbolo identifica gia' lo scenario: basta mostrare il valore elettrico.
         return [label]
     parts = label.split(maxsplit=1)
-    if component_type in {"resistor", "capacitor", "fuse"} and len(parts) == 2 and re.fullmatch(r"[A-Za-z]+[0-9]*", parts[0]):
+    if component_type in {
+        "resistor", "capacitor", "polarized_capacitor",
+        "variable_capacitor", "variable_polarized_capacitor", "fuse",
+    } and len(parts) == 2 and re.fullmatch(r"[A-Za-z]+[0-9]*", parts[0]):
         return [parts[0], parts[1]]
     if len(parts) == 2 and re.fullmatch(r"[A-Za-z]+[0-9]+", parts[0]):
         return [parts[0], parts[1]]
@@ -693,7 +734,7 @@ def render_two_terminal_symbol(
     elif visual_class == "resistor":
         flow_path = f'M{-half} 0 H-36 L-30 -14 L-18 14 L-6 -14 L6 14 L18 -14 L30 14 L36 0 H{half}'
         body = f'<path d="{flow_path}"/>'
-    elif visual_class == "polarized_capacitor":
+    elif visual_class in {"polarized_capacitor", "variable_polarized_capacitor"}:
         # La piastra diritta e il segno + seguono sempre il terminale positive
         # del Graph JSON; la piastra opposta e curva e porta il segno -.
         positive_x, negative_x = battery_polarity_axis(position)
@@ -703,6 +744,11 @@ def render_two_terminal_symbol(
         # destra e `)|` quando e' a sinistra, senza alterare la polarita.
         curve_x = negative_plate_x - (12.0 if negative_plate_x > 0 else -12.0)
         flow_path = f'M{-half} 0 H-8 M8 0 H{half}'
+        tuning_arrow = (
+            '<path d="M-23 25 L23 -25 M14 -25 H23 V-16"/>'
+            if visual_class == "variable_polarized_capacitor"
+            else ""
+        )
         body = (
             f'<path d="M{-half} 0 H-8 '
             f'M{format_number(negative_plate_x)} -20 Q{format_number(curve_x)} 0 {format_number(negative_plate_x)} 20 '
@@ -712,12 +758,29 @@ def render_two_terminal_symbol(
             f'transform="rotate({format_number(-angle)} {format_number(positive_x)} 0)">+</text>'
             f'<text class="battery-polarity" x="{format_number(negative_x)}" y="5" '
             f'transform="rotate({format_number(-angle)} {format_number(negative_x)} 0)">-</text>'
+            f'{tuning_arrow}'
+        )
+    elif visual_class == "variable_capacitor":
+        # Condensatore regolabile: piastre dritte, nessuna polarita e freccia
+        # diagonale secondo il simbolo circuitale standard.
+        flow_path = f'M{-half} 0 H-8 M8 0 H{half}'
+        body = (
+            f'<path d="M{-half} 0 H-8 M-8 -20 V20 M8 -20 V20 M8 0 H{half} '
+            'M-23 25 L23 -25 M14 -25 H23 V-16"/>'
         )
     elif "capacitor" in visual_class:
         flow_path = f'M{-half} 0 H-8 M-8 -20 V20 M8 -20 V20 M8 0 H{half}'
         body = f'<path d="{flow_path}"/>'
     elif "inductor" in visual_class:
-        body = f'<path d="M{-half} 0 H{-half + 10} C{-half + 18} -20 {-half + 30} -20 {-half + 30} 0 C{-half + 38} -20 {-half + 50} -20 {-half + 50} 0 C{-half + 58} -20 {half - 10} -20 {half - 10} 0 H{half}"/>'
+        # Tre gobbe identiche rendono il simbolo stabile anche quando il
+        # layout lo ruota per rappresentare un induttore verticale.
+        body = (
+            f'<path d="M{-half} 0 H-30 '
+            'C-30 -20 -10 -20 -10 0 '
+            'C-10 -20 10 -20 10 0 '
+            'C10 -20 30 -20 30 0 '
+            f'H{half}"/>'
+        )
     elif "led" in visual_class or "diode" in visual_class:
         glow = render_led_glow(led_profiles.get(component_id), active) if "led" in visual_class else ""
         rays = '<path class="led-rays" d="M5 -20 L17 -34 M20 -16 L32 -30"/>' if "led" in visual_class else ""
@@ -818,6 +881,96 @@ def render_two_terminal_symbol(
     )
 
 
+def render_antenna(component: dict[str, Any], position: dict[str, Any]) -> str:
+    """Disegna un'antenna a stelo con elemento triangolare e un solo terminale."""
+    center_x = float(position.get("x") or 0)
+    center_y = float(position.get("y") or 0)
+    terminals = position.get("terminals") or []
+    terminal_y = float(terminals[0].get("y") or center_y + 48.0) if terminals else center_y + 48.0
+    label = render_component_label(component_label_lines(component, position), center_x, center_y - 58.0, "middle")
+    body = (
+        f'<g class="component antenna"><g class="symbol">'
+        f'<path d="M{format_number(center_x)} {format_number(terminal_y)} '
+        f'V{format_number(center_y - 12.0)} '
+        f'M{format_number(center_x)} {format_number(center_y - 12.0)} '
+        f'L{format_number(center_x - 24.0)} {format_number(center_y - 46.0)} '
+        f'H{format_number(center_x + 24.0)} Z"/>'
+        # Le onde laterali identificano l'interfaccia RF senza aggiungere
+        # una sorgente elettrica o modificare lo stato della simulazione.
+        f'<path class="radio-wave wave-1" d="M{format_number(center_x - 30.0)} {format_number(center_y - 42.0)} '
+        f'Q{format_number(center_x - 43.0)} {format_number(center_y - 29.0)} '
+        f'{format_number(center_x - 33.0)} {format_number(center_y - 14.0)}"/>'
+        f'<path class="radio-wave wave-2" d="M{format_number(center_x - 39.0)} {format_number(center_y - 50.0)} '
+        f'Q{format_number(center_x - 58.0)} {format_number(center_y - 29.0)} '
+        f'{format_number(center_x - 43.0)} {format_number(center_y - 5.0)}"/>'
+        f'<path class="radio-wave wave-1" d="M{format_number(center_x + 30.0)} {format_number(center_y - 42.0)} '
+        f'Q{format_number(center_x + 43.0)} {format_number(center_y - 29.0)} '
+        f'{format_number(center_x + 33.0)} {format_number(center_y - 14.0)}"/>'
+        f'<path class="radio-wave wave-2" d="M{format_number(center_x + 39.0)} {format_number(center_y - 50.0)} '
+        f'Q{format_number(center_x + 58.0)} {format_number(center_y - 29.0)} '
+        f'{format_number(center_x + 43.0)} {format_number(center_y - 5.0)}"/>'
+        '</g></g>'
+    )
+    return body + label
+
+
+def render_headset(
+    component_id: str,
+    component: dict[str, Any],
+    position: dict[str, Any],
+    steady_ids: set[str],
+    leakage_ids: set[str],
+    transient_ids: set[str],
+) -> str:
+    """Disegna una cuffia con due prese, padiglioni e archetto riconoscibili."""
+    terminals = position.get("terminals") or []
+    if len(terminals) < 2:
+        return render_two_terminal_symbol(
+            component_id, component, position, steady_ids, leakage_ids, transient_ids, {}
+        )
+    ordered = sorted(terminals, key=lambda item: float(item.get("y") or 0))
+    left_x = min(float(item.get("x") or 0) for item in ordered)
+    top_y, bottom_y = float(ordered[0]["y"]), float(ordered[1]["y"])
+    cup_x = left_x + 34.0
+    arc_right = left_x + 88.0
+    label_x = (left_x + arc_right) / 2
+    label = render_component_label(component_label_lines(component, position), label_x, top_y - 36.0, "middle")
+    body_path = (
+        f'M{format_number(left_x)} {format_number(top_y)} H{format_number(cup_x - 10.0)} '
+        f'M{format_number(left_x)} {format_number(bottom_y)} H{format_number(cup_x - 10.0)} '
+        f'M{format_number(cup_x + 10.0)} {format_number(top_y)} H{format_number(cup_x + 22.0)} '
+        f'M{format_number(cup_x + 10.0)} {format_number(bottom_y)} H{format_number(cup_x + 22.0)} '
+        f'M{format_number(cup_x + 22.0)} {format_number(top_y)} '
+        f'Q{format_number(arc_right)} {format_number((top_y + bottom_y) / 2)} '
+        f'{format_number(cup_x + 22.0)} {format_number(bottom_y)}'
+    )
+    active = component_id in steady_ids or component_id in transient_ids
+    leakage = component_id in leakage_ids
+    flow_class = "component-flow leakage" if leakage else "component-flow"
+    flow = f'<path class="{flow_class}" d="{body_path}"/>' if active or leakage else ""
+    audio_state_class = " active" if active else ""
+    middle_y = (top_y + bottom_y) / 2
+    audio_waves = (
+        f'<path class="audio-wave wave-1{audio_state_class}" '
+        f'd="M{format_number(arc_right + 7.0)} {format_number(middle_y - 10.0)} '
+        f'Q{format_number(arc_right + 16.0)} {format_number(middle_y)} '
+        f'{format_number(arc_right + 7.0)} {format_number(middle_y + 10.0)}"/>'
+        f'<path class="audio-wave wave-2{audio_state_class}" '
+        f'd="M{format_number(arc_right + 15.0)} {format_number(middle_y - 17.0)} '
+        f'Q{format_number(arc_right + 30.0)} {format_number(middle_y)} '
+        f'{format_number(arc_right + 15.0)} {format_number(middle_y + 17.0)}"/>'
+    )
+    body = (
+        f'<g class="component headset"><g class="symbol"><path d="{body_path}"/>'
+        f'<ellipse cx="{format_number(cup_x)}" cy="{format_number(top_y)}" rx="10" ry="15"/>'
+        f'<ellipse cx="{format_number(cup_x)}" cy="{format_number(bottom_y)}" rx="10" ry="15"/>'
+        f'<ellipse cx="{format_number(cup_x)}" cy="{format_number(top_y)}" rx="5" ry="9"/>'
+        f'<ellipse cx="{format_number(cup_x)}" cy="{format_number(bottom_y)}" rx="5" ry="9"/>'
+        f'{audio_waves}</g>{flow}</g>'
+    )
+    return body + label
+
+
 def render_connector(component_id: str, position: dict[str, Any]) -> str:
     """Disegna un connector compatto dimensionato sul numero dei terminali."""
     terminals = position.get("terminals") or []
@@ -899,14 +1052,15 @@ def transistor_reference_label(component: dict[str, Any]) -> str:
     return first_token if first_token.upper().startswith("Q") else "Q"
 
 
-def render_npn_transistor(
+def render_bjt_transistor(
     component_id: str,
     component: dict[str, Any],
     position: dict[str, Any],
     steady_ids: set[str],
     transient_ids: set[str],
+    transistor_kind: str = "npn",
 ) -> str:
-    """Disegna un transistor NPN classico usando i terminali B, C ed E."""
+    """Disegna un BJT NPN o PNP usando i terminali semantici B, C ed E."""
     base = terminal_by_name(position, "B")
     collector = terminal_by_name(position, "C")
     emitter = terminal_by_name(position, "E")
@@ -921,15 +1075,17 @@ def render_npn_transistor(
     emitter_x = float(emitter["x"])
     emitter_y = float(emitter["y"])
 
-    # La freccia e' orientata lungo l'emettitore e punta verso l'esterno.
+    # Per l'NPN la freccia punta verso l'esterno; per il PNP punta verso la base.
     direction_x = emitter_x - base_x
     direction_y = emitter_y - base_bottom
     length = max(math.hypot(direction_x, direction_y), 1.0)
     unit_x, unit_y = direction_x / length, direction_y / length
-    tip_x = base_x + direction_x * 0.72
-    tip_y = base_bottom + direction_y * 0.72
-    back_x = tip_x - unit_x * 11.0
-    back_y = tip_y - unit_y * 11.0
+    arrow_fraction = 0.28 if transistor_kind == "pnp" else 0.72
+    arrow_direction = -1.0 if transistor_kind == "pnp" else 1.0
+    tip_x = base_x + direction_x * arrow_fraction
+    tip_y = base_bottom + direction_y * arrow_fraction
+    back_x = tip_x - unit_x * 11.0 * arrow_direction
+    back_y = tip_y - unit_y * 11.0 * arrow_direction
     normal_x, normal_y = -unit_y * 5.0, unit_x * 5.0
 
     body_path = (
@@ -1067,7 +1223,10 @@ def vertical_label_placements(
         if position.get("orientation") != "vertical":
             continue
         component_type = str(position.get("component_type") or "").lower()
-        if component_type not in {"resistor", "capacitor", "inductor", "diode", "lamp", "fuse"}:
+        if component_type not in {
+            "resistor", "capacitor", "polarized_capacitor", "variable_capacitor",
+            "variable_polarized_capacitor", "inductor", "diode", "lamp", "fuse",
+        }:
             continue
         lines = component_label_lines(indexed.get(component_id) or {}, position)
         if not lines:
@@ -1131,7 +1290,8 @@ def vertical_label_placements(
     # simboli, fili e label gia' assegnate. Cosi la lettura non dipende da un
     # circuito o da coordinate fissate a mano.
     horizontal_types = {
-        "resistor", "capacitor", "inductor", "diode", "lamp", "fuse",
+        "resistor", "capacitor", "polarized_capacitor", "variable_capacitor",
+        "variable_polarized_capacitor", "inductor", "diode", "lamp", "fuse",
         "switch", "voltage_source", "current_source", "signal_source",
     }
     for component_id, position in components.items():
@@ -1227,13 +1387,20 @@ def render_components(
             symbol = render_terminal_port(component, position)
         elif visual_class == "analog_meter":
             symbol = render_analog_meter(component, position)
-        elif visual_class in {"npn_transistor", "bjt"}:
-            symbol = render_npn_transistor(
+        elif visual_class == "antenna":
+            symbol = render_antenna(component, position)
+        elif visual_class == "headset":
+            symbol = render_headset(
+                str(component_id), component, position, steady_ids, leakage_ids, transient_ids
+            )
+        elif visual_class in {"npn_transistor", "pnp_transistor", "bjt"}:
+            symbol = render_bjt_transistor(
                 str(component_id),
                 component,
                 position,
                 steady_ids,
                 transient_ids,
+                transistor_kind="pnp" if visual_class == "pnp_transistor" else "npn",
             )
         elif terminal_count > 2:
             symbol = render_multi_terminal(str(component_id), position)
@@ -1333,7 +1500,7 @@ def render_node_badges(model: dict[str, Any], layout: dict[str, Any]) -> str:
         if isinstance(position, dict)
     ]
     # I badge non devono mai occupare la fascia grafica destinata alla legenda.
-    component_bounds.append((legend_x - 10.0, 14.0, legend_x + 190.0, 372.0))
+    component_bounds.append((legend_x - 10.0, 14.0, legend_x + 190.0, 222.0))
     occupied: list[tuple[float, float, float, float]] = []
     rendered: list[str] = []
     for node in model.get("nodes") or []:
@@ -1369,8 +1536,8 @@ def render_node_badges(model: dict[str, Any], layout: dict[str, Any]) -> str:
 
 
 def render_legend(x: float, y: float) -> str:
-    """Disegna legende distinte per stati elettrici e classi di corrente."""
-    return f'''<g class="legend" transform="translate({format_number(x)} {format_number(y)})"><rect width="180" height="188" rx="6"/><text class="legend-title" x="14" y="22">Stati</text><path class="wire energized" d="M14 42 H54"/><text x="68" y="46">tensione presente</text><path class="wire active" d="M14 68 H54"/><text x="68" y="72">corrente DC</text><path class="wire transient" d="M14 94 H54"/><text x="68" y="98">segnale variabile</text><path class="wire mixed-signal" d="M14 120 H54"/><text x="68" y="124">DC + segnale</text><path class="wire idle" d="M14 146 H54"/><text x="68" y="150">nessuna corrente</text><circle class="constraint-node" cx="34" cy="170" r="5"/><text x="68" y="174">vincolo scenario</text></g><g class="legend" transform="translate({format_number(x)} {format_number(y + 202.0)})"><rect width="180" height="138" rx="6"/><text class="legend-title" x="14" y="22">Correnti</text><path class="wire active" d="M14 46 H54"/><text x="68" y="50">DC: ≥ 10 pA</text><path class="wire leakage" d="M14 72 H54"/><text x="68" y="76">leakage: 0-10 pA</text><path class="wire idle" d="M14 98 H54"/><text x="68" y="102">0 A: fermo</text><text x="14" y="124">fonte: OP SPICE / DC</text></g>'''
+    """Disegna un'unica legenda compatta degli stati elettrici generali."""
+    return f'''<g class="legend" transform="translate({format_number(x)} {format_number(y)})"><rect width="180" height="188" rx="6"/><text class="legend-title" x="14" y="22">Stati</text><path class="wire energized" d="M14 42 H54"/><text x="68" y="46">tensione presente</text><path class="wire active" d="M14 68 H54"/><text x="68" y="72">corrente DC</text><path class="wire transient" d="M14 94 H54"/><text x="68" y="98">segnale variabile</text><path class="wire mixed-signal" d="M14 120 H54"/><text x="68" y="124">DC + segnale</text><path class="wire idle" d="M14 146 H54"/><text x="68" y="150">nessuna corrente</text><circle class="constraint-node" cx="34" cy="170" r="5"/><text x="68" y="174">vincolo scenario</text></g>'''
 
 
 def render_svg(model: dict[str, Any], layout: dict[str, Any]) -> str:

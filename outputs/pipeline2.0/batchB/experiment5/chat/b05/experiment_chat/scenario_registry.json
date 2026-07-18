@@ -1,0 +1,480 @@
+{
+  "source_format": "pipeline2.0_experiment_scenario_registry",
+  "batch_name": "batchB",
+  "experiment_name": "experiment5",
+  "circuit_id": "b05",
+  "created_at": "2026-07-18T19:28:58",
+  "updated_at": "2026-07-18T19:39:15",
+  "max_executable_scenarios": 5,
+  "next_scenario_number": 7,
+  "last_added_scenario_id": "scenario_6",
+  "proposals": [
+    {
+      "proposal_id": "proposal_1",
+      "created_at": "2026-07-18T19:29:34",
+      "source_agent_response": "outputs\\pipeline2.0\\batchB\\experiment5\\chat\\b05\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_1",
+        "scenario_2",
+        "scenario_3"
+      ]
+    },
+    {
+      "proposal_id": "proposal_2",
+      "created_at": "2026-07-18T19:30:54",
+      "source_agent_response": "outputs\\pipeline2.0\\batchB\\experiment5\\chat\\b05\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_4"
+      ]
+    },
+    {
+      "proposal_id": "proposal_3",
+      "created_at": "2026-07-18T19:34:55",
+      "source_agent_response": "outputs\\pipeline2.0\\batchB\\experiment5\\chat\\b05\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_5"
+      ]
+    },
+    {
+      "proposal_id": "proposal_4",
+      "created_at": "2026-07-18T19:38:01",
+      "source_agent_response": "outputs\\pipeline2.0\\batchB\\experiment5\\chat\\b05\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_6"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_number": 1,
+      "scenario_id": "scenario_1",
+      "title": "Chiudere lo switch di alimentazione riconosciuto",
+      "hypothesis": "The open switch switch25.1 may be isolating battery2.1 from the rest of the circuit, leaving the headset branch unpowered.",
+      "actions": [
+        {
+          "type": "close_switch",
+          "target": "switch25.1"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N002)",
+        "v(N004)",
+        "v(N003)",
+        "i(vbattery2_1#branch)"
+      ],
+      "measure": {},
+      "gain": null,
+      "expect": {
+        "v(N004)": "changed",
+        "i(vbattery2_1#branch)": "nonzero"
+      },
+      "rerun_from": "06",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_1",
+      "execution_path": "outputs\\pipeline2.0\\batchB\\experiment5\\chat\\b05\\scenarios\\scenario_1",
+      "created_at": "2026-07-18T19:29:34",
+      "updated_at": "2026-07-18T19:29:44",
+      "signature": "[{\"target\":\"switch25.1\",\"type\":\"close_switch\"}]",
+      "scenario": {
+        "scenario_id": "scenario_1",
+        "title": "Chiudere lo switch di alimentazione riconosciuto",
+        "hypothesis": "The open switch switch25.1 may be isolating battery2.1 from the rest of the circuit, leaving the headset branch unpowered.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "close_switch",
+            "target": "switch25.1"
+          }
+        ],
+        "rerun_from": "06",
+        "analysis": "op",
+        "compare": [
+          "v(N002)",
+          "v(N004)",
+          "v(N003)",
+          "i(vbattery2_1#branch)"
+        ],
+        "expect": {
+          "v(N004)": "changed",
+          "i(vbattery2_1#branch)": "nonzero"
+        }
+      }
+    },
+    {
+      "scenario_number": 2,
+      "scenario_id": "scenario_2",
+      "title": "Collegare il nodo batteria al nodo del ramo audio",
+      "hypothesis": "The circuit may be inactive because N002 is not electrically continuous with N004, which feeds the bias and headset branch.",
+      "actions": [
+        {
+          "type": "connect_nodes",
+          "from": "N002",
+          "to": "N004",
+          "resistance": "1m"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N002)",
+        "v(N004)",
+        "v(N003)",
+        "i(vbattery2_1#branch)"
+      ],
+      "measure": {},
+      "gain": null,
+      "expect": {
+        "v(N004)": "changed",
+        "i(vbattery2_1#branch)": "nonzero"
+      },
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 2,
+      "original_scenario_id": "scenario_2",
+      "execution_path": null,
+      "created_at": "2026-07-18T19:29:34",
+      "updated_at": "2026-07-18T19:29:34",
+      "signature": "[{\"from\":\"N002\",\"resistance\":\"1m\",\"to\":\"N004\",\"type\":\"connect_nodes\"}]",
+      "scenario": {
+        "scenario_id": "scenario_2",
+        "title": "Collegare il nodo batteria al nodo del ramo audio",
+        "hypothesis": "The circuit may be inactive because N002 is not electrically continuous with N004, which feeds the bias and headset branch.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "connect_nodes",
+            "from": "N002",
+            "to": "N004",
+            "resistance": "1m"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N002)",
+          "v(N004)",
+          "v(N003)",
+          "i(vbattery2_1#branch)"
+        ],
+        "expect": {
+          "v(N004)": "changed",
+          "i(vbattery2_1#branch)": "nonzero"
+        }
+      }
+    },
+    {
+      "scenario_number": 3,
+      "scenario_id": "scenario_3",
+      "title": "Applicare un segnale di prova al nodo antenna",
+      "hypothesis": "The base run may stay silent because antenna1.1 is unsupported and no AC excitation reaches N001.",
+      "actions": [
+        {
+          "type": "add_voltage_source_between_nodes",
+          "positive": "N001",
+          "negative": "0",
+          "value": "SIN(0 1 1000)"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "tran",
+      "compare": [
+        "v(N001)",
+        "v(N003)",
+        "v(N004)"
+      ],
+      "measure": {},
+      "gain": null,
+      "expect": {
+        "v(N001)": "changed",
+        "v(N003)": "changed",
+        "v(N004)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 3,
+      "original_scenario_id": "scenario_3",
+      "execution_path": null,
+      "created_at": "2026-07-18T19:29:34",
+      "updated_at": "2026-07-18T19:29:34",
+      "signature": "[{\"negative\":\"0\",\"positive\":\"N001\",\"type\":\"add_voltage_source_between_nodes\",\"value\":\"SIN(0 1 1000)\"}]",
+      "scenario": {
+        "scenario_id": "scenario_3",
+        "title": "Applicare un segnale di prova al nodo antenna",
+        "hypothesis": "The base run may stay silent because antenna1.1 is unsupported and no AC excitation reaches N001.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "add_voltage_source_between_nodes",
+            "positive": "N001",
+            "negative": "0",
+            "value": "SIN(0 1 1000)"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N001)",
+          "v(N003)",
+          "v(N004)"
+        ],
+        "expect": {
+          "v(N001)": "changed",
+          "v(N003)": "changed",
+          "v(N004)": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 4,
+      "scenario_id": "scenario_4",
+      "title": "Iniettare un segnale sul nodo antenna con alimentazione inserita",
+      "hypothesis": "With switch25.1 closed, the circuit may still be silent only because the base netlist has no AC excitation at N001; adding a sinusoidal input there should reveal whether useful signal reaches the headset output between N003 and N004.",
+      "actions": [
+        {
+          "type": "close_switch",
+          "target": "switch25.1"
+        },
+        {
+          "type": "add_voltage_source_between_nodes",
+          "positive": "N001",
+          "negative": "0",
+          "value": "SIN(0 100m 1000)"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "tran",
+      "compare": [
+        "v(N001)",
+        "v(N003,N004)"
+      ],
+      "measure": {},
+      "gain": {
+        "input": "v(N001)",
+        "output": "v(N003,N004)",
+        "min_ratio": 0.05
+      },
+      "expect": {
+        "v(N001)": "activated",
+        "v(N003,N004)": "changed"
+      },
+      "rerun_from": "06",
+      "status": "executed",
+      "outcome": "not_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_2",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_2",
+      "execution_path": "outputs\\pipeline2.0\\batchB\\experiment5\\chat\\b05\\scenarios\\scenario_4",
+      "created_at": "2026-07-18T19:30:54",
+      "updated_at": "2026-07-18T19:31:49",
+      "signature": "[{\"target\":\"switch25.1\",\"type\":\"close_switch\"},{\"negative\":\"0\",\"positive\":\"N001\",\"type\":\"add_voltage_source_between_nodes\",\"value\":\"SIN(0 100m 1000)\"}]",
+      "scenario": {
+        "scenario_id": "scenario_4",
+        "title": "Iniettare un segnale sul nodo antenna con alimentazione inserita",
+        "hypothesis": "With switch25.1 closed, the circuit may still be silent only because the base netlist has no AC excitation at N001; adding a sinusoidal input there should reveal whether useful signal reaches the headset output between N003 and N004.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "close_switch",
+            "target": "switch25.1"
+          },
+          {
+            "type": "add_voltage_source_between_nodes",
+            "positive": "N001",
+            "negative": "0",
+            "value": "SIN(0 100m 1000)"
+          }
+        ],
+        "rerun_from": "06",
+        "analysis": "tran",
+        "compare": [
+          "v(N001)",
+          "v(N003,N004)"
+        ],
+        "expect": {
+          "v(N001)": "activated",
+          "v(N003,N004)": "changed"
+        },
+        "gain": {
+          "input": "v(N001)",
+          "output": "v(N003,N004)",
+          "min_ratio": 0.05
+        }
+      }
+    },
+    {
+      "scenario_number": 5,
+      "scenario_id": "scenario_5",
+      "title": "Iniettare il segnale direttamente su N005 verso le cuffie",
+      "hypothesis": "With switch25.1 closed, injecting a sinusoidal signal directly at N005 should reveal whether the downstream path from N005 to the headset output v(N003,N004) can transfer useful signal.",
+      "actions": [
+        {
+          "type": "close_switch",
+          "target": "switch25.1"
+        },
+        {
+          "type": "add_voltage_source_between_nodes",
+          "positive": "N005",
+          "negative": "0",
+          "value": "SIN(0 100m 1000)"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "tran",
+      "compare": [
+        "v(N005)",
+        "v(N003,N004)"
+      ],
+      "measure": {},
+      "gain": {
+        "input": "v(N005)",
+        "output": "v(N003,N004)",
+        "min_ratio": 0.05
+      },
+      "expect": {
+        "v(N005)": "activated",
+        "v(N003,N004)": "changed"
+      },
+      "rerun_from": "06",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_3",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_5",
+      "execution_path": "outputs\\pipeline2.0\\batchB\\experiment5\\chat\\b05\\scenarios\\scenario_5",
+      "created_at": "2026-07-18T19:34:55",
+      "updated_at": "2026-07-18T19:35:55",
+      "signature": "[{\"target\":\"switch25.1\",\"type\":\"close_switch\"},{\"negative\":\"0\",\"positive\":\"N005\",\"type\":\"add_voltage_source_between_nodes\",\"value\":\"SIN(0 100m 1000)\"}]",
+      "scenario": {
+        "scenario_id": "scenario_5",
+        "title": "Iniettare il segnale direttamente su N005 verso le cuffie",
+        "hypothesis": "With switch25.1 closed, injecting a sinusoidal signal directly at N005 should reveal whether the downstream path from N005 to the headset output v(N003,N004) can transfer useful signal.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "close_switch",
+            "target": "switch25.1"
+          },
+          {
+            "type": "add_voltage_source_between_nodes",
+            "positive": "N005",
+            "negative": "0",
+            "value": "SIN(0 100m 1000)"
+          }
+        ],
+        "rerun_from": "06",
+        "analysis": "tran",
+        "compare": [
+          "v(N005)",
+          "v(N003,N004)"
+        ],
+        "expect": {
+          "v(N005)": "activated",
+          "v(N003,N004)": "changed"
+        },
+        "gain": {
+          "input": "v(N005)",
+          "output": "v(N003,N004)",
+          "min_ratio": 0.05
+        }
+      }
+    },
+    {
+      "scenario_number": 6,
+      "scenario_id": "scenario_6",
+      "title": "Iniettare su N001 un segnale piu ampio con switch chiuso",
+      "hypothesis": "With switch25.1 closed, the previous stimulus at N001 may have been too small to drive useful transfer through diode7.1; a larger sinusoidal input at N001 should test whether a usable signal can then reach v(N003,N004).",
+      "actions": [
+        {
+          "type": "close_switch",
+          "target": "switch25.1"
+        },
+        {
+          "type": "add_voltage_source_between_nodes",
+          "positive": "N001",
+          "negative": "0",
+          "value": "SIN(0 1 1000)"
+        }
+      ],
+      "intent": "correction",
+      "analysis": "tran",
+      "compare": [
+        "v(N001)",
+        "v(N003,N004)"
+      ],
+      "measure": {},
+      "gain": {
+        "input": "v(N001)",
+        "output": "v(N003,N004)",
+        "min_ratio": 0.05
+      },
+      "expect": {
+        "v(N001)": "activated",
+        "v(N003,N004)": "changed"
+      },
+      "rerun_from": "06",
+      "status": "executed",
+      "outcome": "resolved_candidate",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_4",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_6",
+      "execution_path": "outputs\\pipeline2.0\\batchB\\experiment5\\chat\\b05\\scenarios\\scenario_6",
+      "created_at": "2026-07-18T19:38:01",
+      "updated_at": "2026-07-18T19:39:15",
+      "signature": "[{\"target\":\"switch25.1\",\"type\":\"close_switch\"},{\"negative\":\"0\",\"positive\":\"N001\",\"type\":\"add_voltage_source_between_nodes\",\"value\":\"SIN(0 1 1000)\"}]",
+      "scenario": {
+        "scenario_id": "scenario_6",
+        "title": "Iniettare su N001 un segnale piu ampio con switch chiuso",
+        "hypothesis": "With switch25.1 closed, the previous stimulus at N001 may have been too small to drive useful transfer through diode7.1; a larger sinusoidal input at N001 should test whether a usable signal can then reach v(N003,N004).",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "close_switch",
+            "target": "switch25.1"
+          },
+          {
+            "type": "add_voltage_source_between_nodes",
+            "positive": "N001",
+            "negative": "0",
+            "value": "SIN(0 1 1000)"
+          }
+        ],
+        "rerun_from": "06",
+        "analysis": "tran",
+        "compare": [
+          "v(N001)",
+          "v(N003,N004)"
+        ],
+        "expect": {
+          "v(N001)": "activated",
+          "v(N003,N004)": "changed"
+        },
+        "gain": {
+          "input": "v(N001)",
+          "output": "v(N003,N004)",
+          "min_ratio": 0.05
+        }
+      }
+    }
+  ]
+}

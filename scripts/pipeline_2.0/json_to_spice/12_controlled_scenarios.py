@@ -76,6 +76,10 @@ COMPARISON_NAME = "scenario_comparison.json"
 SPICE_RUN_NAME = "08_spice_run.json"
 STEP08_PATH = Path(__file__).resolve().parent / "08_spice_run.py"
 MAX_EXECUTABLE_SCENARIOS = 5
+# I collegamenti sotto questa soglia sono trattati come vincoli quasi ideali.
+# Il limite serve soltanto al controllo preventivo dei generatori in conflitto:
+# non modifica in alcun modo i valori elettrici emessi nella netlist.
+MAX_NEAR_IDEAL_RESISTANCE_OHMS = 0.1
 
 
 def read_json(path: Path) -> dict[str, Any]:
@@ -286,6 +290,95 @@ def insert_or_replace_initial_node_voltage(netlist_text: str, node: str, voltage
     return "\n".join(lines) + "\n", "inserted", directive
 
 
+def parse_spice_scalar(value: str) -> float | None:
+    """Converte un valore SPICE scalare usando i suffissi ingegneristici comuni."""
+    match = re.fullmatch(
+        r"([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)\s*(meg|[tgkmunpf]?)",
+        str(value or "").strip(),
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        return None
+    multipliers = {
+        "": 1.0,
+        "t": 1e12,
+        "g": 1e9,
+        "meg": 1e6,
+        "k": 1e3,
+        "m": 1e-3,
+        "u": 1e-6,
+        "n": 1e-9,
+        "p": 1e-12,
+        "f": 1e-15,
+    }
+    return float(match.group(1)) * multipliers[match.group(2).lower()]
+
+
+def voltage_constraint_adjacency(netlist_text: str) -> dict[str, set[str]]:
+    """
+    Costruisce il grafo dei vincoli di tensione gia presenti nella netlist.
+
+    Sono inclusi i generatori ideali di tensione e le resistenze quasi ideali.
+    Componenti ordinari, condensatori, induttori e rami ad alta impedenza non
+    vengono assimilati a un vincolo, cosi il controllo resta conservativo.
+    """
+    adjacency: dict[str, set[str]] = {}
+
+    def add_edge(node_a: str, node_b: str) -> None:
+        adjacency.setdefault(node_a.upper(), set()).add(node_b.upper())
+        adjacency.setdefault(node_b.upper(), set()).add(node_a.upper())
+
+    for raw_line in netlist_text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith(("*", ".")):
+            continue
+        parts = line.split()
+        if len(parts) < 3:
+            continue
+        element_name = parts[0]
+        if element_name[0].upper() == "V":
+            add_edge(parts[1], parts[2])
+            continue
+        if element_name[0].upper() != "R" or len(parts) < 4:
+            continue
+        resistance = parse_spice_scalar(parts[3])
+        if resistance is not None and abs(resistance) <= MAX_NEAR_IDEAL_RESISTANCE_OHMS:
+            add_edge(parts[1], parts[2])
+    return adjacency
+
+
+def nodes_are_voltage_constrained(netlist_text: str, node_a: str, node_b: str) -> bool:
+    """Verifica se due nodi sono gia legati da generatori o rami quasi ideali."""
+    start = str(node_a).strip().upper()
+    target = str(node_b).strip().upper()
+    if start == target:
+        return True
+    adjacency = voltage_constraint_adjacency(netlist_text)
+    pending = [start]
+    visited: set[str] = set()
+    while pending:
+        current = pending.pop()
+        if current in visited:
+            continue
+        visited.add(current)
+        for neighbour in adjacency.get(current, set()):
+            if neighbour == target:
+                return True
+            if neighbour not in visited:
+                pending.append(neighbour)
+    return False
+
+
+def validate_new_voltage_source_path(netlist_text: str, positive: str, negative: str) -> None:
+    """Rifiuta un nuovo generatore che chiuderebbe un conflitto quasi ideale."""
+    if nodes_are_voltage_constrained(netlist_text, positive, negative):
+        raise ValueError(
+            "Generatore di scenario in conflitto: i nodi "
+            f"{positive} e {negative} sono gia vincolati da una sorgente o da "
+            "un percorso a bassissima impedenza"
+        )
+
+
 def apply_set_initial_node_voltage(
     action: dict[str, Any],
     run_dir: Path,
@@ -335,6 +428,7 @@ def apply_drive_node_voltage(
     node_map = read_json(run_dir / "03_node_map.json")
     target_node = validate_node_target(action.get("target"), node_map)
     source_definition = normalize_spice_source_value(action.get("value"))
+    validate_new_voltage_source_path(netlist_text, target_node, "0")
 
     source_name = f"VSCENARIO_{sanitize_spice_name(target_node)}"
     source_line = f"{source_name} {target_node} 0 {source_definition}"
@@ -382,6 +476,7 @@ def apply_add_voltage_source_between_nodes(
         raise ValueError("add_voltage_source_between_nodes requires two different nodes")
 
     source_definition = normalize_spice_source_value(action.get("value"))
+    validate_new_voltage_source_path(netlist_text, positive_node, negative_node)
     source_name = (
         f"VSCENARIO_SUPPLY_{sanitize_spice_name(positive_node)}_"
         f"{sanitize_spice_name(negative_node)}"
@@ -914,7 +1009,7 @@ def run_spice_for_scenario(
 
 
 def normalize_quantity_name(name: str) -> str:
-    """Normalizza una grandezza richiesta dallo scenario, ad esempio v(N002)."""
+    """Normalizza una grandezza, incluse tensioni differenziali tra due nodi."""
     text = str(name).strip()
     if re.search(r"(?i)#branch$", text) and "(" not in text:
         return f"i({text})"
@@ -924,7 +1019,9 @@ def normalize_quantity_name(name: str) -> str:
     kind = match.group(1).lower()
     target = match.group(2).strip()
     if kind == "v":
-        return f"v({target.upper()})"
+        # La forma v(N1,N2) viene resa canonica eliminando gli spazi tra i nodi.
+        voltage_nodes = [node.strip().upper() for node in target.split(",")]
+        return f"v({','.join(voltage_nodes)})"
     return f"{kind}({target})"
 
 
@@ -1040,8 +1137,20 @@ def count_ngspice_stderr_warnings(stderr_path: Path) -> float | None:
 
 
 def is_voltage_quantity(quantity: str) -> bool:
-    """Riconosce una grandezza di tensione del tipo `v(N001)`."""
-    return bool(re.match(r"(?i)^v\([^)]+\)$", quantity.strip()))
+    """Riconosce tensioni `v(N1)` e tensioni differenziali `v(N1,N2)`."""
+    return voltage_quantity_nodes(quantity) is not None
+
+
+def voltage_quantity_nodes(quantity: str) -> tuple[str, ...] | None:
+    """Estrae uno o due nodi da una grandezza di tensione SPICE valida."""
+    normalized = normalize_quantity_name(quantity)
+    match = re.fullmatch(r"(?i)v\(([^)]+)\)", normalized)
+    if not match:
+        return None
+    nodes = tuple(node.strip().upper() for node in match.group(1).split(","))
+    if len(nodes) not in {1, 2} or any(not node for node in nodes):
+        return None
+    return nodes
 
 
 def is_stderr_quantity(quantity: str) -> bool:
@@ -1049,7 +1158,10 @@ def is_stderr_quantity(quantity: str) -> bool:
     return quantity.strip().lower() in {"stderr", "ngspice_stderr", "stderr_warnings", "warning_count"}
 
 
-def parse_tran_csv_metrics(csv_path: Path) -> dict[str, dict[str, float]]:
+def parse_tran_csv_metrics(
+    csv_path: Path,
+    requested_quantities: list[str] | None = None,
+) -> dict[str, dict[str, float]]:
     """
     Estrae metriche semplici dal CSV transitorio pulito.
 
@@ -1059,8 +1171,8 @@ def parse_tran_csv_metrics(csv_path: Path) -> dict[str, dict[str, float]]:
     - mean
     - vpp
 
-    Questa prima versione resta volutamente semplice: per gli scenari `.tran`
-    usiamo `vpp` come metrica principale da confrontare.
+    Per le richieste `v(N1,N2)` calcoliamo prima, campione per campione,
+    `v(N1) - v(N2)`. Questo evita l'errore di sottrarre due Vpp gia aggregati.
     """
     if not csv_path.exists():
         return {}
@@ -1075,8 +1187,20 @@ def parse_tran_csv_metrics(csv_path: Path) -> dict[str, dict[str, float]]:
     if not rows:
         return {}
 
+    differential_columns: dict[str, tuple[str, str]] = {}
+    for quantity in requested_quantities or []:
+        nodes = voltage_quantity_nodes(str(quantity))
+        if nodes is None or len(nodes) != 2:
+            continue
+        output_key = quantity_lookup_key(str(quantity))
+        differential_columns[output_key] = (
+            f"v({nodes[0].lower()})",
+            f"v({nodes[1].lower()})",
+        )
+
     values_by_column: dict[str, list[float]] = {}
     for row in rows:
+        row_values: dict[str, float] = {}
         for column_name, value_text in row.items():
             if column_name is None:
                 continue
@@ -1087,6 +1211,16 @@ def parse_tran_csv_metrics(csv_path: Path) -> dict[str, dict[str, float]]:
             if value is None:
                 continue
             values_by_column.setdefault(column_key, []).append(value)
+            row_values[column_key] = value
+
+        # La differenza usa soltanto campioni in cui entrambe le tensioni sono
+        # presenti, preservando l'allineamento temporale delle due colonne.
+        for output_key, (positive_key, negative_key) in differential_columns.items():
+            if positive_key not in row_values or negative_key not in row_values:
+                continue
+            values_by_column.setdefault(output_key, []).append(
+                row_values[positive_key] - row_values[negative_key]
+            )
 
     metrics: dict[str, dict[str, float]] = {}
     for column_key, values in values_by_column.items():
@@ -1127,7 +1261,7 @@ def classify_change(base_value: float | None, scenario_value: float | None) -> s
 def evaluate_diagnostic_outcome(
     summary: dict[str, Any],
     analysis: str = "op",
-    intent: str = "correction",
+    intent: str = "diagnostic",
 ) -> dict[str, Any]:
     """
     Valuta in modo prudente se uno scenario sembra risolvere il problema.
@@ -1136,6 +1270,11 @@ def evaluate_diagnostic_outcome(
     semplice basato sui confronti SPICE richiesti dallo scenario. Serve per
     capire se l'automazione puo fermarsi o se conviene provare un altro scenario.
     """
+    # Solo la dichiarazione esplicita `correction` puo autorizzare lo stop.
+    # Valori mancanti o non riconosciuti restano diagnostici per evitare che
+    # una semplice precondizione elettrica venga scambiata per sintomo risolto.
+    intent = "correction" if str(intent).strip().lower() == "correction" else "diagnostic"
+
     requested = int(summary.get("requested_count") or 0)
     changed = int(summary.get("changed_count") or 0)
     activated = int(summary.get("activated_count") or 0)
@@ -1151,6 +1290,11 @@ def evaluate_diagnostic_outcome(
     quality_output_preserved = bool(summary.get("quality_output_preserved"))
     base_thd = summary.get("base_thd")
     scenario_thd = summary.get("scenario_thd")
+    gain_required = bool(summary.get("gain_required"))
+    gain_available = bool(summary.get("gain_available"))
+    gain_sufficient = bool(summary.get("gain_sufficient"))
+    scenario_gain = summary.get("scenario_gain")
+    min_gain_ratio = summary.get("min_gain_ratio")
 
     if expected > 0 and expectations_missing > 0:
         status = "partially_resolved"
@@ -1159,6 +1303,24 @@ def evaluate_diagnostic_outcome(
         reason = (
             "Almeno una misura necessaria ai criteri di successo non e disponibile "
             "negli output SPICE dello scenario."
+        )
+        stop_automation = False
+    elif gain_required and not gain_available:
+        status = "partially_resolved" if intent == "correction" else "unknown"
+        technical_label = "Signal gain unavailable"
+        label = "Trasferimento del segnale non misurabile"
+        reason = (
+            "Lo scenario richiede una soglia minima di trasferimento, ma il "
+            "rapporto Vpp uscita/ingresso non e disponibile."
+        )
+        stop_automation = False
+    elif gain_required and not gain_sufficient:
+        status = "partially_resolved" if intent == "correction" else "not_resolved"
+        technical_label = "Signal gain below threshold"
+        label = "Trasferimento del segnale insufficiente"
+        reason = (
+            "Il rapporto Vpp uscita/ingresso resta sotto la soglia dichiarata "
+            f"dallo scenario ({float(scenario_gain):.6g} < {float(min_gain_ratio):.6g})."
         )
         stop_automation = False
     elif intent == "correction" and quality_required and not quality_available:
@@ -1330,18 +1492,29 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
     base_output_dir = Path(status.get("base_output_dir") or scenario_dir.parent.parent)
     run_dir = scenario_dir / "run"
     analysis = str(scenario.get("analysis") or "op").strip().lower()
-    intent = str(scenario.get("intent") or "correction").strip().lower()
-
-    base_values = parse_ngspice_stdout(base_output_dir / "08_ngspice_stdout.txt")
-    scenario_values = parse_ngspice_stdout(run_dir / "08_ngspice_stdout.txt")
-    base_tran_metrics = parse_tran_csv_metrics(base_output_dir / "08_tran.csv")
-    scenario_tran_metrics = parse_tran_csv_metrics(run_dir / "08_tran.csv")
-    base_stderr_warning_count = count_ngspice_stderr_warnings(base_output_dir / "08_ngspice_stderr.txt")
-    scenario_stderr_warning_count = count_ngspice_stderr_warnings(run_dir / "08_ngspice_stderr.txt")
+    # Uno scenario legacy privo di `intent` e un test diagnostico prudente.
+    # La risoluzione automatica richiede sempre `intent: correction` esplicito.
+    intent = (
+        "correction"
+        if str(scenario.get("intent") or "").strip().lower() == "correction"
+        else "diagnostic"
+    )
 
     requested = scenario.get("compare") or []
     if not isinstance(requested, list):
         requested = []
+
+    base_values = parse_ngspice_stdout(base_output_dir / "08_ngspice_stdout.txt")
+    scenario_values = parse_ngspice_stdout(run_dir / "08_ngspice_stdout.txt")
+    base_tran_metrics = parse_tran_csv_metrics(
+        base_output_dir / "08_tran.csv", requested_quantities=requested
+    )
+    scenario_tran_metrics = parse_tran_csv_metrics(
+        run_dir / "08_tran.csv", requested_quantities=requested
+    )
+    base_stderr_warning_count = count_ngspice_stderr_warnings(base_output_dir / "08_ngspice_stderr.txt")
+    scenario_stderr_warning_count = count_ngspice_stderr_warnings(run_dir / "08_ngspice_stderr.txt")
+
     raw_expectations = scenario.get("expect") or {}
     expectations = (
         {
@@ -1471,6 +1644,16 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
     gain_config = scenario.get("gain") if isinstance(scenario.get("gain"), dict) else {}
     gain_input = quantity_lookup_key(str(gain_config.get("input") or ""))
     gain_output = quantity_lookup_key(str(gain_config.get("output") or ""))
+    min_gain_ratio = None
+    raw_min_gain_ratio = gain_config.get("min_ratio")
+    if raw_min_gain_ratio is not None:
+        try:
+            parsed_min_gain_ratio = float(raw_min_gain_ratio)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("scenario.gain.min_ratio deve essere un numero positivo") from exc
+        if parsed_min_gain_ratio <= 0:
+            raise ValueError("scenario.gain.min_ratio deve essere maggiore di zero")
+        min_gain_ratio = parsed_min_gain_ratio
     base_gain = None
     scenario_gain = None
     if gain_input and gain_output:
@@ -1492,6 +1675,13 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
         "output": gain_config.get("output"),
         "base_gain": base_gain,
         "scenario_gain": scenario_gain,
+        "min_ratio": min_gain_ratio,
+        "available": scenario_gain is not None,
+        "sufficient": (
+            scenario_gain is not None
+            and min_gain_ratio is not None
+            and scenario_gain >= min_gain_ratio
+        ) if min_gain_ratio is not None else None,
         "relative_change": relative_change_ratio(base_gain, scenario_gain),
     } if gain_config else None
 
@@ -1533,6 +1723,15 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
     summary["scenario_thd"] = (
         quality_comparison.get("scenario_thd") if quality_comparison else None
     )
+    summary["gain_required"] = min_gain_ratio is not None
+    summary["gain_available"] = scenario_gain is not None
+    summary["gain_sufficient"] = bool(
+        min_gain_ratio is not None
+        and scenario_gain is not None
+        and scenario_gain >= min_gain_ratio
+    )
+    summary["scenario_gain"] = scenario_gain
+    summary["min_gain_ratio"] = min_gain_ratio
     diagnostic_outcome = evaluate_diagnostic_outcome(
         summary,
         analysis=analysis,

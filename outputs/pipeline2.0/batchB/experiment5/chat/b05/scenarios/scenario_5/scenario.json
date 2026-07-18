@@ -1,0 +1,33 @@
+{
+  "scenario_id": "scenario_5",
+  "title": "Iniettare il segnale direttamente su N005 verso le cuffie",
+  "hypothesis": "With switch25.1 closed, injecting a sinusoidal signal directly at N005 should reveal whether the downstream path from N005 to the headset output v(N003,N004) can transfer useful signal.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    },
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N005",
+      "negative": "0",
+      "value": "SIN(0 100m 1000)"
+    }
+  ],
+  "rerun_from": "06",
+  "analysis": "tran",
+  "compare": [
+    "v(N005)",
+    "v(N003,N004)"
+  ],
+  "expect": {
+    "v(N005)": "activated",
+    "v(N003,N004)": "changed"
+  },
+  "gain": {
+    "input": "v(N005)",
+    "output": "v(N003,N004)",
+    "min_ratio": 0.05
+  }
+}

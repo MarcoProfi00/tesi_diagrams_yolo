@@ -809,6 +809,30 @@ def build_structural_components(
     return structural
 
 
+def apply_manual_viewer_overrides(
+    components: list[dict[str, Any]],
+    values_bound: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Applica override visuali espliciti senza modificare la semantica SPICE."""
+    bound_components = values_bound.get("components") or {}
+    updated: list[dict[str, Any]] = []
+    for component in components:
+        item = dict(component)
+        source_id = str(item.get("source_component_id") or item.get("id") or "")
+        value_entry = bound_components.get(source_id) or {}
+        value_data = value_entry.get("value_data") if isinstance(value_entry, dict) else {}
+        override = value_data.get("viewer_override") if isinstance(value_data, dict) else {}
+        if isinstance(override, dict) and override.get("visual_class"):
+            item["viewer_kind"] = str(override["visual_class"])
+            item["viewer_override"] = dict(override)
+            if override.get("label") is not None:
+                item["viewer_label"] = str(override.get("label") or "")
+            if override.get("display_value") is not None:
+                item["viewer_value"] = str(override.get("display_value") or "")
+        updated.append(item)
+    return updated
+
+
 def remove_emitted_simplified_duplicates(
     structural_components: list[dict[str, Any]],
     netlist_components: list[dict[str, Any]],
@@ -1252,6 +1276,10 @@ def build_viewer_model(run_dir: Path) -> dict[str, Any]:
         rules,
         values_bound,
     )
+    # Gli override sono dichiarati per componente nel file valori: il meccanismo
+    # resta generale e non introduce eccezioni legate a uno specifico circuito.
+    components = apply_manual_viewer_overrides(components, values_bound)
+    structural_components = apply_manual_viewer_overrides(structural_components, values_bound)
     if scenario:
         structural_components = apply_scenario_visual_overrides(structural_components, scenario, components)
     circuit_id = str(node_map.get("circuit_id") or rules.get("circuit_id") or "")

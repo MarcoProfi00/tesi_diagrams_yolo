@@ -2410,6 +2410,14 @@ change_component_value
    nodi, componenti, azioni e firma dello scenario, quindi usa un runtime comune
    ai flussi `CHAT` e `AGENT` per richiamare `12`-`15`.
 
+   Nel flusso `CHAT`, uno scenario privo di `intent` viene normalizzato in modo
+   prudente come `diagnostic`. In questo modo un test che chiude uno switch o
+   dimostra soltanto la presenza dell'alimentazione puo confermare una
+   precondizione, ma non produrre uno stop risolutivo. `intent=correction` deve
+   essere esplicito e deve verificare direttamente il sintomo; per audio o
+   segnali variabili cio richiede `analysis=tran` e una misura `tran_vpp`
+   dell'uscita, differenziale quando il carico e collegato tra due nodi.
+
    Regole di arresto:
 
    - massimo 5 run scenario realmente eseguite;
@@ -2446,6 +2454,15 @@ change_component_value
    - per sintomi di amplificazione, gli scenari correttivi dichiarano
      `gain.input` e `gain.output`, entrambi presenti in `compare`, per misurare
      `Vpp(output) / Vpp(input)`;
+   - per propagazione o attenuazione, anche uno scenario diagnostico puo
+     dichiarare `gain.min_ratio`; una uscita non nulla ma sotto la soglia non
+     conferma un trasferimento utile e non deve essere descritta come segnale
+     realmente arrivato al carico;
+   - `gain.min_ratio` e un criterio positivo motivato dallo scenario, non una
+     costante globale imposta a ogni famiglia circuitale;
+   - non e ammessa una nuova run con la stessa firma di azioni soltanto per
+     aggiungere misure o soglie: dopo un trasferimento insufficiente l'agente
+     deve spostare il confine di isolamento oppure testare una causa distinta;
    - per distorsione e clipping con sorgente SIN, gli scenari transitori
      dichiarano quality=thd; la pipeline usa le ultime tre oscillazioni,
      fondamentale e armoniche 2-5;

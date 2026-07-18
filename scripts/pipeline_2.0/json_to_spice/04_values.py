@@ -26,6 +26,7 @@ from typing import Any
 VALUE_REQUIRED = {
     "Resistor": ("value",),
     "Capacitor": ("value",),
+    "Inductor": ("value",),
     # I condensatori polarizzati usano la stessa primitiva SPICE C, ma il
     # Graph JSON ne conserva la polarita come informazione semantica.
     "Polarized_Capacitor": ("value",),
@@ -36,8 +37,10 @@ VALUE_REQUIRED = {
     "LED": ("model",),
     "Diode": ("model",),
     "NPN_Transistor": ("model",),
+    "PNP_Transistor": ("model",),
     "Lamp": ("equivalent_resistance", "value"),
     "Switch": ("state",),
+    "Breaker": ("state",),
     "Fuse": ("state",),
     "Transformer": ("model",),
 }
@@ -143,8 +146,25 @@ def has_required_data(class_name: str, value_data: dict[str, Any]) -> bool:
     return any(field in value_data and value_data.get(field) not in (None, "") for field in required_fields)
 
 
+def has_resistive_load_override(value_data: dict[str, Any] | None) -> bool:
+    """Verifica un override esplicito e sicuro verso un carico resistivo."""
+    if not isinstance(value_data, dict):
+        return False
+    override = value_data.get("spice_override")
+    if not isinstance(override, dict):
+        return False
+    return (
+        override.get("emit_as") == "resistive_load"
+        and override.get("equivalent_resistance") not in (None, "")
+    )
+
+
 def classify_component(class_name: str, value_data: dict[str, Any] | None) -> str:
     """Assegna uno stato semplice al componente."""
+    # L'override e' opzionale e viene richiesto dal YAML di un singolo
+    # componente; non modifica il significato generale della sua classe OCR.
+    if has_resistive_load_override(value_data):
+        return "bound"
     if class_name in NOT_REQUIRED:
         return "not_required"
     if class_name in VALUE_REQUIRED:

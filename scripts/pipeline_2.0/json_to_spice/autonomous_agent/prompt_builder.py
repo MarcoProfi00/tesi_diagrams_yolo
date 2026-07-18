@@ -94,6 +94,8 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
 - Con analysis="tran" puoi dichiarare la mappa opzionale `measure` per scegliere
   la misura di ogni grandezza: `tran_vpp` per una tensione letta da 08_tran.csv,
   `op` per tensioni, correnti o potenze lette dal punto di lavoro.
+- `tran_vpp` accetta sia `v(NODO)` rispetto a massa sia `v(NODO1,NODO2)` per
+  carichi flottanti: nel secondo caso usa la differenza campione per campione.
 - Se `measure` non e presente resta valido il comportamento standard: le tensioni
   sono confrontate sul Vpp, mentre correnti e potenze restano osservazioni OP.
 - In uno scenario misto puoi usare una corrente come criterio expect soltanto
@@ -102,8 +104,23 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
   con analysis="tran" e `tran_vpp`: un valore DC non dimostra il funzionamento AC.
 - Per sintomi di amplificazione o guadagno, ogni scenario con intent="correction" deve includere
   `gain: {{"input":"v(NODO_IN)","output":"v(NODO_OUT)"}}`; entrambe le
-  tensioni devono essere presenti in compare. Valuta il guadagno come
+  tensioni devono essere presenti in compare e possono anche usare la forma
+  differenziale `v(NODO1,NODO2)`. Valuta il guadagno come
   Vpp(output) / Vpp(input), senza confondere due nodi entrambi di uscita.
+- Per verificare propagazione o attenuazione di un segnale, anche uno scenario
+  diagnostico deve aggiungere `gain.min_ratio` con una soglia positiva motivata
+  dall'obiettivo dello scenario. Non usare il solo `changed` per concludere che
+  un segnale non nullo ma trascurabile arrivi utilmente all'uscita.
+- Non ripetere le stesse azioni elettriche di una run gia eseguita soltanto per
+  aggiungere gain, measure, expect o una soglia: reinterpreta le misure esistenti.
+  Dopo un trasferimento insufficiente, sposta il confine di isolamento a un nodo
+  intermedio giustificato oppure testa una causa elettricamente distinta.
+- Se il trasferimento fallisce con una sorgente SIN provata a una sola ampiezza,
+  prima di concludere un guasto strutturale mantieni lo stesso percorso e la
+  stessa frequenza e prova un'ampiezza significativamente diversa. Se anche il
+  nuovo livello fallisce e resta budget, continua lo sweep; fermati appena il
+  trasferimento diventa sufficiente. Non ripetere lo stesso stimolo aggiungendo
+  soltanto una forzatura su un nodo di alimentazione.
 - Prima di attribuire un'uscita assoluta debole a un guasto, verifica se il
   circuito sta gia amplificando un ingresso molto piccolo.
 - Per sintomi di distorsione, clipping, saturazione o segnale poco pulito,
@@ -171,6 +188,9 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
   realmente verificata da uno scenario con intent="correction".
 - Preferisci modifiche minime su componenti, valori e collegamenti gia esistenti.
 - Usa nuove sorgenti o nuovi rami resistivi solo quando le evidenze tecniche li giustificano.
+- Non usare `drive_node_voltage` su un nodo gia vincolato a una sorgente attiva,
+  direttamente o tramite uno switch/collegamento quasi ideale chiuso nello stesso
+  scenario: produrrebbe generatori in conflitto e correnti prive di significato.
 - Usa feed_nodes_from_source_node solo da un nodo che gli output mostrano gia alimentato.
 - Usa connect_nodes per una ipotesi di continuita mancante senza attribuire a un nodo il ruolo di sorgente.
 - I pin distinti dello stesso connector rappresentano reti funzionali separate finche

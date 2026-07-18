@@ -98,6 +98,53 @@ def build_supply_rules(values_bound: dict[str, Any]) -> dict[str, Any]:
     return dict(sorted(supply_rules.items()))
 
 
+def resistive_load_override_rule(
+    component_data: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Converte un override YAML esplicito in una regola SPICE equivalente."""
+    value_data = component_data.get("value_data") or {}
+    override = value_data.get("spice_override") if isinstance(value_data, dict) else None
+    if not isinstance(override, dict) or override.get("emit_as") != "resistive_load":
+        return None
+
+    resistance = override.get("equivalent_resistance")
+    if resistance in (None, ""):
+        return {
+            "class_name": component_data.get("class_name"),
+            "status": "missing_parameters",
+            "spice_support": "equivalent",
+            "missing_fields": ["spice_override.equivalent_resistance"],
+        }
+
+    terminal_nodes = component_data.get("terminal_nodes") or {}
+    node_order = [str(node) for node in as_list(override.get("node_order") or ["t1", "t2"])]
+    nodes, terminals_missing = ordered_nodes(terminal_nodes, node_order)
+    if terminals_missing:
+        return {
+            "class_name": component_data.get("class_name"),
+            "status": "invalid_node_order",
+            "spice_support": "equivalent",
+            "missing_terminals": terminals_missing,
+        }
+
+    parameters = {
+        **value_data,
+        "equivalent_resistance": resistance,
+        "resistance_unit": override.get("resistance_unit") or "ohm",
+    }
+    return {
+        "class_name": component_data.get("class_name"),
+        "status": "spice_ready",
+        "spice_support": "equivalent",
+        "spice_prefix": "R",
+        "emit_as": "resistive_load",
+        "node_order": node_order,
+        "nodes": nodes,
+        "parameters": parameters,
+        "reason": "Explicit YAML override emitted as an equivalent resistive load.",
+    }
+
+
 def classify_component_rule(
     component_id: str,
     component_data: dict[str, Any],
@@ -108,6 +155,13 @@ def classify_component_rule(
     value_data = component_data.get("value_data") or {}
     terminal_nodes = component_data.get("terminal_nodes") or {}
     value_status = component_data.get("status")
+
+    # Una riclassificazione elettrica e' consentita solo quando il YAML la
+    # dichiara esplicitamente con un carico resistivo e i suoi due terminali.
+    # Questo evita di dedurre che una classe OCR ambigua sia sempre una cuffia.
+    override_rule = resistive_load_override_rule(component_data)
+    if override_rule is not None:
+        return override_rule
 
     if class_rule is None:
         return {

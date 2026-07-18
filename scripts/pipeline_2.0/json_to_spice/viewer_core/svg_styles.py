@@ -19,6 +19,10 @@ CONSTRAINT_STYLE_BLOCK = '''<style>.node-constraint{cursor:help}.constraint-lead
 
 NODE_STYLE_BLOCK = '''<style>.node-wire{cursor:help}.node-badge{cursor:help}.node-badge rect{fill:#0b1728;fill-opacity:.9;stroke:#52647c;stroke-width:1}.node-badge text{fill:#d7dfeb;font-size:11px;font-weight:700;text-anchor:middle;letter-spacing:0}.node-badge:hover rect{stroke:#38bdf8;fill:#082334}.node-badge:hover text{fill:#dff6ff}</style>'''
 
+# Antenna e cuffia hanno segni funzionali discreti; l'animazione audio si
+# attiva solo quando la simulazione rileva corrente nel carico equivalente.
+INTERFACE_STYLE_BLOCK = '''<style>.headset .symbol ellipse{fill:none;stroke:#f4f7fb;stroke-width:3}.headset .audio-wave,.antenna .radio-wave{fill:none;stroke:#f4f7fb;stroke-width:2;stroke-linecap:round;opacity:.5}.headset .audio-wave.active{stroke:#38bdf8;animation:viewerAudioWave 1.25s ease-out infinite}.headset .audio-wave.wave-2.active{animation-delay:.18s}.antenna .radio-wave{animation:viewerRadioWave 1.8s ease-in-out infinite}.antenna .radio-wave.wave-2{animation-delay:.3s}@keyframes viewerAudioWave{0%{opacity:.2}55%{opacity:1}100%{opacity:.2}}@keyframes viewerRadioWave{0%,100%{opacity:.25}50%{opacity:.8}}@media (prefers-reduced-motion:reduce){.headset .audio-wave.active,.antenna .radio-wave{animation:none}}</style>'''
+
 
 def render_svg_style_blocks() -> str:
     """Restituisce i blocchi CSS nello stesso ordine usato dal renderer storico."""
@@ -31,5 +35,6 @@ def render_svg_style_blocks() -> str:
             MIXED_SIGNAL_STYLE_BLOCK,
             CONSTRAINT_STYLE_BLOCK,
             NODE_STYLE_BLOCK,
+            INTERFACE_STYLE_BLOCK,
         )
     )

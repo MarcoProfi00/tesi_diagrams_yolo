@@ -13,6 +13,6 @@ VIEWER_SVG_NAME = "15_viewer.svg"
 
 # Le revisioni forzano il ricalcolo di base run e scenari quando cambia la
 # semantica visuale di alimentazioni o condensatori polarizzati.
-VIEWER_MODEL_SCHEMA_VERSION = 15
-VIEWER_LAYOUT_SCHEMA_VERSION = 33
-VIEWER_RENDER_VERSION = 14
+VIEWER_MODEL_SCHEMA_VERSION = 17
+VIEWER_LAYOUT_SCHEMA_VERSION = 39
+VIEWER_RENDER_VERSION = 21

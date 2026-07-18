@@ -36,7 +36,7 @@ VIEWER_CONTENT_WIDTH = VIEWER_LEGEND_LEFT - VIEWER_LEGEND_CLEARANCE
 
 def legend_obstacle_bounds() -> tuple[float, float, float, float]:
     """Restituisce l'ingombro riservato alla legenda per placement e routing."""
-    return (VIEWER_LEGEND_LEFT - 10.0, 14.0, VIEWER_CANVAS_WIDTH - 15.0, 364.0)
+    return (VIEWER_LEGEND_LEFT - 10.0, 14.0, VIEWER_CANVAS_WIDTH - 15.0, 222.0)
 
 
 def component_label(component: dict[str, Any]) -> str:
@@ -292,6 +292,21 @@ def standardize_terminals(
         standardized[0]["x"] = center_x
         standardized[0]["y"] = center_y - spec["height"] / 2
         return standardized[:1]
+
+    if component_type == "antenna":
+        # L'antenna ha un solo punto elettrico, posto alla base dello stelo.
+        standardized[0]["x"] = center_x
+        standardized[0]["y"] = center_y + spec["height"] / 2
+        return standardized[:1]
+
+    if component_type == "headset" and len(standardized) == 2:
+        # Le due prese della cuffia restano sullo stesso lato, come nel simbolo
+        # circuitale originale, ma conservano i rispettivi nodi elettrici.
+        ordered = sorted(standardized, key=lambda item: float(item.get("y") or 0))
+        for index, terminal in enumerate(ordered):
+            terminal["x"] = center_x - spec["width"] / 2
+            terminal["y"] = center_y + (-22.0 if index == 0 else 22.0)
+        return ordered
 
     if len(standardized) == 2:
         # I bipoli usano sempre la stessa lunghezza e rispettano l'ordine rilevato.
@@ -576,6 +591,13 @@ def relax_component_spacing(positioned: dict[str, dict[str, Any]]) -> None:
         for component in positioned.values()
         if component.get("component_type") not in {"ground", "terminal"}
     ]
+    original_centers = {
+        id(component): (
+            float(component.get("x") or 0),
+            float(component.get("y") or 0),
+        )
+        for component in items
+    }
     clearance = 18.0
     for _ in range(14):
         moved = False
@@ -604,13 +626,24 @@ def relax_component_spacing(positioned: dict[str, dict[str, Any]]) -> None:
                 second_weight = component_spacing_weight(second)
                 total_weight = max(first_weight + second_weight, 0.1)
                 if overlap_x <= overlap_y:
-                    direction = -1.0 if float(first.get("x") or 0) <= float(second.get("x") or 0) else 1.0
+                    # Il verso resta quello della geometria immagine iniziale:
+                    # componenti gia' separati non possono scavalcarsi durante
+                    # le iterazioni successive del rilassamento.
+                    direction = (
+                        -1.0
+                        if original_centers[id(first)][0] <= original_centers[id(second)][0]
+                        else 1.0
+                    )
                     first_shift = direction * overlap_x * (second_weight / total_weight) * 0.55
                     second_shift = -direction * overlap_x * (first_weight / total_weight) * 0.55
                     translate_component(first, first_shift, 0.0)
                     translate_component(second, second_shift, 0.0)
                 else:
-                    direction = -1.0 if float(first.get("y") or 0) <= float(second.get("y") or 0) else 1.0
+                    direction = (
+                        -1.0
+                        if original_centers[id(first)][1] <= original_centers[id(second)][1]
+                        else 1.0
+                    )
                     first_shift = direction * overlap_y * (second_weight / total_weight) * 0.55
                     second_shift = -direction * overlap_y * (first_weight / total_weight) * 0.55
                     translate_component(first, 0.0, first_shift)
@@ -952,7 +985,10 @@ def segment_crosses_rectangle(
     """Rileva l'attraversamento di un ostacolo da parte di un segmento ortogonale."""
     start, end = segment
     if point_in_rectangle(start, rectangle) or point_in_rectangle(end, rectangle):
-        return False
+        # Gli ostacoli dei due componenti collegati sono gia' esclusi dal
+        # chiamante: un estremo dentro qualunque altro simbolo e' quindi una
+        # collisione reale, non un contatto elettrico intenzionale.
+        return True
     if abs(start[1] - end[1]) < 0.01:
         low_x, high_x = sorted((start[0], end[0]))
         return rectangle[1] <= start[1] <= rectangle[3] and high_x >= rectangle[0] and low_x <= rectangle[2]
@@ -1158,7 +1194,12 @@ def build_image_guided_components(
         center = geometry_component.get("center") or {}
         position = transform_point(center.get("x"), center.get("y"), transform)
         orientation = normalize_orientation(geometry_component.get("estimated_orientation"))
-        visual_class_name = str(geometry_component.get("class_name") or component.get("layout_kind") or "structural")
+        visual_class_name = str(
+            component.get("viewer_kind")
+            or geometry_component.get("class_name")
+            or component.get("layout_kind")
+            or "structural"
+        )
         component_type = normalize_component_type(visual_class_name, component.get("layout_kind"))
         raw_terminals = match_geometry_terminals(component, geometry_component, transform)
         terminals = standardize_terminals(raw_terminals, position, component_type, orientation)
@@ -1596,11 +1637,40 @@ def route_segments(points: list[tuple[float, float]]) -> list[tuple[tuple[float,
     return [(first, second) for first, second in zip(points, points[1:]) if first != second]
 
 
+def parallel_segments_too_close(
+    first: tuple[tuple[float, float], tuple[float, float]],
+    second: tuple[tuple[float, float], tuple[float, float]],
+    clearance: float = 9.0,
+) -> bool:
+    """Rileva tratti paralleli di nodi diversi che sembrerebbero un unico filo."""
+    (first_start, first_end), (second_start, second_end) = first, second
+    first_horizontal = abs(first_start[1] - first_end[1]) < 0.01
+    second_horizontal = abs(second_start[1] - second_end[1]) < 0.01
+    first_vertical = abs(first_start[0] - first_end[0]) < 0.01
+    second_vertical = abs(second_start[0] - second_end[0]) < 0.01
+
+    if first_horizontal and second_horizontal:
+        overlap = min(max(first_start[0], first_end[0]), max(second_start[0], second_end[0])) - max(
+            min(first_start[0], first_end[0]), min(second_start[0], second_end[0])
+        )
+        return overlap > 5.0 and abs(first_start[1] - second_start[1]) < clearance
+    if first_vertical and second_vertical:
+        overlap = min(max(first_start[1], first_end[1]), max(second_start[1], second_end[1])) - max(
+            min(first_start[1], first_end[1]), min(second_start[1], second_end[1])
+        )
+        return overlap > 5.0 and abs(first_start[0] - second_start[0]) < clearance
+    return False
+
+
 def route_score(
     points: list[tuple[float, float]],
     obstacles: list[tuple[float, float, float, float]],
+    node_id: str = "",
+    occupied_segments: list[
+        tuple[str, tuple[tuple[float, float], tuple[float, float]]]
+    ] | None = None,
 ) -> float:
-    """Valuta un percorso premiando rette e una sola piega, ma evitando simboli."""
+    """Valuta un percorso evitando simboli e ambiguita con fili di altri nodi."""
     segments = route_segments(points)
     length = sum(abs(end[0] - start[0]) + abs(end[1] - start[1]) for start, end in segments)
     crossings = sum(
@@ -1610,7 +1680,30 @@ def route_score(
         if segment_crosses_rectangle(segment, obstacle)
     )
     bends = max(len(segments) - 1, 0)
-    return crossings * 1_000_000.0 + bends * 34.0 + length
+    foreign_segments = [
+        segment
+        for occupied_node_id, segment in occupied_segments or []
+        if occupied_node_id != node_id
+    ]
+    parallel_conflicts = sum(
+        1
+        for segment in segments
+        for occupied in foreign_segments
+        if parallel_segments_too_close(segment, occupied)
+    )
+    wire_crossings = sum(
+        1
+        for segment in segments
+        for occupied in foreign_segments
+        if segments_cross(segment, occupied)
+    )
+    return (
+        crossings * 1_000_000.0
+        + parallel_conflicts * 250_000.0
+        + wire_crossings * 18_000.0
+        + bends * 34.0
+        + length
+    )
 
 
 def terminal_outward_direction(terminal: dict[str, Any]) -> tuple[float, float] | None:
@@ -1720,6 +1813,9 @@ def route_respects_terminal_directions(
 def route_connection(
     connection: dict[str, Any],
     positioned: dict[str, dict[str, Any]],
+    occupied_segments: list[
+        tuple[str, tuple[tuple[float, float], tuple[float, float]]]
+    ] | None = None,
 ) -> list[dict[str, float]]:
     """Trova un percorso ortogonale corto tra due terminali, evitando gli altri simboli."""
     start = connection.get("from") or {}
@@ -1778,6 +1874,38 @@ def route_connection(
         ]
     )
 
+    # Piccole corsie parallele permettono di separare fili di nodi diversi
+    # senza costringere il percorso a una deviazione ampia attorno al circuito.
+    local_clearance = 12.0
+    for lane_y in (
+        min(start_escape[1], end_escape[1]) - local_clearance,
+        max(start_escape[1], end_escape[1]) + local_clearance,
+    ):
+        candidates.append(
+            [
+                start_point,
+                start_escape,
+                (start_escape[0], lane_y),
+                (end_escape[0], lane_y),
+                end_escape,
+                end_point,
+            ]
+        )
+    for lane_x in (
+        min(start_escape[0], end_escape[0]) - local_clearance,
+        max(start_escape[0], end_escape[0]) + local_clearance,
+    ):
+        candidates.append(
+            [
+                start_point,
+                start_escape,
+                (lane_x, start_escape[1]),
+                (lane_x, end_escape[1]),
+                end_escape,
+                end_point,
+            ]
+        )
+
     # Le corsie esterne sono un fallback: vengono usate solo se le due soluzioni a una piega incontrano un simbolo.
     padding = 24.0
     for obstacle in obstacles:
@@ -1797,7 +1925,11 @@ def route_connection(
     ]
     if valid_candidates:
         compact_candidates = valid_candidates
-    selected = min(compact_candidates, key=lambda candidate: route_score(candidate, obstacles))
+    node_id = str(connection.get("node_id") or "")
+    selected = min(
+        compact_candidates,
+        key=lambda candidate: route_score(candidate, obstacles, node_id, occupied_segments),
+    )
     return [{"x": round(point[0], 2), "y": round(point[1], 2)} for point in selected]
 
 
@@ -1806,8 +1938,56 @@ def route_layout_connections(
     positioned: dict[str, dict[str, Any]],
 ) -> list[dict[str, Any]]:
     """Aggiunge a ogni collegamento il percorso preferito che il renderer deve seguire."""
+    occupied_segments: list[
+        tuple[str, tuple[tuple[float, float], tuple[float, float]]]
+    ] = []
     for connection in connections:
-        connection["route"] = route_connection(connection, positioned)
+        connection["route"] = route_connection(connection, positioned, occupied_segments)
+        route_points = [
+            (float(point["x"]), float(point["y"]))
+            for point in connection.get("route") or []
+            if isinstance(point, dict) and "x" in point and "y" in point
+        ]
+        node_id = str(connection.get("node_id") or "")
+        occupied_segments.extend((node_id, segment) for segment in route_segments(route_points))
+
+    # Se due nodi differenti devono comunque incrociarsi, il collegamento
+    # disegnato per ultimo riceve un piccolo ponte visuale. Gli incroci dello
+    # stesso nodo restano invece normali giunzioni elettriche.
+    for current_index, connection in enumerate(connections):
+        current_node = str(connection.get("node_id") or "")
+        current_points = [
+            (float(point["x"]), float(point["y"]))
+            for point in connection.get("route") or []
+            if isinstance(point, dict) and "x" in point and "y" in point
+        ]
+        bridges: list[dict[str, Any]] = []
+        for segment_index, current_segment in enumerate(route_segments(current_points)):
+            current_horizontal = abs(current_segment[0][1] - current_segment[1][1]) < 0.01
+            for previous in connections[:current_index]:
+                if str(previous.get("node_id") or "") == current_node:
+                    continue
+                previous_points = [
+                    (float(point["x"]), float(point["y"]))
+                    for point in previous.get("route") or []
+                    if isinstance(point, dict) and "x" in point and "y" in point
+                ]
+                for previous_segment in route_segments(previous_points):
+                    if not segments_cross(current_segment, previous_segment):
+                        continue
+                    previous_horizontal = abs(previous_segment[0][1] - previous_segment[1][1]) < 0.01
+                    horizontal = current_segment if current_horizontal else previous_segment
+                    vertical = previous_segment if current_horizontal else current_segment
+                    bridges.append(
+                        {
+                            "segment_index": segment_index,
+                            "x": round(vertical[0][0], 2),
+                            "y": round(horizontal[0][1], 2),
+                            "orientation": "horizontal" if current_horizontal else "vertical",
+                        }
+                    )
+        if bridges:
+            connection["wire_bridges"] = bridges
     return connections
 
 

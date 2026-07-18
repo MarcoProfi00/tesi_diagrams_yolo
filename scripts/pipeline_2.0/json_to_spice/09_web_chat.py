@@ -722,10 +722,33 @@ def registered_scenario_signature(scenario: dict[str, Any]) -> str:
     return json.dumps(comparable, sort_keys=True, ensure_ascii=False)
 
 
+def scenario_requires_signal_gain(scenario: dict[str, Any]) -> bool:
+    """Riconosce scenari transitori che dichiarano un obiettivo di trasferimento."""
+    if str(scenario.get("analysis") or "").strip().lower() != "tran":
+        return False
+    text = " ".join(
+        str(scenario.get(field) or "").strip().lower()
+        for field in ("title", "hypothesis")
+    )
+    transfer_markers = (
+        "gain",
+        "guadagn",
+        "amplif",
+        "attenuat",
+        "propagat",
+        "trasfer",
+        "signal transfer",
+        "signal path",
+        "percorso del segnale",
+    )
+    return any(marker in text for marker in transfer_markers)
+
+
 def scenario_is_executable(scenario: dict[str, Any]) -> bool:
     """Accetta scenari con azioni e criteri `expect` direttamente verificabili."""
     actions = scenario.get("actions")
     expectations = scenario.get("expect")
+    gain = scenario.get("gain")
     compared = {
         str(item).strip().lower()
         for item in scenario.get("compare") or []
@@ -733,6 +756,27 @@ def scenario_is_executable(scenario: dict[str, Any]) -> bool:
     }
     if not isinstance(actions, list) or not actions or not isinstance(expectations, dict) or not expectations:
         return False
+    gain_required = scenario_requires_signal_gain(scenario)
+    if gain_required and not isinstance(gain, dict):
+        return False
+    if gain is not None:
+        if not isinstance(gain, dict) or str(scenario.get("analysis") or "").strip().lower() != "tran":
+            return False
+        gain_input = str(gain.get("input") or "").strip().lower()
+        gain_output = str(gain.get("output") or "").strip().lower()
+        if not gain_input or not gain_output or gain_input == gain_output:
+            return False
+        if gain_input not in compared or gain_output not in compared:
+            return False
+        raw_min_ratio = gain.get("min_ratio")
+        if gain_required and raw_min_ratio is None:
+            return False
+        if raw_min_ratio is not None:
+            try:
+                if float(raw_min_ratio) <= 0:
+                    return False
+            except (TypeError, ValueError):
+                return False
     return all(
         str(quantity).strip().lower() in compared
         and str(expectation).strip().lower() in ALLOWED_EXPECTATIONS
@@ -778,6 +822,14 @@ def register_experiment2_scenarios_from_response(
     for local_index, raw_scenario in enumerate(extracted, start=1):
         scenario = normalize_human_text(json.dumps(unescape_html_entities(raw_scenario), ensure_ascii=False))
         scenario = json.loads(scenario)
+        # Compatibilita prudente con risposte CHAT precedenti: se il modello
+        # omette `intent`, lo scenario verifica un'ipotesi ma non puo fermare
+        # la diagnosi come correzione del sintomo.
+        scenario["intent"] = (
+            "correction"
+            if str(scenario.get("intent") or "").strip().lower() == "correction"
+            else "diagnostic"
+        )
         if not scenario_is_executable(scenario):
             # Una conclusione o un dato mancante non deve occupare un numero
             # scenario ne' essere suggerito come comando eseguibile.
@@ -798,8 +850,12 @@ def register_experiment2_scenarios_from_response(
             "title": scenario.get("title") or scenario_id,
             "hypothesis": scenario.get("hypothesis"),
             "actions": scenario.get("actions") or [],
+            "intent": scenario.get("intent"),
             "analysis": scenario.get("analysis") or "op",
             "compare": scenario.get("compare") or [],
+            "measure": scenario.get("measure") or {},
+            "gain": scenario.get("gain"),
+            "expect": scenario.get("expect") or {},
             "rerun_from": scenario.get("rerun_from"),
             "status": "proposed",
             "outcome": None,
@@ -2899,7 +2955,7 @@ def main() -> None:
         missing_workspaces = [mode for mode, path in workspace_dirs.items() if not path.is_dir()]
         if missing_workspaces:
             raise SystemExit(
-                "Missing Experiment 4 workspace(s): " + ", ".join(missing_workspaces)
+                f"Missing {args.experiment} workspace(s): " + ", ".join(missing_workspaces)
             )
         output_dir = workspace_dirs[default_workspace_mode]
     else:

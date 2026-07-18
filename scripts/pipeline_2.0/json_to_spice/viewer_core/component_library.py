@@ -10,6 +10,8 @@ COMPONENT_SPECS: dict[str, dict[str, float]] = {
     "resistor": {"width": 92.0, "height": 34.0},
     "capacitor": {"width": 58.0, "height": 48.0},
     "polarized_capacitor": {"width": 58.0, "height": 48.0},
+    "variable_capacitor": {"width": 64.0, "height": 58.0},
+    "variable_polarized_capacitor": {"width": 64.0, "height": 58.0},
     "inductor": {"width": 92.0, "height": 38.0},
     "diode": {"width": 82.0, "height": 46.0},
     "led": {"width": 82.0, "height": 52.0},
@@ -24,9 +26,12 @@ COMPONENT_SPECS: dict[str, dict[str, float]] = {
     "connector": {"width": 54.0, "height": 150.0, "pin_spacing": 58.0},
     "ground": {"width": 50.0, "height": 34.0},
     "npn_transistor": {"width": 70.0, "height": 70.0},
+    "pnp_transistor": {"width": 70.0, "height": 70.0},
     "bjt": {"width": 70.0, "height": 70.0},
     "analog_meter": {"width": 108.0, "height": 72.0},
     "fuse": {"width": 74.0, "height": 30.0},
+    "antenna": {"width": 58.0, "height": 96.0},
+    "headset": {"width": 104.0, "height": 76.0},
     "terminal": {"width": 18.0, "height": 18.0},
     "connection": {"width": 68.0, "height": 68.0},
     "structural": {"width": 68.0, "height": 46.0},
@@ -40,10 +45,16 @@ def normalize_component_type(class_name: Any, layout_kind: Any = "") -> str:
         "gnd": "ground",
         "ground": "ground",
         "npn": "npn_transistor",
+        "pnp": "pnp_transistor",
         "transistor": "npn_transistor",
         "npn_transistor": "npn_transistor",
+        "pnp_transistor": "pnp_transistor",
         "analogmeter": "analog_meter",
         "polarized_capacitor": "polarized_capacitor",
+        "variable_capacitor": "variable_capacitor",
+        "variable_polarized_capacitor": "variable_polarized_capacitor",
+        "antenna": "antenna",
+        "headset": "headset",
         "scenario_voltage_source": "scenario_voltage_source",
         "dc_supply": "dc_supply",
         "signal_generator": "signal_source",
@@ -57,6 +68,8 @@ def normalize_component_type(class_name: Any, layout_kind: Any = "") -> str:
         return "connector"
     if "switch" in value:
         return "switch"
+    if "pnp" in value and "transistor" in value:
+        return "pnp_transistor"
     if "transistor" in value:
         return "npn_transistor"
     if "meter" in value:

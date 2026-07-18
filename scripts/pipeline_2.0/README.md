@@ -131,6 +131,11 @@ Gli step oggi caricati davvero dal codice sono:
 10_build_diagnostic_context.py
 ```
 
+Il mapping elettrico supporta sia `NPN_Transistor` sia `PNP_Transistor` con
+ordine nodi SPICE `C, B, E`. Il modello concreto resta dichiarato nel file
+manuale dei valori; quando l'immagine non riporta un part number e disponibile
+il modello minimale `PNP_GENERIC`.
+
 ### prepare_experiment_outputs.py
 
 Path:
@@ -283,6 +288,31 @@ experiment2_chat/scenario_registry.md
 Per `experiment3_1` la stessa sessione file-based e disponibile nella cartella
 `experiment_chat/`; le root `experiment2*` continuano a usare
 `experiment2_chat/` per compatibilita.
+
+Gli scenari CHAT eseguibili devono includere `expect` e dichiarare
+`intent: diagnostic | correction`. Per compatibilita prudente, uno scenario
+privo di `intent` viene registrato come `diagnostic`: puo confermare una causa
+o una precondizione, ma non arresta la diagnosi come problema risolto. Solo
+`intent: correction` esplicito puo produrre uno stop risolutivo, e le misure
+devono verificare direttamente il sintomo. Per audio e altri segnali variabili
+serve quindi una run `tran` con una misura `tran_vpp` sull'uscita; alimentazione
+presente o corrente di batteria non nulla dimostrano soltanto la precondizione.
+
+Per propagazione, attenuazione e amplificazione, lo scenario puo dichiarare
+`gain: {"input":"v(...)","output":"v(...)","min_ratio":...}`. La soglia
+positiva appartiene allo scenario ed e motivata dal suo obiettivo: non esiste
+una soglia universale imposta a tutti i circuiti. Se il rapporto Vpp misurato e
+inferiore, lo step 12 classifica il trasferimento come insufficiente anche se
+l'uscita e numericamente non nulla o `changed`. Inoltre, se una risposta CHAT
+interpreta scenari eseguiti senza trovare `stop_automation=true` e resta budget,
+deve proporre un nuovo scenario autonomo, salvo richiesta esplicita di
+conclusione finale o mancanza di evidenza esterna indispensabile.
+Una nuova run non puo ripetere la stessa firma di azioni soltanto per aggiungere
+`gain`, misure o soglie: questi campi reinterpretano risultati gia disponibili
+ma non cambiano il circuito. Dopo un trasferimento insufficiente il nuovo test
+deve spostare il confine di isolamento o applicare una azione elettricamente
+distinta. Gli scenari CHAT/AGENT riconosciuti come test di trasferimento sono
+validi soltanto con `gain.min_ratio` positivo.
 
 ### 11_agent_readonly.py
 

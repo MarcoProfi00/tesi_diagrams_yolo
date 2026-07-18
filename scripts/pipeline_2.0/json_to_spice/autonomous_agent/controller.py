@@ -35,6 +35,9 @@ STEP10_PATH = Path(__file__).resolve().parents[1] / "10_build_diagnostic_context
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 DecisionProvider = Callable[[str, str], str]
 _CONTROLLER_LOCK = threading.Lock()
+# Tre livelli falliti consentono una localizzazione piu robusta del limite di
+# trasferimento; una risposta utile interrompe comunque subito lo sweep.
+MIN_FAILED_SIGNAL_AMPLITUDES_BEFORE_LOCALIZATION = 3
 
 
 class AutonomousControllerError(RuntimeError):
@@ -206,8 +209,88 @@ def symptom_requires_gain_comparison(symptom: str) -> bool:
         r"\bguadagn\w*",
         r"\bgain\b",
         r"\bamplification\b",
+        r"\btrasfer\w*\s+(?:del\s+)?segnale\b",
+        r"\bsegnale\b.*\b(?:arriv\w*|uscita|carico|cuffi\w*)\b",
+        r"\b(?:non\s+)?sent\w*\b.*\b(?:cuffi\w*|audio)\b",
+        r"\bcuffi\w*\b.*\b(?:mut\w*|segnale|audio)\b",
+        r"\bsignal\b.*\b(?:reach\w*|output|load|headset|headphone)\b",
+        r"\b(?:headset|headphone)\w*\b.*\b(?:mute|signal|audio)\b",
     )
     return any(re.search(pattern, normalized) for pattern in gain_patterns)
+
+
+def parse_sine_amplitude(value: Any) -> float | None:
+    """Estrae l'ampiezza da una sorgente SIN usando i suffissi SPICE comuni."""
+    match = re.match(
+        r"(?i)^\s*sin\s*\(\s*[^\s,()]+[\s,]+"
+        r"([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)(meg|[tgkmunpf]?)",
+        str(value or ""),
+    )
+    if not match:
+        return None
+    multipliers = {
+        "": 1.0,
+        "t": 1e12,
+        "g": 1e9,
+        "meg": 1e6,
+        "k": 1e3,
+        "m": 1e-3,
+        "u": 1e-6,
+        "n": 1e-9,
+        "p": 1e-12,
+        "f": 1e-15,
+    }
+    return abs(float(match.group(1)) * multipliers[match.group(2).lower()])
+
+
+def signal_gain_requires_amplitude_followup(state: dict[str, Any]) -> bool:
+    """
+    Rileva un trasferimento fallito provato con una sola ampiezza sinusoidale.
+
+    La chiave comprende percorso di ingresso e confronto di guadagno: stimoli
+    applicati a nodi diversi non vengono confusi tra loro.
+    """
+    failed_paths: set[tuple[str, str, str]] = set()
+    amplitudes: dict[tuple[str, str, str], set[float]] = {}
+    for iteration in state.get("iterations") or []:
+        if not isinstance(iteration, dict):
+            continue
+        scenarios = (iteration.get("decision") or {}).get("scenarios") or []
+        results = iteration.get("scenario_results") or []
+        for scenario, result in zip(scenarios, results):
+            if not isinstance(scenario, dict) or not isinstance(result, dict):
+                continue
+            if not result.get("spice_executed"):
+                continue
+            summary = result.get("comparison_summary") or {}
+            if not summary.get("gain_required") or summary.get("gain_sufficient"):
+                continue
+            gain = scenario.get("gain") or {}
+            gain_input = str(gain.get("input") or "").strip().lower()
+            gain_output = str(gain.get("output") or "").strip().lower()
+            for action in scenario.get("actions") or []:
+                if not isinstance(action, dict):
+                    continue
+                action_type = str(action.get("type") or "")
+                if action_type == "add_voltage_source_between_nodes":
+                    source_path = (
+                        f"{str(action.get('positive') or '').strip().upper()}->"
+                        f"{str(action.get('negative') or '').strip().upper()}"
+                    )
+                elif action_type == "drive_node_voltage":
+                    source_path = f"{str(action.get('target') or '').strip().upper()}->0"
+                else:
+                    continue
+                amplitude = parse_sine_amplitude(action.get("value"))
+                if amplitude is None or amplitude <= 0:
+                    continue
+                key = (source_path, gain_input, gain_output)
+                failed_paths.add(key)
+                amplitudes.setdefault(key, set()).add(amplitude)
+    return any(
+        len(amplitudes.get(path, set())) < MIN_FAILED_SIGNAL_AMPLITUDES_BEFORE_LOCALIZATION
+        for path in failed_paths
+    )
 
 
 def symptom_requires_quality_analysis(symptom: str) -> bool:
@@ -289,6 +372,7 @@ def request_valid_decision(
     require_direct_component_measurement: bool,
     require_joint_objective_verification: bool,
     require_temporal_expectation: bool,
+    require_signal_amplitude_followup: bool,
     provider: DecisionProvider,
 ) -> tuple[dict[str, Any], list[str]]:
     """Richiede una decisione e consente un solo tentativo di correzione JSON."""
@@ -314,6 +398,7 @@ def request_valid_decision(
                 require_direct_component_measurement=require_direct_component_measurement,
                 require_joint_objective_verification=require_joint_objective_verification,
                 require_temporal_expectation=require_temporal_expectation,
+                require_signal_amplitude_followup=require_signal_amplitude_followup,
             ), response_paths
         except AutonomousDecisionError as exc:
             last_error = exc
@@ -426,6 +511,14 @@ def run_iteration(
         require_temporal_expectation = symptom_requires_temporal_expectation(
             str(state.get("symptom") or "")
         )
+        # Un singolo livello di stimolo non basta per attribuire a un guasto
+        # strutturale un trasferimento sotto soglia, se resta budget disponibile.
+        require_signal_amplitude_followup = (
+            remaining_budget > 0
+            and require_gain_comparison
+            and not has_verified_resolution(state)
+            and signal_gain_requires_amplitude_followup(state)
+        )
         state["executed_scenarios_count"] = executed_count
 
         refresh_diagnostic_context(
@@ -456,6 +549,7 @@ def run_iteration(
                 require_direct_component_measurement=require_direct_component_measurement,
                 require_joint_objective_verification=require_joint_objective_verification,
                 require_temporal_expectation=require_temporal_expectation,
+                require_signal_amplitude_followup=require_signal_amplitude_followup,
                 provider=provider or default_decision_provider,
             )
         except Exception as exc:

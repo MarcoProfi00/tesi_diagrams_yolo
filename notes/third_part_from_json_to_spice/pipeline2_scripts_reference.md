@@ -404,6 +404,9 @@ Ruolo:
 - distingue componenti emettibili, strutturali, mancanti, semplificati o non
   supportati;
 - prepara prefissi, nodi e parametri da usare nello step 07.
+- gestisce i BJT `NPN_Transistor` e `PNP_Transistor` con ordine terminali
+  SPICE `C, B, E`; il tipo effettivo e determinato dalla classe validata e dal
+  modello dichiarato nel file valori.
 
 Input:
 
@@ -1049,9 +1052,19 @@ Guardrail implementati:
 - la mappa opzionale `measure` puo scegliere per ogni voce di `compare` la
   metrica `op` oppure `tran_vpp`, quindi un singolo scenario puo verificare
   insieme un segnale AC e correnti o tensioni DC su altri rami;
+- `tran_vpp` accetta `v(NODO)` e `v(NODO1,NODO2)`; la seconda forma calcola la
+  tensione differenziale campione per campione prima di ricavare il Vpp ed e
+  adatta a cuffie, altoparlanti e altri carichi non riferiti a massa;
 - ogni scenario autonomo dichiara `intent: "correction"` oppure
   `intent: "diagnostic"`; un test diagnostico puo confermare un'ipotesi ma non
   produrre lo stop risolutivo senza criteri espliciti di correzione;
+- anche il registro CHAT normalizza come `diagnostic` uno scenario legacy o
+  una risposta priva di `intent`; soltanto `intent: "correction"` dichiarato
+  esplicitamente puo produrre `stop_automation: true`;
+- chiudere uno switch, alimentare un ramo o ottenere una corrente di sorgente
+  non nulla resta diagnostico quando verifica solo una precondizione; per un
+  sintomo audio o variabile la correzione deve osservare direttamente l'uscita
+  in `tran`, con `tran_vpp` anche differenziale quando il carico ha due nodi;
 - in analisi `tran`, correnti e potenze prive di una traccia CSV possono
   entrare in `expect` soltanto se dichiarate come `op` nella mappa `measure`;
 - i sintomi che nominano esplicitamente AC o VAC impongono a una correzione
@@ -1070,6 +1083,21 @@ Guardrail implementati:
 - per sintomi di amplificazione, una correzione dichiara
   `gain: {"input":"v(NODO_IN)","output":"v(NODO_OUT)"}` e lo step 12 salva
   il guadagno base e scenario calcolato sui rispettivi Vpp;
+- per test di propagazione o attenuazione, `gain` puo aggiungere
+  `min_ratio`; se il rapporto Vpp uscita/ingresso resta sotto questa soglia
+  dichiarata, lo scenario non conferma un trasferimento utile anche quando
+  l'uscita passa da zero a un valore numericamente `changed`;
+- `min_ratio` deve essere positivo e motivato dal singolo scenario: la pipeline
+  non applica una soglia assoluta universale a circuiti e carichi diversi;
+- nelle risposte CHAT sugli scenari eseguiti, `stop_automation=false` con
+  budget residuo richiede una nuova proposta self-contained, salvo conclusione
+  finale esplicitamente richiesta o dato esterno indispensabile mancante;
+- una proposta non puo ripetere la stessa firma di azioni di una run eseguita
+  soltanto per aggiungere `gain`, `measure`, `expect` o `min_ratio`; dopo un
+  trasferimento insufficiente deve cambiare il confine di isolamento o una
+  causa elettrica verificata;
+- i test di trasferimento riconosciuti nei flussi CHAT e AGENT richiedono
+  `gain.min_ratio` positivo per essere accettati come scenari eseguibili;
 - per distorsione o clipping con sorgente SIN, lo scenario dichiara
   quality=thd; transient_signal_quality.py analizza le ultime tre oscillazioni
   complete e calcola fondamentale, guadagno e THD sulle armoniche 2-5;

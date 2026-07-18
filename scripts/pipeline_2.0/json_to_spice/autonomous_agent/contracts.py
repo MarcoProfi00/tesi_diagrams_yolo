@@ -52,6 +52,17 @@ class AutonomousDecisionError(ValueError):
     """Segnala una decisione AI non conforme al contratto previsto."""
 
 
+def is_transient_voltage_quantity(quantity: str) -> bool:
+    """Accetta per `tran_vpp` una tensione a uno o due nodi."""
+    return bool(
+        re.fullmatch(
+            r"v\(\s*[^,()\s]+\s*(?:,\s*[^,()\s]+\s*)?\)",
+            str(quantity or ""),
+            flags=re.IGNORECASE,
+        )
+    )
+
+
 def action_field_is_missing(value: Any) -> bool:
     """Riconosce campi assenti, stringhe vuote e liste prive di valori."""
     if value is None:
@@ -236,11 +247,11 @@ def validate_scenario(
                 raise AutonomousDecisionError(
                     f"Scenario {scenario_index}: tran_vpp richiede analysis='tran'"
                 )
-            if measurement == "tran_vpp" and not re.fullmatch(
-                r"v\([^)]+\)", canonical_quantity, flags=re.IGNORECASE
+            if measurement == "tran_vpp" and not is_transient_voltage_quantity(
+                canonical_quantity
             ):
                 raise AutonomousDecisionError(
-                    f"Scenario {scenario_index}: tran_vpp e disponibile soltanto per tensioni v(NODO)"
+                    f"Scenario {scenario_index}: tran_vpp richiede v(NODO) oppure v(NODO1,NODO2)"
                 )
             normalized_measurements[canonical_quantity] = measurement
         normalized["measure"] = normalized_measurements
@@ -259,10 +270,10 @@ def validate_scenario(
 
     gain = scenario.get("gain")
     gain_required = (
-        (require_gain_comparison and intent == "correction")
+        require_gain_comparison
         or (require_quality_analysis and analysis == "tran")
     )
-    if gain_required:
+    if gain_required or isinstance(gain, dict):
         if not isinstance(gain, dict):
             raise AutonomousDecisionError(
                 f"Scenario {scenario_index}: una correzione del sintomo di "
@@ -282,20 +293,38 @@ def validate_scenario(
                 f"Scenario {scenario_index}: gain.input e gain.output devono essere grandezze distinte"
             )
         if not all(
-            re.fullmatch(r"v\([^)]+\)", quantity, flags=re.IGNORECASE)
+            is_transient_voltage_quantity(quantity)
             for quantity in (canonical_input, canonical_output)
         ):
             raise AutonomousDecisionError(
-                f"Scenario {scenario_index}: gain.input e gain.output devono essere tensioni v(NODO)"
+                f"Scenario {scenario_index}: gain.input e gain.output devono essere tensioni a uno o due nodi"
             )
         if analysis != "tran":
             raise AutonomousDecisionError(
                 f"Scenario {scenario_index}: il confronto di guadagno richiede analysis='tran'"
             )
-        normalized["gain"] = {
+        normalized_gain: dict[str, Any] = {
             "input": canonical_input,
             "output": canonical_output,
         }
+        raw_min_ratio = gain.get("min_ratio")
+        if require_gain_comparison and raw_min_ratio is None:
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: il test di trasferimento richiede gain.min_ratio"
+            )
+        if raw_min_ratio is not None:
+            try:
+                min_ratio = float(raw_min_ratio)
+            except (TypeError, ValueError) as exc:
+                raise AutonomousDecisionError(
+                    f"Scenario {scenario_index}: gain.min_ratio deve essere un numero positivo"
+                ) from exc
+            if min_ratio <= 0:
+                raise AutonomousDecisionError(
+                    f"Scenario {scenario_index}: gain.min_ratio deve essere maggiore di zero"
+                )
+            normalized_gain["min_ratio"] = min_ratio
+        normalized["gain"] = normalized_gain
     if require_quality_analysis:
         quality = str(scenario.get("quality") or "").strip().lower()
         if intent == "correction" and analysis != "tran":
@@ -430,6 +459,7 @@ def validate_decision(
     require_direct_component_measurement: bool = False,
     require_joint_objective_verification: bool = False,
     require_temporal_expectation: bool = False,
+    require_signal_amplitude_followup: bool = False,
 ) -> dict[str, Any]:
     """Valida e normalizza una decisione `run_scenarios` oppure `stop`."""
     decision = str(data.get("decision") or "").strip()
@@ -451,6 +481,12 @@ def validate_decision(
             raise AutonomousDecisionError(
                 "Prima della conclusione serve una singola run self-contained che verifichi "
                 "insieme il segnale variabile e lo stato diretto del componente"
+            )
+        if require_signal_amplitude_followup:
+            raise AutonomousDecisionError(
+                "Il trasferimento e fallito senza uno sweep di ampiezza sufficiente: con budget "
+                "disponibile serve un nuovo scenario self-contained sullo stesso percorso, "
+                "con ampiezza significativamente diversa, prima di concludere un guasto strutturale"
             )
         final_status = str(data.get("final_status") or "").strip()
         final_answer = str(data.get("final_answer") or "").strip()
@@ -522,6 +558,7 @@ def parse_and_validate_decision(
     require_direct_component_measurement: bool = False,
     require_joint_objective_verification: bool = False,
     require_temporal_expectation: bool = False,
+    require_signal_amplitude_followup: bool = False,
 ) -> dict[str, Any]:
     """Converte il testo del modello in una decisione autonoma valida."""
     return validate_decision(
@@ -537,4 +574,5 @@ def parse_and_validate_decision(
         require_direct_component_measurement=require_direct_component_measurement,
         require_joint_objective_verification=require_joint_objective_verification,
         require_temporal_expectation=require_temporal_expectation,
+        require_signal_amplitude_followup=require_signal_amplitude_followup,
     )

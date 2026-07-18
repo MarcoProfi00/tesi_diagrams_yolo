@@ -1,0 +1,38 @@
+{
+  "title": "Isolare lo stadio finale pilotando direttamente la base di Q2 con S1 chiuso",
+  "hypothesis": "Il precedente scenario mostra arresto del segnale tra N005 e uscita. Iniettando un piccolo segnale sinusoidale direttamente su N008 con S1 chiuso, si verifica se il solo stadio finale Q2 piu cuffia equivalente e capace di generare un'uscita AC utile su N003-N004. Se si osserva guadagno non nullo all'uscita, il blocco e a monte del secondo stadio; se resta nullo, il problema e nel secondo stadio o nel carico cuffia.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    },
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N008",
+      "negative": "0",
+      "value": "SIN(0 10m 1k)"
+    }
+  ],
+  "compare": [
+    "v(N008)",
+    "v(N003,N004)",
+    "v(N007)"
+  ],
+  "measure": {
+    "v(N008)": "tran_vpp",
+    "v(N003,N004)": "tran_vpp",
+    "v(N007)": "tran_vpp"
+  },
+  "gain": {
+    "input": "v(N008)",
+    "output": "v(N003,N004)",
+    "min_ratio": 0.01
+  },
+  "expect": {
+    "v(N008)": "nonzero",
+    "v(N003,N004)": "nonzero"
+  },
+  "scenario_id": "agent_scenario_3"
+}
