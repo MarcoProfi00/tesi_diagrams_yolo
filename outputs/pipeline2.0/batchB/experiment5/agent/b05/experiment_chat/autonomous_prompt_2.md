@@ -12,7 +12,7 @@ Ho acceso questa radio, ma nelle cuffie non sento nulla. Puoi trovare il problem
 - Usa soltanto queste primitive: add_resistor_between_nodes, add_voltage_source_between_nodes, change_component_value, change_source_value, close_switch, connect_nodes, drive_node_voltage, feed_nodes_from_source_node, set_initial_node_voltage.
 - Ogni scenario deve essere self-contained e partire dalla base run.
 - Puoi proporre al massimo 2 scenari indipendenti.
-- Budget residuo: 3 run scenario.
+- Budget residuo: 4 run scenario.
 - Se il budget e zero devi restituire decision=stop.
 - Prima di una conclusione diagnostica devi eseguire almeno uno scenario controllato
   quando il budget e disponibile: la sola base run localizza un sospetto, ma non lo verifica.
@@ -21,8 +21,11 @@ Ho acceso questa radio, ma nelle cuffie non sento nulla. Puoi trovare il problem
 - Puoi invece fermarti con final_status="localized" dopo uno scenario diagnostico
   forte che verifica la causa ma non rappresenta una riparazione del circuito.
 - Se il sintomo utente richiede esplicitamente di correggere, risolvere, attivare,
-  disattivare o ripristinare un comportamento, `localized` non basta finche resta
-  budget: esegui un'altra correzione distinta e sostenuta dagli artefatti.
+  disattivare o ripristinare un comportamento, prova una correzione distinta e
+  sostenuta dagli artefatti finche ne esiste una non ancora verificata.
+- Se una correzione e gia fallita e restano soltanto scenari duplicati oppure
+  modifiche non sostenute dagli artefatti, fermati con `localized`,
+  `partially_localized` o `inconclusive` e lascia `verified_correction` vuoto.
 - Se uno scenario migliora il sintomo ma viola un vincolo richiesto (per esempio
   perde regolarita, spegne un componente da preservare o degrada l'uscita), trattalo
   come evidenza diagnostica e non come correzione finale.
@@ -184,13 +187,13 @@ oppure
     "decision_number": 1,
     "decision": {
       "decision": "run_scenarios",
-      "reason": "La base run mostra assenza totale di assorbimento dalla batteria e tutti i nodi audio praticamente a 0 V: il sospetto principale e che l'interruttore S1 aperto isoli completamente l'alimentazione del ricevitore. Serve almeno uno scenario controllato per verificare la causa e tentare una correzione diretta del sintomo.",
+      "reason": "La base run mostra corrente di batteria nulla e tutti i nodi del circuito audio praticamente a 0 V: il sospetto principale e che l'interruttore S1 aperto lasci completamente scollegata l'alimentazione dal resto della radio. Serve almeno uno scenario controllato per verificare questa causa e, dato che l'utente chiede anche di provare a risolvere, la prima prova deve essere una correzione diretta sostenuta dagli artefatti.",
       "scenarios": [
         {
-          "title": "Chiudere l'interruttore di alimentazione S1",
-          "hypothesis": "Il circuito non funziona perche S1 e aperto e lascia il nodo N004, che alimenta bias e cuffia, completamente scollegato dalla batteria. Chiudendo S1 la batteria dovrebbe alimentare il ramo audio e comparire corrente nel carico cuffia.",
+          "title": "Chiudere S1 per ripristinare l'alimentazione del circuito audio",
+          "hypothesis": "Lo switch25.1 e aperto nella base run, quindi N004 e tutto il ramo con R1-R2-R3, Q1-Q2 e la cuffia equivalente restano senza alimentazione; chiudendo S1 la batteria dovrebbe alimentare N004 e comparire attivita utile sul carico cuffia.",
           "intent": "correction",
-          "analysis": "op",
+          "analysis": "tran",
           "actions": [
             {
               "type": "close_switch",
@@ -199,44 +202,24 @@ oppure
           ],
           "compare": [
             "v(N004)",
-            "v(N003)",
+            "v(N003,N004)",
             "i(Rbreaker3_1)",
-            "i(Vbattery2_1)",
-            "i(Rresistor22_1)",
-            "i(Rresistor22_2)",
-            "i(Rresistor22_3)"
+            "i(Vbattery2_1)"
           ],
+          "measure": {
+            "v(N003,N004)": "tran_vpp",
+            "v(N004)": "op",
+            "i(Rbreaker3_1)": "op",
+            "i(Vbattery2_1)": "op"
+          },
+          "gain": {
+            "input": "v(N004)",
+            "output": "v(N003,N004)",
+            "min_ratio": 0.01
+          },
           "expect": {
             "v(N004)": "changed",
-            "i(Rbreaker3_1)": "nonzero",
-            "i(Vbattery2_1)": "nonzero"
-          }
-        },
-        {
-          "title": "Alimentare direttamente il bus N004 dal nodo batteria N002",
-          "hypothesis": "Se il problema e solo la continuita mancante dell'interruttore/alimentazione verso N004, forzare la stessa alimentazione dal nodo gia alimentato N002 a N004 dovrebbe produrre lo stesso effetto elettrico di base: comparsa di bias e corrente nel carico cuffia.",
-          "intent": "diagnostic",
-          "analysis": "op",
-          "actions": [
-            {
-              "type": "feed_nodes_from_source_node",
-              "source_node": "N002",
-              "target_nodes": [
-                "N004"
-              ]
-            }
-          ],
-          "compare": [
-            "v(N004)",
-            "v(N003)",
-            "i(Rbreaker3_1)",
-            "i(Vbattery2_1)",
-            "i(Rresistor22_1)",
-            "i(Rresistor22_2)",
-            "i(Rresistor22_3)"
-          ],
-          "expect": {
-            "v(N004)": "changed",
+            "v(N003,N004)": "nonzero",
             "i(Rbreaker3_1)": "nonzero",
             "i(Vbattery2_1)": "nonzero"
           }
@@ -257,13 +240,13 @@ oppure
         "spice_status": "success",
         "spice_exit_code": 0,
         "comparison_summary": {
-          "requested_count": 7,
-          "changed_count": 7,
-          "activated_count": 7,
+          "requested_count": 4,
+          "changed_count": 3,
+          "activated_count": 3,
           "missing_count": 0,
-          "expected_count": 3,
+          "expected_count": 4,
           "expectations_met_count": 3,
-          "expectations_failed_count": 0,
+          "expectations_failed_count": 1,
           "expectations_missing_count": 0,
           "meaningful_improvement_count": 2,
           "quality_required": false,
@@ -273,21 +256,21 @@ oppure
           "quality_output_preserved": false,
           "base_thd": null,
           "scenario_thd": null,
-          "gain_required": false,
+          "gain_required": true,
           "gain_available": false,
           "gain_sufficient": false,
           "scenario_gain": null,
-          "min_gain_ratio": null
+          "min_gain_ratio": 0.01
         },
         "diagnostic_outcome": {
-          "status": "resolved_candidate",
-          "technical_label": "Candidate resolved",
-          "label": "Criteri di successo soddisfatti",
-          "reason": "Tutti i comportamenti attesi dichiarati dallo scenario sono verificati dagli output SPICE.",
-          "user_message": "Lo scenario fornisce una conferma forte dell'ipotesi testata.",
-          "stop_automation": true,
-          "confidence": "medium",
-          "next_step": "Ci sono gia evidenze forti per fermarsi qui e passare alla conclusione diagnostica."
+          "status": "partially_resolved",
+          "technical_label": "Signal gain unavailable",
+          "label": "Trasferimento del segnale non misurabile",
+          "reason": "Lo scenario richiede una soglia minima di trasferimento, ma il rapporto Vpp uscita/ingresso non e disponibile.",
+          "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+          "stop_automation": false,
+          "confidence": "low",
+          "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
         },
         "viewer": {
           "model": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchB\\experiment5\\agent\\b05\\scenarios\\agent_scenario_1\\run\\13_viewer_model.json",
@@ -296,55 +279,6 @@ oppure
         },
         "viewer_error": null,
         "executed_scenarios_count": 1
-      },
-      {
-        "scenario_id": "agent_scenario_2",
-        "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchB\\experiment5\\agent\\b05\\scenarios\\agent_scenario_2",
-        "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchB\\experiment5\\agent\\b05\\scenarios\\agent_scenario_2\\run",
-        "status": "spice_success",
-        "spice_executed": true,
-        "spice_status": "success",
-        "spice_exit_code": 0,
-        "comparison_summary": {
-          "requested_count": 7,
-          "changed_count": 7,
-          "activated_count": 7,
-          "missing_count": 0,
-          "expected_count": 3,
-          "expectations_met_count": 3,
-          "expectations_failed_count": 0,
-          "expectations_missing_count": 0,
-          "meaningful_improvement_count": 2,
-          "quality_required": false,
-          "quality_available": false,
-          "quality_improved": false,
-          "quality_acceptable": false,
-          "quality_output_preserved": false,
-          "base_thd": null,
-          "scenario_thd": null,
-          "gain_required": false,
-          "gain_available": false,
-          "gain_sufficient": false,
-          "scenario_gain": null,
-          "min_gain_ratio": null
-        },
-        "diagnostic_outcome": {
-          "status": "partially_resolved",
-          "technical_label": "Diagnostic hypothesis confirmed",
-          "label": "Ipotesi diagnostica confermata",
-          "reason": "I criteri dichiarati dal test diagnostico sono soddisfatti, ma lo scenario non applica una correzione del sintomo utente.",
-          "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
-          "stop_automation": false,
-          "confidence": "low",
-          "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
-        },
-        "viewer": {
-          "model": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchB\\experiment5\\agent\\b05\\scenarios\\agent_scenario_2\\run\\13_viewer_model.json",
-          "layout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchB\\experiment5\\agent\\b05\\scenarios\\agent_scenario_2\\run\\14_viewer_layout.json",
-          "svg": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchB\\experiment5\\agent\\b05\\scenarios\\agent_scenario_2\\run\\15_viewer.svg"
-        },
-        "viewer_error": null,
-        "executed_scenarios_count": 2
       }
     ]
   }
@@ -1583,27 +1517,27 @@ Current ngspice program size =   15.910 MB.
     {
       "scenario_dir": "outputs\\pipeline2.0\\batchB\\experiment5\\agent\\b05\\scenarios\\agent_scenario_1",
       "scenario_id": "agent_scenario_1",
-      "title": "Chiudere l'interruttore di alimentazione S1",
+      "title": "Chiudere S1 per ripristinare l'alimentazione del circuito audio",
       "status": "spice_success",
       "spice_status": "success",
       "diagnostic_outcome": {
-        "status": "resolved_candidate",
-        "technical_label": "Candidate resolved",
-        "label": "Criteri di successo soddisfatti",
-        "reason": "Tutti i comportamenti attesi dichiarati dallo scenario sono verificati dagli output SPICE.",
-        "user_message": "Lo scenario fornisce una conferma forte dell'ipotesi testata.",
-        "stop_automation": true,
-        "confidence": "medium",
-        "next_step": "Ci sono gia evidenze forti per fermarsi qui e passare alla conclusione diagnostica."
+        "status": "partially_resolved",
+        "technical_label": "Signal gain unavailable",
+        "label": "Trasferimento del segnale non misurabile",
+        "reason": "Lo scenario richiede una soglia minima di trasferimento, ma il rapporto Vpp uscita/ingresso non e disponibile.",
+        "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+        "stop_automation": false,
+        "confidence": "low",
+        "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
       },
       "comparison_summary": {
-        "requested_count": 7,
-        "changed_count": 7,
-        "activated_count": 7,
+        "requested_count": 4,
+        "changed_count": 3,
+        "activated_count": 3,
         "missing_count": 0,
-        "expected_count": 3,
+        "expected_count": 4,
         "expectations_met_count": 3,
-        "expectations_failed_count": 0,
+        "expectations_failed_count": 1,
         "expectations_missing_count": 0,
         "meaningful_improvement_count": 2,
         "quality_required": false,
@@ -1613,11 +1547,11 @@ Current ngspice program size =   15.910 MB.
         "quality_output_preserved": false,
         "base_thd": null,
         "scenario_thd": null,
-        "gain_required": false,
+        "gain_required": true,
         "gain_available": false,
         "gain_sufficient": false,
         "scenario_gain": null,
-        "min_gain_ratio": null
+        "min_gain_ratio": 0.01
       },
       "led_profiles": {},
       "artifacts": {
@@ -1642,147 +1576,34 @@ Current ngspice program size =   15.910 MB.
           "role": "Base-vs-scenario comparison used to evaluate the scenario."
         }
       }
-    },
-    {
-      "scenario_dir": "outputs\\pipeline2.0\\batchB\\experiment5\\agent\\b05\\scenarios\\agent_scenario_2",
-      "scenario_id": "agent_scenario_2",
-      "title": "Alimentare direttamente il bus N004 dal nodo batteria N002",
-      "status": "spice_success",
-      "spice_status": "success",
-      "diagnostic_outcome": {
-        "status": "partially_resolved",
-        "technical_label": "Diagnostic hypothesis confirmed",
-        "label": "Ipotesi diagnostica confermata",
-        "reason": "I criteri dichiarati dal test diagnostico sono soddisfatti, ma lo scenario non applica una correzione del sintomo utente.",
-        "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
-        "stop_automation": false,
-        "confidence": "low",
-        "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
-      },
-      "comparison_summary": {
-        "requested_count": 7,
-        "changed_count": 7,
-        "activated_count": 7,
-        "missing_count": 0,
-        "expected_count": 3,
-        "expectations_met_count": 3,
-        "expectations_failed_count": 0,
-        "expectations_missing_count": 0,
-        "meaningful_improvement_count": 2,
-        "quality_required": false,
-        "quality_available": false,
-        "quality_improved": false,
-        "quality_acceptable": false,
-        "quality_output_preserved": false,
-        "base_thd": null,
-        "scenario_thd": null,
-        "gain_required": false,
-        "gain_available": false,
-        "gain_sufficient": false,
-        "scenario_gain": null,
-        "min_gain_ratio": null
-      },
-      "led_profiles": {},
-      "artifacts": {
-        "scenario_definition": {
-          "available": true,
-          "path": "outputs\\pipeline2.0\\batchB\\experiment5\\agent\\b05\\scenarios\\agent_scenario_2\\scenario.json",
-          "role": "Scenario selected by the user and saved before execution."
-        },
-        "scenario_status": {
-          "available": true,
-          "path": "outputs\\pipeline2.0\\batchB\\experiment5\\agent\\b05\\scenarios\\agent_scenario_2\\scenario_status.json",
-          "role": "Current scenario status, SPICE status and diagnostic outcome."
-        },
-        "controlled_scenario_report": {
-          "available": true,
-          "path": "outputs\\pipeline2.0\\batchB\\experiment5\\agent\\b05\\scenarios\\agent_scenario_2\\12_controlled_scenarios.json",
-          "role": "Report produced by the controlled scenario runner."
-        },
-        "scenario_comparison": {
-          "available": true,
-          "path": "outputs\\pipeline2.0\\batchB\\experiment5\\agent\\b05\\scenarios\\agent_scenario_2\\scenario_comparison.json",
-          "role": "Base-vs-scenario comparison used to evaluate the scenario."
-        }
-      }
     }
   ],
   "scenario_outcome_summary": {
     "available": true,
     "best_scenario_id": "agent_scenario_1",
-    "best_outcome_status": "resolved_candidate",
-    "best_stop_automation": true,
+    "best_outcome_status": "partially_resolved",
+    "best_stop_automation": false,
     "ranking_status": "verified_best",
     "interpretation_rule": "If a user asks which scenario resolves the problem, prefer the scenario with outcome_status='resolved_candidate' and stop_automation=true. Partially resolved scenarios without verified expectations are supporting diagnostics and must not be ranked only by changed_count.",
     "scenarios": [
       {
         "scenario_id": "agent_scenario_1",
-        "title": "Chiudere l'interruttore di alimentazione S1",
-        "status": "spice_success",
-        "spice_status": "success",
-        "outcome_status": "resolved_candidate",
-        "outcome_label": "Criteri di successo soddisfatti",
-        "outcome_technical_label": "Candidate resolved",
-        "outcome_reason": "Tutti i comportamenti attesi dichiarati dallo scenario sono verificati dagli output SPICE.",
-        "stop_automation": true,
-        "comparison_summary": {
-          "requested_count": 7,
-          "changed_count": 7,
-          "activated_count": 7,
-          "missing_count": 0,
-          "expected_count": 3,
-          "expectations_met_count": 3,
-          "expectations_failed_count": 0,
-          "expectations_missing_count": 0,
-          "meaningful_improvement_count": 2,
-          "quality_required": false,
-          "quality_available": false,
-          "quality_improved": false,
-          "quality_acceptable": false,
-          "quality_output_preserved": false,
-          "base_thd": null,
-          "scenario_thd": null,
-          "gain_required": false,
-          "gain_available": false,
-          "gain_sufficient": false,
-          "scenario_gain": null,
-          "min_gain_ratio": null
-        },
-        "quantity_summary": {
-          "changed": [
-            "v(N004)",
-            "v(N003)",
-            "i(Rbreaker3_1)",
-            "i(Vbattery2_1)",
-            "i(Rresistor22_1)",
-            "i(Rresistor22_2)",
-            "i(Rresistor22_3)"
-          ],
-          "unchanged": [],
-          "missing": []
-        },
-        "led_profiles": {},
-        "ranking_verified": true,
-        "score": 215
-      },
-      {
-        "scenario_id": "agent_scenario_2",
-        "title": "Alimentare direttamente il bus N004 dal nodo batteria N002",
+        "title": "Chiudere S1 per ripristinare l'alimentazione del circuito audio",
         "status": "spice_success",
         "spice_status": "success",
         "outcome_status": "partially_resolved",
-        "outcome_label": "Ipotesi diagnostica confermata",
-        "outcome_technical_label": "Diagnostic hypothesis confirmed",
-        "outcome_reason": "I criteri dichiarati dal test diagnostico sono soddisfatti, ma lo scenario non applica una correzione del sintomo utente.",
+        "outcome_label": "Trasferimento del segnale non misurabile",
+        "outcome_technical_label": "Signal gain unavailable",
+        "outcome_reason": "Lo scenario richiede una soglia minima di trasferimento, ma il rapporto Vpp uscita/ingresso non e disponibile.",
         "stop_automation": false,
         "comparison_summary": {
-          "requested_count": 7,
-          "changed_count": 7,
-          "activated_count": 7,
+          "requested_count": 4,
+          "changed_count": 3,
+          "activated_count": 3,
           "missing_count": 0,
-          "expected_count": 3,
+          "expected_count": 4,
           "expectations_met_count": 3,
-          "expectations_failed_count": 0,
+          "expectations_failed_count": 1,
           "expectations_missing_count": 0,
           "meaningful_improvement_count": 2,
           "quality_required": false,
@@ -1792,23 +1613,21 @@ Current ngspice program size =   15.910 MB.
           "quality_output_preserved": false,
           "base_thd": null,
           "scenario_thd": null,
-          "gain_required": false,
+          "gain_required": true,
           "gain_available": false,
           "gain_sufficient": false,
           "scenario_gain": null,
-          "min_gain_ratio": null
+          "min_gain_ratio": 0.01
         },
         "quantity_summary": {
           "changed": [
             "v(N004)",
-            "v(N003)",
             "i(Rbreaker3_1)",
-            "i(Vbattery2_1)",
-            "i(Rresistor22_1)",
-            "i(Rresistor22_2)",
-            "i(Rresistor22_3)"
+            "i(Vbattery2_1)"
           ],
-          "unchanged": [],
+          "unchanged": [
+            "v(N003,N004)"
+          ],
           "missing": []
         },
         "led_profiles": {},
@@ -1819,8 +1638,8 @@ Current ngspice program size =   15.910 MB.
   },
   "scenario_budget": {
     "max_executable_scenarios": 5,
-    "executed_scenarios_count": 2,
-    "remaining_executable_scenarios": 3,
+    "executed_scenarios_count": 1,
+    "remaining_executable_scenarios": 4,
     "budget_exhausted": false,
     "last_scenario_available": false,
     "policy": "At most 5 scenarios can be executed for the same circuit. When only one scenario remains, the agent should propose a single final scenario. When no scenario remains, the agent must stop proposing new scenarios and provide a final diagnostic conclusion."

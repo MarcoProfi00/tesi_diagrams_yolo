@@ -23,6 +23,9 @@ from .svg_styles import render_svg_style_blocks
 # leakage e corrente continua misurata in modo leggibile.
 MIN_NUMERICAL_CURRENT_A = 1e-15
 LEAKAGE_CURRENT_MAX_A = 1e-11
+# La corrente del ramo puo' restare visibile anche a livelli molto piccoli, ma
+# un LED emette luce apprezzabile soltanto oltre una soglia dedicata.
+LED_VISIBLE_CURRENT_A = 1e-4
 
 
 def format_number(value: Any) -> str:
@@ -474,6 +477,14 @@ def render_analog_meter(component: dict[str, Any], position: dict[str, Any]) -> 
 def component_label_lines(component: dict[str, Any], position: dict[str, Any]) -> list[str]:
     """Divide riferimento e valore su due righe quando la label li contiene."""
     component_type = str(position.get("component_type") or "").lower()
+    if component_type in {"diode", "zener", "led"} and component.get("display_label"):
+        override_label = str(component.get("viewer_label") or "").strip()
+        override_value = str(component.get("viewer_value") or "").strip()
+        if override_label or override_value:
+            return [line for line in (override_label, override_value) if line]
+        label = str(component["display_label"]).strip()
+        parts = label.split(maxsplit=1)
+        return parts if len(parts) == 2 else [label]
     if component_type in {"antenna", "headset", "variable_capacitor", "variable_polarized_capacitor"}:
         label = str(component.get("viewer_label") or position.get("label") or component_type).strip()
         value = str(component.get("viewer_value") or "").strip()
@@ -652,8 +663,46 @@ def current_source_arrow_axis(position: dict[str, Any]) -> tuple[float, float]:
     return -13.0 * direction, 13.0 * direction
 
 
-def render_led_glow(profile: dict[str, Any] | None, active: bool) -> str:
+def led_color(component: dict[str, Any]) -> str:
+    """Ricava il colore dichiarato del LED da modello e label disponibili."""
+    searchable = " ".join(
+        str(value or "")
+        for value in (
+            component.get("model"),
+            component.get("display_label"),
+            (component.get("parameters") or {}).get("model"),
+            (component.get("parameters") or {}).get("label_text"),
+        )
+    ).lower()
+    color_tokens = {
+        "green": ("green", "verde"),
+        "yellow": ("yellow", "giallo"),
+        "red": ("red", "rosso"),
+    }
+    for color, tokens in color_tokens.items():
+        if any(re.search(rf"(?:^|[^a-z]){token}(?:[^a-z]|$)", searchable) for token in tokens):
+            return color
+    return "red"
+
+
+def led_is_luminous(
+    component_id: str,
+    component: dict[str, Any],
+    measurements: dict[str, Any],
+    fallback_active: bool,
+) -> bool:
+    """Separa la luce del LED dalla semplice presenza di corrente nel ramo."""
+    current = measured_component_current(component_id, measurements)
+    if current is not None:
+        return abs(current) >= LED_VISIBLE_CURRENT_A
+    # Il fallback conserva il comportamento per output ngspice privi della
+    # tabella delle correnti dei diodi.
+    return fallback_active
+
+
+def render_led_glow(profile: dict[str, Any] | None, active: bool, color: str) -> str:
     """Disegna un alone LED statico o sincronizzato con il profilo TRAN."""
+    color_class = f" led-color-{color}"
     if profile:
         state = str(profile.get("state") or "off")
         if state == "off":
@@ -661,7 +710,7 @@ def render_led_glow(profile: dict[str, Any] | None, active: bool) -> str:
         if state == "steady_on":
             tooltip = "LED acceso in modo continuo secondo il transitorio SPICE"
             return (
-                '<ellipse class="led-glow led-steady" cx="0" cy="0" rx="42" ry="30">'
+                f'<ellipse class="led-glow led-steady{color_class}" cx="0" cy="0" rx="42" ry="30">'
                 f'<title>{escape(tooltip)}</title></ellipse>'
             )
 
@@ -687,7 +736,7 @@ def render_led_glow(profile: dict[str, Any] | None, active: bool) -> str:
                 f"{format_number(actual_duty)}% della finestra. Riproduzione rallentata."
             )
         return (
-            '<ellipse class="led-glow led-transient-profile" cx="0" cy="0" rx="42" ry="30" opacity="0.08">'
+            f'<ellipse class="led-glow led-transient-profile{color_class}" cx="0" cy="0" rx="42" ry="30" opacity="0.08">'
             f'<title>{escape(tooltip)}</title>'
             '<animate attributeName="opacity" values="0.08;0.48;0.48;0.08;0.08" '
             f'keyTimes="0;0.02;{format_number(duty_cycle)};{format_number(fade_end)};1" '
@@ -698,9 +747,27 @@ def render_led_glow(profile: dict[str, Any] | None, active: bool) -> str:
     if not active:
         return ""
     return (
-        '<ellipse class="led-glow led-steady" cx="0" cy="0" rx="42" ry="30">'
+        f'<ellipse class="led-glow led-steady{color_class}" cx="0" cy="0" rx="42" ry="30">'
         '<title>LED attivo; profilo transitorio non disponibile</title></ellipse>'
     )
+
+
+def semantic_terminal_local_sign(
+    position: dict[str, Any],
+    terminal_name: str,
+    default: float = 1.0,
+) -> float:
+    """Indica se un terminale semantico occupa il lato locale sinistro o destro.
+
+    Il renderer ruota poi l'intero bipolo: `-1` rappresenta il primo estremo
+    locale e `+1` il secondo. In questo modo anodo e catodo restano corretti
+    tanto nei simboli orizzontali quanto in quelli verticali.
+    """
+    wanted = terminal_name.strip().lower()
+    for index, terminal in enumerate((position.get("terminals") or [])[:2]):
+        if str(terminal.get("name") or "").strip().lower() == wanted:
+            return -1.0 if index == 0 else 1.0
+    return default
 
 
 def render_two_terminal_symbol(
@@ -711,6 +778,7 @@ def render_two_terminal_symbol(
     leakage_ids: set[str],
     transient_ids: set[str],
     led_profiles: dict[str, dict[str, Any]],
+    measurements: dict[str, Any],
 ) -> str:
     """Disegna un componente a due terminali usando il vocabolario SVG comune."""
     center_x, center_y, angle, length = two_terminal_geometry(position)
@@ -781,10 +849,38 @@ def render_two_terminal_symbol(
             'C10 -20 30 -20 30 0 '
             f'H{half}"/>'
         )
-    elif "led" in visual_class or "diode" in visual_class:
-        glow = render_led_glow(led_profiles.get(component_id), active) if "led" in visual_class else ""
-        rays = '<path class="led-rays" d="M5 -20 L17 -34 M20 -16 L32 -30"/>' if "led" in visual_class else ""
-        body = f'{glow}<path d="M{-half} 0 H-18 M-18 -18 L18 0 L-18 18 Z M18 -20 V20 M18 0 H{half}"/>{rays}'
+    elif "led" in visual_class or "diode" in visual_class or "zener" in visual_class:
+        color = led_color(component) if "led" in visual_class else ""
+        luminous = led_is_luminous(component_id, component, measurements, active) if "led" in visual_class else False
+        glow = render_led_glow(led_profiles.get(component_id), luminous, color) if "led" in visual_class else ""
+        cathode_sign = semantic_terminal_local_sign(position, "cathode")
+        cathode_x = 18.0 * cathode_sign
+        anode_x = -cathode_x
+        ray_sign = cathode_sign
+        rays = (
+            f'<path class="led-rays" d="M{format_number(5.0 * ray_sign)} -20 '
+            f'L{format_number(17.0 * ray_sign)} -34 '
+            f'M{format_number(20.0 * ray_sign)} -16 '
+            f'L{format_number(32.0 * ray_sign)} -30"/>'
+            if "led" in visual_class
+            else ""
+        )
+        cathode = (
+            f'M{format_number(10.0 * cathode_sign)} -20 '
+            f'L{format_number(cathode_x)} -14 V14 '
+            f'L{format_number(26.0 * cathode_sign)} 20'
+            if "zener" in visual_class
+            else f'M{format_number(cathode_x)} -20 V20'
+        )
+        diode_body = (
+            f'M{format_number(anode_x)} -18 '
+            f'L{format_number(cathode_x)} 0 '
+            f'L{format_number(anode_x)} 18 Z'
+        )
+        body = (
+            f'{glow}<path d="M{-half} 0 H-18 {diode_body} '
+            f'{cathode} M18 0 H{half}"/>{rays}'
+        )
         flow_path = f'M{-half} 0 H{half}'
     elif "lamp" in visual_class:
         glow = '<ellipse class="lamp-glow" cx="0" cy="0" rx="46" ry="38"/>' if active else ""
@@ -872,8 +968,9 @@ def render_two_terminal_symbol(
             flow_svg = f'<path class="{flow_class}" d="{flow_path}"/>'
     else:
         flow_svg = ""
+    component_css = f"component led-color-{led_color(component)}" if "led" in visual_class else "component"
     return (
-        f'<g class="component" transform="translate({format_number(center_x)} {format_number(center_y)}) rotate({format_number(angle)})">'
+        f'<g class="{component_css}" transform="translate({format_number(center_x)} {format_number(center_y)}) rotate({format_number(angle)})">'
         f'<g class="{stroke_class}">{body}</g>'
         f'{flow_svg}'
         "</g>"
@@ -926,7 +1023,7 @@ def render_headset(
     terminals = position.get("terminals") or []
     if len(terminals) < 2:
         return render_two_terminal_symbol(
-            component_id, component, position, steady_ids, leakage_ids, transient_ids, {}
+            component_id, component, position, steady_ids, leakage_ids, transient_ids, {}, {}
         )
     ordered = sorted(terminals, key=lambda item: float(item.get("y") or 0))
     left_x = min(float(item.get("x") or 0) for item in ordered)
@@ -1069,21 +1166,30 @@ def render_bjt_transistor(
 
     center_x = float(position.get("x") or 0)
     center_y = float(position.get("y") or 0)
-    base_x = center_x - 6.0
+    # La base puo' trovarsi a sinistra oppure a destra del simbolo. La barra
+    # interna segue quel lato, mentre collettore ed emettitore partono verso
+    # il lato opposto senza incrociarsi.
+    base_side = 1.0 if float(base["x"]) >= center_x else -1.0
+    base_x = center_x + base_side * 6.0
     base_top = center_y - 18.0
     base_bottom = center_y + 18.0
+    collector_x = float(collector["x"])
+    collector_y = float(collector["y"])
     emitter_x = float(emitter["x"])
     emitter_y = float(emitter["y"])
+    emitter_is_upper = emitter_y < collector_y
+    emitter_start_y = base_top if emitter_is_upper else base_bottom
+    collector_start_y = base_bottom if emitter_is_upper else base_top
 
     # Per l'NPN la freccia punta verso l'esterno; per il PNP punta verso la base.
     direction_x = emitter_x - base_x
-    direction_y = emitter_y - base_bottom
+    direction_y = emitter_y - emitter_start_y
     length = max(math.hypot(direction_x, direction_y), 1.0)
     unit_x, unit_y = direction_x / length, direction_y / length
     arrow_fraction = 0.28 if transistor_kind == "pnp" else 0.72
     arrow_direction = -1.0 if transistor_kind == "pnp" else 1.0
     tip_x = base_x + direction_x * arrow_fraction
-    tip_y = base_bottom + direction_y * arrow_fraction
+    tip_y = emitter_start_y + direction_y * arrow_fraction
     back_x = tip_x - unit_x * 11.0 * arrow_direction
     back_y = tip_y - unit_y * 11.0 * arrow_direction
     normal_x, normal_y = -unit_y * 5.0, unit_x * 5.0
@@ -1091,8 +1197,10 @@ def render_bjt_transistor(
     body_path = (
         f'M{format_number(base["x"])} {format_number(base["y"])} H{format_number(base_x)} '
         f'M{format_number(base_x)} {format_number(base_top)} V{format_number(base_bottom)} '
-        f'M{format_number(base_x)} {format_number(base_top)} L{format_number(collector["x"])} {format_number(collector["y"])} '
-        f'M{format_number(base_x)} {format_number(base_bottom)} L{format_number(emitter_x)} {format_number(emitter_y)}'
+        f'M{format_number(base_x)} {format_number(collector_start_y)} '
+        f'L{format_number(collector_x)} {format_number(collector_y)} '
+        f'M{format_number(base_x)} {format_number(emitter_start_y)} '
+        f'L{format_number(emitter_x)} {format_number(emitter_y)}'
     )
     arrow_path = (
         f'M{format_number(back_x + normal_x)} {format_number(back_y + normal_y)} '
@@ -1413,6 +1521,7 @@ def render_components(
                 leakage_ids,
                 transient_ids,
                 led_profiles,
+                model.get("measurements") or {},
             )
         if component.get("is_scenario_added"):
             # Il colore rende visibile l'origine senza una label testuale ingombrante.

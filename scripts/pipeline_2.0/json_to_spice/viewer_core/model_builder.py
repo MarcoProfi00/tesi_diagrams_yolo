@@ -106,6 +106,40 @@ def enrich_components_with_rules(
     return enriched
 
 
+def enrich_bjt_kind_from_spice_models(
+    components: list[dict[str, Any]],
+    directives: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Distingue NPN e PNP usando il tipo dichiarato nelle direttive `.model`.
+
+    Il Graph JSON puo' conservare una classe transistor generica o storicamente
+    errata. La netlist simulata resta la fonte di verita': il viewer ricava la
+    freccia del BJT dal modello realmente caricato da ngspice, senza dipendere
+    dall'id del componente o dal circuito corrente.
+    """
+    model_kinds: dict[str, str] = {}
+    for entry in directives:
+        directive = str((entry or {}).get("directive") or "").strip()
+        match = re.match(
+            r"^\.model\s+(\S+)\s+(NPN|PNP)(?:\s|\()",
+            directive,
+            flags=re.IGNORECASE,
+        )
+        if match:
+            model_kinds[match.group(1).upper()] = match.group(2).lower()
+
+    enriched: list[dict[str, Any]] = []
+    for component in components:
+        item = dict(component)
+        if str(item.get("kind") or "").lower() == "bjt":
+            model_kind = model_kinds.get(str(item.get("model") or "").upper())
+            if model_kind in {"npn", "pnp"}:
+                item["viewer_kind"] = f"{model_kind}_transistor"
+                item["viewer_bjt_kind_source"] = "spice_model_directive"
+        enriched.append(item)
+    return enriched
+
+
 def enrich_manual_dc_supplies(
     components: list[dict[str, Any]],
     rules: dict[str, Any],
@@ -138,9 +172,28 @@ def enrich_manual_dc_supplies(
         if source is None:
             continue
 
-        # La sorgente resta un simbolo DC circolare; l'origine OCR serve solo
-        # a evitare una seconda label esterna, non cambia la netlist SPICE.
-        is_ocr_label = str(parameters.get("source") or "").strip().lower() == "manual_from_image_label"
+        source_origin = str(parameters.get("source") or "").strip().lower()
+        is_ocr_label = source_origin == "manual_from_image_label"
+        try:
+            reference_value = float(parameters.get("value") or 0.0)
+        except (TypeError, ValueError):
+            reference_value = None
+        is_simulation_reference = (
+            source_origin == "manual_reference_for_floating_battery_circuit"
+            and reference_value == 0.0
+            and str(parameters.get("reference") or "0").strip() == "0"
+        )
+        if is_simulation_reference:
+            # Una sorgente ideale da 0 V usata soltanto per riferire una rete
+            # flottante non e' un componente presente nell'immagine.
+            source["viewer_hidden"] = True
+            source["viewer_role"] = "simulation_reference"
+            source["parameters"] = dict(parameters)
+            source["supply_name"] = str(supply_name)
+            continue
+
+        # Le altre sorgenti manuali restano simboli DC circolari; l'origine OCR
+        # serve solo a evitare una seconda label esterna.
         source["viewer_kind"] = "dc_supply"
         source["viewer_role"] = "manual_ocr_dc_supply" if is_ocr_label else "manual_dc_supply"
         source["parameters"] = dict(parameters)
@@ -220,7 +273,7 @@ def parse_ngspice_stdout(stdout_path: Path) -> dict[str, Any]:
 
     lines = stdout_path.read_text(encoding="utf-8", errors="replace").splitlines()
     section: str | None = None
-    pending_resistor_devices: list[str] = []
+    pending_devices: list[str] = []
 
     for raw_line in lines:
         line = raw_line.strip()
@@ -235,7 +288,7 @@ def parse_ngspice_stdout(stdout_path: Path) -> dict[str, Any]:
             continue
         if lower.startswith("device"):
             tokens = line.split()[1:]
-            pending_resistor_devices = [token.lower() for token in tokens]
+            pending_devices = [token.lower() for token in tokens]
             section = "device_table"
             continue
         if section == "node_voltage":
@@ -248,9 +301,23 @@ def parse_ngspice_stdout(stdout_path: Path) -> dict[str, Any]:
             if match:
                 measurements["branch_currents"][match.group(1).upper()] = float(match.group(2))
             continue
-        if section == "device_table" and lower.startswith("i ") and pending_resistor_devices:
+        if section == "device_table" and pending_devices:
+            quantity = lower.split(maxsplit=1)[0]
+            # ngspice chiama `i` la corrente dei bipoli, `id` quella dei
+            # diodi e `ic` quella di collettore dei BJT. Si conserva una sola
+            # misura rappresentativa per dispositivo, evitando che `ib` o
+            # `ie` sovrascrivano la corrente principale del transistor.
+            expected_quantity = (
+                "id"
+                if all(device.startswith("d") for device in pending_devices)
+                else "ic"
+                if all(device.startswith("q") for device in pending_devices)
+                else "i"
+            )
+            if quantity != expected_quantity:
+                continue
             values = line.split()[1:]
-            for device, value in zip(pending_resistor_devices, values):
+            for device, value in zip(pending_devices, values):
                 try:
                     measurements["device_currents"][device.upper()] = float(value)
                 except ValueError:
@@ -1258,6 +1325,7 @@ def build_viewer_model(run_dir: Path) -> dict[str, Any]:
     rules = read_json(run_dir / "06_component_rules.json")
     components, directives, warnings = parse_netlist(run_dir / NETLIST_NAME)
     components = enrich_components_with_rules(components, rules)
+    components = enrich_bjt_kind_from_spice_models(components, directives)
     components = enrich_manual_dc_supplies(components, rules)
     measurements = parse_ngspice_stdout(run_dir / "08_ngspice_stdout.txt")
     transient = parse_transient_csv(run_dir / "08_tran.csv", components)

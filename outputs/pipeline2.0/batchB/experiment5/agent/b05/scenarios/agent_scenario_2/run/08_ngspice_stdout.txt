@@ -19,15 +19,16 @@ n002                                        -9
 n003                                  -1.55294
 n004                                  -8.99999
 n001                                         0
-n005                              -1.22429e-16
+n005                              -4.63477e-14
 n007                                 -0.120768
 n006                                 -0.791174
 n008                                 -0.808234
-linductor10_1#branch              -2.24208e-44
+linductor10_1#branch                         0
+vscenario_supply_n001_0#branch     4.63477e-26
 vbattery2_1#branch                 -0.00568727
 
 
-No. of Data Rows : 5008
+No. of Data Rows : 5012
 Doing analysis at TEMP = 27.000000 and TNOM = 27.000000
 
 Using SPARSE 1.3 as Direct Linear Solver
@@ -43,22 +44,23 @@ n002                                        -9
 n003                                  -1.55294
 n004                                  -8.99999
 n001                                         0
-n005                              -1.22429e-16
+n005                              -4.63477e-14
 n007                                 -0.120768
 n006                                 -0.791174
 n008                                 -0.808234
-linductor10_1#branch              -2.24208e-44
+linductor10_1#branch                         0
+vscenario_supply_n001_0#branch     4.63477e-26
 vbattery2_1#branch                 -0.00568727
 
 
-No. of Data Rows : 5008
+No. of Data Rows : 5012
 	Node                                  Voltage
 	----                                  -------
 	----	-------
 	n008                             -8.08234e-01
 	n006                             -7.91174e-01
 	n007                             -1.20768e-01
-	n005                             -1.22429e-16
+	n005                             -4.63477e-14
 	n001                             0.000000e+00
 	n004                             -8.99999e+00
 	n003                             -1.55294e+00
@@ -68,7 +70,8 @@ No. of Data Rows : 5008
 	------	-------
 
 	vbattery2_1#branch               -5.68727e-03
-	linductor10_1#branch             -2.24208e-44
+	vscenario_supply_n001_0#branch   4.634774e-26
+	linductor10_1#branch             0.000000e+00
 
  BJT models (Bipolar Junction Transistor)
       model           pnp_generic
@@ -340,8 +343,8 @@ No. of Data Rows : 5008
 capacitance                 1e-09               2.2e-08               2.2e-08
       dtemp                     0                     0                     0
      bv_max                 1e+99                 1e+99                 1e+99
-          i           5.43825e-17           2.20246e-19           -7.6947e-18
-          p            4.0499e-16           1.51412e-19          -6.08785e-18
+          i           1.78434e-15          -2.58283e-15           5.96683e-18
+          p           1.32881e-14          -1.77561e-15            4.7208e-18
 
  Capacitor: Fixed capacitor
      device cpolarized_capacitor2
@@ -349,15 +352,15 @@ capacitance                 1e-09               2.2e-08               2.2e-08
 capacitance              3.75e-10
       dtemp                     0
      bv_max                 1e+99
-          i          -1.91153e-27
-          p           6.22316e-51
+          i            2.3562e-08
+          p          -2.88551e-25
 
  Diode: Junction Diode model
      device             ddiode7_1
       model             d_generic
     thermal                     0
-         vd           6.66134e-16
-         id           9.23706e-28
+         vd           -8.5556e-11
+         id          -1.18634e-22
          gd           1.38662e-12
          cd                     0
 
@@ -367,13 +370,13 @@ capacitance              3.75e-10
  inductance               0.00025
       dtemp                     0
          nt                     0
-       flux           2.55412e-31
-          v           -3.2556e-24
-          i           1.02165e-27
-          p          -3.32608e-51
+       flux           3.22279e-15
+          v          -1.22447e-17
+          i           1.28912e-11
+          p          -1.57849e-28
 
  Resistor: Simple linear resistor
-     device rscenario_feed_n002_n         rresistor22_3         rresistor22_2
+     device  rscenario_switch25_1         rresistor22_3         rresistor22_2
       model                     R                     R                     R
  resistance                 0.001                220000                  4700
          ac                 0.001                220000                  4700
@@ -395,32 +398,48 @@ capacitance              3.75e-10
           p           0.000306294             0.0277293
 
  Vsource: Independent voltage source
-     device           vbattery2_1
-         dc                     9
-      acmag                     0
-      pulse         -
-        sin         -
-        exp         -
-        pwl         -
-       sffm         -
-         am         -
-    trnoise         -
-   trrandom         -
-    portnum                     0
-         z0                     0
-        pwr                     0
-       freq                     0
-      phase                     0
-          i           -0.00568727
-          p            -0.0511855
+     device vscenario_supply_n001           vbattery2_1
+         dc                     0                     9
+      acmag                     0                     0
+      pulse                     0         -
+                             0.01          
+                             1000          
+        sin                     0         -
+                             0.01          
+                             1000          
+        exp                     0         -
+                             0.01          
+                             1000          
+        pwl                     0         -
+                             0.01          
+                             1000          
+       sffm                     0         -
+                             0.01          
+                             1000          
+         am                     0         -
+                             0.01          
+                             1000          
+    trnoise                     0         -
+                             0.01          
+                             1000          
+   trrandom                     0         -
+                             0.01          
+                             1000          
+    portnum                     0                     0
+         z0                     0                     0
+        pwr                     0                     0
+       freq                     0                     0
+      phase                     0                     0
+          i          -2.35749e-08           -0.00568727
+          p           2.88709e-25            -0.0511855
 
 
-Total analysis time (seconds) = 0.0406656
+Total analysis time (seconds) = 0.04273
 
-Total elapsed time (seconds) = 0.095 
+Total elapsed time (seconds) = 0.100 
 
 Total DRAM available = 32239.535 MB.
-DRAM currently available = 16270.645 MB.
-Maximum ngspice program size =   16.094 MB.
-Current ngspice program size =   15.922 MB.
+DRAM currently available = 14894.824 MB.
+Maximum ngspice program size =   16.211 MB.
+Current ngspice program size =   16.078 MB.
 

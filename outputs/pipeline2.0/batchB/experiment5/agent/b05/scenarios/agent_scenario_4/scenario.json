@@ -1,0 +1,44 @@
+{
+  "title": "Ultimo sweep di ampiezza: verificare la propagazione con S1 chiuso e ingresso SIN molto maggiore",
+  "hypothesis": "Se il segnale non arriva in cuffia solo perche gli stimoli precedenti erano ancora sotto la soglia utile del rivelatore/amplificatore, allora mantenendo lo stesso nodo N001 e la stessa frequenza di 1 kHz ma aumentando molto l'ampiezza di ingresso dovrebbe comparire un Vpp chiaramente non nullo ai capi del carico cuffia Rbreaker3_1 con guadagno almeno minimo. Se anche cosi il rapporto resta sotto soglia, la radio non soffre solo di S1 aperto ma anche di mancato trasferimento sul percorso audio.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    },
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N001",
+      "negative": "0",
+      "value": "SIN(0 2 1000)"
+    }
+  ],
+  "compare": [
+    "v(N001)",
+    "v(N005)",
+    "v(N003,N004)",
+    "i(Rbreaker3_1)",
+    "i(Vbattery2_1)"
+  ],
+  "measure": {
+    "v(N001)": "tran_vpp",
+    "v(N005)": "tran_vpp",
+    "v(N003,N004)": "tran_vpp",
+    "i(Rbreaker3_1)": "op",
+    "i(Vbattery2_1)": "op"
+  },
+  "gain": {
+    "input": "v(N001)",
+    "output": "v(N003,N004)",
+    "min_ratio": 0.01
+  },
+  "expect": {
+    "v(N001)": "nonzero",
+    "v(N005)": "nonzero",
+    "v(N003,N004)": "nonzero",
+    "i(Vbattery2_1)": "nonzero"
+  },
+  "scenario_id": "agent_scenario_4"
+}

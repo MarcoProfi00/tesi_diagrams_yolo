@@ -21,8 +21,11 @@ Ho acceso questa radio, ma nelle cuffie non sento nulla. Puoi trovare il problem
 - Puoi invece fermarti con final_status="localized" dopo uno scenario diagnostico
   forte che verifica la causa ma non rappresenta una riparazione del circuito.
 - Se il sintomo utente richiede esplicitamente di correggere, risolvere, attivare,
-  disattivare o ripristinare un comportamento, `localized` non basta finche resta
-  budget: esegui un'altra correzione distinta e sostenuta dagli artefatti.
+  disattivare o ripristinare un comportamento, prova una correzione distinta e
+  sostenuta dagli artefatti finche ne esiste una non ancora verificata.
+- Se una correzione e gia fallita e restano soltanto scenari duplicati oppure
+  modifiche non sostenute dagli artefatti, fermati con `localized`,
+  `partially_localized` o `inconclusive` e lascia `verified_correction` vuoto.
 - Se uno scenario migliora il sintomo ma viola un vincolo richiesto (per esempio
   perde regolarita, spegne un componente da preservare o degrada l'uscita), trattalo
   come evidenza diagnostica e non come correzione finale.

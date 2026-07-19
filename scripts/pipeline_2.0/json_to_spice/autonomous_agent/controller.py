@@ -204,6 +204,38 @@ def symptom_requests_correction(symptom: str) -> bool:
 def symptom_requires_gain_comparison(symptom: str) -> bool:
     """Riconosce obiettivi che richiedono un confronto tra ingresso e uscita."""
     normalized = str(symptom or "").strip().lower()
+
+    # Per i sintomi audio l'ordine delle parole non deve influire: una
+    # destinazione sonora e un'indicazione di assenza/debolezza, presenti nella
+    # stessa richiesta, implicano sempre una verifica del trasferimento.
+    audio_target_patterns = (
+        r"\baudio\b",
+        r"\bcuffi\w*\b",
+        r"\bhead(?:set|phone)s?\b",
+        r"\baltoparlant\w*\b",
+        r"\bspeakers?\b",
+    )
+    missing_or_weak_signal_patterns = (
+        r"\bnon\s+sent\w*\b",
+        r"\bnon\s+arriv\w*\b",
+        r"\bnessun\w*\s+(?:suon\w*|segnal\w*)\b",
+        r"\bsilenz\w*\b",
+        r"\bmut(?:o|a|i|e)\b",
+        r"\bsegnal\w*\b.*\b(?:assent\w*|debol\w*|non\s+arriv\w*)\b",
+        r"\b(?:audio|suon\w*|segnal\w*)\b.*\b(?:debol\w*|troppo\s+bass\w*)\b",
+        r"\bvolume\b.*\b(?:bass\w*|null\w*)\b",
+        r"\b(?:no\s+sound|cannot\s+hear|can't\s+hear|silent|muted?)\b",
+        r"\b(?:missing|weak)\s+(?:audio|signal|sound)\b",
+    )
+    has_audio_target = any(
+        re.search(pattern, normalized) for pattern in audio_target_patterns
+    )
+    has_missing_or_weak_signal = any(
+        re.search(pattern, normalized) for pattern in missing_or_weak_signal_patterns
+    )
+    if has_audio_target and has_missing_or_weak_signal:
+        return True
+
     gain_patterns = (
         r"\bamplific\w*",
         r"\bguadagn\w*",
@@ -211,10 +243,7 @@ def symptom_requires_gain_comparison(symptom: str) -> bool:
         r"\bamplification\b",
         r"\btrasfer\w*\s+(?:del\s+)?segnale\b",
         r"\bsegnale\b.*\b(?:arriv\w*|uscita|carico|cuffi\w*)\b",
-        r"\b(?:non\s+)?sent\w*\b.*\b(?:cuffi\w*|audio)\b",
-        r"\bcuffi\w*\b.*\b(?:mut\w*|segnale|audio)\b",
         r"\bsignal\b.*\b(?:reach\w*|output|load|headset|headphone)\b",
-        r"\b(?:headset|headphone)\w*\b.*\b(?:mute|signal|audio)\b",
     )
     return any(re.search(pattern, normalized) for pattern in gain_patterns)
 
@@ -245,12 +274,15 @@ def parse_sine_amplitude(value: Any) -> float | None:
 
 def signal_gain_requires_amplitude_followup(state: dict[str, Any]) -> bool:
     """
-    Rileva un trasferimento fallito provato con una sola ampiezza sinusoidale.
+    Determina se un trasferimento fallito richiede altre ampiezze sinusoidali.
 
     La chiave comprende percorso di ingresso e confronto di guadagno: stimoli
-    applicati a nodi diversi non vengono confusi tra loro.
+    applicati a nodi diversi non vengono confusi tra loro. Un guadagno sufficiente
+    completa lo sweep del proprio percorso; in sua assenza servono abbastanza
+    ampiezze fallite distinte da consentire una localizzazione prudente.
     """
     failed_paths: set[tuple[str, str, str]] = set()
+    successful_paths: set[tuple[str, str, str]] = set()
     amplitudes: dict[tuple[str, str, str], set[float]] = {}
     for iteration in state.get("iterations") or []:
         if not isinstance(iteration, dict):
@@ -263,7 +295,7 @@ def signal_gain_requires_amplitude_followup(state: dict[str, Any]) -> bool:
             if not result.get("spice_executed"):
                 continue
             summary = result.get("comparison_summary") or {}
-            if not summary.get("gain_required") or summary.get("gain_sufficient"):
+            if not summary.get("gain_required"):
                 continue
             gain = scenario.get("gain") or {}
             gain_input = str(gain.get("input") or "").strip().lower()
@@ -285,11 +317,16 @@ def signal_gain_requires_amplitude_followup(state: dict[str, Any]) -> bool:
                 if amplitude is None or amplitude <= 0:
                     continue
                 key = (source_path, gain_input, gain_output)
-                failed_paths.add(key)
-                amplitudes.setdefault(key, set()).add(amplitude)
+                if summary.get("gain_sufficient"):
+                    # Una misura sufficiente sullo stesso percorso completa lo sweep,
+                    # anche quando ampiezze precedenti erano risultate insufficienti.
+                    successful_paths.add(key)
+                else:
+                    failed_paths.add(key)
+                    amplitudes.setdefault(key, set()).add(amplitude)
     return any(
         len(amplitudes.get(path, set())) < MIN_FAILED_SIGNAL_AMPLITUDES_BEFORE_LOCALIZATION
-        for path in failed_paths
+        for path in failed_paths - successful_paths
     )
 
 

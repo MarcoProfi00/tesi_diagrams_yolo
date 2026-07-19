@@ -472,11 +472,6 @@ def validate_decision(
             raise AutonomousDecisionError(
                 "Prima della conclusione serve almeno uno scenario controllato eseguito"
             )
-        if require_verified_correction:
-            raise AutonomousDecisionError(
-                "L'obiettivo utente richiede una correzione: con budget disponibile non puoi "
-                "fermarti senza una correzione verificata da uno scenario SPICE"
-            )
         if require_joint_objective_verification:
             raise AutonomousDecisionError(
                 "Prima della conclusione serve una singola run self-contained che verifichi "
@@ -503,6 +498,10 @@ def validate_decision(
         if final_status == "resolved" and not verified_correction:
             raise AutonomousDecisionError(
                 "verified_correction e obbligatorio quando final_status='resolved'"
+            )
+        if final_status != "resolved" and verified_correction:
+            raise AutonomousDecisionError(
+                "verified_correction deve restare vuoto quando la conclusione non e resolved"
             )
         return {
             "decision": "stop",

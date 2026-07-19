@@ -1,8 +1,8 @@
 {
-  "title": "Chiudere l'interruttore di alimentazione S1",
-  "hypothesis": "Il circuito non funziona perche S1 e aperto e lascia il nodo N004, che alimenta bias e cuffia, completamente scollegato dalla batteria. Chiudendo S1 la batteria dovrebbe alimentare il ramo audio e comparire corrente nel carico cuffia.",
+  "title": "Chiudere S1 per ripristinare l'alimentazione del circuito audio",
+  "hypothesis": "Lo switch25.1 e aperto nella base run, quindi N004 e tutto il ramo con R1-R2-R3, Q1-Q2 e la cuffia equivalente restano senza alimentazione; chiudendo S1 la batteria dovrebbe alimentare N004 e comparire attivita utile sul carico cuffia.",
   "intent": "correction",
-  "analysis": "op",
+  "analysis": "tran",
   "actions": [
     {
       "type": "close_switch",
@@ -11,15 +11,24 @@
   ],
   "compare": [
     "v(N004)",
-    "v(N003)",
+    "v(N003,N004)",
     "i(Rbreaker3_1)",
-    "i(Vbattery2_1)",
-    "i(Rresistor22_1)",
-    "i(Rresistor22_2)",
-    "i(Rresistor22_3)"
+    "i(Vbattery2_1)"
   ],
+  "measure": {
+    "v(N003,N004)": "tran_vpp",
+    "v(N004)": "op",
+    "i(Rbreaker3_1)": "op",
+    "i(Vbattery2_1)": "op"
+  },
+  "gain": {
+    "input": "v(N004)",
+    "output": "v(N003,N004)",
+    "min_ratio": 0.01
+  },
   "expect": {
     "v(N004)": "changed",
+    "v(N003,N004)": "nonzero",
     "i(Rbreaker3_1)": "nonzero",
     "i(Vbattery2_1)": "nonzero"
   },

@@ -1,0 +1,30 @@
+{
+  "title": "Alimentare direttamente il bus N004 dal nodo batteria N002",
+  "hypothesis": "Se il problema e solo la continuita mancante dell'interruttore/alimentazione verso N004, forzare la stessa alimentazione dal nodo gia alimentato N002 a N004 dovrebbe produrre lo stesso effetto elettrico di base: comparsa di bias e corrente nel carico cuffia.",
+  "intent": "diagnostic",
+  "analysis": "op",
+  "actions": [
+    {
+      "type": "feed_nodes_from_source_node",
+      "source_node": "N002",
+      "target_nodes": [
+        "N004"
+      ]
+    }
+  ],
+  "compare": [
+    "v(N004)",
+    "v(N003)",
+    "i(Rbreaker3_1)",
+    "i(Vbattery2_1)",
+    "i(Rresistor22_1)",
+    "i(Rresistor22_2)",
+    "i(Rresistor22_3)"
+  ],
+  "expect": {
+    "v(N004)": "changed",
+    "i(Rbreaker3_1)": "nonzero",
+    "i(Vbattery2_1)": "nonzero"
+  },
+  "scenario_id": "agent_scenario_2"
+}

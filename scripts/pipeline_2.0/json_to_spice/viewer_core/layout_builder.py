@@ -128,6 +128,9 @@ def collect_layout_components(model: dict[str, Any]) -> list[dict[str, Any]]:
             if component.get("viewer_proxy_for"):
                 # Lo strumento strutturale rappresenta gia' il suo equivalente numerico SPICE.
                 continue
+            if component.get("viewer_hidden"):
+                # Riferimenti numerici e altri ausili SPICE non sono componenti fisici.
+                continue
             if component.get("viewer_hidden_by_terminal"):
                 # Il terminale strutturale mostra gia' questa alimentazione sullo schema.
                 continue

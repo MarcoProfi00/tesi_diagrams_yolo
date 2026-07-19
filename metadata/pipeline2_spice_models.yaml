@@ -12,6 +12,28 @@ models:
   LED_RED:
     line: ".model LED_RED D"
 
+  LED_YELLOW:
+    # Modello LED minimale distinto per conservare il colore dichiarato.
+    line: ".model LED_YELLOW D"
+
+  LED_GREEN:
+    # Modello LED minimale distinto per conservare il colore dichiarato.
+    line: ".model LED_GREEN D"
+
+  1N4148:
+    # Modello semplificato del diodo switching: tensione inversa e tempi
+    # principali sono coerenti con la famiglia 1N4148, senza legarsi a un
+    # singolo produttore.
+    line: ".model 1N4148 D(BV=100 IBV=100u TT=4n CJO=4p)"
+
+  BZX79C10:
+    # Zener BZX79 serie C: valore nominale 10 V alla corrente di prova 5 mA.
+    line: ".model BZX79C10 D(BV=10 IBV=5m)"
+
+  BZX79C12:
+    # Zener BZX79 serie C: valore nominale 12 V alla corrente di prova 5 mA.
+    line: ".model BZX79C12 D(BV=12 IBV=5m)"
+
   2N3904:
     line: ".model 2N3904 NPN(IS=6.734f BF=416.4 VAF=74.03 IKF=66.78m ISE=6.734f NE=1.259 BR=0.7371 VAR=12.11 IKR=0.0 ISC=0.0 NC=2 RB=10 RC=1 RE=0.1 CJE=4.493p VJE=0.75 MJE=0.2593 CJC=3.638p VJC=0.75 MJC=0.3085 TF=301.2p TR=239.5n)"
 
@@ -24,3 +46,46 @@ models:
 
   BC547:
     line: ".model BC547 NPN"
+
+  BC557:
+    # Modello PNP minimale, coerente con il livello di dettaglio del BC547
+    # gia presente nel registro. Il suffisso di guadagno A/B/C non e visibile.
+    line: ".model BC557 PNP"
+
+  BC547_TYP:
+    # Modello tipico isolato per circuiti di soglia. BF=250 assume il gruppo
+    # intermedio B quando il suffisso A/B/C non e leggibile nello schema.
+    line: ".model BC547_TYP NPN(BF=250 VAF=50 IKF=100m)"
+
+  BC557_TYP:
+    # Complementare PNP del modello tipico BC547 usato nello stesso banco.
+    line: ".model BC557_TYP PNP(BF=250 VAF=50 IKF=100m)"
+
+  D_1N4148_TYP:
+    # Modello tipico del diodo switching. La curva diretta e calibrata nella
+    # fascia del datasheet; BV, capacita e recovery restano valori di targa.
+    line: ".model D_1N4148_TYP D(IS=6n N=1.9 RS=0.65 BV=100 IBV=100u TT=4n CJO=4p)"
+
+  BZX79C10_TYP:
+    # NBV approssima la resistenza differenziale tipica dichiarata a 1 mA e
+    # 5 mA senza spostare la tensione nominale di breakdown a 10 V.
+    line: ".model BZX79C10_TYP D(BV=10 IBV=5m NBV=1.7)"
+
+  BZX79C12_TYP:
+    # NBV approssima la resistenza differenziale tipica dichiarata a 1 mA e
+    # 5 mA senza spostare la tensione nominale di breakdown a 12 V.
+    line: ".model BZX79C12_TYP D(BV=12 IBV=5m NBV=1.9)"
+
+  LED_RED_TYP:
+    # LED generico rosso: il part number non e indicato, quindi il modello
+    # rappresenta soltanto una caduta diretta tipica del colore.
+    line: ".model LED_RED_TYP D(IS=1e-15 N=2 RS=10)"
+
+  LED_YELLOW_TYP:
+    # LED generico giallo distinto dal rosso per la caduta diretta tipica.
+    line: ".model LED_YELLOW_TYP D(IS=1e-17 N=2 RS=10)"
+
+  LED_GREEN_TYP:
+    # LED generico verde distinto dagli altri colori; non sostituisce un
+    # modello di part number specifico non disponibile nell'immagine.
+    line: ".model LED_GREEN_TYP D(IS=1e-18 N=2 RS=10)"

@@ -1,0 +1,179 @@
+# Valori manuali per il monitor a tre LED b03.
+# Gli ID dei componenti sono quelli del Graph JSON della Pipeline 1.0.
+# Il Graph resta invariato: la natura PNP di Q3 e dichiarata dal modello BC557.
+
+circuit_id: b03
+
+supplies:
+  VREF_B:
+    # L'immagine non contiene un simbolo GND. Questa sorgente ideale da 0 V
+    # collega il terminale negativo B al riferimento SPICE senza aggiungere
+    # una seconda alimentazione al circuito.
+    terminal: battery2.1_negative
+    type: dc
+    value: 0
+    unit: V
+    reference: 0
+    source: manual_reference_for_floating_battery_circuit
+    label_text: "B: riferimento SPICE 0 V"
+
+components:
+  battery2.1:
+    # La tensione non e scritta nello schema. Il circuito originale e un
+    # monitor per batteria automobilistica; 12 V e il punto nominale di base.
+    type: dc
+    value: 12
+    unit: V
+    source: manual_from_original_circuit_context
+    label_text: "batteria automobilistica nominale 12 V tra A e B"
+
+  # R1: ramo del LED rosso D1 verso il collettore di Q1.
+  resistor22.1:
+    value: 1
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R1 1 kohm"
+
+  # R2: collegamento fra la base di Q1 e il collettore di Q2.
+  resistor22.2:
+    value: 100
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R2 100 kohm"
+
+  # R3: ramo del LED giallo D2 verso il collettore di Q2.
+  resistor22.3:
+    value: 1
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R3 1 kohm"
+
+  # R4: dalla base di Q2 al nodo comune D6/R5.
+  resistor22.4:
+    value: 3.3
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R4 3.3 kohm"
+
+  # R5: dal nodo D6/R4 alla rail negativa B.
+  resistor22.5:
+    value: 3.3
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R5 3.3 kohm"
+
+  # R6: dal collettore di Q3 al LED verde D7.
+  resistor22.6:
+    value: 1
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R6 1 kohm"
+
+  # R7: fra la base di Q3 e il nodo della catena D8-D10.
+  resistor22.7:
+    value: 3.3
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R7 3.3 kohm"
+
+  # R8: dalla rail positiva A al nodo R7/D8.
+  resistor22.8:
+    value: 3.3
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R8 3.3 kohm"
+
+  npn_transistor18.1:
+    model: BC547_TYP
+    source: manual_from_image_label
+    label_text: "Q1 BC547 NPN"
+
+  npn_transistor18.2:
+    model: BC547_TYP
+    source: manual_from_image_label
+    label_text: "Q2 BC547 NPN"
+
+  npn_transistor18.3:
+    # L'ID storico deriva dalla classe OCR, ma Q3 e un BC557 PNP. In SPICE la
+    # polarita elettrica e determinata dal modello, non dal prefisso dell'ID.
+    model: BC557_TYP
+    source: manual_from_image_label_semantic_correction
+    label_text: "Q3 BC557 PNP"
+
+  led12.1:
+    model: LED_RED_TYP
+    source: manual_from_image_color
+    label_text: "D1 LED rosso"
+
+  led12.2:
+    model: LED_YELLOW_TYP
+    source: manual_from_image_color
+    label_text: "D2 LED giallo"
+
+  led12.3:
+    model: LED_GREEN_TYP
+    source: manual_from_image_color
+    label_text: "D7 LED verde"
+
+  # D3, D4, D5, D8 e D9 riportano tutti il part number 1N4148.
+  diode7.1:
+    model: D_1N4148_TYP
+    source: manual_from_image_label
+    label_text: "D3 1N4148"
+
+  diode7.3:
+    model: D_1N4148_TYP
+    source: manual_from_image_label
+    label_text: "D4 1N4148"
+
+  diode7.4:
+    model: D_1N4148_TYP
+    source: manual_from_image_label
+    label_text: "D5 1N4148"
+
+  diode7.2:
+    model: BZX79C10_TYP
+    source: manual_from_image_label
+    label_text: "D6 BZX79C10 zener 10 V"
+    viewer_override:
+      # Il modello elettrico resta un diodo SPICE; il viewer usa il simbolo
+      # Zener dichiarato esplicitamente dai metadati del componente.
+      visual_class: zener
+      label: D6
+      display_value: "BZX79C10 10 V"
+
+  diode7.6:
+    model: D_1N4148_TYP
+    source: manual_from_image_label
+    label_text: "D8 1N4148"
+
+  diode7.7:
+    model: D_1N4148_TYP
+    source: manual_from_image_label
+    label_text: "D9 1N4148"
+
+  diode7.5:
+    model: BZX79C12_TYP
+    source: manual_from_image_label
+    label_text: "D10 BZX79C12 zener 12 V"
+    viewer_override:
+      visual_class: zener
+      label: D10
+      display_value: "BZX79C12 12 V"
+
+nodes:
+  battery2.1_positive:
+    label: A
+    source: manual_from_image_label
+    label_text: "A: positivo batteria"
+
+  battery2.1_negative:
+    label: B
+    source: manual_from_image_label
+    label_text: "B: negativo batteria e riferimento SPICE"
+
+simulation:
+  # Il circuito e statico e non contiene elementi reattivi. La prima base run
+  # usa il punto di lavoro; le tre fasce saranno verificate in seguito variando
+  # la tensione della batteria con scenari DC separati.
+  analyses: [op]

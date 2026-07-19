@@ -1,0 +1,27 @@
+{
+  "title": "Chiudere l'interruttore di alimentazione S1",
+  "hypothesis": "Il circuito non funziona perche S1 e aperto e lascia il nodo N004, che alimenta bias e cuffia, completamente scollegato dalla batteria. Chiudendo S1 la batteria dovrebbe alimentare il ramo audio e comparire corrente nel carico cuffia.",
+  "intent": "correction",
+  "analysis": "op",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    }
+  ],
+  "compare": [
+    "v(N004)",
+    "v(N003)",
+    "i(Rbreaker3_1)",
+    "i(Vbattery2_1)",
+    "i(Rresistor22_1)",
+    "i(Rresistor22_2)",
+    "i(Rresistor22_3)"
+  ],
+  "expect": {
+    "v(N004)": "changed",
+    "i(Rbreaker3_1)": "nonzero",
+    "i(Vbattery2_1)": "nonzero"
+  },
+  "scenario_id": "agent_scenario_1"
+}

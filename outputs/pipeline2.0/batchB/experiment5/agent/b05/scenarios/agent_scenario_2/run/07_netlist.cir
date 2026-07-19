@@ -14,12 +14,14 @@ Cpolarized_capacitor20_4 N003 N004 0.001u
 Rresistor22_1 N006 N004 220k
 Rresistor22_2 N007 N004 4.7k
 Rresistor22_3 N008 N004 220k
-* switch25.1 open: not emitted
+* switch25.1 open in base run; closed by scenario close_switch
 
 .model D_GENERIC D
 .model PNP_GENERIC PNP
 
-RSCENARIO_FEED_N002_N004 N002 N004 1m
+* scenario close_switch: switch25.1 modeled as RSCENARIO_switch25_1 N002 N004 1m
+RSCENARIO_switch25_1 N002 N004 1m
+VSCENARIO_SUPPLY_N001_0 N001 0 SIN(0 10m 1000)
 .op
 .save all
 .tran 1us 5ms
