@@ -339,6 +339,8 @@ Ruolo:
 - legge i valori manuali dal file YAML;
 - associa valori, modelli e stati ai componenti;
 - gestisce anche supply manuali e stato degli switch;
+- risolve `spice_override.node_refs` esclusivamente verso terminali gia
+  presenti nel Graph JSON;
 - distingue componenti `bound`, mancanti o non supportati.
 
 Input:
@@ -358,6 +360,30 @@ Output:
 Perche serve:
 
 la topologia da sola non basta a generare una netlist utilizzabile.
+
+### Overlay SPICE dichiarativo nello YAML
+
+Il Graph JSON non viene corretto o riscritto dalla Pipeline 2.0. Quando la
+semantica elettrica richiede un arricchimento manuale, il singolo componente
+puo dichiarare `spice_override` nel file valori:
+
+- `node_order`: sceglie l'ordine di terminali gia disponibili, per esempio il
+  secondario effettivo di un trasformatore equivalente;
+- `terminal_map`: associa un pin elettrico atteso al terminale OCR validato,
+  per esempio `C, B, E` di un BJT;
+- `emit_as: subcircuit`, `pin_order` e `node_refs`: dichiarano in modo
+  generale un dispositivo SPICE multipin.
+
+Ogni `node_refs` deve citare un terminale del Graph. Se un pin indispensabile
+non e ancora validato, l'override deve restare `pending`: lo step 06 produce
+uno stato mancante e lo step 07 non emette un componente elettricamente
+inventato.
+
+Se la validazione immagine-graph dimostra un net merge errato, il YAML puo
+aggiungere `spice_topology_overlay.terminal_node_overrides`. Ogni voce cita un
+terminale esistente e un nodo SPICE nominato: modifica soltanto la vista
+elettrica usata da 04-07, registra il passaggio in `04_values_bound.json` e
+non riscrive mai il Graph JSON della Pipeline 1.0.
 
 ## 05_device_profiles.py
 
@@ -407,6 +433,9 @@ Ruolo:
 - gestisce i BJT `NPN_Transistor` e `PNP_Transistor` con ordine terminali
   SPICE `C, B, E`; il tipo effettivo e determinato dalla classe validata e dal
   modello dichiarato nel file valori.
+- applica gli override YAML dichiarativi senza mutare il Graph sorgente;
+- puo preparare una subcircuit a piu terminali quando tutti i `node_refs` sono
+  risolti e il modello e disponibile.
 
 Input:
 
@@ -440,6 +469,7 @@ Ruolo:
   elementi supportati;
 - commenta o salta componenti strutturali e non emettibili;
 - aggiunge modelli `.model` quando servono;
+- emette una subcircuit dichiarativa come elemento `X...`;
 - aggiunge `.op` e, se richiesto, anche `.tran`;
 - salva anche un report di emissione.
 
@@ -627,7 +657,10 @@ Ruolo:
 - parte dalla netlist realmente simulata in `07_netlist.cir`;
 - aggiunge contesto strutturale da `03_node_map.json` e `06_component_rules.json`;
 - aggiunge misure operative e transienti da `08_*`;
-- acquisisce geometry seed da Pipeline 1.0 (`03_estimate_terminals`).
+- acquisisce geometry seed da Pipeline 1.0 (`03_estimate_terminals`);
+- riconosce le istanze di subcircuito `X...` e ignora gli elementi interni
+  compresi tra `.subckt` e `.ends`, che non appartengono allo schema utente;
+- integra i `viewer_override` dello YAML senza modificare il Graph JSON.
 
 Output:
 
@@ -660,6 +693,12 @@ Ruolo:
 - normalizza bbox e terminali sul canvas viewer;
 - assegna posizioni a componenti, nodi, pin e connessioni;
 - calcola routes e fallback per componenti scenario senza bbox;
+- associa prima i terminali mediante i nomi logici dei pin, cosi dispositivi
+  multipin come gli SCR mantengono anodo, catodo e gate distinti;
+- sintetizza un pin dichiarato ma assente dalla geometria OCR prima di usare
+  terminali geometrici residui;
+- puo collocare una sorgente esterna tra due terminali del Graph dichiarati
+  nello YAML, senza coordinate o identificativi di circuito nel codice;
 - riserva una fascia destra stabile per la legenda del viewer;
 - prepara la separazione tra modello elettrico e coordinate SVG.
 
@@ -697,7 +736,14 @@ Ruolo:
 - applicare il vocabolario dei componenti grafici;
 - produrre `15_viewer.svg` embeddabile nella web chat;
 - usare il vocabolario componenti comune, animazioni elettriche, legenda,
-  tooltip scenario, zoom/pan e scope transienti forniti dalla pagina web.
+  tooltip scenario, zoom/pan e scope transienti forniti dalla pagina web;
+- disegnare SCR a tre terminali, trasformatori a due avvolgimenti e batterie
+  esterne mediante primitive generali condivise da base, CHAT e AGENT.
+- alleggerire le label tramite `viewer_override.label_mode` (`hidden`,
+  `reference_only`, `value_only`) e spostare le informazioni descrittive nel
+  `viewer_override.tooltip` SVG.
+- posizionare i badge nodo su piu punti candidati e considerarli in collisione
+  anche con le label dei bipoli, non soltanto con i simboli.
 
 Principio:
 
@@ -1050,8 +1096,14 @@ Guardrail implementati:
   `analysis: "tran"`; nel secondo caso le tensioni vengono confrontate sul
   Vpp ricavato da `08_tran.csv`;
 - la mappa opzionale `measure` puo scegliere per ogni voce di `compare` la
-  metrica `op` oppure `tran_vpp`, quindi un singolo scenario puo verificare
-  insieme un segnale AC e correnti o tensioni DC su altri rami;
+  metrica `op`, `tran_vpp` oppure `tran_abs_peak`, quindi un singolo scenario
+  puo verificare insieme un segnale AC e correnti o tensioni DC su altri rami;
+- `tran_abs_peak` e riservata alle correnti interne `@dNOME[id]` dei diodi e
+  LED esportate nel CSV: confronta il massimo valore assoluto della run e non
+  il solo campione finale;
+- nel registro CHAT una proposta `tran` che confronta `@dNOME[id]` viene
+  accettata solo se dichiara esplicitamente quella misura, impedendo un fallback
+  involontario al punto operativo;
 - `tran_vpp` accetta `v(NODO)` e `v(NODO1,NODO2)`; la seconda forma calcola la
   tensione differenziale campione per campione prima di ricavare il Vpp ed e
   adatta a cuffie, altoparlanti e altri carichi non riferiti a massa;
@@ -1092,10 +1144,11 @@ Guardrail implementati:
 - nelle risposte CHAT sugli scenari eseguiti, `stop_automation=false` con
   budget residuo richiede una nuova proposta self-contained, salvo conclusione
   finale esplicitamente richiesta o dato esterno indispensabile mancante;
-- una proposta non puo ripetere la stessa firma di azioni di una run eseguita
-  soltanto per aggiungere `gain`, `measure`, `expect` o `min_ratio`; dopo un
-  trasferimento insufficiente deve cambiare il confine di isolamento o una
-  causa elettrica verificata;
+- una proposta non puo ripetere le stesse azioni con la stessa analisi soltanto
+  per aggiungere `gain`, `measure`, `expect` o `min_ratio`; una stessa modifica
+  e invece distinta e ammessa in `op` e in `tran` quando la seconda run verifica
+  un comportamento temporale; dopo un trasferimento insufficiente deve cambiare
+  il confine di isolamento o una causa elettrica verificata;
 - i test di trasferimento riconosciuti nei flussi CHAT e AGENT richiedono
   `gain.min_ratio` positivo per essere accettati come scenari eseguibili;
 - per distorsione o clipping con sorgente SIN, lo scenario dichiara

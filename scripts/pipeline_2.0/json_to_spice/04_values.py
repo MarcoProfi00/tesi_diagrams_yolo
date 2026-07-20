@@ -203,8 +203,11 @@ def bind_supplies(
         if not isinstance(supply_data, dict):
             continue
         terminal_id = supply_data.get("terminal")
+        return_terminal_id = supply_data.get("return_terminal")
         entry = dict(supply_data)
         entry["node"] = terminal_to_node.get(str(terminal_id)) if terminal_id else None
+        if return_terminal_id:
+            entry["return_node"] = terminal_to_node.get(str(return_terminal_id))
         bound[str(supply_name)] = entry
 
     return dict(sorted(bound.items()))
@@ -225,6 +228,89 @@ def bind_manual_nodes(
     return dict(sorted(bound.items()))
 
 
+def bind_spice_override_nodes(
+    value_data: dict[str, Any],
+    terminal_to_node: dict[str, str],
+) -> dict[str, Any]:
+    """Risolve nello YAML i riferimenti a terminali usati dagli overlay SPICE."""
+    result = dict(value_data)
+    override = result.get("spice_override")
+    if not isinstance(override, dict):
+        return result
+
+    node_refs = override.get("node_refs")
+    if not isinstance(node_refs, dict):
+        return result
+
+    resolved_refs: dict[str, str | None] = {}
+    for pin_name, terminal_id in node_refs.items():
+        # Un node_ref puo' indicare solo un terminale gia' estratto dal Graph.
+        # Questo evita che lo YAML inventi nodi o collegamenti non tracciabili.
+        resolved_refs[str(pin_name)] = terminal_to_node.get(str(terminal_id))
+
+    bound_override = dict(override)
+    bound_override["resolved_node_refs"] = resolved_refs
+    result["spice_override"] = bound_override
+    return result
+
+
+def apply_spice_topology_overlay(
+    terminal_to_node: dict[str, str],
+    component_terminal_nodes: dict[str, Any],
+    normalized_circuit: dict[str, Any],
+    overlay_data: dict[str, Any],
+) -> tuple[dict[str, str], dict[str, dict[str, str]], list[dict[str, Any]]]:
+    """Applica correzioni SPICE dichiarative senza modificare il Graph JSON."""
+    resolved_terminals = dict(terminal_to_node)
+    resolved_components = {
+        str(component_id): dict(nodes) if isinstance(nodes, dict) else {}
+        for component_id, nodes in component_terminal_nodes.items()
+    }
+    report: list[dict[str, Any]] = []
+    overrides = overlay_data.get("terminal_node_overrides") if isinstance(overlay_data, dict) else None
+    if not isinstance(overrides, dict):
+        return resolved_terminals, resolved_components, report
+
+    terminal_index: dict[str, tuple[str, str]] = {}
+    for component in normalized_circuit.get("components") or []:
+        component_id = str(component.get("component_id", ""))
+        for terminal in component.get("terminals") or []:
+            terminal_id = str(terminal.get("terminal_id", ""))
+            terminal_name = str(terminal.get("name", ""))
+            if component_id and terminal_id and terminal_name:
+                terminal_index[terminal_id] = (component_id, terminal_name)
+
+    for terminal_id, override_data in overrides.items():
+        terminal_id = str(terminal_id)
+        target_node = (
+            override_data.get("node")
+            if isinstance(override_data, dict)
+            else override_data
+        )
+        component_terminal = terminal_index.get(terminal_id)
+        if component_terminal is None or target_node in (None, ""):
+            report.append({
+                "terminal_id": terminal_id,
+                "status": "invalid",
+                "reason": "Unknown Graph terminal or missing overlay node.",
+            })
+            continue
+
+        component_id, terminal_name = component_terminal
+        old_node = resolved_terminals.get(terminal_id)
+        resolved_terminals[terminal_id] = str(target_node)
+        resolved_components.setdefault(component_id, {})[terminal_name] = str(target_node)
+        report.append({
+            "terminal_id": terminal_id,
+            "from_node": old_node,
+            "to_node": str(target_node),
+            "status": "applied",
+            "source": override_data.get("source") if isinstance(override_data, dict) else None,
+        })
+
+    return resolved_terminals, resolved_components, report
+
+
 def build_values_bound(
     normalized_circuit: dict[str, Any],
     node_map: dict[str, Any],
@@ -241,8 +327,15 @@ def build_values_bound(
     yaml_supplies = values_data.get("supplies") or {}
     yaml_nodes = values_data.get("nodes") or {}
     yaml_simulation = values_data.get("simulation") or {}
+    yaml_topology_overlay = values_data.get("spice_topology_overlay") or {}
     terminal_to_node = node_map.get("terminal_to_node") or {}
     component_terminal_nodes = node_map.get("component_terminal_nodes") or {}
+    terminal_to_node, component_terminal_nodes, topology_overlay_report = apply_spice_topology_overlay(
+        terminal_to_node=terminal_to_node,
+        component_terminal_nodes=component_terminal_nodes,
+        normalized_circuit=normalized_circuit,
+        overlay_data=yaml_topology_overlay,
+    )
 
     bound_components: dict[str, Any] = {}
     missing: list[dict[str, Any]] = []
@@ -269,6 +362,7 @@ def build_values_bound(
         value_data = graph_value_data(component)
         if isinstance(yaml_value_data, dict):
             value_data.update(yaml_value_data)
+        value_data = bind_spice_override_nodes(value_data, terminal_to_node)
         if not value_data:
             value_data = None
 
@@ -310,6 +404,7 @@ def build_values_bound(
         "supplies": bound_supplies,
         "components": dict(sorted(bound_components.items())),
         "nodes": bound_nodes,
+        "spice_topology_overlay": topology_overlay_report,
         "simulation": yaml_simulation if isinstance(yaml_simulation, dict) else {},
         "missing": missing,
         "stats": stats,

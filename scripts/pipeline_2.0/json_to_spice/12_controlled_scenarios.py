@@ -1141,6 +1141,12 @@ def is_voltage_quantity(quantity: str) -> bool:
     return voltage_quantity_nodes(quantity) is not None
 
 
+def is_internal_device_current_quantity(quantity: str) -> bool:
+    """Riconosce una corrente interna diodo/LED esportata da ngspice nel CSV."""
+    normalized = normalize_quantity_name(quantity)
+    return bool(re.fullmatch(r"@[^\s\[\]]+\[id\]", normalized, flags=re.IGNORECASE))
+
+
 def voltage_quantity_nodes(quantity: str) -> tuple[str, ...] | None:
     """Estrae uno o due nodi da una grandezza di tensione SPICE valida."""
     normalized = normalize_quantity_name(quantity)
@@ -1165,11 +1171,13 @@ def parse_tran_csv_metrics(
     """
     Estrae metriche semplici dal CSV transitorio pulito.
 
-    Per ogni colonna tensione calcoliamo:
+    Per ogni colonna numerica calcoliamo:
     - min
     - max
     - mean
     - vpp
+    - final
+    - abs_peak
 
     Per le richieste `v(N1,N2)` calcoliamo prima, campione per campione,
     `v(N1) - v(N2)`. Questo evita l'errore di sottrarre due Vpp gia aggregati.
@@ -1234,6 +1242,10 @@ def parse_tran_csv_metrics(
             "max": maximum,
             "mean": mean,
             "vpp": maximum - minimum,
+            # `final` serve alle misure OP prive della tabella stdout;
+            # `abs_peak` conserva l'evidenza di attivazione transitoria.
+            "final": values[-1],
+            "abs_peak": max(abs(minimum), abs(maximum)),
         }
 
     return metrics
@@ -1553,6 +1565,15 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
             scenario_value = scenario_stderr_warning_count
             base_details: dict[str, Any] = {}
             scenario_details: dict[str, Any] = {}
+        elif measurement == "tran_abs_peak":
+            lookup_key = quantity_lookup_key(quantity)
+            base_metric_set = base_tran_metrics.get(lookup_key) or {}
+            scenario_metric_set = scenario_tran_metrics.get(lookup_key) or {}
+            base_value = base_metric_set.get("abs_peak")
+            scenario_value = scenario_metric_set.get("abs_peak")
+            lookup_key = f"{lookup_key}.abs_peak"
+            base_details = base_metric_set
+            scenario_details = scenario_metric_set
         elif measurement == "tran_vpp" or (
             measurement is None and analysis == "tran" and is_voltage_quantity(quantity)
         ):
@@ -1562,6 +1583,21 @@ def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> d
             base_value = base_metric_set.get("vpp")
             scenario_value = scenario_metric_set.get("vpp")
             lookup_key = f"{lookup_key}.vpp"
+            base_details = base_metric_set
+            scenario_details = scenario_metric_set
+        elif (
+            (measurement == "op" or (measurement is None and analysis == "op"))
+            and is_internal_device_current_quantity(quantity)
+        ):
+            # I vettori `@d...[id]` sono esportati nello storico CSV, ma non
+            # nella tabella .op dello stdout. Il campione finale e la migliore
+            # evidenza stazionaria disponibile senza alterare la simulazione.
+            lookup_key = quantity_lookup_key(quantity)
+            base_metric_set = base_tran_metrics.get(lookup_key) or {}
+            scenario_metric_set = scenario_tran_metrics.get(lookup_key) or {}
+            base_value = base_metric_set.get("final")
+            scenario_value = scenario_metric_set.get("final")
+            lookup_key = f"{lookup_key}.final"
             base_details = base_metric_set
             scenario_details = scenario_metric_set
         else:

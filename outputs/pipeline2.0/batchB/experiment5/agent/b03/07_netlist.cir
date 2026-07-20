@@ -35,4 +35,14 @@ Rresistor22_8 N002 N009 3.3k
 .model LED_YELLOW_TYP D(IS=1e-17 N=2 RS=10)
 
 .op
+.save all
+.tran 1ms 3s
+
+.control
+set wr_singlescale
+set wr_vecnames
+save all @ddiode7_1[id] @ddiode7_2[id] @ddiode7_3[id] @ddiode7_4[id] @ddiode7_5[id] @ddiode7_6[id] @ddiode7_7[id] @dled12_1[id] @dled12_2[id] @dled12_3[id]
+run
+wrdata 08_tran.csv time v(N001) v(N002) v(N003) v(N004) v(N005) v(N006) v(N007) v(N008) v(N009) v(N010) v(N011) v(N012) v(N013) v(N014) v(N015) v(N016) v(N017) @ddiode7_1[id] @ddiode7_2[id] @ddiode7_3[id] @ddiode7_4[id] @ddiode7_5[id] @ddiode7_6[id] @ddiode7_7[id] @dled12_1[id] @dled12_2[id] @dled12_3[id]
+.endc
 .end

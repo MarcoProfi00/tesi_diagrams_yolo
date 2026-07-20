@@ -410,6 +410,13 @@ Esempi di condizioni in cui l'agente puo richiedere l'immagine:
 - componenti complessi rappresentati in modo parziale, come rele o
   trasformatore.
 
+Per un componente segnato `pending` nei `spice_override` del YAML, l'agente
+deve considerare la base run non pronta: non puo proporre di interpretare una
+simulazione ottenuta sostituendo o collegando automaticamente il pin mancante.
+Un `spice_topology_overlay` gia presente negli artefatti e invece una
+correzione manuale tracciata: l'agente deve citarla come assunzione tecnica,
+senza presentarla come topologia osservata direttamente nel Graph.
+
 Se ngspice fallisce con forti segnali di topologia incoerente, l'agente deve
 prima leggere graph, node map, netlist e stderr. Solo dopo aver rilevato
 evidenze come sorgente spezzata, nodi singleton, ramo non chiuso o componente
@@ -2430,10 +2437,22 @@ change_component_value
      `localized` finche resta budget; una run che dichiara e soddisfa i
      criteri della correzione puo essere promossa senza rieseguire azioni
      duplicate;
-   - la mappa opzionale `measure` seleziona `op` oppure `tran_vpp` per ogni
-     grandezza in `compare`, consentendo test misti nello stesso scenario;
-   - in `tran`, correnti e potenze possono essere criteri `expect` soltanto
-     quando `measure` le dichiara esplicitamente come misure `op`;
+   - la mappa opzionale `measure` seleziona `op`, `tran_vpp` oppure
+     `tran_abs_peak` per ogni grandezza in `compare`, consentendo test misti
+     nello stesso scenario;
+- `tran_abs_peak` e riservata alle correnti interne di diodi/LED
+  `@dNOME[id]` esportate nel CSV e confronta il picco assoluto della run;
+- per un sintomo di ricarica, la sola magnitudine di `i(V...)` non prova la
+  corrente entrante nella batteria: il segno dipende dalla polarita SPICE della
+  sorgente. Una correzione deve quindi usare TRAN e una corrente del percorso di
+  carica giustificato dal netlist; per un diodo raddrizzatore interno si usa
+  `@dNOME[id]` con `tran_abs_peak`;
+- una proposta CHAT `tran` che include `@dNOME[id]` deve dichiarare
+  esplicitamente `measure: {"@dNOME[id]":"tran_abs_peak"}`; in sua assenza
+  non viene registrata come scenario eseguibile;
+   - in `tran`, correnti e potenze possono essere criteri `expect` quando
+     `measure` le dichiara esplicitamente come `op`; per un LED/diodo che deve
+     accendersi in una fase della run si usa invece `tran_abs_peak`;
    - un obiettivo AC/VAC richiede almeno una tensione misurata come `tran_vpp`:
      una tensione DC non dimostra il funzionamento di un voltmetro AC;
    - se il sintomo riguarda lo stato di un LED o di una lampada, una correzione
@@ -2460,9 +2479,11 @@ change_component_value
      realmente arrivato al carico;
    - `gain.min_ratio` e un criterio positivo motivato dallo scenario, non una
      costante globale imposta a ogni famiglia circuitale;
-   - non e ammessa una nuova run con la stessa firma di azioni soltanto per
-     aggiungere misure o soglie: dopo un trasferimento insufficiente l'agente
-     deve spostare il confine di isolamento oppure testare una causa distinta;
+- non e ammessa una nuova run con le stesse azioni e la stessa analisi soltanto
+  per aggiungere misure o soglie: una modifica puo invece essere verificata una
+  volta in `op` e una volta in `tran` quando la seconda run risponde a una
+  domanda temporale; dopo un trasferimento insufficiente l'agente deve spostare
+  il confine di isolamento oppure testare una causa distinta;
    - per distorsione e clipping con sorgente SIN, gli scenari transitori
      dichiarano quality=thd; la pipeline usa le ultime tre oscillazioni,
      fondamentale e armoniche 2-5;

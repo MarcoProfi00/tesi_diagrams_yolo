@@ -1,0 +1,409 @@
+{
+  "source_format": "pipeline2.0_experiment_scenario_registry",
+  "batch_name": "batchB",
+  "experiment_name": "experiment5",
+  "circuit_id": "b03",
+  "created_at": "2026-07-20T10:09:07",
+  "updated_at": "2026-07-20T10:45:01",
+  "max_executable_scenarios": 5,
+  "next_scenario_number": 6,
+  "last_added_scenario_id": "scenario_5",
+  "proposals": [
+    {
+      "proposal_id": "proposal_1",
+      "created_at": "2026-07-20T10:09:07",
+      "source_agent_response": "outputs\\pipeline2.0\\batchB\\experiment5\\chat\\b03\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_1"
+      ]
+    },
+    {
+      "proposal_id": "proposal_2",
+      "created_at": "2026-07-20T10:17:40",
+      "source_agent_response": "outputs\\pipeline2.0\\batchB\\experiment5\\chat\\b03\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_2"
+      ]
+    },
+    {
+      "proposal_id": "proposal_3",
+      "created_at": "2026-07-20T10:22:25",
+      "source_agent_response": "outputs\\pipeline2.0\\batchB\\experiment5\\chat\\b03\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_3"
+      ]
+    },
+    {
+      "proposal_id": "proposal_4",
+      "created_at": "2026-07-20T10:30:17",
+      "source_agent_response": "outputs\\pipeline2.0\\batchB\\experiment5\\chat\\b03\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_4"
+      ]
+    },
+    {
+      "proposal_id": "proposal_5",
+      "created_at": "2026-07-20T10:33:21",
+      "source_agent_response": "outputs\\pipeline2.0\\batchB\\experiment5\\chat\\b03\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_5"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_number": 1,
+      "scenario_id": "scenario_1",
+      "title": "Abbassare la tensione della batteria",
+      "hypothesis": "Se il monitor distingue una batteria scarica, riducendo la sorgente Vbattery2_1 devono cambiare i nodi dei rami indicatori e il punto di lavoro del circuito.",
+      "actions": [
+        {
+          "type": "change_source_value",
+          "target": "Vbattery2_1",
+          "value": "DC 10V"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N002)",
+        "v(N004)",
+        "v(N012)",
+        "i(vbattery2_1#branch)"
+      ],
+      "measure": {},
+      "gain": null,
+      "expect": {
+        "v(N002)": "changed",
+        "v(N004)": "changed",
+        "v(N012)": "changed",
+        "i(vbattery2_1#branch)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_1",
+      "execution_path": "outputs\\pipeline2.0\\batchB\\experiment5\\chat\\b03\\scenarios\\scenario_1",
+      "created_at": "2026-07-20T10:09:07",
+      "updated_at": "2026-07-20T10:10:55",
+      "signature": "[{\"target\":\"Vbattery2_1\",\"type\":\"change_source_value\",\"value\":\"DC 10V\"}]",
+      "scenario": {
+        "scenario_id": "scenario_1",
+        "title": "Abbassare la tensione della batteria",
+        "hypothesis": "Se il monitor distingue una batteria scarica, riducendo la sorgente Vbattery2_1 devono cambiare i nodi dei rami indicatori e il punto di lavoro del circuito.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vbattery2_1",
+            "value": "DC 10V"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N002)",
+          "v(N004)",
+          "v(N012)",
+          "i(vbattery2_1#branch)"
+        ],
+        "expect": {
+          "v(N002)": "changed",
+          "v(N004)": "changed",
+          "v(N012)": "changed",
+          "i(vbattery2_1#branch)": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 2,
+      "scenario_id": "scenario_2",
+      "title": "Aumentare la tensione della batteria verso una condizione di batteria molto carica",
+      "hypothesis": "Se il monitor distingue una batteria molto carica, aumentando Vbattery2_1 sopra 12 V devono cambiare i nodi dei rami indicatori e il punto di lavoro del circuito.",
+      "actions": [
+        {
+          "type": "change_source_value",
+          "target": "Vbattery2_1",
+          "value": "DC 14V"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N002)",
+        "v(N004)",
+        "v(N012)",
+        "i(vbattery2_1#branch)"
+      ],
+      "measure": {},
+      "gain": null,
+      "expect": {
+        "v(N002)": "changed",
+        "v(N004)": "changed",
+        "v(N012)": "changed",
+        "i(vbattery2_1#branch)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_2",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_2",
+      "execution_path": "outputs\\pipeline2.0\\batchB\\experiment5\\chat\\b03\\scenarios\\scenario_2",
+      "created_at": "2026-07-20T10:17:40",
+      "updated_at": "2026-07-20T10:18:09",
+      "signature": "[{\"target\":\"Vbattery2_1\",\"type\":\"change_source_value\",\"value\":\"DC 14V\"}]",
+      "scenario": {
+        "scenario_id": "scenario_2",
+        "title": "Aumentare la tensione della batteria verso una condizione di batteria molto carica",
+        "hypothesis": "Se il monitor distingue una batteria molto carica, aumentando Vbattery2_1 sopra 12 V devono cambiare i nodi dei rami indicatori e il punto di lavoro del circuito.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vbattery2_1",
+            "value": "DC 14V"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N002)",
+          "v(N004)",
+          "v(N012)",
+          "i(vbattery2_1#branch)"
+        ],
+        "expect": {
+          "v(N002)": "changed",
+          "v(N004)": "changed",
+          "v(N012)": "changed",
+          "i(vbattery2_1#branch)": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 3,
+      "scenario_id": "scenario_3",
+      "title": "Alleggerire la polarizzazione della base di Q2 in alta tensione",
+      "hypothesis": "A 14 V il LED giallo Dled12_2 resta acceso perché Qnpn_transistor18_2 continua a ricevere sufficiente polarizzazione di base tramite Rresistor22_4 e il nodo N005.",
+      "actions": [
+        {
+          "type": "change_source_value",
+          "target": "Vbattery2_1",
+          "value": "DC 14V"
+        },
+        {
+          "type": "change_component_value",
+          "target": "Rresistor22_4",
+          "value": "10k"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N015)",
+        "v(N016)",
+        "v(N004)",
+        "i(vbattery2_1#branch)"
+      ],
+      "measure": {},
+      "gain": null,
+      "expect": {
+        "v(N015)": "changed",
+        "v(N016)": "changed",
+        "v(N004)": "changed",
+        "i(vbattery2_1#branch)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_3",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_3",
+      "execution_path": "outputs\\pipeline2.0\\batchB\\experiment5\\chat\\b03\\scenarios\\scenario_3",
+      "created_at": "2026-07-20T10:22:25",
+      "updated_at": "2026-07-20T10:23:36",
+      "signature": "[{\"target\":\"Vbattery2_1\",\"type\":\"change_source_value\",\"value\":\"DC 14V\"},{\"target\":\"Rresistor22_4\",\"type\":\"change_component_value\",\"value\":\"10k\"}]",
+      "scenario": {
+        "scenario_id": "scenario_3",
+        "title": "Alleggerire la polarizzazione della base di Q2 in alta tensione",
+        "hypothesis": "A 14 V il LED giallo Dled12_2 resta acceso perché Qnpn_transistor18_2 continua a ricevere sufficiente polarizzazione di base tramite Rresistor22_4 e il nodo N005.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vbattery2_1",
+            "value": "DC 14V"
+          },
+          {
+            "type": "change_component_value",
+            "target": "Rresistor22_4",
+            "value": "10k"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N015)",
+          "v(N016)",
+          "v(N004)",
+          "i(vbattery2_1#branch)"
+        ],
+        "expect": {
+          "v(N015)": "changed",
+          "v(N016)": "changed",
+          "v(N004)": "changed",
+          "i(vbattery2_1#branch)": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 4,
+      "scenario_id": "scenario_4",
+      "title": "Spingere la batteria ben oltre 14 V",
+      "hypothesis": "Se la soglia di commutazione alta del circuito è superiore a 14 V, portando Vbattery2_1 a 16 V devono cambiare i nodi dei rami indicatori ad alta tensione e il punto di lavoro del circuito.",
+      "actions": [
+        {
+          "type": "change_source_value",
+          "target": "Vbattery2_1",
+          "value": "DC 16V"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N002)",
+        "v(N004)",
+        "v(N012)",
+        "i(vbattery2_1#branch)"
+      ],
+      "measure": {},
+      "gain": null,
+      "expect": {
+        "v(N002)": "changed",
+        "v(N004)": "changed",
+        "v(N012)": "changed",
+        "i(vbattery2_1#branch)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_4",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_4",
+      "execution_path": "outputs\\pipeline2.0\\batchB\\experiment5\\chat\\b03\\scenarios\\scenario_4",
+      "created_at": "2026-07-20T10:30:17",
+      "updated_at": "2026-07-20T10:30:48",
+      "signature": "[{\"target\":\"Vbattery2_1\",\"type\":\"change_source_value\",\"value\":\"DC 16V\"}]",
+      "scenario": {
+        "scenario_id": "scenario_4",
+        "title": "Spingere la batteria ben oltre 14 V",
+        "hypothesis": "Se la soglia di commutazione alta del circuito è superiore a 14 V, portando Vbattery2_1 a 16 V devono cambiare i nodi dei rami indicatori ad alta tensione e il punto di lavoro del circuito.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vbattery2_1",
+            "value": "DC 16V"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N002)",
+          "v(N004)",
+          "v(N012)",
+          "i(vbattery2_1#branch)"
+        ],
+        "expect": {
+          "v(N002)": "changed",
+          "v(N004)": "changed",
+          "v(N012)": "changed",
+          "i(vbattery2_1#branch)": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 5,
+      "scenario_id": "scenario_5",
+      "title": "Far salire lentamente la batteria da scarica a molto carica",
+      "hypothesis": "Se gli indicatori dipendono dalla tensione della batteria, una salita lenta di Vbattery2_1 deve produrre transizioni temporali osservabili sui nodi dei tre rami LED e sulla corrente della sorgente.",
+      "actions": [
+        {
+          "type": "change_source_value",
+          "target": "Vbattery2_1",
+          "value": "PWL(0s 10V 3s 16V)"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "tran",
+      "compare": [
+        "v(N002)",
+        "v(N011)",
+        "v(N004)",
+        "v(N012)",
+        "i(vbattery2_1#branch)"
+      ],
+      "measure": {},
+      "gain": null,
+      "expect": {
+        "v(N002)": "changed",
+        "v(N011)": "changed",
+        "v(N004)": "changed",
+        "v(N012)": "changed",
+        "i(vbattery2_1#branch)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_5",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_5",
+      "execution_path": "outputs\\pipeline2.0\\batchB\\experiment5\\chat\\b03\\scenarios\\scenario_5",
+      "created_at": "2026-07-20T10:33:21",
+      "updated_at": "2026-07-20T10:45:01",
+      "signature": "[{\"target\":\"Vbattery2_1\",\"type\":\"change_source_value\",\"value\":\"PWL(0s 10V 3s 16V)\"}]",
+      "scenario": {
+        "scenario_id": "scenario_5",
+        "title": "Far salire lentamente la batteria da scarica a molto carica",
+        "hypothesis": "Se gli indicatori dipendono dalla tensione della batteria, una salita lenta di Vbattery2_1 deve produrre transizioni temporali osservabili sui nodi dei tre rami LED e sulla corrente della sorgente.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vbattery2_1",
+            "value": "PWL(0s 10V 3s 16V)"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N002)",
+          "v(N011)",
+          "v(N004)",
+          "v(N012)",
+          "i(vbattery2_1#branch)"
+        ],
+        "expect": {
+          "v(N002)": "changed",
+          "v(N011)": "changed",
+          "v(N004)": "changed",
+          "v(N012)": "changed",
+          "i(vbattery2_1#branch)": "changed"
+        }
+      }
+    }
+  ]
+}

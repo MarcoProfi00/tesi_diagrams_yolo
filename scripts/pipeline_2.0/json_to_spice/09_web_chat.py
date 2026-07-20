@@ -744,6 +744,11 @@ def scenario_requires_signal_gain(scenario: dict[str, Any]) -> bool:
     return any(marker in text for marker in transfer_markers)
 
 
+def is_transient_diode_current(quantity: str) -> bool:
+    """Riconosce una corrente interna di diodo esportabile nel CSV transitorio."""
+    return bool(re.fullmatch(r"@d[^\[\]\s]+\[id\]", str(quantity or "").strip(), flags=re.IGNORECASE))
+
+
 def scenario_is_executable(scenario: dict[str, Any]) -> bool:
     """Accetta scenari con azioni e criteri `expect` direttamente verificabili."""
     actions = scenario.get("actions")
@@ -756,11 +761,27 @@ def scenario_is_executable(scenario: dict[str, Any]) -> bool:
     }
     if not isinstance(actions, list) or not actions or not isinstance(expectations, dict) or not expectations:
         return False
+    analysis = str(scenario.get("analysis") or "op").strip().lower()
+    measurements = scenario.get("measure") or {}
+    if not isinstance(measurements, dict):
+        return False
+    normalized_measures = {
+        str(quantity).strip().lower(): str(measurement).strip().lower()
+        for quantity, measurement in measurements.items()
+        if str(quantity).strip()
+    }
+    # Una corrente interna di diodo e disponibile nel CSV soltanto come serie
+    # temporale. In una run TRAN richiede quindi il picco assoluto esplicito,
+    # altrimenti il confronto ricadrebbe impropriamente sul punto operativo.
+    if analysis == "tran":
+        for quantity in compared:
+            if is_transient_diode_current(quantity) and normalized_measures.get(quantity) != "tran_abs_peak":
+                return False
     gain_required = scenario_requires_signal_gain(scenario)
     if gain_required and not isinstance(gain, dict):
         return False
     if gain is not None:
-        if not isinstance(gain, dict) or str(scenario.get("analysis") or "").strip().lower() != "tran":
+        if not isinstance(gain, dict) or analysis != "tran":
             return False
         gain_input = str(gain.get("input") or "").strip().lower()
         gain_output = str(gain.get("output") or "").strip().lower()

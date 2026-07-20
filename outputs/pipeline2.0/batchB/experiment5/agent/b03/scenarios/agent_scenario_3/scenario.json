@@ -1,0 +1,35 @@
+{
+  "title": "Rampa transitoria batteria 9V->15V",
+  "hypothesis": "Con una rampa della batteria da 9 V a 15 V il circuito deve attraversare i regimi già verificati staticamente: LED rosso attivo a bassa tensione, LED giallo nella zona intermedia vicina ai 12 V e LED verde ad alta tensione, confermando che il comportamento osservato nella base run è coerente con le soglie dei tre rami.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "PWL(0s 9V 3s 15V)"
+    }
+  ],
+  "compare": [
+    "@dled12_1[id]",
+    "@dled12_2[id]",
+    "@dled12_3[id]",
+    "v(N004)",
+    "v(N009)",
+    "v(N012)"
+  ],
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak",
+    "@dled12_2[id]": "tran_abs_peak",
+    "@dled12_3[id]": "tran_abs_peak"
+  },
+  "expect": {
+    "@dled12_1[id]": "activated",
+    "@dled12_2[id]": "activated",
+    "@dled12_3[id]": "activated",
+    "v(N004)": "changed",
+    "v(N009)": "changed",
+    "v(N012)": "changed"
+  },
+  "scenario_id": "agent_scenario_3"
+}

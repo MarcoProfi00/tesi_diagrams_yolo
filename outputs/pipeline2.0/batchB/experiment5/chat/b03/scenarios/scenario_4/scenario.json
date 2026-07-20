@@ -1,0 +1,27 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Spingere la batteria ben oltre 14 V",
+  "hypothesis": "Se la soglia di commutazione alta del circuito è superiore a 14 V, portando Vbattery2_1 a 16 V devono cambiare i nodi dei rami indicatori ad alta tensione e il punto di lavoro del circuito.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "DC 16V"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N002)",
+    "v(N004)",
+    "v(N012)",
+    "i(vbattery2_1#branch)"
+  ],
+  "expect": {
+    "v(N002)": "changed",
+    "v(N004)": "changed",
+    "v(N012)": "changed",
+    "i(vbattery2_1#branch)": "changed"
+  }
+}

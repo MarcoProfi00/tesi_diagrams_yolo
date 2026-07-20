@@ -28,6 +28,7 @@ from .json_io import read_json, write_json
 TRANSIENT_VARIATION_EPSILON = 1e-5
 MAX_TRANSIENT_VIEWER_SAMPLES = 800
 LED_FORWARD_THRESHOLD_V = 0.6
+LED_VISIBLE_CURRENT_A = 1e-4
 LED_BRANCH_SIGNAL_MIN_SPAN_V = 0.5
 LED_PLAYBACK_SLOWDOWN = 10.0
 LED_PERIOD_RELATIVE_TOLERANCE = 0.15
@@ -50,6 +51,7 @@ def spice_kind(name: str) -> str:
         "I": "current_source",
         "D": "diode",
         "Q": "bjt",
+        "X": "subcircuit",
     }.get(prefix, "unknown")
 
 
@@ -72,7 +74,7 @@ def expected_node_count(name: str) -> int:
 def source_component_id(spice_name: str) -> str | None:
     """Prova a ricostruire l'id del componente originale dal nome SPICE."""
     prefix = spice_name[:1].upper()
-    if prefix not in {"R", "C", "L", "D", "Q", "V", "I"}:
+    if prefix not in {"R", "C", "L", "D", "Q", "V", "I", "X"}:
         return None
     base = spice_name[1:]
     if spice_name.lower().startswith("rmeter_"):
@@ -99,6 +101,7 @@ def enrich_components_with_rules(
             item["class_name"] = rule.get("class_name")
             item["parameters"] = rule.get("parameters") or {}
             item["display_label"] = (rule.get("parameters") or {}).get("label_text")
+            item["terminal_names"] = [str(name) for name in (rule.get("node_order") or [])]
             if rule.get("status") == "measurement_only":
                 item["viewer_proxy_for"] = source_id
                 item["viewer_role"] = "simulation_measurement_proxy"
@@ -173,13 +176,15 @@ def enrich_manual_dc_supplies(
             continue
 
         source_origin = str(parameters.get("source") or "").strip().lower()
+        viewer_override = parameters.get("viewer_override")
+        viewer_override = viewer_override if isinstance(viewer_override, dict) else {}
         is_ocr_label = source_origin == "manual_from_image_label"
         try:
             reference_value = float(parameters.get("value") or 0.0)
         except (TypeError, ValueError):
             reference_value = None
         is_simulation_reference = (
-            source_origin == "manual_reference_for_floating_battery_circuit"
+            source_origin.startswith("manual_reference_for_")
             and reference_value == 0.0
             and str(parameters.get("reference") or "0").strip() == "0"
         )
@@ -192,13 +197,36 @@ def enrich_manual_dc_supplies(
             source["supply_name"] = str(supply_name)
             continue
 
-        # Le altre sorgenti manuali restano simboli DC circolari; l'origine OCR
-        # serve solo a evitare una seconda label esterna.
-        source["viewer_kind"] = "dc_supply"
+        # Lo YAML puo' chiedere una batteria esterna mantenendo separati il
+        # modello elettrico e il simbolo. Il nodo di ritorno e' gia' risolto
+        # dallo step 04 e non viene dedotto dal circuito corrente.
+        source["viewer_kind"] = str(viewer_override.get("visual_class") or "dc_supply")
         source["viewer_role"] = "manual_ocr_dc_supply" if is_ocr_label else "manual_dc_supply"
         source["parameters"] = dict(parameters)
-        source["display_label"] = str(parameters.get("label_text") or supply_name)
+        source["display_label"] = str(viewer_override.get("label") or parameters.get("label_text") or supply_name)
+        source["viewer_label"] = str(viewer_override.get("label") or "")
+        if viewer_override.get("display_value") is not None:
+            source["viewer_value"] = str(viewer_override.get("display_value") or "")
+        if viewer_override.get("label_mode") is not None:
+            source["viewer_label_mode"] = str(viewer_override.get("label_mode") or "")
+        if viewer_override.get("tooltip") is not None:
+            source["viewer_tooltip"] = str(viewer_override.get("tooltip") or "")
         source["supply_name"] = str(supply_name)
+        return_node = parameters.get("return_node")
+        supply_nodes = list(supply.get("nodes") or [])
+        if supply_nodes and return_node not in (None, "") and viewer_override.get("visual_class") == "battery":
+            source["simulation_nodes"] = list(source.get("nodes") or [])
+            source["nodes"] = [str(supply_nodes[0]), normalize_node(str(return_node))]
+            source["terminal_names"] = ["positive", "negative"]
+            anchor_terminal_ids = [
+                str(parameters.get("terminal") or ""),
+                str(parameters.get("return_terminal") or ""),
+            ]
+            source["viewer_anchor_component_ids"] = [
+                terminal_id.rsplit("_", 1)[0]
+                for terminal_id in anchor_terminal_ids
+                if "_" in terminal_id
+            ]
     return enriched
 
 
@@ -208,6 +236,7 @@ def parse_netlist(netlist_path: Path) -> tuple[list[dict[str, Any]], list[dict[s
     directives: list[dict[str, Any]] = []
     warnings: list[str] = []
     inside_control_block = False
+    inside_subcircuit = False
 
     if not netlist_path.exists():
         warnings.append(f"Netlist mancante: {netlist_path}")
@@ -225,17 +254,28 @@ def parse_netlist(netlist_path: Path) -> tuple[list[dict[str, Any]], list[dict[s
                 inside_control_block = True
             elif line.lower() == ".endc":
                 inside_control_block = False
+            elif line.lower().startswith(".subckt "):
+                inside_subcircuit = True
+            elif line.lower().startswith(".ends"):
+                inside_subcircuit = False
             continue
         if inside_control_block:
             # I comandi `run` e `wrdata` appartengono a ngspice e non sono componenti.
             directives.append({"line_number": line_number, "directive": line, "scope": "control"})
+            continue
+        if inside_subcircuit:
+            # Gli elementi interni appartengono al modello X e non devono
+            # apparire come componenti fisici separati nel viewer.
             continue
 
         parts = line.split()
         if not parts:
             continue
         name = parts[0]
-        node_count = expected_node_count(name)
+        # Le subcircuit emesse dalla Pipeline 2.0 hanno forma X + nodi + nome
+        # modello. Il numero di pin resta quindi ricavabile senza conoscere il
+        # dispositivo specifico o introdurre eccezioni per circuito.
+        node_count = len(parts) - 2 if name[:1].upper() == "X" else expected_node_count(name)
         if len(parts) < 1 + node_count:
             warnings.append(f"Impossibile interpretare la riga {line_number}: {line}")
             continue
@@ -249,7 +289,7 @@ def parse_netlist(netlist_path: Path) -> tuple[list[dict[str, Any]], list[dict[s
             "kind": spice_kind(name),
             "nodes": nodes,
             "value": " ".join(value_tokens),
-            "model": value_tokens[-1] if value_tokens and name[:1].upper() in {"D", "Q"} else None,
+            "model": value_tokens[-1] if value_tokens and name[:1].upper() in {"D", "Q", "X"} else None,
             "source_component_id": source_component_id(name),
             "is_scenario_added": is_scenario_added,
             "source_line": raw_line,
@@ -332,6 +372,16 @@ def transient_node_id(column_name: str) -> str | None:
     """Ricava il nodo SPICE da una colonna CSV nel formato `v(N001)`."""
     match = re.fullmatch(r"v\(([^)]+)\)", str(column_name).strip(), flags=re.IGNORECASE)
     return normalize_node(match.group(1)) if match else None
+
+
+def transient_device_current_id(column_name: str) -> str | None:
+    """Ricava il dispositivo da colonne `@D...[id]` oppure `i(D...)`."""
+    text = str(column_name).strip()
+    parameter_match = re.fullmatch(r"@([^\[]+)\[id\]", text, flags=re.IGNORECASE)
+    if parameter_match:
+        return parameter_match.group(1).upper()
+    current_match = re.fullmatch(r"i\(([^)]+)\)", text, flags=re.IGNORECASE)
+    return current_match.group(1).upper() if current_match else None
 
 
 def numeric_series_span(values: list[float]) -> dict[str, float | bool]:
@@ -419,6 +469,29 @@ def led_on_durations(
     return durations
 
 
+def led_state_timeline(times: list[float], states: list[bool]) -> tuple[list[float], list[bool]]:
+    """Compatta le commutazioni LED in una timeline normalizzata fra 0 e 1."""
+    if not times or not states or len(times) != len(states):
+        return [], []
+    time_start = times[0]
+    time_span = max(times[-1] - time_start, 1e-12)
+    key_times = [0.0]
+    key_states = [states[0]]
+    for index in range(1, len(states)):
+        if states[index] == states[index - 1]:
+            continue
+        normalized_time = min(1.0, max(0.0, (times[index] - time_start) / time_span))
+        if normalized_time <= key_times[-1]:
+            key_states[-1] = states[index]
+            continue
+        key_times.append(normalized_time)
+        key_states.append(states[index])
+    if key_times[-1] < 1.0:
+        key_times.append(1.0)
+        key_states.append(key_states[-1])
+    return key_times, key_states
+
+
 def led_branch_control_signal(
     led_component: dict[str, Any],
     components: list[dict[str, Any]],
@@ -495,9 +568,11 @@ def led_transient_profiles(
     components: list[dict[str, Any]],
     times: list[float],
     node_series: dict[str, list[float]],
+    device_current_series: dict[str, list[float]] | None = None,
 ) -> dict[str, dict[str, Any]]:
-    """Ricava lampeggio e duty cycle LED da diodo o ramo serie misurato."""
+    """Ricava lampeggio e duty cycle LED privilegiando la corrente diretta."""
     profiles: dict[str, dict[str, Any]] = {}
+    current_series = device_current_series or {}
     if len(times) < 2:
         return profiles
 
@@ -518,17 +593,36 @@ def led_transient_profiles(
             anode - cathode
             for anode, cathode in zip(anode_values, cathode_values)
         ]
-        states = [voltage >= LED_FORWARD_THRESHOLD_V for voltage in forward_voltages]
-        profile_method = "terminal_forward_voltage"
-        threshold_v = LED_FORWARD_THRESHOLD_V
-        branch_control = led_branch_control_signal(component, components, node_series)
-        if branch_control is not None:
-            branch_values = list(branch_control["values"])
-            # Il punto medio e' relativo al ramo osservato: evita di imporre una
-            # soglia assoluta a LED con modelli o alimentazioni differenti.
-            threshold_v = (min(branch_values) + max(branch_values)) / 2.0
-            states = [value >= threshold_v for value in branch_values]
-            profile_method = "series_branch_voltage"
+        aliases = {
+            str(component.get("id") or "").upper(),
+            str(component.get("spice_name") or "").upper(),
+        }
+        measured_currents = next(
+            (
+                values for alias in aliases
+                if alias and (values := current_series.get(alias)) and len(values) == len(times)
+            ),
+            None,
+        )
+        branch_control: dict[str, Any] | None = None
+        threshold_v: float | None = None
+        if measured_currents is not None:
+            # La corrente diretta e' la misura fisica della luce emessa. Evita
+            # falsi positivi quando il LED conserva Vf ma conduce solo leakage.
+            states = [current >= LED_VISIBLE_CURRENT_A for current in measured_currents]
+            profile_method = "device_current"
+        else:
+            states = [voltage >= LED_FORWARD_THRESHOLD_V for voltage in forward_voltages]
+            profile_method = "terminal_forward_voltage"
+            threshold_v = LED_FORWARD_THRESHOLD_V
+            branch_control = led_branch_control_signal(component, components, node_series)
+            if branch_control is not None:
+                branch_values = list(branch_control["values"])
+                # Il punto medio e' relativo al ramo osservato: evita di imporre una
+                # soglia assoluta a LED con modelli o alimentazioni differenti.
+                threshold_v = (min(branch_values) + max(branch_values)) / 2.0
+                states = [value >= threshold_v for value in branch_values]
+                profile_method = "series_branch_voltage"
         if not states:
             continue
         rising_indices = [
@@ -580,6 +674,7 @@ def led_transient_profiles(
         # La radice quadrata mantiene visibili gli impulsi brevi senza rendere
         # uguali duty cycle reali molto diversi tra loro.
         display_duty_cycle = min(0.8, 0.08 + 0.8 * (duty_cycle ** 0.5))
+        timeline_key_times, timeline_states = led_state_timeline(times, states)
         profiles[component_id] = {
             "status": "measured",
             "state": state,
@@ -596,9 +691,19 @@ def led_transient_profiles(
             "playback_duration_s": playback_duration,
             "playback_slowdown": LED_PLAYBACK_SLOWDOWN,
             "pulse_count": len(rising_indices),
+            "timeline_key_times": timeline_key_times,
+            "timeline_states": timeline_states,
             "voltage_min": min(forward_voltages),
             "voltage_max": max(forward_voltages),
         }
+        if measured_currents is not None:
+            profiles[component_id].update(
+                {
+                    "threshold_current_a": LED_VISIBLE_CURRENT_A,
+                    "current_min_a": min(measured_currents),
+                    "current_max_a": max(measured_currents),
+                }
+            )
         if branch_control is not None:
             profiles[component_id].update(
                 {
@@ -649,6 +754,7 @@ def parse_transient_csv(
         return {"status": "missing", "component_activity": {}}
 
     node_series: dict[str, list[float]] = {}
+    device_current_series: dict[str, list[float]] = {}
     times: list[float] = []
     try:
         with csv_path.open("r", encoding="utf-8", newline="") as handle:
@@ -658,10 +764,18 @@ def parse_transient_csv(
                 for column in (reader.fieldnames or [])
                 if transient_node_id(column)
             }
+            current_columns = {
+                column: transient_device_current_id(column)
+                for column in (reader.fieldnames or [])
+                if transient_device_current_id(column)
+            }
             for node_id in columns.values():
                 if node_id:
                     node_series.setdefault(node_id, [])
             node_series.setdefault("0", [])
+            for device_id in current_columns.values():
+                if device_id:
+                    device_current_series.setdefault(device_id, [])
 
             for row in reader:
                 try:
@@ -669,15 +783,21 @@ def parse_transient_csv(
                 except (TypeError, ValueError):
                     continue
                 sample_values: dict[str, float] = {}
+                sample_currents: dict[str, float] = {}
                 try:
                     for column, node_id in columns.items():
                         if node_id:
                             sample_values[node_id] = float(row.get(column) or "")
+                    for column, device_id in current_columns.items():
+                        if device_id:
+                            sample_currents[device_id] = float(row.get(column) or "")
                 except (TypeError, ValueError):
                     continue
                 times.append(time_value)
                 for node_id, value in sample_values.items():
                     node_series[node_id].append(value)
+                for device_id, value in sample_currents.items():
+                    device_current_series[device_id].append(value)
                 node_series["0"].append(0.0)
     except (OSError, csv.Error):
         return {"status": "invalid", "component_activity": {}}
@@ -693,8 +813,18 @@ def parse_transient_csv(
         "time_start": times[0] if times else None,
         "time_end": times[-1] if times else None,
         "node_activity": node_activity,
+        "device_current_activity": {
+            device_id: numeric_series_span(values)
+            for device_id, values in device_current_series.items()
+            if values
+        },
         "component_activity": component_transient_activity(components, node_series),
-        "led_profiles": led_transient_profiles(components, times, node_series),
+        "led_profiles": led_transient_profiles(
+            components,
+            times,
+            node_series,
+            device_current_series,
+        ),
         "traces": build_transient_traces(times, node_series),
     }
 
@@ -889,13 +1019,26 @@ def apply_manual_viewer_overrides(
         value_entry = bound_components.get(source_id) or {}
         value_data = value_entry.get("value_data") if isinstance(value_entry, dict) else {}
         override = value_data.get("viewer_override") if isinstance(value_data, dict) else {}
-        if isinstance(override, dict) and override.get("visual_class"):
-            item["viewer_kind"] = str(override["visual_class"])
+        if isinstance(override, dict) and override:
+            # Un override puo' intervenire solo su label o tooltip: il simbolo
+            # non deve essere obbligatorio per applicare tali metadati visuali.
+            if override.get("visual_class"):
+                item["viewer_kind"] = str(override["visual_class"])
             item["viewer_override"] = dict(override)
             if override.get("label") is not None:
                 item["viewer_label"] = str(override.get("label") or "")
             if override.get("display_value") is not None:
                 item["viewer_value"] = str(override.get("display_value") or "")
+            if override.get("label_mode") is not None:
+                item["viewer_label_mode"] = str(override.get("label_mode") or "")
+            if override.get("tooltip") is not None:
+                item["viewer_tooltip"] = str(override.get("tooltip") or "")
+            if override.get("include_graph_terminals"):
+                terminal_nodes = value_entry.get("terminal_nodes") if isinstance(value_entry, dict) else {}
+                if isinstance(terminal_nodes, dict) and terminal_nodes:
+                    item["simulation_nodes"] = list(item.get("nodes") or [])
+                    item["nodes"] = [str(node) for node in terminal_nodes.values()]
+                    item["terminal_names"] = [str(name) for name in terminal_nodes]
         updated.append(item)
     return updated
 
@@ -1101,8 +1244,23 @@ def enrich_structural_terminals(
                 continue
             parameters = supply.get("parameters") if isinstance(supply.get("parameters"), dict) else supply
             terminal_id = str(parameters.get("terminal") or "")
-            if not terminal_id.startswith(f"{component_id}_"):
+            return_terminal_id = str(parameters.get("return_terminal") or "")
+            viewer_override = parameters.get("viewer_override")
+            viewer_override = viewer_override if isinstance(viewer_override, dict) else {}
+            belongs_to_visual_source = any(
+                candidate.startswith(f"{component_id}_")
+                for candidate in (terminal_id, return_terminal_id)
+                if candidate
+            )
+            if not belongs_to_visual_source:
                 continue
+
+            if viewer_override.get("visual_class") == "battery":
+                # La batteria a due terminali sostituisce i due port esterni
+                # soltanto nel viewer; i Terminal originali restano nel Graph.
+                item["viewer_hidden"] = True
+                if not terminal_id.startswith(f"{component_id}_"):
+                    break
 
             expected_name = f"V{supply_name}".lower()
             supply_nodes = {normalize_node(node) for node in supply.get("nodes") or []}
@@ -1125,7 +1283,8 @@ def enrich_structural_terminals(
             if source is None:
                 continue
 
-            source["viewer_hidden_by_terminal"] = component_id
+            if viewer_override.get("visual_class") != "battery":
+                source["viewer_hidden_by_terminal"] = component_id
             item["is_supply_terminal"] = True
             item["supply_name"] = str(supply_name)
             item["display_label"] = str(supply_name)
@@ -1139,8 +1298,12 @@ def enrich_structural_terminals(
     return enriched, netlist
 
 
-def build_nodes(node_map: dict[str, Any], measurements: dict[str, Any]) -> list[dict[str, Any]]:
-    """Unisce i nodi del node map con le tensioni operative misurate."""
+def build_nodes(
+    node_map: dict[str, Any],
+    measurements: dict[str, Any],
+    values_bound: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Unisce node map, overlay SPICE e tensioni operative misurate."""
     voltages = measurements.get("node_voltages") or {}
     nodes: list[dict[str, Any]] = []
     for item in node_map.get("nodes") or []:
@@ -1161,6 +1324,36 @@ def build_nodes(node_map: dict[str, Any], measurements: dict[str, Any]) -> list[
                 "source_groups": item.get("source_groups") or [],
             }
         )
+
+    indexed = {str(item.get("id") or ""): item for item in nodes}
+    for overlay in (values_bound or {}).get("spice_topology_overlay") or []:
+        if not isinstance(overlay, dict) or overlay.get("status") != "applied":
+            continue
+        terminal_id = str(overlay.get("terminal_id") or "")
+        from_node = normalize_node(str(overlay.get("from_node") or ""))
+        to_node = normalize_node(str(overlay.get("to_node") or ""))
+        if not terminal_id or not to_node:
+            continue
+        source = indexed.get(from_node)
+        if source:
+            source["terminals"] = [item for item in source.get("terminals") or [] if str(item) != terminal_id]
+            source["terminal_count"] = len(source["terminals"])
+        target = indexed.get(to_node)
+        if target is None:
+            target = {
+                "id": to_node,
+                "label": to_node,
+                "is_ground": False,
+                "voltage_op": voltages.get(to_node),
+                "terminals": [],
+                "terminal_count": 0,
+                "source_groups": ["spice_topology_overlay"],
+            }
+            nodes.append(target)
+            indexed[to_node] = target
+        if terminal_id not in target["terminals"]:
+            target["terminals"].append(terminal_id)
+        target["terminal_count"] = len(target["terminals"])
     return nodes
 
 
@@ -1363,7 +1556,7 @@ def build_viewer_model(run_dir: Path) -> dict[str, Any]:
             "source_netlist_path": str(run_dir / NETLIST_NAME),
             "generated_at": datetime.now().isoformat(timespec="seconds"),
         },
-        "nodes": build_nodes(node_map, measurements),
+        "nodes": build_nodes(node_map, measurements, values_bound),
         "netlist_components": components,
         "structural_components": structural_components,
         "directives": directives,

@@ -96,13 +96,16 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
   qualsiasi sintomo dinamico. Usa analysis="op" soltanto per il punto di lavoro DC.
 - Con analysis="tran" puoi dichiarare la mappa opzionale `measure` per scegliere
   la misura di ogni grandezza: `tran_vpp` per una tensione letta da 08_tran.csv,
-  `op` per tensioni, correnti o potenze lette dal punto di lavoro.
+  `op` per tensioni, correnti o potenze lette dal punto di lavoro, `tran_abs_peak` per
+  il picco assoluto di una corrente interna `@dNOME[id]` letta da 08_tran.csv.
 - `tran_vpp` accetta sia `v(NODO)` rispetto a massa sia `v(NODO1,NODO2)` per
   carichi flottanti: nel secondo caso usa la differenza campione per campione.
 - Se `measure` non e presente resta valido il comportamento standard: le tensioni
   sono confrontate sul Vpp, mentre correnti e potenze restano osservazioni OP.
 - In uno scenario misto puoi usare una corrente come criterio expect soltanto
-  dichiarandola esplicitamente con `measure: {{"i(R...)":"op"}}`.
+  dichiarandola esplicitamente: `measure: {{"i(R...)":"op"}}` per una corrente
+  OP oppure `measure: {{"@dled...[id]":"tran_abs_peak"}}` per verificare che
+  un LED/diodo si sia attivato almeno una volta durante la run TRAN.
 - Un voltmetro VAC, un segnale AC o una tensione alternata devono essere verificati
   con analysis="tran" e `tran_vpp`: un valore DC non dimostra il funzionamento AC.
 - Per sintomi di amplificazione o guadagno, ogni scenario con intent="correction" deve includere
@@ -114,6 +117,17 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
   diagnostico deve aggiungere `gain.min_ratio` con una soglia positiva motivata
   dall'obiettivo dello scenario. Non usare il solo `changed` per concludere che
   un segnale non nullo ma trascurabile arrivi utilmente all'uscita.
+- Quando aggiungi una sorgente `SIN(...)` a un nodo o tra due nodi gia esistenti,
+  ricava prima dalla base run la tensione di punto operativo dello stesso nodo o
+  della stessa coppia. Se la differenza DC e significativa, conserva quel valore
+  come primo parametro di `SIN` e sovrapponi soltanto l'ampiezza AC richiesta.
+  Usa offset zero solo se il nodo/la coppia e gia circa a 0 V oppure se lo
+  scenario deve esplicitamente cambiare il bias DC.
+- Per un test di propagazione iniettato direttamente sulla base di un BJT, usa
+  un vero piccolo segnale di pochi millivolt (normalmente 1-10 mV di picco,
+  salvo evidenze contrarie) e conserva il bias DC misurato. Decine di millivolt
+  sulla base possono portare il transistor in interdizione o saturazione e non
+  isolano piu il percorso lineare del segnale.
 - Non ripetere le stesse azioni elettriche di una run gia eseguita soltanto per
   aggiungere gain, measure, expect o una soglia: reinterpreta le misure esistenti.
   Dopo un trasferimento insufficiente, sposta il confine di isolamento a un nodo
@@ -177,6 +191,12 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
   proporre come chiusura del circuito un cammino che termina soltanto su un condensatore.
 - Per una run .tran usa le tracce disponibili e confronta almeno l'uscita o il ramo
   direttamente coinvolto nell'obiettivo, oltre agli eventuali nodi intermedi.
+- Per sintomi di ricarica o carica batteria, non usare la sola corrente di una
+  sorgente `V...` come prova della carica: il suo segno dipende dalla convenzione
+  SPICE e dalla sua polarita. Una correzione deve usare `.tran` e misurare anche
+  un componente del percorso di carica direttamente giustificato dalla netlist
+  (per esempio `@dNOME[id]` del raddrizzatore con `tran_abs_peak`). La corrente
+  della sorgente puo essere soltanto un'evidenza di supporto, con segno spiegato.
 - Per obiettivi che chiedono lampeggio, periodicita, regolarita, duty cycle o durata
   di accensione, ogni scenario deve dichiarare `temporal_expect`.
   Questo blocco usa il profilo transitorio del componente nel viewer: `target`,

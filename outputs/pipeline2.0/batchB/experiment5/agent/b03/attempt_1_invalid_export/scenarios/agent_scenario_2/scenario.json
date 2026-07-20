@@ -1,0 +1,30 @@
+{
+  "title": "Verifica statica dello stato molto carico a 15 V",
+  "hypothesis": "Aumentando la batteria da 12 V a 15 V il circuito deve uscire dallo stato nominale col LED giallo acceso e portarsi nello stato di batteria molto carica, con aumento della polarizzazione del ramo rosso e riduzione del ramo giallo; il ramo verde resta non dominante.",
+  "intent": "diagnostic",
+  "analysis": "op",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "15V"
+    }
+  ],
+  "compare": [
+    "v(N011)",
+    "v(N004)",
+    "v(N012)",
+    "v(N013)",
+    "v(N015)",
+    "v(N017)"
+  ],
+  "expect": {
+    "v(N011)": "changed",
+    "v(N004)": "changed",
+    "v(N012)": "changed",
+    "v(N013)": "changed",
+    "v(N015)": "changed",
+    "v(N017)": "changed"
+  },
+  "scenario_id": "agent_scenario_2"
+}

@@ -136,6 +136,19 @@ ordine nodi SPICE `C, B, E`. Il modello concreto resta dichiarato nel file
 manuale dei valori; quando l'immagine non riporta un part number e disponibile
 il modello minimale `PNP_GENERIC`.
 
+Il YAML puo inoltre dichiarare un `spice_override` locale e tracciabile, senza
+modificare il Graph JSON: `node_order` seleziona i terminali elettrici per un
+equivalente, `terminal_map` corregge il pinout OCR di un dispositivo multipin,
+mentre `emit_as: subcircuit` con `pin_order` e `node_refs` descrive un modello
+SPICE a piu terminali. I `node_refs` devono riferirsi a terminali gia presenti
+nel Graph; un riferimento `pending` rende la base run non pronta invece di
+inventare un collegamento.
+
+Quando una validazione dell'immagine dimostra un net merge errato, il YAML puo
+dichiarare anche `spice_topology_overlay.terminal_node_overrides`: sposta un
+solo terminale del Graph verso un nodo SPICE nominato e documentato. Il Graph
+sorgente non viene mai riscritto; l'overlay e visibile in `04_values_bound`.
+
 ### prepare_experiment_outputs.py
 
 Path:
@@ -187,6 +200,7 @@ full
 
 - legge i valori manuali dal file YAML;
 - associa valori, modelli e stati ai componenti;
+- risolve i `node_refs` degli override verso nodi gia estratti dal Graph;
 - salva `04_values_bound.json`.
 
 ### 05_device_profiles.py
@@ -206,12 +220,14 @@ Servira piu avanti per:
 ### 06_component_rules.py
 
 - applica il mapping SPICE delle classi;
+- applica `node_order`, `terminal_map` e subcircuit dichiarati nello YAML;
 - decide cosa e emettibile, strutturale, mancante o non supportato;
 - salva `06_component_rules.json`.
 
 ### 07_spice_emit.py
 
 - genera la netlist SPICE;
+- emette anche subcircuit generiche `X...` quando dichiarate dal layer 06;
 - emette anche modelli quando servono;
 - salva:
 
@@ -298,6 +314,24 @@ devono verificare direttamente il sintomo. Per audio e altri segnali variabili
 serve quindi una run `tran` con una misura `tran_vpp` sull'uscita; alimentazione
 presente o corrente di batteria non nulla dimostrano soltanto la precondizione.
 
+Per le correnti interne di LED e diodi esportate come `@dNOME[id]`, lo step 12
+legge i vettori dal CSV transitorio: `measure: {"@dNOME[id]":"op"}` usa il
+campione finale disponibile, mentre `measure: {"@dNOME[id]":"tran_abs_peak"}`
+verifica il picco assoluto della corrente sull'intera run TRAN. La seconda forma
+e quella adatta a dimostrare un'accensione che avviene in una fase della rampa,
+non necessariamente all'istante finale.
+
+Per un sintomo di ricarica, la sola corrente di una sorgente `i(V...)` non dimostra
+la direzione della carica: segno e verso dipendono dalla polarita SPICE della
+sorgente. Uno scenario correttivo deve quindi usare una run TRAN e confrontare
+anche una corrente del percorso di carica giustificato dal netlist; per un diodo
+raddrizzatore interno si usa `@dNOME[id]` con `tran_abs_peak`.
+
+Nel registro CHAT una corrente `@dNOME[id]` proposta in una run `tran` e
+registrabile solo con `measure: {"@dNOME[id]":"tran_abs_peak"}`: evita che il
+runtime confronti per errore il punto operativo al posto della traccia
+transitoria.
+
 Per propagazione, attenuazione e amplificazione, lo scenario puo dichiarare
 `gain: {"input":"v(...)","output":"v(...)","min_ratio":...}`. La soglia
 positiva appartiene allo scenario ed e motivata dal suo obiettivo: non esiste
@@ -307,9 +341,11 @@ l'uscita e numericamente non nulla o `changed`. Inoltre, se una risposta CHAT
 interpreta scenari eseguiti senza trovare `stop_automation=true` e resta budget,
 deve proporre un nuovo scenario autonomo, salvo richiesta esplicita di
 conclusione finale o mancanza di evidenza esterna indispensabile.
-Una nuova run non puo ripetere la stessa firma di azioni soltanto per aggiungere
-`gain`, misure o soglie: questi campi reinterpretano risultati gia disponibili
-ma non cambiano il circuito. Dopo un trasferimento insufficiente il nuovo test
+Una nuova run non puo ripetere le stesse azioni con la stessa analisi soltanto
+per aggiungere `gain`, misure o soglie: questi campi reinterpretano risultati
+gia disponibili ma non cambiano quella simulazione. Le stesse azioni sono invece
+ammesse una volta in `op` e una volta in `tran` quando il transitorio risponde a
+una domanda temporale distinta. Dopo un trasferimento insufficiente il nuovo test
 deve spostare il confine di isolamento o applicare una azione elettricamente
 distinta. Gli scenari CHAT/AGENT riconosciuti come test di trasferimento sono
 validi soltanto con `gain.min_ratio` positivo.
@@ -355,12 +391,20 @@ scenarios/<scenario_id>/
 - costruisce il modello del circuito realmente simulato;
 - unisce netlist, node map, component rules, misure ngspice e geometry seed
   della Pipeline 1.0;
+- riconosce le istanze SPICE `X...` senza mostrare come componenti separati gli
+  elementi interni dichiarati tra `.subckt` e `.ends`;
+- applica gli arricchimenti visuali dichiarativi dello YAML, inclusi componenti
+  multipin e sorgenti esterne ancorate ai terminali del Graph;
 - salva `13_viewer_model.json`.
 
 ### 14_build_viewer_layout.py
 
 - calcola posizione, terminali e route ortogonali dei componenti;
 - usa bbox/orientamenti come seed e include fallback per componenti scenario;
+- usa i nomi logici dei pin per orientare dispositivi multipin e puo ricavare la
+  geometria di una sorgente esterna dai due terminali a cui e collegata;
+- crea prima un pin logico dichiarato ma assente dalla geometria OCR, evitando
+  che venga confuso con un terminale residuo di un componente multipin;
 - riserva una fascia destra stabile per la legenda, separata dal circuito;
 - salva `14_viewer_layout.json`.
 
@@ -370,6 +414,13 @@ scenarios/<scenario_id>/
 - usa un vocabolario comune di simboli e stati elettrici;
 - rappresenta rami attivi, segnali variabili, switch, componenti scenario,
   LED/lampade e attraversamenti senza giunzione.
+- comprende simboli generali per SCR, trasformatore e batteria esterna; un
+  potenziometro equivalente puo mantenere il simbolo resistivo e dichiarare la
+  propria funzione mediante `viewer_override.label` e `display_value`.
+- `viewer_override.label_mode` puo limitare la scritta a riferimento o valore,
+  mentre `viewer_override.tooltip` conserva i dettagli al passaggio del mouse.
+- i badge dei nodi valutano anche gli ingombri delle label e piu punti lungo
+  ogni segmento, cosi possono spostarsi senza coprire riferimenti e valori.
 
 Implementazione interna:
 

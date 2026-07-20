@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import csv
 import html
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -153,6 +154,13 @@ def write_clean_tran_csv(raw_csv_path: str | Path, clean_csv_path: str | Path) -
     return output_path
 
 
+def voltage_series_names(names: list[str]) -> list[str]:
+    """Seleziona le sole tensioni per il grafico, lasciando le correnti nel CSV."""
+    selected = [name for name in names if re.fullmatch(r"v\(.+\)", name, flags=re.IGNORECASE)]
+    # Compatibilita' con vecchi CSV che non riportano la forma `v(NODO)`.
+    return selected or names
+
+
 def write_tran_png(csv_path: str | Path, plot_path: str | Path) -> Path | None:
     """Crea un grafico PNG con matplotlib se disponibile."""
     names, times, series = parse_tran_csv(csv_path)
@@ -166,8 +174,9 @@ def write_tran_png(csv_path: str | Path, plot_path: str | Path) -> Path | None:
     except ImportError:
         return None
 
+    plotted_names = voltage_series_names(names)
     figure, axis = plt.subplots(figsize=(11, 6.2), dpi=140)
-    for name in names:
+    for name in plotted_names:
         axis.plot(times, series[name], linewidth=1.8, label=name)
 
     axis.set_title("Transient analysis")
@@ -213,7 +222,8 @@ def write_tran_plot(csv_path: str | Path, plot_path: str | Path) -> Path | None:
     if not times or not names:
         return None
 
-    all_values = [value for name in names for value in series.get(name, [])]
+    plotted_names = voltage_series_names(names)
+    all_values = [value for name in plotted_names for value in series.get(name, [])]
     if not all_values:
         return None
 
@@ -232,7 +242,7 @@ def write_tran_plot(csv_path: str | Path, plot_path: str | Path) -> Path | None:
     polylines: list[str] = []
     legend: list[str] = []
 
-    for index, name in enumerate(names):
+    for index, name in enumerate(plotted_names):
         color = colors[index % len(colors)]
         polyline = points_to_polyline(
             times,

@@ -32,7 +32,7 @@ FINAL_STATUSES = frozenset(
     }
 )
 ALLOWED_SCENARIO_INTENTS = frozenset({"correction", "diagnostic"})
-ALLOWED_MEASUREMENT_TYPES = frozenset({"op", "tran_vpp"})
+ALLOWED_MEASUREMENT_TYPES = frozenset({"op", "tran_vpp", "tran_abs_peak"})
 MAX_SCENARIOS_PER_DECISION = 2
 MAX_ACTIONS_PER_SCENARIO = 5
 ACTION_REQUIRED_FIELDS = {
@@ -60,6 +60,26 @@ def is_transient_voltage_quantity(quantity: str) -> bool:
             str(quantity or ""),
             flags=re.IGNORECASE,
         )
+    )
+
+
+def is_transient_internal_current_quantity(quantity: str) -> bool:
+    """Accetta la corrente diretta interna di un diodo/LED esportata nel CSV."""
+    return bool(
+        re.fullmatch(
+            r"@[^\s\[\]]+\[id\]",
+            str(quantity or "").strip(),
+            flags=re.IGNORECASE,
+        )
+    )
+
+
+def is_direct_component_quantity(quantity: str) -> bool:
+    """Riconosce correnti, potenze o correnti interne utili a un componente."""
+    text = str(quantity or "").strip()
+    return bool(
+        re.match(r"^[ip]\s*\(", text, flags=re.IGNORECASE)
+        or is_transient_internal_current_quantity(text)
     )
 
 
@@ -253,6 +273,16 @@ def validate_scenario(
                 raise AutonomousDecisionError(
                     f"Scenario {scenario_index}: tran_vpp richiede v(NODO) oppure v(NODO1,NODO2)"
                 )
+            if measurement == "tran_abs_peak" and analysis != "tran":
+                raise AutonomousDecisionError(
+                    f"Scenario {scenario_index}: tran_abs_peak richiede analysis='tran'"
+                )
+            if measurement == "tran_abs_peak" and not is_transient_internal_current_quantity(
+                canonical_quantity
+            ):
+                raise AutonomousDecisionError(
+                    f"Scenario {scenario_index}: tran_abs_peak richiede @dNOME[id]"
+                )
             normalized_measurements[canonical_quantity] = measurement
         normalized["measure"] = normalized_measurements
 
@@ -360,13 +390,14 @@ def validate_scenario(
         selected_measurement = normalized_measurements.get(canonical_quantity)
         if (
             analysis == "tran"
-            and re.match(r"^[ip]\s*\(", canonical_quantity, flags=re.IGNORECASE)
+            and is_direct_component_quantity(canonical_quantity)
             and selected_measurement != "op"
+            and selected_measurement != "tran_abs_peak"
         ):
             raise AutonomousDecisionError(
                 f"Scenario {scenario_index}: in analysis='tran' la grandezza "
                 f"'{canonical_quantity}' puo restare in compare come osservazione OP, "
-                "ma richiede measure='op' per essere usata come criterio expect"
+                "ma richiede measure='op' o measure='tran_abs_peak' per essere usata come criterio expect"
             )
         if expectation == "unchanged" and not allow_unchanged_expectations:
             raise AutonomousDecisionError(
@@ -384,7 +415,7 @@ def validate_scenario(
         direct_quantities = [
             quantity
             for quantity in normalized_expectations
-            if re.match(r"^[ip]\s*\(", quantity, flags=re.IGNORECASE)
+            if is_direct_component_quantity(quantity)
         ]
         if not direct_quantities:
             raise AutonomousDecisionError(
@@ -392,11 +423,12 @@ def validate_scenario(
                 "almeno una corrente o potenza diretta in expect"
             )
         if analysis == "tran" and not any(
-            normalized_measurements.get(quantity) == "op" for quantity in direct_quantities
+            normalized_measurements.get(quantity) in {"op", "tran_abs_peak"}
+            for quantity in direct_quantities
         ):
             raise AutonomousDecisionError(
                 f"Scenario {scenario_index}: nello scenario misto la misura diretta del "
-                "componente deve essere dichiarata come op nella mappa measure"
+                "componente deve essere dichiarata come op o tran_abs_peak nella mappa measure"
             )
     normalized["expect"] = normalized_expectations
     normalized["actions"] = [

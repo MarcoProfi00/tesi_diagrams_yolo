@@ -1,0 +1,14 @@
+* Test tecnico generale: salvataggio esplicito della corrente di un diodo in transitorio.
+VTEST IN 0 PWL(0s 0V 1s 5V)
+RTEST IN OUT 1k
+DTEST OUT 0 DTEST_MODEL
+.model DTEST_MODEL D(IS=1e-15 N=2 RS=10)
+.tran 1ms 1s
+.control
+set wr_singlescale
+set wr_vecnames
+save all @dtest[id]
+run
+wrdata 02_diode_current_save_test.csv time v(IN) @dtest[id]
+.endc
+.end

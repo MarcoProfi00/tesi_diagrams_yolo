@@ -19,10 +19,11 @@ from .json_io import read_json
 from .svg_styles import render_svg_style_blocks
 
 
-# Soglie visuali generali: non cambiano la simulazione, ma distinguono zero,
-# leakage e corrente continua misurata in modo leggibile.
+# Soglie visuali generali: non cambiano la simulazione. Una corrente molto
+# piccola misurata su un componente passivo viene trattata come residuo
+# numerico; una sorgente di corrente esplicita resta invece visibile anche a pA.
 MIN_NUMERICAL_CURRENT_A = 1e-15
-LEAKAGE_CURRENT_MAX_A = 1e-11
+MIN_VISIBLE_MEASURED_CURRENT_A = 1e-11
 # La corrente del ramo puo' restare visibile anche a livelli molto piccoli, ma
 # un LED emette luce apprezzabile soltanto oltre una soglia dedicata.
 LED_VISIBLE_CURRENT_A = 1e-4
@@ -101,7 +102,7 @@ def component_display_current(component: dict[str, Any], measurements: dict[str,
 
 
 def component_activity_ids(model: dict[str, Any]) -> tuple[set[str], set[str], set[str]]:
-    """Classifica i rami OP in corrente continua, leakage e transitorio."""
+    """Classifica i rami OP in corrente continua significativa e transitorio."""
     measurements = model.get("measurements") or {}
     components = [item for item in model.get("netlist_components") or [] if isinstance(item, dict)]
     steady_ids: set[str] = set()
@@ -109,18 +110,24 @@ def component_activity_ids(model: dict[str, Any]) -> tuple[set[str], set[str], s
     transient_ids: set[str] = set()
     active_nodes: set[str] = set()
 
-    # Le misure dirette sono la fonte primaria; le sorgenti ideali di corrente
-    # usano il loro valore DC solo quando ngspice non le riporta nel parser OP.
+    # Le sorgenti ideali dichiarate non sono residui numerici: se non nulle
+    # restano visibili anche sotto la soglia applicata agli altri componenti.
     for component in components:
         component_id = str(component.get("id") or "")
+        declared_source_current = declared_current_source_value(component)
+        is_nonzero_current_source = (
+            declared_source_current is not None
+            and abs(declared_source_current) > MIN_NUMERICAL_CURRENT_A
+        )
         current = component_display_current(component, measurements)
-        if current is None or abs(current) <= MIN_NUMERICAL_CURRENT_A:
-            continue
-        if abs(current) < LEAKAGE_CURRENT_MAX_A:
-            leakage_ids.add(component_id)
-        else:
+        if is_nonzero_current_source:
             steady_ids.add(component_id)
             active_nodes.update(str(node_id) for node_id in component.get("nodes") or [])
+            continue
+        if current is None or abs(current) < MIN_VISIBLE_MEASURED_CURRENT_A:
+            continue
+        steady_ids.add(component_id)
+        active_nodes.update(str(node_id) for node_id in component.get("nodes") or [])
 
     # Il riepilogo TRAN permette di riconoscere anche condensatori e sorgenti AC.
     transient_activity = (model.get("transient") or {}).get("component_activity") or {}
@@ -296,6 +303,28 @@ def active_closed_switch_ids(
     return active_switches & closed_switch_ids(layout)
 
 
+def render_flow_layers(
+    path: str,
+    *,
+    steady: bool,
+    transient: bool,
+    css_base: str,
+) -> str:
+    """Disegna separatamente corrente DC e variazione temporale sullo stesso ramo."""
+    if steady and transient:
+        # La componente continua resta leggibile in giallo; il segnale variabile
+        # e' una traccia blu piu sottile sovrapposta, non uno stato alternativo.
+        return (
+            f'<path class="{css_base}" d="{path}"/>'
+            f'<path class="{css_base} signal-overlay" d="{path}"/>'
+        )
+    if transient:
+        return f'<path class="{css_base} transient" d="{path}"/>'
+    if steady:
+        return f'<path class="{css_base}" d="{path}"/>'
+    return ""
+
+
 def render_connections(
     layout: dict[str, Any],
     model: dict[str, Any],
@@ -337,8 +366,16 @@ def render_connections(
         )
         tooltip = escape(node_tooltip(model, node_id)) if node_id and node_id != "0" else "Massa"
         path = routed_path(connection, start, end)
-        if css_class == "wire mixed":
-            wire_svg = f'<path class="wire mixed-signal" d="{path}"/>'
+        has_transient_endpoint = bool(endpoint_ids & transient_ids)
+        if css_class == "wire mixed" or (css_class == "wire active" and has_transient_endpoint):
+            # Anche uno switch chiuso puo' condurre DC mentre il ramo trasporta
+            # un segnale variabile: il filo mostra allora entrambe le componenti.
+            wire_svg = render_flow_layers(
+                path,
+                steady=True,
+                transient=True,
+                css_base="wire active",
+            )
         else:
             wire_svg = f'<path class="{css_class}" d="{path}"/>'
         paths.append(f'<g class="node-wire"><title>{tooltip}</title>{wire_svg}</g>')
@@ -477,6 +514,33 @@ def render_analog_meter(component: dict[str, Any], position: dict[str, Any]) -> 
 def component_label_lines(component: dict[str, Any], position: dict[str, Any]) -> list[str]:
     """Divide riferimento e valore su due righe quando la label li contiene."""
     component_type = str(position.get("component_type") or "").lower()
+    viewer_label = str(component.get("viewer_label") or "").strip()
+    viewer_value = str(component.get("viewer_value") or "").strip()
+    label_mode = str(component.get("viewer_label_mode") or "").strip().lower()
+    if label_mode == "hidden":
+        return []
+    if (
+        component.get("is_scenario_modified")
+        and str(component.get("kind") or "").lower() == "voltage_source"
+    ):
+        # Una sorgente modificata deve sempre mostrare il valore della netlist
+        # di scenario, anche se la base usa una label compatta dichiarativa.
+        scenario_value = str(component.get("scenario_value") or component.get("value") or "").strip()
+        match = re.fullmatch(
+            r"(?:DC\s+)?([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[a-zA-Z]+)?)",
+            scenario_value,
+            flags=re.IGNORECASE,
+        )
+        if match:
+            value = match.group(1)
+            return [value if value.lower().endswith("v") else f"{value} V"]
+        return [scenario_value] if scenario_value else []
+    if label_mode == "reference_only":
+        return [viewer_label] if viewer_label else []
+    if label_mode == "value_only":
+        return [viewer_value] if viewer_value else []
+    if viewer_label or viewer_value:
+        return [line for line in (viewer_label, viewer_value) if line]
     if component_type in {"diode", "zener", "led"} and component.get("display_label"):
         override_label = str(component.get("viewer_label") or "").strip()
         override_value = str(component.get("viewer_value") or "").strip()
@@ -708,6 +772,11 @@ def render_led_glow(profile: dict[str, Any] | None, active: bool, color: str) ->
         if state == "off":
             return ""
         if state == "steady_on":
+            # Per una condizione stazionaria la corrente diretta letta da
+            # ngspice e' piu' affidabile della sola caduta ai capi del diodo:
+            # un modello puo' avere Vf > soglia anche in sola perdita.
+            if not active:
+                return ""
             tooltip = "LED acceso in modo continuo secondo il transitorio SPICE"
             return (
                 f'<ellipse class="led-glow led-steady{color_class}" cx="0" cy="0" rx="42" ry="30">'
@@ -715,6 +784,33 @@ def render_led_glow(profile: dict[str, Any] | None, active: bool, color: str) ->
             )
 
         duration = max(0.8, float(profile.get("playback_duration_s") or 1.25))
+        timeline_key_times = profile.get("timeline_key_times") or []
+        timeline_states = profile.get("timeline_states") or []
+        if (
+            state != "blinking"
+            and len(timeline_key_times) >= 2
+            and len(timeline_key_times) == len(timeline_states)
+        ):
+            # Le transizioni non periodiche conservano la posizione temporale
+            # misurata: LED diversi possono quindi accendersi in sequenza o
+            # sovrapporsi soltanto negli intervalli presenti nei dati SPICE.
+            key_times = ";".join(format_number(float(value)) for value in timeline_key_times)
+            state_values = [
+                (value is True) or str(value).strip().lower() in {"1", "true", "on"}
+                for value in timeline_states
+            ]
+            opacity_values = ";".join("0.48" if value else "0.08" for value in state_values)
+            initial_opacity = "0.48" if state_values[0] else "0.08"
+            tooltip = "LED: sequenza temporale ricavata dalla corrente transitoria SPICE"
+            return (
+                f'<ellipse class="led-glow led-transient-profile{color_class}" '
+                f'cx="0" cy="0" rx="42" ry="30" opacity="{initial_opacity}">'
+                f'<title>{escape(tooltip)}</title>'
+                f'<animate attributeName="opacity" values="{opacity_values}" '
+                f'keyTimes="{key_times}" calcMode="discrete" '
+                f'dur="{format_number(duration)}s" repeatCount="indefinite"/>'
+                '</ellipse>'
+            )
         duty_cycle = min(0.8, max(0.12, float(profile.get("display_duty_cycle") or 0.12)))
         fade_end = min(0.98, duty_cycle + 0.02)
         frequency = profile.get("frequency_hz")
@@ -960,12 +1056,21 @@ def render_two_terminal_symbol(
     mixed = component_id in steady_ids and component_id in transient_ids
     if (active or leakage) and flow_path:
         if mixed:
-            flow_svg = f'<path class="component-flow mixed-signal" d="{flow_path}"/>'
+            flow_svg = render_flow_layers(
+                flow_path,
+                steady=True,
+                transient=True,
+                css_base="component-flow",
+            )
         elif leakage:
             flow_svg = f'<path class="component-flow leakage" d="{flow_path}"/>'
         else:
-            flow_class = "component-flow transient" if transient else "component-flow"
-            flow_svg = f'<path class="{flow_class}" d="{flow_path}"/>'
+            flow_svg = render_flow_layers(
+                flow_path,
+                steady=component_id in steady_ids,
+                transient=transient,
+                css_base="component-flow",
+            )
     else:
         flow_svg = ""
     component_css = f"component led-color-{led_color(component)}" if "led" in visual_class else "component"
@@ -1043,8 +1148,12 @@ def render_headset(
     )
     active = component_id in steady_ids or component_id in transient_ids
     leakage = component_id in leakage_ids
-    flow_class = "component-flow leakage" if leakage else "component-flow"
-    flow = f'<path class="{flow_class}" d="{body_path}"/>' if active or leakage else ""
+    flow = render_flow_layers(
+        body_path,
+        steady=component_id in steady_ids,
+        transient=component_id in transient_ids,
+        css_base="component-flow",
+    ) if active else (f'<path class="component-flow leakage" d="{body_path}"/>' if leakage else "")
     audio_state_class = " active" if active else ""
     middle_y = (top_y + bottom_y) / 2
     audio_waves = (
@@ -1064,6 +1173,117 @@ def render_headset(
         f'<ellipse cx="{format_number(cup_x)}" cy="{format_number(top_y)}" rx="5" ry="9"/>'
         f'<ellipse cx="{format_number(cup_x)}" cy="{format_number(bottom_y)}" rx="5" ry="9"/>'
         f'{audio_waves}</g>{flow}</g>'
+    )
+    return body + label
+
+
+def render_speaker(
+    component_id: str,
+    component: dict[str, Any],
+    position: dict[str, Any],
+    steady_ids: set[str],
+    leakage_ids: set[str],
+    transient_ids: set[str],
+) -> str:
+    """Disegna un altoparlante con cono e onde attive solo con segnale misurato."""
+    terminals = position.get("terminals") or []
+    if len(terminals) < 2:
+        return render_two_terminal_symbol(
+            component_id, component, position, steady_ids, leakage_ids, transient_ids, {}, {}
+        )
+
+    ordered = sorted(terminals, key=lambda item: float(item.get("y") or 0))
+    left_x = min(float(item.get("x") or 0) for item in ordered)
+    top_y, bottom_y = float(ordered[0]["y"]), float(ordered[1]["y"])
+    middle_y = (top_y + bottom_y) / 2
+    body_left_x = left_x + 22.0
+    body_right_x = body_left_x + 11.0
+    horn_right_x = body_right_x + 25.0
+    wave_x = horn_right_x + 11.0
+    # La label sta oltre le onde, sul fianco del simbolo: sopra lo speaker
+    # passano spesso il condensatore d'uscita e il relativo badge di nodo.
+    label = render_component_label(
+        component_label_lines(component, position), horn_right_x + 46.0, middle_y + 4.0, "start"
+    )
+    body_path = (
+        f'M{format_number(left_x)} {format_number(top_y)} H{format_number(body_left_x)} '
+        f'M{format_number(left_x)} {format_number(bottom_y)} H{format_number(body_left_x)} '
+        f'M{format_number(body_left_x)} {format_number(top_y)} '
+        f'H{format_number(body_right_x)} '
+        f'V{format_number(bottom_y)} '
+        f'H{format_number(body_left_x)} Z '
+        f'M{format_number(body_right_x)} {format_number(top_y)} '
+        f'L{format_number(horn_right_x)} {format_number(top_y - 13.0)} '
+        f'V{format_number(bottom_y + 13.0)} '
+        f'L{format_number(body_right_x)} {format_number(bottom_y)}'
+    )
+    active = component_id in steady_ids or component_id in transient_ids
+    # Una corrente di leakage non equivale a un'uscita audio percepibile: il
+    # simbolo si anima solo con attivita' utile rilevata nel carico.
+    flow = render_flow_layers(
+        body_path,
+        steady=component_id in steady_ids,
+        transient=component_id in transient_ids,
+        css_base="component-flow",
+    ) if active else ""
+    audio_state_class = " active" if active else ""
+    audio_waves = (
+        f'<path class="audio-wave wave-1{audio_state_class}" '
+        f'd="M{format_number(wave_x)} {format_number(middle_y - 11.0)} '
+        f'Q{format_number(wave_x + 10.0)} {format_number(middle_y)} '
+        f'{format_number(wave_x)} {format_number(middle_y + 11.0)}"/>'
+        f'<path class="audio-wave wave-2{audio_state_class}" '
+        f'd="M{format_number(wave_x + 9.0)} {format_number(middle_y - 18.0)} '
+        f'Q{format_number(wave_x + 25.0)} {format_number(middle_y)} '
+        f'{format_number(wave_x + 9.0)} {format_number(middle_y + 18.0)}"/>'
+    )
+    body = f'<g class="component speaker"><g class="symbol"><path d="{body_path}"/>{audio_waves}</g>{flow}</g>'
+    return body + label
+
+
+def render_operational_amplifier(component: dict[str, Any], position: dict[str, Any]) -> str:
+    """Disegna un operazionale a triangolo rispettando ingressi, uscita e alimentazioni."""
+    center_x = float(position.get("x") or 0)
+    center_y = float(position.get("y") or 0)
+    terminals = {str(item.get("name") or "").lower(): item for item in position.get("terminals") or []}
+    symbol_size = position.get("symbol_size") or component_spec("operational_amplifier")
+    symbol_width = float(symbol_size.get("width") or 112.0)
+    symbol_height = float(symbol_size.get("height") or 84.0)
+    left_x, right_x = center_x - symbol_width * 0.37, center_x + symbol_width * 0.41
+    top_y, bottom_y = center_y - symbol_height * 0.40, center_y + symbol_height * 0.40
+
+    def terminal(name: str, alternate: str = "") -> dict[str, Any] | None:
+        return terminals.get(name) or (terminals.get(alternate) if alternate else None)
+
+    in_plus = terminal("in1", "inp")
+    in_minus = terminal("in2", "inm")
+    output = terminal("out")
+    vcc = terminal("aux1", "vcc")
+    vee = terminal("aux2", "vee")
+    leads: list[str] = []
+    if in_plus:
+        leads.append(f'M{format_number(float(in_plus["x"]))} {format_number(float(in_plus["y"]))} H{format_number(left_x)}')
+    if in_minus:
+        leads.append(f'M{format_number(float(in_minus["x"]))} {format_number(float(in_minus["y"]))} H{format_number(left_x)}')
+    if output:
+        leads.append(f'M{format_number(right_x)} {format_number(center_y)} H{format_number(float(output["x"]))}')
+    if vcc:
+        leads.append(f'M{format_number(center_x + 4.0)} {format_number(top_y + 8.0)} V{format_number(float(vcc["y"]))}')
+    if vee:
+        leads.append(f'M{format_number(center_x + 4.0)} {format_number(bottom_y - 8.0)} V{format_number(float(vee["y"]))}')
+    # La label resta dentro il triangolo: evita collisioni con pin di
+    # alimentazione, badge dei nodi e componenti vicini.
+    label = render_component_label(
+        component_label_lines(component, position), center_x + 4.0, center_y + 2.0, "middle"
+    )
+    body = (
+        f'<g class="component operational-amplifier"><g class="symbol">'
+        f'<path d="M{format_number(left_x)} {format_number(top_y)} '
+        f'L{format_number(left_x)} {format_number(bottom_y)} '
+        f'L{format_number(right_x)} {format_number(center_y)} Z {' '.join(leads)}"/>'
+        f'<text class="battery-polarity positive" x="{format_number(left_x + 10.0)}" y="{format_number(center_y - 12.0)}">+</text>'
+        f'<text class="battery-polarity" x="{format_number(left_x + 10.0)}" y="{format_number(center_y + 22.0)}">-</text>'
+        '</g></g>'
     )
     return body + label
 
@@ -1209,14 +1429,12 @@ def render_bjt_transistor(
     )
     active = component_id in steady_ids or component_id in transient_ids
     mixed = component_id in steady_ids and component_id in transient_ids
-    if active:
-        if mixed:
-            flow = f'<path class="transistor-flow mixed-signal" d="{body_path}"/>'
-        else:
-            flow_class = "transistor-flow transient" if component_id in transient_ids else "transistor-flow"
-            flow = f'<path class="{flow_class}" d="{body_path}"/>'
-    else:
-        flow = ""
+    flow = render_flow_layers(
+        body_path,
+        steady=component_id in steady_ids,
+        transient=component_id in transient_ids,
+        css_base="transistor-flow",
+    ) if active else ""
     label = escape(transistor_reference_label(component))
     return (
         '<g class="symbol transistor">'
@@ -1224,6 +1442,69 @@ def render_bjt_transistor(
         f'<path d="{body_path}"/><path d="{arrow_path}"/>{flow}'
         f'<text class="component-label" x="{format_number(center_x)}" y="{format_number(center_y-40)}">{label}</text>'
         '</g>'
+    )
+
+
+def render_scr(
+    component_id: str,
+    component: dict[str, Any],
+    position: dict[str, Any],
+    steady_ids: set[str],
+    transient_ids: set[str],
+) -> str:
+    """Disegna un SCR standard a tre terminali con gate esplicito."""
+    center_x = float(position.get("x") or 0)
+    center_y = float(position.get("y") or 0)
+    spec = component_spec("scr", "scr", 3)
+    half = float(spec["width"]) / 2
+    active = component_id in steady_ids or component_id in transient_ids
+    transient = component_id in transient_ids
+    label_lines = component_label_lines(component, position)
+    label_svg = render_component_label(label_lines, center_x, center_y - 56.0, "middle")
+    flow = render_flow_layers(
+        f"M{-half} 0 H{half}",
+        steady=component_id in steady_ids,
+        transient=transient,
+        css_base="component-flow",
+    ) if active else ""
+    return (
+        f'<g class="component scr" transform="translate({format_number(center_x)} {format_number(center_y)})">'
+        '<g class="symbol">'
+        f'<path d="M{-half} 0 H-24 M24 0 H{half} M12 15 L20 25 L12 35"/>'
+        '<circle cx="0" cy="0" r="28"/>'
+        '<path d="M-20 -17 L12 0 L-20 17 Z M14 -19 V19"/>'
+        '</g>'
+        f'{flow}'
+        '</g>'
+        f'{label_svg}'
+    )
+
+
+def render_transformer(
+    component_id: str,
+    component: dict[str, Any],
+    position: dict[str, Any],
+    transient_ids: set[str],
+) -> str:
+    """Disegna un trasformatore a quattro terminali con due avvolgimenti."""
+    center_x = float(position.get("x") or 0)
+    center_y = float(position.get("y") or 0)
+    spec = component_spec("transformer", "transformer", 4)
+    half = float(spec["width"]) / 2
+    label_lines = component_label_lines(component, position)
+    label_svg = render_component_label(label_lines, center_x, center_y - 66.0, "middle")
+    primary = 'M-28 -25 C-42 -25 -42 -9 -28 -9 C-42 -9 -42 8 -28 8 C-42 8 -42 25 -28 25'
+    secondary = 'M28 -25 C42 -25 42 -9 28 -9 C42 -9 42 8 28 8 C42 8 42 25 28 25'
+    flow = f'<path class="component-flow transient" d="M28 -25 {secondary[8:]}"/>' if component_id in transient_ids else ""
+    return (
+        f'<g class="component transformer" transform="translate({format_number(center_x)} {format_number(center_y)})">'
+        '<g class="symbol">'
+        f'<path d="M{-half} -25 H-28 M{-half} 25 H-28 {primary} '
+        f'M28 -25 H{half} M28 25 H{half} {secondary} M-6 -34 V34 M6 -34 V34"/>'
+        '</g>'
+        f'{flow}'
+        '</g>'
+        f'{label_svg}'
     )
 
 
@@ -1501,6 +1782,12 @@ def render_components(
             symbol = render_headset(
                 str(component_id), component, position, steady_ids, leakage_ids, transient_ids
             )
+        elif visual_class == "speaker":
+            symbol = render_speaker(
+                str(component_id), component, position, steady_ids, leakage_ids, transient_ids
+            )
+        elif visual_class == "operational_amplifier":
+            symbol = render_operational_amplifier(component, position)
         elif visual_class in {"npn_transistor", "pnp_transistor", "bjt"}:
             symbol = render_bjt_transistor(
                 str(component_id),
@@ -1509,6 +1796,14 @@ def render_components(
                 steady_ids,
                 transient_ids,
                 transistor_kind="pnp" if visual_class == "pnp_transistor" else "npn",
+            )
+        elif visual_class == "scr":
+            symbol = render_scr(
+                str(component_id), component, position, steady_ids, transient_ids
+            )
+        elif visual_class == "transformer":
+            symbol = render_transformer(
+                str(component_id), component, position, transient_ids
             )
         elif terminal_count > 2:
             symbol = render_multi_terminal(str(component_id), position)
@@ -1540,6 +1835,11 @@ def render_components(
                 f'<title>{tooltip}</title>'
                 f"{symbol}</g>"
             )
+        elif component.get("viewer_tooltip"):
+            # I dettagli opzionali restano accessibili senza affollare lo
+            # schema: il tag SVG `title` viene mostrato al passaggio del mouse.
+            tooltip = escape(str(component.get("viewer_tooltip") or ""))
+            symbol = f'<g class="component-with-tooltip"><title>{tooltip}</title>{symbol}</g>'
         rendered.append(symbol)
     return "".join(rendered)
 
@@ -1589,13 +1889,80 @@ def node_badge_candidates(layout: dict[str, Any], node_id: str) -> list[tuple[fl
             length = abs(second[0] - first[0]) + abs(second[1] - first[1])
             if length < 20.0:
                 continue
-            middle_x = (first[0] + second[0]) / 2
-            middle_y = (first[1] + second[1]) / 2
             if abs(first[1] - second[1]) < 0.01:
-                candidates.extend(((middle_x, middle_y - 16.0), (middle_x, middle_y + 16.0)))
+                for fraction in (0.33, 0.5, 0.67):
+                    sample_x = first[0] + (second[0] - first[0]) * fraction
+                    candidates.extend(((sample_x, first[1] - 16.0), (sample_x, first[1] + 16.0)))
             else:
-                candidates.extend(((middle_x + 18.0, middle_y), (middle_x - 18.0, middle_y)))
+                for fraction in (0.33, 0.5, 0.67):
+                    sample_y = first[1] + (second[1] - first[1]) * fraction
+                    candidates.extend(((first[0] + 18.0, sample_y), (first[0] - 18.0, sample_y)))
     return candidates
+
+
+def component_label_obstacles(
+    layout: dict[str, Any],
+    indexed: dict[str, dict[str, Any]],
+) -> list[tuple[float, float, float, float]]:
+    """Stima gli ingombri delle label dei bipoli per proteggere i badge nodo."""
+    placements = vertical_label_placements(layout, indexed)
+    obstacles: list[tuple[float, float, float, float]] = []
+    for component_id, original_position in (layout.get("components") or {}).items():
+        if not isinstance(original_position, dict):
+            continue
+        component_type = str(original_position.get("component_type") or "").lower()
+        if component_type not in {
+            "resistor", "capacitor", "polarized_capacitor", "variable_capacitor",
+            "variable_polarized_capacitor", "inductor", "diode", "lamp", "fuse",
+            "switch", "voltage_source", "current_source", "signal_source", "battery",
+        }:
+            continue
+        placement = placements.get(str(component_id)) or {}
+        position = {
+            **original_position,
+            "label_side": placement.get("side", original_position.get("label_side")),
+            "label_offset_x": placement.get("offset_x", original_position.get("label_offset_x")),
+            "label_offset_y": placement.get("offset_y", original_position.get("label_offset_y")),
+        }
+        lines = component_label_lines(indexed.get(str(component_id)) or {}, position)
+        if not lines:
+            continue
+        text_width = max(len(line) for line in lines) * 7.2 + 4.0
+        text_height = max(len(lines), 1) * 14.0 + 4.0
+        center_x = float(position.get("x") or 0)
+        center_y = float(position.get("y") or 0)
+        if position.get("orientation") == "vertical":
+            side = str(position.get("label_side") or "right")
+            if side in {"top", "bottom"}:
+                vertical_half = float((position.get("symbol_size") or {}).get("width") or 72.0) / 2
+                direction = -1.0 if side == "top" else 1.0
+                label_x = center_x + float(position.get("label_offset_x") or 0)
+                label_y = center_y + direction * (vertical_half + text_height / 2 + 8.0)
+                box = (
+                    label_x - text_width / 2, label_y - text_height / 2,
+                    label_x + text_width / 2, label_y + text_height / 2,
+                )
+            else:
+                label_x = center_x - 34.0 if side == "left" else center_x + 34.0
+                label_y = center_y + 4.0 + float(position.get("label_offset_y") or 0)
+                box = (
+                    label_x - text_width if side == "left" else label_x,
+                    label_y - text_height / 2,
+                    label_x if side == "left" else label_x + text_width,
+                    label_y + text_height / 2,
+                )
+        else:
+            side = str(position.get("label_side") or "top")
+            direction = 1.0 if side == "bottom" else -1.0
+            symbol_height = float((position.get("symbol_size") or {}).get("height") or 46.0)
+            label_x = center_x + float(position.get("label_offset_x") or 0)
+            label_y = center_y + direction * (symbol_height / 2 + text_height / 2 + 8.0)
+            box = (
+                label_x - text_width / 2, label_y - text_height / 2,
+                label_x + text_width / 2, label_y + text_height / 2,
+            )
+        obstacles.append(box)
+    return obstacles
 
 
 def render_node_badges(model: dict[str, Any], layout: dict[str, Any]) -> str:
@@ -1608,6 +1975,9 @@ def render_node_badges(model: dict[str, Any], layout: dict[str, Any]) -> str:
         for position in (layout.get("components") or {}).values()
         if isinstance(position, dict)
     ]
+    # I badge devono evitare anche le scritte: altrimenti un nodo corretto puo'
+    # coprire riferimento e valore pur non intersecando il simbolo elettrico.
+    component_bounds.extend(component_label_obstacles(layout, model_components(model)))
     # I badge non devono mai occupare la fascia grafica destinata alla legenda.
     component_bounds.append((legend_x - 10.0, 14.0, legend_x + 190.0, 222.0))
     occupied: list[tuple[float, float, float, float]] = []
@@ -1646,7 +2016,8 @@ def render_node_badges(model: dict[str, Any], layout: dict[str, Any]) -> str:
 
 def render_legend(x: float, y: float) -> str:
     """Disegna un'unica legenda compatta degli stati elettrici generali."""
-    return f'''<g class="legend" transform="translate({format_number(x)} {format_number(y)})"><rect width="180" height="188" rx="6"/><text class="legend-title" x="14" y="22">Stati</text><path class="wire energized" d="M14 42 H54"/><text x="68" y="46">tensione presente</text><path class="wire active" d="M14 68 H54"/><text x="68" y="72">corrente DC</text><path class="wire transient" d="M14 94 H54"/><text x="68" y="98">segnale variabile</text><path class="wire mixed-signal" d="M14 120 H54"/><text x="68" y="124">DC + segnale</text><path class="wire idle" d="M14 146 H54"/><text x="68" y="150">nessuna corrente</text><circle class="constraint-node" cx="34" cy="170" r="5"/><text x="68" y="174">vincolo scenario</text></g>'''
+    mixed = '<path class="wire active" d="M14 120 H54"/><path class="wire signal-overlay" d="M14 120 H54"/>'
+    return f'''<g class="legend" transform="translate({format_number(x)} {format_number(y)})"><rect width="180" height="188" rx="6"/><text class="legend-title" x="14" y="22">Stati</text><path class="wire energized" d="M14 42 H54"/><text x="68" y="46">tensione presente</text><path class="wire active" d="M14 68 H54"/><text x="68" y="72">corrente DC</text><path class="wire transient" d="M14 94 H54"/><text x="68" y="98">segnale variabile</text>{mixed}<text x="68" y="124">DC + segnale</text><path class="wire idle" d="M14 146 H54"/><text x="68" y="150">nessuna corrente</text><circle class="constraint-node" cx="34" cy="170" r="5"/><text x="68" y="174">vincolo scenario</text></g>'''
 
 
 def render_svg(model: dict[str, Any], layout: dict[str, Any]) -> str:

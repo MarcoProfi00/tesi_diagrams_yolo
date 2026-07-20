@@ -173,7 +173,12 @@ nodes:
     label_text: "B: negativo batteria e riferimento SPICE"
 
 simulation:
-  # Il circuito e statico e non contiene elementi reattivi. La prima base run
-  # usa il punto di lavoro; le tre fasce saranno verificate in seguito variando
-  # la tensione della batteria con scenari DC separati.
-  analyses: [op]
+  # Il punto di lavoro descrive la condizione nominale a 12 V. Il transitorio
+  # di base rende invece disponibile una traccia temporale reale per i futuri
+  # scenari CHAT, anche se con batteria costante il LED giallo resta stabile.
+  analyses: [op, tran]
+  tran:
+    # Risoluzione e durata sufficienti per una futura variazione lenta della
+    # batteria, senza appesantire inutilmente la base run.
+    step: 1ms
+    stop: 3s

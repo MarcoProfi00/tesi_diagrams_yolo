@@ -69,6 +69,88 @@ def ordered_nodes(
     return nodes, missing_terminals
 
 
+def override_data(value_data: dict[str, Any]) -> dict[str, Any]:
+    """Restituisce l'override SPICE solo quando e' una mappa valida."""
+    override = value_data.get("spice_override") if isinstance(value_data, dict) else None
+    return override if isinstance(override, dict) else {}
+
+
+def effective_node_order(
+    class_rule: dict[str, Any],
+    value_data: dict[str, Any],
+) -> list[str]:
+    """Calcola l'ordine dei nodi applicando override YAML dichiarativi."""
+    override = override_data(value_data)
+    requested_order = override.get("node_order") or class_rule.get("node_order")
+    node_order = [str(node) for node in as_list(requested_order)]
+    terminal_map = override.get("terminal_map")
+    if not isinstance(terminal_map, dict):
+        return node_order
+
+    # terminal_map associa il pin elettrico atteso al terminale OCR che porta
+    # realmente quel nodo. E' una correzione locale e tracciabile del pinout,
+    # utile per BJT e dispositivi multipin senza riscrivere il Graph JSON.
+    return [str(terminal_map.get(terminal_name, terminal_name)) for terminal_name in node_order]
+
+
+def subcircuit_override_rule(component_data: dict[str, Any]) -> dict[str, Any] | None:
+    """Converte un override YAML generico verso una subcircuit SPICE."""
+    value_data = component_data.get("value_data") or {}
+    override = override_data(value_data)
+    if override.get("emit_as") != "subcircuit":
+        return None
+
+    if str(override.get("status", "")).lower().startswith("pending"):
+        return {
+            "class_name": component_data.get("class_name"),
+            "status": "missing_parameters",
+            "spice_support": "subcircuit",
+            "missing_fields": ["spice_override.gate_node_ref"],
+            "reason": "SPICE subcircuit override is intentionally pending manual node validation.",
+        }
+
+    pin_order = [str(pin) for pin in as_list(override.get("pin_order"))]
+    resolved_refs = override.get("resolved_node_refs")
+    if not pin_order or not isinstance(resolved_refs, dict):
+        return {
+            "class_name": component_data.get("class_name"),
+            "status": "missing_parameters",
+            "spice_support": "subcircuit",
+            "missing_fields": ["spice_override.pin_order", "spice_override.node_refs"],
+        }
+
+    nodes = [resolved_refs.get(pin) for pin in pin_order]
+    missing_pins = [pin for pin, node in zip(pin_order, nodes) if node in (None, "")]
+    if missing_pins:
+        return {
+            "class_name": component_data.get("class_name"),
+            "status": "invalid_node_order",
+            "spice_support": "subcircuit",
+            "missing_terminals": missing_pins,
+        }
+
+    model = value_data.get("model") or override.get("subcircuit")
+    if model in (None, ""):
+        return {
+            "class_name": component_data.get("class_name"),
+            "status": "missing_parameters",
+            "spice_support": "subcircuit",
+            "missing_fields": ["model"],
+        }
+
+    return {
+        "class_name": component_data.get("class_name"),
+        "status": "spice_ready",
+        "spice_support": "subcircuit",
+        "spice_prefix": "X",
+        "emit_as": "subcircuit",
+        "node_order": pin_order,
+        "nodes": [str(node) for node in nodes],
+        "parameters": value_data,
+        "reason": "Explicit YAML override emitted as a SPICE subcircuit.",
+    }
+
+
 def build_supply_rules(values_bound: dict[str, Any]) -> dict[str, Any]:
     """
     Prepara le supply manuali come sorgenti SPICE potenziali.
@@ -103,8 +185,8 @@ def resistive_load_override_rule(
 ) -> dict[str, Any] | None:
     """Converte un override YAML esplicito in una regola SPICE equivalente."""
     value_data = component_data.get("value_data") or {}
-    override = value_data.get("spice_override") if isinstance(value_data, dict) else None
-    if not isinstance(override, dict) or override.get("emit_as") != "resistive_load":
+    override = override_data(value_data)
+    if override.get("emit_as") != "resistive_load":
         return None
 
     resistance = override.get("equivalent_resistance")
@@ -163,6 +245,10 @@ def classify_component_rule(
     if override_rule is not None:
         return override_rule
 
+    subcircuit_rule = subcircuit_override_rule(component_data)
+    if subcircuit_rule is not None:
+        return subcircuit_rule
+
     if class_rule is None:
         return {
             "class_name": class_name,
@@ -181,7 +267,7 @@ def classify_component_rule(
         }
 
     if spice_support in MEASUREMENT_SUPPORT:
-        node_order = [str(node) for node in as_list(class_rule.get("node_order"))]
+        node_order = effective_node_order(class_rule, value_data)
         nodes, terminals_missing = ordered_nodes(terminal_nodes, node_order)
         if terminals_missing:
             return {
@@ -237,7 +323,7 @@ def classify_component_rule(
             "missing_fields": fields_missing,
         }
 
-    node_order = [str(node) for node in as_list(class_rule.get("node_order"))]
+    node_order = effective_node_order(class_rule, value_data)
     nodes, terminals_missing = ordered_nodes(terminal_nodes, node_order)
     if terminals_missing:
         return {

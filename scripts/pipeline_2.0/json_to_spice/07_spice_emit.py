@@ -37,6 +37,9 @@ def build_model_lines(spice_models: dict[str, Any] | None = None) -> dict[str, s
     for model_name, model_data in yaml_models.items():
         if isinstance(model_data, dict):
             line = model_data.get("line")
+            lines = model_data.get("lines")
+            if isinstance(lines, dict):
+                line = "\n".join(str(item) for item in lines.values() if item not in (None, ""))
         else:
             line = model_data
         if line:
@@ -215,6 +218,17 @@ def emit_model_component(component_id: str, rule: dict[str, Any]) -> tuple[str |
     return line, None
 
 
+def emit_subcircuit(component_id: str, rule: dict[str, Any]) -> tuple[str | None, str | None]:
+    """Emette una subcircuit SPICE generica con nodi dichiarati nello YAML."""
+    nodes = rule.get("nodes") or []
+    parameters = rule.get("parameters") or {}
+    subcircuit = parameters.get("model")
+    if not subcircuit or len(nodes) < 2:
+        return None, f"{component_id}: incomplete subcircuit override"
+
+    return f"{element_name('X', component_id)} {' '.join(nodes)} {subcircuit}", None
+
+
 def emit_simplified(component_id: str, rule: dict[str, Any]) -> tuple[str | None, str | None]:
     """Emit simplified components such as open or closed switches."""
     nodes = rule.get("nodes") or []
@@ -256,6 +270,8 @@ def emit_component(component_id: str, rule: dict[str, Any]) -> tuple[str | None,
         line, warning = emit_equivalent(component_id, rule)
     elif support == "model":
         line, warning = emit_model_component(component_id, rule)
+    elif support == "subcircuit":
+        line, warning = emit_subcircuit(component_id, rule)
     elif support == "simplified":
         line, warning = emit_simplified(component_id, rule)
     else:
@@ -263,7 +279,7 @@ def emit_component(component_id: str, rule: dict[str, Any]) -> tuple[str | None,
 
     model = None
     parameters = rule.get("parameters") or {}
-    if support == "model":
+    if support in ("model", "subcircuit"):
         model = parameters.get("model")
 
     return line, model, warning
@@ -291,19 +307,34 @@ def build_analysis_lines(simulation: dict[str, Any]) -> tuple[list[str], list[st
     return lines, sorted(enabled)
 
 
-def build_control_lines(analyses: list[str], probe_nodes: list[str]) -> list[str]:
-    """Aggiunge comandi ngspice per esportare dati transitori plottabili."""
-    if "tran" not in analyses or not probe_nodes:
+def build_control_lines(
+    analyses: list[str],
+    probe_nodes: list[str],
+    device_current_vectors: list[str] | None = None,
+) -> list[str]:
+    """Aggiunge comandi ngspice per esportare tensioni e correnti transitorie."""
+    current_vectors = list(device_current_vectors or [])
+    if "tran" not in analyses or (not probe_nodes and not current_vectors):
         return []
 
-    voltage_vectors = " ".join(f"v({node})" for node in probe_nodes)
+    export_vectors = [
+        *(f"v({node})" for node in probe_nodes),
+        *current_vectors,
+    ]
+    control_save = []
+    if current_vectors:
+        # I parametri interni dei dispositivi non rientrano in `.save all`.
+        # Senza questo salvataggio esplicito ngspice espone soltanto il loro
+        # ultimo valore, che `wrdata` ripeterebbe per tutta la timeline.
+        control_save.append(f"save all {' '.join(current_vectors)}")
     return [
         "",
         ".control",
         "set wr_singlescale",
         "set wr_vecnames",
+        *control_save,
         "run",
-        f"wrdata 08_tran.csv time {voltage_vectors}",
+        f"wrdata 08_tran.csv time {' '.join(export_vectors)}",
         ".endc",
     ]
 
@@ -326,6 +357,7 @@ def build_spice_netlist(
     skipped: list[str] = []
     models: set[str] = set()
     transient_nodes: set[str] = set()
+    transient_device_currents: set[str] = set()
     emitted_elements = 0
 
     for supply_name, supply in (component_rules.get("supplies") or {}).items():
@@ -353,6 +385,14 @@ def build_spice_netlist(
             lines.append(line)
             if not line.startswith("*"):
                 emitted_elements += 1
+                emitted_name = line.split(maxsplit=1)[0]
+                if emitted_name[:1].upper() == "D":
+                    # `id` e' la corrente diretta del modello diodo. Esportare
+                    # tutti i diodi mantiene generale la pipeline e permette al
+                    # viewer di distinguere luce LED e semplice caduta diretta.
+                    # I vettori interni richiamati dal linguaggio `.control`
+                    # di ngspice usano il nome canonico in minuscolo.
+                    transient_device_currents.add(f"@{emitted_name.lower()}[id]")
                 for node in rule.get("nodes") or []:
                     if str(node) != "0":
                         transient_nodes.add(str(node))
@@ -387,7 +427,8 @@ def build_spice_netlist(
 
     analysis_lines, analyses = build_analysis_lines(component_rules.get("simulation") or {})
     probe_nodes = sorted(transient_nodes)
-    control_lines = build_control_lines(analyses, probe_nodes)
+    current_vectors = sorted(transient_device_currents, key=str.lower)
+    control_lines = build_control_lines(analyses, probe_nodes, current_vectors)
     lines.extend(["", *analysis_lines, *control_lines, ".end"])
 
     report = {
@@ -400,8 +441,9 @@ def build_spice_netlist(
         "measurement_points": measurement_points,
         "analyses": analyses,
         "transient_export": {
-            "path": "08_tran.csv" if "tran" in analyses and probe_nodes else None,
+            "path": "08_tran.csv" if "tran" in analyses and (probe_nodes or current_vectors) else None,
             "nodes": probe_nodes if "tran" in analyses else [],
+            "device_currents": current_vectors if "tran" in analyses else [],
         },
         "models": sorted(models),
         "warnings": warnings,

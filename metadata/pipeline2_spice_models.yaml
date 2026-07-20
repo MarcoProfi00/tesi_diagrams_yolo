@@ -66,6 +66,27 @@ models:
     # fascia del datasheet; BV, capacita e recovery restano valori di targa.
     line: ".model D_1N4148_TYP D(IS=6n N=1.9 RS=0.65 BV=100 IBV=100u TT=4n CJO=4p)"
 
+  D_1N4001_TYP:
+    # Modello rettificatore semplificato per la famiglia 1N4001, sufficiente
+    # alla base run a 50 Hz senza dichiarare un produttore specifico.
+    line: ".model D_1N4001_TYP D(IS=14n N=1.9 RS=0.08 BV=50 IBV=5u TT=2u CJO=25p)"
+
+  BC148_TYP:
+    # BC148 NPN di piccolo segnale: parametri tipici cauti per una prima
+    # simulazione di soglia, non sostitutivi di un datasheet selezionato.
+    line: ".model BC148_TYP NPN(BF=110 VAF=50 IKF=100m IS=1e-14)"
+
+  SCR_2N3668_TYP:
+    # Equivalente SCR generale a tre terminali A-G-K. Una conduttanza
+    # comportamentale continua evita la discontinuita' numerica del commutatore
+    # ideale durante l'innesco; nel caricabatteria a semionda il gate comanda
+    # comunque la conduzione solo nel semiperiodo positivo.
+    lines:
+      header: ".subckt SCR_2N3668_TYP A G K"
+      main: "BMAIN A K I={V(A,K)*(1/10Meg+(1/0.05-1/10Meg)*(0.5+0.5*tanh((V(G,K)-0.75)/0.08)))}"
+      gate_resistor: "RGK G K 100"
+      footer: ".ends SCR_2N3668_TYP"
+
   BZX79C10_TYP:
     # NBV approssima la resistenza differenziale tipica dichiarata a 1 mA e
     # 5 mA senza spostare la tensione nominale di breakdown a 10 V.
@@ -89,3 +110,15 @@ models:
     # LED generico verde distinto dagli altri colori; non sostituisce un
     # modello di part number specifico non disponibile nell'immagine.
     line: ".model LED_GREEN_TYP D(IS=1e-18 N=2 RS=10)"
+
+  LM386_SIMPLE:
+    # Equivalente lineare generale a cinque terminali per una prima base run.
+    # Rappresenta soltanto ingresso differenziale, guadagno in tensione circa
+    # 20 e resistenza d'uscita; non sostituisce il macromodello del produttore.
+    lines:
+      header: ".subckt LM386_SIMPLE INP INM VCC VEE OUT"
+      input_resistance: "RIN INP INM 50k"
+      amplifier: "EAMP NAMP VEE INP INM 20"
+      output_resistance: "ROUT NAMP OUT 5"
+      supply_bleed: "RBLEED VCC VEE 100k"
+      footer: ".ends LM386_SIMPLE"

@@ -1,0 +1,25 @@
+{
+  "title": "Prova statica batteria molto carica",
+  "hypothesis": "Aumentando la batteria ben sopra i 12 V nominali deve emergere il comportamento del ramo di sovratensione, con aumento o attivazione della corrente del LED verde rispetto alla base run dove era spento.",
+  "intent": "diagnostic",
+  "analysis": "op",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "15V"
+    }
+  ],
+  "compare": [
+    "@dled12_1[id]",
+    "@dled12_2[id]",
+    "@dled12_3[id]",
+    "v(N008)",
+    "v(N009)",
+    "v(N012)"
+  ],
+  "expect": {
+    "@dled12_3[id]": "activated"
+  },
+  "scenario_id": "agent_scenario_2"
+}

@@ -132,8 +132,11 @@ def scenario_verifies_joint_objective(
         for quantity, expectation in expectations.items()
     )
     has_direct_component = any(
-        re.match(r"^[ip]\s*\(", str(quantity), flags=re.IGNORECASE)
-        and str(measurements.get(quantity) or "").strip().lower() == "op"
+        (
+            re.match(r"^[ip]\s*\(", str(quantity), flags=re.IGNORECASE)
+            or re.fullmatch(r"@[^\s\[\]]+\[id\]", str(quantity).strip(), flags=re.IGNORECASE)
+        )
+        and str(measurements.get(quantity) or "").strip().lower() in {"op", "tran_abs_peak"}
         and str(expectation or "").strip().lower() in positive_effects
         for quantity, expectation in expectations.items()
     )

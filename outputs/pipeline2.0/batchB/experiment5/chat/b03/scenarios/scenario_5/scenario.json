@@ -1,0 +1,29 @@
+{
+  "scenario_id": "scenario_5",
+  "title": "Far salire lentamente la batteria da scarica a molto carica",
+  "hypothesis": "Se gli indicatori dipendono dalla tensione della batteria, una salita lenta di Vbattery2_1 deve produrre transizioni temporali osservabili sui nodi dei tre rami LED e sulla corrente della sorgente.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "PWL(0s 10V 3s 16V)"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N002)",
+    "v(N011)",
+    "v(N004)",
+    "v(N012)",
+    "i(vbattery2_1#branch)"
+  ],
+  "expect": {
+    "v(N002)": "changed",
+    "v(N011)": "changed",
+    "v(N004)": "changed",
+    "v(N012)": "changed",
+    "i(vbattery2_1#branch)": "changed"
+  }
+}

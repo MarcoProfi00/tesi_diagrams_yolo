@@ -68,9 +68,16 @@ def safe_scenario_id(value: str) -> str:
 
 
 def scenario_signature(scenario: dict[str, Any]) -> str:
-    """Calcola una firma stabile basata soltanto sulle azioni tecniche."""
+    """Calcola una firma stabile della modifica elettrica e della sua analisi."""
     actions = scenario.get("actions")
-    normalized = actions if isinstance(actions, list) else []
+    # La stessa modifica puo' essere utile sia come punto operativo sia come
+    # transitorio: le due run producono evidenze diverse e non sono duplicate.
+    # Compare, expect e measure non entrano invece nella firma perche' non
+    # modificano la netlist o l'analisi eseguita.
+    normalized = {
+        "actions": actions if isinstance(actions, list) else [],
+        "analysis": str(scenario.get("analysis") or "op").strip().lower(),
+    }
     return json.dumps(normalized, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 

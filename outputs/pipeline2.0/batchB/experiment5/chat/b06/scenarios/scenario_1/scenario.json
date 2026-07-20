@@ -1,0 +1,25 @@
+{
+  "scenario_id": "scenario_1",
+  "title": "Iniettare un piccolo segnale all'ingresso del LM386_SIMPLE",
+  "hypothesis": "The audio stage may be functional but inactive because node N010 receives no useful signal in the base run.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N010",
+      "negative": "0",
+      "value": "SIN(0 5m 1000)"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N010)",
+    "v(N009)",
+    "v(N003)"
+  ],
+  "expect": {
+    "v(N009)": "changed",
+    "v(N003)": "changed"
+  }
+}

@@ -220,6 +220,60 @@ def visual_source_id(component: dict[str, Any]) -> str:
     return str(component.get("source_component_id") or component.get("id") or "")
 
 
+def anchored_geometry_component(
+    component: dict[str, Any],
+    geometry_components: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Costruisce una geometria da due port esterni dichiarati nel viewer."""
+    anchor_ids = [str(item) for item in component.get("viewer_anchor_component_ids") or []]
+    anchors = [geometry_components.get(anchor_id) for anchor_id in anchor_ids]
+    anchors = [item for item in anchors if isinstance(item, dict)]
+    nodes = [str(node) for node in component.get("nodes") or []]
+    terminal_names = [str(name) for name in component.get("terminal_names") or []]
+    if len(anchors) != 2 or len(nodes) < 2:
+        return None
+
+    centers = [item.get("center") or {} for item in anchors]
+    try:
+        center_x = sum(float(item.get("x")) for item in centers) / 2
+        center_y = sum(float(item.get("y")) for item in centers) / 2
+    except (TypeError, ValueError):
+        return None
+    bboxes = [item.get("bbox") for item in anchors]
+    valid_bboxes = [item for item in bboxes if isinstance(item, list) and len(item) == 4]
+    bbox = (
+        [
+            min(float(item[0]) for item in valid_bboxes),
+            min(float(item[1]) for item in valid_bboxes),
+            max(float(item[2]) for item in valid_bboxes),
+            max(float(item[3]) for item in valid_bboxes),
+        ]
+        if valid_bboxes
+        else [center_x - 10, center_y - 30, center_x + 10, center_y + 30]
+    )
+    terminals: dict[str, dict[str, Any]] = {}
+    for index, (anchor, node_id) in enumerate(zip(anchors, nodes)):
+        name = terminal_names[index] if index < len(terminal_names) else f"t{index + 1}"
+        anchor_terminal = next(iter((anchor.get("terminals") or {}).values()), {})
+        anchor_center = anchor.get("center") or {}
+        terminals[name] = {
+            "id": str(anchor_terminal.get("id") or f"{anchor_ids[index]}_t1"),
+            "name": name,
+            "relative_position": "top" if index == 0 else "bottom",
+            "x": anchor_terminal.get("x", anchor_center.get("x")),
+            "y": anchor_terminal.get("y", anchor_center.get("y")),
+            "node_id": node_id,
+        }
+    return {
+        "component_id": visual_source_id(component),
+        "class_name": str(component.get("viewer_kind") or "Component"),
+        "bbox": bbox,
+        "center": {"x": center_x, "y": center_y},
+        "estimated_orientation": "vertical" if abs(float(centers[1]["y"]) - float(centers[0]["y"])) >= abs(float(centers[1]["x"]) - float(centers[0]["x"])) else "horizontal",
+        "terminals": terminals,
+    }
+
+
 def normalize_orientation(value: Any) -> str:
     """Riduce le orientazioni della Pipeline 1.0 alle varianti del renderer."""
     orientation = str(value or "").lower()
@@ -237,16 +291,33 @@ def match_geometry_terminals(
     geometry_terminals = geometry_component.get("terminals") or {}
     matched: list[dict[str, Any]] = []
     used_names: set[str] = set()
+    terminal_names = [str(name) for name in component.get("terminal_names") or []]
 
     # La corrispondenza per nodo evita di dipendere dai nomi t1, anode o pin1.
     for index, node_id in enumerate(component.get("nodes") or [], start=1):
         selected_name = ""
         selected: dict[str, Any] = {}
+        logical_name = terminal_names[index - 1] if index <= len(terminal_names) else ""
+        if logical_name and logical_name in geometry_terminals and logical_name not in used_names:
+            selected_name = logical_name
+            selected = geometry_terminals[logical_name]
         for name, terminal in geometry_terminals.items():
-            if name not in used_names and str(terminal.get("node_id") or "") == str(node_id):
+            if not selected and name not in used_names and str(terminal.get("node_id") or "") == str(node_id):
                 selected_name = str(name)
                 selected = terminal
                 break
+        if not selected and logical_name and logical_name not in geometry_terminals:
+            # Un pin aggiunto dall'overlay SPICE non possiede coordinate OCR.
+            # Parte dal centro e viene collocato dallo standardizzatore del
+            # simbolo, mantenendo dichiarativi nome e nodo elettrico.
+            center = geometry_component.get("center") or {}
+            selected_name = logical_name
+            selected = {
+                "id": f"{visual_source_id(component)}_{logical_name}",
+                "relative_position": "synthetic",
+                "x": center.get("x"),
+                "y": center.get("y"),
+            }
         if not selected:
             remaining = [(name, item) for name, item in geometry_terminals.items() if name not in used_names]
             if remaining:
@@ -309,6 +380,77 @@ def standardize_terminals(
         for index, terminal in enumerate(ordered):
             terminal["x"] = center_x - spec["width"] / 2
             terminal["y"] = center_y + (-22.0 if index == 0 else 22.0)
+        return ordered
+
+    if component_type == "speaker" and len(standardized) == 2:
+        # L'altoparlante conserva due terminali sullo stesso lato, come il
+        # simbolo elettrico, lasciando il cono libero sul lato opposto.
+        ordered = sorted(standardized, key=lambda item: float(item.get("y") or 0))
+        for index, terminal in enumerate(ordered):
+            terminal["x"] = center_x - spec["width"] / 2
+            terminal["y"] = center_y + (-22.0 if index == 0 else 22.0)
+        return ordered
+
+    if component_type == "operational_amplifier" and len(standardized) >= 3:
+        # Schema comune per operazionali e amplificatori audio a triangolo:
+        # ingressi a sinistra, uscita a destra, alimentazioni sopra e sotto.
+        by_name = {str(item.get("name") or "").lower(): item for item in standardized}
+        positions = {
+            "in1": (-spec["width"] / 2, -18.0),
+            "inp": (-spec["width"] / 2, -18.0),
+            "in2": (-spec["width"] / 2, 18.0),
+            "inm": (-spec["width"] / 2, 18.0),
+            "out": (spec["width"] / 2, 0.0),
+            "aux1": (4.0, -spec["height"] / 2),
+            "vcc": (4.0, -spec["height"] / 2),
+            "aux2": (4.0, spec["height"] / 2),
+            "vee": (4.0, spec["height"] / 2),
+        }
+        ordered: list[dict[str, Any]] = []
+        used_ids: set[int] = set()
+        for name, offset in positions.items():
+            terminal = by_name.get(name)
+            if terminal is None or id(terminal) in used_ids:
+                continue
+            terminal.update({"x": center_x + offset[0], "y": center_y + offset[1]})
+            ordered.append(terminal)
+            used_ids.add(id(terminal))
+        for terminal in standardized:
+            if id(terminal) not in used_ids:
+                terminal.update({"x": center_x, "y": center_y})
+                ordered.append(terminal)
+        return ordered
+
+    if component_type == "scr" and len(standardized) >= 3:
+        # SCR standard: anodo e catodo sull'asse principale, gate in basso
+        # vicino al catodo. I nomi provengono dalla node_order dello step 06.
+        by_name = {str(item.get("name") or "").lower(): item for item in standardized}
+        anode = by_name.get("anode") or standardized[0]
+        gate = by_name.get("gate") or standardized[1]
+        cathode = by_name.get("cathode") or standardized[-1]
+        anode.update({"x": center_x - spec["width"] / 2, "y": center_y})
+        cathode.update({"x": center_x + spec["width"] / 2, "y": center_y})
+        gate.update({"x": center_x + 12.0, "y": center_y + spec["height"] / 2})
+        return [anode, gate, cathode]
+
+    if component_type == "transformer" and len(standardized) >= 4:
+        # Il trasformatore conserva le quattro porte del Graph anche quando
+        # SPICE emette soltanto una sorgente equivalente sul secondario.
+        by_name = {str(item.get("name") or "").lower(): item for item in standardized}
+        offsets = {
+            "t1": (-spec["width"] / 2, -25.0),
+            "t2": (spec["width"] / 2, -25.0),
+            "t3": (-spec["width"] / 2, 25.0),
+            "t4": (spec["width"] / 2, 25.0),
+        }
+        ordered: list[dict[str, Any]] = []
+        for name in ("t1", "t2", "t3", "t4"):
+            terminal = by_name.get(name)
+            if terminal is None:
+                continue
+            offset_x, offset_y = offsets[name]
+            terminal.update({"x": center_x + offset_x, "y": center_y + offset_y})
+            ordered.append(terminal)
         return ordered
 
     if len(standardized) == 2:
@@ -575,6 +717,86 @@ def translate_component(component: dict[str, Any], delta_x: float, delta_y: floa
     for terminal in component.get("terminals") or []:
         terminal["x"] = float(terminal.get("x") or 0) + delta_x
         terminal["y"] = float(terminal.get("y") or 0) + delta_y
+
+
+def separate_supply_switch_chain_from_parallel_capacitor(
+    positioned: dict[str, dict[str, Any]],
+) -> None:
+    """Separa una dorsale sorgente-switch da un condensatore posto in parallelo.
+
+    La regola usa esclusivamente i nodi: se sorgente e switch sono in serie e
+    i loro due nodi esterni coincidono con quelli di un condensatore, i tre
+    elementi descrivono una tipica alimentazione con bypass. La dorsale viene
+    spostata sul lato in cui si trova gia', senza cambiare alcun collegamento.
+    """
+    capacitors = [
+        component
+        for component in positioned.values()
+        if "capacitor" in str(component.get("component_type") or "")
+        and len(component.get("terminals") or []) == 2
+    ]
+    switches = [
+        component
+        for component in positioned.values()
+        if str(component.get("component_type") or "") == "switch"
+        and len(component.get("terminals") or []) == 2
+    ]
+    sources = [
+        component
+        for component in positioned.values()
+        if str(component.get("component_type") or "") in {"battery", "voltage_source", "dc_supply"}
+        and len(component.get("terminals") or []) == 2
+    ]
+
+    def terminal_nodes(component: dict[str, Any]) -> set[str]:
+        return {
+            str(terminal.get("node_id") or "")
+            for terminal in component.get("terminals") or []
+            if str(terminal.get("node_id") or "")
+        }
+
+    moved_chains: set[tuple[int, int]] = set()
+    minimum_axis_clearance = 72.0
+    for switch in switches:
+        switch_nodes = terminal_nodes(switch)
+        for source in sources:
+            source_nodes = terminal_nodes(source)
+            common_nodes = switch_nodes & source_nodes
+            if len(common_nodes) != 1:
+                continue
+            common_node = next(iter(common_nodes))
+            external_nodes = (switch_nodes | source_nodes) - {common_node}
+            if len(external_nodes) != 2:
+                continue
+            chain_key = tuple(sorted((id(switch), id(source))))
+            if chain_key in moved_chains:
+                continue
+            capacitor = next(
+                (item for item in capacitors if terminal_nodes(item) == external_nodes),
+                None,
+            )
+            if capacitor is None:
+                continue
+
+            capacitor_x = float(capacitor.get("x") or 0)
+            chain_x = [float(switch.get("x") or 0), float(source.get("x") or 0)]
+            chain_center_x = sum(chain_x) / len(chain_x)
+            if abs(chain_center_x - capacitor_x) >= minimum_axis_clearance:
+                continue
+
+            if chain_center_x >= capacitor_x:
+                delta_x = capacitor_x + minimum_axis_clearance - min(chain_x)
+                right_edge = max(component_symbol_bounds(item)[2] for item in (switch, source))
+                delta_x = min(delta_x, VIEWER_CONTENT_WIDTH - 12.0 - right_edge)
+            else:
+                delta_x = capacitor_x - minimum_axis_clearance - max(chain_x)
+                left_edge = min(component_symbol_bounds(item)[0] for item in (switch, source))
+                delta_x = max(delta_x, 12.0 - left_edge)
+
+            if abs(delta_x) > 0.01:
+                translate_component(switch, delta_x, 0.0)
+                translate_component(source, delta_x, 0.0)
+                moved_chains.add(chain_key)
 
 
 def component_spacing_weight(component: dict[str, Any]) -> float:
@@ -1189,6 +1411,8 @@ def build_image_guided_components(
         component_id = str(component.get("id") or "")
         source_id = visual_source_id(component)
         geometry_component = geometry_components.get(source_id)
+        if not geometry_component:
+            geometry_component = anchored_geometry_component(component, geometry_components)
         if not component_id:
             continue
         if not geometry_component:
@@ -2085,6 +2309,7 @@ def build_viewer_layout(run_dir: Path) -> dict[str, Any]:
     align_near_perpendicular_leads(component_positions)
     align_near_series_components(component_positions)
     align_direct_battery_connector_links(component_positions)
+    separate_supply_switch_chain_from_parallel_capacitor(component_positions)
     realign_connector_bridges(component_positions)
     align_connector_ground_symbols(component_positions, model)
     align_direct_vertical_ground_symbols(component_positions, model)

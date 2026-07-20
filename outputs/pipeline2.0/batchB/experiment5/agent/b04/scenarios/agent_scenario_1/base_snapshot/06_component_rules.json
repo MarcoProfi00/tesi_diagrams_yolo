@@ -1,0 +1,466 @@
+{
+  "circuit_id": "b04",
+  "source_format": "pipeline2.0_component_rules",
+  "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\pipeline2_manual_values\\batchB\\b04_values.yaml",
+  "spice_classes_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\pipeline2_spice_classes.yaml",
+  "supplies": {
+    "VBAT_TEST": {
+      "status": "spice_ready",
+      "spice_prefix": "V",
+      "emit_as": "independent_voltage_source",
+      "nodes": [
+        "N009",
+        "0"
+      ],
+      "parameters": {
+        "terminal": "terminal26.3_t1",
+        "return_terminal": "terminal26.4_t1",
+        "type": "dc",
+        "value": 12,
+        "unit": "V",
+        "reference": 0,
+        "source": "manual_assumption_nominal_12v_battery_testbench",
+        "label_text": "Batteria esterna di prova: 12 V nominali",
+        "viewer_override": {
+          "visual_class": "battery",
+          "label": "",
+          "display_value": "12 V",
+          "label_mode": "value_only",
+          "tooltip": "Batteria esterna in carica; tensione di prova 12 V"
+        },
+        "node": "N009",
+        "return_node": "N010"
+      }
+    },
+    "VREF_BATTERY_NEGATIVE": {
+      "status": "spice_ready",
+      "spice_prefix": "V",
+      "emit_as": "independent_voltage_source",
+      "nodes": [
+        "N010",
+        "0"
+      ],
+      "parameters": {
+        "terminal": "terminal26.4_t1",
+        "type": "dc",
+        "value": 0,
+        "unit": "V",
+        "reference": 0,
+        "source": "manual_reference_for_floating_charger_circuit",
+        "label_text": "Negativo batteria e ritorno secondario: riferimento SPICE",
+        "node": "N010"
+      }
+    }
+  },
+  "components": {
+    "diode7.1": {
+      "class_name": "Diode",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "D",
+      "emit_as": "diode",
+      "node_order": [
+        "anode",
+        "cathode"
+      ],
+      "nodes": [
+        "N001",
+        "N002"
+      ],
+      "parameters": {
+        "model": "D_1N4001_TYP",
+        "source": "manual_from_image_label",
+        "label_text": "D1 1N4001"
+      }
+    },
+    "diode7.2": {
+      "class_name": "Diode",
+      "status": "spice_ready",
+      "spice_support": "subcircuit",
+      "spice_prefix": "X",
+      "emit_as": "subcircuit",
+      "node_order": [
+        "anode",
+        "gate",
+        "cathode"
+      ],
+      "nodes": [
+        "N003",
+        "H1_GATE",
+        "N004"
+      ],
+      "parameters": {
+        "model": "SCR_2N3668_TYP",
+        "source": "manual_semantic_correction_from_image_label",
+        "label_text": "H1 2N3668 SCR",
+        "viewer_override": {
+          "visual_class": "scr",
+          "label": "H1",
+          "display_value": "2N3668 SCR"
+        },
+        "spice_override": {
+          "emit_as": "subcircuit",
+          "pin_order": [
+            "anode",
+            "gate",
+            "cathode"
+          ],
+          "node_refs": {
+            "anode": "diode7.2_anode",
+            "gate": "diode7.3_cathode",
+            "cathode": "diode7.2_cathode"
+          },
+          "resolved_node_refs": {
+            "anode": "N003",
+            "gate": "H1_GATE",
+            "cathode": "N004"
+          }
+        }
+      },
+      "reason": "Explicit YAML override emitted as a SPICE subcircuit."
+    },
+    "diode7.3": {
+      "class_name": "Diode",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "D",
+      "emit_as": "diode",
+      "node_order": [
+        "anode",
+        "cathode"
+      ],
+      "nodes": [
+        "N001",
+        "H1_GATE"
+      ],
+      "parameters": {
+        "model": "D_1N4001_TYP",
+        "source": "manual_from_image_label",
+        "label_text": "D3 1N4001"
+      }
+    },
+    "diode7.4": {
+      "class_name": "Diode",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "D",
+      "emit_as": "diode",
+      "node_order": [
+        "anode",
+        "cathode"
+      ],
+      "nodes": [
+        "N005",
+        "N004"
+      ],
+      "parameters": {
+        "model": "D_1N4001_TYP",
+        "source": "manual_from_image_label",
+        "label_text": "D4 1N4001"
+      }
+    },
+    "diode7.5": {
+      "class_name": "Diode",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "D",
+      "emit_as": "diode",
+      "node_order": [
+        "anode",
+        "cathode"
+      ],
+      "nodes": [
+        "N006",
+        "N007"
+      ],
+      "parameters": {
+        "model": "D_GENERIC",
+        "source": "manual_generic_model_for_image_label_SD50",
+        "label_text": "D2 SD50; modello diodo generico per la prima base run",
+        "viewer_override": {
+          "visual_class": "diode",
+          "label": "D2",
+          "display_value": "SD50"
+        }
+      }
+    },
+    "fuse8.1": {
+      "class_name": "Fuse",
+      "status": "spice_ready",
+      "spice_support": "simplified",
+      "spice_prefix": null,
+      "emit_as": null,
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N008",
+        "N009"
+      ],
+      "parameters": {
+        "state": "closed",
+        "current_rating": 2,
+        "current_rating_unit": "A",
+        "source": "manual_from_image_label",
+        "label_text": "F1 2 A, chiuso"
+      },
+      "strategy": "short_circuit"
+    },
+    "npn_transistor18.1": {
+      "class_name": "NPN_Transistor",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "Q",
+      "emit_as": "bjt_npn",
+      "node_order": [
+        "C",
+        "B",
+        "E"
+      ],
+      "nodes": [
+        "N002",
+        "N007",
+        "N010"
+      ],
+      "parameters": {
+        "model": "BC148_TYP",
+        "source": "manual_from_image_label_and_functional_spice_validation",
+        "label_text": "Q1 BC148 NPN"
+      }
+    },
+    "resistor22.1": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N003",
+        "N005"
+      ],
+      "parameters": {
+        "value": 22,
+        "unit": "ohm",
+        "power": 5,
+        "power_unit": "W",
+        "source": "manual_from_image_label",
+        "label_text": "R2 22 ohm 5 W"
+      }
+    },
+    "resistor22.2": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N003",
+        "N001"
+      ],
+      "parameters": {
+        "value": 330,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "R1 330 ohm"
+      }
+    },
+    "resistor22.3": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N004",
+        "N011"
+      ],
+      "parameters": {
+        "value": 820,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "R3 820 ohm"
+      }
+    },
+    "resistor22.4": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N006",
+        "N010"
+      ],
+      "parameters": {
+        "value": 100,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "R5 100 ohm"
+      }
+    },
+    "resistor22.5": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "equivalent",
+      "spice_prefix": "R",
+      "emit_as": "resistive_load",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N011",
+        "N006"
+      ],
+      "parameters": {
+        "value": 50,
+        "unit": "ohm",
+        "nominal_total_value": 100,
+        "nominal_total_unit": "ohm",
+        "source": "manual_from_image_label_midpoint_assumption",
+        "label_text": "R4 variabile 100 ohm; equivalente base run 50 ohm",
+        "viewer_override": {
+          "visual_class": "resistor",
+          "label": "R4",
+          "display_value": "100 ohm",
+          "tooltip": "R4; potenziometro 100 ohm, equivalente SPICE base run 50 ohm"
+        },
+        "spice_override": {
+          "emit_as": "resistive_load",
+          "equivalent_resistance": 50,
+          "resistance_unit": "ohm",
+          "node_order": [
+            "t1",
+            "t2"
+          ]
+        },
+        "equivalent_resistance": 50,
+        "resistance_unit": "ohm"
+      },
+      "reason": "Explicit YAML override emitted as an equivalent resistive load."
+    },
+    "resistor22.6": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N004",
+        "N008"
+      ],
+      "parameters": {
+        "value": 1,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "R6 1 ohm"
+      }
+    },
+    "terminal26.1": {
+      "class_name": "Terminal",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "External terminal/label; useful for nodes and interface handling."
+    },
+    "terminal26.2": {
+      "class_name": "Terminal",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "External terminal/label; useful for nodes and interface handling."
+    },
+    "terminal26.3": {
+      "class_name": "Terminal",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "External terminal/label; useful for nodes and interface handling."
+    },
+    "terminal26.4": {
+      "class_name": "Terminal",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "External terminal/label; useful for nodes and interface handling."
+    },
+    "transformer28.1": {
+      "class_name": "Transformer",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "V",
+      "emit_as": "equivalent_ac_source",
+      "node_order": [
+        "t2",
+        "t4"
+      ],
+      "nodes": [
+        "N003",
+        "N010"
+      ],
+      "parameters": {
+        "model": "T1_230VAC_TO_15VAC_EQ",
+        "secondary_voltage_rms": 15,
+        "frequency": 50,
+        "source": "manual_from_image_label",
+        "label_text": "T1: primario 230 V AC, secondario 15-0 V AC",
+        "viewer_override": {
+          "visual_class": "transformer",
+          "label": "T1",
+          "display_value": "230 V AC / 15-0 V AC",
+          "label_mode": "reference_only",
+          "tooltip": "T1; trasformatore 230 V AC / 15-0 V AC",
+          "include_graph_terminals": true
+        },
+        "spice_override": {
+          "emit_as": "equivalent_ac_source",
+          "node_order": [
+            "t2",
+            "t4"
+          ],
+          "waveform": "sin",
+          "source": "manual_transformer_secondary_pinout_from_image"
+        }
+      }
+    }
+  },
+  "simulation": {
+    "analyses": [
+      "op",
+      "tran"
+    ],
+    "tran": {
+      "step": "100us",
+      "stop": "100ms"
+    },
+    "readiness": "ready"
+  },
+  "stats": {
+    "components_total": 18,
+    "spice_ready_components": 14,
+    "not_emitted_components": 4,
+    "measurement_components": 0,
+    "missing_components": 0,
+    "unsupported_components": 0,
+    "pin_aware_components": 0,
+    "invalid_components": 0,
+    "supplies_ready_count": 2
+  }
+}
