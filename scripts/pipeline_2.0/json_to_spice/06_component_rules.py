@@ -4,7 +4,7 @@ Regole di conversione e classificazione dei componenti.
 Questo modulo definisce come trattare ogni classe di componente riconosciuta
 dalla pipeline_1.0 nella fase elettrica.
 
-Esempi di decisioni previste:
+Esempi di trattamenti descritti dal contratto:
 
 - Resistor -> elemento SPICE R se il valore e disponibile;
 - Capacitor -> elemento SPICE C se il valore e disponibile;
@@ -16,8 +16,8 @@ Esempi di decisioni previste:
 - Connector/Terminal -> non simulabili direttamente, ma utili per nodi;
 - Integrated_Circuit -> modello SPICE, modello semplificato o black box pin-aware.
 
-Le regole dovranno contribuire a stabilire lo stato del circuito:
-READY, PARTIAL o NOT_READY.
+Le regole classificano ogni componente come emettibile, strutturale,
+misurabile, incompleto oppure non ancora supportato.
 """
 
 from __future__ import annotations
@@ -232,7 +232,7 @@ def classify_component_rule(
     component_data: dict[str, Any],
     class_rule: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    """Apply a single SPICE rule to an already value-bound component."""
+    """Applica una regola SPICE a un componente con valori gia associati."""
     class_name = component_data.get("class_name")
     value_data = component_data.get("value_data") or {}
     terminal_nodes = component_data.get("terminal_nodes") or {}

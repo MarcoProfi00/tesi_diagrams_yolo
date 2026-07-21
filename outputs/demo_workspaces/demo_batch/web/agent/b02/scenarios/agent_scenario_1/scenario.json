@@ -1,0 +1,43 @@
+{
+  "title": "Rottura controllata della simmetria iniziale sui due nodi base",
+  "hypothesis": "Il circuito puo oscillare ma la soluzione simmetrica del punto operativo lo blocca; imponendo condizioni iniziali diverse e saltando l'OP si verifica se il lampeggio alternato compare senza cambiare topologia o valori.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "set_initial_node_voltage",
+      "target": "N004",
+      "value": "0V",
+      "skip_operating_point": true
+    },
+    {
+      "type": "set_initial_node_voltage",
+      "target": "N006",
+      "value": "5V",
+      "skip_operating_point": true
+    }
+  ],
+  "compare": [
+    "v(N004)",
+    "v(N006)",
+    "@dled12_1[id]",
+    "@dled12_2[id]"
+  ],
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak",
+    "@dled12_2[id]": "tran_abs_peak"
+  },
+  "expect": {
+    "v(N004)": "changed",
+    "v(N006)": "changed",
+    "@dled12_1[id]": "nonzero",
+    "@dled12_2[id]": "nonzero"
+  },
+  "temporal_expect": {
+    "target": "Dled12_1",
+    "required_state": "blinking",
+    "require_regular_period": true,
+    "min_duty_cycle": 0.1
+  },
+  "scenario_id": "agent_scenario_1"
+}

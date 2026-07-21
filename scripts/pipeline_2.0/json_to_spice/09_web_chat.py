@@ -1,5 +1,5 @@
 """
-Interfaccia web locale temporanea per la chat diagnostica.
+Interfaccia web locale per CHAT e AGENT.
 
 Questo script avvia un piccolo server locale, senza database e senza stato
 persistente obbligatorio. Serve come step 09 della Pipeline 2.0 per
@@ -9,7 +9,7 @@ scenari controllati.
 La parte HTML vive in `web_chat/templates/`, cosi il layout puo crescere senza
 trasformare questo script in un file troppo grande.
 
-Responsabilita della versione corrente:
+Responsabilita:
 
 - aprire una pagina locale nel browser;
 - mostrare la base run e le eventuali scenario run del circuito selezionato;
@@ -62,6 +62,7 @@ from scenario_runtime import (
     scenario_signature,
 )
 from scenario_expectations import ALLOWED_EXPECTATIONS
+from run_sources import get_run_source_path
 from viewer_core.contracts import (
     VIEWER_LAYOUT_NAME,
     VIEWER_LAYOUT_SCHEMA_VERSION,
@@ -69,6 +70,13 @@ from viewer_core.contracts import (
     VIEWER_MODEL_SCHEMA_VERSION,
     VIEWER_RENDER_VERSION,
     VIEWER_SVG_NAME,
+)
+from web_chat_core import (
+    escape_block,
+    is_safe_path_name,
+    read_json_safe,
+    read_text_safe,
+    unescape_html_entities,
 )
 
 
@@ -102,8 +110,6 @@ CHAT_RESPONSE_NAME = "11_agent_response_chat.md"
 MAX_EXECUTABLE_SCENARIOS = 5
 EXPERIMENT2_CHAT_DIRNAME = "experiment2_chat"
 INTERACTIVE_CHAT_DIRNAME = "experiment_chat"
-# Experiment 5 riusa le sessioni isolate di CHAT/AGENT gia validate in Experiment 4.
-INTERACTIVE_HISTORY_EXPERIMENTS = {"experiment3_1", "experiment4", "experiment5"}
 MULTI_WORKSPACE_EXPERIMENTS = {"experiment4", "experiment5"}
 CHAT_HISTORY_JSON_NAME = "chat_history.json"
 CHAT_HISTORY_MD_NAME = "chat_history.md"
@@ -148,54 +154,6 @@ SCENARIO_ROOT_ARTIFACTS = [
 
 
 IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg"]
-
-
-def is_safe_path_name(name: str | None) -> bool:
-    """Accetta solo nomi semplici per segmenti di path controllati da CLI."""
-    if name is None:
-        return True
-    return bool(re.fullmatch(r"[A-Za-z0-9_.-]+", name)) and name not in {".", ".."}
-
-def read_text_safe(path: Path) -> str:
-    """Legge un file testuale senza far fallire il server se manca."""
-    if not path.exists():
-        return "File not available yet."
-    try:
-        return path.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
-        return path.read_text(encoding="utf-8", errors="replace")
-
-
-def read_json_safe(path: Path) -> dict[str, Any]:
-    """Legge un JSON quando possibile, altrimenti restituisce un dizionario vuoto."""
-    if not path.exists():
-        return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return {}
-    return data if isinstance(data, dict) else {}
-
-
-def unescape_html_entities(value: Any) -> Any:
-    """
-    Decodifica entita HTML dentro stringhe, liste e dizionari semplici.
-
-    Ci serve per evitare che testi come `dell&#x27;emettitore` finiscano visibili
-    nella UI quando uno scenario e stato salvato con caratteri gia escapati.
-    """
-    if isinstance(value, str):
-        return html.unescape(value)
-    if isinstance(value, list):
-        return [unescape_html_entities(item) for item in value]
-    if isinstance(value, dict):
-        return {key: unescape_html_entities(item) for key, item in value.items()}
-    return value
-
-
-def escape_block(text: str) -> str:
-    """Prepara testo tecnico da mostrare dentro un blocco pre."""
-    return html.escape(text, quote=False)
 
 
 def repair_common_mojibake(text: str) -> str:
@@ -333,9 +291,8 @@ def project_relative(path: Path) -> str:
 
 
 def is_experiment2_history_enabled(experiment: str | None) -> bool:
-    """Abilita history/registry per le root interattive supportate."""
-    normalized_experiment = str(experiment or "")
-    return normalized_experiment.startswith("experiment2") or normalized_experiment in INTERACTIVE_HISTORY_EXPERIMENTS
+    """Abilita history e registry per ogni sessione interattiva nominata."""
+    return bool(str(experiment or "").strip())
 
 
 def build_experiment2_chat_dir(output_dir: Path, experiment: str | None) -> Path | None:
@@ -1150,6 +1107,10 @@ def build_output_dir(
 
 def find_input_image_path(batch: str, circuit: str, output_dir: Path) -> Path | None:
     """Trova l'immagine originale usata dalla Pipeline 1.0, quando disponibile."""
+    declared_image = get_run_source_path(output_dir, "input_image")
+    if declared_image is not None and declared_image.is_file():
+        return declared_image
+
     graph = read_json_safe(output_dir / "01_graph.json")
     image_name = graph.get("image_name")
     image_candidates: list[Path] = []
@@ -2504,7 +2465,7 @@ def handle_scenario_request(
 
 
 class WebChatHandler(BaseHTTPRequestHandler):
-    """Gestisce la pagina web e le piccole API locali dello scheletro."""
+    """Gestisce la pagina web e le API locali della sessione diagnostica."""
 
     server: "WebChatServer"
 
@@ -2929,6 +2890,80 @@ class WebChatServer(ThreadingHTTPServer):
         return selected_mode
 
 
+def serve_web_chat(
+    *,
+    batch: str,
+    circuit: str,
+    output_dir: Path,
+    experiment: str | None = None,
+    variant: str | None = None,
+    host: str = "127.0.0.1",
+    port: int = 8765,
+    ngspice_executable: str | None = None,
+    workspace_dirs: dict[str, Path] | None = None,
+    default_workspace_mode: str | None = None,
+    open_browser: bool = True,
+) -> None:
+    """Avvia la webchat su directory gia risolte dal chiamante.
+
+    L'interfaccia esplicita permette all'orchestratore unificato di fornire le
+    due copie CHAT/AGENT senza dipendere dalla struttura storica degli output.
+    """
+    resolved_output_dir = Path(output_dir).resolve()
+    resolved_workspaces = {
+        mode: Path(path).resolve()
+        for mode, path in (workspace_dirs or {}).items()
+    }
+    missing_workspaces = [
+        mode for mode, path in resolved_workspaces.items() if not path.is_dir()
+    ]
+    if missing_workspaces:
+        raise FileNotFoundError(
+            "Workspace web mancanti: " + ", ".join(missing_workspaces)
+        )
+    if not resolved_output_dir.is_dir():
+        raise FileNotFoundError(
+            f"Directory output Pipeline 2.0 non trovata: {resolved_output_dir}"
+        )
+    if not INDEX_TEMPLATE.is_file():
+        raise FileNotFoundError(f"Template webchat non trovato: {INDEX_TEMPLATE}")
+
+    server = WebChatServer(
+        (host, port),
+        WebChatHandler,
+        batch=batch,
+        circuit=circuit,
+        experiment=experiment,
+        output_dir=resolved_output_dir,
+        ngspice_executable=ngspice_executable,
+        workspace_dirs=resolved_workspaces,
+        default_workspace_mode=default_workspace_mode,
+    )
+
+    url = f"http://{host}:{port}/"
+    if default_workspace_mode:
+        url += f"?mode={default_workspace_mode}"
+    print(f"Pipeline 2.0 diagnostic web chat: {url}")
+    if experiment:
+        print(f"Experiment: {experiment}")
+    if variant:
+        print(f"Variant: {variant}")
+    if resolved_workspaces:
+        print(f"Workspace modes: {', '.join(resolved_workspaces)}")
+    print(f"Output directory: {resolved_output_dir}")
+    print("Press Ctrl+C to stop the temporary local server.")
+
+    if open_browser and os.environ.get("PIPELINE2_NO_BROWSER") != "1":
+        webbrowser.open(url)
+
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nStopping web chat server.")
+    finally:
+        server.server_close()
+
+
 def parse_args() -> argparse.Namespace:
     """Legge gli argomenti da terminale."""
     parser = argparse.ArgumentParser(description="Launch the temporary Pipeline 2.0 diagnostic web chat.")
@@ -2955,7 +2990,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
-    """Avvia il server locale temporaneo."""
+    """Avvia il server diagnostico locale."""
     args = parse_args()
     if not is_safe_path_name(args.experiment):
         raise SystemExit(f"Invalid experiment name: {args.experiment}")
@@ -2982,45 +3017,22 @@ def main() -> None:
     else:
         output_dir = build_output_dir(args.batch, args.circuit, args.experiment, args.variant)
 
-    if not output_dir.exists():
-        raise SystemExit(f"Pipeline 2.0 output directory not found: {output_dir}")
-    if not INDEX_TEMPLATE.exists():
-        raise SystemExit(f"Web chat template not found: {INDEX_TEMPLATE}")
-
-    server = WebChatServer(
-        (args.host, args.port),
-        WebChatHandler,
-        batch=args.batch,
-        circuit=args.circuit,
-        experiment=args.experiment,
-        output_dir=output_dir,
-        ngspice_executable=args.ngspice_executable,
-        workspace_dirs=workspace_dirs,
-        default_workspace_mode=default_workspace_mode,
-    )
-
-    url = f"http://{args.host}:{args.port}/"
-    if default_workspace_mode:
-        url += f"?mode={default_workspace_mode}"
-    print(f"Pipeline 2.0 diagnostic web chat: {url}")
-    if args.experiment:
-        print(f"Experiment: {args.experiment}")
-    if args.variant:
-        print(f"Variant: {args.variant}")
-    if workspace_dirs:
-        print(f"Workspace modes: {', '.join(workspace_dirs)}")
-    print(f"Output directory: {output_dir}")
-    print("Press Ctrl+C to stop the temporary local server.")
-
-    if not args.no_browser and os.environ.get("PIPELINE2_NO_BROWSER") != "1":
-        webbrowser.open(url)
-
     try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        print("\nStopping web chat server.")
-    finally:
-        server.server_close()
+        serve_web_chat(
+            batch=args.batch,
+            circuit=args.circuit,
+            experiment=args.experiment,
+            variant=args.variant,
+            output_dir=output_dir,
+            host=args.host,
+            port=args.port,
+            ngspice_executable=args.ngspice_executable,
+            workspace_dirs=workspace_dirs,
+            default_workspace_mode=default_workspace_mode,
+            open_browser=not args.no_browser,
+        )
+    except FileNotFoundError as error:
+        raise SystemExit(str(error)) from error
 
 
 if __name__ == "__main__":

@@ -27,6 +27,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from run_sources import get_run_source_path
+
 MAX_EXECUTABLE_SCENARIOS = 5
 VIEWER_MODEL_FILENAME = "13_viewer_model.json"
 
@@ -163,8 +165,14 @@ def find_image_path(
     project_root: Path | None,
     batch_name: str,
     circuit_id: str,
+    output_dir: Path | None = None,
 ) -> Path | None:
     """Trova l'immagine originale senza includerla nel manifest."""
+    if output_dir is not None:
+        declared_image = get_run_source_path(output_dir, "input_image")
+        if declared_image is not None and declared_image.is_file():
+            return declared_image
+
     if project_root is None:
         return None
 
@@ -180,9 +188,10 @@ def build_image_access(
     project_root: Path | None,
     batch_name: str,
     circuit_id: str,
+    output_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Definisce quando l'agente puo richiedere l'immagine originale."""
-    image_path = find_image_path(project_root, batch_name, circuit_id)
+    image_path = find_image_path(project_root, batch_name, circuit_id, output_dir)
     return {
         "included_by_default": False,
         "can_be_requested": image_path is not None,
@@ -478,7 +487,7 @@ def build_diagnostic_context(
         "executed_scenarios": executed_scenarios,
         "scenario_outcome_summary": build_scenario_outcome_summary(executed_scenarios, root),
         "scenario_budget": build_scenario_budget(executed_scenarios),
-        "image_access": build_image_access(root, batch_name, circuit_id),
+        "image_access": build_image_access(root, batch_name, circuit_id, circuit_dir),
         "agent_mode": "graph_grounded_readonly",
         "agent_rules": build_agent_rules(),
     }

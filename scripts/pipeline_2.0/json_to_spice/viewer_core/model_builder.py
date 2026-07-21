@@ -17,6 +17,8 @@ from pathlib import Path
 from statistics import median
 from typing import Any
 
+from run_sources import get_run_source_path
+
 from .contracts import (
     NETLIST_NAME,
     PROJECT_ROOT,
@@ -32,6 +34,53 @@ LED_VISIBLE_CURRENT_A = 1e-4
 LED_BRANCH_SIGNAL_MIN_SPAN_V = 0.5
 LED_PLAYBACK_SLOWDOWN = 10.0
 LED_PERIOD_RELATIVE_TOLERANCE = 0.15
+
+
+def led_current_states_with_hysteresis(
+    currents: list[float],
+) -> tuple[list[bool], float, float]:
+    """
+    Converte la corrente LED in stati stabili con una soglia isteretica.
+
+    ngspice puo oscillare numericamente attorno alla soglia di visibilita e
+    produrre false commutazioni a ogni campione. Le due soglie si adattano
+    all'escursione misurata. Una modulazione ad alto contrasto distingue inoltre
+    uno stato luminoso da uno molto piu debole, anche quando il modello SPICE
+    ideale non porta la corrente esattamente a zero.
+    """
+    if not currents:
+        return [], LED_VISIBLE_CURRENT_A, LED_VISIBLE_CURRENT_A
+    current_min = min(currents)
+    current_max = max(currents)
+    if current_max < LED_VISIBLE_CURRENT_A:
+        return [False] * len(currents), LED_VISIBLE_CURRENT_A, LED_VISIBLE_CURRENT_A
+    current_span = current_max - current_min
+    high_contrast_modulation = (
+        current_span >= LED_VISIBLE_CURRENT_A
+        and current_min <= 0.25 * current_max
+    )
+    if current_min >= LED_VISIBLE_CURRENT_A and not high_contrast_modulation:
+        return [True] * len(currents), LED_VISIBLE_CURRENT_A, LED_VISIBLE_CURRENT_A
+
+    turn_on_threshold = max(
+        LED_VISIBLE_CURRENT_A,
+        current_min + 0.40 * current_span,
+    )
+    relative_turn_off = current_min + 0.15 * current_span
+    turn_off_threshold = (
+        relative_turn_off
+        if high_contrast_modulation
+        else min(LED_VISIBLE_CURRENT_A, relative_turn_off)
+    )
+    state = currents[0] >= LED_VISIBLE_CURRENT_A
+    states: list[bool] = []
+    for current in currents:
+        if state and current <= turn_off_threshold:
+            state = False
+        elif not state and current >= turn_on_threshold:
+            state = True
+        states.append(state)
+    return states, turn_on_threshold, turn_off_threshold
 
 
 def normalize_node(node: str) -> str:
@@ -606,11 +655,27 @@ def led_transient_profiles(
         )
         branch_control: dict[str, Any] | None = None
         threshold_v: float | None = None
+        turn_on_current_a: float | None = None
+        turn_off_current_a: float | None = None
         if measured_currents is not None:
             # La corrente diretta e' la misura fisica della luce emessa. Evita
             # falsi positivi quando il LED conserva Vf ma conduce solo leakage.
-            states = [current >= LED_VISIBLE_CURRENT_A for current in measured_currents]
-            profile_method = "device_current"
+            # L'isteresi evita inoltre di contare il chattering numerico vicino
+            # alla soglia come un lampeggio ad alta frequenza.
+            states, turn_on_current_a, turn_off_current_a = led_current_states_with_hysteresis(
+                measured_currents
+            )
+            current_min = min(measured_currents)
+            current_max = max(measured_currents)
+            uses_hysteresis = (
+                current_min < LED_VISIBLE_CURRENT_A <= current_max
+                or (
+                    current_max >= LED_VISIBLE_CURRENT_A
+                    and current_min <= 0.25 * current_max
+                    and current_max - current_min >= LED_VISIBLE_CURRENT_A
+                )
+            )
+            profile_method = "device_current_hysteresis" if uses_hysteresis else "device_current"
         else:
             states = [voltage >= LED_FORWARD_THRESHOLD_V for voltage in forward_voltages]
             profile_method = "terminal_forward_voltage"
@@ -704,6 +769,13 @@ def led_transient_profiles(
                     "current_max_a": max(measured_currents),
                 }
             )
+            if profile_method == "device_current_hysteresis":
+                profiles[component_id].update(
+                    {
+                        "turn_on_current_a": turn_on_current_a,
+                        "turn_off_current_a": turn_off_current_a,
+                    }
+                )
         if branch_control is not None:
             profiles[component_id].update(
                 {
@@ -1456,13 +1528,19 @@ def build_geometry_component(
 
 def load_geometry_seed(run_dir: Path, circuit_id: str, node_map: dict[str, Any]) -> dict[str, Any]:
     """Carica la geometria Pipeline 1.0 usata come seme dal layout automatico."""
-    batch_id = infer_batch_id(run_dir)
-    if not batch_id or not circuit_id:
-        return {"status": "missing", "reason": "batch_or_circuit_unknown", "components": {}}
+    # Nei workspace persistenti le sorgenti esplicite hanno priorita: in questo
+    # modo il viewer usa sempre gli step 03 e 05 della stessa run Pipeline 1.0.
+    estimate_path = get_run_source_path(run_dir, "pipeline1", "terminal_estimates")
+    graph_path = get_run_source_path(run_dir, "pipeline1", "terminal_graph")
 
-    pipeline1_dir = PROJECT_ROOT / "outputs" / "pipeline1.0" / batch_id
-    estimate_path = pipeline1_dir / "03_estimate_terminals" / f"{circuit_id}.json"
-    graph_path = pipeline1_dir / "05_build_terminal_graph" / f"{circuit_id}.json"
+    if estimate_path is None or graph_path is None:
+        batch_id = infer_batch_id(run_dir)
+        if not batch_id or not circuit_id:
+            return {"status": "missing", "reason": "batch_or_circuit_unknown", "components": {}}
+        pipeline1_dir = PROJECT_ROOT / "outputs" / "pipeline1.0" / batch_id
+        estimate_path = pipeline1_dir / "03_estimate_terminals" / f"{circuit_id}.json"
+        graph_path = pipeline1_dir / "05_build_terminal_graph" / f"{circuit_id}.json"
+
     terminal_estimates = read_json(estimate_path)
     terminal_graph = read_json(graph_path)
     if not terminal_estimates or not terminal_graph:

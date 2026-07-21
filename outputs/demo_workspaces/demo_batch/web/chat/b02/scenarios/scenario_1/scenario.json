@@ -1,0 +1,38 @@
+{
+  "scenario_id": "scenario_1",
+  "title": "Rompere la simmetria iniziale dei due nodi di base",
+  "hypothesis": "The astable may stay locked because the transient starts from a perfectly symmetric initial condition at N004 and N006.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "set_initial_node_voltage",
+      "target": "N004",
+      "value": "0.6V",
+      "skip_operating_point": true
+    },
+    {
+      "type": "set_initial_node_voltage",
+      "target": "N006",
+      "value": "0.8V",
+      "skip_operating_point": true
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N004)",
+    "v(N006)",
+    "@dled12_1[id]",
+    "@dled12_2[id]"
+  ],
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak",
+    "@dled12_2[id]": "tran_abs_peak"
+  },
+  "expect": {
+    "v(N004)": "changed",
+    "v(N006)": "changed",
+    "@dled12_1[id]": "changed",
+    "@dled12_2[id]": "changed"
+  }
+}

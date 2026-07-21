@@ -1,0 +1,28 @@
+{
+  "title": "Batteria scarica: verifica stato LED a tensione ridotta",
+  "hypothesis": "Riducendo la batteria ben sotto i 12 V nominali, il ramo con zener da 10 V e Q2 dovrebbe smettere di sostenere il LED giallo; questo verifica staticamente il comportamento di soglia lato batteria scarica.",
+  "intent": "diagnostic",
+  "analysis": "op",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "9V"
+    }
+  ],
+  "compare": [
+    "v(N002)",
+    "v(N004)",
+    "v(N011)",
+    "v(N012)",
+    "i(Dled12_1)",
+    "i(Dled12_2)",
+    "i(Dled12_3)",
+    "i(Rresistor22_3)",
+    "i(Rresistor22_6)"
+  ],
+  "expect": {
+    "i(Dled12_2)": "deactivated"
+  },
+  "scenario_id": "agent_scenario_1"
+}

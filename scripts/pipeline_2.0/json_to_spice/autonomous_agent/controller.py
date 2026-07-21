@@ -1,4 +1,4 @@
-"""Controller a singola iterazione per l'agente autonomo di Experiment 4."""
+"""Controller a singola iterazione per la modalita AGENT autonoma."""
 
 from __future__ import annotations
 
@@ -396,6 +396,77 @@ def symptom_requires_temporal_expectation(symptom: str) -> bool:
     return any(re.search(pattern, normalized) for pattern in temporal_patterns)
 
 
+def has_only_failed_initial_condition_trials(state: dict[str, Any]) -> bool:
+    """Riconosce evidenze temporali negative ottenute soltanto con direttive `.ic`.
+
+    Una condizione iniziale serve a verificare l'avvio numerico di un circuito,
+    ma da sola non dimostra che valori o topologia siano errati. Il controllo e'
+    limitato ai sintomi temporali e considera soltanto scenari realmente eseguiti.
+    """
+    if not symptom_requires_temporal_expectation(str(state.get("symptom") or "")):
+        return False
+
+    found_executed_scenario = False
+    for iteration in state.get("iterations") or []:
+        if not isinstance(iteration, dict):
+            continue
+        scenarios = (iteration.get("decision") or {}).get("scenarios") or []
+        results = iteration.get("scenario_results") or []
+        for scenario, result in zip(scenarios, results):
+            if not isinstance(scenario, dict) or not isinstance(result, dict):
+                continue
+            if not result.get("spice_executed"):
+                continue
+            actions = scenario.get("actions") or []
+            if not actions or any(
+                not isinstance(action, dict)
+                or str(action.get("type") or "") != "set_initial_node_voltage"
+                for action in actions
+            ):
+                return False
+            found_executed_scenario = True
+            summary = result.get("comparison_summary") or {}
+            if summary.get("temporal_met") is True:
+                return False
+            outcome = result.get("diagnostic_outcome") or {}
+            if outcome.get("status") == "resolved_candidate":
+                return False
+    return found_executed_scenario
+
+
+def guard_initial_condition_conclusion(
+    state: dict[str, Any],
+    decision: dict[str, Any],
+) -> dict[str, Any]:
+    """Impedisce diagnosi strutturali fondate soltanto su test `.ic` negativi."""
+    if decision.get("decision") != "stop":
+        return decision
+    if decision.get("final_status") not in {
+        "localized",
+        "partially_localized",
+        "topology_issue",
+    }:
+        return decision
+    if not has_only_failed_initial_condition_trials(state):
+        return decision
+
+    guarded = dict(decision)
+    guarded["final_status"] = "inconclusive"
+    guarded["reason"] = (
+        "Le sole condizioni iniziali provate non hanno soddisfatto i criteri "
+        "temporali; questa evidenza non basta a localizzare un difetto di valori "
+        "o topologia."
+    )
+    guarded["final_answer"] = (
+        "Il test sulle condizioni iniziali non ha verificato il comportamento "
+        "temporale richiesto. Da questa sola prova non si puo concludere che il "
+        "circuito abbia valori o topologia errati."
+    )
+    guarded["final_cause"] = ""
+    guarded["verified_correction"] = ""
+    return guarded
+
+
 def request_valid_decision(
     output_dir: Path,
     prompt: str,
@@ -510,7 +581,7 @@ def run_iteration(
 
         executed_count = count_executed_scenarios(output_dir)
         remaining_budget = max(0, MAX_EXECUTABLE_SCENARIOS - executed_count)
-        # Experiment 4 richiede una verifica SPICE prima di accettare una diagnosi finale.
+        # La modalita AGENT richiede una verifica SPICE prima della diagnosi finale.
         require_first_scenario = executed_count == 0 and remaining_budget > 0
         # Solo lo stato resolved richiede una correzione misurata; una causa puo essere localizzata.
         require_verified_resolution = remaining_budget > 0 and not has_verified_resolution(state)
@@ -600,6 +671,7 @@ def run_iteration(
             return state
 
         state["agent_decisions_count"] = decision_number
+        decision = guard_initial_condition_conclusion(state, decision)
         iteration: dict[str, Any] = {
             "decision_number": decision_number,
             "decision": decision,

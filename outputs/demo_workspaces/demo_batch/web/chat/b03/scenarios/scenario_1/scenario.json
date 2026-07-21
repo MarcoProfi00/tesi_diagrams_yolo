@@ -1,0 +1,27 @@
+{
+  "scenario_id": "scenario_1",
+  "title": "Abbassare la tensione della batteria per simulare una batteria scarica",
+  "hypothesis": "If the monitor distinguishes a discharged battery, lowering the existing source Vbattery2_1 from its nominal 12 V should change the LED-related branch conditions.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "10V"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N002)",
+    "v(N004)",
+    "v(N011)",
+    "v(N012)"
+  ],
+  "expect": {
+    "v(N002)": "changed",
+    "v(N004)": "changed",
+    "v(N011)": "changed",
+    "v(N012)": "changed"
+  }
+}

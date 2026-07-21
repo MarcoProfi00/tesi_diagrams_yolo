@@ -293,6 +293,50 @@ def evaluate_temporal_expectation(
     }
 
 
+def temporal_correction_is_resolved(
+    scenario: dict[str, Any],
+    summary: dict[str, Any],
+    evaluation: dict[str, Any],
+) -> bool:
+    """
+    Verifica se uno scenario temporale corregge direttamente il sintomo.
+
+    Il passaggio tra stati qualitativi, per esempio da acceso fisso a
+    lampeggiante regolare, e gia una correzione misurabile e non richiede anche
+    una variazione scalare relativa del 10%. Restano comunque obbligatori tutti
+    i criteri elettrici, temporali, di guadagno e di qualita dichiarati.
+    """
+    if str(scenario.get("intent") or "").strip().lower() != "correction":
+        return False
+    if not evaluation.get("available") or not evaluation.get("met"):
+        return False
+
+    expected = int(summary.get("expected_count") or 0)
+    expectations_met = int(summary.get("expectations_met_count") or 0)
+    expectations_failed = int(summary.get("expectations_failed_count") or 0)
+    expectations_missing = int(summary.get("expectations_missing_count") or 0)
+    if (
+        expected <= 0
+        or expectations_met != expected
+        or expectations_failed > 0
+        or expectations_missing > 0
+    ):
+        return False
+
+    if bool(summary.get("gain_required")) and not (
+        bool(summary.get("gain_available")) and bool(summary.get("gain_sufficient"))
+    ):
+        return False
+    if bool(summary.get("quality_required")) and not (
+        bool(summary.get("quality_available"))
+        and bool(summary.get("quality_improved"))
+        and bool(summary.get("quality_acceptable"))
+        and bool(summary.get("quality_output_preserved"))
+    ):
+        return False
+    return True
+
+
 def update_report_with_temporal_expectation(
     output_dir: Path,
     scenario_dir: Path,
@@ -329,16 +373,6 @@ def update_report_with_temporal_expectation(
 
     outcome = comparison.get("diagnostic_outcome")
     outcome = dict(outcome) if isinstance(outcome, dict) else {}
-    expected = int(summary.get("expected_count") or 0)
-    expectations_met = int(summary.get("expectations_met_count") or 0)
-    meaningful = int(summary.get("meaningful_improvement_count") or 0)
-    quality_blocks_resolution = bool(summary.get("quality_required")) and not (
-        bool(summary.get("quality_available"))
-        and bool(summary.get("quality_improved"))
-        and bool(summary.get("quality_acceptable"))
-        and bool(summary.get("quality_output_preserved"))
-    )
-
     if not evaluation.get("available"):
         outcome.update(
             {
@@ -363,7 +397,7 @@ def update_report_with_temporal_expectation(
                 "next_step": "Il comportamento temporale non soddisfa ancora l'obiettivo: prova un'altra correzione.",
             }
         )
-    elif expected > 0 and expectations_met == expected and meaningful > 0 and not quality_blocks_resolution:
+    elif temporal_correction_is_resolved(scenario, summary, evaluation):
         outcome.update(
             {
                 "status": "resolved_candidate",

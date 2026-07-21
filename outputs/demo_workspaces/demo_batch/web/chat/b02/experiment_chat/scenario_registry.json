@@ -1,0 +1,351 @@
+{
+  "source_format": "pipeline2.0_experiment_scenario_registry",
+  "batch_name": "batchDemo",
+  "experiment_name": "demo_batch",
+  "circuit_id": "b02",
+  "created_at": "2026-07-21T18:14:31",
+  "updated_at": "2026-07-21T18:17:11",
+  "max_executable_scenarios": 5,
+  "next_scenario_number": 5,
+  "last_added_scenario_id": "scenario_4",
+  "proposals": [
+    {
+      "proposal_id": "proposal_1",
+      "created_at": "2026-07-21T18:15:03",
+      "source_agent_response": "outputs\\demo_workspaces\\demo_batch\\web\\chat\\b02\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_1",
+        "scenario_2",
+        "scenario_3"
+      ]
+    },
+    {
+      "proposal_id": "proposal_2",
+      "created_at": "2026-07-21T18:16:52",
+      "source_agent_response": "outputs\\demo_workspaces\\demo_batch\\web\\chat\\b02\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_4"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_number": 1,
+      "scenario_id": "scenario_1",
+      "title": "Rompere la simmetria iniziale dei due nodi di base",
+      "hypothesis": "The astable may stay locked because the transient starts from a perfectly symmetric initial condition at N004 and N006.",
+      "actions": [
+        {
+          "type": "set_initial_node_voltage",
+          "target": "N004",
+          "value": "0.6V",
+          "skip_operating_point": true
+        },
+        {
+          "type": "set_initial_node_voltage",
+          "target": "N006",
+          "value": "0.8V",
+          "skip_operating_point": true
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "tran",
+      "compare": [
+        "v(N004)",
+        "v(N006)",
+        "@dled12_1[id]",
+        "@dled12_2[id]"
+      ],
+      "measure": {
+        "@dled12_1[id]": "tran_abs_peak",
+        "@dled12_2[id]": "tran_abs_peak"
+      },
+      "gain": null,
+      "expect": {
+        "v(N004)": "changed",
+        "v(N006)": "changed",
+        "@dled12_1[id]": "changed",
+        "@dled12_2[id]": "changed"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_1",
+      "execution_path": "outputs\\demo_workspaces\\demo_batch\\web\\chat\\b02\\scenarios\\scenario_1",
+      "created_at": "2026-07-21T18:15:03",
+      "updated_at": "2026-07-21T18:15:11",
+      "signature": "{\"actions\":[{\"skip_operating_point\":true,\"target\":\"N004\",\"type\":\"set_initial_node_voltage\",\"value\":\"0.6V\"},{\"skip_operating_point\":true,\"target\":\"N006\",\"type\":\"set_initial_node_voltage\",\"value\":\"0.8V\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_1",
+        "title": "Rompere la simmetria iniziale dei due nodi di base",
+        "hypothesis": "The astable may stay locked because the transient starts from a perfectly symmetric initial condition at N004 and N006.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "set_initial_node_voltage",
+            "target": "N004",
+            "value": "0.6V",
+            "skip_operating_point": true
+          },
+          {
+            "type": "set_initial_node_voltage",
+            "target": "N006",
+            "value": "0.8V",
+            "skip_operating_point": true
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N004)",
+          "v(N006)",
+          "@dled12_1[id]",
+          "@dled12_2[id]"
+        ],
+        "measure": {
+          "@dled12_1[id]": "tran_abs_peak",
+          "@dled12_2[id]": "tran_abs_peak"
+        },
+        "expect": {
+          "v(N004)": "changed",
+          "v(N006)": "changed",
+          "@dled12_1[id]": "changed",
+          "@dled12_2[id]": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 2,
+      "scenario_id": "scenario_2",
+      "title": "Alleggerire una sola resistenza di base per rompere il bilanciamento",
+      "hypothesis": "The symmetric 2.2k base-bias network may be holding both transistor sides in the same state.",
+      "actions": [
+        {
+          "type": "change_component_value",
+          "target": "Rresistor22_2",
+          "value": "1k"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "tran",
+      "compare": [
+        "v(N004)",
+        "v(N006)",
+        "v(N005)",
+        "v(N007)",
+        "@dled12_1[id]",
+        "@dled12_2[id]"
+      ],
+      "measure": {
+        "@dled12_1[id]": "tran_abs_peak",
+        "@dled12_2[id]": "tran_abs_peak"
+      },
+      "gain": null,
+      "expect": {
+        "v(N004)": "changed",
+        "v(N006)": "changed",
+        "@dled12_1[id]": "changed",
+        "@dled12_2[id]": "changed"
+      },
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 2,
+      "original_scenario_id": "scenario_2",
+      "execution_path": null,
+      "created_at": "2026-07-21T18:15:03",
+      "updated_at": "2026-07-21T18:15:03",
+      "signature": "{\"actions\":[{\"target\":\"Rresistor22_2\",\"type\":\"change_component_value\",\"value\":\"1k\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_2",
+        "title": "Alleggerire una sola resistenza di base per rompere il bilanciamento",
+        "hypothesis": "The symmetric 2.2k base-bias network may be holding both transistor sides in the same state.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Rresistor22_2",
+            "value": "1k"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N004)",
+          "v(N006)",
+          "v(N005)",
+          "v(N007)",
+          "@dled12_1[id]",
+          "@dled12_2[id]"
+        ],
+        "measure": {
+          "@dled12_1[id]": "tran_abs_peak",
+          "@dled12_2[id]": "tran_abs_peak"
+        },
+        "expect": {
+          "v(N004)": "changed",
+          "v(N006)": "changed",
+          "@dled12_1[id]": "changed",
+          "@dled12_2[id]": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 3,
+      "scenario_id": "scenario_3",
+      "title": "Ridurre un solo condensatore d’accoppiamento per testare la rete temporale",
+      "hypothesis": "The RC cross-coupling may not be producing a transition in the emitted netlist, keeping both LED branches steady.",
+      "actions": [
+        {
+          "type": "change_component_value",
+          "target": "Cpolarized_capacitor20_1",
+          "value": "10u"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "tran",
+      "compare": [
+        "v(N005)",
+        "v(N006)",
+        "@dled12_1[id]",
+        "@dled12_2[id]"
+      ],
+      "measure": {
+        "@dled12_1[id]": "tran_abs_peak",
+        "@dled12_2[id]": "tran_abs_peak"
+      },
+      "gain": null,
+      "expect": {
+        "v(N005)": "changed",
+        "v(N006)": "changed",
+        "@dled12_1[id]": "changed",
+        "@dled12_2[id]": "changed"
+      },
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 3,
+      "original_scenario_id": "scenario_3",
+      "execution_path": null,
+      "created_at": "2026-07-21T18:15:03",
+      "updated_at": "2026-07-21T18:15:03",
+      "signature": "{\"actions\":[{\"target\":\"Cpolarized_capacitor20_1\",\"type\":\"change_component_value\",\"value\":\"10u\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_3",
+        "title": "Ridurre un solo condensatore d’accoppiamento per testare la rete temporale",
+        "hypothesis": "The RC cross-coupling may not be producing a transition in the emitted netlist, keeping both LED branches steady.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Cpolarized_capacitor20_1",
+            "value": "10u"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N005)",
+          "v(N006)",
+          "@dled12_1[id]",
+          "@dled12_2[id]"
+        ],
+        "measure": {
+          "@dled12_1[id]": "tran_abs_peak",
+          "@dled12_2[id]": "tran_abs_peak"
+        },
+        "expect": {
+          "v(N005)": "changed",
+          "v(N006)": "changed",
+          "@dled12_1[id]": "changed",
+          "@dled12_2[id]": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 4,
+      "scenario_id": "scenario_4",
+      "title": "Ridurre leggermente una resistenza di bias per rompere la simmetria strutturale",
+      "hypothesis": "The base run may stay locked because the two bias branches are too perfectly symmetric; a small bias mismatch on Rresistor22_2 may break the lock.",
+      "actions": [
+        {
+          "type": "change_component_value",
+          "target": "Rresistor22_2",
+          "value": "2k"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "tran",
+      "compare": [
+        "v(N004)",
+        "v(N006)",
+        "@dled12_1[id]",
+        "@dled12_2[id]"
+      ],
+      "measure": {
+        "@dled12_1[id]": "tran_abs_peak",
+        "@dled12_2[id]": "tran_abs_peak"
+      },
+      "gain": null,
+      "expect": {
+        "v(N004)": "changed",
+        "v(N006)": "changed",
+        "@dled12_1[id]": "changed",
+        "@dled12_2[id]": "changed"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_2",
+      "source_local_index": 3,
+      "original_scenario_id": "scenario_3",
+      "execution_path": "outputs\\demo_workspaces\\demo_batch\\web\\chat\\b02\\scenarios\\scenario_4",
+      "created_at": "2026-07-21T18:16:52",
+      "updated_at": "2026-07-21T18:17:11",
+      "signature": "{\"actions\":[{\"target\":\"Rresistor22_2\",\"type\":\"change_component_value\",\"value\":\"2k\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_4",
+        "title": "Ridurre leggermente una resistenza di bias per rompere la simmetria strutturale",
+        "hypothesis": "The base run may stay locked because the two bias branches are too perfectly symmetric; a small bias mismatch on Rresistor22_2 may break the lock.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Rresistor22_2",
+            "value": "2k"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N004)",
+          "v(N006)",
+          "@dled12_1[id]",
+          "@dled12_2[id]"
+        ],
+        "measure": {
+          "@dled12_1[id]": "tran_abs_peak",
+          "@dled12_2[id]": "tran_abs_peak"
+        },
+        "expect": {
+          "v(N004)": "changed",
+          "v(N006)": "changed",
+          "@dled12_1[id]": "changed",
+          "@dled12_2[id]": "changed"
+        }
+      }
+    }
+  ]
+}

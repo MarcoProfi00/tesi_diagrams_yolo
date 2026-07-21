@@ -19,7 +19,7 @@ def now_iso() -> str:
 
 
 def state_path(output_dir: Path) -> Path:
-    """Calcola il percorso dello stato dentro la sessione Experiment 4."""
+    """Calcola il percorso dello stato dentro la sessione AGENT corrente."""
     return output_dir / "experiment_chat" / STATE_NAME
 
 

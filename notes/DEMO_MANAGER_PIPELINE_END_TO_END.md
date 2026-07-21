@@ -37,8 +37,8 @@ graph
 spice
   parte da un Graph JSON esistente, esegue Pipeline 2.0 fino a ngspice e si ferma
 
-webchat --mode chat|agent
-  parte da una base SPICE esistente e apre direttamente la modalità richiesta
+webchat
+  prepara due copie indipendenti e apre CHAT e AGENT nello stesso server
 ```
 
 L'utente non deve essere obbligato a rieseguire gli step precedenti.
@@ -137,8 +137,7 @@ autosufficiente, identificato da un nome stabile scelto dall'utente.
 outputs/demo_workspaces/<workspace_id>/
 |-- workspace_manifest.json
 |-- input/
-|   |-- circuit_image.<ext>
-|   `-- values.yaml
+|   `-- images/
 |-- pipeline1.0/
 |   |-- 01_detect_components/
 |   |-- 02_assign_instances/
@@ -147,11 +146,10 @@ outputs/demo_workspaces/<workspace_id>/
 |   |-- 05_build_terminal_graph/
 |   `-- 06_graph_report/
 |-- pipeline2.0/
-|   `-- base/
+|   `-- <circuit_id>/
 |       |-- 01_graph.json
 |       |-- ...
-|       |-- 08_spice_run.json
-|       `-- 10_diagnostic_context.json
+|       `-- 08_spice_run.json
 |-- web/
 |   |-- chat/
 |   `-- agent/
@@ -161,25 +159,25 @@ outputs/demo_workspaces/<workspace_id>/
 Esempio:
 
 ```text
-outputs/demo_workspaces/manager_a08/
+outputs/demo_workspaces/demo_a08/
 ```
 
 Il comando `graph` crea il workspace e completa soltanto `pipeline1.0/`. Il
-giorno successivo `spice --workspace manager_a08` legge il Graph dal manifest
-e completa `pipeline2.0/base/`. In un momento ancora successivo,
-`webchat --workspace manager_a08 --mode agent` crea o riapre soltanto
-`web/agent/`.
+giorno successivo `spice --workspace demo_a08` legge il Graph appena prodotto
+nel workspace e completa `pipeline2.0/<circuit_id>/`. In un momento ancora successivo,
+`webchat --workspace demo_a08` crea o riapre entrambe le directory
+`web/chat/` e `web/agent/`, lasciando all'utente la scelta nella pagina.
 
-Lo YAML sorgente resta quello ufficiale:
+Ogni batch e autosufficiente e conserva gli YAML manuali con una convenzione
+generale basata sull'identificativo del circuito:
 
 ```text
-metadata/pipeline2_manual_values/batchA/a08_values.yaml
-metadata/pipeline2_manual_values/batchB/b02_values.yaml
+data/<batch>/values/<circuit_id>_values.yaml
 ```
 
-Alla prima esecuzione di `spice` viene copiato in `input/values.yaml`; il
-manifest conserva sia il path sorgente sia l'hash della copia. Gli step
-successivi usano la copia del workspace e non dipendono dallo YAML esterno.
+Il manifest conserva path e hash dello YAML effettivamente usato. Il comando
+`spice` non cerca Graph negli output storici di Batch A o Batch B: risolve
+sempre `pipeline1.0/06_graph_report` dentro il workspace selezionato.
 
 Allo stesso modo, `graph` copia l'immagine in `input/` e registra path sorgente
 e hash. Il workspace può quindi essere riaperto anche in un giorno diverso
@@ -190,7 +188,7 @@ senza dover ricostruire il comando originale.
 - Ogni comando riceve `--workspace <workspace_id>`.
 - Il manifest è il contratto tra Pipeline 1.0, Pipeline 2.0 e webchat.
 - `spice` richiede che lo stato `pipeline1` sia `completed`.
-- `webchat` richiede che lo stato `spice` sia `completed`.
+- `webchat` richiede che lo stato `pipeline2` sia `completed`.
 - CHAT e AGENT sono copie indipendenti della stessa base SPICE.
 - Riaprire AGENT non modifica CHAT e viceversa.
 - Un comando non sovrascrive artefatti completati senza `--force`.
@@ -207,7 +205,7 @@ mantenendo comunque disponibili gli script originali.
 Path previsto:
 
 ```text
-scripts/run_full_pipeline.py
+scripts/pipeline_unified/run_pipeline.py
 ```
 
 Sottocomandi pubblici:
@@ -273,7 +271,7 @@ lo YAML, ngspice o la chiave OpenAI.
 Prerequisiti:
 
 - Graph JSON prodotto dalla Pipeline 1.0;
-- YAML manuale scelto esplicitamente;
+- YAML manuale omonimo in `data/<batch>/values/`;
 - file globali delle classi e dei modelli SPICE.
 
 Esegue:
@@ -286,7 +284,6 @@ Esegue:
 06_component_rules
 07_spice_emit
 08_spice_run
-10_build_diagnostic_context
 ```
 
 Al termine deve mostrare:
@@ -296,8 +293,7 @@ Al termine deve mostrare:
 - warning di emissione;
 - path della netlist;
 - stato ngspice ed exit code;
-- presenza di analisi OP e/o TRAN;
-- path del contesto diagnostico.
+- presenza di analisi OP e/o TRAN.
 
 La modalità standard della demo deve considerare ngspice obbligatorio. Il
 comando non apre il browser e non richiede la chiave OpenAI.
@@ -327,17 +323,17 @@ Prepara due workspace isolati copiando soltanto la base tecnica:
 Questa fase sostituisce i due comandi manuali attualmente necessari con
 `prepare_experiment_outputs.py`.
 
-### `webchat --mode chat|agent`
+### `webchat`
 
-Parte da una base SPICE esistente, prepara il workspace richiesto e avvia
-`09_web_chat.py`, aprendo il browser direttamente nella modalità selezionata.
+Parte da una base SPICE esistente, prepara due workspace indipendenti e avvia
+`09_web_chat.py` con entrambe le modalità disponibili nello stesso server.
 
 ```text
---mode chat
-  usa la copia CHAT e abilita l'interazione guidata
+CHAT
+  usa la copia guidata
 
---mode agent
-  usa la copia AGENT e apre la modalità autonoma
+AGENT
+  usa la copia autonoma
 ```
 
 Il comando non deve rieseguire Pipeline 1.0 o SPICE, salvo richiesta esplicita.
@@ -378,53 +374,41 @@ Non è obbligatorio che tutta la demo avvenga in un singolo processo. È invece
 obbligatorio che i passaggi siano collegati da contratti chiari e che un output
 valido possa diventare l'input dello step successivo.
 
-## Contratto CLI desiderato
+## Contratto CLI progressivo
 
 Esempio Pipeline 1.0 soltanto:
 
 ```powershell
-python scripts\run_full_pipeline.py graph `
-  --workspace manager_a08 `
-  --image data\batchA\a08.jpg `
+.venv312\Scripts\python.exe scripts\pipeline_unified\run_pipeline.py graph `
+  --workspace demo_a08 `
+  --input-dir data\batchDemo `
   --circuit a08
 ```
 
 Esempio ripresa dalla Pipeline 2.0:
 
 ```powershell
-python scripts\run_full_pipeline.py spice `
-  --workspace manager_a08 `
-  --values-yaml metadata\pipeline2_manual_values\batchA\a08_values.yaml `
+.venv312\Scripts\python.exe scripts\pipeline_unified\run_pipeline.py spice `
+  --workspace demo_a08 `
+  --circuit a08 `
   --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
 ```
 
-Esempio apertura diretta della modalità CHAT:
+Esempio apertura della webchat con CHAT e AGENT disponibili:
 
 ```powershell
-python scripts\run_full_pipeline.py webchat `
-  --workspace manager_a08 `
-  --mode chat `
-  --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
-```
-
-Esempio apertura diretta della modalità AGENT:
-
-```powershell
-python scripts\run_full_pipeline.py webchat `
-  --workspace manager_a08 `
-  --mode agent `
+.venv312\Scripts\python.exe scripts\pipeline_unified\run_pipeline.py webchat `
+  --workspace demo_a08 `
   --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
 ```
 
 Esempio completo:
 
 ```powershell
-python scripts\run_full_pipeline.py all `
-  --workspace manager_a08 `
-  --image data\batchA\a08.jpg `
+.venv312\Scripts\python.exe scripts\pipeline_unified\run_pipeline.py all `
+  --workspace demo_a08 `
+  --input-dir data\batchDemo `
   --circuit a08 `
-  --values-yaml metadata\pipeline2_manual_values\batchA\a08_values.yaml `
-  --mode chat `
   --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
 ```
 
@@ -436,17 +420,17 @@ sono i dati che non devono essere dedotti implicitamente.
 ### Pipeline 1.0
 
 - Gli step 01-05 usano `PIPELINE_DATASET` tramite variabile ambiente.
-- Lo step 01 usa `PIPELINE_INPUT_BATCH` e legge una cartella sotto `data/`.
-- Gli step 03-05 supportano già `PIPELINE_IMAGE_IDS`.
-- Gli step 01 e 02 non filtrano ancora il singolo circuito.
-- Lo step 06 possiede una CLI per le directory, ma non filtra il singolo JSON.
+- Lo step 01 accetta `PIPELINE_INPUT_DIR` mantenendo il fallback storico su
+  `PIPELINE_INPUT_BATCH`.
+- Gli step 01-05 supportano `PIPELINE_IMAGE_IDS`.
+- Lo step 06 supporta sia `PIPELINE_IMAGE_IDS` sia `--image-ids`.
 
-Intervento minimo:
+Intervento completato:
 
-- aggiungere filtro immagine generale agli step 01, 02 e 06;
-- supportare una directory immagine esplicita nello step 01;
-- usare lo stesso interprete Python dell'orchestratore;
-- propagare le variabili ambiente soltanto ai processi figli.
+- filtro immagine generale negli step 01, 02 e 06;
+- directory immagine esplicita nello step 01;
+- stesso interprete Python dell'orchestratore;
+- variabili ambiente propagate soltanto ai processi figli.
 
 ### Pipeline 2.0
 
@@ -461,7 +445,7 @@ Intervento minimo:
 
 - permettere un riferimento YAML esplicito o una copia demo tracciata;
 - aggiungere una funzione per costruire direttamente il viewer;
-- preparare su richiesta il solo workspace CHAT o AGENT selezionato;
+- preparare le due copie indipendenti CHAT e AGENT dalla stessa base;
 - riaprire un workspace interattivo esistente senza ricreare la base;
 - rilevare in modo generale i workspace `chat/agent`.
 
@@ -543,18 +527,54 @@ OPENAI_API_KEY nel processo di controllo: non rilevata
 Il preflight dovrà bloccare soltanto CHAT/AGENT se manca la chiave OpenAI;
 Pipeline 1.0, Pipeline 2.0, SPICE e viewer devono restare utilizzabili.
 
+## Stabilizzazione Pipeline 2.0 completata il 21 luglio 2026
+
+Prima dell'orchestratore e stata completata una pulizia conservativa della
+Pipeline 2.0:
+
+- nessuna modifica alla logica elettrica, alle primitive o al viewer;
+- facciate numerate mantenute compatibili;
+- parsing misure ed esito scenario isolati in moduli interni;
+- utility pure della webchat isolate senza cambiare la pagina generata;
+- suite `unittest` con caratterizzazione di 15 circuiti, viewer, scenari,
+  pagine CHAT/AGENT, contratti e CLI;
+- nessuna scrittura sugli output validati durante i test.
+
+La prima fase dello script unico e ora disponibile in:
+
+```text
+scripts/pipeline_unified/run_pipeline.py
+scripts/pipeline_unified/README.md
+```
+
+Il comando `graph` collega gli step 01-06 in un workspace isolato, `spice`
+completa la base tecnica 01-08 e `webchat` prepara viewer e sessioni CHAT/AGENT
+indipendenti. Restano da implementare l'esecuzione completa `all` e il comando
+di riepilogo `status`.
+
+### Checkpoint Pipeline 1.0 del 21 luglio 2026
+
+- workspace singolo rinominato in `demo_b02`;
+- workspace batch rinominato in `demo_batch`;
+- A04, A08 e B03 identici byte per byte ai Graph validati;
+- B02 identico strutturalmente al Graph corretto di Experiment 5;
+- euristica `Diode -> LED` resa piu selettiva senza condizioni specifiche per
+  circuito, coordinate o batch;
+- B03 rigenerato con 3 LED e 7 diodi, senza terminali isolati o unmatched.
+
 ## Ordine di implementazione
 
-1. Aggiungere il filtro per singola immagine agli step Pipeline 1.0 mancanti.
-2. Creare l'orchestratore e il preflight condiviso.
-3. Collegare il sottocomando pubblico `graph`.
-4. Collegare `spice` e lo YAML esplicito.
-5. Collegare gli step viewer 13-15.
-6. Automatizzare la preparazione indipendente di CHAT e AGENT.
-7. Collegare `webchat --mode chat|agent` e generalizzare il rilevamento dei workspace.
-8. Scrivere il manifest della demo.
-9. Eseguire smoke test su A08, B02 e B03.
-10. Scegliere circuito principale, confronto e fallback.
+1. Aggiungere il filtro per singola immagine agli step Pipeline 1.0 mancanti. Completato.
+2. Creare la struttura dell'orchestratore e il manifest iniziale. Completato.
+3. Collegare il sottocomando pubblico `graph`. Completato e validato manualmente.
+4. Aggiungere il preflight condiviso. Completato per `graph` e `spice`.
+5. Collegare `spice` agli YAML autosufficienti del batch. Completato e validato.
+6. Collegare gli step viewer 13-15. Completato nel comando `webchat`.
+7. Automatizzare la preparazione indipendente di CHAT e AGENT. Completato.
+8. Collegare una webchat unica con entrambe le modalita disponibili. Completato.
+9. Estendere il manifest alle fasi SPICE, viewer, CHAT e AGENT. Completato fino alla preparazione web.
+10. Eseguire smoke test sui circuiti dimostrativi. Graph e SPICE completati.
+11. Scegliere circuito principale, confronto e fallback.
 
 ## Stato delle attività
 
@@ -562,14 +582,18 @@ Pipeline 1.0, Pipeline 2.0, SPICE e viewer devono restare utilizzabili.
 [x] Inventario degli script Pipeline 1.0 e Pipeline 2.0
 [x] Verifica preliminare dell'ambiente locale
 [x] Definizione del flusso modulare della demo
-[ ] Filtri per singola immagine Pipeline 1.0
-[ ] Orchestratore generale
-[ ] Preflight automatico
-[ ] Collegamento Pipeline 2.0 e YAML
-[ ] Viewer automatico
-[ ] Preparazione persistente e indipendente CHAT/AGENT
-[ ] Apertura diretta webchat in modalità CHAT o AGENT
-[ ] Manifest di esecuzione
-[ ] Smoke test circuiti candidati
+[x] Stabilizzazione e test di regressione Pipeline 2.0
+[x] Filtri per singola immagine Pipeline 1.0
+[x] Struttura iniziale dell'orchestratore
+[x] Comando graph e manifest Pipeline 1.0
+[x] Preflight automatico per Graph e SPICE
+[x] Collegamento Pipeline 2.0 e YAML autosufficienti del batch
+[x] Viewer automatico
+[x] Preparazione persistente e indipendente CHAT/AGENT
+[x] Webchat unica con selettore CHAT/AGENT
+[x] Manifest di esecuzione per la fase Pipeline 1.0
+[x] Estensione manifest alla fase Pipeline 2.0 tecnica
+[x] Smoke test Graph e SPICE sui quattro circuiti candidati
+[x] Smoke test isolato viewer e pagine CHAT/AGENT su B02
 [ ] Comando definitivo e procedura fallback
 ```

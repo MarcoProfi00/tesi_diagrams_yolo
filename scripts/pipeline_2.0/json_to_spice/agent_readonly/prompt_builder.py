@@ -1,16 +1,17 @@
 """
 Costruzione del prompt per l'agente diagnostico read-only.
 
-Questo modulo prepara il file 11_agent_prompt.md, cioe il testo che potra essere
-mandato al modello AI nella prima versione dell'agente.
+Questo modulo prepara `11_agent_prompt.md`, cioe il testo inviabile al modello
+AI dall'agente read-only.
 
 Il prompt resta separato dal preview:
 
 - il preview serve a noi per vedere tutti gli artefatti caricati;
-- il prompt serve al futuro modello AI per rispondere in modo controllato.
+- il prompt serve al modello AI per rispondere in modo controllato.
 
-La versione corrente non chiama ancora OpenAI. Genera solo un prompt locale e
-verificabile, con istruzioni stabili ed evidenze caricate dagli output 01-08.
+La chiamata OpenAI resta separata in `openai_runner.py`; questo modulo genera
+soltanto un prompt locale e verificabile, con istruzioni stabili ed evidenze
+caricate dagli output 01-08.
 """
 
 from __future__ import annotations
@@ -497,7 +498,7 @@ def build_prompt_operating_rules() -> list[str]:
         "Use `add_voltage_source_between_nodes` when the base netlist lacks a realistic external excitation and the natural diagnostic move is to power the circuit from existing interface nodes such as connector pins, supply labels or input/return nodes.",
         "Prefer `add_voltage_source_between_nodes` over `drive_node_voltage` when the goal is to energize the whole circuit or a whole input path, not only to isolate a single internal branch node.",
         "Use `drive_node_voltage` mainly for controlled isolation tests or when no more natural value/source/state action is available.",
-        "Use `set_initial_node_voltage` only with `analysis: tran` to break an artificial symmetric initial state; it emits a temporary `.ic` constraint, adds no source and must not be used to power the circuit.",
+        "Use `set_initial_node_voltage` only with `analysis: tran` to break an artificial symmetric initial state; it emits a temporary `.ic` constraint, adds no source and must not be used to power the circuit. Its optional boolean `skip_operating_point: true` enables a genuine startup run with `.tran ... UIC`; use it only when the DC operating point would preserve artificial symmetry and choose genuinely asymmetric initial values. When two symmetric control nodes exist, initialize both in the same scenario to distinct physically admissible levels.",
         "Use `add_resistor_between_nodes` when the hypothesis is not a missing ideal continuity, but a missing or too-weak resistive branch such as a pull-up, pull-down, shunt or additional bias path between two existing nodes.",
         "For `add_resistor_between_nodes`, provide a concrete resistor value and prefer simple plausible values already present in the circuit scale, for example `1k`, `10k`, `33k`, `47k`, `100k`, rather than arbitrary uncommon numbers.",
         "Do not use `add_resistor_between_nodes` when the real hypothesis is only to vary the value of an already emitted resistor; in that case prefer `change_component_value`.",

@@ -1,0 +1,31 @@
+{
+  "scenario_id": "scenario_5",
+  "title": "Far salire lentamente la batteria e osservare la sequenza dei LED",
+  "hypothesis": "Since scenario_1, scenario_2 and scenario_4 showed distinct static LED states at 10V, 14V and 16V, replacing Vbattery2_1 with a slow rising source should reveal in transient the same progression of LED branch activation from low-battery to high-battery conditions.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "PWL(0s 10V 3s 16V)"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N011)",
+    "v(N004)",
+    "v(N012)",
+    "@dled12_1[id]",
+    "@dled12_2[id]",
+    "@dled12_3[id]"
+  ],
+  "expect": {
+    "v(N011)": "changed",
+    "v(N004)": "changed",
+    "v(N012)": "changed",
+    "@dled12_1[id]": "changed",
+    "@dled12_2[id]": "changed",
+    "@dled12_3[id]": "changed"
+  }
+}

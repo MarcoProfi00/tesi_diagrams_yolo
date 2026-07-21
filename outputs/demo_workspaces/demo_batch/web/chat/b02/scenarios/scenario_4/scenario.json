@@ -1,0 +1,31 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Ridurre leggermente una resistenza di bias per rompere la simmetria strutturale",
+  "hypothesis": "The base run may stay locked because the two bias branches are too perfectly symmetric; a small bias mismatch on Rresistor22_2 may break the lock.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Rresistor22_2",
+      "value": "2k"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N004)",
+    "v(N006)",
+    "@dled12_1[id]",
+    "@dled12_2[id]"
+  ],
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak",
+    "@dled12_2[id]": "tran_abs_peak"
+  },
+  "expect": {
+    "v(N004)": "changed",
+    "v(N006)": "changed",
+    "@dled12_1[id]": "changed",
+    "@dled12_2[id]": "changed"
+  }
+}

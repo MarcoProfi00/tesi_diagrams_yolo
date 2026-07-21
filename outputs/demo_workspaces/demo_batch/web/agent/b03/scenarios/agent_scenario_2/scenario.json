@@ -1,0 +1,28 @@
+{
+  "title": "Batteria molto carica: verifica stato LED ad alta tensione",
+  "hypothesis": "Aumentando la batteria sopra il nominale, il ramo con zener da 12 V e transistor PNP Q3 dovrebbe iniziare a polarizzare il LED verde; questo verifica staticamente il comportamento lato batteria molto carica e se il circuito commuta fuori dallo stato solo-giallo osservato a 12 V.",
+  "intent": "diagnostic",
+  "analysis": "op",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "15V"
+    }
+  ],
+  "compare": [
+    "v(N002)",
+    "v(N003)",
+    "v(N004)",
+    "v(N012)",
+    "i(Dled12_1)",
+    "i(Dled12_2)",
+    "i(Dled12_3)",
+    "i(Rresistor22_3)",
+    "i(Rresistor22_6)"
+  ],
+  "expect": {
+    "i(Dled12_3)": "activated"
+  },
+  "scenario_id": "agent_scenario_2"
+}

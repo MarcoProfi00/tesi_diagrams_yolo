@@ -36,7 +36,16 @@ scripts/pipeline_2.0/
     |-- 09_web_chat.py
     |-- 10_build_diagnostic_context.py
     |-- 11_agent_readonly.py
-    `-- 12_controlled_scenarios.py
+    |-- 12_controlled_scenarios.py
+    |-- 13_build_viewer_model.py
+    |-- 14_build_viewer_layout.py
+    |-- 15_render_viewer_svg.py
+    |-- 16_autonomous_diagnosis.py
+    |-- agent_readonly/
+    |-- autonomous_agent/
+    |-- controlled_scenarios/
+    |-- viewer_core/
+    `-- web_chat_core/
 ```
 
 Output possibili:
@@ -88,6 +97,10 @@ Sono gli script che lavorano sopra una base gia generata:
 10_build_diagnostic_context
 11_agent_readonly
 12_controlled_scenarios
+13_build_viewer_model
+14_build_viewer_layout
+15_render_viewer_svg
+16_autonomous_diagnosis
 ```
 
 Questa parte non sostituisce la pipeline tecnica. La usa come evidenza.
@@ -109,6 +122,12 @@ Ruolo:
 - esegue gli step tecnici nell'ordine corretto;
 - opzionalmente esegue ngspice;
 - alla fine costruisce anche `10_diagnostic_context.json`.
+
+Il file espone anche `run_technical_pipeline(...)`: riceve percorsi espliciti
+per Graph JSON, YAML e output ed esegue soltanto gli step 01-08. E il punto di
+riuso del launcher unificato nei workspace `outputs/demo_workspaces/`; non
+introduce una seconda implementazione della conversione elettrica. La CLI
+storica continua a risolvere le root Batch A/B e a costruire lo step 10.
 
 Step oggi caricati davvero dal codice:
 
@@ -563,6 +582,10 @@ Caratteristiche architetturali:
 - niente API pubbliche;
 - server solo locale e temporaneo.
 
+Le utility pure di lettura e serializzazione sono isolate in
+`web_chat_core/io_utils.py`; `09_web_chat.py` resta la facciata pubblica e
+mantiene gli stessi nomi importabili.
+
 Artefatti chat principali:
 
 ```text
@@ -571,7 +594,8 @@ Artefatti chat principali:
 11_agent_response_chat.md
 ```
 
-Per root `experiment2*` salva anche memoria ufficiale locale:
+Per ogni sessione interattiva nominata salva anche memoria ufficiale locale.
+Le root `experiment2*` mantengono per compatibilita questi path:
 
 ```text
 experiment2_chat/chat_history.json
@@ -594,6 +618,8 @@ Sessione Experiment 3.1:
 - salva i file in `experiment_chat/` per non attribuirli artificialmente
   all'Esperimento 2;
 - le root `experiment2*` conservano `experiment2_chat/` per compatibilita.
+- le altre sessioni nominate, inclusi i workspace dell'orchestratore
+  unificato, usano `experiment_chat/`.
 
 Input:
 
@@ -639,6 +665,9 @@ Nota architetturale:
 
 - il viewer e `netlist-grounded + image-guided`;
 - bbox e terminali della Pipeline 1.0 sono geometry seed, non verita elettrica;
+- `pipeline2_sources.json`, quando presente nella base o in una directory
+  antenata, collega esplicitamente immagine, `03_estimate_terminals` e
+  `05_build_terminal_graph` della stessa run persistente;
 - `09_web_chat.py` non contiene coordinate o renderer di singoli circuiti;
 - modello, layout e rendering derivano da `13_viewer_model.json`,
   `14_viewer_layout.json` e `15_viewer.svg`.
@@ -657,7 +686,8 @@ Ruolo:
 - parte dalla netlist realmente simulata in `07_netlist.cir`;
 - aggiunge contesto strutturale da `03_node_map.json` e `06_component_rules.json`;
 - aggiunge misure operative e transienti da `08_*`;
-- acquisisce geometry seed da Pipeline 1.0 (`03_estimate_terminals`);
+- acquisisce geometry seed da Pipeline 1.0 (`03_estimate_terminals` e
+  `05_build_terminal_graph`), privilegiando i path espliciti della stessa run;
 - riconosce le istanze di subcircuito `X...` e ignora gli elementi interni
   compresi tra `.subckt` e `.ends`, che non appartengono allo schema utente;
 - integra i `viewer_override` dello YAML senza modificare il Graph JSON.
@@ -944,6 +974,17 @@ Responsabilita aggiuntive:
   - `not_resolved`
   - `unknown`
 
+Struttura interna:
+
+```text
+controlled_scenarios/measurements.py  parsing e metriche OP/TRAN
+controlled_scenarios/outcome.py       classificazione prudente dell'esito
+```
+
+`12_controlled_scenarios.py` resta l'entry point pubblico e riesporta le
+funzioni spostate, mentre applicazione delle azioni e invocazione di ngspice
+rimangono nella facciata numerata.
+
 Output principali:
 
 ```text
@@ -1130,8 +1171,9 @@ Guardrail implementati:
 - `final_status: resolved` richiede una `verified_correction` non vuota;
 - `final_status: localized` puo terminare dopo una conferma diagnostica forte,
   anche quando non esiste una riparazione fisica verificata;
-- lo stop correttivo richiede almeno un effetto relativo del 10% oppure una
-  vera attivazione/disattivazione; variazioni minori restano parziali;
+- lo stop correttivo richiede almeno un effetto relativo del 10%, una vera
+  attivazione/disattivazione oppure il completo soddisfacimento di un criterio
+  temporale dichiarato; variazioni scalari minori restano parziali;
 - per sintomi di amplificazione, una correzione dichiara
   `gain: {"input":"v(NODO_IN)","output":"v(NODO_OUT)"}` e lo step 12 salva
   il guadagno base e scenario calcolato sui rispettivi Vpp;
@@ -1171,7 +1213,9 @@ Guardrail implementati:
 - per sintomi di lampeggio, regolarita, duty cycle o durata di accensione, lo
   scenario dichiara `temporal_expect`; `scenario_runtime.py` confronta i
   profili transitori del viewer e richiede che stato, periodicita e soglie di
-  duty siano soddisfatti prima di confermare una correzione;
+  duty siano soddisfatti prima di confermare una correzione. Quando tutte le
+  aspettative elettriche e temporali sono verificate, il cambio qualitativo di
+  stato e gia risolutivo e non richiede anche un incremento scalare del 10%;
 - una sequenza temporale tra componenti richiede ancora un'estensione futura:
   oggi non viene verificata se la base contiene solo `.op` e manca `08_tran.csv`;
 - ogni decisione contiene al massimo 2 scenari e il ciclo al massimo 8

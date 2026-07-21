@@ -1,0 +1,329 @@
+{
+  "source_format": "pipeline2.0_experiment_scenario_registry",
+  "batch_name": "batchDemo",
+  "experiment_name": "demo_batch",
+  "circuit_id": "b03",
+  "created_at": "2026-07-21T16:56:37",
+  "updated_at": "2026-07-21T17:08:25",
+  "max_executable_scenarios": 5,
+  "next_scenario_number": 5,
+  "last_added_scenario_id": "scenario_4",
+  "proposals": [
+    {
+      "proposal_id": "proposal_1",
+      "created_at": "2026-07-21T16:57:03",
+      "source_agent_response": "outputs\\demo_workspaces\\demo_batch\\web\\chat\\b03\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_1"
+      ]
+    },
+    {
+      "proposal_id": "proposal_2",
+      "created_at": "2026-07-21T16:58:44",
+      "source_agent_response": "outputs\\demo_workspaces\\demo_batch\\web\\chat\\b03\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_2"
+      ]
+    },
+    {
+      "proposal_id": "proposal_3",
+      "created_at": "2026-07-21T17:00:18",
+      "source_agent_response": "outputs\\demo_workspaces\\demo_batch\\web\\chat\\b03\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_3"
+      ]
+    },
+    {
+      "proposal_id": "proposal_4",
+      "created_at": "2026-07-21T17:01:37",
+      "source_agent_response": "outputs\\demo_workspaces\\demo_batch\\web\\chat\\b03\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_4"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_number": 1,
+      "scenario_id": "scenario_1",
+      "title": "Abbassare la tensione della batteria per simulare una batteria scarica",
+      "hypothesis": "If the monitor distinguishes a discharged battery, lowering the existing source Vbattery2_1 from its nominal 12 V should change the LED-related branch conditions.",
+      "actions": [
+        {
+          "type": "change_source_value",
+          "target": "Vbattery2_1",
+          "value": "10V"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N002)",
+        "v(N004)",
+        "v(N011)",
+        "v(N012)"
+      ],
+      "measure": {},
+      "gain": null,
+      "expect": {
+        "v(N002)": "changed",
+        "v(N004)": "changed",
+        "v(N011)": "changed",
+        "v(N012)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_1",
+      "execution_path": "outputs\\demo_workspaces\\demo_batch\\web\\chat\\b03\\scenarios\\scenario_1",
+      "created_at": "2026-07-21T16:57:03",
+      "updated_at": "2026-07-21T16:57:39",
+      "signature": "{\"actions\":[{\"target\":\"Vbattery2_1\",\"type\":\"change_source_value\",\"value\":\"10V\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_1",
+        "title": "Abbassare la tensione della batteria per simulare una batteria scarica",
+        "hypothesis": "If the monitor distinguishes a discharged battery, lowering the existing source Vbattery2_1 from its nominal 12 V should change the LED-related branch conditions.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vbattery2_1",
+            "value": "10V"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N002)",
+          "v(N004)",
+          "v(N011)",
+          "v(N012)"
+        ],
+        "expect": {
+          "v(N002)": "changed",
+          "v(N004)": "changed",
+          "v(N011)": "changed",
+          "v(N012)": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 2,
+      "scenario_id": "scenario_2",
+      "title": "Alzare la tensione della batteria per simulare una batteria molto carica",
+      "hypothesis": "If the monitor distinguishes a very highly charged battery, increasing Vbattery2_1 above the nominal 12 V should change the green LED branch conditions and may activate Dled12_3.",
+      "actions": [
+        {
+          "type": "change_source_value",
+          "target": "Vbattery2_1",
+          "value": "14V"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N012)",
+        "v(N004)",
+        "v(N011)",
+        "@dled12_3[id]"
+      ],
+      "measure": {},
+      "gain": null,
+      "expect": {
+        "v(N012)": "changed",
+        "v(N004)": "changed",
+        "v(N011)": "changed",
+        "@dled12_3[id]": "magnitude_increased"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_2",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_2",
+      "execution_path": "outputs\\demo_workspaces\\demo_batch\\web\\chat\\b03\\scenarios\\scenario_2",
+      "created_at": "2026-07-21T16:58:44",
+      "updated_at": "2026-07-21T16:58:52",
+      "signature": "{\"actions\":[{\"target\":\"Vbattery2_1\",\"type\":\"change_source_value\",\"value\":\"14V\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_2",
+        "title": "Alzare la tensione della batteria per simulare una batteria molto carica",
+        "hypothesis": "If the monitor distinguishes a very highly charged battery, increasing Vbattery2_1 above the nominal 12 V should change the green LED branch conditions and may activate Dled12_3.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vbattery2_1",
+            "value": "14V"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N012)",
+          "v(N004)",
+          "v(N011)",
+          "@dled12_3[id]"
+        ],
+        "expect": {
+          "v(N012)": "changed",
+          "v(N004)": "changed",
+          "v(N011)": "changed",
+          "@dled12_3[id]": "magnitude_increased"
+        }
+      }
+    },
+    {
+      "scenario_number": 3,
+      "scenario_id": "scenario_3",
+      "title": "Ridurre il bias della base di Q2 a 14 V",
+      "hypothesis": "At 14 V, Qnpn_transistor18_2 may remain active because its base path through Rresistor22_4 still provides enough drive; increasing Rresistor22_4 should weaken Q2 and reduce the yellow LED branch current.",
+      "actions": [
+        {
+          "type": "change_source_value",
+          "target": "Vbattery2_1",
+          "value": "14V"
+        },
+        {
+          "type": "change_component_value",
+          "target": "Rresistor22_4",
+          "value": "33k"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N015)",
+        "v(N004)",
+        "@dled12_2[id]",
+        "@dled12_3[id]"
+      ],
+      "measure": {},
+      "gain": null,
+      "expect": {
+        "v(N015)": "changed",
+        "v(N004)": "changed",
+        "@dled12_2[id]": "magnitude_decreased",
+        "@dled12_3[id]": "nonzero"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_3",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_3",
+      "execution_path": "outputs\\demo_workspaces\\demo_batch\\web\\chat\\b03\\scenarios\\scenario_3",
+      "created_at": "2026-07-21T17:00:18",
+      "updated_at": "2026-07-21T17:00:28",
+      "signature": "{\"actions\":[{\"target\":\"Vbattery2_1\",\"type\":\"change_source_value\",\"value\":\"14V\"},{\"target\":\"Rresistor22_4\",\"type\":\"change_component_value\",\"value\":\"33k\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_3",
+        "title": "Ridurre il bias della base di Q2 a 14 V",
+        "hypothesis": "At 14 V, Qnpn_transistor18_2 may remain active because its base path through Rresistor22_4 still provides enough drive; increasing Rresistor22_4 should weaken Q2 and reduce the yellow LED branch current.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vbattery2_1",
+            "value": "14V"
+          },
+          {
+            "type": "change_component_value",
+            "target": "Rresistor22_4",
+            "value": "33k"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N015)",
+          "v(N004)",
+          "@dled12_2[id]",
+          "@dled12_3[id]"
+        ],
+        "expect": {
+          "v(N015)": "changed",
+          "v(N004)": "changed",
+          "@dled12_2[id]": "magnitude_decreased",
+          "@dled12_3[id]": "nonzero"
+        }
+      }
+    },
+    {
+      "scenario_number": 4,
+      "scenario_id": "scenario_4",
+      "title": "Alzare ancora la batteria per vedere se il verde prevale davvero",
+      "hypothesis": "Since scenario_2 at 14V already activated Dled12_3 while Dled12_2 stayed on, increasing Vbattery2_1 further to 16V can verify whether the circuit is still in a mixed yellow+green region or whether the green branch becomes dominant.",
+      "actions": [
+        {
+          "type": "change_source_value",
+          "target": "Vbattery2_1",
+          "value": "16V"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N012)",
+        "v(N004)",
+        "@dled12_2[id]",
+        "@dled12_3[id]"
+      ],
+      "measure": {},
+      "gain": null,
+      "expect": {
+        "v(N012)": "changed",
+        "v(N004)": "changed",
+        "@dled12_2[id]": "changed",
+        "@dled12_3[id]": "magnitude_increased"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_4",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_4",
+      "execution_path": "outputs\\demo_workspaces\\demo_batch\\web\\chat\\b03\\scenarios\\scenario_4",
+      "created_at": "2026-07-21T17:01:37",
+      "updated_at": "2026-07-21T17:01:55",
+      "signature": "{\"actions\":[{\"target\":\"Vbattery2_1\",\"type\":\"change_source_value\",\"value\":\"16V\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_4",
+        "title": "Alzare ancora la batteria per vedere se il verde prevale davvero",
+        "hypothesis": "Since scenario_2 at 14V already activated Dled12_3 while Dled12_2 stayed on, increasing Vbattery2_1 further to 16V can verify whether the circuit is still in a mixed yellow+green region or whether the green branch becomes dominant.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vbattery2_1",
+            "value": "16V"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N012)",
+          "v(N004)",
+          "@dled12_2[id]",
+          "@dled12_3[id]"
+        ],
+        "expect": {
+          "v(N012)": "changed",
+          "v(N004)": "changed",
+          "@dled12_2[id]": "changed",
+          "@dled12_3[id]": "magnitude_increased"
+        }
+      }
+    }
+  ]
+}

@@ -4,7 +4,7 @@ Scenari simulativi controllati.
 Questo script applica modifiche di scenario solo dentro la cartella scenario,
 senza toccare mai la base run originale della Pipeline 2.0.
 
-Versione attuale minimale:
+Comportamento attuale:
 
 - legge `scenario.json`;
 - lavora sulla netlist copiata in `run/07_netlist.cir`;
@@ -50,7 +50,6 @@ VSCENARIO_N001 N001 0 SIN(0 5 50)
 from __future__ import annotations
 
 import argparse
-import csv
 from datetime import datetime
 import importlib.util
 import json
@@ -58,6 +57,20 @@ import re
 from pathlib import Path
 from typing import Any
 
+from controlled_scenarios.measurements import (
+    classify_change,
+    count_ngspice_stderr_warnings,
+    is_internal_device_current_quantity,
+    is_stderr_quantity,
+    is_voltage_quantity,
+    normalize_quantity_name,
+    parse_float,
+    parse_ngspice_stdout,
+    parse_tran_csv_metrics,
+    quantity_lookup_key,
+    voltage_quantity_nodes,
+)
+from controlled_scenarios.outcome import evaluate_diagnostic_outcome
 from scenario_expectations import (
     COMPARISON_TOLERANCE,
     MIN_MEANINGFUL_RELATIVE_CHANGE,
@@ -250,8 +263,8 @@ def insert_or_replace_initial_node_voltage(netlist_text: str, node: str, voltage
     Le condizioni sono mantenute in una sola direttiva ``.ic`` identificata da
     un commento dedicato. In questo modo piu azioni possono inizializzare nodi
     diversi senza modificare eventuali direttive ``.ic`` gia presenti nella
-    netlist originale. La direttiva non aggiunge ``UIC``: ngspice calcola prima
-    un punto operativo coerente con il vincolo e lo rilascia nel transitorio.
+    netlist originale. La scelta di saltare o meno il punto operativo resta
+    separata, perche riguarda l'intera analisi transitoria e non il singolo nodo.
     """
     marker = "* pipeline2 scenario initial conditions"
     lines = netlist_text.splitlines()
@@ -288,6 +301,27 @@ def insert_or_replace_initial_node_voltage(netlist_text: str, node: str, voltage
     directive = f".ic {assignment}"
     lines[insert_at:insert_at] = [marker, directive]
     return "\n".join(lines) + "\n", "inserted", directive
+
+
+def enable_transient_initial_conditions(netlist_text: str) -> tuple[str, str]:
+    """
+    Aggiunge ``UIC`` alla direttiva ``.tran`` esistente.
+
+    Questa modalita rappresenta un avvio da condizioni iniziali, utile quando
+    il punto operativo DC mantiene artificialmente simmetrico un circuito
+    dinamico. Non cambia topologia o valori e non crea sorgenti permanenti.
+    """
+    lines = netlist_text.splitlines()
+    for index, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped.lower().startswith(".tran"):
+            continue
+        tokens = stripped.split()
+        if any(token.lower() == "uic" for token in tokens[1:]):
+            return "\n".join(lines) + "\n", "unchanged"
+        lines[index] = f"{line.rstrip()} UIC"
+        return "\n".join(lines) + "\n", "enabled"
+    raise ValueError("skip_operating_point richiede una direttiva .tran nella netlist")
 
 
 def parse_spice_scalar(value: str) -> float | None:
@@ -387,9 +421,10 @@ def apply_set_initial_node_voltage(
     """
     Imposta la tensione iniziale di un nodo per una simulazione transitoria.
 
-    L'azione emette solo ``.ic V(nodo)=valore`` nella netlist dello scenario:
-    non altera la topologia, non crea una sorgente permanente e non richiede
-    alcun simbolo aggiuntivo nel viewer.
+    L'azione emette ``.ic V(nodo)=valore`` nella netlist dello scenario. Con
+    ``skip_operating_point=true`` abilita anche ``UIC`` sulla ``.tran`` per
+    simulare un vero avvio dalle condizioni iniziali. In entrambi i casi non
+    altera la topologia e non crea una sorgente permanente.
     """
     node_map = read_json(run_dir / "03_node_map.json")
     target_node = validate_node_target(action.get("target"), node_map)
@@ -399,6 +434,14 @@ def apply_set_initial_node_voltage(
         target_node,
         voltage,
     )
+    skip_operating_point = action.get("skip_operating_point", False)
+    if not isinstance(skip_operating_point, bool):
+        raise ValueError("skip_operating_point deve essere booleano")
+    transient_startup_operation = "not_requested"
+    if skip_operating_point:
+        updated_netlist, transient_startup_operation = enable_transient_initial_conditions(
+            updated_netlist
+        )
 
     result = {
         "status": "applied",
@@ -408,6 +451,8 @@ def apply_set_initial_node_voltage(
         "normalized_dc_value": voltage,
         "inserted_line": directive,
         "operation": operation,
+        "skip_operating_point": skip_operating_point,
+        "transient_startup_operation": transient_startup_operation,
         "spice_executed": False,
     }
     return updated_netlist, result
@@ -1006,496 +1051,6 @@ def run_spice_for_scenario(
     )
     write_json(run_dir / SPICE_RUN_NAME, spice_report)
     return spice_report
-
-
-def normalize_quantity_name(name: str) -> str:
-    """Normalizza una grandezza, incluse tensioni differenziali tra due nodi."""
-    text = str(name).strip()
-    if re.search(r"(?i)#branch$", text) and "(" not in text:
-        return f"i({text})"
-    match = re.match(r"(?i)^([vip])\(([^)]+)\)$", text)
-    if not match:
-        return text
-    kind = match.group(1).lower()
-    target = match.group(2).strip()
-    if kind == "v":
-        # La forma v(N1,N2) viene resa canonica eliminando gli spazi tra i nodi.
-        voltage_nodes = [node.strip().upper() for node in target.split(",")]
-        return f"v({','.join(voltage_nodes)})"
-    return f"{kind}({target})"
-
-
-def quantity_lookup_key(name: str) -> str:
-    """Crea una chiave case-insensitive per confrontare grandezze SPICE."""
-    return normalize_quantity_name(name).lower()
-
-
-def parse_float(text: str) -> float | None:
-    """Converte una stringa SPICE in float quando possibile."""
-    try:
-        return float(text)
-    except ValueError:
-        return None
-
-
-def parse_ngspice_stdout(stdout_path: Path) -> dict[str, float]:
-    """
-    Estrae valori principali da uno stdout ngspice `.op`.
-
-    Supporta:
-    - tensioni nodo: `v(N001)`;
-    - correnti sorgenti: `i(vvcc#branch)`;
-    - correnti/potenze dispositivi nelle tabelle: `i(Rlamp13_1)`, `p(Rlamp13_1)`.
-    """
-    if not stdout_path.exists():
-        return {}
-
-    values: dict[str, float] = {}
-    lines = stdout_path.read_text(encoding="utf-8", errors="replace").splitlines()
-    in_node_table = False
-    in_source_table = False
-    current_devices: list[str] = []
-
-    for raw_line in lines:
-        line = raw_line.strip()
-        lower = line.lower()
-
-        if not line:
-            # ngspice spesso lascia una riga vuota tra l'intestazione e i dati
-            # delle tabelle, quindi non chiudiamo la sezione su una riga vuota.
-            continue
-
-        if lower.startswith("node") and "voltage" in lower:
-            in_node_table = True
-            in_source_table = False
-            current_devices = []
-            continue
-
-        if lower.startswith("source") and "current" in lower:
-            in_source_table = True
-            in_node_table = False
-            current_devices = []
-            continue
-
-        if set(line.replace("\t", "").replace(" ", "")) <= {"-"}:
-            continue
-
-        parts = line.split()
-        if len(parts) < 2:
-            continue
-
-        if parts[0].lower() == "device":
-            current_devices = parts[1:]
-            in_node_table = False
-            in_source_table = False
-            continue
-
-        if in_node_table:
-            value = parse_float(parts[-1])
-            if value is not None:
-                values[quantity_lookup_key(f"v({parts[0]})")] = value
-            continue
-
-        if in_source_table:
-            value = parse_float(parts[-1])
-            if value is not None:
-                source_name = parts[0]
-                values[quantity_lookup_key(f"i({source_name})")] = value
-            continue
-
-        if current_devices and len(parts) == len(current_devices) + 1:
-            property_name = parts[0].lower()
-            for device_name, value_text in zip(current_devices, parts[1:]):
-                value = parse_float(value_text)
-                if value is None:
-                    continue
-                if property_name in {"i", "id"}:
-                    values[quantity_lookup_key(f"i({device_name})")] = value
-                elif property_name == "p":
-                    values[quantity_lookup_key(f"p({device_name})")] = value
-
-    return values
-
-
-def count_ngspice_stderr_warnings(stderr_path: Path) -> float | None:
-    """
-    Conta i warning nello stderr ngspice.
-
-    Serve per scenari che vogliono verificare se una modifica riduce problemi
-    numerici, per esempio `singular matrix`. Restituiamo un numero per riusare
-    lo stesso confronto base/scenario gia usato per tensioni e correnti.
-    """
-    if not stderr_path.exists():
-        return None
-
-    lines = stderr_path.read_text(encoding="utf-8", errors="replace").splitlines()
-    warning_count = 0
-    for line in lines:
-        if line.strip().lower().startswith("warning:"):
-            warning_count += 1
-    return float(warning_count)
-
-
-def is_voltage_quantity(quantity: str) -> bool:
-    """Riconosce tensioni `v(N1)` e tensioni differenziali `v(N1,N2)`."""
-    return voltage_quantity_nodes(quantity) is not None
-
-
-def is_internal_device_current_quantity(quantity: str) -> bool:
-    """Riconosce una corrente interna diodo/LED esportata da ngspice nel CSV."""
-    normalized = normalize_quantity_name(quantity)
-    return bool(re.fullmatch(r"@[^\s\[\]]+\[id\]", normalized, flags=re.IGNORECASE))
-
-
-def voltage_quantity_nodes(quantity: str) -> tuple[str, ...] | None:
-    """Estrae uno o due nodi da una grandezza di tensione SPICE valida."""
-    normalized = normalize_quantity_name(quantity)
-    match = re.fullmatch(r"(?i)v\(([^)]+)\)", normalized)
-    if not match:
-        return None
-    nodes = tuple(node.strip().upper() for node in match.group(1).split(","))
-    if len(nodes) not in {1, 2} or any(not node for node in nodes):
-        return None
-    return nodes
-
-
-def is_stderr_quantity(quantity: str) -> bool:
-    """Riconosce richieste di confronto sui warning stderr."""
-    return quantity.strip().lower() in {"stderr", "ngspice_stderr", "stderr_warnings", "warning_count"}
-
-
-def parse_tran_csv_metrics(
-    csv_path: Path,
-    requested_quantities: list[str] | None = None,
-) -> dict[str, dict[str, float]]:
-    """
-    Estrae metriche semplici dal CSV transitorio pulito.
-
-    Per ogni colonna numerica calcoliamo:
-    - min
-    - max
-    - mean
-    - vpp
-    - final
-    - abs_peak
-
-    Per le richieste `v(N1,N2)` calcoliamo prima, campione per campione,
-    `v(N1) - v(N2)`. Questo evita l'errore di sottrarre due Vpp gia aggregati.
-    """
-    if not csv_path.exists():
-        return {}
-
-    try:
-        with csv_path.open(encoding="utf-8", newline="") as handle:
-            reader = csv.DictReader(handle)
-            rows = list(reader)
-    except (OSError, csv.Error):
-        return {}
-
-    if not rows:
-        return {}
-
-    differential_columns: dict[str, tuple[str, str]] = {}
-    for quantity in requested_quantities or []:
-        nodes = voltage_quantity_nodes(str(quantity))
-        if nodes is None or len(nodes) != 2:
-            continue
-        output_key = quantity_lookup_key(str(quantity))
-        differential_columns[output_key] = (
-            f"v({nodes[0].lower()})",
-            f"v({nodes[1].lower()})",
-        )
-
-    values_by_column: dict[str, list[float]] = {}
-    for row in rows:
-        row_values: dict[str, float] = {}
-        for column_name, value_text in row.items():
-            if column_name is None:
-                continue
-            column_key = column_name.strip().lower()
-            if not column_key or column_key == "time":
-                continue
-            value = parse_float(str(value_text).strip())
-            if value is None:
-                continue
-            values_by_column.setdefault(column_key, []).append(value)
-            row_values[column_key] = value
-
-        # La differenza usa soltanto campioni in cui entrambe le tensioni sono
-        # presenti, preservando l'allineamento temporale delle due colonne.
-        for output_key, (positive_key, negative_key) in differential_columns.items():
-            if positive_key not in row_values or negative_key not in row_values:
-                continue
-            values_by_column.setdefault(output_key, []).append(
-                row_values[positive_key] - row_values[negative_key]
-            )
-
-    metrics: dict[str, dict[str, float]] = {}
-    for column_key, values in values_by_column.items():
-        if not values:
-            continue
-        minimum = min(values)
-        maximum = max(values)
-        mean = sum(values) / len(values)
-        metrics[column_key] = {
-            "min": minimum,
-            "max": maximum,
-            "mean": mean,
-            "vpp": maximum - minimum,
-            # `final` serve alle misure OP prive della tabella stdout;
-            # `abs_peak` conserva l'evidenza di attivazione transitoria.
-            "final": values[-1],
-            "abs_peak": max(abs(minimum), abs(maximum)),
-        }
-
-    return metrics
-
-
-def classify_change(base_value: float | None, scenario_value: float | None) -> str:
-    """Classifica una variazione semplice tra base e scenario."""
-    if base_value is None or scenario_value is None:
-        return "missing"
-    if (
-        abs(base_value) < COMPARISON_TOLERANCE
-        and abs(scenario_value) >= COMPARISON_TOLERANCE
-    ):
-        return "activated"
-    if (
-        abs(base_value) >= COMPARISON_TOLERANCE
-        and abs(scenario_value) < COMPARISON_TOLERANCE
-    ):
-        return "deactivated"
-    if abs(scenario_value - base_value) < COMPARISON_TOLERANCE:
-        return "unchanged"
-    return "changed"
-
-
-def evaluate_diagnostic_outcome(
-    summary: dict[str, Any],
-    analysis: str = "op",
-    intent: str = "diagnostic",
-) -> dict[str, Any]:
-    """
-    Valuta in modo prudente se uno scenario sembra risolvere il problema.
-
-    Questa non e una diagnosi semantica definitiva: e un criterio automatico
-    semplice basato sui confronti SPICE richiesti dallo scenario. Serve per
-    capire se l'automazione puo fermarsi o se conviene provare un altro scenario.
-    """
-    # Solo la dichiarazione esplicita `correction` puo autorizzare lo stop.
-    # Valori mancanti o non riconosciuti restano diagnostici per evitare che
-    # una semplice precondizione elettrica venga scambiata per sintomo risolto.
-    intent = "correction" if str(intent).strip().lower() == "correction" else "diagnostic"
-
-    requested = int(summary.get("requested_count") or 0)
-    changed = int(summary.get("changed_count") or 0)
-    activated = int(summary.get("activated_count") or 0)
-    missing = int(summary.get("missing_count") or 0)
-    expected = int(summary.get("expected_count") or 0)
-    expectations_met = int(summary.get("expectations_met_count") or 0)
-    expectations_missing = int(summary.get("expectations_missing_count") or 0)
-    meaningful_improvements = int(summary.get("meaningful_improvement_count") or 0)
-    quality_required = bool(summary.get("quality_required"))
-    quality_available = bool(summary.get("quality_available"))
-    quality_improved = bool(summary.get("quality_improved"))
-    quality_acceptable = bool(summary.get("quality_acceptable"))
-    quality_output_preserved = bool(summary.get("quality_output_preserved"))
-    base_thd = summary.get("base_thd")
-    scenario_thd = summary.get("scenario_thd")
-    gain_required = bool(summary.get("gain_required"))
-    gain_available = bool(summary.get("gain_available"))
-    gain_sufficient = bool(summary.get("gain_sufficient"))
-    scenario_gain = summary.get("scenario_gain")
-    min_gain_ratio = summary.get("min_gain_ratio")
-
-    if expected > 0 and expectations_missing > 0:
-        status = "partially_resolved"
-        technical_label = "Partially resolved"
-        label = "Criteri verificati solo in parte"
-        reason = (
-            "Almeno una misura necessaria ai criteri di successo non e disponibile "
-            "negli output SPICE dello scenario."
-        )
-        stop_automation = False
-    elif gain_required and not gain_available:
-        status = "partially_resolved" if intent == "correction" else "unknown"
-        technical_label = "Signal gain unavailable"
-        label = "Trasferimento del segnale non misurabile"
-        reason = (
-            "Lo scenario richiede una soglia minima di trasferimento, ma il "
-            "rapporto Vpp uscita/ingresso non e disponibile."
-        )
-        stop_automation = False
-    elif gain_required and not gain_sufficient:
-        status = "partially_resolved" if intent == "correction" else "not_resolved"
-        technical_label = "Signal gain below threshold"
-        label = "Trasferimento del segnale insufficiente"
-        reason = (
-            "Il rapporto Vpp uscita/ingresso resta sotto la soglia dichiarata "
-            f"dallo scenario ({float(scenario_gain):.6g} < {float(min_gain_ratio):.6g})."
-        )
-        stop_automation = False
-    elif intent == "correction" and quality_required and not quality_available:
-        status = "partially_resolved"
-        technical_label = "Signal quality unavailable"
-        label = "Qualita del segnale non misurabile"
-        reason = (
-            "La correzione riguarda la distorsione, ma non e stato possibile "
-            "calcolare la THD su oscillazioni complete della sorgente SIN."
-        )
-        stop_automation = False
-    elif intent == "correction" and quality_required and not quality_improved:
-        status = "partially_resolved"
-        technical_label = "Distortion not improved"
-        label = "Distorsione non migliorata abbastanza"
-        reason = (
-            "La THD dell'uscita non diminuisce almeno del 20% rispetto alla base "
-            f"({float(base_thd):.1%} -> {float(scenario_thd):.1%})."
-        )
-        stop_automation = False
-    elif intent == "correction" and quality_required and not quality_acceptable:
-        status = "partially_resolved"
-        technical_label = "Residual distortion"
-        label = "Distorsione ridotta ma ancora elevata"
-        reason = (
-            "La THD migliora, ma resta sopra la soglia del 10% richiesta per "
-            f"una correzione risolutiva ({float(base_thd):.1%} -> "
-            f"{float(scenario_thd):.1%})."
-        )
-        stop_automation = False
-    elif intent == "correction" and quality_required and not quality_output_preserved:
-        status = "partially_resolved"
-        technical_label = "Output not preserved"
-        label = "Segnale utile non preservato"
-        reason = (
-            "La distorsione diminuisce, ma il guadagno fondamentale o la "
-            "componente utile dell'uscita risultano troppo ridotti."
-        )
-        stop_automation = False
-    elif (
-        intent == "correction"
-        and expected > 0
-        and expectations_met == expected
-        and meaningful_improvements == 0
-    ):
-        status = "partially_resolved"
-        technical_label = "Improvement too small"
-        label = "Variazione non ancora significativa"
-        reason = (
-            "I criteri direzionali sono soddisfatti, ma nessun effetto correttivo "
-            f"raggiunge la soglia relativa del {MIN_MEANINGFUL_RELATIVE_CHANGE:.0%}."
-        )
-        stop_automation = False
-    elif expected > 0 and expectations_met == expected:
-        status = "resolved_candidate"
-        technical_label = "Candidate resolved"
-        label = "Criteri di successo soddisfatti"
-        reason = (
-            "Tutti i comportamenti attesi dichiarati dallo scenario sono "
-            "verificati dagli output SPICE."
-        )
-        stop_automation = True
-    elif expected > 0 and expectations_met == 0:
-        status = "not_resolved"
-        technical_label = "Not resolved"
-        label = "Criteri di successo non soddisfatti"
-        reason = (
-            "Nessuno dei comportamenti attesi dichiarati dallo scenario e "
-            "stato verificato."
-        )
-        stop_automation = False
-    elif expected > 0:
-        status = "partially_resolved"
-        technical_label = "Partially resolved"
-        label = "Criteri verificati solo in parte"
-        reason = "Solo una parte dei comportamenti attesi dichiarati dallo scenario e stata verificata."
-        stop_automation = False
-    elif requested == 0:
-        status = "unknown"
-        technical_label = "Outcome unknown"
-        label = "Esito non determinabile"
-        reason = "Lo scenario non definisce grandezze di confronto sufficienti per valutarne l'esito."
-        stop_automation = False
-    elif missing == requested:
-        status = "unknown"
-        technical_label = "Outcome unknown"
-        label = "Confronto incompleto"
-        reason = "Nessuna delle grandezze richieste e disponibile negli output SPICE dello scenario."
-        stop_automation = False
-    elif changed == 0:
-        status = "not_resolved"
-        technical_label = "Not resolved"
-        label = "Scenario non informativo"
-        reason = "Le grandezze richieste non cambiano rispetto alla run base, quindi questo test non aggiunge evidenza utile."
-        stop_automation = False
-    elif missing > 0:
-        status = "partially_resolved"
-        technical_label = "Partially resolved"
-        label = "Ipotesi confermata sul ramo testato"
-        reason = (
-            "Lo scenario conferma utilmente l'ipotesi sulle grandezze disponibili, "
-            "anche se almeno un confronto richiesto resta mancante o incompleto."
-        )
-        stop_automation = False
-    elif analysis == "tran" and changed == requested:
-        status = "partially_resolved"
-        technical_label = "Partially resolved"
-        label = "Ipotesi confermata sul ramo testato"
-        reason = (
-            "Le forme d'onda richieste cambiano tutte nel transitorio, quindi l'ipotesi e supportata, "
-            "ma questo da solo non basta per fermare automaticamente la diagnosi."
-        )
-        stop_automation = False
-    elif changed == requested and activated > 0:
-        status = "resolved_candidate"
-        technical_label = "Candidate resolved"
-        label = "Ipotesi fortemente confermata"
-        reason = "Tutte le grandezze richieste cambiano e almeno una grandezza prima inattiva si attiva davvero."
-        stop_automation = True
-    else:
-        status = "partially_resolved"
-        technical_label = "Partially resolved"
-        label = "Ipotesi confermata sul ramo testato"
-        reason = (
-            "Lo scenario modifica il comportamento del circuito in modo utile, "
-            "ma l'evidenza resta locale o non abbastanza forte per fermarsi automaticamente."
-        )
-        stop_automation = False
-
-    # Un test diagnostico puo confermare una causa, ma non rappresenta una correzione.
-    if intent == "diagnostic" and stop_automation:
-        status = "partially_resolved"
-        technical_label = "Diagnostic hypothesis confirmed"
-        label = "Ipotesi diagnostica confermata"
-        reason = (
-            "I criteri dichiarati dal test diagnostico sono soddisfatti, ma lo "
-            "scenario non applica una correzione del sintomo utente."
-        )
-        stop_automation = False
-
-    user_message = {
-        "resolved_candidate": "Lo scenario fornisce una conferma forte dell'ipotesi testata.",
-        "partially_resolved": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
-        "not_resolved": "Lo scenario non ha prodotto un cambiamento utile rispetto alla base.",
-        "unknown": "Non ci sono abbastanza dati per valutare con affidabilita l'esito dello scenario.",
-    }.get(status, "Lo scenario produce un risultato tecnico che richiede ancora interpretazione.")
-
-    next_step = (
-        "Ci sono gia evidenze forti per fermarsi qui e passare alla conclusione diagnostica."
-        if stop_automation
-        else "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
-    )
-
-    return {
-        "status": status,
-        "technical_label": technical_label,
-        "label": label,
-        "reason": reason,
-        "user_message": user_message,
-        "stop_automation": stop_automation,
-        "confidence": "medium" if status == "resolved_candidate" else "low",
-        "next_step": next_step,
-    }
 
 
 def build_scenario_comparison(scenario_dir: Path, scenario: dict[str, Any]) -> dict[str, Any]:

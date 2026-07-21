@@ -878,9 +878,19 @@ VSCENARIO_N002 N002 0 DC 5
 
 `set_initial_node_voltage` e una primitiva diversa: e valida soltanto con
 `analysis: "tran"` e inserisce `.ic V(NODO)=valore` nella copia della netlist
-scenario. Non aggiunge una sorgente permanente, non usa `UIC` e non modifica
-topologia, valori o alimentazione. L'agente la usa soltanto per verificare un
-possibile equilibrio iniziale artificialmente simmetrico.
+scenario. Non aggiunge una sorgente permanente e non modifica topologia, valori
+o alimentazione. Per impostazione predefinita mantiene il normale punto
+operativo; l'opzione booleana `skip_operating_point: true` aggiunge `UIC` alla
+`.tran` e rappresenta invece un vero avvio dalle condizioni iniziali. L'agente
+la usa soltanto per verificare un possibile equilibrio iniziale artificialmente
+simmetrico.
+
+La tensione iniziale deve essere fisicamente ammissibile e chiaramente distinta
+dal punto di lavoro base osservato: una variazione di pochi punti percentuali
+attorno allo stesso bias non costituisce un test sufficiente. Inoltre, una sola
+prova `.ic` negativa non autorizza una diagnosi di valori o topologia errati. Se
+non esistono altre evidenze strutturali, il controller mantiene la conclusione
+`inconclusive`.
 
 Esempio:
 
@@ -888,9 +898,16 @@ Esempio:
 {
   "type": "set_initial_node_voltage",
   "target": "N004",
-  "value": "0.5V"
+  "value": "0.5V",
+  "skip_operating_point": true
 }
 ```
+
+Con `skip_operating_point: true` il valore deve introdurre una reale asimmetria:
+un valore nullo su un nodo, mentre tutti gli altri nodi non specificati partono
+gia da zero, non rompe da solo una simmetria perfetta. Quando il circuito espone
+due nodi di controllo simmetrici, lo scenario deve inizializzarli a due livelli
+distinti e fisicamente ammissibili.
 
 `add_voltage_source_between_nodes` aggiunge invece una sorgente tra due nodi
 gia esistenti della node map. Questa e la primitiva piu naturale quando il
@@ -2133,7 +2150,9 @@ scelta scenario -> copia base/run -> modifica netlist scenario -> ngspice scenar
 
 Il ciclo include anche `set_initial_node_voltage` per le sole run `tran`:
 aggiunge una direttiva `.ic` alla copia scenario senza creare una sorgente
-permanente e senza modificare la base run.
+permanente e senza modificare la base run. L'opzione
+`skip_operating_point: true` abilita inoltre `.tran ... UIC` per i test di
+accensione nei quali il punto operativo DC manterrebbe una simmetria artificiale.
 
 Implementato anche il rientro dei risultati scenario nell'agente:
 
@@ -2464,12 +2483,14 @@ change_component_value
    - `final_status=resolved` richiede una correzione verificata non vuota;
    - `final_status=localized` puo chiudere il ciclo dopo un test diagnostico
      forte, senza inventare una riparazione per consumare il budget residuo;
-   - una correzione richiede almeno un miglioramento relativo del 10% oppure
-     una vera attivazione/disattivazione;
+   - una correzione richiede almeno un miglioramento relativo del 10%, una vera
+     attivazione/disattivazione oppure criteri temporali completamente
+     soddisfatti;
    - per lampeggio, periodicita, regolarita, duty cycle o durata di accensione,
      ogni scenario `tran` dichiara `temporal_expect`; il runtime confronta i
      profili viewer base/scenario e non accetta come risolutivo un test che
-     viola la periodicita richiesta;
+     viola la periodicita richiesta. Un cambio qualitativo verificato, come
+     `steady_on -> blinking`, non richiede anche un incremento scalare del 10%;
    - per sintomi di amplificazione, gli scenari correttivi dichiarano
      `gain.input` e `gain.output`, entrambi presenti in `compare`, per misurare
      `Vpp(output) / Vpp(input)`;
@@ -2560,10 +2581,11 @@ piu casi, usando i report Batch A come riferimento.
 
 ## Esperimento 5 - Generalizzazione Batch B
 
-Il passo successivo e applicare la stessa pipeline al Batch B senza partire da
-nuove regole per circuito.
+Experiment 5 ha applicato la stessa pipeline al Batch B senza introdurre regole
+legate a un singolo circuito. Nel perimetro validato sono stati completati
+`b02`, `b03`, `b04`, `b05`, `b06` e `b10`, nelle modalita CHAT e AGENT.
 
-Ordine operativo:
+Ordine operativo seguito:
 
 1. costruire le base run Batch B fino agli artefatti `01-08` e al viewer;
 2. leggere per ogni circuito immagine, Graph JSON, node map, netlist e output
@@ -2576,8 +2598,8 @@ Ordine operativo:
 
 Il viewer resta lo stesso sistema run-aware: non deve essere ridisegnato per
 Batch B. Nuovi simboli o layout sono ammessi solo se rappresentano una classe
-di componenti riusabile. Le sequenze temporali tra componenti restano una fase
-successiva, distinta dalla prima generalizzazione Batch B.
+di componenti riusabile. I report uniformi di Batch A e Batch B costituiscono
+ora la base per la successiva valutazione con judge, tabelle e statistiche.
 
 ## Limiti da dichiarare
 

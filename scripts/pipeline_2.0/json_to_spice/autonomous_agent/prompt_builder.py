@@ -205,6 +205,26 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
 - Scegli soglie coerenti con il sintomo: per esempio un lampeggio chiaramente visibile
   puo richiedere stato `blinking`, periodicita regolare e un duty cycle minimo.
   Se un test aumenta il duty cycle ma perde la periodicita richiesta, non e risolutivo.
+- Quando usi `set_initial_node_voltage` per rompere un equilibrio simmetrico,
+  scegli una tensione iniziale fisicamente ammissibile ma chiaramente separata
+  dal punto di lavoro del nodo mostrato dagli artefatti. Una variazione di pochi
+  punti percentuali attorno allo stesso bias non e un test sufficiente; preferisci
+  un riferimento o un rail gia documentato nel circuito, senza inventarne uno.
+- Se il sintomo riguarda l'avvio di un circuito dinamico e il punto operativo DC
+  mantiene artificialmente la simmetria, puoi aggiungere
+  `skip_operating_point: true` a `set_initial_node_voltage`. In questo caso ngspice
+  usa `.tran ... UIC`: la condizione deve introdurre una reale asimmetria iniziale,
+  per esempio un valore non nullo su uno dei nodi simmetrici. Non usare questa
+  opzione per mascherare errori di topologia, alimentazione o componenti.
+  Se esistono due nodi di controllo simmetrici, inizializzali nello stesso
+  scenario a due livelli distinti e fisicamente ammissibili; lasciare entrambi
+  implicitamente allo stesso valore non rompe la simmetria.
+- Se un LED o un altro target e gia attivo nella base run, non usare `activated`
+  per verificarne il lampeggio: confronta la sua traccia transitoria e usa
+  `temporal_expect` per lo stato dinamico richiesto.
+- Un solo scenario negativo basato esclusivamente su condizioni iniziali non
+  dimostra un errore di valori o topologia. In assenza di altre evidenze
+  strutturali, concludi `inconclusive` oppure continua con un test distinto.
 - Non dichiarare verified_correction se i confronti non misurano direttamente sia
   il componente target sia gli eventuali componenti che devono restare attivi.
 - Se final_status="resolved", verified_correction deve descrivere la correzione
@@ -232,7 +252,7 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
 
 ## Schema delle azioni consentite
 - drive_node_voltage: type, target, value
-- set_initial_node_voltage: type, target, value (solo analysis=tran; condizione iniziale senza sorgente permanente e senza UIC)
+- set_initial_node_voltage: type, target, value, skip_operating_point opzionale booleano (solo analysis=tran; condizione iniziale senza sorgente permanente; con `true` abilita `.tran ... UIC`)
 - change_source_value: type, target, value
 - change_component_value: type, target, value
 - close_switch: type, target, resistance opzionale

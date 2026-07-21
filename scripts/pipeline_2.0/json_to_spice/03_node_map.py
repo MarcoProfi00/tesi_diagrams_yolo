@@ -5,13 +5,15 @@ Cuore iniziale della pipeline 2.0. A partire dal campo
 graph del JSON, calcola le componenti connesse dei terminali e assegna a
 ogni gruppo un nodo elettrico.
 
-Responsabilita previste:
+Responsabilita:
 
 - raggruppare terminali connessi nello stesso nodo;
 - mappare i terminali collegati a GND sul nodo SPICE 0;
-- applicare eventuali nodi manuali dichiarati nel values.yaml;
 - preservare warning e informazioni di provenienza;
-- produrre node_map.json.
+- produrre `03_node_map.json`.
+
+Gli override manuali dei nodi vengono applicati nello step 04, dopo la lettura
+del file YAML.
 
 La node map deve diventare il contratto elettrico principale da cui derivare
 netlist, report e diagnosi.

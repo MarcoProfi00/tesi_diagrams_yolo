@@ -1,8 +1,8 @@
 """
 Normalizzazione del Graph JSON.
 
-Questo modulo trasforma il JSON canonico prodotto dalla pipeline_1.0 (script 05) in una
-struttura interna piu comoda per i passaggi successivi.
+Questo modulo trasforma il Graph JSON canonico pubblicato dalla Pipeline 1.0
+in `06_graph_report` in una struttura interna stabile per gli step successivi.
 
 Il JSON di partenza contiene principalmente:
 
@@ -11,7 +11,7 @@ Il JSON di partenza contiene principalmente:
 - graph;
 - warnings.
 
-La normalizzazione dovra costruire una vista coerente del circuito, con lookup
+La normalizzazione costruisce una vista coerente del circuito, con lookup
 rapidi per componenti, terminali, classi, appartenenza terminale-componente e
 adiacenze del grafo. Non deve ancora generare nodi SPICE ne netlist.
 """

@@ -1,0 +1,41 @@
+{
+  "title": "Aumento delle due resistenze di base da 2.2k a 22k",
+  "hypothesis": "Le resistenze di base troppo basse polarizzano entrambi i transistor in conduzione simultanea e impediscono l'oscillazione; portandole a 22k il multivibratore dovrebbe uscire dal latch DC e far lampeggiare alternativamente i LED.",
+  "intent": "correction",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "resistor22.2",
+      "value": "22k"
+    },
+    {
+      "type": "change_component_value",
+      "target": "resistor22.3",
+      "value": "22k"
+    }
+  ],
+  "compare": [
+    "v(N004)",
+    "v(N006)",
+    "@dled12_1[id]",
+    "@dled12_2[id]"
+  ],
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak",
+    "@dled12_2[id]": "tran_abs_peak"
+  },
+  "expect": {
+    "v(N004)": "changed",
+    "v(N006)": "changed",
+    "@dled12_1[id]": "nonzero",
+    "@dled12_2[id]": "nonzero"
+  },
+  "temporal_expect": {
+    "target": "Dled12_1",
+    "required_state": "blinking",
+    "require_regular_period": true,
+    "min_duty_cycle": 0.1
+  },
+  "scenario_id": "agent_scenario_2"
+}

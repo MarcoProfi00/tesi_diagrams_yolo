@@ -421,7 +421,17 @@ def component_value(component: dict[str, Any], position: dict[str, Any]) -> str:
         reference = display_label.split()[0] if display_label else ""
         raw_value = str(component.get("value") or component.get("scenario_value") or "").strip()
         numeric_value = parse_spice_scalar(raw_value)
-        units = {"resistor": "Ohm", "capacitor": "F", "inductor": "H"}
+        units = {
+            "resistor": "Ohm",
+            "inductor": "H",
+            # Tutte le varianti del condensatore condividono l'unita` F.
+            # Questo mantiene renderizzabili anche gli scenari che ne
+            # modificano un tipo polarizzato o variabile.
+            "capacitor": "F",
+            "polarized_capacitor": "F",
+            "variable_capacitor": "F",
+            "variable_polarized_capacitor": "F",
+        }
         current_value = format_engineering_value(numeric_value, units[component_type]) if numeric_value is not None else raw_value
         return f"{reference} {current_value}".strip()
     if component_type in {"resistor", *capacitor_types} and component.get("display_label"):
@@ -511,6 +521,22 @@ def render_analog_meter(component: dict[str, Any], position: dict[str, Any]) -> 
     )
 
 
+def compact_led_label(label: str) -> str:
+    """Rimuove dalla sola vista LED la nota tecnica sul modello generico.
+
+    Il modello SPICE rimane nei parametri della componente e nella netlist,
+    ma non deve occupare spazio nello schema equivalente. La normalizzazione
+    si applica a qualunque LED che usi la convenzione testuale standard,
+    senza dipendere dal circuito o dal riferimento della componente.
+    """
+    return re.sub(
+        r"\s*;\s*modello\s+spice\s+generico\s*$",
+        "",
+        str(label or ""),
+        flags=re.IGNORECASE,
+    ).strip()
+
+
 def component_label_lines(component: dict[str, Any], position: dict[str, Any]) -> list[str]:
     """Divide riferimento e valore su due righe quando la label li contiene."""
     component_type = str(position.get("component_type") or "").lower()
@@ -547,6 +573,8 @@ def component_label_lines(component: dict[str, Any], position: dict[str, Any]) -
         if override_label or override_value:
             return [line for line in (override_label, override_value) if line]
         label = str(component["display_label"]).strip()
+        if component_type == "led":
+            label = compact_led_label(label)
         parts = label.split(maxsplit=1)
         return parts if len(parts) == 2 else [label]
     if component_type in {"antenna", "headset", "variable_capacitor", "variable_polarized_capacitor"}:

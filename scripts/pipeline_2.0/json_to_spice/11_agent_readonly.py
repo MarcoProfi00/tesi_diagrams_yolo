@@ -1,24 +1,24 @@
 """
 Agente diagnostico in sola lettura.
 
-Questo modulo e la prima base concreta dell'agente AI.
+Questo modulo prepara ed esegue, quando richiesto, l'agente AI in sola lettura.
 
 Di default non chiama nessun modello esterno. Legge il manifest prodotto dallo
 step 10, carica gli artefatti principali della Pipeline 2.0 e prepara un file
-Markdown con l'input che verra poi dato all'agente.
+Markdown con l'input dato all'agente.
 
 La logica deve restare generale per tutti i batch: l'agente non deve conoscere
 casi speciali come a01, a02 o a10, ma deve usare solo il contesto fornito dalla
 pipeline.
 
-Responsabilita della versione corrente:
+Responsabilita:
 
 - leggere 10_diagnostic_context.json;
 - leggere una domanda o un sintomo dell'utente;
 - risolvere i path degli artefatti indicati dal manifest;
 - caricare graph, node map, valori, regole, netlist e output ngspice;
 - leggere anche gli eventuali scenari gia eseguiti indicizzati dal manifest;
-- costruire un preview ordinato dell'input per il futuro modello AI;
+- costruire un preview ordinato dell'input per il modello AI;
 - costruire il prompt controllato da mandare al modello AI;
 - chiamare OpenAI solo se viene passato esplicitamente --run-agent;
 - non eseguire scenari e non modificare la netlist.
@@ -31,7 +31,7 @@ from __future__ import annotations
 
 import argparse
 
-from agent_readonly.openai_runner import write_agent_response
+from agent_readonly.openai_runner import supported_model_hint, write_agent_response
 from agent_readonly.prompt_builder import write_agent_prompt
 from agent_readonly.preview_builder import (
     resolve_manifest_path,
@@ -93,7 +93,7 @@ def parse_args() -> argparse.Namespace:
         help=(
             "Modello OpenAI da usare con --run-agent. "
             "Default: OPENAI_MODEL o gpt-5.4. "
-            "Consigliati: gpt-5.4, gpt-5.5, gpt-5.4-mini, gpt-5-mini."
+            f"Consigliati: {supported_model_hint()}."
         ),
     )
     parser.add_argument(

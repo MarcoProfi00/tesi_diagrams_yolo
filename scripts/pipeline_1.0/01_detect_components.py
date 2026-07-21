@@ -35,6 +35,12 @@ PIPELINE_DATASET = os.environ.get(
     "pipeline1.0/batchA_07_09"
 )
 PIPELINE_INPUT_BATCH = os.environ.get("PIPELINE_INPUT_BATCH", "batchA_07_09")
+PIPELINE_INPUT_DIR = str(os.environ.get("PIPELINE_INPUT_DIR", "")).strip()
+PIPELINE_IMAGE_IDS = {
+    image_id.strip()
+    for image_id in os.environ.get("PIPELINE_IMAGE_IDS", "").split(",")
+    if image_id.strip()
+}
 
 # === MODELLO ===
 MODEL_PATH = (
@@ -50,7 +56,15 @@ MODEL_PATH = (
 CLASS_TERMINALS_PATH = PROJECT_ROOT / "metadata" / "class_terminals_v1.yaml"
 
 # === INPUT ===
-INPUT_IMAGES_DIR = PROJECT_ROOT / "data" / PIPELINE_INPUT_BATCH
+if PIPELINE_INPUT_DIR:
+    _configured_input_dir = Path(PIPELINE_INPUT_DIR).expanduser()
+    INPUT_IMAGES_DIR = (
+        _configured_input_dir
+        if _configured_input_dir.is_absolute()
+        else PROJECT_ROOT / _configured_input_dir
+    )
+else:
+    INPUT_IMAGES_DIR = PROJECT_ROOT / "data" / PIPELINE_INPUT_BATCH
 
 # === OUTPUT ===
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "01_detect_components"
@@ -825,9 +839,12 @@ def classify_plate_symbol(image_binary, box):
 
 
 def is_led_like_diode_box(image_binary, box) -> bool:
-    """True solo se attorno al diodo ci sono 2 segni piccoli staccati dal corpo:
-    tipico dei LED con frecce luminose.
-    Zener/TVS hanno invece segni attaccati al simbolo e non devono passare.
+    """Riconosce due marker luminosi staccati e coerenti con un LED.
+
+    Le sole componenti connesse vicine non bastano: lettere, valori e tratti
+    dei rami possono produrre lo stesso conteggio. I due marker devono quindi
+    essere compatti, sufficientemente pieni, simili tra loro e collocati
+    dalla stessa parte del corpo del diodo.
     """
     x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)
     h, w = image_binary.shape[:2]
@@ -864,7 +881,7 @@ def is_led_like_diode_box(image_binary, box) -> bool:
     core_w = max(ox2 - ox1 + 1, 1)
     core_h = max(oy2 - oy1 + 1, 1)
 
-    detached_arrow_like = 0
+    detached_markers = []
 
     for idx in range(1, num_labels):
         sx = int(stats[idx, cv2.CC_STAT_LEFT])
@@ -873,7 +890,7 @@ def is_led_like_diode_box(image_binary, box) -> bool:
         sh = int(stats[idx, cv2.CC_STAT_HEIGHT])
         area = int(stats[idx, cv2.CC_STAT_AREA])
 
-        # componenti piccole/medie, non il simbolo principale
+        # Componenti piccole/medie, non il simbolo principale.
         if not (12 <= area <= 260):
             continue
 
@@ -891,6 +908,15 @@ def is_led_like_diode_box(image_binary, box) -> bool:
         dy = comp_cy - core_cy
 
         aspect = max(sw, sh) / float(max(1, min(sw, sh)))
+        fill_ratio = area / float(max(1, sw * sh))
+
+        # Le punte piene delle frecce occupano una parte consistente del bbox.
+        # Conserviamo anche il formato storico con due tratti molto sottili e
+        # allungati, ma le due forme non possono essere mescolate nella coppia.
+        compact_marker = min(sw, sh) >= 5 and fill_ratio >= 0.45
+        thin_marker = min(sw, sh) >= 2 and aspect >= 4.0 and area >= 20
+        if not compact_marker and not thin_marker:
+            continue
 
         # Due modalita' valide:
         # 1) tratti obliqui/laterali ben allungati;
@@ -902,9 +928,42 @@ def is_led_like_diode_box(image_binary, box) -> bool:
         if not (lateral_arrow or upper_led_marker):
             continue
 
-        detached_arrow_like += 1
+        detached_markers.append(
+            {
+                "dx": float(dx),
+                "dy": float(dy),
+                "area": int(area),
+                "compact": bool(compact_marker),
+                "thin": bool(thin_marker),
+            }
+        )
 
-    return detached_arrow_like >= 2
+    # Una coppia valida deve puntare nella stessa direzione rispetto al diodo
+    # e avere dimensioni confrontabili. La similarita' angolare evita di
+    # scambiare per frecce due frammenti posti ai lati opposti del simbolo.
+    for marker_index, first in enumerate(detached_markers):
+        for second in detached_markers[marker_index + 1:]:
+            direction_dot = first["dx"] * second["dx"] + first["dy"] * second["dy"]
+            first_distance = math.hypot(first["dx"], first["dy"])
+            second_distance = math.hypot(second["dx"], second["dy"])
+            direction_similarity = direction_dot / float(
+                max(first_distance * second_distance, 1e-6)
+            )
+            area_ratio = min(first["area"], second["area"]) / float(
+                max(first["area"], second["area"])
+            )
+            same_marker_family = (
+                (first["compact"] and second["compact"])
+                or (first["thin"] and second["thin"])
+            )
+            if (
+                same_marker_family
+                and direction_similarity >= 0.65
+                and area_ratio >= 0.55
+            ):
+                return True
+
+    return False
 
 # =========================================================
 # CONNECTOR E ANALOG METER STRUTTURATI
@@ -2091,8 +2150,17 @@ def get_input_images():
         if p.is_file() and p.suffix.lower() in IMAGE_EXTS
     ])
 
+    # Lo stesso filtro e' condiviso con gli step 03-05. Se non viene
+    # configurato, il comportamento storico sul batch completo non cambia.
+    if PIPELINE_IMAGE_IDS:
+        images = [path for path in images if path.stem in PIPELINE_IMAGE_IDS]
+
     if not images:
-        raise FileNotFoundError(f"Nessuna immagine trovata in: {INPUT_IMAGES_DIR}")
+        requested = ", ".join(sorted(PIPELINE_IMAGE_IDS))
+        filter_detail = f" per PIPELINE_IMAGE_IDS={requested}" if requested else ""
+        raise FileNotFoundError(
+            f"Nessuna immagine trovata in: {INPUT_IMAGES_DIR}{filter_detail}"
+        )
 
     return images
 
@@ -2334,6 +2402,8 @@ def main() -> None:
     print(f"CLASS_TERMINALS_PATH : {CLASS_TERMINALS_PATH}")
     print(f"INPUT_IMAGES_DIR     : {INPUT_IMAGES_DIR}")
     print(f"OUTPUT_DIR           : {OUTPUT_DIR}")
+    if PIPELINE_IMAGE_IDS:
+        print(f"PIPELINE_IMAGE_IDS   : {sorted(PIPELINE_IMAGE_IDS)}")
     print(f"DETECT_CLASS_IDS     : {detect_class_ids}")
     print(f"TERMINAL_CLASS_IDS   : {terminal_class_ids}")
     print(f"MASKING_CLASS_IDS    : {masking_class_ids}\n")

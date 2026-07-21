@@ -1,0 +1,27 @@
+{
+  "scenario_id": "scenario_2",
+  "title": "Alzare la tensione della batteria per simulare una batteria molto carica",
+  "hypothesis": "If the monitor distinguishes a very highly charged battery, increasing Vbattery2_1 above the nominal 12 V should change the green LED branch conditions and may activate Dled12_3.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "14V"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N012)",
+    "v(N004)",
+    "v(N011)",
+    "@dled12_3[id]"
+  ],
+  "expect": {
+    "v(N012)": "changed",
+    "v(N004)": "changed",
+    "v(N011)": "changed",
+    "@dled12_3[id]": "magnitude_increased"
+  }
+}

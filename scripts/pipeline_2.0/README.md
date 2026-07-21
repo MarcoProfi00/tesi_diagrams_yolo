@@ -1,6 +1,6 @@
 # Pipeline 2.0 - Graph JSON to SPICE
 
-Questo README spiega come usare oggi la Pipeline 2.0 da terminale.
+Questo README spiega come usare e verificare oggi la Pipeline 2.0 da terminale.
 
 Per una descrizione piu analitica del ruolo di ogni script, vedere anche:
 
@@ -117,6 +117,13 @@ Fa questo:
 - genera gli output `01-07`;
 - opzionalmente esegue `08_spice_run`;
 - costruisce anche `10_diagnostic_context.json`.
+
+Espone inoltre `run_technical_pipeline(...)`, il core riutilizzabile degli
+step 01-08 con Graph JSON, YAML e cartella output passati esplicitamente. Il
+launcher in `scripts/pipeline_unified/` usa questa funzione per lavorare nei
+workspace isolati senza duplicare la logica elettrica e senza creare ancora
+il contesto diagnostico dello step 10. La CLI storica di `run_pipeline2.py`
+mantiene invece il comportamento precedente, incluso lo step 10.
 
 Gli step oggi caricati davvero dal codice sono:
 
@@ -391,6 +398,9 @@ scenarios/<scenario_id>/
 - costruisce il modello del circuito realmente simulato;
 - unisce netlist, node map, component rules, misure ngspice e geometry seed
   della Pipeline 1.0;
+- se la run contiene o eredita `pipeline2_sources.json`, usa esplicitamente
+  `03_estimate_terminals` e `05_build_terminal_graph` indicati dal workspace;
+  il percorso storico per batch resta disponibile come fallback;
 - riconosce le istanze SPICE `X...` senza mostrare come componenti separati gli
   elementi interni dichiarati tra `.subckt` e `.ends`;
 - applica gli arricchimenti visuali dichiarativi dello YAML, inclusi componenti
@@ -878,7 +888,9 @@ Guardrail della prima versione:
   localizzata finche resta budget e manca una correzione verificata;
 - per lampeggio, regolarita, duty cycle o durata di accensione, gli scenari
   `.tran` dichiarano `temporal_expect`: il runtime confronta i profili viewer
-  base/scenario prima di accettare lo stop risolutivo;
+  base/scenario prima di accettare lo stop risolutivo; se tutte le aspettative
+  elettriche e temporali sono soddisfatte, il cambio qualitativo di stato non
+  richiede anche una variazione scalare relativa del 10%;
 - pulsante `Stop` e stato persistente riprendibile.
 
 La macchina a stati e il runtime sono stati verificati con decisioni
@@ -886,16 +898,33 @@ controllate e con la prima passata OpenAI su `a01`, `a02` e `a04`-`a10`.
 Le sequenze temporali tra componenti restano un'estensione futura: richiedono
 una `.tran` aggiungibile dallo scenario e profili temporali anche per lampade.
 
-## Prossima fase: Experiment 5 / Batch B
+## Experiment 5 / Batch B
 
-Experiment 5 usera il Batch B come prova di generalizzazione. Per ogni circuito
-si prepara prima la base fino a `01-08` e il viewer, poi si prova `CHAT` con le
-primitive esistenti e infine `AGENT` sugli stessi sintomi. Nuove primitive o
-simboli viewer saranno aggiunti solo quando il limite e ricorrente e generale,
-mai per adattare la pipeline a un singolo circuito.
+Experiment 5 ha usato il Batch B come prova di generalizzazione. Per ogni
+circuito e stata preparata prima la base fino a `01-08` e il viewer, poi `CHAT`
+con le primitive esistenti e infine `AGENT` sugli stessi sintomi. Nuove
+primitive o simboli viewer restano ammessi solo quando il limite e ricorrente e
+generale, mai per adattare la pipeline a un singolo circuito.
 
 I comandi diretti in linguaggio naturale verranno affrontati dopo il ciclo
 autonomo di base e riuseranno lo stesso runtime.
+
+## Test di regressione
+
+La suite di caratterizzazione usa `unittest`, senza aggiungere un framework di
+test, e non chiama OpenAI o ngspice. Usa `01_graph.json` come fixture e
+rigenera in memoria gli step 02-07; inoltre controlla viewer, scenari,
+contratti CHAT/AGENT e gli entry point pubblici. Le
+prove che scrivono file lavorano esclusivamente sotto `.tmp/pipeline2_tests` e
+non modificano gli output validati.
+
+Da PowerShell, nella root del repository:
+
+```powershell
+.venv312\Scripts\python.exe -B -m unittest discover -s tests\pipeline2 -v
+```
+
+`-B` evita la generazione di file `.pyc` durante la verifica.
 
 ## Sintesi finale
 

@@ -1,0 +1,33 @@
+{
+  "title": "Rampa batteria 9V->12V->15V: mostrare la sequenza di commutazione dei LED",
+  "hypothesis": "Se il circuito e coerente con le due prove statiche gia osservate, una singola rampa lenta della batteria deve mostrare nel transitorio il passaggio da rosso acceso a giallo acceso fino a verde acceso, con attivazione dei tre rami in zone di tensione distinte.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "PWL(0s 9V 1s 9V 1.5s 12V 2s 15V 3s 15V)"
+    }
+  ],
+  "compare": [
+    "@dled12_1[id]",
+    "@dled12_2[id]",
+    "@dled12_3[id]",
+    "v(N004)",
+    "v(N012)"
+  ],
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak",
+    "@dled12_2[id]": "tran_abs_peak",
+    "@dled12_3[id]": "tran_abs_peak"
+  },
+  "expect": {
+    "@dled12_1[id]": "nonzero",
+    "@dled12_2[id]": "nonzero",
+    "@dled12_3[id]": "nonzero",
+    "v(N004)": "changed",
+    "v(N012)": "changed"
+  },
+  "scenario_id": "agent_scenario_3"
+}

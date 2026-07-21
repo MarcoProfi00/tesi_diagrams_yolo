@@ -1,21 +1,20 @@
 """
 Entry point della pipeline 2.0.
 
-Parte dai Graph JSON gia prodotti dal passo 05
+Parte dai Graph JSON gia prodotti dal passo 06
 della pipeline 1.0 e genera gli artefatti elettrici successivi:
 
 - normalizzazione del JSON;
 - costruzione della mappa dei nodi elettrici;
 - associazione dei valori tramite YAML;
-- applicazione di device profile per componenti complessi;
 - generazione di netlist SPICE complete o parziali;
 - esecuzione opzionale di ngspice;
 - report elettrico finale;
 - contesto diagnostico strutturato.
 
-La pipeline deve restare unica per Batch A, Batch B, Batch C1 e Batch C2 e altri.
-Il livello di output potra cambiare in base allo stato del circuito:
-READY, PARTIAL o NOT_READY.
+La pipeline resta unica per Batch A, Batch B, Batch C1, Batch C2 e batch futuri.
+`05_device_profiles.py` e ancora un'estensione dichiarativa non integrata nel
+flusso eseguito da questo entry point.
 """
 
 from __future__ import annotations
@@ -23,11 +22,18 @@ from __future__ import annotations
 import argparse
 import importlib.util
 from pathlib import Path
+import sys
 from types import ModuleType
 
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 MODULE_DIR = SCRIPT_DIR / "json_to_spice"
+
+# Gli step caricati da file possono condividere moduli interni non numerati.
+# Inserire una sola volta la directory mantiene validi sia la CLI sia gli
+# import effettuati dall'orchestratore unificato.
+if str(MODULE_DIR) not in sys.path:
+    sys.path.insert(0, str(MODULE_DIR))
 
 
 def load_step_module(filename: str, module_name: str) -> ModuleType:
@@ -57,25 +63,30 @@ spice_run = load_step_module("08_spice_run.py", "pipeline2_spice_run")
 diagnostic_context = load_step_module("10_build_diagnostic_context.py", "pipeline2_diagnostic_context")
 
 
-def run_one_circuit(
-    batch_name: str,
-    circuit_id: str,
+def run_technical_pipeline(
+    input_json: str | Path,
+    output_dir: str | Path,
+    values_path: str | Path,
     run_spice: bool = False,
     ngspice_executable: str | None = None,
-    experiment_name: str | None = None,
-) -> Path:
-    """Esegue gli step disponibili della pipeline 2.0 su un circuito."""
-    input_json = io.resolve_pipeline1_graph_json(batch_name, circuit_id)
-    output_dir = io.prepare_circuit_output(batch_name, circuit_id, experiment_name)
+) -> dict[str, object]:
+    """Esegue gli step tecnici 01-08 usando percorsi espliciti.
 
-    io.copy_source_graph(input_json, output_dir)
+    Questa funzione contiene l'unica implementazione della conversione
+    Graph JSON -> SPICE. I launcher possono quindi scegliere liberamente la
+    posizione di input e output senza duplicare la logica elettrica.
+    """
+    input_json = Path(input_json).resolve()
+    output_dir = Path(output_dir).resolve()
+    values_path = Path(values_path).resolve()
+
+    graph_copy_path = io.copy_source_graph(input_json, output_dir)
 
     raw_graph = io.load_json(input_json)
     normalized = normalize.normalize_circuit_graph(raw_graph)
     normalized_path = io.write_json(output_dir / "02_normalized_circuit.json", normalized)
     node_map_data = node_map.build_node_map(normalized)
     node_map_path = io.write_json(output_dir / "03_node_map.json", node_map_data)
-    values_path = values.find_manual_values_path(io.PROJECT_ROOT, batch_name, circuit_id)
     values_data = values.load_simple_yaml(values_path)
     values_bound = values.build_values_bound(
         normalized_circuit=normalized,
@@ -117,6 +128,60 @@ def run_one_circuit(
             output_dir / "08_spice_run.json",
             spice_run_report,
         )
+
+    return {
+        "input_json": input_json,
+        "values_path": values_path,
+        "output_dir": output_dir,
+        "graph_copy_path": graph_copy_path,
+        "normalized": normalized,
+        "normalized_path": normalized_path,
+        "node_map": node_map_data,
+        "node_map_path": node_map_path,
+        "values_bound": values_bound,
+        "values_bound_path": values_bound_path,
+        "component_rules": component_rules_data,
+        "component_rules_path": component_rules_path,
+        "netlist_path": netlist_path,
+        "spice_emit_report": spice_emit_report,
+        "spice_emit_report_path": spice_emit_report_path,
+        "spice_run_report": spice_run_report,
+        "spice_run_report_path": spice_run_report_path,
+    }
+
+
+def run_one_circuit(
+    batch_name: str,
+    circuit_id: str,
+    run_spice: bool = False,
+    ngspice_executable: str | None = None,
+    experiment_name: str | None = None,
+) -> Path:
+    """Esegue la Pipeline 2.0 storica su un circuito del repository."""
+    input_json = io.resolve_pipeline1_graph_json(batch_name, circuit_id)
+    output_dir = io.prepare_circuit_output(batch_name, circuit_id, experiment_name)
+    values_path = values.find_manual_values_path(io.PROJECT_ROOT, batch_name, circuit_id)
+    result = run_technical_pipeline(
+        input_json=input_json,
+        output_dir=output_dir,
+        values_path=values_path,
+        run_spice=run_spice,
+        ngspice_executable=ngspice_executable,
+    )
+
+    normalized = result["normalized"]
+    normalized_path = result["normalized_path"]
+    node_map_data = result["node_map"]
+    node_map_path = result["node_map_path"]
+    values_bound = result["values_bound"]
+    values_bound_path = result["values_bound_path"]
+    component_rules_data = result["component_rules"]
+    component_rules_path = result["component_rules_path"]
+    netlist_path = result["netlist_path"]
+    spice_emit_report = result["spice_emit_report"]
+    spice_emit_report_path = result["spice_emit_report_path"]
+    spice_run_report = result["spice_run_report"]
+    spice_run_report_path = result["spice_run_report_path"]
 
     diagnostic_context_data = diagnostic_context.build_diagnostic_context(
         output_dir=output_dir,

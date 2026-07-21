@@ -8,13 +8,13 @@ Il file YAML serve a separare il problema topologico dal problema OCR/valori:
 la pipeline 2.0 non deve inventare valori mancanti. Se un valore non e
 disponibile, deve essere registrato nei parametri mancanti e nel report.
 
-Responsabilita previste:
+Responsabilita:
 
 - leggere valori di resistenze, condensatori, sorgenti e carichi;
 - leggere modelli per LED, diodi, BJT, MOSFET e componenti speciali;
 - leggere stati manuali di switch quando necessario;
 - leggere nodi manuali come VCC, VDD, GND, OUT;
-- distinguere valori osservati, assunti e mancanti.
+- distinguere valori provenienti dal grafo, valori manuali e valori mancanti.
 """
 
 from __future__ import annotations

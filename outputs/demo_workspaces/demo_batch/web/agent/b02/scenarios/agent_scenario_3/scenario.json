@@ -1,0 +1,41 @@
+{
+  "title": "Diagnostica forte con riduzione ulteriore del bias di base a 47k",
+  "hypothesis": "Se 22k non basta, una riduzione piu marcata della corrente di base deve comunque rompere la conduzione simultanea; un eventuale lampeggio o spegnimento alternato confermerebbe che la causa primaria e il bias eccessivo, non la topologia di accoppiamento.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "resistor22.2",
+      "value": "47k"
+    },
+    {
+      "type": "change_component_value",
+      "target": "resistor22.3",
+      "value": "47k"
+    }
+  ],
+  "compare": [
+    "v(N004)",
+    "v(N006)",
+    "@dled12_1[id]",
+    "@dled12_2[id]"
+  ],
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak",
+    "@dled12_2[id]": "tran_abs_peak"
+  },
+  "expect": {
+    "v(N004)": "changed",
+    "v(N006)": "changed",
+    "@dled12_1[id]": "nonzero",
+    "@dled12_2[id]": "nonzero"
+  },
+  "temporal_expect": {
+    "target": "Dled12_1",
+    "required_state": "blinking",
+    "require_regular_period": true,
+    "min_duty_cycle": 0.1
+  },
+  "scenario_id": "agent_scenario_3"
+}

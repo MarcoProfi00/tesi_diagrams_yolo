@@ -4,19 +4,19 @@ Generazione della netlist SPICE.
 Questo modulo converte la rappresentazione normalizzata del circuito, la
 node map e i valori YAML in una netlist SPICE completa o parziale.
 
-La generazione non deve essere tutto-o-niente:
+La generazione e tollerante ai componenti incompleti:
 
-- in modalita READY produce una netlist eseguibile;
-- in modalita PARTIAL produce una netlist parziale con commenti e warning;
-- in modalita NOT_READY puo produrre solo un riepilogo delle cause di blocco.
+- emette gli elementi supportati e pronti;
+- registra nel report componenti saltati, warning e modelli mancanti;
+- puo quindi produrre una netlist parziale, che lo step 08 valutera con ngspice.
 
-Responsabilita previste:
+Responsabilita:
 
 - emettere righe SPICE per componenti supportati;
 - includere modelli .model o .subckt quando dichiarati;
 - aggiungere analisi base come .op o .tran quando richiesto;
 - commentare componenti saltati per valori o modelli mancanti;
-- produrre spice_netlist.cir e conversion_report.json.
+- produrre `07_netlist.cir` e `07_spice_emit_report.json`.
 """
 
 from __future__ import annotations
@@ -49,21 +49,21 @@ def build_model_lines(spice_models: dict[str, Any] | None = None) -> dict[str, s
 
 
 def safe_name(raw_name: str) -> str:
-    """Return a SPICE-safe element name fragment."""
+    """Restituisce un frammento sicuro per il nome di un elemento SPICE."""
     return re.sub(r"[^A-Za-z0-9_]", "_", raw_name)
 
 
 def element_name(prefix: str, raw_name: str) -> str:
-    """Build a SPICE element name with a valid prefix."""
+    """Costruisce un nome di elemento SPICE con un prefisso valido."""
     return f"{prefix}{safe_name(raw_name)}"
 
 
 def spice_value(value: Any, unit: str | None = None) -> str:
     """
-    Convert a simple scalar value to SPICE text.
+    Converte un semplice valore scalare in testo SPICE.
 
-    YAML values should preferably already be stored in base units. This helper
-    only adds a few common suffixes when needed.
+    I valori YAML dovrebbero essere gia espressi nelle unita di base. Questo
+    helper aggiunge soltanto alcuni suffissi comuni quando servono.
     """
     if value is None:
         return ""
@@ -86,7 +86,7 @@ def spice_value(value: Any, unit: str | None = None) -> str:
 
 
 def source_kind(parameters: dict[str, Any]) -> str:
-    """Return the minimal SPICE source kind, usually DC for now."""
+    """Restituisce il tipo minimo della sorgente SPICE, normalmente DC."""
     kind = str(parameters.get("type", "dc")).upper()
     if kind == "DC":
         return "DC"
@@ -122,7 +122,7 @@ def voltage_source_expression(parameters: dict[str, Any]) -> str:
 
 
 def emit_equivalent_ac_source(component_id: str, rule: dict[str, Any]) -> tuple[str | None, str | None]:
-    """Emit a transformer equivalent as a sinusoidal voltage source."""
+    """Emette l'equivalente di un trasformatore come sorgente sinusoidale."""
     nodes = rule.get("nodes") or []
     parameters = rule.get("parameters") or {}
     if len(nodes) != 2:
@@ -146,7 +146,7 @@ def emit_equivalent_ac_source(component_id: str, rule: dict[str, Any]) -> tuple[
 
 
 def emit_supply(name: str, supply: dict[str, Any]) -> tuple[str | None, str | None]:
-    """Emit a manual supply as a SPICE voltage source."""
+    """Emette un'alimentazione manuale come sorgente di tensione SPICE."""
     if supply.get("status") != "spice_ready":
         return None, f"{name}: supply not ready"
 
@@ -164,7 +164,7 @@ def emit_supply(name: str, supply: dict[str, Any]) -> tuple[str | None, str | No
 
 
 def emit_direct(component_id: str, rule: dict[str, Any]) -> tuple[str | None, str | None]:
-    """Emit direct SPICE primitives such as R, C, L, V, I."""
+    """Emette primitive SPICE dirette come R, C, L, V e I."""
     prefix = rule.get("spice_prefix")
     nodes = rule.get("nodes") or []
     parameters = rule.get("parameters") or {}
@@ -192,7 +192,7 @@ def emit_direct(component_id: str, rule: dict[str, Any]) -> tuple[str | None, st
 
 
 def emit_equivalent(component_id: str, rule: dict[str, Any]) -> tuple[str | None, str | None]:
-    """Emit equivalent loads, currently as resistors."""
+    """Emette carichi equivalenti, attualmente modellati come resistenze."""
     nodes = rule.get("nodes") or []
     parameters = rule.get("parameters") or {}
     if len(nodes) != 2:
@@ -205,7 +205,7 @@ def emit_equivalent(component_id: str, rule: dict[str, Any]) -> tuple[str | None
 
 
 def emit_model_component(component_id: str, rule: dict[str, Any]) -> tuple[str | None, str | None]:
-    """Emit model-based components, currently LEDs and diodes."""
+    """Emette componenti basati su modello, attualmente LED e diodi."""
     prefix = rule.get("spice_prefix")
     nodes = rule.get("nodes") or []
     parameters = rule.get("parameters") or {}
@@ -230,7 +230,7 @@ def emit_subcircuit(component_id: str, rule: dict[str, Any]) -> tuple[str | None
 
 
 def emit_simplified(component_id: str, rule: dict[str, Any]) -> tuple[str | None, str | None]:
-    """Emit simplified components such as open or closed switches."""
+    """Emette componenti semplificati, come switch aperti o chiusi."""
     nodes = rule.get("nodes") or []
     strategy = rule.get("strategy")
     if len(nodes) != 2:
@@ -244,7 +244,7 @@ def emit_simplified(component_id: str, rule: dict[str, Any]) -> tuple[str | None
 
 
 def emit_component(component_id: str, rule: dict[str, Any]) -> tuple[str | None, str | None, str | None]:
-    """Emit a single SPICE line or comment."""
+    """Emette una singola riga SPICE oppure un commento."""
     status = rule.get("status")
     support = rule.get("spice_support")
     nodes = [str(node) for node in (rule.get("nodes") or [])]
@@ -343,7 +343,7 @@ def build_spice_netlist(
     component_rules: dict[str, Any],
     spice_models: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Build netlist text and a compact emission report."""
+    """Costruisce il testo della netlist e un report compatto di emissione."""
     circuit_id = component_rules.get("circuit_id") or "unknown"
     model_lines = build_model_lines(spice_models)
     lines = [
@@ -460,7 +460,7 @@ def write_spice_outputs(
     component_rules: dict[str, Any],
     spice_models: dict[str, Any] | None = None,
 ) -> tuple[Path, dict[str, Any]]:
-    """Write 07_netlist.cir and return the emission report."""
+    """Scrive `07_netlist.cir` e restituisce il report di emissione."""
     output_path = Path(output_dir)
     result = build_spice_netlist(component_rules, spice_models=spice_models)
     netlist_path = output_path / "07_netlist.cir"

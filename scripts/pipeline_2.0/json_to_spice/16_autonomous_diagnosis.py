@@ -1,4 +1,4 @@
-"""Entry point CLI dell'agente autonomo controllato di Experiment 4."""
+"""Entry point CLI della modalita AGENT autonoma e controllata."""
 
 from __future__ import annotations
 

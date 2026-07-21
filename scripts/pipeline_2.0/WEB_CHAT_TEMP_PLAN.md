@@ -1,4 +1,9 @@
-# Pipeline 2.0 - Web Chat Plan
+# Pipeline 2.0 - Piano storico della webchat
+
+> Documento storico di progettazione. Descrive le decisioni iniziali che hanno
+> portato all'implementazione corrente; per comandi e comportamento effettivi
+> usare `scripts/pipeline_2.0/README.md`. Gli esempi marcati come futuri, incluso
+> `run_pipeline2.py --open-web`, non rappresentano opzioni CLI disponibili.
 
 Questa nota fissa il ruolo della web chat, il suo stato attuale e i prossimi
 passi. Non descrive singoli circuiti: deve restare un promemoria generale

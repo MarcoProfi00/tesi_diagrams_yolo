@@ -134,100 +134,88 @@ def validate_action(action: Any, scenario_index: int, action_index: int) -> dict
         raise AutonomousDecisionError(
             f"Scenario {scenario_index}, azione {action_index}: target_nodes deve essere una lista"
         )
+    if (
+        action_type == "set_initial_node_voltage"
+        and "skip_operating_point" in action
+        and not isinstance(action.get("skip_operating_point"), bool)
+    ):
+        raise AutonomousDecisionError(
+            f"Scenario {scenario_index}, azione {action_index}: "
+            "skip_operating_point deve essere booleano"
+        )
     return dict(action)
 
 
-def validate_scenario(
-    scenario: Any,
+def normalize_temporal_expectation(
+    scenario: dict[str, Any],
+    normalized: dict[str, Any],
     scenario_index: int,
-    allow_unchanged_expectations: bool = True,
-    require_gain_comparison: bool = False,
-    require_quality_analysis: bool = False,
-    require_variable_signal_measurement: bool = False,
-    require_direct_component_measurement: bool = False,
-    require_temporal_expectation: bool = False,
-) -> dict[str, Any]:
-    """Valida uno scenario self-contained proposto dall'agente."""
-    if not isinstance(scenario, dict):
-        raise AutonomousDecisionError(f"Scenario {scenario_index}: oggetto JSON richiesto")
-    actions = scenario.get("actions")
-    if not isinstance(actions, list) or not actions:
-        raise AutonomousDecisionError(f"Scenario {scenario_index}: actions non puo essere vuoto")
-    if len(actions) > MAX_ACTIONS_PER_SCENARIO:
-        raise AutonomousDecisionError(
-            f"Scenario {scenario_index}: massimo {MAX_ACTIONS_PER_SCENARIO} azioni"
-        )
-
-    normalized = dict(scenario)
-    normalized["title"] = str(scenario.get("title") or f"Scenario autonomo {scenario_index}").strip()
-    normalized["hypothesis"] = str(scenario.get("hypothesis") or "").strip()
-    intent = str(scenario.get("intent") or "").strip().lower()
-    if intent not in ALLOWED_SCENARIO_INTENTS:
-        raise AutonomousDecisionError(
-            f"Scenario {scenario_index}: intent deve essere 'correction' oppure 'diagnostic'"
-        )
-    normalized["intent"] = intent
-    analysis = str(scenario.get("analysis") or "").strip().lower()
-    if analysis not in {"op", "tran"}:
-        raise AutonomousDecisionError(
-            f"Scenario {scenario_index}: analysis deve essere 'op' oppure 'tran'"
-        )
-    normalized["analysis"] = analysis
-
-    # I criteri temporali usano i profili calcolati dal viewer dopo la run .tran.
+    analysis: str,
+    require_temporal_expectation: bool,
+) -> None:
+    """Normalizza i criteri temporali senza cambiarne l'ordine di validazione."""
     raw_temporal_expectation = scenario.get("temporal_expect")
-    if raw_temporal_expectation is not None:
-        if analysis != "tran":
+    if raw_temporal_expectation is None:
+        if require_temporal_expectation:
             raise AutonomousDecisionError(
-                f"Scenario {scenario_index}: temporal_expect richiede analysis='tran'"
+                f"Scenario {scenario_index}: il sintomo dinamico richiede temporal_expect"
             )
-        if not isinstance(raw_temporal_expectation, dict):
-            raise AutonomousDecisionError(
-                f"Scenario {scenario_index}: temporal_expect deve essere un oggetto"
-            )
-        target = str(raw_temporal_expectation.get("target") or "").strip()
-        if not target:
-            raise AutonomousDecisionError(
-                f"Scenario {scenario_index}: temporal_expect.target e obbligatorio"
-            )
-        normalized_temporal_expectation: dict[str, Any] = {"target": target}
-        required_state = raw_temporal_expectation.get("required_state")
-        if required_state is not None:
-            required_state = str(required_state).strip()
-            if not required_state:
-                raise AutonomousDecisionError(
-                    f"Scenario {scenario_index}: temporal_expect.required_state non puo essere vuoto"
-                )
-            normalized_temporal_expectation["required_state"] = required_state
-        regular_period = raw_temporal_expectation.get("require_regular_period")
-        if regular_period is not None:
-            if not isinstance(regular_period, bool):
-                raise AutonomousDecisionError(
-                    f"Scenario {scenario_index}: temporal_expect.require_regular_period deve essere booleano"
-                )
-            normalized_temporal_expectation["require_regular_period"] = regular_period
-        for field in ("min_duty_cycle", "min_relative_duty_increase"):
-            value = raw_temporal_expectation.get(field)
-            if value is None:
-                continue
-            if not isinstance(value, (int, float)) or isinstance(value, bool) or value < 0:
-                raise AutonomousDecisionError(
-                    f"Scenario {scenario_index}: temporal_expect.{field} deve essere un numero non negativo"
-                )
-            if field == "min_duty_cycle" and value > 1:
-                raise AutonomousDecisionError(
-                    f"Scenario {scenario_index}: temporal_expect.min_duty_cycle deve essere compreso tra 0 e 1"
-                )
-            normalized_temporal_expectation[field] = float(value)
-        if len(normalized_temporal_expectation) == 1:
-            raise AutonomousDecisionError(
-                f"Scenario {scenario_index}: temporal_expect deve dichiarare almeno un criterio"
-            )
-        normalized["temporal_expect"] = normalized_temporal_expectation
-    elif require_temporal_expectation:
+        return
+    if analysis != "tran":
         raise AutonomousDecisionError(
-            f"Scenario {scenario_index}: il sintomo dinamico richiede temporal_expect"
+            f"Scenario {scenario_index}: temporal_expect richiede analysis='tran'"
         )
+    if not isinstance(raw_temporal_expectation, dict):
+        raise AutonomousDecisionError(
+            f"Scenario {scenario_index}: temporal_expect deve essere un oggetto"
+        )
+    target = str(raw_temporal_expectation.get("target") or "").strip()
+    if not target:
+        raise AutonomousDecisionError(
+            f"Scenario {scenario_index}: temporal_expect.target e obbligatorio"
+        )
+    normalized_temporal_expectation: dict[str, Any] = {"target": target}
+    required_state = raw_temporal_expectation.get("required_state")
+    if required_state is not None:
+        required_state = str(required_state).strip()
+        if not required_state:
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: temporal_expect.required_state non puo essere vuoto"
+            )
+        normalized_temporal_expectation["required_state"] = required_state
+    regular_period = raw_temporal_expectation.get("require_regular_period")
+    if regular_period is not None:
+        if not isinstance(regular_period, bool):
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: temporal_expect.require_regular_period deve essere booleano"
+            )
+        normalized_temporal_expectation["require_regular_period"] = regular_period
+    for field in ("min_duty_cycle", "min_relative_duty_increase"):
+        value = raw_temporal_expectation.get(field)
+        if value is None:
+            continue
+        if not isinstance(value, (int, float)) or isinstance(value, bool) or value < 0:
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: temporal_expect.{field} deve essere un numero non negativo"
+            )
+        if field == "min_duty_cycle" and value > 1:
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: temporal_expect.min_duty_cycle deve essere compreso tra 0 e 1"
+            )
+        normalized_temporal_expectation[field] = float(value)
+    if len(normalized_temporal_expectation) == 1:
+        raise AutonomousDecisionError(
+            f"Scenario {scenario_index}: temporal_expect deve dichiarare almeno un criterio"
+        )
+    normalized["temporal_expect"] = normalized_temporal_expectation
+
+
+def normalize_compare(
+    scenario: dict[str, Any],
+    normalized: dict[str, Any],
+    scenario_index: int,
+) -> dict[str, str]:
+    """Normalizza le grandezze confrontate e restituisce il lookup canonico."""
     compare = scenario.get("compare")
     if not isinstance(compare, list) or not compare:
         raise AutonomousDecisionError(f"Scenario {scenario_index}: compare non puo essere vuoto")
@@ -240,55 +228,72 @@ def validate_scenario(
                 f"Scenario {scenario_index}: la corrente diretta BJT '{quantity}' non e "
                 "disponibile; usa la corrente di una resistenza di collettore o emettitore"
             )
+    return {quantity.lower(): quantity for quantity in normalized["compare"]}
 
-    # La mappa opzionale permette di combinare misure DC e transitorie nello stesso test.
-    compare_names = {quantity.lower(): quantity for quantity in normalized["compare"]}
+
+def normalize_measurements(
+    scenario: dict[str, Any],
+    normalized: dict[str, Any],
+    scenario_index: int,
+    analysis: str,
+    compare_names: dict[str, str],
+) -> dict[str, str]:
+    """Normalizza la mappa opzionale delle misure OP e transitorie."""
     raw_measurements = scenario.get("measure")
     normalized_measurements: dict[str, str] = {}
-    if raw_measurements is not None:
-        if not isinstance(raw_measurements, dict) or not raw_measurements:
+    if raw_measurements is None:
+        return normalized_measurements
+    if not isinstance(raw_measurements, dict) or not raw_measurements:
+        raise AutonomousDecisionError(
+            f"Scenario {scenario_index}: measure deve essere un oggetto non vuoto"
+        )
+    for raw_quantity, raw_measurement in raw_measurements.items():
+        quantity = str(raw_quantity or "").strip()
+        measurement = str(raw_measurement or "").strip().lower()
+        canonical_quantity = compare_names.get(quantity.lower())
+        if canonical_quantity is None:
             raise AutonomousDecisionError(
-                f"Scenario {scenario_index}: measure deve essere un oggetto non vuoto"
+                f"Scenario {scenario_index}: la misura '{quantity}' non e presente in compare"
             )
-        for raw_quantity, raw_measurement in raw_measurements.items():
-            quantity = str(raw_quantity or "").strip()
-            measurement = str(raw_measurement or "").strip().lower()
-            canonical_quantity = compare_names.get(quantity.lower())
-            if canonical_quantity is None:
-                raise AutonomousDecisionError(
-                    f"Scenario {scenario_index}: la misura '{quantity}' non e presente in compare"
-                )
-            if measurement not in ALLOWED_MEASUREMENT_TYPES:
-                allowed = ", ".join(sorted(ALLOWED_MEASUREMENT_TYPES))
-                raise AutonomousDecisionError(
-                    f"Scenario {scenario_index}: misura non valida '{measurement}'; usa {allowed}"
-                )
-            if measurement == "tran_vpp" and analysis != "tran":
-                raise AutonomousDecisionError(
-                    f"Scenario {scenario_index}: tran_vpp richiede analysis='tran'"
-                )
-            if measurement == "tran_vpp" and not is_transient_voltage_quantity(
-                canonical_quantity
-            ):
-                raise AutonomousDecisionError(
-                    f"Scenario {scenario_index}: tran_vpp richiede v(NODO) oppure v(NODO1,NODO2)"
-                )
-            if measurement == "tran_abs_peak" and analysis != "tran":
-                raise AutonomousDecisionError(
-                    f"Scenario {scenario_index}: tran_abs_peak richiede analysis='tran'"
-                )
-            if measurement == "tran_abs_peak" and not is_transient_internal_current_quantity(
-                canonical_quantity
-            ):
-                raise AutonomousDecisionError(
-                    f"Scenario {scenario_index}: tran_abs_peak richiede @dNOME[id]"
-                )
-            normalized_measurements[canonical_quantity] = measurement
-        normalized["measure"] = normalized_measurements
+        if measurement not in ALLOWED_MEASUREMENT_TYPES:
+            allowed = ", ".join(sorted(ALLOWED_MEASUREMENT_TYPES))
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: misura non valida '{measurement}'; usa {allowed}"
+            )
+        if measurement == "tran_vpp" and analysis != "tran":
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: tran_vpp richiede analysis='tran'"
+            )
+        if measurement == "tran_vpp" and not is_transient_voltage_quantity(
+            canonical_quantity
+        ):
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: tran_vpp richiede v(NODO) oppure v(NODO1,NODO2)"
+            )
+        if measurement == "tran_abs_peak" and analysis != "tran":
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: tran_abs_peak richiede analysis='tran'"
+            )
+        if measurement == "tran_abs_peak" and not is_transient_internal_current_quantity(
+            canonical_quantity
+        ):
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: tran_abs_peak richiede @dNOME[id]"
+            )
+        normalized_measurements[canonical_quantity] = measurement
+    normalized["measure"] = normalized_measurements
+    return normalized_measurements
 
-    complete_mixed_objective = (
-        require_variable_signal_measurement and require_direct_component_measurement
-    )
+
+def validate_variable_signal_measurement(
+    scenario_index: int,
+    intent: str,
+    analysis: str,
+    normalized_measurements: dict[str, str],
+    require_variable_signal_measurement: bool,
+    complete_mixed_objective: bool,
+) -> None:
+    """Verifica la misura variabile richiesta dagli obiettivi AC o VAC."""
     if require_variable_signal_measurement and (
         intent == "correction" or complete_mixed_objective
     ):
@@ -298,76 +303,112 @@ def validate_scenario(
                 "analysis='tran' e almeno una misura tran_vpp"
             )
 
-    gain = scenario.get("gain")
-    gain_required = (
-        require_gain_comparison
-        or (require_quality_analysis and analysis == "tran")
-    )
-    if gain_required or isinstance(gain, dict):
-        if not isinstance(gain, dict):
-            raise AutonomousDecisionError(
-                f"Scenario {scenario_index}: una correzione del sintomo di "
-                "amplificazione richiede gain con input e output"
-            )
-        gain_input = str(gain.get("input") or "").strip()
-        gain_output = str(gain.get("output") or "").strip()
-        compare_lookup = {quantity.lower(): quantity for quantity in normalized["compare"]}
-        canonical_input = compare_lookup.get(gain_input.lower())
-        canonical_output = compare_lookup.get(gain_output.lower())
-        if canonical_input is None or canonical_output is None:
-            raise AutonomousDecisionError(
-                f"Scenario {scenario_index}: gain.input e gain.output devono essere presenti in compare"
-            )
-        if canonical_input.lower() == canonical_output.lower():
-            raise AutonomousDecisionError(
-                f"Scenario {scenario_index}: gain.input e gain.output devono essere grandezze distinte"
-            )
-        if not all(
-            is_transient_voltage_quantity(quantity)
-            for quantity in (canonical_input, canonical_output)
-        ):
-            raise AutonomousDecisionError(
-                f"Scenario {scenario_index}: gain.input e gain.output devono essere tensioni a uno o due nodi"
-            )
-        if analysis != "tran":
-            raise AutonomousDecisionError(
-                f"Scenario {scenario_index}: il confronto di guadagno richiede analysis='tran'"
-            )
-        normalized_gain: dict[str, Any] = {
-            "input": canonical_input,
-            "output": canonical_output,
-        }
-        raw_min_ratio = gain.get("min_ratio")
-        if require_gain_comparison and raw_min_ratio is None:
-            raise AutonomousDecisionError(
-                f"Scenario {scenario_index}: il test di trasferimento richiede gain.min_ratio"
-            )
-        if raw_min_ratio is not None:
-            try:
-                min_ratio = float(raw_min_ratio)
-            except (TypeError, ValueError) as exc:
-                raise AutonomousDecisionError(
-                    f"Scenario {scenario_index}: gain.min_ratio deve essere un numero positivo"
-                ) from exc
-            if min_ratio <= 0:
-                raise AutonomousDecisionError(
-                    f"Scenario {scenario_index}: gain.min_ratio deve essere maggiore di zero"
-                )
-            normalized_gain["min_ratio"] = min_ratio
-        normalized["gain"] = normalized_gain
-    if require_quality_analysis:
-        quality = str(scenario.get("quality") or "").strip().lower()
-        if intent == "correction" and analysis != "tran":
-            raise AutonomousDecisionError(
-                f"Scenario {scenario_index}: una correzione della distorsione richiede analysis='tran'"
-            )
-        if analysis == "tran" and quality != "thd":
-            raise AutonomousDecisionError(
-                f"Scenario {scenario_index}: un test transitorio della distorsione richiede quality='thd'"
-            )
-        if analysis == "tran":
-            normalized["quality"] = "thd"
 
+def normalize_gain(
+    scenario: dict[str, Any],
+    normalized: dict[str, Any],
+    scenario_index: int,
+    analysis: str,
+    require_gain_comparison: bool,
+    require_quality_analysis: bool,
+) -> None:
+    """Normalizza il confronto di guadagno quando presente o obbligatorio."""
+    gain = scenario.get("gain")
+    gain_required = require_gain_comparison or (
+        require_quality_analysis and analysis == "tran"
+    )
+    if not gain_required and not isinstance(gain, dict):
+        return
+    if not isinstance(gain, dict):
+        raise AutonomousDecisionError(
+            f"Scenario {scenario_index}: una correzione del sintomo di "
+            "amplificazione richiede gain con input e output"
+        )
+    gain_input = str(gain.get("input") or "").strip()
+    gain_output = str(gain.get("output") or "").strip()
+    compare_lookup = {quantity.lower(): quantity for quantity in normalized["compare"]}
+    canonical_input = compare_lookup.get(gain_input.lower())
+    canonical_output = compare_lookup.get(gain_output.lower())
+    if canonical_input is None or canonical_output is None:
+        raise AutonomousDecisionError(
+            f"Scenario {scenario_index}: gain.input e gain.output devono essere presenti in compare"
+        )
+    if canonical_input.lower() == canonical_output.lower():
+        raise AutonomousDecisionError(
+            f"Scenario {scenario_index}: gain.input e gain.output devono essere grandezze distinte"
+        )
+    if not all(
+        is_transient_voltage_quantity(quantity)
+        for quantity in (canonical_input, canonical_output)
+    ):
+        raise AutonomousDecisionError(
+            f"Scenario {scenario_index}: gain.input e gain.output devono essere tensioni a uno o due nodi"
+        )
+    if analysis != "tran":
+        raise AutonomousDecisionError(
+            f"Scenario {scenario_index}: il confronto di guadagno richiede analysis='tran'"
+        )
+    normalized_gain: dict[str, Any] = {
+        "input": canonical_input,
+        "output": canonical_output,
+    }
+    raw_min_ratio = gain.get("min_ratio")
+    if require_gain_comparison and raw_min_ratio is None:
+        raise AutonomousDecisionError(
+            f"Scenario {scenario_index}: il test di trasferimento richiede gain.min_ratio"
+        )
+    if raw_min_ratio is not None:
+        try:
+            min_ratio = float(raw_min_ratio)
+        except (TypeError, ValueError) as exc:
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: gain.min_ratio deve essere un numero positivo"
+            ) from exc
+        if min_ratio <= 0:
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: gain.min_ratio deve essere maggiore di zero"
+            )
+        normalized_gain["min_ratio"] = min_ratio
+    normalized["gain"] = normalized_gain
+
+
+def normalize_quality(
+    scenario: dict[str, Any],
+    normalized: dict[str, Any],
+    scenario_index: int,
+    intent: str,
+    analysis: str,
+    require_quality_analysis: bool,
+) -> None:
+    """Normalizza il criterio di qualita quando richiesto dal sintomo."""
+    if not require_quality_analysis:
+        return
+    quality = str(scenario.get("quality") or "").strip().lower()
+    if intent == "correction" and analysis != "tran":
+        raise AutonomousDecisionError(
+            f"Scenario {scenario_index}: una correzione della distorsione richiede analysis='tran'"
+        )
+    if analysis == "tran" and quality != "thd":
+        raise AutonomousDecisionError(
+            f"Scenario {scenario_index}: un test transitorio della distorsione richiede quality='thd'"
+        )
+    if analysis == "tran":
+        normalized["quality"] = "thd"
+
+
+def normalize_expectations(
+    scenario: dict[str, Any],
+    normalized: dict[str, Any],
+    scenario_index: int,
+    intent: str,
+    analysis: str,
+    compare_names: dict[str, str],
+    normalized_measurements: dict[str, str],
+    allow_unchanged_expectations: bool,
+    require_direct_component_measurement: bool,
+    complete_mixed_objective: bool,
+) -> None:
+    """Normalizza le aspettative e verifica i criteri diretti sui componenti."""
     expectations = scenario.get("expect")
     if not isinstance(expectations, dict) or not expectations:
         raise AutonomousDecisionError(
@@ -431,6 +472,99 @@ def validate_scenario(
                 "componente deve essere dichiarata come op o tran_abs_peak nella mappa measure"
             )
     normalized["expect"] = normalized_expectations
+
+
+def validate_scenario(
+    scenario: Any,
+    scenario_index: int,
+    allow_unchanged_expectations: bool = True,
+    require_gain_comparison: bool = False,
+    require_quality_analysis: bool = False,
+    require_variable_signal_measurement: bool = False,
+    require_direct_component_measurement: bool = False,
+    require_temporal_expectation: bool = False,
+) -> dict[str, Any]:
+    """Valida uno scenario self-contained proposto dall'agente."""
+    if not isinstance(scenario, dict):
+        raise AutonomousDecisionError(f"Scenario {scenario_index}: oggetto JSON richiesto")
+    actions = scenario.get("actions")
+    if not isinstance(actions, list) or not actions:
+        raise AutonomousDecisionError(f"Scenario {scenario_index}: actions non puo essere vuoto")
+    if len(actions) > MAX_ACTIONS_PER_SCENARIO:
+        raise AutonomousDecisionError(
+            f"Scenario {scenario_index}: massimo {MAX_ACTIONS_PER_SCENARIO} azioni"
+        )
+
+    normalized = dict(scenario)
+    normalized["title"] = str(scenario.get("title") or f"Scenario autonomo {scenario_index}").strip()
+    normalized["hypothesis"] = str(scenario.get("hypothesis") or "").strip()
+    intent = str(scenario.get("intent") or "").strip().lower()
+    if intent not in ALLOWED_SCENARIO_INTENTS:
+        raise AutonomousDecisionError(
+            f"Scenario {scenario_index}: intent deve essere 'correction' oppure 'diagnostic'"
+        )
+    normalized["intent"] = intent
+    analysis = str(scenario.get("analysis") or "").strip().lower()
+    if analysis not in {"op", "tran"}:
+        raise AutonomousDecisionError(
+            f"Scenario {scenario_index}: analysis deve essere 'op' oppure 'tran'"
+        )
+    normalized["analysis"] = analysis
+
+    normalize_temporal_expectation(
+        scenario,
+        normalized,
+        scenario_index,
+        analysis,
+        require_temporal_expectation,
+    )
+    compare_names = normalize_compare(scenario, normalized, scenario_index)
+    normalized_measurements = normalize_measurements(
+        scenario,
+        normalized,
+        scenario_index,
+        analysis,
+        compare_names,
+    )
+    complete_mixed_objective = (
+        require_variable_signal_measurement and require_direct_component_measurement
+    )
+    validate_variable_signal_measurement(
+        scenario_index,
+        intent,
+        analysis,
+        normalized_measurements,
+        require_variable_signal_measurement,
+        complete_mixed_objective,
+    )
+    normalize_gain(
+        scenario,
+        normalized,
+        scenario_index,
+        analysis,
+        require_gain_comparison,
+        require_quality_analysis,
+    )
+    normalize_quality(
+        scenario,
+        normalized,
+        scenario_index,
+        intent,
+        analysis,
+        require_quality_analysis,
+    )
+    normalize_expectations(
+        scenario,
+        normalized,
+        scenario_index,
+        intent,
+        analysis,
+        compare_names,
+        normalized_measurements,
+        allow_unchanged_expectations,
+        require_direct_component_measurement,
+        complete_mixed_objective,
+    )
     normalized["actions"] = [
         validate_action(action, scenario_index, action_index)
         for action_index, action in enumerate(actions, start=1)
