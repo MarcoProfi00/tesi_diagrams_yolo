@@ -6,6 +6,7 @@ import json
 import re
 from typing import Any
 
+from scenario_actions import repeated_assignment_message, repeated_target_assignments
 from scenario_expectations import ALLOWED_EXPECTATIONS
 
 
@@ -567,10 +568,16 @@ def validate_scenario(
         require_direct_component_measurement,
         complete_mixed_objective,
     )
-    normalized["actions"] = [
+    normalized_actions = [
         validate_action(action, scenario_index, action_index)
         for action_index, action in enumerate(actions, start=1)
     ]
+    conflicts = repeated_target_assignments(normalized_actions)
+    if conflicts:
+        raise AutonomousDecisionError(
+            f"Scenario {scenario_index}: {repeated_assignment_message(conflicts[0])}"
+        )
+    normalized["actions"] = normalized_actions
     return normalized
 
 

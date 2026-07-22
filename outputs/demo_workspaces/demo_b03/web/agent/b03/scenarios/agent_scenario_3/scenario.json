@@ -1,0 +1,41 @@
+{
+  "title": "Rampa batteria unica 9V->15V per mostrare la sequenza degli stati LED",
+  "hypothesis": "Se il circuito di soglia lavora coerentemente con le due prove statiche già ottenute, una singola sorgente PWL che porta la batteria da 9 V a 15 V deve far variare nel tempo le correnti dei tre LED: il rosso deve risultare presente nella parte bassa della rampa, il giallo deve cambiare rispetto alla base run intermedia a 12 V e il verde deve risultare presente nella parte alta della rampa.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "PWL(0s 9V 1.5s 9V 3s 15V)"
+    }
+  ],
+  "compare": [
+    "@dled12_1[id]",
+    "@dled12_2[id]",
+    "@dled12_3[id]",
+    "v(N004)",
+    "v(N012)",
+    "v(N016)",
+    "v(N017)"
+  ],
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak",
+    "@dled12_2[id]": "tran_abs_peak",
+    "@dled12_3[id]": "tran_abs_peak"
+  },
+  "expect": {
+    "@dled12_1[id]": "nonzero",
+    "@dled12_2[id]": "changed",
+    "@dled12_3[id]": "nonzero",
+    "v(N012)": "changed",
+    "v(N016)": "changed",
+    "v(N017)": "changed"
+  },
+  "temporal_expect": {
+    "target": "Dled12_2",
+    "required_state": "blinking",
+    "min_relative_duty_increase": 0.0
+  },
+  "scenario_id": "agent_scenario_3"
+}

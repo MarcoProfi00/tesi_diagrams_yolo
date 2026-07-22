@@ -1,0 +1,34 @@
+{
+  "scenario_id": "scenario_3",
+  "title": "Far variare la batteria nel tempo",
+  "hypothesis": "Una sorgente variabile nel tempo su Vbattery2_1 dovrebbe produrre una risposta temporale osservabile nei LED se il monitor segue la tensione batteria.",
+  "intent": "correction",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "SIN(12 2 0.2)"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "@dled12_1[id]",
+    "@dled12_2[id]",
+    "@dled12_3[id]",
+    "v(N002)",
+    "v(N004)",
+    "v(N012)"
+  ],
+  "expect": {
+    "@dled12_1[id]": "changed",
+    "@dled12_2[id]": "changed",
+    "@dled12_3[id]": "changed",
+    "v(N002)": "changed"
+  },
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak",
+    "@dled12_2[id]": "tran_abs_peak",
+    "@dled12_3[id]": "tran_abs_peak"
+  }
+}

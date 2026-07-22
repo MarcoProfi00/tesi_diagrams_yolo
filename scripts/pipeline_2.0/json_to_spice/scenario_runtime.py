@@ -15,6 +15,7 @@ import shutil
 from pathlib import Path
 from typing import Any, Iterable
 
+from scenario_actions import repeated_assignment_message, repeated_target_assignments
 from viewer_core.layout_builder import write_viewer_layout
 from viewer_core.model_builder import write_viewer_model
 from viewer_core.svg_renderer import write_viewer_svg
@@ -131,6 +132,10 @@ def validate_scenario(
             errors.append(f"azione {index}: type mancante")
         elif allowed and action_type not in allowed:
             errors.append(f"azione {index}: tipo non consentito '{action_type}'")
+    errors.extend(
+        repeated_assignment_message(conflict)
+        for conflict in repeated_target_assignments(actions)
+    )
     return errors
 
 

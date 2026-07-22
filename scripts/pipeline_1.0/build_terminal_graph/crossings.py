@@ -12,6 +12,8 @@ il circuito produce un falso corto. Questo modulo cerca di riconoscere:
 
 from __future__ import annotations
 
+from itertools import combinations
+
 import cv2
 import numpy as np
 
@@ -1199,6 +1201,103 @@ def split_bridge_labels(
         next_label += 1
 
     return relabeled
+
+
+def _foreground_count(binary: np.ndarray, x1: int, y1: int, x2: int, y2: int):
+    """Conta i pixel dello skeleton in una finestra limitata all'immagine."""
+    h, w = binary.shape[:2]
+    x1, y1, x2, y2 = clamp_window(x1, y1, x2, y2, w, h)
+    return int(np.count_nonzero(binary[y1:y2, x1:x2] > 0))
+
+
+def _has_looped_crossing_signature(skeleton_binary: np.ndarray, x: int, y: int):
+    """Riconosce un crossover con arco laterale e sottile tratto spurio centrale."""
+    binary = np.where(skeleton_binary > 0, 1, 0).astype(np.uint8)
+    horizontal_left = _foreground_count(binary, x - 30, y - 2, x - 5, y + 3)
+    horizontal_right = _foreground_count(binary, x + 5, y - 2, x + 30, y + 3)
+    vertical_up = _foreground_count(binary, x - 2, y - 30, x + 3, y - 5)
+    vertical_down = _foreground_count(binary, x - 2, y + 5, x + 3, y + 30)
+    if min(horizontal_left, horizontal_right, vertical_up, vertical_down) < 8:
+        return False
+
+    left_upper = _foreground_count(binary, x - 30, y - 20, x - 6, y - 5)
+    left_lower = _foreground_count(binary, x - 30, y + 5, x - 6, y + 20)
+    right_upper = _foreground_count(binary, x + 6, y - 20, x + 30, y - 5)
+    right_lower = _foreground_count(binary, x + 6, y + 5, x + 30, y + 20)
+
+    # Un nodo ortogonale normale non contiene due archi sullo stesso lato.
+    # La doppia diagonale e' invece l'evidenza grafica del ponticello.
+    return (
+        min(left_upper, left_lower) >= 4
+        or min(right_upper, right_lower) >= 4
+    )
+
+
+def split_looped_orthogonal_crossing_groups(
+    label_to_terminal_ids: dict,
+    terminals: list[dict],
+    skeleton_binary: np.ndarray,
+):
+    """Divide solo gruppi a quattro terminali sostenuti da un crossover ad arco."""
+    terminal_by_id = {term["terminal_id"]: term for term in terminals}
+    output_groups = []
+
+    for terminal_ids in label_to_terminal_ids.values():
+        unique_ids = sorted(set(terminal_ids))
+        split_pairs = None
+        if len(unique_ids) == 4:
+            for vertical_ids in combinations(unique_ids, 2):
+                vertical_terms = [terminal_by_id.get(item) for item in vertical_ids]
+                if any(term is None for term in vertical_terms):
+                    continue
+                if {
+                    str(term.get("relative_position") or "").lower()
+                    for term in vertical_terms
+                } != {"top", "bottom"}:
+                    continue
+
+                remaining_ids = [item for item in unique_ids if item not in vertical_ids]
+                horizontal_terms = [terminal_by_id.get(item) for item in remaining_ids]
+                if any(term is None for term in horizontal_terms):
+                    continue
+                if {
+                    str(term.get("relative_position") or "").lower()
+                    for term in horizontal_terms
+                } != {"left", "right"}:
+                    continue
+
+                vertical_x_delta = abs(float(vertical_terms[0]["x"]) - float(vertical_terms[1]["x"]))
+                vertical_y_gap = abs(float(vertical_terms[0]["y"]) - float(vertical_terms[1]["y"]))
+                horizontal_y_delta = abs(float(horizontal_terms[0]["y"]) - float(horizontal_terms[1]["y"]))
+                horizontal_x_gap = abs(float(horizontal_terms[0]["x"]) - float(horizontal_terms[1]["x"]))
+                if vertical_x_delta > 12 or horizontal_y_delta > 12:
+                    continue
+                if vertical_y_gap < 40 or horizontal_x_gap < 40:
+                    continue
+
+                crossing_x = int(round(sum(float(term["x"]) for term in vertical_terms) / 2.0))
+                crossing_y = int(round(sum(float(term["y"]) for term in horizontal_terms) / 2.0))
+                horizontal_xs = [float(term["x"]) for term in horizontal_terms]
+                vertical_ys = [float(term["y"]) for term in vertical_terms]
+                if not min(horizontal_xs) < crossing_x < max(horizontal_xs):
+                    continue
+                if not min(vertical_ys) < crossing_y < max(vertical_ys):
+                    continue
+                if not _has_looped_crossing_signature(skeleton_binary, crossing_x, crossing_y):
+                    continue
+
+                split_pairs = (list(vertical_ids), remaining_ids)
+                break
+
+        if split_pairs is None:
+            output_groups.append(unique_ids)
+        else:
+            output_groups.extend(split_pairs)
+
+    return {
+        index: group
+        for index, group in enumerate(output_groups, start=1)
+    }
 
 
 def has_opamp_aux_singleton_group(related_groups: list[list[str]], terminal_by_id: dict):

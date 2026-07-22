@@ -1,0 +1,41 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Alimentare insieme il ramo LED e il ramo lampada dal nodo batteria protetto",
+  "hypothesis": "Both loads stay inactive together because the powered node N003 is not propagated to the LED input N005 and to the lamp path input N004; with switch25.1 closed, feeding both branches from N003 should activate LED and lamp simultaneously.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "connect_nodes",
+      "from": "N003",
+      "to": "N005",
+      "resistance": "1m"
+    },
+    {
+      "type": "connect_nodes",
+      "from": "N003",
+      "to": "N004",
+      "resistance": "1m"
+    },
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N004)",
+    "v(N005)",
+    "v(N006)",
+    "v(N007)",
+    "i(Rlamp13_1)",
+    "i(vbattery2_1#branch)"
+  ],
+  "expect": {
+    "v(N005)": "changed",
+    "v(N007)": "changed",
+    "v(N006)": "changed",
+    "i(Rlamp13_1)": "nonzero",
+    "i(vbattery2_1#branch)": "magnitude_increased"
+  }
+}

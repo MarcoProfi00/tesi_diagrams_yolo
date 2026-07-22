@@ -1,0 +1,86 @@
+﻿[
+    {
+        "slide":  1,
+        "layout":  "DEFAULT",
+        "background_rgb":  2102027,
+        "text":  "Object Detection e Diagnosi AI\rdi circuiti elettrici | Panoramica del percorso di tesi: dataset → YOLO → Graph JSON → SPICE → agente diagnostico | Dataset\rRoboflow + bbox | YOLOv11\robject detection | Pipeline 1.0\rGraph JSON | Pipeline 2.0\rSPICE/ngspice | Agente\rCHAT + AGENT | Obiettivo: trasformare immagini di schemi elettrici in evidenze strutturate, simulabili e interrogabili da un agente AI. | Marco Profilo | 01"
+    },
+    {
+        "slide":  2,
+        "layout":  "DEFAULT",
+        "background_rgb":  16579320,
+        "text":  "Visione del progetto | Una pipeline end-to-end, modulare e verificabile | Panoramica percorso di tesi | 02 | Immagine\rschema elettrico | YOLO\rcomponenti | Terminali\rOCR + pin | Graph JSON\rnodi + fili | SPICE\rnetlist + run | Agente\rscenari + risposta | PRINCIPIO GUIDA | Non ricostruzione perfetta dello schema, ma rappresentazione tecnica controllabile. | Ogni step produce artefatti leggibili e versionabili. | Le assunzioni sono dichiarate nei file YAML, non nascoste nel codice. | La base run non viene mai modificata: ogni test è una copia scenario. | Il modello AI ragiona su evidenze, non su ipotesi libere. | OUTPUT TECNICI | 01 | bbox + istanze | 02 | Graph JSON | 03 | netlist SPICE | 04 | ngspice OP/TRAN | 05 | scenario_comparison | 06 | viewer SVG + diagnosi | Stesso schema logico per circuiti semplici e complessi: cambia il livello di simulabilità, non il metodo."
+    },
+    {
+        "slide":  3,
+        "layout":  "DEFAULT",
+        "background_rgb":  16579320,
+        "text":  "Dataset e augmentation | Costruzione della base dati per object detection | Panoramica percorso di tesi | 03 | 627 | immagini annotate | YOLO | formato bbox + classi | 1024 | risoluzione input | DATASET ROBOFLOW | Annotazione manuale dei componenti con bounding box. | Esportazione in formato YOLO per train/validation/test. | Label e split mantenuti tracciabili tra esperimenti. | VARIANTI GENERATE | RGB baseline | dataset originale | Grayscale | conversione immagini, label identiche | Aug v1 | rotazioni leggere + rumore | Aug v2 compose | schemi affiancati + padding | Strong v3 | rotazioni 25–45°, traslazioni 8–15% | La versione finale scelta per il training YOLO è la variante RGB con augmentation strong v3. | exp11b1_yolo11_rgb_aug_strong_v3"
+    },
+    {
+        "slide":  4,
+        "layout":  "DEFAULT",
+        "background_rgb":  16579320,
+        "text":  "Benchmark YOLO e scelta del modello | YOLOv7, YOLOv8 e YOLOv11 confrontati su varianti di dataset | Panoramica percorso di tesi | 04 | Scelta finale: YOLOv11 RGB + strong augmentation v3 — miglior mAP@0.5:0.95 (0,6687) e F1 molto vicino al massimo (0,9168). | Risultati chiave | F1 massimo: exp11 aug v1 = 0,9215; scelta finale = miglior mAP@0.5:0.95 con F1 quasi equivalente."
+    },
+    {
+        "slide":  5,
+        "layout":  "DEFAULT",
+        "background_rgb":  16579320,
+        "text":  "Verifica dell\u0027output della Pipeline 1.0 | Due quality gate: fedeltà topologica e utilità per il troubleshooting | Panoramica percorso di tesi | 05 | Prima di usare il Graph JSON nelle fasi successive, l\u0027output viene verificato su due livelli indipendenti. | 01  IMAGE ↔ GRAPH | Fedeltà topologica | Immagine | + | Graph JSON | GPT-5.4\njudge | 4 batch · 38 circuiti verificati | Controllo di terminali, pin e connessioni | Solo ciò che è visibile: nessun datasheet | 02  DIAGNOSI SUI SINTOMI | Utilità diagnostica | JSON +\ndatasheet | JSON + immagine\n+ datasheet | 8 GPT →\nGPT-5.5 judge | 2 batch · 16 circuiti · 256 diagnosi | Stesso sintomo e doppia modalità di input | Risposta, token, latenza e costo salvati | Perché due test? | Un grafo può essere fedele all\u0027immagine ma non ancora simulabile. Il primo gate misura la topologia; il secondo misura quanto quella struttura supporta una diagnosi tecnica."
+    },
+    {
+        "slide":  6,
+        "layout":  "DEFAULT",
+        "background_rgb":  16579320,
+        "text":  "GPT judge: prompt, regole e valutazione | Output JSON vincolato per rendere il confronto uniforme e ripetibile | Panoramica percorso di tesi | 06 | PROMPT IMAGE ↔ GRAPH | Input al judge multimodale | Immagine originale | Graph JSON | YAML terminali | Regole rigorose | I collegamenti terminale-terminale\ndichiarati nel JSON coincidono con l\u0027immagine? | Niente datasheet, valori o giudizio sul funzionamento.\nLe ambiguità finiscono in uncertain_points. | SCORING TOPOLOGICO /100 | Componenti endpoint | 10 | Terminali e pin | 25 | Connessioni del graph | 55 | Semantica visibile | 10 | DECISIONE | VERY HIGH\n90-100 | HIGH\n75-89 | MEDIUM\n55-74 | LOW\n0-54 | SECONDO JUDGE: QUALITÀ DIAGNOSTICA /21 | 7 criteri × 0-3: comprensione · datasheet · uso input · accuratezza\npriorità · controlli pratici · assenza di allucinazioni | Output: score, verdetto, Top-1/Top-3, errori gravi e allucinazioni. | JSON judge | CSV + report | Aggregazioni | Grafici | Critici / maggiori / minori · usable_as_graph_base"
+    },
+    {
+        "slide":  7,
+        "layout":  "DEFAULT",
+        "background_rgb":  16579320,
+        "text":  "Pipeline 1.0: dall’immagine al Graph JSON | Object detection, terminali e collegamenti elettrici | Panoramica percorso di tesi | 07 | CATENA TECNICA 01–06 | 01 | detect | 01_detect_components | 02 | instances | 02_assign_instances | 03 | terminals | 03_estimate_terminals | 04 | wires | 04_extract_wires | 05 | graph | 05_build_terminal_graph | 06 | report | 06_render_graph_report | RAPPRESENTAZIONE | Il Graph JSON diventa il contratto tra computer vision, giudizio automatico, SPICE e agente. | Componenti con istanza stabile: resistor22.1, led12.1, ecc. | Terminali stimati con orientamento, OCR e regole per componenti IC. | Wire e giunzioni trasformati in connessioni terminale-terminale. | Warning conservati: nodi incerti, terminali scollegati, stati switch. | Graph JSON | {\r  \"components\": [...],\r  \"terminals\": [...],\r  \"connections\": [...],\r  \"visible_semantics\": {\r    \"switch_state\": \"open\",\r    \"polarity\": \"known\"\r  },\r  \"warnings\": [...]\r} | output riusabile"
+    },
+    {
+        "slide":  8,
+        "layout":  "DEFAULT",
+        "background_rgb":  16579320,
+        "text":  "Risultati della verifica | Graph JSON generalmente fedele; l\u0027immagine è utile ma non sempre determinante | Panoramica percorso di tesi | 08 | FEDELTÀ IMMAGINE ↔ GRAPH | Score medio per batch /100 | A | 93,0 | B | 89,5 | C1 | 93,6 | C2 | 93,6 | 92,4/100 media | 38/38 usabili | 32 VERY HIGH · 4 HIGH · 2 MEDIUM · 0 LOW | DIAGNOSI: QUANTO AGGIUNGE L\u0027IMMAGINE? | Score medio /21 | 256 run | JSON + datasheet | JSON + immagine | Batch v1 | 15,67 | 15,94 | Batch v2 | 14,94 | 15,31 | Delta score +0,32 | Top-1 +3,9 pp | Top-3 85,2% | Migliore qualità: GPT-5.4 = 19,13/21; i modelli mini riducono il costo. | MESSAGGIO CHIAVE | Il Graph JSON conserva già gran parte dell\u0027informazione necessaria al troubleshooting. L\u0027immagine è complementare: può aiutare, essere neutra o introdurre rumore a seconda del circuito e del modello. | Limite: un solo judge e una sola run per combinazione; benchmark uniforme, non validazione statistica multi-rater."
+    },
+    {
+        "slide":  9,
+        "layout":  "DEFAULT",
+        "background_rgb":  16579320,
+        "text":  "Pipeline 2.0: Graph JSON → SPICE | Trasformare il grafo in netlist simulabile e contesto diagnostico | Panoramica percorso di tesi | 09 | INPUT | Graph JSON\rcomponenti + terminali + wire | values.yaml\rvalori e assunzioni dichiarate | SPICE YAML\rclassi, modelli, override | STEP TECNICI | 01  io | 02  normalize | 03  node map | 04  values | 06  rules | 07  spice emit | 08  ngspice | 10  context | OUTPUT | 07_netlist.cir\rnetlist SPICE | 08_tran.csv\rforme d’onda | 10_context.json\rpacchetto per agente | viewer 13–15\rschema equivalente | Regola ingegneristica: la pipeline non inventa collegamenti o modelli. Se qualcosa manca, viene dichiarato come warning o assunzione."
+    },
+    {
+        "slide":  10,
+        "layout":  "DEFAULT",
+        "background_rgb":  16579320,
+        "text":  "Scenari controllati e viewer visuale | Ogni ipotesi diagnostica produce una run separata e confrontabile | Panoramica percorso di tesi | 10 | RUNTIME SCENARIO | scenario.json\razione proposta | base snapshot\rcopia immutabile | run SPICE\rnetlist alternativa | comparison\rbase vs scenario | viewer\rSVG interattivo | PRIMITIVE VALIDATE | Stato / valori | close_switch | change_source_value | change_component_value | Topologia | connect_nodes | feed_nodes_from_source_node | add_resistor_between_nodes | Stimoli / transitori | add_voltage_source_between_nodes | drive_node_voltage | set_initial_node_voltage"
+    },
+    {
+        "slide":  11,
+        "layout":  "DEFAULT",
+        "background_rgb":  16579320,
+        "text":  "Modalità CHAT: diagnosi guidata | L’utente sceglie quali scenari eseguire, la pipeline conserva ogni decisione | Panoramica percorso di tesi | 11 | FLUSSO OPERATIVO | Sintomo utente\rdomanda naturale | Agente read‑only\ranalisi artefatti | Proposte\rscenari candidati | Conferma utente\resegui scenario N | Runner\rngspice + viewer | Risposta\rinterpretazione confronto | COSA DIMOSTRA | Il sistema sa trasformare domande come “la lampada non si accende” in ipotesi elettriche eseguibili. | History e scenario registry rendono ripetibile la conversazione. | Gli scenari sono self-contained: ogni run riparte dalla base e non sporca gli output originali. | Utile per debug, validazione manuale e raccolta di casi studio per la tesi."
+    },
+    {
+        "slide":  12,
+        "layout":  "DEFAULT",
+        "background_rgb":  16579320,
+        "text":  "Modalità AGENT: automazione controllata | L’agente propone, esegue e confronta scenari fino a una conclusione | Panoramica percorso di tesi | 12 | CICLO AUTONOMO | 1 | decide\rrun / stop | 2 | valida\rwhitelist | 3 | esegue\rSPICE + viewer | 4 | confronta\rexpect + metriche | 5 | conclude\rresolved / localized | GUARDRAIL IMPLEMENTATI | Massimo 2 scenari per decisione e 5 run per circuito. | Primitive ammesse tramite whitelist rigida. | Scenari duplicati rifiutati senza consumare budget. | expect, gain e temporal_expect per verifiche OP/TRAN. | Stati finali distinti: resolved, localized, topology_issue, inconclusive. | Differenza chiave | CHAT assiste l’utente.\r\rAGENT chiude il ciclo diagnostico in autonomia controllata."
+    },
+    {
+        "slide":  13,
+        "layout":  "DEFAULT",
+        "background_rgb":  16579320,
+        "text":  "Validazione sperimentale | Batch A e Batch B usati per verificare SPICE, scenari e agente | Panoramica percorso di tesi | 13 | 15 | circuiti documentati | 2 | modalità: CHAT + AGENT | 5 | max run scenario/circuito | BATCH A — CIRCUITI SEMPLICI / DISCRETI | a01/a02 | continuità e alimentazione mancante | a04/a06 | amplificazione, gain e distorsione | a08 | lampeggio con duty cycle e temporal_expect | a09/a10 | carichi multipli: lampada + LED | BATCH B — CIRCUITI PIÙ COMPLESSI | b02 | multivibratore simmetrico: .ic iniziale | b03 | monitor batteria: sequenza rosso/giallo/verde | b04 | caricabatteria: corrente D4 transitoria | b05/b06 | radio/audio: iniezione controllata del segnale | b10 | switch simbolico: stato ON/OFF | Risultato: la pipeline è stata validata come flusso di diagnosi tecnico-riproducibile; l’aggregazione quantitativa CHAT–AGENT è il prossimo step naturale. | Sintesi delle validazioni | Sintesi delle validazioni"
+    },
+    {
+        "slide":  14,
+        "layout":  "DEFAULT",
+        "background_rgb":  2101768,
+        "text":  "Risultato del percorso | Una pipeline completa che unisce computer vision, rappresentazione strutturata, simulazione elettrica e diagnosi agentica. | 01 | Dataset + benchmark YOLO | 627 immagini, augmentation e scelta YOLOv11 strong v3 | 02 | Pipeline 1.0 | da detection a Graph JSON con terminali, OCR e warning | 03 | Judge GPT | verifica Graph JSON e diagnosi su sintomi con datasheet | 04 | Pipeline 2.0 | Graph JSON → netlist SPICE → ngspice OP/TRAN | 05 | Agente diagnostico | CHAT guidata, AGENT autonomo, scenari e viewer | 14"
+    }
+]

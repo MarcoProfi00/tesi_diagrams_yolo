@@ -1,0 +1,325 @@
+{
+  "source_format": "pipeline2.0_experiment_scenario_registry",
+  "batch_name": "batchDemo",
+  "experiment_name": "demo_a09_all",
+  "circuit_id": "a09",
+  "created_at": "2026-07-22T11:19:33",
+  "updated_at": "2026-07-22T11:22:55",
+  "max_executable_scenarios": 5,
+  "next_scenario_number": 5,
+  "last_added_scenario_id": "scenario_4",
+  "proposals": [
+    {
+      "proposal_id": "proposal_1",
+      "created_at": "2026-07-22T11:20:13",
+      "source_agent_response": "outputs\\demo_workspaces\\demo_a09_all\\web\\chat\\a09\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_1",
+        "scenario_2",
+        "scenario_3"
+      ]
+    },
+    {
+      "proposal_id": "proposal_2",
+      "created_at": "2026-07-22T11:22:50",
+      "source_agent_response": "outputs\\demo_workspaces\\demo_a09_all\\web\\chat\\a09\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_4"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_number": 1,
+      "scenario_id": "scenario_1",
+      "title": "Chiudere lo switch della lampada",
+      "hypothesis": "The lamp branch is inactive because switch25.1 is open and prevents supply from reaching N006.",
+      "actions": [
+        {
+          "type": "close_switch",
+          "target": "switch25.1"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N004)",
+        "v(N006)",
+        "i(Rlamp13_1)"
+      ],
+      "measure": {},
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N006)": "changed",
+        "i(Rlamp13_1)": "nonzero"
+      },
+      "rerun_from": "06",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_1",
+      "execution_path": null,
+      "created_at": "2026-07-22T11:20:13",
+      "updated_at": "2026-07-22T11:20:13",
+      "signature": "{\"actions\":[{\"target\":\"switch25.1\",\"type\":\"close_switch\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_1",
+        "title": "Chiudere lo switch della lampada",
+        "hypothesis": "The lamp branch is inactive because switch25.1 is open and prevents supply from reaching N006.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "close_switch",
+            "target": "switch25.1"
+          }
+        ],
+        "rerun_from": "06",
+        "analysis": "op",
+        "compare": [
+          "v(N004)",
+          "v(N006)",
+          "i(Rlamp13_1)"
+        ],
+        "expect": {
+          "v(N006)": "changed",
+          "i(Rlamp13_1)": "nonzero"
+        }
+      }
+    },
+    {
+      "scenario_number": 2,
+      "scenario_id": "scenario_2",
+      "title": "Alimentare il ramo LED dal nodo BAT_FUSED",
+      "hypothesis": "The LED branch is inactive because the powered node N003 does not reach the branch input N005.",
+      "actions": [
+        {
+          "type": "connect_nodes",
+          "from": "N003",
+          "to": "N005",
+          "resistance": "1m"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N003)",
+        "v(N005)",
+        "v(N007)",
+        "i(Rresistor22_1)"
+      ],
+      "measure": {},
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N005)": "changed",
+        "i(Rresistor22_1)": "nonzero"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 2,
+      "original_scenario_id": "scenario_2",
+      "execution_path": "outputs\\demo_workspaces\\demo_a09_all\\web\\chat\\a09\\scenarios\\scenario_2",
+      "created_at": "2026-07-22T11:20:13",
+      "updated_at": "2026-07-22T11:21:54",
+      "signature": "{\"actions\":[{\"from\":\"N003\",\"resistance\":\"1m\",\"to\":\"N005\",\"type\":\"connect_nodes\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_2",
+        "title": "Alimentare il ramo LED dal nodo BAT_FUSED",
+        "hypothesis": "The LED branch is inactive because the powered node N003 does not reach the branch input N005.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "connect_nodes",
+            "from": "N003",
+            "to": "N005",
+            "resistance": "1m"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N003)",
+          "v(N005)",
+          "v(N007)",
+          "i(Rresistor22_1)"
+        ],
+        "expect": {
+          "v(N005)": "changed",
+          "i(Rresistor22_1)": "nonzero"
+        }
+      }
+    },
+    {
+      "scenario_number": 3,
+      "scenario_id": "scenario_3",
+      "title": "Alimentare l'ingresso della lampada dal nodo BAT_FUSED",
+      "hypothesis": "The lamp branch input N004 may be inactive because the powered node N003 is not electrically continuous with it.",
+      "actions": [
+        {
+          "type": "connect_nodes",
+          "from": "N003",
+          "to": "N004",
+          "resistance": "1m"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N003)",
+        "v(N004)",
+        "v(N006)",
+        "i(Rlamp13_1)"
+      ],
+      "measure": {},
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N004)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 3,
+      "original_scenario_id": "scenario_3",
+      "execution_path": null,
+      "created_at": "2026-07-22T11:20:13",
+      "updated_at": "2026-07-22T11:20:13",
+      "signature": "{\"actions\":[{\"from\":\"N003\",\"resistance\":\"1m\",\"to\":\"N004\",\"type\":\"connect_nodes\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_3",
+        "title": "Alimentare l'ingresso della lampada dal nodo BAT_FUSED",
+        "hypothesis": "The lamp branch input N004 may be inactive because the powered node N003 is not electrically continuous with it.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "connect_nodes",
+            "from": "N003",
+            "to": "N004",
+            "resistance": "1m"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N003)",
+          "v(N004)",
+          "v(N006)",
+          "i(Rlamp13_1)"
+        ],
+        "expect": {
+          "v(N004)": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 4,
+      "scenario_id": "scenario_4",
+      "title": "Alimentare insieme i due rami e chiudere SW2",
+      "hypothesis": "The full symptom is resolved if BAT_FUSED powers both branch inputs, keeping the LED branch fed through N005 and feeding the lamp branch through N004 while closing switch25.1 so current can flow in both Rresistor22_1 and Rlamp13_1 in the same simulation.",
+      "actions": [
+        {
+          "type": "connect_nodes",
+          "from": "N003",
+          "to": "N005",
+          "resistance": "1m"
+        },
+        {
+          "type": "connect_nodes",
+          "from": "N003",
+          "to": "N004",
+          "resistance": "1m"
+        },
+        {
+          "type": "close_switch",
+          "target": "switch25.1"
+        }
+      ],
+      "intent": "correction",
+      "analysis": "op",
+      "compare": [
+        "v(N003)",
+        "v(N004)",
+        "v(N005)",
+        "v(N006)",
+        "v(N007)",
+        "i(Rresistor22_1)",
+        "i(Rlamp13_1)"
+      ],
+      "measure": {},
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N004)": "activated",
+        "v(N005)": "activated",
+        "v(N006)": "activated",
+        "i(Rresistor22_1)": "nonzero",
+        "i(Rlamp13_1)": "nonzero"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_2",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_3",
+      "execution_path": "outputs\\demo_workspaces\\demo_a09_all\\web\\chat\\a09\\scenarios\\scenario_4",
+      "created_at": "2026-07-22T11:22:50",
+      "updated_at": "2026-07-22T11:22:55",
+      "signature": "{\"actions\":[{\"from\":\"N003\",\"resistance\":\"1m\",\"to\":\"N005\",\"type\":\"connect_nodes\"},{\"from\":\"N003\",\"resistance\":\"1m\",\"to\":\"N004\",\"type\":\"connect_nodes\"},{\"target\":\"switch25.1\",\"type\":\"close_switch\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_4",
+        "title": "Alimentare insieme i due rami e chiudere SW2",
+        "hypothesis": "The full symptom is resolved if BAT_FUSED powers both branch inputs, keeping the LED branch fed through N005 and feeding the lamp branch through N004 while closing switch25.1 so current can flow in both Rresistor22_1 and Rlamp13_1 in the same simulation.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "connect_nodes",
+            "from": "N003",
+            "to": "N005",
+            "resistance": "1m"
+          },
+          {
+            "type": "connect_nodes",
+            "from": "N003",
+            "to": "N004",
+            "resistance": "1m"
+          },
+          {
+            "type": "close_switch",
+            "target": "switch25.1"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N003)",
+          "v(N004)",
+          "v(N005)",
+          "v(N006)",
+          "v(N007)",
+          "i(Rresistor22_1)",
+          "i(Rlamp13_1)"
+        ],
+        "expect": {
+          "v(N004)": "activated",
+          "v(N005)": "activated",
+          "v(N006)": "activated",
+          "i(Rresistor22_1)": "nonzero",
+          "i(Rlamp13_1)": "nonzero"
+        }
+      }
+    }
+  ]
+}

@@ -118,99 +118,77 @@ distinti.
 
 ### Obiettivo dimostrativo
 
-Mostrare che il monitor a tre LED reagisce a tre condizioni statiche della
-batteria: scarica, molto carica e chiaramente oltre soglia. Il percorso usa
-soltanto la sorgente della batteria gia' presente nella netlist e non modifica
-la topologia del circuito.
+Mostrare con tre scenari indipendenti che il monitor reagisce a una batteria
+scarica, a una batteria molto carica e a una tensione che varia nel tempo. Ogni
+scenario modifica soltanto la sorgente della batteria già presente nella
+netlist e riparte dalla base run.
+
+Prima della prova usare **Clean CHAT** e selezionare la base run.
 
 ### Sequenza da copiare e incollare
 
 1. Domanda iniziale:
 
    ```text
-   Con la batteria a 12 V vedo acceso solo il LED giallo. Vorrei verificare che il monitor distingua una batteria scarica: quale scenario controllato proponi come primo test?
+   Con la batteria a 12 V vedo acceso solo il LED giallo. Vorrei verificare il monitor in tre condizioni: batteria scarica, batteria molto carica e variazione della tensione nel tempo. Quali tre scenari controllati, indipendenti ed eseguibili proponi?
    ```
 
-2. Dopo la proposta, eseguire il primo scenario:
+2. Controllare che siano stati registrati tre scenari eseguibili:
+
+   - batteria scarica a `10 V`;
+   - batteria molto carica a `14,4 V`;
+   - batteria variabile con `SIN(12 2 0.2)`.
+
+3. Eseguire il caso di batteria scarica:
 
    ```text
    esegui scenario 1
    ```
 
-   Risultato da osservare: a 10 V si accende il LED rosso.
+   Risultato da osservare: a 10 V il rosso è `steady_on`, mentre giallo e verde
+   sono spenti.
 
-3. Domanda per la condizione molto carica:
-
-   ```text
-   Con 10 V il LED rosso si è acceso. Per completare la verifica del monitor, quale scenario controllato proponi ora per una batteria molto carica?
-   ```
-
-4. Dopo la proposta, eseguire il secondo scenario:
+4. Eseguire il caso di batteria molto carica:
 
    ```text
    esegui scenario 2
    ```
 
-   Risultato da osservare: a 14 V possono restare accesi sia il LED giallo sia
-   quello verde; questa e' l'evidenza da usare per la domanda seguente.
+   Risultato da osservare: a 14,4 V il verde è `steady_on`, mentre rosso e
+   giallo sono spenti.
 
-5. Domanda diagnostica sul comportamento a 14 V:
-
-   ```text
-   Con 14 V sono accesi sia il LED giallo sia il verde, ma il circuito dovrebbe mostrare solo il verde sopra 13,5 V. Quale scenario diagnostico minimo proponi per capire perché Q2 e il LED giallo restano accesi?
-   ```
-
-6. Dopo la proposta, eseguire il terzo scenario:
+5. Eseguire la variazione temporale:
 
    ```text
    esegui scenario 3
    ```
 
-   Risultato da osservare: il giallo puo' restare acceso; il test diagnostico
-   non e' ancora una correzione risolutiva.
+   Risultato da osservare: i tre LED attraversano stati `transient_pulse` in
+   istanti diversi, seguendo i campioni prodotti da ngspice. La finestra di 3
+   secondi mostra la salita fino al massimo e buona parte della discesa della
+   sinusoide da 0,2 Hz.
 
-7. Domanda per verificare una condizione chiaramente oltre soglia:
+### Risultato validato
 
-   ```text
-   A 14 V vedo ancora giallo e verde. Vorrei verificare il comportamento a una tensione chiaramente più alta: quale scenario controllato proponi?
-   ```
+- tre scenari registrati con `Executable: True`;
+- tutte le run ngspice concluse con `success`;
+- nessuna misura attesa fallita o mancante;
+- misure `tran_abs_peak` presenti per tutte le correnti LED;
+- scenario 1: rosso acceso;
+- scenario 2: verde acceso;
+- scenario 3: risposta temporale visibile su tutti e tre i LED;
+- nessuna modifica al Graph JSON o alla topologia.
 
-8. Dopo la proposta, eseguire l'ultimo scenario proposto:
-
-   ```text
-   esegui ultimo
-   ```
-
-   Risultato finale da mostrare: a 16 V il LED verde prevale correttamente.
-
-### Estensione transitoria opzionale
-
-Dopo aver concluso i quattro test statici, si puo' mostrare anche la
-transizione temporale tra batteria scarica e molto carica. Questo scenario usa
-una rampa sulla sorgente della batteria: nel viewer i LED cambiano stato mentre
-la tensione sale.
-
-9. Domanda per il transitorio:
-
-   ```text
-   Abbiamo verificato il comportamento statico a batteria scarica, nominale e molto carica. Ora vorrei osservare come reagiscono nel tempo i LED se la tensione della batteria varia lentamente da scarica a molto carica: quale scenario transitorio proponi?
-   ```
-
-10. Dopo la proposta, eseguire lo scenario transitorio:
-
-   ```text
-   esegui ultimo
-   ```
-
-   Risultato da mostrare: la sorgente batteria varia nel tempo e il viewer
-   riproduce i cambi di stato ricavati dal transitorio ngspice. Non e' un
-   lampeggio artificiale: l'animazione e' derivata dai campioni SPICE.
+Gli outcome possono restare `partially_resolved`: gli scenari verificano il
+comportamento del monitor, ma le aspettative `changed` non rappresentano una
+correzione relativa del sintomo superiore alla soglia interna. Questo non
+invalida gli stati LED misurati e mostrati dal viewer.
 
 ### Chiusura della dimostrazione B03–CHAT
 
-La sequenza dimostra un controllo progressivo e ripetibile: la stessa netlist
-viene confrontata a 10 V, 14 V e 16 V in run scenario separate. La base run
-non viene modificata.
+La sequenza dimostra in modo compatto un controllo statico e dinamico della
+stessa netlist. Le tre run rimangono separate e la base a 12 V non viene
+modificata.
 
 ## B03 — AGENT
 
@@ -224,7 +202,7 @@ Graph JSON o topologia.
 ### Domanda unica da copiare e incollare
 
 ```text
-Nella base run a 12 V è acceso solo il LED giallo. Voglio verificare prima, con prove statiche separate, il comportamento a batteria scarica e a batteria molto carica. Solo dopo esegui una singola rampa transitoria per mostrare il passaggio tra gli stati. Mantieni invariati Graph JSON e topologia e concludi usando le evidenze SPICE.
+Il monitor della batteria a 12 V mostra solo il LED giallo. Puoi controllare da solo se segnala correttamente una batteria scarica, una molto carica e anche cosa succede mentre la tensione cambia?
 ```
 
 ### Risultato atteso da osservare
@@ -410,3 +388,113 @@ Il LED produce soltanto lampi brevissimi e quasi non si vede. Puoi capire perch�
 La prova mostra un ciclo autonomo completo: due ipotesi vengono eliminate con
 ngspice, la terza modifica un solo componente gia' presente e il ciclo si ferma
 quando i criteri elettrici e temporali risultano entrambi soddisfatti.
+
+## A09 — CHAT
+
+### Obiettivo dimostrativo
+
+Mostrare che la base run alimenta il solo nodo dopo il fusibile, mentre i rami
+della lampada e del LED rimangono separati. CHAT verifica prima il ramo LED e
+poi applica una correzione self-contained che alimenta entrambi i rami e chiude
+lo switch della lampada. A09 usa soltanto il punto operativo DC: non richiedere
+scenari transitori, perché la base run non contiene `08_tran.csv`.
+
+Prima della prova usare **Clean CHAT** e selezionare la base run.
+
+### Sequenza da copiare e incollare
+
+1. Domanda iniziale:
+
+   ```text
+   La lampada e il LED non si accendono. Come possiamo fare per accenderli contemporaneamente?
+   ```
+
+2. La risposta validata propone tre prove diagnostiche separate. Eseguire
+   quella che alimenta il ramo LED dal nodo `BAT_FUSED`; in una CHAT pulita è:
+
+   ```text
+   esegui scenario 2
+   ```
+
+   Risultato da osservare: si accende soltanto il LED. La tensione su `N005`
+   sale a circa 9 V e la corrente del ramo LED raggiunge circa 25 mA.
+
+3. Chiedere ora la correzione completa:
+
+   ```text
+   Il test conferma che il ramo LED funziona quando viene alimentato. Ora proponi un unico scenario self-contained che mantenga acceso il LED e accenda anche la lampada, alimentando il suo ingresso e chiudendo lo switch. Considera risolto il problema solo se nella stessa simulazione passa corrente sia nel LED sia nella lampada.
+   ```
+
+4. Controllare che lo scenario combini nella stessa run:
+
+   - collegamento di `N003` a `N005` per il ramo LED;
+   - collegamento di `N003` a `N004` per il ramo lampada;
+   - chiusura di `switch25.1`.
+
+   Eseguire quindi l'ultimo scenario registrato:
+
+   ```text
+   esegui ultimo
+   ```
+
+### Risultato atteso da osservare
+
+- stato ngspice: `success`;
+- ramo LED alimentato, con corrente di circa `25 mA`;
+- lampada alimentata, con corrente di circa `100 mA`;
+- LED e lampada attivi contemporaneamente nel viewer;
+- nessuna aspettativa elettrica fallita;
+- base run non modificata.
+
+L'esito formale può restare `partially_resolved` perché `v(N004)` non è
+disponibile nella base run: il nodo era flottante. Questa misura mancante non
+invalida le due correnti non nulle che dimostrano l'attivazione simultanea dei
+carichi.
+
+### Chiusura della dimostrazione A09—CHAT
+
+La prova mostra una diagnosi guidata progressiva: prima viene verificato un
+singolo ramo, poi la correzione completa viene applicata in una nuova copia
+self-contained. I risultati sono letti dal punto operativo prodotto da
+ngspice, senza introdurre un transitorio privo di significato per questo
+circuito DC.
+
+## A09 — AGENT
+
+### Obiettivo dimostrativo
+
+Mostrare che AGENT può partire dallo stesso sintomo umano, riconoscere entrambi
+i percorsi non alimentati e verificare autonomamente la correzione completa in
+una sola run SPICE.
+
+Prima della prova usare **Clean AGENT**. Il workspace AGENT è indipendente
+dalla sessione CHAT.
+
+### Domanda unica da copiare e incollare
+
+```text
+La lampada e il LED non si accendono. Puoi capire perché e sistemare il circuito in modo che si accendano entrambi contemporaneamente?
+```
+
+### Esito validato da osservare
+
+- ciclo autonomo: `completed`;
+- 2 decisioni totali su 8;
+- un solo scenario eseguito;
+- stato ngspice: `success`;
+- collegamento di `N003` a `N004` e `N005`;
+- chiusura di `switch25.1`;
+- corrente della lampada di circa `100 mA`;
+- corrente del LED di circa `25 mA`;
+- 4 criteri attesi su 4 soddisfatti;
+- esito dello scenario: `resolved_candidate`;
+- arresto automatico: `stop_automation: true`;
+- stato finale AGENT: `resolved`;
+- causa e correzione verificate riportate nella conclusione finale.
+
+### Chiusura della dimostrazione A09—AGENT
+
+AGENT applica direttamente la correzione combinata, verifica con ngspice che
+le correnti dei due carichi siano entrambe attive e si ferma senza consumare
+scenari ulteriori. Questo rende A09 un caso breve e leggibile per mostrare la
+differenza tra il percorso guidato di CHAT e quello autonomo di AGENT.

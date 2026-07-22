@@ -4,8 +4,13 @@ from __future__ import annotations
 
 import sys
 import unittest
+from unittest import mock
 
-from tests.pipeline2.helpers import JSON_TO_SPICE_DIR, load_numbered_module
+from tests.pipeline2.helpers import (
+    JSON_TO_SPICE_DIR,
+    isolated_directory,
+    load_numbered_module,
+)
 
 
 if str(JSON_TO_SPICE_DIR) not in sys.path:
@@ -110,6 +115,65 @@ class SharedContractTests(unittest.TestCase):
         ):
             validate_scenario(scenario, 1)
 
+    def test_repeated_source_values_require_separate_scenarios(self) -> None:
+        """Due punti operativi sulla stessa sorgente non diventano una falsa sweep."""
+        scenario = {
+            "title": "Batteria bassa e alta",
+            "hypothesis": "Verificare due condizioni statiche",
+            "intent": "diagnostic",
+            "analysis": "op",
+            "actions": [
+                {
+                    "type": "change_source_value",
+                    "target": "Vbattery1",
+                    "value": "8V",
+                },
+                {
+                    "type": "change_source_value",
+                    "target": "Vbattery1",
+                    "value": "14.4V",
+                },
+            ],
+            "compare": ["v(N001)"],
+            "expect": {"v(N001)": "changed"},
+        }
+
+        with self.assertRaisesRegex(
+            AutonomousDecisionError,
+            "assegna piu volte il target 'Vbattery1'",
+        ):
+            validate_scenario(scenario, 1)
+
+        runtime_errors = scenario_runtime.validate_scenario(scenario)
+        self.assertTrue(
+            any("usa scenari separati" in error for error in runtime_errors),
+            runtime_errors,
+        )
+        self.assertFalse(self.web_chat.scenario_is_executable(scenario))
+
+    def test_single_transient_source_sweep_remains_valid(self) -> None:
+        """Una singola PWL conserva il modo corretto di rappresentare una sweep."""
+        scenario = {
+            "title": "Rampa della batteria",
+            "hypothesis": "Osservare la risposta durante una variazione temporale",
+            "intent": "diagnostic",
+            "analysis": "tran",
+            "actions": [
+                {
+                    "type": "change_source_value",
+                    "target": "Vbattery1",
+                    "value": "PWL(0s 8V 1s 12V 2s 14.4V)",
+                }
+            ],
+            "compare": ["v(N001)"],
+            "measure": {"v(N001)": "tran_vpp"},
+            "expect": {"v(N001)": "changed"},
+        }
+
+        self.assertEqual(validate_scenario(scenario, 1), scenario)
+        self.assertEqual(scenario_runtime.validate_scenario(scenario), [])
+        self.assertTrue(self.web_chat.scenario_is_executable(scenario))
+
     def test_chat_led_startup_requires_a_temporal_correction(self) -> None:
         """CHAT registra un avvio LED solo se verifica davvero il lampeggio."""
         scenario = {
@@ -210,6 +274,83 @@ class SharedContractTests(unittest.TestCase):
             AGENT_SCENARIO_LIMIT,
         }
         self.assertEqual(limits, {5})
+
+    def test_chat_registry_distinguishes_op_and_transient_evidence(self) -> None:
+        """Le stesse azioni restano eseguibili una volta in OP e una in TRAN."""
+        operating_point = {
+            "analysis": "op",
+            "actions": [{"type": "close_switch", "target": "switch1.1"}],
+        }
+        transient = {
+            "analysis": "tran",
+            "actions": [{"type": "close_switch", "target": "switch1.1"}],
+        }
+
+        self.assertNotEqual(
+            self.web_chat.registered_scenario_signature(operating_point),
+            self.web_chat.registered_scenario_signature(transient),
+        )
+        self.assertEqual(
+            self.web_chat.registered_scenario_signature(operating_point),
+            scenario_runtime.scenario_signature(operating_point),
+        )
+        self.assertEqual(
+            self.web_chat.registered_scenario_signature(transient),
+            scenario_runtime.scenario_signature(transient),
+        )
+
+    def test_chat_completes_requested_transient_diode_measurements(self) -> None:
+        """Una corrente TRAN gia richiesta riceve il metodo di lettura mancante."""
+        scenario = {
+            "analysis": "tran",
+            "intent": "diagnostic",
+            "actions": [
+                {
+                    "type": "change_source_value",
+                    "target": "Vbattery1",
+                    "value": "10V",
+                }
+            ],
+            "compare": ["v(N001)", "@Dled1[id]"],
+            "expect": {"@Dled1[id]": "changed"},
+        }
+
+        completed = self.web_chat.complete_transient_current_measurements(scenario)
+
+        self.assertNotIn("measure", scenario)
+        self.assertEqual(completed["measure"], {"@Dled1[id]": "tran_abs_peak"})
+        self.assertTrue(self.web_chat.scenario_is_executable(completed))
+
+    def test_chat_never_executes_a_scenario_rejected_by_the_registry(self) -> None:
+        """Un JSON non registrabile non puo aggirare i guardrail via fallback."""
+        invalid_response = """```json
+{
+  "scenario_id": "scenario_1",
+  "analysis": "op",
+  "actions": [{"type": "close_switch", "target": "switch1.1"}],
+  "compare": ["v(N001)"],
+  "expect": {}
+}
+```"""
+        with isolated_directory("unregistered_chat_scenario") as temporary_root:
+            output_dir = temporary_root / "run"
+            output_dir.mkdir(parents=True)
+            (output_dir / self.web_chat.CHAT_RESPONSE_NAME).write_text(
+                invalid_response,
+                encoding="utf-8",
+            )
+
+            with mock.patch.object(self.web_chat, "execute_shared_scenario") as execute:
+                result = self.web_chat.handle_scenario_request(
+                    output_dir=output_dir,
+                    user_message="esegui scenario 1",
+                    batch="batchTest",
+                    circuit="circuitTest",
+                    experiment="demo_test",
+                )
+
+            execute.assert_not_called()
+            self.assertIn("non risulta registrato come eseguibile", result["reply"])
 
     def test_webchat_helpers_are_reexported_by_the_numbered_step(self) -> None:
         """La facciata web mantiene le utility pubbliche spostate internamente."""

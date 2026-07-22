@@ -61,6 +61,7 @@ from scenario_runtime import (
     execute_scenario as execute_shared_scenario,
     scenario_signature,
 )
+from scenario_actions import repeated_target_assignments
 from scenario_expectations import ALLOWED_EXPECTATIONS
 from run_sources import get_run_source_path
 from viewer_core.contracts import (
@@ -669,7 +670,15 @@ def registered_scenario_signature(scenario: dict[str, Any]) -> str:
     """Firma uno scenario con la stessa logica tecnica usata dal runtime."""
     actions = scenario.get("actions")
     if isinstance(actions, list) and actions:
-        return scenario_signature({"actions": actions})
+        # L'analisi fa parte della prova elettrica: le stesse azioni eseguite
+        # prima in OP e poi in TRAN producono evidenze diverse e non devono
+        # essere eliminate dal registro come duplicati.
+        return scenario_signature(
+            {
+                "actions": actions,
+                "analysis": scenario.get("analysis") or "op",
+            }
+        )
 
     # Le proposte non eseguibili restano distinte tramite il loro significato.
     comparable = {
@@ -758,6 +767,42 @@ def is_transient_diode_current(quantity: str) -> bool:
     return bool(re.fullmatch(r"@d[^\[\]\s]+\[id\]", str(quantity or "").strip(), flags=re.IGNORECASE))
 
 
+def complete_transient_current_measurements(scenario: dict[str, Any]) -> dict[str, Any]:
+    """Completa le misure TRAN implicite senza cambiare azioni o aspettative."""
+    if str(scenario.get("analysis") or "op").strip().lower() != "tran":
+        return scenario
+
+    raw_measurements = scenario.get("measure")
+    if raw_measurements is not None and not isinstance(raw_measurements, dict):
+        return scenario
+
+    measurements = dict(raw_measurements or {})
+    normalized_names = {
+        str(quantity).strip().lower()
+        for quantity in measurements
+        if str(quantity).strip()
+    }
+    changed = False
+    for quantity in scenario.get("compare") or []:
+        quantity_text = str(quantity).strip()
+        if not is_transient_diode_current(quantity_text):
+            continue
+        if quantity_text.lower() in normalized_names:
+            continue
+        # La corrente e gia stata richiesta esplicitamente dal modello: qui
+        # aggiungiamo soltanto il metodo deterministico necessario a leggerla
+        # dal CSV, senza inventare grandezze o modifiche elettriche.
+        measurements[quantity_text] = "tran_abs_peak"
+        normalized_names.add(quantity_text.lower())
+        changed = True
+
+    if not changed:
+        return scenario
+    completed = dict(scenario)
+    completed["measure"] = measurements
+    return completed
+
+
 def scenario_is_executable(scenario: dict[str, Any]) -> bool:
     """Accetta scenari con azioni e criteri `expect` direttamente verificabili."""
     actions = scenario.get("actions")
@@ -769,6 +814,8 @@ def scenario_is_executable(scenario: dict[str, Any]) -> bool:
         if str(item).strip()
     }
     if not isinstance(actions, list) or not actions or not isinstance(expectations, dict) or not expectations:
+        return False
+    if repeated_target_assignments(actions):
         return False
     analysis = str(scenario.get("analysis") or "op").strip().lower()
     if scenario_requires_led_temporal_expectation(scenario):
@@ -867,6 +914,7 @@ def register_experiment2_scenarios_from_response(
             if str(scenario.get("intent") or "").strip().lower() == "correction"
             else "diagnostic"
         )
+        scenario = complete_transient_current_measurements(scenario)
         if not scenario_is_executable(scenario):
             # Una conclusione o un dato mancante non deve occupare un numero
             # scenario ne' essere suggerito come comando eseguibile.
@@ -2308,6 +2356,17 @@ def handle_scenario_request(
         registry = sync_scenario_registry_with_existing_runs(output_dir, batch, circuit, experiment)
     selected = select_scenario_from_registry(registry, requested_index) if registry else None
     scenarios: list[dict[str, Any]] = []
+
+    if selected is None and registry is not None:
+        return {
+            "reply": (
+                f"Ho riconosciuto la richiesta per lo scenario {requested_label}, "
+                "ma quello scenario non risulta registrato come eseguibile.\n\n"
+                "Non eseguo direttamente blocchi tecnici scartati dal registro. "
+                "Puoi scrivere `mostra scenari` oppure chiedere una nuova proposta eseguibile."
+            ),
+            "debug": ["Blocked execution of an unregistered scenario"],
+        }
 
     if selected is None:
         if not response_path.exists():

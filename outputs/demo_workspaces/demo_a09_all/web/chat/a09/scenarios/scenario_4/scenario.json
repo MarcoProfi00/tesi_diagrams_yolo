@@ -1,0 +1,42 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Alimentare insieme i due rami e chiudere SW2",
+  "hypothesis": "The full symptom is resolved if BAT_FUSED powers both branch inputs, keeping the LED branch fed through N005 and feeding the lamp branch through N004 while closing switch25.1 so current can flow in both Rresistor22_1 and Rlamp13_1 in the same simulation.",
+  "intent": "correction",
+  "actions": [
+    {
+      "type": "connect_nodes",
+      "from": "N003",
+      "to": "N005",
+      "resistance": "1m"
+    },
+    {
+      "type": "connect_nodes",
+      "from": "N003",
+      "to": "N004",
+      "resistance": "1m"
+    },
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N003)",
+    "v(N004)",
+    "v(N005)",
+    "v(N006)",
+    "v(N007)",
+    "i(Rresistor22_1)",
+    "i(Rlamp13_1)"
+  ],
+  "expect": {
+    "v(N004)": "activated",
+    "v(N005)": "activated",
+    "v(N006)": "activated",
+    "i(Rresistor22_1)": "nonzero",
+    "i(Rlamp13_1)": "nonzero"
+  }
+}

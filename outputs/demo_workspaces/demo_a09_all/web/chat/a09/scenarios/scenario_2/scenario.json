@@ -1,0 +1,26 @@
+{
+  "scenario_id": "scenario_2",
+  "title": "Alimentare il ramo LED dal nodo BAT_FUSED",
+  "hypothesis": "The LED branch is inactive because the powered node N003 does not reach the branch input N005.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "connect_nodes",
+      "from": "N003",
+      "to": "N005",
+      "resistance": "1m"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N003)",
+    "v(N005)",
+    "v(N007)",
+    "i(Rresistor22_1)"
+  ],
+  "expect": {
+    "v(N005)": "changed",
+    "i(Rresistor22_1)": "nonzero"
+  }
+}

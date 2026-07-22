@@ -132,6 +132,10 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
   aggiungere gain, measure, expect o una soglia: reinterpreta le misure esistenti.
   Dopo un trasferimento insufficiente, sposta il confine di isolamento a un nodo
   intermedio giustificato oppure testa una causa elettricamente distinta.
+- Non inserire due `change_source_value` sullo stesso target nella stessa run:
+  la seconda assegnazione sovrascrive la prima e non costituisce uno sweep.
+  Usa scenari separati per punti operativi statici diversi, oppure una sola
+  sorgente `PWL(...)`/`SIN(...)` quando vuoi davvero una variazione temporale.
 - Se il trasferimento fallisce con una sorgente SIN provata a una sola ampiezza,
   prima di concludere un guasto strutturale mantieni lo stesso percorso e la
   stessa frequenza e prova un'ampiezza significativamente diversa. Se anche il

@@ -20,6 +20,8 @@ FACING_RESTORE_MAX_BBOX_OVERLAP = 36
 FACING_RESTORE_MIN_PROJECTION_OVERLAP_RATIO = 0.45
 FACING_RESTORE_THICKNESS = 4
 FACING_RESTORE_LABEL_RADIUS = 5
+EVIDENCE_RESTORE_MAX_AXIS_GAP = 180
+EVIDENCE_RESTORE_MAX_LATERAL_DELTA = 8
 
 def should_erase_component_body_from_skeleton(component: dict):
     """
@@ -147,6 +149,44 @@ def _find_facing_restore_pairs(components: list[dict]):
     return pairs
 
 
+def _find_long_aligned_restore_pairs(components: list[dict]):
+    """Trova coppie lunghe da ripristinare solo con evidenza nello skeleton."""
+    terminals = _flatten_component_terminals(components)
+    pairs = []
+
+    for index, item_a in enumerate(terminals):
+        term_a = item_a["term"]
+        side_a = str(term_a.get("relative_position") or "").lower()
+        for item_b in terminals[index + 1:]:
+            if item_a["instance_id"] == item_b["instance_id"]:
+                continue
+
+            term_b = item_b["term"]
+            side_b = str(term_b.get("relative_position") or "").lower()
+            x_a = float(term_a["x"])
+            y_a = float(term_a["y"])
+            x_b = float(term_b["x"])
+            y_b = float(term_b["y"])
+            if {side_a, side_b} == {"top", "bottom"}:
+                lateral_delta = abs(x_a - x_b)
+                axis_gap = abs(y_a - y_b)
+            elif {side_a, side_b} == {"left", "right"}:
+                lateral_delta = abs(y_a - y_b)
+                axis_gap = abs(x_a - x_b)
+            else:
+                continue
+
+            if axis_gap <= FACING_RESTORE_MAX_AXIS_GAP:
+                continue
+            if axis_gap > EVIDENCE_RESTORE_MAX_AXIS_GAP:
+                continue
+            if lateral_delta > EVIDENCE_RESTORE_MAX_LATERAL_DELTA:
+                continue
+            pairs.append((term_a, term_b))
+
+    return pairs
+
+
 def _nearest_label_in_radius(labels: np.ndarray, x: float, y: float, radius: int):
     """Cerca la label positiva piu' vicina a un punto entro un raggio locale."""
     h, w = labels.shape[:2]
@@ -222,7 +262,14 @@ def erase_component_bodies_from_skeleton(
         if class_name == "connector":
             cut_connector_pin_separators(cleaned, component)
 
-    for term_a, term_b in _find_facing_restore_pairs(components):
+    restore_pairs = list(_find_facing_restore_pairs(components))
+    restore_pairs.extend(_find_long_aligned_restore_pairs(components))
+    seen_pairs = set()
+    for term_a, term_b in restore_pairs:
+        pair_key = tuple(sorted((str(term_a.get("terminal_id")), str(term_b.get("terminal_id")))))
+        if pair_key in seen_pairs:
+            continue
+        seen_pairs.add(pair_key)
         label_a = _nearest_label_in_radius(
             original_labels,
             term_a.get("x", 0.0),

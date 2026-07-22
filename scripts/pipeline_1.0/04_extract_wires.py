@@ -99,6 +99,16 @@ FACING_KEEP_MAX_BBOX_OVERLAP = 36
 FACING_KEEP_MIN_PROJECTION_OVERLAP_RATIO = 0.45
 FACING_KEEP_MIN_THICKNESS = 4
 
+# Un filo lungo puo' attraversare il bbox di un componente vicino e venire
+# cancellato dalla sua maschera. Lo recuperiamo solo quando i terminali sono
+# allineati e l'immagine originale mostra gia' un tratto scuro quasi continuo:
+# la keep zone non inventa quindi collegamenti assenti dal disegno.
+EVIDENCE_KEEP_MAX_AXIS_GAP = 180
+EVIDENCE_KEEP_MAX_LATERAL_DELTA = 8
+EVIDENCE_KEEP_LINE_HALF_WIDTH = 3
+EVIDENCE_KEEP_DARK_THRESHOLD = 180
+EVIDENCE_KEEP_MIN_SUPPORT_RATIO = 0.88
+
 # I pin ausiliari degli opamp possono essere molto vicini al corpo del simbolo:
 # usiamo una keep zone piu' piccola per non riaprire troppo il triangolo.
 OPAMP_AUX_KEEP_RADIUS = 5
@@ -464,7 +474,91 @@ def _facing_terminal_keep_pairs(terminals, components):
     return pairs
 
 
-def carve_terminal_keep_zones(mask, terminals, components):
+def _line_dark_support_ratio(source_gray, term_a, term_b):
+    """Misura la continuita' scura tra due terminali lungo il loro asse."""
+    side_pair = {
+        str(term_a.get("relative_position") or "").lower(),
+        str(term_b.get("relative_position") or "").lower(),
+    }
+    vertical = side_pair == {"top", "bottom"}
+    horizontal = side_pair == {"left", "right"}
+    if not vertical and not horizontal:
+        return 0.0
+
+    x_a = float(term_a["x"])
+    y_a = float(term_a["y"])
+    x_b = float(term_b["x"])
+    y_b = float(term_b["y"])
+    axis_length = abs(y_b - y_a) if vertical else abs(x_b - x_a)
+    sample_count = max(1, int(round(axis_length)))
+    supported = 0
+    h, w = source_gray.shape[:2]
+
+    for index in range(sample_count + 1):
+        fraction = index / sample_count
+        x = int(round(x_a + (x_b - x_a) * fraction))
+        y = int(round(y_a + (y_b - y_a) * fraction))
+        if vertical:
+            x1 = max(0, x - EVIDENCE_KEEP_LINE_HALF_WIDTH)
+            x2 = min(w, x + EVIDENCE_KEEP_LINE_HALF_WIDTH + 1)
+            y1 = max(0, y)
+            y2 = min(h, y + 1)
+        else:
+            x1 = max(0, x)
+            x2 = min(w, x + 1)
+            y1 = max(0, y - EVIDENCE_KEEP_LINE_HALF_WIDTH)
+            y2 = min(h, y + EVIDENCE_KEEP_LINE_HALF_WIDTH + 1)
+        roi = source_gray[y1:y2, x1:x2]
+        if roi.size and np.any(roi < EVIDENCE_KEEP_DARK_THRESHOLD):
+            supported += 1
+
+    return supported / float(sample_count + 1)
+
+
+def _evidence_backed_facing_pairs(terminals, source_gray):
+    """Trova collegamenti lunghi sostenuti dai pixel dell'immagine originale."""
+    if source_gray is None:
+        return []
+
+    pairs = []
+    for index, term_a in enumerate(terminals):
+        instance_a = str(term_a.get("instance_id") or "")
+        side_a = str(term_a.get("relative_position") or "").lower()
+        for term_b in terminals[index + 1:]:
+            instance_b = str(term_b.get("instance_id") or "")
+            if not instance_a or instance_a == instance_b:
+                continue
+
+            side_b = str(term_b.get("relative_position") or "").lower()
+            x_a = float(term_a["x"])
+            y_a = float(term_a["y"])
+            x_b = float(term_b["x"])
+            y_b = float(term_b["y"])
+            if {side_a, side_b} == {"top", "bottom"}:
+                lateral_delta = abs(x_a - x_b)
+                axis_gap = abs(y_a - y_b)
+            elif {side_a, side_b} == {"left", "right"}:
+                lateral_delta = abs(y_a - y_b)
+                axis_gap = abs(x_a - x_b)
+            else:
+                continue
+
+            # I collegamenti brevi sono gia' gestiti dalla regola geometrica
+            # esistente; qui consideriamo solo il caso lungo mascherato.
+            if axis_gap <= FACING_KEEP_MAX_AXIS_GAP:
+                continue
+            if axis_gap > EVIDENCE_KEEP_MAX_AXIS_GAP:
+                continue
+            if lateral_delta > EVIDENCE_KEEP_MAX_LATERAL_DELTA:
+                continue
+            if _line_dark_support_ratio(source_gray, term_a, term_b) < EVIDENCE_KEEP_MIN_SUPPORT_RATIO:
+                continue
+            pairs.append((term_a, term_b))
+
+    return pairs
+
+
+def carve_terminal_keep_zones(mask, terminals, components, source_gray=None):
     """
     Riapre nella maschera le zone che devono rimanere visibili come filo.
 
@@ -515,10 +609,17 @@ def carve_terminal_keep_zones(mask, terminals, components):
         cv2.line(mask, p1, p2, 0, thickness=params["thickness"])
         cv2.line(keep_debug, p1, p2, 255, thickness=params["thickness"])
 
-    for term_a, term_b in _facing_terminal_keep_pairs(terminals, components):
+    facing_pairs = list(_facing_terminal_keep_pairs(terminals, components))
+    facing_pairs.extend(_evidence_backed_facing_pairs(terminals, source_gray))
+    seen_pairs = set()
+    for term_a, term_b in facing_pairs:
+        pair_key = tuple(sorted((str(term_a.get("terminal_id")), str(term_b.get("terminal_id")))))
+        if pair_key in seen_pairs:
+            continue
+        seen_pairs.add(pair_key)
         # Quando due terminali di componenti diversi si fronteggiano molto da
-        # vicino, preserviamo anche il segmento tra i due punti: e' una difesa
-        # contro collegamenti corti cancellati da due maschere adiacenti.
+        # vicino, oppure il disegno mostra una linea lunga continua, preserviamo
+        # il segmento tra i due punti contro le maschere adiacenti.
         x1, y1 = clamp_point(term_a["x"], term_a["y"], w, h)
         x2, y2 = clamp_point(term_b["x"], term_b["y"], w, h)
 
@@ -544,10 +645,15 @@ def carve_terminal_keep_zones(mask, terminals, components):
 
 
 # Costruisce la maschera finale dei componenti e le zone terminali da preservare.
-def build_component_mask(image_shape, components, terminals):
+def build_component_mask(image_shape, components, terminals, source_gray=None):
     """Costruisce maschera componenti finale e immagine debug delle keep zone."""
     mask = build_base_component_mask(image_shape, components)
-    mask, keep_debug = carve_terminal_keep_zones(mask, terminals, components)
+    mask, keep_debug = carve_terminal_keep_zones(
+        mask,
+        terminals,
+        components,
+        source_gray=source_gray,
+    )
     return mask, keep_debug
 
 # =========================================================
@@ -748,7 +854,10 @@ def extract_wires_from_image(image_bgr, components, terminals):
 
     # 2. Maschera componenti + riapertura locale dei terminali.
     component_mask, terminal_keep_debug = build_component_mask(
-        image_bgr.shape, components, terminals
+        image_bgr.shape,
+        components,
+        terminals,
+        source_gray=gray,
     )
 
     # 3. Applicazione maschera: le zone a 255 della maschera diventano bianche,
@@ -808,6 +917,8 @@ def extract_wires_from_image(image_bgr, components, terminals):
         "facing_keep_max_bbox_gap": FACING_KEEP_MAX_BBOX_GAP,
         "facing_keep_max_bbox_overlap": FACING_KEEP_MAX_BBOX_OVERLAP,
         "facing_keep_min_projection_overlap_ratio": FACING_KEEP_MIN_PROJECTION_OVERLAP_RATIO,
+        "evidence_keep_max_axis_gap": EVIDENCE_KEEP_MAX_AXIS_GAP,
+        "evidence_keep_min_support_ratio": EVIDENCE_KEEP_MIN_SUPPORT_RATIO,
         "notes": "Ogni terminale preserva un cerchio locale e una piccola capsula direzionata lungo il lato stimato, per tollerare terminali non perfettamente sul cavo.",
     }
 

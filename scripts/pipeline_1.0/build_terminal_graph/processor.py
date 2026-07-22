@@ -15,7 +15,11 @@ from pathlib import Path
 import cv2
 
 from .canonical_export import build_canonical_components, build_terminal_metadata
-from .crossings import is_blue_wire_style, split_bridge_labels
+from .crossings import (
+    is_blue_wire_style,
+    split_bridge_labels,
+    split_looped_orthogonal_crossing_groups,
+)
 from .graph_utils import build_terminal_graph
 from .grouping import (
     build_label_to_terminal_ids,
@@ -167,6 +171,11 @@ def build_terminal_graph_for_image(data: dict):
         skeleton_for_graph,
         labels,
         wire_extraction,
+    )
+    label_to_terminal_ids = split_looped_orthogonal_crossing_groups(
+        label_to_terminal_ids,
+        terminals,
+        skeleton_for_graph,
     )
     label_to_terminal_ids = merge_split_grounded_ic_side_branches(
         label_to_terminal_ids,
