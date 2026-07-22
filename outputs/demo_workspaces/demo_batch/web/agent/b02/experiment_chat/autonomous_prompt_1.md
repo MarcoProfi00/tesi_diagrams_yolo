@@ -4,7 +4,7 @@ Sei il controller diagnostico di una pipeline Graph JSON -> SPICE/ngspice.
 Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
 
 ## Sintomo utente
-Il circuito dovrebbe far lampeggiare alternativamente i due LED, ma nella simulazione restano entrambi accesi fissi. Come possiamo risolvere?
+Il circuito dovrebbe far lampeggiare alternativamente i due LED, ma nella simulazione restano entrambi accesi. Come mai?
 
 ## Vincoli obbligatori
 - Rispondi con un solo oggetto JSON valido, senza Markdown o testo esterno.
@@ -161,7 +161,7 @@ Il circuito dovrebbe far lampeggiare alternativamente i due LED, ma nella simula
   scegli una tensione iniziale fisicamente ammissibile ma chiaramente separata
   dal punto di lavoro del nodo mostrato dagli artefatti. Una variazione di pochi
   punti percentuali attorno allo stesso bias non e un test sufficiente; preferisci
-  un riferimento o un rail gia documentato nel circuito, senza inventarne uno.
+  un riferimento gia documentato nel circuito, senza inventarne uno.
 - Se il sintomo riguarda l'avvio di un circuito dinamico e il punto operativo DC
   mantiene artificialmente la simmetria, puoi aggiungere
   `skip_operating_point: true` a `set_initial_node_voltage`. In questo caso ngspice
@@ -171,9 +171,26 @@ Il circuito dovrebbe far lampeggiare alternativamente i due LED, ma nella simula
   Se esistono due nodi di controllo simmetrici, inizializzali nello stesso
   scenario a due livelli distinti e fisicamente ammissibili; lasciare entrambi
   implicitamente allo stesso valore non rompe la simmetria.
+  Un nodo interno di controllo non e un ingresso di alimentazione: se una base
+  BJT ha un punto di lavoro sotto il rail, non inizializzarla al rail completo.
+  Ricava livelli moderati dal bias misurato e dal ruolo del dispositivo (per
+  esempio, con una base al silicio attorno a 0.8 V e alimentazione a 5 V, usa
+  un livello basso su un ramo e circa 1-1.5 V sull'altro, non 5 V).
+  Per due basi BJT simmetriche, il primo test di avvio deve usare sul ramo basso
+  il riferimento di massa gia presente, normalmente 0 V, e sull'altro un livello
+  moderato vicino o poco sopra il bias misurato. Non scegliere un valore basso
+  intermedio arbitrario se la massa e gia il riferimento elettrico documentato.
+- Se un test iniziale `.ic` produce un profilo `transient_pulse`, oppure rende
+  dinamiche grandezze prima statiche senza ottenere ancora periodicita regolare,
+  considera promettente l'ipotesi di startup. Prima di cambiare componenti prova
+  una sola seconda coppia di condizioni iniziali, materialmente diversa ma
+  fisicamente ammissibile, sempre dalla base run. Solo se anche quel test non
+  produce il comportamento richiesto passa a ipotesi sui valori dei componenti.
 - Se un LED o un altro target e gia attivo nella base run, non usare `activated`
   per verificarne il lampeggio: confronta la sua traccia transitoria e usa
   `temporal_expect` per lo stato dinamico richiesto.
+  `temporal_expect.target` deve contenere un solo identificatore testuale, non
+  una lista; se sono coinvolti piu LED, confronta le correnti di tutti.
 - Un solo scenario negativo basato esclusivamente su condizioni iniziali non
   dimostra un errore di valori o topologia. In assenza di altre evidenze
   strutturali, concludi `inconclusive` oppure continua con un test distinto.
@@ -1170,7 +1187,7 @@ Current ngspice program size =   15.266 MB.
   "batch_name": "batchDemo",
   "experiment_name": "demo_batch",
   "circuit_id": "b02",
-  "user_problem": "Il circuito dovrebbe far lampeggiare alternativamente i due LED, ma nella simulazione restano entrambi accesi fissi. Come possiamo risolvere?",
+  "user_problem": "Il circuito dovrebbe far lampeggiare alternativamente i due LED, ma nella simulazione restano entrambi accesi. Come mai?",
   "pipeline2_output_dir": "outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02",
   "summary": {
     "spice_status": "success",

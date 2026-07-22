@@ -4,7 +4,7 @@ Sei il controller diagnostico di una pipeline Graph JSON -> SPICE/ngspice.
 Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
 
 ## Sintomo utente
-Il circuito dovrebbe far lampeggiare alternativamente i due LED, ma nella simulazione restano entrambi accesi fissi. Come possiamo risolvere?
+Il circuito dovrebbe far lampeggiare alternativamente i due LED, ma nella simulazione restano entrambi accesi. Come mai?
 
 ## Vincoli obbligatori
 - Rispondi con un solo oggetto JSON valido, senza Markdown o testo esterno.
@@ -161,7 +161,7 @@ Il circuito dovrebbe far lampeggiare alternativamente i due LED, ma nella simula
   scegli una tensione iniziale fisicamente ammissibile ma chiaramente separata
   dal punto di lavoro del nodo mostrato dagli artefatti. Una variazione di pochi
   punti percentuali attorno allo stesso bias non e un test sufficiente; preferisci
-  un riferimento o un rail gia documentato nel circuito, senza inventarne uno.
+  un riferimento gia documentato nel circuito, senza inventarne uno.
 - Se il sintomo riguarda l'avvio di un circuito dinamico e il punto operativo DC
   mantiene artificialmente la simmetria, puoi aggiungere
   `skip_operating_point: true` a `set_initial_node_voltage`. In questo caso ngspice
@@ -171,9 +171,26 @@ Il circuito dovrebbe far lampeggiare alternativamente i due LED, ma nella simula
   Se esistono due nodi di controllo simmetrici, inizializzali nello stesso
   scenario a due livelli distinti e fisicamente ammissibili; lasciare entrambi
   implicitamente allo stesso valore non rompe la simmetria.
+  Un nodo interno di controllo non e un ingresso di alimentazione: se una base
+  BJT ha un punto di lavoro sotto il rail, non inizializzarla al rail completo.
+  Ricava livelli moderati dal bias misurato e dal ruolo del dispositivo (per
+  esempio, con una base al silicio attorno a 0.8 V e alimentazione a 5 V, usa
+  un livello basso su un ramo e circa 1-1.5 V sull'altro, non 5 V).
+  Per due basi BJT simmetriche, il primo test di avvio deve usare sul ramo basso
+  il riferimento di massa gia presente, normalmente 0 V, e sull'altro un livello
+  moderato vicino o poco sopra il bias misurato. Non scegliere un valore basso
+  intermedio arbitrario se la massa e gia il riferimento elettrico documentato.
+- Se un test iniziale `.ic` produce un profilo `transient_pulse`, oppure rende
+  dinamiche grandezze prima statiche senza ottenere ancora periodicita regolare,
+  considera promettente l'ipotesi di startup. Prima di cambiare componenti prova
+  una sola seconda coppia di condizioni iniziali, materialmente diversa ma
+  fisicamente ammissibile, sempre dalla base run. Solo se anche quel test non
+  produce il comportamento richiesto passa a ipotesi sui valori dei componenti.
 - Se un LED o un altro target e gia attivo nella base run, non usare `activated`
   per verificarne il lampeggio: confronta la sua traccia transitoria e usa
   `temporal_expect` per lo stato dinamico richiesto.
+  `temporal_expect.target` deve contenere un solo identificatore testuale, non
+  una lista; se sono coinvolti piu LED, confronta le correnti di tutti.
 - Un solo scenario negativo basato esclusivamente su condizioni iniziali non
   dimostra un errore di valori o topologia. In assenza di altre evidenze
   strutturali, concludi `inconclusive` oppure continua con un test distinto.
@@ -227,11 +244,11 @@ oppure
     "decision_number": 1,
     "decision": {
       "decision": "run_scenarios",
-      "reason": "La base run mostra un multivibratore perfettamente simmetrico bloccato in uno stato DC con entrambi i transistor e i due LED accesi; serve un test controllato per verificare se il problema e solo l'avvio simmetrico oppure un errore strutturale/valoriale.",
+      "reason": "La base run mostra un astabile perfettamente simmetrico bloccato in uno stato DC con entrambi i transistor e i LED conducenti; serve un test controllato di startup per verificare se il mancato lampeggio dipende dalla sola simmetria iniziale della simulazione transitoria.",
       "scenarios": [
         {
-          "title": "Rottura controllata della simmetria iniziale sui due nodi base",
-          "hypothesis": "Il circuito puo oscillare ma la soluzione simmetrica del punto operativo lo blocca; imponendo condizioni iniziali diverse e saltando l'OP si verifica se il lampeggio alternato compare senza cambiare topologia o valori.",
+          "title": "Rottura controllata della simmetria iniziale sulle due basi",
+          "hypothesis": "Il circuito e topologicamente coerente come multivibratore astabile, ma con componenti e bias perfettamente simmetrici ngspice parte da un equilibrio metastabile DC e resta bloccato con entrambi i rami accesi. Una condizione iniziale asimmetrica moderata sulle due basi dovrebbe far emergere l'oscillazione alternata se la causa e di startup.",
           "intent": "diagnostic",
           "analysis": "tran",
           "actions": [
@@ -244,7 +261,7 @@ oppure
             {
               "type": "set_initial_node_voltage",
               "target": "N006",
-              "value": "5V",
+              "value": "1.2V",
               "skip_operating_point": true
             }
           ],
@@ -275,20 +292,53 @@ oppure
     },
     "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\experiment_chat\\autonomous_prompt_1.md",
     "response_paths": [
-      "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\experiment_chat\\autonomous_response_1_attempt_1.txt",
-      "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\experiment_chat\\autonomous_response_1_attempt_2.txt"
+      "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\experiment_chat\\autonomous_response_1_attempt_1.txt"
     ],
     "scenario_results": [
       {
         "scenario_id": "agent_scenario_1",
         "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_1",
         "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_1\\run",
-        "status": "spice_failed",
+        "status": "spice_success",
         "spice_executed": true,
-        "spice_status": "failed",
-        "spice_exit_code": 1,
-        "comparison_summary": {},
-        "diagnostic_outcome": {},
+        "spice_status": "success",
+        "spice_exit_code": 0,
+        "comparison_summary": {
+          "requested_count": 4,
+          "changed_count": 4,
+          "activated_count": 2,
+          "missing_count": 0,
+          "expected_count": 4,
+          "expectations_met_count": 4,
+          "expectations_failed_count": 0,
+          "expectations_missing_count": 0,
+          "meaningful_improvement_count": 0,
+          "quality_required": false,
+          "quality_available": false,
+          "quality_improved": false,
+          "quality_acceptable": false,
+          "quality_output_preserved": false,
+          "base_thd": null,
+          "scenario_thd": null,
+          "gain_required": false,
+          "gain_available": false,
+          "gain_sufficient": false,
+          "scenario_gain": null,
+          "min_gain_ratio": null,
+          "temporal_required": true,
+          "temporal_available": true,
+          "temporal_met": false
+        },
+        "diagnostic_outcome": {
+          "status": "partially_resolved",
+          "technical_label": "Temporal criteria not satisfied",
+          "label": "Criteri temporali non soddisfatti",
+          "reason": "Almeno un criterio temporale non e soddisfatto.",
+          "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+          "stop_automation": false,
+          "confidence": "low",
+          "next_step": "Il comportamento temporale non soddisfa ancora l'obiettivo: prova un'altra correzione."
+        },
         "viewer": {
           "model": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_1\\run\\13_viewer_model.json",
           "layout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_1\\run\\14_viewer_layout.json",
@@ -303,23 +353,25 @@ oppure
     "decision_number": 2,
     "decision": {
       "decision": "run_scenarios",
-      "reason": "La base run e il test con condizioni iniziali indicano che il blocco non dipende solo dalla simmetria di avvio: anche forzando uno sbilanciamento iniziale i due LED restano steady_on. La causa piu sostenuta dagli artefatti e un errore di valori nel bias di base: R2 e R4 sono 2.2k, troppo basse rispetto a un astabile classico con C=47uF, e tengono entrambi i BJT fortemente in conduzione (Vb≈0.77 V, Ic≈15.5 mA su entrambi). Conviene verificare una correzione minima aumentando entrambe le resistenze di base di un ordine di grandezza plausibile.",
+      "reason": "Il primo test con condizioni iniziali ha prodotto dinamica reale ma non periodicita regolare, quindi l'ipotesi di blocco da startup e promettente ma non ancora verificata in modo forte. Le evidenze strutturali mostrano anche un forte sospetto sui valori: con R2=R4=2.2k le basi sono polarizzate molto in alto (circa 0.77 V) e ciascun transistor assorbe circa 1.92 mA di base, mantenendo entrambi i rami fortemente accesi. In un astabile RC con 47 uF, resistenze di base cosi basse possono dominare il circuito e impedire l'alternanza. Prima di concludere serve quindi un secondo test di startup materialmente distinto e, in parallelo, una correzione minima sostenuta dai valori anomali delle resistenze di base.",
       "scenarios": [
         {
-          "title": "Aumento delle due resistenze di base da 2.2k a 22k",
-          "hypothesis": "Le resistenze di base troppo basse polarizzano entrambi i transistor in conduzione simultanea e impediscono l'oscillazione; portandole a 22k il multivibratore dovrebbe uscire dal latch DC e far lampeggiare alternativamente i LED.",
-          "intent": "correction",
+          "title": "Seconda rottura di simmetria iniziale sulle due basi",
+          "hypothesis": "Se il mancato lampeggio dipende soprattutto dall'avvio in equilibrio simmetrico, una seconda coppia di condizioni iniziali fisicamente ammissibili ma diversa dalla precedente dovrebbe ancora far emergere un'alternanza regolare. Se anche cosi non compare periodicita, l'ipotesi startup da sola si indebolisce.",
+          "intent": "diagnostic",
           "analysis": "tran",
           "actions": [
             {
-              "type": "change_component_value",
-              "target": "resistor22.2",
-              "value": "22k"
+              "type": "set_initial_node_voltage",
+              "target": "N004",
+              "value": "1.2V",
+              "skip_operating_point": true
             },
             {
-              "type": "change_component_value",
-              "target": "resistor22.3",
-              "value": "22k"
+              "type": "set_initial_node_voltage",
+              "target": "N006",
+              "value": "0V",
+              "skip_operating_point": true
             }
           ],
           "compare": [
@@ -339,27 +391,27 @@ oppure
             "@dled12_2[id]": "nonzero"
           },
           "temporal_expect": {
-            "target": "Dled12_1",
+            "target": "Dled12_2",
             "required_state": "blinking",
             "require_regular_period": true,
             "min_duty_cycle": 0.1
           }
         },
         {
-          "title": "Diagnostica forte con riduzione ulteriore del bias di base a 47k",
-          "hypothesis": "Se 22k non basta, una riduzione piu marcata della corrente di base deve comunque rompere la conduzione simultanea; un eventuale lampeggio o spegnimento alternato confermerebbe che la causa primaria e il bias eccessivo, non la topologia di accoppiamento.",
-          "intent": "diagnostic",
+          "title": "Aumento simmetrico delle resistenze di base",
+          "hypothesis": "Le resistenze di base da 2.2 kOhm sono probabilmente troppo basse rispetto ai 47 uF e tengono entrambi i transistor contemporaneamente in conduzione. Aumentandole in modo simmetrico a un valore molto piu alto si dovrebbe ridurre la polarizzazione DC delle basi e favorire il comportamento astabile con LED alternati.",
+          "intent": "correction",
           "analysis": "tran",
           "actions": [
             {
               "type": "change_component_value",
-              "target": "resistor22.2",
-              "value": "47k"
+              "target": "Rresistor22_2",
+              "value": "22k"
             },
             {
               "type": "change_component_value",
-              "target": "resistor22.3",
-              "value": "47k"
+              "target": "Rresistor22_3",
+              "value": "22k"
             }
           ],
           "compare": [
@@ -454,12 +506,12 @@ oppure
         "spice_exit_code": 0,
         "comparison_summary": {
           "requested_count": 4,
-          "changed_count": 2,
-          "activated_count": 0,
+          "changed_count": 4,
+          "activated_count": 2,
           "missing_count": 0,
           "expected_count": 4,
-          "expectations_met_count": 2,
-          "expectations_failed_count": 2,
+          "expectations_met_count": 4,
+          "expectations_failed_count": 0,
           "expectations_missing_count": 0,
           "meaningful_improvement_count": 0,
           "quality_required": false,
@@ -1446,7 +1498,7 @@ Current ngspice program size =   15.266 MB.
   "batch_name": "batchDemo",
   "experiment_name": "demo_batch",
   "circuit_id": "b02",
-  "user_problem": "Il circuito dovrebbe far lampeggiare alternativamente i due LED, ma nella simulazione restano entrambi accesi fissi. Come possiamo risolvere?",
+  "user_problem": "Il circuito dovrebbe far lampeggiare alternativamente i due LED, ma nella simulazione restano entrambi accesi. Come mai?",
   "pipeline2_output_dir": "outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02",
   "summary": {
     "spice_status": "success",
@@ -1577,33 +1629,67 @@ Current ngspice program size =   15.266 MB.
     {
       "scenario_dir": "outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_1",
       "scenario_id": "agent_scenario_1",
-      "title": "Rottura controllata della simmetria iniziale sui due nodi base",
-      "status": "spice_failed",
-      "spice_status": "failed",
-      "diagnostic_outcome": {},
-      "comparison_summary": {},
+      "title": "Rottura controllata della simmetria iniziale sulle due basi",
+      "status": "spice_success",
+      "spice_status": "success",
+      "diagnostic_outcome": {
+        "status": "partially_resolved",
+        "technical_label": "Temporal criteria not satisfied",
+        "label": "Criteri temporali non soddisfatti",
+        "reason": "Almeno un criterio temporale non e soddisfatto.",
+        "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+        "stop_automation": false,
+        "confidence": "low",
+        "next_step": "Il comportamento temporale non soddisfa ancora l'obiettivo: prova un'altra correzione."
+      },
+      "comparison_summary": {
+        "requested_count": 4,
+        "changed_count": 4,
+        "activated_count": 2,
+        "missing_count": 0,
+        "expected_count": 4,
+        "expectations_met_count": 4,
+        "expectations_failed_count": 0,
+        "expectations_missing_count": 0,
+        "meaningful_improvement_count": 0,
+        "quality_required": false,
+        "quality_available": false,
+        "quality_improved": false,
+        "quality_acceptable": false,
+        "quality_output_preserved": false,
+        "base_thd": null,
+        "scenario_thd": null,
+        "gain_required": false,
+        "gain_available": false,
+        "gain_sufficient": false,
+        "scenario_gain": null,
+        "min_gain_ratio": null,
+        "temporal_required": true,
+        "temporal_available": true,
+        "temporal_met": false
+      },
       "led_profiles": {
         "Dled12_1": {
-          "state": "steady_on",
+          "state": "transient_pulse",
           "regular_period": false,
           "frequency_hz": null,
-          "duty_cycle": 1.0,
-          "on_fraction": 1.0,
+          "duty_cycle": 0.0007342143906020558,
+          "on_fraction": 0.0007342143906020558,
           "pulse_count": 1,
-          "voltage_min": 0.7244573699999997,
-          "voltage_max": 0.7284786199999997,
+          "voltage_min": 0.5584947299999996,
+          "voltage_max": 0.8566023600000001,
           "anode_node": "N001",
           "cathode_node": "N002"
         },
         "Dled12_2": {
-          "state": "steady_on",
+          "state": "transient_pulse",
           "regular_period": false,
           "frequency_hz": null,
-          "duty_cycle": 1.0,
-          "on_fraction": 1.0,
-          "pulse_count": 1,
-          "voltage_min": 0.7250209400000003,
-          "voltage_max": 0.72922537,
+          "duty_cycle": 0.6461086637298091,
+          "on_fraction": 0.6461086637298091,
+          "pulse_count": 19,
+          "voltage_min": -6478.20099,
+          "voltage_max": 0.7466161600000003,
           "anode_node": "N001",
           "cathode_node": "N003"
         }
@@ -1625,8 +1711,8 @@ Current ngspice program size =   15.266 MB.
           "role": "Report produced by the controlled scenario runner."
         },
         "scenario_comparison": {
-          "available": false,
-          "path": null,
+          "available": true,
+          "path": "outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_1\\scenario_comparison.json",
           "role": "Base-vs-scenario comparison used to evaluate the scenario."
         }
       }
@@ -1634,7 +1720,98 @@ Current ngspice program size =   15.266 MB.
     {
       "scenario_dir": "outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_2",
       "scenario_id": "agent_scenario_2",
-      "title": "Aumento delle due resistenze di base da 2.2k a 22k",
+      "title": "Seconda rottura di simmetria iniziale sulle due basi",
+      "status": "spice_success",
+      "spice_status": "success",
+      "diagnostic_outcome": {
+        "status": "partially_resolved",
+        "technical_label": "Temporal criteria not satisfied",
+        "label": "Criteri temporali non soddisfatti",
+        "reason": "Almeno un criterio temporale non e soddisfatto.",
+        "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+        "stop_automation": false,
+        "confidence": "low",
+        "next_step": "Il comportamento temporale non soddisfa ancora l'obiettivo: prova un'altra correzione."
+      },
+      "comparison_summary": {
+        "requested_count": 4,
+        "changed_count": 4,
+        "activated_count": 2,
+        "missing_count": 0,
+        "expected_count": 4,
+        "expectations_met_count": 4,
+        "expectations_failed_count": 0,
+        "expectations_missing_count": 0,
+        "meaningful_improvement_count": 0,
+        "quality_required": false,
+        "quality_available": false,
+        "quality_improved": false,
+        "quality_acceptable": false,
+        "quality_output_preserved": false,
+        "base_thd": null,
+        "scenario_thd": null,
+        "gain_required": false,
+        "gain_available": false,
+        "gain_sufficient": false,
+        "scenario_gain": null,
+        "min_gain_ratio": null,
+        "temporal_required": true,
+        "temporal_available": true,
+        "temporal_met": false
+      },
+      "led_profiles": {
+        "Dled12_1": {
+          "state": "transient_pulse",
+          "regular_period": false,
+          "frequency_hz": null,
+          "duty_cycle": 0.6792452830188679,
+          "on_fraction": 0.6792452830188679,
+          "pulse_count": 19,
+          "voltage_min": -6478.20099,
+          "voltage_max": 0.7466161600000003,
+          "anode_node": "N001",
+          "cathode_node": "N002"
+        },
+        "Dled12_2": {
+          "state": "transient_pulse",
+          "regular_period": false,
+          "frequency_hz": null,
+          "duty_cycle": 0.0007861635220125787,
+          "on_fraction": 0.0007861635220125787,
+          "pulse_count": 1,
+          "voltage_min": 0.5358872699999999,
+          "voltage_max": 0.8566023600000001,
+          "anode_node": "N001",
+          "cathode_node": "N003"
+        }
+      },
+      "artifacts": {
+        "scenario_definition": {
+          "available": true,
+          "path": "outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_2\\scenario.json",
+          "role": "Scenario selected by the user and saved before execution."
+        },
+        "scenario_status": {
+          "available": true,
+          "path": "outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_2\\scenario_status.json",
+          "role": "Current scenario status, SPICE status and diagnostic outcome."
+        },
+        "controlled_scenario_report": {
+          "available": true,
+          "path": "outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_2\\12_controlled_scenarios.json",
+          "role": "Report produced by the controlled scenario runner."
+        },
+        "scenario_comparison": {
+          "available": true,
+          "path": "outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_2\\scenario_comparison.json",
+          "role": "Base-vs-scenario comparison used to evaluate the scenario."
+        }
+      }
+    },
+    {
+      "scenario_dir": "outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_3",
+      "scenario_id": "agent_scenario_3",
+      "title": "Aumento simmetrico delle resistenze di base",
       "status": "spice_success",
       "spice_status": "success",
       "diagnostic_outcome": {
@@ -1702,97 +1879,6 @@ Current ngspice program size =   15.266 MB.
       "artifacts": {
         "scenario_definition": {
           "available": true,
-          "path": "outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_2\\scenario.json",
-          "role": "Scenario selected by the user and saved before execution."
-        },
-        "scenario_status": {
-          "available": true,
-          "path": "outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_2\\scenario_status.json",
-          "role": "Current scenario status, SPICE status and diagnostic outcome."
-        },
-        "controlled_scenario_report": {
-          "available": true,
-          "path": "outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_2\\12_controlled_scenarios.json",
-          "role": "Report produced by the controlled scenario runner."
-        },
-        "scenario_comparison": {
-          "available": true,
-          "path": "outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_2\\scenario_comparison.json",
-          "role": "Base-vs-scenario comparison used to evaluate the scenario."
-        }
-      }
-    },
-    {
-      "scenario_dir": "outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_3",
-      "scenario_id": "agent_scenario_3",
-      "title": "Diagnostica forte con riduzione ulteriore del bias di base a 47k",
-      "status": "spice_success",
-      "spice_status": "success",
-      "diagnostic_outcome": {
-        "status": "partially_resolved",
-        "technical_label": "Temporal criteria not satisfied",
-        "label": "Criteri temporali non soddisfatti",
-        "reason": "Almeno un criterio temporale non e soddisfatto.",
-        "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
-        "stop_automation": false,
-        "confidence": "low",
-        "next_step": "Il comportamento temporale non soddisfa ancora l'obiettivo: prova un'altra correzione."
-      },
-      "comparison_summary": {
-        "requested_count": 4,
-        "changed_count": 2,
-        "activated_count": 0,
-        "missing_count": 0,
-        "expected_count": 4,
-        "expectations_met_count": 2,
-        "expectations_failed_count": 2,
-        "expectations_missing_count": 0,
-        "meaningful_improvement_count": 0,
-        "quality_required": false,
-        "quality_available": false,
-        "quality_improved": false,
-        "quality_acceptable": false,
-        "quality_output_preserved": false,
-        "base_thd": null,
-        "scenario_thd": null,
-        "gain_required": false,
-        "gain_available": false,
-        "gain_sufficient": false,
-        "scenario_gain": null,
-        "min_gain_ratio": null,
-        "temporal_required": true,
-        "temporal_available": true,
-        "temporal_met": false
-      },
-      "led_profiles": {
-        "Dled12_1": {
-          "state": "steady_on",
-          "regular_period": false,
-          "frequency_hz": null,
-          "duty_cycle": 1.0,
-          "on_fraction": 1.0,
-          "pulse_count": 1,
-          "voltage_min": 0.7223485399999996,
-          "voltage_max": 0.7223485500000004,
-          "anode_node": "N001",
-          "cathode_node": "N002"
-        },
-        "Dled12_2": {
-          "state": "steady_on",
-          "regular_period": false,
-          "frequency_hz": null,
-          "duty_cycle": 1.0,
-          "on_fraction": 1.0,
-          "pulse_count": 1,
-          "voltage_min": 0.7223485399999996,
-          "voltage_max": 0.7223485500000004,
-          "anode_node": "N001",
-          "cathode_node": "N003"
-        }
-      },
-      "artifacts": {
-        "scenario_definition": {
-          "available": true,
           "path": "outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_3\\scenario.json",
           "role": "Scenario selected by the user and saved before execution."
         },
@@ -1816,7 +1902,7 @@ Current ngspice program size =   15.266 MB.
   ],
   "scenario_outcome_summary": {
     "available": true,
-    "best_scenario_id": "agent_scenario_2",
+    "best_scenario_id": "agent_scenario_1",
     "best_outcome_status": "partially_resolved",
     "best_stop_automation": false,
     "ranking_status": "verified_best",
@@ -1824,52 +1910,157 @@ Current ngspice program size =   15.266 MB.
     "scenarios": [
       {
         "scenario_id": "agent_scenario_1",
-        "title": "Rottura controllata della simmetria iniziale sui due nodi base",
-        "status": "spice_failed",
-        "spice_status": "failed",
-        "outcome_status": null,
-        "outcome_label": null,
-        "outcome_technical_label": null,
-        "outcome_reason": null,
+        "title": "Rottura controllata della simmetria iniziale sulle due basi",
+        "status": "spice_success",
+        "spice_status": "success",
+        "outcome_status": "partially_resolved",
+        "outcome_label": "Criteri temporali non soddisfatti",
+        "outcome_technical_label": "Temporal criteria not satisfied",
+        "outcome_reason": "Almeno un criterio temporale non e soddisfatto.",
         "stop_automation": false,
-        "comparison_summary": {},
+        "comparison_summary": {
+          "requested_count": 4,
+          "changed_count": 4,
+          "activated_count": 2,
+          "missing_count": 0,
+          "expected_count": 4,
+          "expectations_met_count": 4,
+          "expectations_failed_count": 0,
+          "expectations_missing_count": 0,
+          "meaningful_improvement_count": 0,
+          "quality_required": false,
+          "quality_available": false,
+          "quality_improved": false,
+          "quality_acceptable": false,
+          "quality_output_preserved": false,
+          "base_thd": null,
+          "scenario_thd": null,
+          "gain_required": false,
+          "gain_available": false,
+          "gain_sufficient": false,
+          "scenario_gain": null,
+          "min_gain_ratio": null,
+          "temporal_required": true,
+          "temporal_available": true,
+          "temporal_met": false
+        },
         "quantity_summary": {
-          "changed": [],
+          "changed": [
+            "v(N004)",
+            "v(N006)",
+            "@dled12_1[id]",
+            "@dled12_2[id]"
+          ],
           "unchanged": [],
           "missing": []
         },
         "led_profiles": {
           "Dled12_1": {
-            "state": "steady_on",
+            "state": "transient_pulse",
             "regular_period": false,
             "frequency_hz": null,
-            "duty_cycle": 1.0,
-            "on_fraction": 1.0,
+            "duty_cycle": 0.0007342143906020558,
+            "on_fraction": 0.0007342143906020558,
             "pulse_count": 1,
-            "voltage_min": 0.7244573699999997,
-            "voltage_max": 0.7284786199999997,
+            "voltage_min": 0.5584947299999996,
+            "voltage_max": 0.8566023600000001,
             "anode_node": "N001",
             "cathode_node": "N002"
           },
           "Dled12_2": {
-            "state": "steady_on",
+            "state": "transient_pulse",
             "regular_period": false,
             "frequency_hz": null,
-            "duty_cycle": 1.0,
-            "on_fraction": 1.0,
-            "pulse_count": 1,
-            "voltage_min": 0.7250209400000003,
-            "voltage_max": 0.72922537,
+            "duty_cycle": 0.6461086637298091,
+            "on_fraction": 0.6461086637298091,
+            "pulse_count": 19,
+            "voltage_min": -6478.20099,
+            "voltage_max": 0.7466161600000003,
             "anode_node": "N001",
             "cathode_node": "N003"
           }
         },
-        "ranking_verified": false,
-        "score": 0
+        "ranking_verified": true,
+        "score": 40
       },
       {
         "scenario_id": "agent_scenario_2",
-        "title": "Aumento delle due resistenze di base da 2.2k a 22k",
+        "title": "Seconda rottura di simmetria iniziale sulle due basi",
+        "status": "spice_success",
+        "spice_status": "success",
+        "outcome_status": "partially_resolved",
+        "outcome_label": "Criteri temporali non soddisfatti",
+        "outcome_technical_label": "Temporal criteria not satisfied",
+        "outcome_reason": "Almeno un criterio temporale non e soddisfatto.",
+        "stop_automation": false,
+        "comparison_summary": {
+          "requested_count": 4,
+          "changed_count": 4,
+          "activated_count": 2,
+          "missing_count": 0,
+          "expected_count": 4,
+          "expectations_met_count": 4,
+          "expectations_failed_count": 0,
+          "expectations_missing_count": 0,
+          "meaningful_improvement_count": 0,
+          "quality_required": false,
+          "quality_available": false,
+          "quality_improved": false,
+          "quality_acceptable": false,
+          "quality_output_preserved": false,
+          "base_thd": null,
+          "scenario_thd": null,
+          "gain_required": false,
+          "gain_available": false,
+          "gain_sufficient": false,
+          "scenario_gain": null,
+          "min_gain_ratio": null,
+          "temporal_required": true,
+          "temporal_available": true,
+          "temporal_met": false
+        },
+        "quantity_summary": {
+          "changed": [
+            "v(N004)",
+            "v(N006)",
+            "@dled12_1[id]",
+            "@dled12_2[id]"
+          ],
+          "unchanged": [],
+          "missing": []
+        },
+        "led_profiles": {
+          "Dled12_1": {
+            "state": "transient_pulse",
+            "regular_period": false,
+            "frequency_hz": null,
+            "duty_cycle": 0.6792452830188679,
+            "on_fraction": 0.6792452830188679,
+            "pulse_count": 19,
+            "voltage_min": -6478.20099,
+            "voltage_max": 0.7466161600000003,
+            "anode_node": "N001",
+            "cathode_node": "N002"
+          },
+          "Dled12_2": {
+            "state": "transient_pulse",
+            "regular_period": false,
+            "frequency_hz": null,
+            "duty_cycle": 0.0007861635220125787,
+            "on_fraction": 0.0007861635220125787,
+            "pulse_count": 1,
+            "voltage_min": 0.5358872699999999,
+            "voltage_max": 0.8566023600000001,
+            "anode_node": "N001",
+            "cathode_node": "N003"
+          }
+        },
+        "ranking_verified": true,
+        "score": 40
+      },
+      {
+        "scenario_id": "agent_scenario_3",
+        "title": "Aumento simmetrico delle resistenze di base",
         "status": "spice_success",
         "spice_status": "success",
         "outcome_status": "partially_resolved",
@@ -1941,82 +2132,6 @@ Current ngspice program size =   15.266 MB.
         },
         "ranking_verified": true,
         "score": 40
-      },
-      {
-        "scenario_id": "agent_scenario_3",
-        "title": "Diagnostica forte con riduzione ulteriore del bias di base a 47k",
-        "status": "spice_success",
-        "spice_status": "success",
-        "outcome_status": "partially_resolved",
-        "outcome_label": "Criteri temporali non soddisfatti",
-        "outcome_technical_label": "Temporal criteria not satisfied",
-        "outcome_reason": "Almeno un criterio temporale non e soddisfatto.",
-        "stop_automation": false,
-        "comparison_summary": {
-          "requested_count": 4,
-          "changed_count": 2,
-          "activated_count": 0,
-          "missing_count": 0,
-          "expected_count": 4,
-          "expectations_met_count": 2,
-          "expectations_failed_count": 2,
-          "expectations_missing_count": 0,
-          "meaningful_improvement_count": 0,
-          "quality_required": false,
-          "quality_available": false,
-          "quality_improved": false,
-          "quality_acceptable": false,
-          "quality_output_preserved": false,
-          "base_thd": null,
-          "scenario_thd": null,
-          "gain_required": false,
-          "gain_available": false,
-          "gain_sufficient": false,
-          "scenario_gain": null,
-          "min_gain_ratio": null,
-          "temporal_required": true,
-          "temporal_available": true,
-          "temporal_met": false
-        },
-        "quantity_summary": {
-          "changed": [
-            "@dled12_1[id]",
-            "@dled12_2[id]"
-          ],
-          "unchanged": [
-            "v(N004)",
-            "v(N006)"
-          ],
-          "missing": []
-        },
-        "led_profiles": {
-          "Dled12_1": {
-            "state": "steady_on",
-            "regular_period": false,
-            "frequency_hz": null,
-            "duty_cycle": 1.0,
-            "on_fraction": 1.0,
-            "pulse_count": 1,
-            "voltage_min": 0.7223485399999996,
-            "voltage_max": 0.7223485500000004,
-            "anode_node": "N001",
-            "cathode_node": "N002"
-          },
-          "Dled12_2": {
-            "state": "steady_on",
-            "regular_period": false,
-            "frequency_hz": null,
-            "duty_cycle": 1.0,
-            "on_fraction": 1.0,
-            "pulse_count": 1,
-            "voltage_min": 0.7223485399999996,
-            "voltage_max": 0.7223485500000004,
-            "anode_node": "N001",
-            "cathode_node": "N003"
-          }
-        },
-        "ranking_verified": true,
-        "score": 30
       }
     ]
   },

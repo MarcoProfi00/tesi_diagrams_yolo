@@ -1,0 +1,145 @@
+{
+  "source_format": "pipeline2.0_diagnostic_context_manifest",
+  "batch_name": "batchDemo",
+  "experiment_name": "test_a09_all",
+  "circuit_id": "a09",
+  "user_problem": "",
+  "pipeline2_output_dir": "outputs\\demo_workspaces\\test_a09_all\\web\\chat\\a09",
+  "summary": {
+    "spice_status": "success",
+    "spice_exit_code": 0,
+    "spice_message": "ngspice completed successfully.",
+    "emitted_elements": 6,
+    "skipped_elements": 6,
+    "emit_warnings_count": 1,
+    "skipped_components_count": 6,
+    "node_count": 8,
+    "ground_groups_count": 5,
+    "singleton_nodes_count": 1,
+    "bound_components": 7,
+    "missing_components": 0,
+    "unsupported_components": 0,
+    "spice_ready_components": 7,
+    "rules_missing_components": 0,
+    "has_tran_csv": false,
+    "has_tran_plot": false,
+    "led_profiles": {}
+  },
+  "artifacts": {
+    "graph": {
+      "step": "01",
+      "available": true,
+      "path": "outputs\\demo_workspaces\\test_a09_all\\web\\chat\\a09\\01_graph.json",
+      "role": "Graph JSON copied from Pipeline 1.0."
+    },
+    "normalized_circuit": {
+      "step": "02",
+      "available": true,
+      "path": "outputs\\demo_workspaces\\test_a09_all\\web\\chat\\a09\\02_normalized_circuit.json",
+      "role": "Normalized circuit representation used by Pipeline 2.0."
+    },
+    "node_map": {
+      "step": "03",
+      "available": true,
+      "path": "outputs\\demo_workspaces\\test_a09_all\\web\\chat\\a09\\03_node_map.json",
+      "role": "Maps component terminals to SPICE node names."
+    },
+    "values_bound": {
+      "step": "04",
+      "available": true,
+      "path": "outputs\\demo_workspaces\\test_a09_all\\web\\chat\\a09\\04_values_bound.json",
+      "role": "Values and labels bound to graph components."
+    },
+    "component_rules": {
+      "step": "06",
+      "available": true,
+      "path": "outputs\\demo_workspaces\\test_a09_all\\web\\chat\\a09\\06_component_rules.json",
+      "role": "SPICE conversion rules for each component."
+    },
+    "netlist": {
+      "step": "07",
+      "available": true,
+      "path": "outputs\\demo_workspaces\\test_a09_all\\web\\chat\\a09\\07_netlist.cir",
+      "role": "Generated SPICE netlist."
+    },
+    "spice_emit_report": {
+      "step": "07",
+      "available": true,
+      "path": "outputs\\demo_workspaces\\test_a09_all\\web\\chat\\a09\\07_spice_emit_report.json",
+      "role": "Report of emitted, skipped and warning components."
+    },
+    "spice_run": {
+      "step": "08",
+      "available": true,
+      "path": "outputs\\demo_workspaces\\test_a09_all\\web\\chat\\a09\\08_spice_run.json",
+      "role": "Structured ngspice execution report."
+    },
+    "ngspice_stdout": {
+      "step": "08",
+      "available": true,
+      "path": "outputs\\demo_workspaces\\test_a09_all\\web\\chat\\a09\\08_ngspice_stdout.txt",
+      "role": "Raw ngspice stdout log."
+    },
+    "ngspice_stderr": {
+      "step": "08",
+      "available": true,
+      "path": "outputs\\demo_workspaces\\test_a09_all\\web\\chat\\a09\\08_ngspice_stderr.txt",
+      "role": "Raw ngspice stderr log."
+    },
+    "tran_csv": {
+      "step": "08",
+      "available": false,
+      "path": null,
+      "role": "Clean transient CSV, when .tran data is available."
+    },
+    "tran_plot_png": {
+      "step": "08",
+      "available": false,
+      "path": null,
+      "role": "Transient plot PNG, when generated."
+    },
+    "tran_plot_svg": {
+      "step": "08",
+      "available": false,
+      "path": null,
+      "role": "Transient plot SVG fallback, when generated."
+    }
+  },
+  "executed_scenarios": [],
+  "scenario_outcome_summary": {
+    "available": false,
+    "best_scenario_id": null,
+    "best_outcome_status": null,
+    "best_stop_automation": null,
+    "ranking_status": "no_verified_best",
+    "interpretation_rule": "If a user asks which scenario resolves the problem, prefer the scenario with outcome_status='resolved_candidate' and stop_automation=true. Partially resolved scenarios without verified expectations are supporting diagnostics and must not be ranked only by changed_count.",
+    "scenarios": []
+  },
+  "scenario_budget": {
+    "max_executable_scenarios": 5,
+    "executed_scenarios_count": 0,
+    "remaining_executable_scenarios": 5,
+    "budget_exhausted": false,
+    "last_scenario_available": false,
+    "policy": "At most 5 scenarios can be executed for the same circuit. When only one scenario remains, the agent should propose a single final scenario. When no scenario remains, the agent must stop proposing new scenarios and provide a final diagnostic conclusion."
+  },
+  "image_access": {
+    "included_by_default": false,
+    "can_be_requested": true,
+    "path": "outputs\\demo_workspaces\\test_a09_all\\input\\images\\a09.png",
+    "policy": "Only request the image if structured outputs suggest that the Graph JSON may be incomplete or wrong."
+  },
+  "agent_mode": "graph_grounded_readonly",
+  "agent_rules": [
+    "Treat this file as a manifest, not as the full diagnostic evidence.",
+    "Load the referenced artifacts needed for the answer.",
+    "Use graph, node map, component rules, netlist, stdout and stderr as evidence.",
+    "If executed_scenarios are available, use them as evidence for questions about scenario outcomes.",
+    "Do not invent values, connections, models or simulation results.",
+    "Do not use the image unless image_access is explicitly requested.",
+    "If Graph JSON inconsistency is suspected, explain which structured outputs suggest it.",
+    "In read-only mode, do not modify netlists and do not execute scenarios.",
+    "Never exceed 5 executed scenarios for the same circuit.",
+    "When the scenario budget is exhausted, stop proposing new scenarios and provide a final diagnostic conclusion."
+  ]
+}

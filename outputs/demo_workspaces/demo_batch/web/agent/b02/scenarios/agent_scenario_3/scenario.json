@@ -1,18 +1,18 @@
 {
-  "title": "Diagnostica forte con riduzione ulteriore del bias di base a 47k",
-  "hypothesis": "Se 22k non basta, una riduzione piu marcata della corrente di base deve comunque rompere la conduzione simultanea; un eventuale lampeggio o spegnimento alternato confermerebbe che la causa primaria e il bias eccessivo, non la topologia di accoppiamento.",
-  "intent": "diagnostic",
+  "title": "Aumento simmetrico delle resistenze di base",
+  "hypothesis": "Le resistenze di base da 2.2 kOhm sono probabilmente troppo basse rispetto ai 47 uF e tengono entrambi i transistor contemporaneamente in conduzione. Aumentandole in modo simmetrico a un valore molto piu alto si dovrebbe ridurre la polarizzazione DC delle basi e favorire il comportamento astabile con LED alternati.",
+  "intent": "correction",
   "analysis": "tran",
   "actions": [
     {
       "type": "change_component_value",
-      "target": "resistor22.2",
-      "value": "47k"
+      "target": "Rresistor22_2",
+      "value": "22k"
     },
     {
       "type": "change_component_value",
-      "target": "resistor22.3",
-      "value": "47k"
+      "target": "Rresistor22_3",
+      "value": "22k"
     }
   ],
   "compare": [

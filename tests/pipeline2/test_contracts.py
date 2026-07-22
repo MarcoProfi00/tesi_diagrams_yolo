@@ -20,6 +20,7 @@ from autonomous_agent.contracts import (  # noqa: E402
 from autonomous_agent.controller import (  # noqa: E402
     guard_initial_condition_conclusion,
 )
+from autonomous_agent.prompt_builder import build_autonomous_prompt  # noqa: E402
 from autonomous_agent.state_store import (  # noqa: E402
     MAX_EXECUTABLE_SCENARIOS as AGENT_SCENARIO_LIMIT,
 )
@@ -49,6 +50,27 @@ class SharedContractTests(unittest.TestCase):
         """Ogni azione ammessa dall'agente deve avere un handler eseguibile."""
         self.assertEqual(set(ALLOWED_ACTION_TYPES), set(ACTION_REQUIRED_FIELDS))
         self.assertEqual(set(ALLOWED_ACTION_TYPES), set(self.step12.ACTION_HANDLERS))
+
+    def test_agent_prompt_reserves_activated_for_inactive_base_quantities(self) -> None:
+        """Il prompt non confonde un segnale base debole con un target inattivo."""
+        prompt = build_autonomous_prompt(
+            JSON_TO_SPICE_DIR,
+            {"symptom": "Il LED produce impulsi brevi", "iterations": []},
+            remaining_budget=5,
+        )
+
+        self.assertIn(
+            "`activated` significa esclusivamente passaggio da una grandezza inattiva o",
+            prompt,
+        )
+        self.assertIn(
+            "se e gia diversa da zero, anche se debole, impulsiva o irregolare",
+            prompt,
+        )
+        self.assertIn(
+            "non usare `activated`, neppure se il profilo base e classificato",
+            prompt,
+        )
 
     def test_transient_startup_uic_is_enabled_once(self) -> None:
         """La modalita di avvio aggiunge UIC senza duplicarlo sulla `.tran`."""
@@ -87,6 +109,65 @@ class SharedContractTests(unittest.TestCase):
             "skip_operating_point deve essere booleano",
         ):
             validate_scenario(scenario, 1)
+
+    def test_chat_led_startup_requires_a_temporal_correction(self) -> None:
+        """CHAT registra un avvio LED solo se verifica davvero il lampeggio."""
+        scenario = {
+            "title": "Avviare il lampeggio alternato dei LED",
+            "hypothesis": "La simmetria iniziale impedisce l'oscillazione",
+            "intent": "correction",
+            "analysis": "tran",
+            "actions": [
+                {
+                    "type": "set_initial_node_voltage",
+                    "target": "N001",
+                    "value": "1V",
+                    "skip_operating_point": True,
+                }
+            ],
+            "compare": ["v(N001)", "@dled1[id]"],
+            "measure": {"@dled1[id]": "tran_abs_peak"},
+            "expect": {"v(N001)": "changed", "@dled1[id]": "changed"},
+            "temporal_expect": {
+                "target": "Dled1",
+                "required_state": "blinking",
+                "require_regular_period": True,
+            },
+        }
+        self.assertTrue(self.web_chat.scenario_is_executable(scenario))
+
+        without_temporal = dict(scenario)
+        without_temporal.pop("temporal_expect")
+        self.assertFalse(self.web_chat.scenario_is_executable(without_temporal))
+
+        diagnostic = dict(scenario)
+        diagnostic["intent"] = "diagnostic"
+        self.assertFalse(self.web_chat.scenario_is_executable(diagnostic))
+
+        operating_point = dict(scenario)
+        operating_point["analysis"] = "op"
+        self.assertFalse(self.web_chat.scenario_is_executable(operating_point))
+
+        irregular = dict(scenario)
+        irregular["temporal_expect"] = {
+            "target": "Dled1",
+            "required_state": "blinking",
+            "require_regular_period": False,
+        }
+        self.assertFalse(self.web_chat.scenario_is_executable(irregular))
+
+        multiple_targets = dict(scenario)
+        multiple_targets["temporal_expect"] = {
+            "target": ["Dled1", "Dled2"],
+            "required_state": "blinking",
+            "require_regular_period": True,
+        }
+        self.assertFalse(self.web_chat.scenario_is_executable(multiple_targets))
+        with self.assertRaisesRegex(
+            AutonomousDecisionError,
+            "un singolo identificatore testuale",
+        ):
+            validate_scenario(multiple_targets, 1)
 
     def test_led_hysteresis_ignores_numeric_threshold_chatter(self) -> None:
         """Il rumore vicino alla soglia non diventa un falso lampeggio veloce."""

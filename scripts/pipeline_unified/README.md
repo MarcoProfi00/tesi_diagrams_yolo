@@ -4,8 +4,8 @@ Questa directory contiene l'orchestratore che colleghera' Pipeline 1.0 e
 Pipeline 2.0 senza duplicare la logica degli script numerati.
 
 L'implementazione procede per fasi verificabili. Sono disponibili la Pipeline
-1.0 completa, la Pipeline 2.0 tecnica fino a ngspice e la webchat con viewer e
-workspace CHAT/AGENT indipendenti.
+1.0 completa, la Pipeline 2.0 tecnica fino a ngspice, la webchat con viewer e
+workspace CHAT/AGENT indipendenti e il comando che orchestra l'intero flusso.
 
 ## Comandi previsti
 
@@ -14,7 +14,7 @@ workspace CHAT/AGENT indipendenti.
 | `graph` | disponibile | Esegue Pipeline 1.0, step 01-06 |
 | `spice` | disponibile | Usa i Graph del workspace e gli YAML del batch, esegue gli step 01-08 |
 | `webchat` | disponibile | Prepara viewer e workspace CHAT/AGENT e apre un unico server |
-| `all` | da implementare | Esegue l'intero flusso fino alla webchat |
+| `all` | disponibile | Esegue l'intero flusso fino alla webchat |
 | `status` | da implementare | Mostra lo stato persistente dei circuiti nel workspace |
 
 I comandi non ancora disponibili non vengono esposti dalla CLI, cosi' non
@@ -30,7 +30,21 @@ possono essere confusi con funzionalita' gia' utilizzabili.
   --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
 ```
 
-I comandi `all` e `status` restano ancora da implementare:
+### Flusso completo disponibile
+
+Su un solo circuito, `all` esegue in ordine Pipeline 1.0, Pipeline 2.0 con
+ngspice e preparazione di CHAT/AGENT; infine avvia il server web:
+
+```powershell
+.venv312\Scripts\python.exe scripts\pipeline_unified\run_pipeline.py all `
+  --workspace demo_a09_all `
+  --input-dir data\batchDemo `
+  --circuit a09 `
+  --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+```
+
+Per elaborare tutto il batch bisogna indicare esplicitamente quale circuito
+aprire nel viewer al termine:
 
 ```powershell
 # Flusso completo sul batch; al termine viene aperto b02
@@ -41,6 +55,13 @@ I comandi `all` e `status` restano ancora da implementare:
   --open-circuit b02 `
   --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
 ```
+
+Il server resta in primo piano e si arresta con `Ctrl+C`. L'opzione
+`--prepare-only` completa entrambe le pipeline e prepara viewer, CHAT e AGENT
+senza avviare il server. Se una fase fallisce, quelle successive non vengono
+eseguite e il workspace conserva manifest e log utili per riprendere la run.
+
+Il solo comando `status` resta ancora da implementare:
 
 ```powershell
 # Stato persistente della run
@@ -146,6 +167,7 @@ Il batch attuale contiene:
 
 - `a04`;
 - `a08`;
+- `a09`;
 - `b02`;
 - `b03`.
 

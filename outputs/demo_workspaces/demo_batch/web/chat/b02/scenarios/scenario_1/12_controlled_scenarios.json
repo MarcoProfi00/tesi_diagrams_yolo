@@ -11,9 +11,9 @@
       "status": "applied",
       "type": "set_initial_node_voltage",
       "target": "N004",
-      "value": "0.6V",
-      "normalized_dc_value": "0.6",
-      "inserted_line": ".ic V(N004)=0.6",
+      "value": "0V",
+      "normalized_dc_value": "0",
+      "inserted_line": ".ic V(N004)=0",
       "operation": "inserted",
       "skip_operating_point": true,
       "transient_startup_operation": "enabled",
@@ -24,9 +24,9 @@
       "status": "applied",
       "type": "set_initial_node_voltage",
       "target": "N006",
-      "value": "0.8V",
-      "normalized_dc_value": "0.8",
-      "inserted_line": ".ic V(N004)=0.6 V(N006)=0.8",
+      "value": "1V",
+      "normalized_dc_value": "1",
+      "inserted_line": ".ic V(N004)=0 V(N006)=1",
       "operation": "updated",
       "skip_operating_point": true,
       "transient_startup_operation": "unchanged",
@@ -62,18 +62,21 @@
     "gain_available": false,
     "gain_sufficient": false,
     "scenario_gain": null,
-    "min_gain_ratio": null
+    "min_gain_ratio": null,
+    "temporal_required": true,
+    "temporal_available": true,
+    "temporal_met": true
   },
   "diagnostic_outcome": {
-    "status": "partially_resolved",
-    "technical_label": "Diagnostic hypothesis confirmed",
-    "label": "Ipotesi diagnostica confermata",
-    "reason": "I criteri dichiarati dal test diagnostico sono soddisfatti, ma lo scenario non applica una correzione del sintomo utente.",
+    "status": "resolved_candidate",
+    "technical_label": "Transient correction verified",
+    "label": "Criteri elettrici e temporali soddisfatti",
+    "reason": "Le aspettative elettriche e il profilo transitorio richiesto sono verificati.",
     "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
-    "stop_automation": false,
-    "confidence": "low",
-    "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
+    "stop_automation": true,
+    "confidence": "medium",
+    "next_step": "La correzione e verificata: puoi passare alla conclusione diagnostica."
   },
   "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
-  "created_or_updated_at": "2026-07-21T18:15:11"
+  "created_or_updated_at": "2026-07-22T09:25:44"
 }

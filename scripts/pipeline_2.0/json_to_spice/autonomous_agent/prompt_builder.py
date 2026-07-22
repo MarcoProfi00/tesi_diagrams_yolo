@@ -173,6 +173,15 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
   grandezze presenti in compare e i valori ammessi sono: activated, deactivated,
   changed, unchanged, increased, decreased, magnitude_increased,
   magnitude_decreased, nonzero.
+- `activated` significa esclusivamente passaggio da una grandezza inattiva o
+  nulla nella base run a una grandezza attiva nello scenario. Prima di usarlo,
+  controlla sempre la misura base della stessa quantita negli artefatti o nella
+  cronologia: se e gia diversa da zero, anche se debole, impulsiva o irregolare,
+  `activated` e semanticamente errato e non potra essere soddisfatto.
+- Quando la quantita base e gia non nulla, usa `changed`, `magnitude_increased`,
+  `magnitude_decreased` o `nonzero` secondo l'effetto realmente richiesto. Per
+  lampeggio, periodicita e duty cycle, affida la verifica dello stato dinamico a
+  `temporal_expect`; non usare `activated` come suo sostituto.
 - Inserisci in expect soltanto i comportamenti indispensabili per verificare
   l'obiettivo o preservare componenti richiesti dall'utente. Le altre misure
   possono restare in compare come osservazioni senza aspettativa.
@@ -180,7 +189,9 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
   il ciclo serve almeno un miglioramento relativo del 10%, oppure una vera
   attivazione/disattivazione del comportamento richiesto.
 - Usa expect per descrivere sia l'effetto cercato sia i vincoli da preservare,
-  per esempio corrente del target activated e corrente del componente protetto unchanged.
+  per esempio corrente gia presente del target `magnitude_increased` e corrente
+  del componente protetto `unchanged`. Usa `activated` soltanto se gli artefatti
+  mostrano che la corrente base del target e davvero nulla o inattiva.
 - Usa unchanged soltanto se il sintomo utente chiede esplicitamente di mantenere
   o preservare un altro componente o comportamento; altrimenti ometti quel
   vincolo e lascia la grandezza soltanto in compare.
@@ -209,7 +220,7 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
   scegli una tensione iniziale fisicamente ammissibile ma chiaramente separata
   dal punto di lavoro del nodo mostrato dagli artefatti. Una variazione di pochi
   punti percentuali attorno allo stesso bias non e un test sufficiente; preferisci
-  un riferimento o un rail gia documentato nel circuito, senza inventarne uno.
+  un riferimento gia documentato nel circuito, senza inventarne uno.
 - Se il sintomo riguarda l'avvio di un circuito dinamico e il punto operativo DC
   mantiene artificialmente la simmetria, puoi aggiungere
   `skip_operating_point: true` a `set_initial_node_voltage`. In questo caso ngspice
@@ -219,9 +230,28 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
   Se esistono due nodi di controllo simmetrici, inizializzali nello stesso
   scenario a due livelli distinti e fisicamente ammissibili; lasciare entrambi
   implicitamente allo stesso valore non rompe la simmetria.
-- Se un LED o un altro target e gia attivo nella base run, non usare `activated`
-  per verificarne il lampeggio: confronta la sua traccia transitoria e usa
-  `temporal_expect` per lo stato dinamico richiesto.
+  Un nodo interno di controllo non e un ingresso di alimentazione: se una base
+  BJT ha un punto di lavoro sotto il rail, non inizializzarla al rail completo.
+  Ricava livelli moderati dal bias misurato e dal ruolo del dispositivo (per
+  esempio, con una base al silicio attorno a 0.8 V e alimentazione a 5 V, usa
+  un livello basso su un ramo e circa 1-1.5 V sull'altro, non 5 V).
+  Per due basi BJT simmetriche, il primo test di avvio deve usare sul ramo basso
+  il riferimento di massa gia presente, normalmente 0 V, e sull'altro un livello
+  moderato vicino o poco sopra il bias misurato. Non scegliere un valore basso
+  intermedio arbitrario se la massa e gia il riferimento elettrico documentato.
+- Se un test iniziale `.ic` produce un profilo `transient_pulse`, oppure rende
+  dinamiche grandezze prima statiche senza ottenere ancora periodicita regolare,
+  considera promettente l'ipotesi di startup. Prima di cambiare componenti prova
+  una sola seconda coppia di condizioni iniziali, materialmente diversa ma
+  fisicamente ammissibile, sempre dalla base run. Solo se anche quel test non
+  produce il comportamento richiesto passa a ipotesi sui valori dei componenti.
+- Se un LED o un altro target presenta gia qualunque impulso o corrente non nulla
+  nella base run, non usare `activated`, neppure se il profilo base e classificato
+  `transient_pulse`, debole o irregolare. Confronta la sua traccia transitoria,
+  scegli un'aspettativa di variazione coerente e usa `temporal_expect` per lo
+  stato dinamico richiesto.
+  `temporal_expect.target` deve contenere un solo identificatore testuale, non
+  una lista; se sono coinvolti piu LED, confronta le correnti di tutti.
 - Un solo scenario negativo basato esclusivamente su condizioni iniziali non
   dimostra un errore di valori o topologia. In assenza di altre evidenze
   strutturali, concludi `inconclusive` oppure continua con un test distinto.

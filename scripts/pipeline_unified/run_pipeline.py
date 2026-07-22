@@ -1226,6 +1226,89 @@ def webchat_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def all_command(args: argparse.Namespace) -> int:
+    """Esegue in sequenza Graph, SPICE e webchat sullo stesso workspace."""
+    circuit_id = args.circuit
+    if args.all:
+        if not args.open_circuit:
+            raise ValueError(
+                "Con --all devi indicare --open-circuit per scegliere quale "
+                "circuito aprire nella webchat."
+            )
+        available_images = discover_images(resolve_project_path(args.input_dir))
+        web_circuit = require_safe_name("circuito", args.open_circuit)
+        if web_circuit not in available_images:
+            available = ", ".join(sorted(available_images))
+            raise FileNotFoundError(
+                f"Circuito {web_circuit!r} non trovato. Circuiti disponibili: {available}"
+            )
+    else:
+        web_circuit = require_safe_name("circuito", circuit_id or "")
+        if args.open_circuit and args.open_circuit != web_circuit:
+            raise ValueError(
+                "Con --circuit la webchat apre lo stesso circuito; "
+                "non usare un --open-circuit differente."
+            )
+
+    shared_selection = {
+        "circuit": circuit_id,
+        "all": bool(args.all),
+    }
+    stages = (
+        (
+            "Pipeline 1.0: immagini -> Graph JSON",
+            graph_command,
+            argparse.Namespace(
+                workspace=args.workspace,
+                input_dir=args.input_dir,
+                force=args.force,
+                dry_run=False,
+                **shared_selection,
+            ),
+        ),
+        (
+            "Pipeline 2.0: Graph JSON -> ngspice",
+            spice_command,
+            argparse.Namespace(
+                workspace=args.workspace,
+                ngspice_executable=args.ngspice_executable,
+                force=args.force,
+                dry_run=False,
+                **shared_selection,
+            ),
+        ),
+        (
+            "Viewer e workspace CHAT/AGENT",
+            webchat_command,
+            argparse.Namespace(
+                workspace=args.workspace,
+                circuit=web_circuit,
+                host=args.host,
+                port=args.port,
+                ngspice_executable=args.ngspice_executable,
+                prepare_only=args.prepare_only,
+                no_browser=args.no_browser,
+                force=args.force,
+                dry_run=False,
+            ),
+        ),
+    )
+
+    for stage_number, (stage_name, handler, stage_args) in enumerate(stages, start=1):
+        print(f"\n{'=' * 72}")
+        print(f"FASE {stage_number}/3 - {stage_name}")
+        print("=" * 72)
+        return_code = int(handler(stage_args))
+        if return_code != 0:
+            print(
+                f"\nFlusso completo interrotto nella fase {stage_number}: {stage_name}.",
+                file=sys.stderr,
+            )
+            return return_code
+
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Costruisce la CLI pubblica dell'orchestratore progressivo."""
     parser = argparse.ArgumentParser(
@@ -1344,6 +1427,55 @@ def build_parser() -> argparse.ArgumentParser:
         help="Valida base SPICE, immagine e geometria senza creare file.",
     )
     webchat_parser.set_defaults(handler=webchat_command)
+
+    all_parser = subparsers.add_parser(
+        "all",
+        help="Esegue Pipeline 1.0, Pipeline 2.0 e webchat nello stesso workspace.",
+    )
+    all_parser.add_argument(
+        "--workspace",
+        required=True,
+        help="Nome della run persistente sotto outputs/demo_workspaces/.",
+    )
+    all_parser.add_argument(
+        "--input-dir",
+        required=True,
+        help="Cartella contenente immagini e sottocartella values/.",
+    )
+    all_selection = all_parser.add_mutually_exclusive_group(required=True)
+    all_selection.add_argument("--circuit", help="Elabora e apre un solo circuito.")
+    all_selection.add_argument(
+        "--all",
+        action="store_true",
+        help="Elabora tutte le immagini presenti nella cartella input.",
+    )
+    all_parser.add_argument(
+        "--open-circuit",
+        help="Con --all, identifica il circuito da aprire nella webchat.",
+    )
+    all_parser.add_argument("--host", default="127.0.0.1", help="Host locale del server.")
+    all_parser.add_argument("--port", type=int, default=8765, help="Porta locale del server.")
+    all_parser.add_argument(
+        "--ngspice-executable",
+        default=None,
+        help="Path o nome dell'eseguibile ngspice.",
+    )
+    all_parser.add_argument(
+        "--prepare-only",
+        action="store_true",
+        help="Completa entrambe le pipeline e prepara il web senza avviare il server.",
+    )
+    all_parser.add_argument(
+        "--no-browser",
+        action="store_true",
+        help="Avvia il server senza aprire automaticamente il browser.",
+    )
+    all_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Rigenera tutte le fasi, incluse le copie web del circuito aperto.",
+    )
+    all_parser.set_defaults(handler=all_command)
     return parser
 
 

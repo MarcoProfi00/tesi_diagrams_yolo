@@ -4,7 +4,7 @@ Sei il controller diagnostico di una pipeline Graph JSON -> SPICE/ngspice.
 Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
 
 ## Sintomo utente
-Il circuito dovrebbe far lampeggiare alternativamente i due LED, ma nella simulazione restano entrambi accesi fissi. Come possiamo risolvere?
+Il circuito dovrebbe far lampeggiare alternativamente i due LED, ma nella simulazione restano entrambi accesi. Come mai?
 
 ## Vincoli obbligatori
 - Rispondi con un solo oggetto JSON valido, senza Markdown o testo esterno.
@@ -161,7 +161,7 @@ Il circuito dovrebbe far lampeggiare alternativamente i due LED, ma nella simula
   scegli una tensione iniziale fisicamente ammissibile ma chiaramente separata
   dal punto di lavoro del nodo mostrato dagli artefatti. Una variazione di pochi
   punti percentuali attorno allo stesso bias non e un test sufficiente; preferisci
-  un riferimento o un rail gia documentato nel circuito, senza inventarne uno.
+  un riferimento gia documentato nel circuito, senza inventarne uno.
 - Se il sintomo riguarda l'avvio di un circuito dinamico e il punto operativo DC
   mantiene artificialmente la simmetria, puoi aggiungere
   `skip_operating_point: true` a `set_initial_node_voltage`. In questo caso ngspice
@@ -171,9 +171,26 @@ Il circuito dovrebbe far lampeggiare alternativamente i due LED, ma nella simula
   Se esistono due nodi di controllo simmetrici, inizializzali nello stesso
   scenario a due livelli distinti e fisicamente ammissibili; lasciare entrambi
   implicitamente allo stesso valore non rompe la simmetria.
+  Un nodo interno di controllo non e un ingresso di alimentazione: se una base
+  BJT ha un punto di lavoro sotto il rail, non inizializzarla al rail completo.
+  Ricava livelli moderati dal bias misurato e dal ruolo del dispositivo (per
+  esempio, con una base al silicio attorno a 0.8 V e alimentazione a 5 V, usa
+  un livello basso su un ramo e circa 1-1.5 V sull'altro, non 5 V).
+  Per due basi BJT simmetriche, il primo test di avvio deve usare sul ramo basso
+  il riferimento di massa gia presente, normalmente 0 V, e sull'altro un livello
+  moderato vicino o poco sopra il bias misurato. Non scegliere un valore basso
+  intermedio arbitrario se la massa e gia il riferimento elettrico documentato.
+- Se un test iniziale `.ic` produce un profilo `transient_pulse`, oppure rende
+  dinamiche grandezze prima statiche senza ottenere ancora periodicita regolare,
+  considera promettente l'ipotesi di startup. Prima di cambiare componenti prova
+  una sola seconda coppia di condizioni iniziali, materialmente diversa ma
+  fisicamente ammissibile, sempre dalla base run. Solo se anche quel test non
+  produce il comportamento richiesto passa a ipotesi sui valori dei componenti.
 - Se un LED o un altro target e gia attivo nella base run, non usare `activated`
   per verificarne il lampeggio: confronta la sua traccia transitoria e usa
   `temporal_expect` per lo stato dinamico richiesto.
+  `temporal_expect.target` deve contenere un solo identificatore testuale, non
+  una lista; se sono coinvolti piu LED, confronta le correnti di tutti.
 - Un solo scenario negativo basato esclusivamente su condizioni iniziali non
   dimostra un errore di valori o topologia. In assenza di altre evidenze
   strutturali, concludi `inconclusive` oppure continua con un test distinto.
@@ -227,11 +244,11 @@ oppure
     "decision_number": 1,
     "decision": {
       "decision": "run_scenarios",
-      "reason": "La base run mostra un multivibratore perfettamente simmetrico bloccato in uno stato DC con entrambi i transistor e i due LED accesi; serve un test controllato per verificare se il problema e solo l'avvio simmetrico oppure un errore strutturale/valoriale.",
+      "reason": "La base run mostra un astabile perfettamente simmetrico bloccato in uno stato DC con entrambi i transistor e i LED conducenti; serve un test controllato di startup per verificare se il mancato lampeggio dipende dalla sola simmetria iniziale della simulazione transitoria.",
       "scenarios": [
         {
-          "title": "Rottura controllata della simmetria iniziale sui due nodi base",
-          "hypothesis": "Il circuito puo oscillare ma la soluzione simmetrica del punto operativo lo blocca; imponendo condizioni iniziali diverse e saltando l'OP si verifica se il lampeggio alternato compare senza cambiare topologia o valori.",
+          "title": "Rottura controllata della simmetria iniziale sulle due basi",
+          "hypothesis": "Il circuito e topologicamente coerente come multivibratore astabile, ma con componenti e bias perfettamente simmetrici ngspice parte da un equilibrio metastabile DC e resta bloccato con entrambi i rami accesi. Una condizione iniziale asimmetrica moderata sulle due basi dovrebbe far emergere l'oscillazione alternata se la causa e di startup.",
           "intent": "diagnostic",
           "analysis": "tran",
           "actions": [
@@ -244,7 +261,7 @@ oppure
             {
               "type": "set_initial_node_voltage",
               "target": "N006",
-              "value": "5V",
+              "value": "1.2V",
               "skip_operating_point": true
             }
           ],
@@ -275,20 +292,53 @@ oppure
     },
     "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\experiment_chat\\autonomous_prompt_1.md",
     "response_paths": [
-      "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\experiment_chat\\autonomous_response_1_attempt_1.txt",
-      "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\experiment_chat\\autonomous_response_1_attempt_2.txt"
+      "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\experiment_chat\\autonomous_response_1_attempt_1.txt"
     ],
     "scenario_results": [
       {
         "scenario_id": "agent_scenario_1",
         "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_1",
         "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_1\\run",
-        "status": "spice_failed",
+        "status": "spice_success",
         "spice_executed": true,
-        "spice_status": "failed",
-        "spice_exit_code": 1,
-        "comparison_summary": {},
-        "diagnostic_outcome": {},
+        "spice_status": "success",
+        "spice_exit_code": 0,
+        "comparison_summary": {
+          "requested_count": 4,
+          "changed_count": 4,
+          "activated_count": 2,
+          "missing_count": 0,
+          "expected_count": 4,
+          "expectations_met_count": 4,
+          "expectations_failed_count": 0,
+          "expectations_missing_count": 0,
+          "meaningful_improvement_count": 0,
+          "quality_required": false,
+          "quality_available": false,
+          "quality_improved": false,
+          "quality_acceptable": false,
+          "quality_output_preserved": false,
+          "base_thd": null,
+          "scenario_thd": null,
+          "gain_required": false,
+          "gain_available": false,
+          "gain_sufficient": false,
+          "scenario_gain": null,
+          "min_gain_ratio": null,
+          "temporal_required": true,
+          "temporal_available": true,
+          "temporal_met": false
+        },
+        "diagnostic_outcome": {
+          "status": "partially_resolved",
+          "technical_label": "Temporal criteria not satisfied",
+          "label": "Criteri temporali non soddisfatti",
+          "reason": "Almeno un criterio temporale non e soddisfatto.",
+          "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+          "stop_automation": false,
+          "confidence": "low",
+          "next_step": "Il comportamento temporale non soddisfa ancora l'obiettivo: prova un'altra correzione."
+        },
         "viewer": {
           "model": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_1\\run\\13_viewer_model.json",
           "layout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_1\\run\\14_viewer_layout.json",
@@ -1247,7 +1297,7 @@ Current ngspice program size =   15.266 MB.
   "batch_name": "batchDemo",
   "experiment_name": "demo_batch",
   "circuit_id": "b02",
-  "user_problem": "Il circuito dovrebbe far lampeggiare alternativamente i due LED, ma nella simulazione restano entrambi accesi fissi. Come possiamo risolvere?",
+  "user_problem": "Il circuito dovrebbe far lampeggiare alternativamente i due LED, ma nella simulazione restano entrambi accesi. Come mai?",
   "pipeline2_output_dir": "outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02",
   "summary": {
     "spice_status": "success",
@@ -1378,33 +1428,67 @@ Current ngspice program size =   15.266 MB.
     {
       "scenario_dir": "outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_1",
       "scenario_id": "agent_scenario_1",
-      "title": "Rottura controllata della simmetria iniziale sui due nodi base",
-      "status": "spice_failed",
-      "spice_status": "failed",
-      "diagnostic_outcome": {},
-      "comparison_summary": {},
+      "title": "Rottura controllata della simmetria iniziale sulle due basi",
+      "status": "spice_success",
+      "spice_status": "success",
+      "diagnostic_outcome": {
+        "status": "partially_resolved",
+        "technical_label": "Temporal criteria not satisfied",
+        "label": "Criteri temporali non soddisfatti",
+        "reason": "Almeno un criterio temporale non e soddisfatto.",
+        "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+        "stop_automation": false,
+        "confidence": "low",
+        "next_step": "Il comportamento temporale non soddisfa ancora l'obiettivo: prova un'altra correzione."
+      },
+      "comparison_summary": {
+        "requested_count": 4,
+        "changed_count": 4,
+        "activated_count": 2,
+        "missing_count": 0,
+        "expected_count": 4,
+        "expectations_met_count": 4,
+        "expectations_failed_count": 0,
+        "expectations_missing_count": 0,
+        "meaningful_improvement_count": 0,
+        "quality_required": false,
+        "quality_available": false,
+        "quality_improved": false,
+        "quality_acceptable": false,
+        "quality_output_preserved": false,
+        "base_thd": null,
+        "scenario_thd": null,
+        "gain_required": false,
+        "gain_available": false,
+        "gain_sufficient": false,
+        "scenario_gain": null,
+        "min_gain_ratio": null,
+        "temporal_required": true,
+        "temporal_available": true,
+        "temporal_met": false
+      },
       "led_profiles": {
         "Dled12_1": {
-          "state": "steady_on",
+          "state": "transient_pulse",
           "regular_period": false,
           "frequency_hz": null,
-          "duty_cycle": 1.0,
-          "on_fraction": 1.0,
+          "duty_cycle": 0.0007342143906020558,
+          "on_fraction": 0.0007342143906020558,
           "pulse_count": 1,
-          "voltage_min": 0.7244573699999997,
-          "voltage_max": 0.7284786199999997,
+          "voltage_min": 0.5584947299999996,
+          "voltage_max": 0.8566023600000001,
           "anode_node": "N001",
           "cathode_node": "N002"
         },
         "Dled12_2": {
-          "state": "steady_on",
+          "state": "transient_pulse",
           "regular_period": false,
           "frequency_hz": null,
-          "duty_cycle": 1.0,
-          "on_fraction": 1.0,
-          "pulse_count": 1,
-          "voltage_min": 0.7250209400000003,
-          "voltage_max": 0.72922537,
+          "duty_cycle": 0.6461086637298091,
+          "on_fraction": 0.6461086637298091,
+          "pulse_count": 19,
+          "voltage_min": -6478.20099,
+          "voltage_max": 0.7466161600000003,
           "anode_node": "N001",
           "cathode_node": "N003"
         }
@@ -1426,8 +1510,8 @@ Current ngspice program size =   15.266 MB.
           "role": "Report produced by the controlled scenario runner."
         },
         "scenario_comparison": {
-          "available": false,
-          "path": null,
+          "available": true,
+          "path": "outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_1\\scenario_comparison.json",
           "role": "Base-vs-scenario comparison used to evaluate the scenario."
         }
       }
@@ -1435,56 +1519,86 @@ Current ngspice program size =   15.266 MB.
   ],
   "scenario_outcome_summary": {
     "available": true,
-    "best_scenario_id": null,
-    "best_outcome_status": null,
-    "best_stop_automation": null,
-    "ranking_status": "no_verified_best",
+    "best_scenario_id": "agent_scenario_1",
+    "best_outcome_status": "partially_resolved",
+    "best_stop_automation": false,
+    "ranking_status": "verified_best",
     "interpretation_rule": "If a user asks which scenario resolves the problem, prefer the scenario with outcome_status='resolved_candidate' and stop_automation=true. Partially resolved scenarios without verified expectations are supporting diagnostics and must not be ranked only by changed_count.",
     "scenarios": [
       {
         "scenario_id": "agent_scenario_1",
-        "title": "Rottura controllata della simmetria iniziale sui due nodi base",
-        "status": "spice_failed",
-        "spice_status": "failed",
-        "outcome_status": null,
-        "outcome_label": null,
-        "outcome_technical_label": null,
-        "outcome_reason": null,
+        "title": "Rottura controllata della simmetria iniziale sulle due basi",
+        "status": "spice_success",
+        "spice_status": "success",
+        "outcome_status": "partially_resolved",
+        "outcome_label": "Criteri temporali non soddisfatti",
+        "outcome_technical_label": "Temporal criteria not satisfied",
+        "outcome_reason": "Almeno un criterio temporale non e soddisfatto.",
         "stop_automation": false,
-        "comparison_summary": {},
+        "comparison_summary": {
+          "requested_count": 4,
+          "changed_count": 4,
+          "activated_count": 2,
+          "missing_count": 0,
+          "expected_count": 4,
+          "expectations_met_count": 4,
+          "expectations_failed_count": 0,
+          "expectations_missing_count": 0,
+          "meaningful_improvement_count": 0,
+          "quality_required": false,
+          "quality_available": false,
+          "quality_improved": false,
+          "quality_acceptable": false,
+          "quality_output_preserved": false,
+          "base_thd": null,
+          "scenario_thd": null,
+          "gain_required": false,
+          "gain_available": false,
+          "gain_sufficient": false,
+          "scenario_gain": null,
+          "min_gain_ratio": null,
+          "temporal_required": true,
+          "temporal_available": true,
+          "temporal_met": false
+        },
         "quantity_summary": {
-          "changed": [],
+          "changed": [
+            "v(N004)",
+            "v(N006)",
+            "@dled12_1[id]",
+            "@dled12_2[id]"
+          ],
           "unchanged": [],
           "missing": []
         },
         "led_profiles": {
           "Dled12_1": {
-            "state": "steady_on",
+            "state": "transient_pulse",
             "regular_period": false,
             "frequency_hz": null,
-            "duty_cycle": 1.0,
-            "on_fraction": 1.0,
+            "duty_cycle": 0.0007342143906020558,
+            "on_fraction": 0.0007342143906020558,
             "pulse_count": 1,
-            "voltage_min": 0.7244573699999997,
-            "voltage_max": 0.7284786199999997,
+            "voltage_min": 0.5584947299999996,
+            "voltage_max": 0.8566023600000001,
             "anode_node": "N001",
             "cathode_node": "N002"
           },
           "Dled12_2": {
-            "state": "steady_on",
+            "state": "transient_pulse",
             "regular_period": false,
             "frequency_hz": null,
-            "duty_cycle": 1.0,
-            "on_fraction": 1.0,
-            "pulse_count": 1,
-            "voltage_min": 0.7250209400000003,
-            "voltage_max": 0.72922537,
+            "duty_cycle": 0.6461086637298091,
+            "on_fraction": 0.6461086637298091,
+            "pulse_count": 19,
+            "voltage_min": -6478.20099,
+            "voltage_max": 0.7466161600000003,
             "anode_node": "N001",
             "cathode_node": "N003"
           }
         },
-        "ranking_verified": false,
-        "score": 0
+        "ranking_verified": true,
+        "score": 40
       }
     ]
   },

@@ -166,6 +166,7 @@ class DemoValuesTests(unittest.TestCase):
         cases = {
             "a04": "batchA",
             "a08": "batchA",
+            "a09": "batchA",
             "b02": "batchB",
             "b03": "batchB",
         }

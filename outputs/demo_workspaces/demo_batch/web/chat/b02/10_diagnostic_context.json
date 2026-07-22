@@ -3,7 +3,7 @@
   "batch_name": "batchDemo",
   "experiment_name": "demo_batch",
   "circuit_id": "b02",
-  "user_problem": "Non lampeggiano alternativamente ma insieme, come possiamo risolvere?",
+  "user_problem": "Lo scenario 1 ha risolto il problema? Qual era la causa e come è stato corretto il comportamento?",
   "pipeline2_output_dir": "outputs\\demo_workspaces\\demo_batch\\web\\chat\\b02",
   "summary": {
     "spice_status": "success",
@@ -138,14 +138,14 @@
       "status": "spice_success",
       "spice_status": "success",
       "diagnostic_outcome": {
-        "status": "partially_resolved",
-        "technical_label": "Diagnostic hypothesis confirmed",
-        "label": "Ipotesi diagnostica confermata",
-        "reason": "I criteri dichiarati dal test diagnostico sono soddisfatti, ma lo scenario non applica una correzione del sintomo utente.",
+        "status": "resolved_candidate",
+        "technical_label": "Transient correction verified",
+        "label": "Criteri elettrici e temporali soddisfatti",
+        "reason": "Le aspettative elettriche e il profilo transitorio richiesto sono verificati.",
         "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
-        "stop_automation": false,
-        "confidence": "low",
-        "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
+        "stop_automation": true,
+        "confidence": "medium",
+        "next_step": "La correzione e verificata: puoi passare alla conclusione diagnostica."
       },
       "comparison_summary": {
         "requested_count": 4,
@@ -168,30 +168,33 @@
         "gain_available": false,
         "gain_sufficient": false,
         "scenario_gain": null,
-        "min_gain_ratio": null
+        "min_gain_ratio": null,
+        "temporal_required": true,
+        "temporal_available": true,
+        "temporal_met": true
       },
       "led_profiles": {
         "Dled12_1": {
           "state": "blinking",
           "regular_period": true,
-          "frequency_hz": 7.274829142817135,
-          "duty_cycle": 0.6717233349303762,
-          "on_fraction": 0.7075070821529745,
+          "frequency_hz": 7.28611809799239,
+          "duty_cycle": 0.669250909462369,
+          "on_fraction": 0.693089430894309,
           "pulse_count": 8,
-          "voltage_min": 0.5671713,
-          "voltage_max": 0.7283711400000001,
+          "voltage_min": 0.57190297,
+          "voltage_max": 0.72816817,
           "anode_node": "N001",
           "cathode_node": "N002"
         },
         "Dled12_2": {
           "state": "blinking",
           "regular_period": true,
-          "frequency_hz": 7.294372939813779,
-          "duty_cycle": 0.6806550114938894,
-          "on_fraction": 0.7294617563739377,
+          "frequency_hz": 7.289055552334194,
+          "duty_cycle": 0.6768579447261436,
+          "on_fraction": 0.7208672086720868,
           "pulse_count": 8,
-          "voltage_min": 0.5361027600000003,
-          "voltage_max": 0.7270001400000003,
+          "voltage_min": 0.5827093899999998,
+          "voltage_max": 0.7264297900000001,
           "anode_node": "N001",
           "cathode_node": "N003"
         }
@@ -223,8 +226,8 @@
   "scenario_outcome_summary": {
     "available": true,
     "best_scenario_id": "scenario_1",
-    "best_outcome_status": "partially_resolved",
-    "best_stop_automation": false,
+    "best_outcome_status": "resolved_candidate",
+    "best_stop_automation": true,
     "ranking_status": "verified_best",
     "interpretation_rule": "If a user asks which scenario resolves the problem, prefer the scenario with outcome_status='resolved_candidate' and stop_automation=true. Partially resolved scenarios without verified expectations are supporting diagnostics and must not be ranked only by changed_count.",
     "scenarios": [
@@ -233,11 +236,11 @@
         "title": "Rompere la simmetria iniziale dei due nodi di base",
         "status": "spice_success",
         "spice_status": "success",
-        "outcome_status": "partially_resolved",
-        "outcome_label": "Ipotesi diagnostica confermata",
-        "outcome_technical_label": "Diagnostic hypothesis confirmed",
-        "outcome_reason": "I criteri dichiarati dal test diagnostico sono soddisfatti, ma lo scenario non applica una correzione del sintomo utente.",
-        "stop_automation": false,
+        "outcome_status": "resolved_candidate",
+        "outcome_label": "Criteri elettrici e temporali soddisfatti",
+        "outcome_technical_label": "Transient correction verified",
+        "outcome_reason": "Le aspettative elettriche e il profilo transitorio richiesto sono verificati.",
+        "stop_automation": true,
         "comparison_summary": {
           "requested_count": 4,
           "changed_count": 4,
@@ -259,7 +262,10 @@
           "gain_available": false,
           "gain_sufficient": false,
           "scenario_gain": null,
-          "min_gain_ratio": null
+          "min_gain_ratio": null,
+          "temporal_required": true,
+          "temporal_available": true,
+          "temporal_met": true
         },
         "quantity_summary": {
           "changed": [
@@ -275,30 +281,30 @@
           "Dled12_1": {
             "state": "blinking",
             "regular_period": true,
-            "frequency_hz": 7.274829142817135,
-            "duty_cycle": 0.6717233349303762,
-            "on_fraction": 0.7075070821529745,
+            "frequency_hz": 7.28611809799239,
+            "duty_cycle": 0.669250909462369,
+            "on_fraction": 0.693089430894309,
             "pulse_count": 8,
-            "voltage_min": 0.5671713,
-            "voltage_max": 0.7283711400000001,
+            "voltage_min": 0.57190297,
+            "voltage_max": 0.72816817,
             "anode_node": "N001",
             "cathode_node": "N002"
           },
           "Dled12_2": {
             "state": "blinking",
             "regular_period": true,
-            "frequency_hz": 7.294372939813779,
-            "duty_cycle": 0.6806550114938894,
-            "on_fraction": 0.7294617563739377,
+            "frequency_hz": 7.289055552334194,
+            "duty_cycle": 0.6768579447261436,
+            "on_fraction": 0.7208672086720868,
             "pulse_count": 8,
-            "voltage_min": 0.5361027600000003,
-            "voltage_max": 0.7270001400000003,
+            "voltage_min": 0.5827093899999998,
+            "voltage_max": 0.7264297900000001,
             "anode_node": "N001",
             "cathode_node": "N003"
           }
         },
         "ranking_verified": true,
-        "score": 40
+        "score": 200
       }
     ]
   },

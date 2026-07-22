@@ -965,7 +965,9 @@ Responsabilita aggiuntive:
 - valida i nodi richiesti dallo scenario;
 - normalizza valori SPICE;
 - per `set_initial_node_voltage` richiede `analysis: "tran"` ed emette una
-  direttiva `.ic` senza sorgenti permanenti ne `UIC`;
+  direttiva `.ic` senza sorgenti permanenti; il flag booleano opzionale
+  `skip_operating_point: true` aggiunge `UIC` alla `.tran` per una prova reale
+  di avvio che deve evitare un punto operativo artificialmente simmetrico;
 - limita il budget a massimo `5` scenari eseguibili per circuito;
 - crea `scenario_comparison.json`;
 - classifica automaticamente l'esito con categorie come:
@@ -1216,6 +1218,15 @@ Guardrail implementati:
   duty siano soddisfatti prima di confermare una correzione. Quando tutte le
   aspettative elettriche e temporali sono verificate, il cambio qualitativo di
   stato e gia risolutivo e non richiede anche un incremento scalare del 10%;
+- CHAT non registra come eseguibile una correzione di lampeggio priva di
+  `analysis: "tran"`, `intent: "correction"` e `temporal_expect` valido; le
+  condizioni iniziali sui nodi interni devono inoltre restare compatibili con
+  il bias del dispositivo e non essere portate automaticamente al rail;
+- AGENT, davanti a un impulso transitorio non ancora regolare prodotto da una
+  prima coppia `.ic`, mantiene prioritaria l'ipotesi di startup e prova una
+  seconda coppia fisicamente ammissibile prima di cambiare componenti;
+- il budget degli scenari e un limite massimo: AGENT puo fermarsi prima quando
+  le ulteriori correzioni sarebbero duplicate o non sostenute dalle evidenze;
 - una sequenza temporale tra componenti richiede ancora un'estensione futura:
   oggi non viene verificata se la base contiene solo `.op` e manca `08_tran.csv`;
 - ogni decisione contiene al massimo 2 scenari e il ciclo al massimo 8

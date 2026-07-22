@@ -100,6 +100,7 @@
 - Use `correction` only when the compared measurements directly verify that the user symptom improved; a powered branch or a nonzero supply current alone does not prove that a signal or audio symptom is resolved.
 - For battery-charging symptoms, do not treat the magnitude of `i(V...)` alone as proof of charging: source-current sign depends on SPICE polarity. A correction must use `analysis: tran` and include a directly justified current in the charging path; when it is an internal rectifier diode current `@dNOME[id]`, require `measure` with `tran_abs_peak`.
 - For audio, oscillation or other time-varying symptoms, a correction scenario must use `analysis: tran`, compare the relevant output waveform, and measure it with `tran_vpp`; use `v(NPOS,NNEG)` when the output is differential.
+- For LED blinking, periodicity, duty-cycle or alternating-state symptoms, every executable scenario that aims to obtain the requested behavior must use `intent: correction`, `analysis: tran` and `temporal_expect`. The temporal target must be the emitted LED identifier and must require `blinking` plus a regular period; scalar `changed` expectations alone never prove blinking.
 - For signal propagation, attenuation or amplification, include `gain` with `input`, `output` and a positive `min_ratio` chosen and justified for that scenario; do not rely on `changed` alone.
 - When a `SIN(...)` source is added to an existing node or between two existing nodes, first read the base-run operating-point voltage of that same node or node pair. If the base differential voltage is significant, preserve it as the first `SIN` parameter (the DC offset) and superimpose only the requested AC amplitude. Use a zero offset only when the base node/pair is already approximately at 0 V, or when the scenario explicitly tests a deliberate DC-bias change.
 - For a propagation test injected directly at the base of a BJT, use a genuine small-signal amplitude of only a few millivolts (normally 1-10 mV peak, unless the evidence requires otherwise). A tens-of-millivolts base drive can force cutoff or saturation and no longer isolates the linear signal path; preserve the measured DC base bias at the same time.
@@ -115,6 +116,8 @@
 - Place `add_voltage_source_between_nodes` on existing external interface nodes whenever possible, not directly on internal load nodes, unless no more natural input nodes exist.
 - Use `drive_node_voltage` mainly as an isolation action when a value/source/switch scenario would be less natural.
 - Use `set_initial_node_voltage` only with `analysis: tran` when an otherwise valid symmetric circuit needs an initial imbalance; it writes `.ic`, adds no permanent source and is not a power-supply action. Set optional boolean `skip_operating_point: true` only for a real startup test in which the DC operating point would preserve an artificial symmetry; then choose genuinely asymmetric initial values. When two symmetric control nodes exist, initialize both in the same scenario to distinct physically admissible levels.
+- An internal transistor control node is not a supply input. Never initialize a BJT base that has a measured sub-rail operating point directly to the full supply rail. Derive moderate values from its measured operating point and device role: for example, with a silicon base near 0.8 V and a 5 V supply, use a low/reference value on one side and roughly 1-1.5 V on the other, not 5 V.
+- When the graph is coherent and the base run is stuck only because of perfect startup symmetry, test the non-invasive initial-condition correction before changing resistor, capacitor or transistor values.
 - Use `connect_nodes` when the hypothesis is a missing continuity, jumper, bridge, wire, connector-to-branch link or controlled path between two nodes that already exist in the node map.
 - Use `add_resistor_between_nodes` when the hypothesis requires a new resistive branch between two existing nodes, for example an added bias path, pull-up, pull-down, shunt or weak coupling branch that is not already present in the netlist.
 - For `add_resistor_between_nodes`, choose a concrete resistor value and prefer simple circuit-scale values that are already plausible in the current schematic family.
@@ -158,7 +161,7 @@
 
 ## User problem
 
-Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
+Lo scenario 1 ha risolto il problema? Qual era la causa e come è stato corretto il comportamento?
 
 ## Circuit metadata
 
@@ -234,8 +237,8 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
 
 ## Executed scenarios index
 
-- `scenario_1`: title=`Rompere la simmetria iniziale dei due nodi di base`, status=`spice_success`, spice=`success`, outcome=`partially_resolved`, stop_automation=`False`, changed=`4/4`
-  LED profiles: `{"Dled12_1": {"state": "blinking", "regular_period": true, "frequency_hz": 7.274829142817135, "duty_cycle": 0.6717233349303762, "on_fraction": 0.7075070821529745, "pulse_count": 8, "voltage_min": 0.5671713, "voltage_max": 0.7283711400000001, "anode_node": "N001", "cathode_node": "N002"}, "Dled12_2": {"state": "blinking", "regular_period": true, "frequency_hz": 7.294372939813779, "duty_cycle": 0.6806550114938894, "on_fraction": 0.7294617563739377, "pulse_count": 8, "voltage_min": 0.5361027600000003, "voltage_max": 0.7270001400000003, "anode_node": "N001", "cathode_node": "N003"}}`
+- `scenario_1`: title=`Rompere la simmetria iniziale dei due nodi di base`, status=`spice_success`, spice=`success`, outcome=`resolved_candidate`, stop_automation=`True`, changed=`4/4`
+  LED profiles: `{"Dled12_1": {"state": "blinking", "regular_period": true, "frequency_hz": 7.28611809799239, "duty_cycle": 0.669250909462369, "on_fraction": 0.693089430894309, "pulse_count": 8, "voltage_min": 0.57190297, "voltage_max": 0.72816817, "anode_node": "N001", "cathode_node": "N002"}, "Dled12_2": {"state": "blinking", "regular_period": true, "frequency_hz": 7.289055552334194, "duty_cycle": 0.6768579447261436, "on_fraction": 0.7208672086720868, "pulse_count": 8, "voltage_min": 0.5827093899999998, "voltage_max": 0.7264297900000001, "anode_node": "N001", "cathode_node": "N003"}}`
 
 ## Scenario outcome summary
 
@@ -243,8 +246,8 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
 {
   "available": true,
   "best_scenario_id": "scenario_1",
-  "best_outcome_status": "partially_resolved",
-  "best_stop_automation": false,
+  "best_outcome_status": "resolved_candidate",
+  "best_stop_automation": true,
   "ranking_status": "verified_best",
   "interpretation_rule": "If a user asks which scenario resolves the problem, prefer the scenario with outcome_status='resolved_candidate' and stop_automation=true. Partially resolved scenarios without verified expectations are supporting diagnostics and must not be ranked only by changed_count.",
   "scenarios": [
@@ -253,11 +256,11 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
       "title": "Rompere la simmetria iniziale dei due nodi di base",
       "status": "spice_success",
       "spice_status": "success",
-      "outcome_status": "partially_resolved",
-      "outcome_label": "Ipotesi diagnostica confermata",
-      "outcome_technical_label": "Diagnostic hypothesis confirmed",
-      "outcome_reason": "I criteri dichiarati dal test diagnostico sono soddisfatti, ma lo scenario non applica una correzione del sintomo utente.",
-      "stop_automation": false,
+      "outcome_status": "resolved_candidate",
+      "outcome_label": "Criteri elettrici e temporali soddisfatti",
+      "outcome_technical_label": "Transient correction verified",
+      "outcome_reason": "Le aspettative elettriche e il profilo transitorio richiesto sono verificati.",
+      "stop_automation": true,
       "comparison_summary": {
         "requested_count": 4,
         "changed_count": 4,
@@ -279,7 +282,10 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
         "gain_available": false,
         "gain_sufficient": false,
         "scenario_gain": null,
-        "min_gain_ratio": null
+        "min_gain_ratio": null,
+        "temporal_required": true,
+        "temporal_available": true,
+        "temporal_met": true
       },
       "quantity_summary": {
         "changed": [
@@ -295,30 +301,30 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
         "Dled12_1": {
           "state": "blinking",
           "regular_period": true,
-          "frequency_hz": 7.274829142817135,
-          "duty_cycle": 0.6717233349303762,
-          "on_fraction": 0.7075070821529745,
+          "frequency_hz": 7.28611809799239,
+          "duty_cycle": 0.669250909462369,
+          "on_fraction": 0.693089430894309,
           "pulse_count": 8,
-          "voltage_min": 0.5671713,
-          "voltage_max": 0.7283711400000001,
+          "voltage_min": 0.57190297,
+          "voltage_max": 0.72816817,
           "anode_node": "N001",
           "cathode_node": "N002"
         },
         "Dled12_2": {
           "state": "blinking",
           "regular_period": true,
-          "frequency_hz": 7.294372939813779,
-          "duty_cycle": 0.6806550114938894,
-          "on_fraction": 0.7294617563739377,
+          "frequency_hz": 7.289055552334194,
+          "duty_cycle": 0.6768579447261436,
+          "on_fraction": 0.7208672086720868,
           "pulse_count": 8,
-          "voltage_min": 0.5361027600000003,
-          "voltage_max": 0.7270001400000003,
+          "voltage_min": 0.5827093899999998,
+          "voltage_max": 0.7264297900000001,
           "anode_node": "N001",
           "cathode_node": "N003"
         }
       },
       "ranking_verified": true,
-      "score": 40
+      "score": 200
     }
   ]
 }
@@ -2164,19 +2170,19 @@ time,v(N001),v(N002),v(N003),v(N004),v(N005),v(N006),v(N007),@dled12_1[id],@dled
 {
   "scenario_id": "scenario_1",
   "title": "Rompere la simmetria iniziale dei due nodi di base",
-  "hypothesis": "The astable may stay locked because the transient starts from a perfectly symmetric initial condition at N004 and N006.",
-  "intent": "diagnostic",
+  "hypothesis": "The transient may be stuck in a symmetric non-oscillating state because N004 and N006 start from identical conditions.",
+  "intent": "correction",
   "actions": [
     {
       "type": "set_initial_node_voltage",
       "target": "N004",
-      "value": "0.6V",
+      "value": "0V",
       "skip_operating_point": true
     },
     {
       "type": "set_initial_node_voltage",
       "target": "N006",
-      "value": "0.8V",
+      "value": "1V",
       "skip_operating_point": true
     }
   ],
@@ -2188,15 +2194,20 @@ time,v(N001),v(N002),v(N003),v(N004),v(N005),v(N006),v(N007),@dled12_1[id],@dled
     "@dled12_1[id]",
     "@dled12_2[id]"
   ],
-  "measure": {
-    "@dled12_1[id]": "tran_abs_peak",
-    "@dled12_2[id]": "tran_abs_peak"
-  },
   "expect": {
     "v(N004)": "changed",
     "v(N006)": "changed",
     "@dled12_1[id]": "changed",
     "@dled12_2[id]": "changed"
+  },
+  "temporal_expect": {
+    "target": "Dled12_1",
+    "required_state": "blinking",
+    "require_regular_period": true
+  },
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak",
+    "@dled12_2[id]": "tran_abs_peak"
   }
 }
 ```
@@ -2213,7 +2224,7 @@ time,v(N001),v(N002),v(N003),v(N004),v(N005),v(N006),v(N007),@dled12_1[id],@dled
   "scenario_id": "scenario_1",
   "source": "guided_chat",
   "spice_executed": true,
-  "created_or_updated_at": "2026-07-21T18:15:11",
+  "created_or_updated_at": "2026-07-22T09:25:44",
   "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
   "spice_status": "success",
   "spice_exit_code": 0,
@@ -2240,22 +2251,25 @@ time,v(N001),v(N002),v(N003),v(N004),v(N005),v(N006),v(N007),@dled12_1[id],@dled
     "gain_available": false,
     "gain_sufficient": false,
     "scenario_gain": null,
-    "min_gain_ratio": null
+    "min_gain_ratio": null,
+    "temporal_required": true,
+    "temporal_available": true,
+    "temporal_met": true
   },
   "diagnostic_outcome": {
-    "status": "partially_resolved",
-    "technical_label": "Diagnostic hypothesis confirmed",
-    "label": "Ipotesi diagnostica confermata",
-    "reason": "I criteri dichiarati dal test diagnostico sono soddisfatti, ma lo scenario non applica una correzione del sintomo utente.",
+    "status": "resolved_candidate",
+    "technical_label": "Transient correction verified",
+    "label": "Criteri elettrici e temporali soddisfatti",
+    "reason": "Le aspettative elettriche e il profilo transitorio richiesto sono verificati.",
     "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
-    "stop_automation": false,
-    "confidence": "low",
-    "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
+    "stop_automation": true,
+    "confidence": "medium",
+    "next_step": "La correzione e verificata: puoi passare alla conclusione diagnostica."
   },
   "controlled_scenario_report": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\chat\\b02\\scenarios\\scenario_1\\12_controlled_scenarios.json",
   "executed_scenarios_count": 1,
   "scenario_budget_exhausted": false,
-  "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
+  "next_step": "La correzione e verificata: puoi passare alla conclusione diagnostica."
 }
 ```
 
@@ -2278,9 +2292,9 @@ time,v(N001),v(N002),v(N003),v(N004),v(N005),v(N006),v(N007),@dled12_1[id],@dled
       "status": "applied",
       "type": "set_initial_node_voltage",
       "target": "N004",
-      "value": "0.6V",
-      "normalized_dc_value": "0.6",
-      "inserted_line": ".ic V(N004)=0.6",
+      "value": "0V",
+      "normalized_dc_value": "0",
+      "inserted_line": ".ic V(N004)=0",
       "operation": "inserted",
       "skip_operating_point": true,
       "transient_startup_operation": "enabled",
@@ -2291,9 +2305,9 @@ time,v(N001),v(N002),v(N003),v(N004),v(N005),v(N006),v(N007),@dled12_1[id],@dled
       "status": "applied",
       "type": "set_initial_node_voltage",
       "target": "N006",
-      "value": "0.8V",
-      "normalized_dc_value": "0.8",
-      "inserted_line": ".ic V(N004)=0.6 V(N006)=0.8",
+      "value": "1V",
+      "normalized_dc_value": "1",
+      "inserted_line": ".ic V(N004)=0 V(N006)=1",
       "operation": "updated",
       "skip_operating_point": true,
       "transient_startup_operation": "unchanged",
@@ -2329,20 +2343,23 @@ time,v(N001),v(N002),v(N003),v(N004),v(N005),v(N006),v(N007),@dled12_1[id],@dled
     "gain_available": false,
     "gain_sufficient": false,
     "scenario_gain": null,
-    "min_gain_ratio": null
+    "min_gain_ratio": null,
+    "temporal_required": true,
+    "temporal_available": true,
+    "temporal_met": true
   },
   "diagnostic_outcome": {
-    "status": "partially_resolved",
-    "technical_label": "Diagnostic hypothesis confirmed",
-    "label": "Ipotesi diagnostica confermata",
-    "reason": "I criteri dichiarati dal test diagnostico sono soddisfatti, ma lo scenario non applica una correzione del sintomo utente.",
+    "status": "resolved_candidate",
+    "technical_label": "Transient correction verified",
+    "label": "Criteri elettrici e temporali soddisfatti",
+    "reason": "Le aspettative elettriche e il profilo transitorio richiesto sono verificati.",
     "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
-    "stop_automation": false,
-    "confidence": "low",
-    "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
+    "stop_automation": true,
+    "confidence": "medium",
+    "next_step": "La correzione e verificata: puoi passare alla conclusione diagnostica."
   },
   "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
-  "created_or_updated_at": "2026-07-21T18:15:11"
+  "created_or_updated_at": "2026-07-22T09:25:44"
 }
 ```
 
@@ -2356,7 +2373,7 @@ time,v(N001),v(N002),v(N003),v(N004),v(N005),v(N006),v(N007),@dled12_1[id],@dled
   "source_format": "pipeline2.0_scenario_comparison",
   "scenario_id": "scenario_1",
   "scenario_title": "Rompere la simmetria iniziale dei due nodi di base",
-  "scenario_intent": "diagnostic",
+  "scenario_intent": "correction",
   "base_output_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\chat\\b02",
   "scenario_run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\chat\\b02\\scenarios\\scenario_1\\run",
   "base_stdout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\chat\\b02\\08_ngspice_stdout.txt",
@@ -2367,12 +2384,12 @@ time,v(N001),v(N002),v(N003),v(N004),v(N005),v(N006),v(N007),@dled12_1[id],@dled
     {
       "quantity": "v(N004)",
       "base_value": 0.0,
-      "scenario_value": 4.55859934,
-      "delta": 4.55859934,
+      "scenario_value": 6.4994184,
+      "delta": 6.4994184,
       "change": "activated",
       "expectation": "changed",
       "expectation_met": true,
-      "relative_change": 4558599340000.0,
+      "relative_change": 6499418400000.0,
       "meaningful_improvement": false,
       "metric": "v(n004).vpp",
       "measurement": "tran_vpp",
@@ -2385,23 +2402,23 @@ time,v(N001),v(N002),v(N003),v(N004),v(N005),v(N006),v(N007),@dled12_1[id],@dled
         "abs_peak": 0.76996644
       },
       "scenario_details": {
-        "min": -3.50428755,
-        "max": 1.05431179,
-        "mean": -0.1396224852905361,
-        "vpp": 4.55859934,
-        "final": 0.797259158,
-        "abs_peak": 3.50428755
+        "min": -3.49937316,
+        "max": 3.00004524,
+        "mean": -0.10887382735008132,
+        "vpp": 6.4994184,
+        "final": 0.737289344,
+        "abs_peak": 3.49937316
       }
     },
     {
       "quantity": "v(N006)",
       "base_value": 0.0,
-      "scenario_value": 4.495675339,
-      "delta": 4.495675339,
+      "scenario_value": 4.65774772,
+      "delta": 4.65774772,
       "change": "activated",
       "expectation": "changed",
       "expectation_met": true,
-      "relative_change": 4495675339000.0,
+      "relative_change": 4657747720000.0,
       "meaningful_improvement": false,
       "metric": "v(n006).vpp",
       "measurement": "tran_vpp",
@@ -2414,23 +2431,23 @@ time,v(N001),v(N002),v(N003),v(N004),v(N005),v(N006),v(N007),@dled12_1[id],@dled
         "abs_peak": 0.76996644
       },
       "scenario_details": {
-        "min": -3.49802989,
-        "max": 0.997645449,
-        "mean": -0.19025949143316007,
-        "vpp": 4.495675339,
-        "final": -1.47999483,
-        "abs_peak": 3.49802989
+        "min": -3.50470061,
+        "max": 1.15304711,
+        "mean": -0.17424222290197086,
+        "vpp": 4.65774772,
+        "final": -0.291220482,
+        "abs_peak": 3.50470061
       }
     },
     {
       "quantity": "@dled12_1[id]",
       "base_value": 0.0154829613,
-      "scenario_value": 0.0169818828,
-      "delta": 0.0014989215,
+      "scenario_value": 0.0168491365,
+      "delta": 0.0013661752,
       "change": "changed",
       "expectation": "changed",
       "expectation_met": true,
-      "relative_change": 0.09681103446276779,
+      "relative_change": 0.088237332221453,
       "meaningful_improvement": false,
       "metric": "@dled12_1[id].abs_peak",
       "measurement": "tran_abs_peak",
@@ -2443,23 +2460,23 @@ time,v(N001),v(N002),v(N003),v(N004),v(N005),v(N006),v(N007),@dled12_1[id],@dled
         "abs_peak": 0.0154829613
       },
       "scenario_details": {
-        "min": 3.33656864e-05,
-        "max": 0.0169818828,
-        "mean": 0.009901987433114094,
-        "vpp": 0.0169485171136,
-        "final": 0.0155034247,
-        "abs_peak": 0.0169818828
+        "min": 4.00634967e-05,
+        "max": 0.0168491365,
+        "mean": 0.009856618153030825,
+        "vpp": 0.0168090730033,
+        "final": 0.0154445225,
+        "abs_peak": 0.0168491365
       }
     },
     {
       "quantity": "@dled12_2[id]",
       "base_value": 0.0154829613,
-      "scenario_value": 0.0161051769,
-      "delta": 0.0006222156,
+      "scenario_value": 0.0157539263,
+      "delta": 0.000270964999999998,
       "change": "changed",
       "expectation": "changed",
       "expectation_met": true,
-      "relative_change": 0.040187118468093044,
+      "relative_change": 0.017500851080729497,
       "meaningful_improvement": false,
       "metric": "@dled12_2[id].abs_peak",
       "measurement": "tran_abs_peak",
@@ -2472,12 +2489,12 @@ time,v(N001),v(N002),v(N003),v(N004),v(N005),v(N006),v(N007),@dled12_1[id],@dled
         "abs_peak": 0.0154829613
       },
       "scenario_details": {
-        "min": 1.00376542e-05,
-        "max": 0.0161051769,
-        "mean": 0.010187915461195325,
-        "vpp": 0.0160951392458,
-        "final": 0.00183725254,
-        "abs_peak": 0.0161051769
+        "min": 6.08412619e-05,
+        "max": 0.0157539263,
+        "mean": 0.010117174689893428,
+        "vpp": 0.015693085038099998,
+        "final": 0.000596120284,
+        "abs_peak": 0.0157539263
       }
     }
   ],
@@ -2502,93 +2519,170 @@ time,v(N001),v(N002),v(N003),v(N004),v(N005),v(N006),v(N007),@dled12_1[id],@dled
     "gain_available": false,
     "gain_sufficient": false,
     "scenario_gain": null,
-    "min_gain_ratio": null
+    "min_gain_ratio": null,
+    "temporal_required": true,
+    "temporal_available": true,
+    "temporal_met": true
   },
   "gain_comparison": null,
   "quality_comparison": null,
   "diagnostic_outcome": {
-    "status": "partially_resolved",
-    "technical_label": "Diagnostic hypothesis confirmed",
-    "label": "Ipotesi diagnostica confermata",
-    "reason": "I criteri dichiarati dal test diagnostico sono soddisfatti, ma lo scenario non applica una correzione del sintomo utente.",
+    "status": "resolved_candidate",
+    "technical_label": "Transient correction verified",
+    "label": "Criteri elettrici e temporali soddisfatti",
+    "reason": "Le aspettative elettriche e il profilo transitorio richiesto sono verificati.",
     "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
-    "stop_automation": false,
-    "confidence": "low",
-    "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
+    "stop_automation": true,
+    "confidence": "medium",
+    "next_step": "La correzione e verificata: puoi passare alla conclusione diagnostica."
   },
-  "created_or_updated_at": "2026-07-21T18:15:11"
+  "created_or_updated_at": "2026-07-22T09:25:44",
+  "temporal_expectation": {
+    "target": "Dled12_1",
+    "available": true,
+    "met": true,
+    "reason": "Criteri temporali verificati.",
+    "base_profile": {
+      "status": "measured",
+      "state": "steady_on",
+      "threshold_v": null,
+      "profile_method": "device_current",
+      "anode_node": "N001",
+      "cathode_node": "N002",
+      "on_fraction": 1.0,
+      "duty_cycle": 1.0,
+      "display_duty_cycle": 0.8,
+      "regular_period": false,
+      "period_s": null,
+      "frequency_hz": null,
+      "playback_duration_s": 6.0,
+      "playback_slowdown": 10.0,
+      "pulse_count": 1,
+      "timeline_key_times": [
+        0.0,
+        1.0
+      ],
+      "timeline_states": [
+        true,
+        true
+      ],
+      "voltage_min": 0.7259810499999997,
+      "voltage_max": 0.7259810499999997,
+      "threshold_current_a": 0.0001,
+      "current_min_a": 0.0154829613,
+      "current_max_a": 0.0154829613
+    },
+    "scenario_profile": {
+      "status": "measured",
+      "state": "blinking",
+      "threshold_v": null,
+      "profile_method": "device_current_hysteresis",
+      "anode_node": "N001",
+      "cathode_node": "N002",
+      "on_fraction": 0.693089430894309,
+      "duty_cycle": 0.669250909462369,
+      "display_duty_cycle": 0.7344620554745066,
+      "regular_period": true,
+      "period_s": 0.13724729499999994,
+      "frequency_hz": 7.28611809799239,
+      "playback_duration_s": 1.3724729499999992,
+      "playback_slowdown": 10.0,
+      "pulse_count": 8,
+      "timeline_key_times": [
+        0.0,
+        0.08419301173011731,
+        0.12815548055480555,
+        0.21910041400414002,
+        0.26362478324783245,
+        0.3554785787857878,
+        0.4024790487904879,
+        0.49532594525945256,
+        0.5397277162771628,
+        0.6326882678826788,
+        0.6774162571625716,
+        0.7683283312833128,
+        0.8137982919829199,
+        0.9062043830438304,
+        0.9517151551515516,
+        1.0
+      ],
+      "timeline_states": [
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        true
+      ],
+      "voltage_min": 0.57190297,
+      "voltage_max": 0.72816817,
+      "threshold_current_a": 0.0001,
+      "current_min_a": 4.00634967e-05,
+      "current_max_a": 0.0168491365,
+      "turn_on_current_a": 0.00676369269802,
+      "turn_off_current_a": 0.002561424447195
+    },
+    "conditions": [
+      {
+        "criterion": "required_state",
+        "expected": "blinking",
+        "actual": "blinking",
+        "met": true
+      },
+      {
+        "criterion": "require_regular_period",
+        "expected": true,
+        "actual": true,
+        "met": true
+      }
+    ]
+  }
 }
 ```
 
 
 ## Required answer format
 
+La domanda riguarda scenari gia eseguiti.
+Rispondi alla domanda, ma continua la diagnosi quando nessuno scenario ha stop_automation=true e resta budget eseguibile.
+Non confondere una variazione numerica non nulla con un segnale utile: per un percorso di segnale calcola e cita Vpp uscita / Vpp ingresso.
+Se il rapporto e trascurabile rispetto al criterio dichiarato o manca un criterio significativo, non dire che il segnale arriva utilmente e non considerare risolto il sintomo.
 Rispondi in Markdown usando esattamente queste sezioni:
 
-1. **Stato della simulazione**
-   Spiega se ngspice e stato eseguito correttamente oppure no.
+1. **Risposta diretta**
+   Indica subito quale scenario ha l'outcome piu forte.
+   Se esiste uno scenario con `diagnostic_outcome.status = resolved_candidate` e `stop_automation = true`, dillo chiaramente.
 
-2. **Evidenze principali**
-   Elenca le prove piu importanti, citando componenti, nodi, netlist, stdout/stderr o report.
+2. **Perche quello scenario risolve meglio**
+   Usa `scenario_comparison.json`: cita le grandezze cambiate, valori base, valori scenario e delta quando sono rilevanti.
 
-3. **Diagnosi rispetto al problema utente**
-   Collega le evidenze al problema scritto dall'utente.
+3. **Perche gli altri scenari non bastano**
+   Spiega per ogni altro scenario perche e solo parziale, diagnostico o di isolamento.
 
-4. **Limiti della diagnosi**
-   Dichiara cosa non si puo concludere dai dati disponibili.
+4. **Conclusione provvisoria**
+   Riassumi in 2-3 frasi la lettura diagnostica piu forte emersa finora.
 
-5. **Scenari proposti**
-   Proponi al massimo 3 scenari diagnostici candidati, pensati per essere trasformati in una nuova simulazione SPICE.
-   In questa prima risposta proponi solo scenari semplici di primo passaggio, non scenari combinati.
-   Non proporre semplici consigli generici: ogni scenario deve essere una ipotesi verificabile.
-   Non presentarli come certamente risolutivi: sono candidati da testare.
-   Ogni scenario iniziale deve testare una singola ipotesi principale ed essere leggibile da solo.
-   Se servono piu scenari, ordinali dal piu semplice al piu utile.
-   Se la domanda dell'utente riguarda scenari gia eseguiti, usa questa sezione per riassumere gli scenari eseguiti e indicare quale outcome e piu forte.
-   Se dai dati disponibili non serve uno scenario, scrivi: `Nessuno scenario necessario dai dati disponibili.`
-
-6. **Conclusione provvisoria**
-   Chiudi con una sintesi breve della diagnosi piu probabile in questo momento e del perche gli scenari proposti sono i passi successivi migliori.
-
-   Quando proponi scenari usa sempre una grammatica visiva stabile.
-   Per ogni scenario usa una forma a due livelli: prima una spiegazione user-friendly, poi un blocco tecnico breve.
-   Ogni scenario deve iniziare con un titolo nel formato `**scenario_1 - Titolo naturale**`.
-
-   Livello user-friendly:
-   - `Ipotesi:` collega lo scenario alle evidenze SPICE e al problema utente.
-   - `Cosa cambia:` spiega in parole semplici la modifica simulativa.
-   - `Cosa verifichiamo:` indica cosa dovrebbe cambiare se l'ipotesi e corretta.
-   - `Come lo leggiamo:` indica quali tensioni, correnti, log o grafici confrontare.
-   - `Se non basta:` indica il prossimo passo solo in una frase breve.
-
-   Blocco tecnico per pipeline:
-   Usa un blocco JSON breve e non inventare campi non deducibili dalle evidenze.
-   Il blocco deve aiutare una futura pipeline a trasformare lo scenario in una run separata.
-   Campi obbligatori per uno scenario eseguibile: `scenario_id`, `title`, `hypothesis`, `intent`, `actions`, `rerun_from`, `analysis`, `compare`, `expect`.
-   In una run `tran`, se confronti una corrente interna di diodo o LED nel formato `@dNOME[id]`, aggiungi obbligatoriamente `measure` con `"@dNOME[id]": "tran_abs_peak"`.
-   Usa `intent: diagnostic` per verificare una causa o una precondizione; usa `intent: correction` solo se le misure verificano direttamente il miglioramento del sintomo utente.
-   Per scenari di correzione topologica non ancora eseguibili puoi aggiungere anche `execution_mode` e `required_evidence`.
-   Non usare `unknown` dentro `actions[].value`: uno scenario eseguibile deve avere valori concreti.
-   Se un valore concreto non e deducibile, ometti l'azione eseguibile e descrivi lo scenario solo come follow-up non ancora eseguibile.
-
-   Primitive scenario disponibili:
-   - Scenari elettrici / di pilotaggio: `drive_node_voltage`, `set_initial_node_voltage`, `add_voltage_source_between_nodes`, `change_source_value`, `change_component_value`, `close_switch`.
-   - Scenari topologici controllati: `connect_nodes`, `add_resistor_between_nodes`, `feed_nodes_from_source_node`.
-   Primitive future, da citare solo se ben giustificate e non ancora eseguibili:
-   `open_switch`, `disconnect_terminal`, `move_terminal`, `replace_with_equivalent`, `run_op`, `run_tran`.
-
-   Dopo l'ultimo scenario aggiungi sempre una chiusura operativa breve, per esempio:
-   `Puoi scrivere: esegui scenario 1` oppure `esegui l'ultimo`.
-
-   Ricorda che nella versione read-only questi scenari NON sono eseguiti.
-   Sono solo proposte per una fase successiva della pipeline.
-
-Alla fine aggiungi una riga:
+5. **Conclusione operativa**
+   Spiega se l'automazione dovrebbe fermarsi o continuare, usando `stop_automation`.
+   Se `stop_automation=false` e resta budget, proponi esattamente un nuovo scenario eseguibile e self-contained, salvo che manchi un dato esterno indispensabile.
+   Il nuovo scenario deve ripetere tutte le condizioni abilitanti necessarie perche ogni run riparte dalla base.
+   Non ripetere azioni e analisi gia eseguite soltanto per aggiungere `gain`, `measure`, `compare` o una soglia. La stessa azione e invece ammessa una volta in `op` e una volta in `tran` se il transitorio risponde a una domanda temporale diversa.
+   Dopo un trasferimento insufficiente, cambia il confine di isolamento in modo elettricamente informativo, per esempio spostando lo stimolo a un nodo intermedio o testando una diversa causa supportata dalle evidenze.
+   Includi un blocco JSON con `scenario_id`, `title`, `hypothesis`, `intent`, `actions`, `rerun_from`, `analysis`, `compare`, `expect`.
+   Per test di propagazione, attenuazione o amplificazione includi anche `gain` con `input`, `output` e `min_ratio` positivo, motivando la soglia nel testo.
+   Se `stop_automation=true`, non proporre un altro scenario salvo richiesta esplicita di ulteriore esplorazione.
 
 `Richiede immagine: si/no`
-
-Metti `si` solo se gli output strutturati indicano una probabile incoerenza del Graph JSON oppure se SPICE non e eseguibile in modo utile.
-Se l'immagine sarebbe solo una verifica opzionale, metti comunque `no` e cita la verifica opzionale nei limiti.
 
 ## Final task
 

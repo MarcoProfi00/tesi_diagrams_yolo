@@ -5,7 +5,7 @@ The agent remains read-only: it can inspect base outputs and existing scenario a
 
 ## User problem
 
-Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
+Lo scenario 1 ha risolto il problema? Qual era la causa e come è stato corretto il comportamento?
 
 ## Circuit
 
@@ -89,8 +89,8 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
 {
   "available": true,
   "best_scenario_id": "scenario_1",
-  "best_outcome_status": "partially_resolved",
-  "best_stop_automation": false,
+  "best_outcome_status": "resolved_candidate",
+  "best_stop_automation": true,
   "ranking_status": "verified_best",
   "interpretation_rule": "If a user asks which scenario resolves the problem, prefer the scenario with outcome_status='resolved_candidate' and stop_automation=true. Partially resolved scenarios without verified expectations are supporting diagnostics and must not be ranked only by changed_count.",
   "scenarios": [
@@ -99,11 +99,11 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
       "title": "Rompere la simmetria iniziale dei due nodi di base",
       "status": "spice_success",
       "spice_status": "success",
-      "outcome_status": "partially_resolved",
-      "outcome_label": "Ipotesi diagnostica confermata",
-      "outcome_technical_label": "Diagnostic hypothesis confirmed",
-      "outcome_reason": "I criteri dichiarati dal test diagnostico sono soddisfatti, ma lo scenario non applica una correzione del sintomo utente.",
-      "stop_automation": false,
+      "outcome_status": "resolved_candidate",
+      "outcome_label": "Criteri elettrici e temporali soddisfatti",
+      "outcome_technical_label": "Transient correction verified",
+      "outcome_reason": "Le aspettative elettriche e il profilo transitorio richiesto sono verificati.",
+      "stop_automation": true,
       "comparison_summary": {
         "requested_count": 4,
         "changed_count": 4,
@@ -125,7 +125,10 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
         "gain_available": false,
         "gain_sufficient": false,
         "scenario_gain": null,
-        "min_gain_ratio": null
+        "min_gain_ratio": null,
+        "temporal_required": true,
+        "temporal_available": true,
+        "temporal_met": true
       },
       "quantity_summary": {
         "changed": [
@@ -141,30 +144,30 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
         "Dled12_1": {
           "state": "blinking",
           "regular_period": true,
-          "frequency_hz": 7.274829142817135,
-          "duty_cycle": 0.6717233349303762,
-          "on_fraction": 0.7075070821529745,
+          "frequency_hz": 7.28611809799239,
+          "duty_cycle": 0.669250909462369,
+          "on_fraction": 0.693089430894309,
           "pulse_count": 8,
-          "voltage_min": 0.5671713,
-          "voltage_max": 0.7283711400000001,
+          "voltage_min": 0.57190297,
+          "voltage_max": 0.72816817,
           "anode_node": "N001",
           "cathode_node": "N002"
         },
         "Dled12_2": {
           "state": "blinking",
           "regular_period": true,
-          "frequency_hz": 7.294372939813779,
-          "duty_cycle": 0.6806550114938894,
-          "on_fraction": 0.7294617563739377,
+          "frequency_hz": 7.289055552334194,
+          "duty_cycle": 0.6768579447261436,
+          "on_fraction": 0.7208672086720868,
           "pulse_count": 8,
-          "voltage_min": 0.5361027600000003,
-          "voltage_max": 0.7270001400000003,
+          "voltage_min": 0.5827093899999998,
+          "voltage_max": 0.7264297900000001,
           "anode_node": "N001",
           "cathode_node": "N003"
         }
       },
       "ranking_verified": true,
-      "score": 40
+      "score": 200
     }
   ]
 }
@@ -178,10 +181,10 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
 - Title: `Rompere la simmetria iniziale dei due nodi di base`
 - Status: `spice_success`
 - SPICE status: `success`
-- Outcome: `partially_resolved`
-- Stop automation: `False`
+- Outcome: `resolved_candidate`
+- Stop automation: `True`
 - Comparison: `4/4` changed
-- LED profiles: `{"Dled12_1": {"state": "blinking", "regular_period": true, "frequency_hz": 7.274829142817135, "duty_cycle": 0.6717233349303762, "on_fraction": 0.7075070821529745, "pulse_count": 8, "voltage_min": 0.5671713, "voltage_max": 0.7283711400000001, "anode_node": "N001", "cathode_node": "N002"}, "Dled12_2": {"state": "blinking", "regular_period": true, "frequency_hz": 7.294372939813779, "duty_cycle": 0.6806550114938894, "on_fraction": 0.7294617563739377, "pulse_count": 8, "voltage_min": 0.5361027600000003, "voltage_max": 0.7270001400000003, "anode_node": "N001", "cathode_node": "N003"}}`
+- LED profiles: `{"Dled12_1": {"state": "blinking", "regular_period": true, "frequency_hz": 7.28611809799239, "duty_cycle": 0.669250909462369, "on_fraction": 0.693089430894309, "pulse_count": 8, "voltage_min": 0.57190297, "voltage_max": 0.72816817, "anode_node": "N001", "cathode_node": "N002"}, "Dled12_2": {"state": "blinking", "regular_period": true, "frequency_hz": 7.289055552334194, "duty_cycle": 0.6768579447261436, "on_fraction": 0.7208672086720868, "pulse_count": 8, "voltage_min": 0.5827093899999998, "voltage_max": 0.7264297900000001, "anode_node": "N001", "cathode_node": "N003"}}`
 
 #### scenario_definition
 
@@ -192,19 +195,19 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
 {
   "scenario_id": "scenario_1",
   "title": "Rompere la simmetria iniziale dei due nodi di base",
-  "hypothesis": "The astable may stay locked because the transient starts from a perfectly symmetric initial condition at N004 and N006.",
-  "intent": "diagnostic",
+  "hypothesis": "The transient may be stuck in a symmetric non-oscillating state because N004 and N006 start from identical conditions.",
+  "intent": "correction",
   "actions": [
     {
       "type": "set_initial_node_voltage",
       "target": "N004",
-      "value": "0.6V",
+      "value": "0V",
       "skip_operating_point": true
     },
     {
       "type": "set_initial_node_voltage",
       "target": "N006",
-      "value": "0.8V",
+      "value": "1V",
       "skip_operating_point": true
     }
   ],
@@ -216,15 +219,20 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
     "@dled12_1[id]",
     "@dled12_2[id]"
   ],
-  "measure": {
-    "@dled12_1[id]": "tran_abs_peak",
-    "@dled12_2[id]": "tran_abs_peak"
-  },
   "expect": {
     "v(N004)": "changed",
     "v(N006)": "changed",
     "@dled12_1[id]": "changed",
     "@dled12_2[id]": "changed"
+  },
+  "temporal_expect": {
+    "target": "Dled12_1",
+    "required_state": "blinking",
+    "require_regular_period": true
+  },
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak",
+    "@dled12_2[id]": "tran_abs_peak"
   }
 }
 ```
@@ -241,7 +249,7 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
   "scenario_id": "scenario_1",
   "source": "guided_chat",
   "spice_executed": true,
-  "created_or_updated_at": "2026-07-21T18:15:11",
+  "created_or_updated_at": "2026-07-22T09:25:44",
   "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
   "spice_status": "success",
   "spice_exit_code": 0,
@@ -268,22 +276,25 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
     "gain_available": false,
     "gain_sufficient": false,
     "scenario_gain": null,
-    "min_gain_ratio": null
+    "min_gain_ratio": null,
+    "temporal_required": true,
+    "temporal_available": true,
+    "temporal_met": true
   },
   "diagnostic_outcome": {
-    "status": "partially_resolved",
-    "technical_label": "Diagnostic hypothesis confirmed",
-    "label": "Ipotesi diagnostica confermata",
-    "reason": "I criteri dichiarati dal test diagnostico sono soddisfatti, ma lo scenario non applica una correzione del sintomo utente.",
+    "status": "resolved_candidate",
+    "technical_label": "Transient correction verified",
+    "label": "Criteri elettrici e temporali soddisfatti",
+    "reason": "Le aspettative elettriche e il profilo transitorio richiesto sono verificati.",
     "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
-    "stop_automation": false,
-    "confidence": "low",
-    "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
+    "stop_automation": true,
+    "confidence": "medium",
+    "next_step": "La correzione e verificata: puoi passare alla conclusione diagnostica."
   },
   "controlled_scenario_report": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\chat\\b02\\scenarios\\scenario_1\\12_controlled_scenarios.json",
   "executed_scenarios_count": 1,
   "scenario_budget_exhausted": false,
-  "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
+  "next_step": "La correzione e verificata: puoi passare alla conclusione diagnostica."
 }
 ```
 
@@ -306,9 +317,9 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
       "status": "applied",
       "type": "set_initial_node_voltage",
       "target": "N004",
-      "value": "0.6V",
-      "normalized_dc_value": "0.6",
-      "inserted_line": ".ic V(N004)=0.6",
+      "value": "0V",
+      "normalized_dc_value": "0",
+      "inserted_line": ".ic V(N004)=0",
       "operation": "inserted",
       "skip_operating_point": true,
       "transient_startup_operation": "enabled",
@@ -319,9 +330,9 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
       "status": "applied",
       "type": "set_initial_node_voltage",
       "target": "N006",
-      "value": "0.8V",
-      "normalized_dc_value": "0.8",
-      "inserted_line": ".ic V(N004)=0.6 V(N006)=0.8",
+      "value": "1V",
+      "normalized_dc_value": "1",
+      "inserted_line": ".ic V(N004)=0 V(N006)=1",
       "operation": "updated",
       "skip_operating_point": true,
       "transient_startup_operation": "unchanged",
@@ -357,20 +368,23 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
     "gain_available": false,
     "gain_sufficient": false,
     "scenario_gain": null,
-    "min_gain_ratio": null
+    "min_gain_ratio": null,
+    "temporal_required": true,
+    "temporal_available": true,
+    "temporal_met": true
   },
   "diagnostic_outcome": {
-    "status": "partially_resolved",
-    "technical_label": "Diagnostic hypothesis confirmed",
-    "label": "Ipotesi diagnostica confermata",
-    "reason": "I criteri dichiarati dal test diagnostico sono soddisfatti, ma lo scenario non applica una correzione del sintomo utente.",
+    "status": "resolved_candidate",
+    "technical_label": "Transient correction verified",
+    "label": "Criteri elettrici e temporali soddisfatti",
+    "reason": "Le aspettative elettriche e il profilo transitorio richiesto sono verificati.",
     "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
-    "stop_automation": false,
-    "confidence": "low",
-    "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
+    "stop_automation": true,
+    "confidence": "medium",
+    "next_step": "La correzione e verificata: puoi passare alla conclusione diagnostica."
   },
   "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
-  "created_or_updated_at": "2026-07-21T18:15:11"
+  "created_or_updated_at": "2026-07-22T09:25:44"
 }
 ```
 
@@ -384,7 +398,7 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
   "source_format": "pipeline2.0_scenario_comparison",
   "scenario_id": "scenario_1",
   "scenario_title": "Rompere la simmetria iniziale dei due nodi di base",
-  "scenario_intent": "diagnostic",
+  "scenario_intent": "correction",
   "base_output_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\chat\\b02",
   "scenario_run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\chat\\b02\\scenarios\\scenario_1\\run",
   "base_stdout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\chat\\b02\\08_ngspice_stdout.txt",
@@ -395,12 +409,12 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
     {
       "quantity": "v(N004)",
       "base_value": 0.0,
-      "scenario_value": 4.55859934,
-      "delta": 4.55859934,
+      "scenario_value": 6.4994184,
+      "delta": 6.4994184,
       "change": "activated",
       "expectation": "changed",
       "expectation_met": true,
-      "relative_change": 4558599340000.0,
+      "relative_change": 6499418400000.0,
       "meaningful_improvement": false,
       "metric": "v(n004).vpp",
       "measurement": "tran_vpp",
@@ -413,23 +427,23 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
         "abs_peak": 0.76996644
       },
       "scenario_details": {
-        "min": -3.50428755,
-        "max": 1.05431179,
-        "mean": -0.1396224852905361,
-        "vpp": 4.55859934,
-        "final": 0.797259158,
-        "abs_peak": 3.50428755
+        "min": -3.49937316,
+        "max": 3.00004524,
+        "mean": -0.10887382735008132,
+        "vpp": 6.4994184,
+        "final": 0.737289344,
+        "abs_peak": 3.49937316
       }
     },
     {
       "quantity": "v(N006)",
       "base_value": 0.0,
-      "scenario_value": 4.495675339,
-      "delta": 4.495675339,
+      "scenario_value": 4.65774772,
+      "delta": 4.65774772,
       "change": "activated",
       "expectation": "changed",
       "expectation_met": true,
-      "relative_change": 4495675339000.0,
+      "relative_change": 4657747720000.0,
       "meaningful_improvement": false,
       "metric": "v(n006).vpp",
       "measurement": "tran_vpp",
@@ -442,23 +456,23 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
         "abs_peak": 0.76996644
       },
       "scenario_details": {
-        "min": -3.49802989,
-        "max": 0.997645449,
-        "mean": -0.19025949143316007,
-        "vpp": 4.495675339,
-        "final": -1.47999483,
-        "abs_peak": 3.49802989
+        "min": -3.50470061,
+        "max": 1.15304711,
+        "mean": -0.17424222290197086,
+        "vpp": 4.65774772,
+        "final": -0.291220482,
+        "abs_peak": 3.50470061
       }
     },
     {
       "quantity": "@dled12_1[id]",
       "base_value": 0.0154829613,
-      "scenario_value": 0.0169818828,
-      "delta": 0.0014989215,
+      "scenario_value": 0.0168491365,
+      "delta": 0.0013661752,
       "change": "changed",
       "expectation": "changed",
       "expectation_met": true,
-      "relative_change": 0.09681103446276779,
+      "relative_change": 0.088237332221453,
       "meaningful_improvement": false,
       "metric": "@dled12_1[id].abs_peak",
       "measurement": "tran_abs_peak",
@@ -471,23 +485,23 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
         "abs_peak": 0.0154829613
       },
       "scenario_details": {
-        "min": 3.33656864e-05,
-        "max": 0.0169818828,
-        "mean": 0.009901987433114094,
-        "vpp": 0.0169485171136,
-        "final": 0.0155034247,
-        "abs_peak": 0.0169818828
+        "min": 4.00634967e-05,
+        "max": 0.0168491365,
+        "mean": 0.009856618153030825,
+        "vpp": 0.0168090730033,
+        "final": 0.0154445225,
+        "abs_peak": 0.0168491365
       }
     },
     {
       "quantity": "@dled12_2[id]",
       "base_value": 0.0154829613,
-      "scenario_value": 0.0161051769,
-      "delta": 0.0006222156,
+      "scenario_value": 0.0157539263,
+      "delta": 0.000270964999999998,
       "change": "changed",
       "expectation": "changed",
       "expectation_met": true,
-      "relative_change": 0.040187118468093044,
+      "relative_change": 0.017500851080729497,
       "meaningful_improvement": false,
       "metric": "@dled12_2[id].abs_peak",
       "measurement": "tran_abs_peak",
@@ -500,12 +514,12 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
         "abs_peak": 0.0154829613
       },
       "scenario_details": {
-        "min": 1.00376542e-05,
-        "max": 0.0161051769,
-        "mean": 0.010187915461195325,
-        "vpp": 0.0160951392458,
-        "final": 0.00183725254,
-        "abs_peak": 0.0161051769
+        "min": 6.08412619e-05,
+        "max": 0.0157539263,
+        "mean": 0.010117174689893428,
+        "vpp": 0.015693085038099998,
+        "final": 0.000596120284,
+        "abs_peak": 0.0157539263
       }
     }
   ],
@@ -530,21 +544,134 @@ Non lampeggiano alternativamente ma insieme, come possiamo risolvere?
     "gain_available": false,
     "gain_sufficient": false,
     "scenario_gain": null,
-    "min_gain_ratio": null
+    "min_gain_ratio": null,
+    "temporal_required": true,
+    "temporal_available": true,
+    "temporal_met": true
   },
   "gain_comparison": null,
   "quality_comparison": null,
   "diagnostic_outcome": {
-    "status": "partially_resolved",
-    "technical_label": "Diagnostic hypothesis confirmed",
-    "label": "Ipotesi diagnostica confermata",
-    "reason": "I criteri dichiarati dal test diagnostico sono soddisfatti, ma lo scenario non applica una correzione del sintomo utente.",
+    "status": "resolved_candidate",
+    "technical_label": "Transient correction verified",
+    "label": "Criteri elettrici e temporali soddisfatti",
+    "reason": "Le aspettative elettriche e il profilo transitorio richiesto sono verificati.",
     "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
-    "stop_automation": false,
-    "confidence": "low",
-    "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
+    "stop_automation": true,
+    "confidence": "medium",
+    "next_step": "La correzione e verificata: puoi passare alla conclusione diagnostica."
   },
-  "created_or_updated_at": "2026-07-21T18:15:11"
+  "created_or_updated_at": "2026-07-22T09:25:44",
+  "temporal_expectation": {
+    "target": "Dled12_1",
+    "available": true,
+    "met": true,
+    "reason": "Criteri temporali verificati.",
+    "base_profile": {
+      "status": "measured",
+      "state": "steady_on",
+      "threshold_v": null,
+      "profile_method": "device_current",
+      "anode_node": "N001",
+      "cathode_node": "N002",
+      "on_fraction": 1.0,
+      "duty_cycle": 1.0,
+      "display_duty_cycle": 0.8,
+      "regular_period": false,
+      "period_s": null,
+      "frequency_hz": null,
+      "playback_duration_s": 6.0,
+      "playback_slowdown": 10.0,
+      "pulse_count": 1,
+      "timeline_key_times": [
+        0.0,
+        1.0
+      ],
+      "timeline_states": [
+        true,
+        true
+      ],
+      "voltage_min": 0.7259810499999997,
+      "voltage_max": 0.7259810499999997,
+      "threshold_current_a": 0.0001,
+      "current_min_a": 0.0154829613,
+      "current_max_a": 0.0154829613
+    },
+    "scenario_profile": {
+      "status": "measured",
+      "state": "blinking",
+      "threshold_v": null,
+      "profile_method": "device_current_hysteresis",
+      "anode_node": "N001",
+      "cathode_node": "N002",
+      "on_fraction": 0.693089430894309,
+      "duty_cycle": 0.669250909462369,
+      "display_duty_cycle": 0.7344620554745066,
+      "regular_period": true,
+      "period_s": 0.13724729499999994,
+      "frequency_hz": 7.28611809799239,
+      "playback_duration_s": 1.3724729499999992,
+      "playback_slowdown": 10.0,
+      "pulse_count": 8,
+      "timeline_key_times": [
+        0.0,
+        0.08419301173011731,
+        0.12815548055480555,
+        0.21910041400414002,
+        0.26362478324783245,
+        0.3554785787857878,
+        0.4024790487904879,
+        0.49532594525945256,
+        0.5397277162771628,
+        0.6326882678826788,
+        0.6774162571625716,
+        0.7683283312833128,
+        0.8137982919829199,
+        0.9062043830438304,
+        0.9517151551515516,
+        1.0
+      ],
+      "timeline_states": [
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        false,
+        true,
+        true
+      ],
+      "voltage_min": 0.57190297,
+      "voltage_max": 0.72816817,
+      "threshold_current_a": 0.0001,
+      "current_min_a": 4.00634967e-05,
+      "current_max_a": 0.0168491365,
+      "turn_on_current_a": 0.00676369269802,
+      "turn_off_current_a": 0.002561424447195
+    },
+    "conditions": [
+      {
+        "criterion": "required_state",
+        "expected": "blinking",
+        "actual": "blinking",
+        "met": true
+      },
+      {
+        "criterion": "require_regular_period",
+        "expected": true,
+        "actual": true,
+        "met": true
+      }
+    ]
+  }
 }
 ```
 

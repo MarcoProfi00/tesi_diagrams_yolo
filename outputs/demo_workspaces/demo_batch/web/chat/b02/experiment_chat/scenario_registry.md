@@ -4,14 +4,14 @@
 - Experiment: `demo_batch`
 - Circuit: `b02`
 - Max executable scenarios: `5`
-- Created at: `2026-07-21T18:14:31`
-- Updated at: `2026-07-21T18:17:11`
+- Created at: `2026-07-22T09:24:15`
+- Updated at: `2026-07-22T09:25:44`
 
 ## Scenario 1 - Rompere la simmetria iniziale dei due nodi di base
 
 - Scenario id: `scenario_1`
 - Status: `executed`
-- Outcome: `partially_resolved`
+- Outcome: `resolved_candidate`
 - Executable: `True`
 - Kind: `spice_scenario`
 - Source proposal: `proposal_1`
@@ -20,7 +20,7 @@
 
 ### Hypothesis
 
-The astable may stay locked because the transient starts from a perfectly symmetric initial condition at N004 and N006.
+The transient may be stuck in a symmetric non-oscillating state because N004 and N006 start from identical conditions.
 
 ### Actions
 
@@ -29,19 +29,19 @@ The astable may stay locked because the transient starts from a perfectly symmet
   {
     "type": "set_initial_node_voltage",
     "target": "N004",
-    "value": "0.6V",
+    "value": "0V",
     "skip_operating_point": true
   },
   {
     "type": "set_initial_node_voltage",
     "target": "N006",
-    "value": "0.8V",
+    "value": "1V",
     "skip_operating_point": true
   }
 ]
 ```
 
-## Scenario 2 - Alleggerire una sola resistenza di base per rompere il bilanciamento
+## Scenario 2 - Introdurre una lieve asimmetria su Rresistor22_2
 
 - Scenario id: `scenario_2`
 - Status: `proposed`
@@ -54,7 +54,7 @@ The astable may stay locked because the transient starts from a perfectly symmet
 
 ### Hypothesis
 
-The symmetric 2.2k base-bias network may be holding both transistor sides in the same state.
+A small bias asymmetry on one base resistor may break the symmetric operating state and allow oscillation to start.
 
 ### Actions
 
@@ -63,12 +63,12 @@ The symmetric 2.2k base-bias network may be holding both transistor sides in the
   {
     "type": "change_component_value",
     "target": "Rresistor22_2",
-    "value": "1k"
+    "value": "2k"
   }
 ]
 ```
 
-## Scenario 3 - Ridurre un solo condensatore d’accoppiamento per testare la rete temporale
+## Scenario 3 - Introdurre una lieve asimmetria su Cpolarized_capacitor20_1
 
 - Scenario id: `scenario_3`
 - Status: `proposed`
@@ -81,7 +81,7 @@ The symmetric 2.2k base-bias network may be holding both transistor sides in the
 
 ### Hypothesis
 
-The RC cross-coupling may not be producing a transition in the emitted netlist, keeping both LED branches steady.
+A small timing asymmetry on one capacitor may break the symmetric transient behavior and allow alternating LED blinking.
 
 ### Actions
 
@@ -90,34 +90,7 @@ The RC cross-coupling may not be producing a transition in the emitted netlist, 
   {
     "type": "change_component_value",
     "target": "Cpolarized_capacitor20_1",
-    "value": "10u"
-  }
-]
-```
-
-## Scenario 4 - Ridurre leggermente una resistenza di bias per rompere la simmetria strutturale
-
-- Scenario id: `scenario_4`
-- Status: `executed`
-- Outcome: `partially_resolved`
-- Executable: `True`
-- Kind: `spice_scenario`
-- Source proposal: `proposal_2`
-- Source local index: `3`
-- Execution path: `outputs\demo_workspaces\demo_batch\web\chat\b02\scenarios\scenario_4`
-
-### Hypothesis
-
-The base run may stay locked because the two bias branches are too perfectly symmetric; a small bias mismatch on Rresistor22_2 may break the lock.
-
-### Actions
-
-```json
-[
-  {
-    "type": "change_component_value",
-    "target": "Rresistor22_2",
-    "value": "2k"
+    "value": "33u"
   }
 ]
 ```

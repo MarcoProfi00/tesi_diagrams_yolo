@@ -701,6 +701,58 @@ def scenario_requires_signal_gain(scenario: dict[str, Any]) -> bool:
     return any(marker in text for marker in transfer_markers)
 
 
+def scenario_requires_led_temporal_expectation(scenario: dict[str, Any]) -> bool:
+    """Riconosce scenari che pretendono di correggere un lampeggio LED."""
+    compared = [str(item or "").strip().lower() for item in scenario.get("compare") or []]
+    has_led_observable = any(
+        quantity.startswith("@d") and quantity.endswith("[id]")
+        for quantity in compared
+    )
+    if not has_led_observable:
+        return False
+    text = " ".join(
+        str(scenario.get(field) or "").strip().lower()
+        for field in ("title", "hypothesis")
+    )
+    temporal_markers = (
+        "blink",
+        "lampegg",
+        "period",
+        "altern",
+        "duty",
+        "impuls",
+        "oscill",
+        "astabil",
+    )
+    startup_action = any(
+        isinstance(action, dict)
+        and str(action.get("type") or "").strip() == "set_initial_node_voltage"
+        and action.get("skip_operating_point") is True
+        for action in scenario.get("actions") or []
+    )
+    mentions_led = "led" in text or "diodo luminos" in text
+    has_temporal_claim = any(marker in text for marker in temporal_markers)
+    return (has_led_observable and (startup_action or has_temporal_claim)) or (
+        mentions_led and has_temporal_claim
+    )
+
+
+def temporal_expectation_is_valid(scenario: dict[str, Any]) -> bool:
+    """Valida la forma minima del criterio temporale registrabile da CHAT."""
+    expectation = scenario.get("temporal_expect")
+    if not isinstance(expectation, dict):
+        return False
+    target = expectation.get("target")
+    if not isinstance(target, str) or not target.strip():
+        return False
+    required_state = str(expectation.get("required_state") or "").strip().lower()
+    if required_state != "blinking":
+        return False
+    if expectation.get("require_regular_period") is not True:
+        return False
+    return True
+
+
 def is_transient_diode_current(quantity: str) -> bool:
     """Riconosce una corrente interna di diodo esportabile nel CSV transitorio."""
     return bool(re.fullmatch(r"@d[^\[\]\s]+\[id\]", str(quantity or "").strip(), flags=re.IGNORECASE))
@@ -719,6 +771,13 @@ def scenario_is_executable(scenario: dict[str, Any]) -> bool:
     if not isinstance(actions, list) or not actions or not isinstance(expectations, dict) or not expectations:
         return False
     analysis = str(scenario.get("analysis") or "op").strip().lower()
+    if scenario_requires_led_temporal_expectation(scenario):
+        if analysis != "tran":
+            return False
+        if str(scenario.get("intent") or "").strip().lower() != "correction":
+            return False
+        if not temporal_expectation_is_valid(scenario):
+            return False
     measurements = scenario.get("measure") or {}
     if not isinstance(measurements, dict):
         return False
@@ -833,6 +892,7 @@ def register_experiment2_scenarios_from_response(
             "compare": scenario.get("compare") or [],
             "measure": scenario.get("measure") or {},
             "gain": scenario.get("gain"),
+            "temporal_expect": scenario.get("temporal_expect"),
             "expect": scenario.get("expect") or {},
             "rerun_from": scenario.get("rerun_from"),
             "status": "proposed",

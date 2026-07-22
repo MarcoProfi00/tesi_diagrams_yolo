@@ -502,8 +502,12 @@ la base run non viene mai modificata
 
 `set_initial_node_voltage` e disponibile solo con `analysis: "tran"`: emette
 `.ic V(NODO)=valore` nella netlist scenario, non aggiunge una sorgente
-permanente e non usa `UIC`. Serve per verificare un possibile equilibrio
-iniziale artificiosamente simmetrico, non per alimentare il circuito.
+permanente e, per impostazione predefinita, conserva il punto operativo.
+Il flag booleano opzionale `skip_operating_point: true` aggiunge `UIC` alla
+direttiva `.tran` soltanto nei test reali di avvio in cui il punto operativo
+manterrebbe una simmetria artificiale. Serve a perturbare lo stato iniziale,
+non ad alimentare il circuito; i nodi interni devono ricevere livelli moderati
+e coerenti con il loro bias, non automaticamente la tensione di alimentazione.
 
 Ogni scenario parte sempre dalla base run. Non resta attivo automaticamente lo
 scenario precedente.
@@ -879,18 +883,26 @@ Guardrail della prima versione:
   resistivo reale;
 - `set_initial_node_voltage` e riservata a scenari `tran` che verificano una
   perturbazione iniziale; non modifica topologia, valori o alimentazione;
+- per due basi BJT simmetriche il primo test usa il riferimento di massa reale
+  sul ramo basso e un livello moderato ricavato dal bias sull'altro; se compare
+  un impulso transitorio ma non ancora un periodo regolare, AGENT prova una
+  seconda coppia `.ic` prima di modificare i componenti;
 - massimo 2 scenari indipendenti nella stessa decisione, eseguiti in sequenza;
 - massimo 5 run SPICE scenario per diagnosi;
 - massimo 8 decisioni del modello, inclusa la conclusione finale;
 - un solo retry se la risposta JSON non rispetta il contratto;
 - scenari non validi o duplicati non consumano budget;
 - se l'utente richiede una correzione, l'agente non chiude come sola causa
-  localizzata finche resta budget e manca una correzione verificata;
+  localizzata finche esiste una correzione distinta e sostenuta dalle evidenze;
+  il budget resta un limite massimo e non deve essere consumato per forza;
 - per lampeggio, regolarita, duty cycle o durata di accensione, gli scenari
   `.tran` dichiarano `temporal_expect`: il runtime confronta i profili viewer
   base/scenario prima di accettare lo stop risolutivo; se tutte le aspettative
   elettriche e temporali sono soddisfatte, il cambio qualitativo di stato non
   richiede anche una variazione scalare relativa del 10%;
+- anche CHAT registra uno scenario di correzione del lampeggio soltanto se usa
+  `analysis: "tran"` e dichiara un `temporal_expect` completo con stato
+  `blinking` e periodo regolare;
 - pulsante `Stop` e stato persistente riprendibile.
 
 La macchina a stati e il runtime sono stati verificati con decisioni

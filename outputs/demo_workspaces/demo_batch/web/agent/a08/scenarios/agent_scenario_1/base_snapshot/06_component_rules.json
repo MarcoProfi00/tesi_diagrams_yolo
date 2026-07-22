@@ -1,0 +1,222 @@
+{
+  "circuit_id": "a08",
+  "source_format": "pipeline2.0_component_rules",
+  "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\data\\batchDemo\\values\\a08_values.yaml",
+  "spice_classes_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\pipeline2_spice_classes.yaml",
+  "supplies": {},
+  "components": {
+    "capacitor4.1": {
+      "class_name": "Capacitor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "C",
+      "emit_as": "capacitor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N001",
+        "0"
+      ],
+      "parameters": {
+        "value": 10,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "C1 10 uF"
+      }
+    },
+    "gnd9.1": {
+      "class_name": "GND",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    "gnd9.2": {
+      "class_name": "GND",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    "led12.1": {
+      "class_name": "LED",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "D",
+      "emit_as": "diode",
+      "node_order": [
+        "anode",
+        "cathode"
+      ],
+      "nodes": [
+        "N002",
+        "N003"
+      ],
+      "parameters": {
+        "model": "LED_RED",
+        "source": "manual_from_image_label",
+        "label_text": "D1 LTL-307EE"
+      }
+    },
+    "npn_transistor18.1": {
+      "class_name": "NPN_Transistor",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "Q",
+      "emit_as": "bjt_npn",
+      "node_order": [
+        "C",
+        "B",
+        "E"
+      ],
+      "nodes": [
+        "N003",
+        "N004",
+        "N005"
+      ],
+      "parameters": {
+        "model": "2N3904",
+        "source": "manual_from_image_label",
+        "label_text": "Q1 2N3904"
+      }
+    },
+    "resistor22.1": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N002",
+        "N001"
+      ],
+      "parameters": {
+        "value": 10,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R1 10 kOhm"
+      }
+    },
+    "resistor22.2": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N005",
+        "0"
+      ],
+      "parameters": {
+        "value": 560,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "R6 560 ohm"
+      }
+    },
+    "resistor22.3": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N002",
+        "N005"
+      ],
+      "parameters": {
+        "value": 560,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "R7 560 ohm"
+      }
+    },
+    "resistor22.4": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N001",
+        "N004"
+      ],
+      "parameters": {
+        "value": 68,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R3 68 kOhm"
+      }
+    },
+    "signal_source23.1": {
+      "class_name": "Signal_Source",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "V",
+      "emit_as": "independent_voltage_source",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N002",
+        "0"
+      ],
+      "parameters": {
+        "type": "pulse",
+        "waveform": "square",
+        "value": 5,
+        "unit": "V",
+        "low_value": 0,
+        "high_value": 5,
+        "delay": 0,
+        "rise_time": "1ms",
+        "fall_time": "1ms",
+        "pulse_width": "50ms",
+        "period": "100ms",
+        "frequency": 10,
+        "frequency_unit": "Hz",
+        "source": "manual_assumption_from_image_label",
+        "label_text": "V2 square 10 Hz",
+        "note": "The image shows square 10 Hz but not the amplitude; 0-5 V is assumed for SPICE."
+      }
+    }
+  },
+  "simulation": {
+    "analyses": [
+      "op",
+      "tran"
+    ],
+    "tran": {
+      "step": "0.5ms",
+      "stop": "300ms"
+    }
+  },
+  "stats": {
+    "components_total": 10,
+    "spice_ready_components": 8,
+    "not_emitted_components": 2,
+    "measurement_components": 0,
+    "missing_components": 0,
+    "unsupported_components": 0,
+    "pin_aware_components": 0,
+    "invalid_components": 0,
+    "supplies_ready_count": 0
+  }
+}

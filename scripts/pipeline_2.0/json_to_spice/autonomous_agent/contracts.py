@@ -169,11 +169,13 @@ def normalize_temporal_expectation(
         raise AutonomousDecisionError(
             f"Scenario {scenario_index}: temporal_expect deve essere un oggetto"
         )
-    target = str(raw_temporal_expectation.get("target") or "").strip()
-    if not target:
+    raw_target = raw_temporal_expectation.get("target")
+    if not isinstance(raw_target, str) or not raw_target.strip():
         raise AutonomousDecisionError(
-            f"Scenario {scenario_index}: temporal_expect.target e obbligatorio"
+            f"Scenario {scenario_index}: temporal_expect.target deve essere "
+            "un singolo identificatore testuale"
         )
+    target = raw_target.strip()
     normalized_temporal_expectation: dict[str, Any] = {"target": target}
     required_state = raw_temporal_expectation.get("required_state")
     if required_state is not None:

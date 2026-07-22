@@ -2491,6 +2491,19 @@ change_component_value
      profili viewer base/scenario e non accetta come risolutivo un test che
      viola la periodicita richiesta. Un cambio qualitativo verificato, come
      `steady_on -> blinking`, non richiede anche un incremento scalare del 10%;
+   - la modalita CHAT applica lo stesso contratto minimo: una correzione del
+     lampeggio entra nel registro eseguibile solo con analisi transitoria,
+     `intent=correction` e criterio temporale `blinking` regolare;
+   - nei test di avvio simmetrico le condizioni iniziali sui nodi di controllo
+     interni sono ricavate dal bias e dal ruolo del dispositivo; non si usa il
+     rail di alimentazione come valore predefinito per una base BJT;
+   - per due basi BJT simmetriche il primo tentativo usa la massa documentata
+     sul ramo basso e un livello moderato vicino al bias sull'altro; un profilo
+     `transient_pulse` rende obbligatoria una seconda prova `.ic` distinta prima
+     di spostare la diagnosi sui valori dei componenti;
+   - il budget e soltanto un tetto massimo: l'agente puo fermarsi prima quando
+     restano soltanto scenari duplicati, speculativi o privi di supporto negli
+     artefatti;
    - per sintomi di amplificazione, gli scenari correttivi dichiarano
      `gain.input` e `gain.output`, entrambi presenti in `compare`, per misurare
      `Vpp(output) / Vpp(input)`;

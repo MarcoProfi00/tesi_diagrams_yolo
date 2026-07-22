@@ -2,48 +2,34 @@
   "source_format": "pipeline2.0_controlled_scenario_report",
   "status": "spice_success",
   "scenario_id": "agent_scenario_2",
-  "scenario_title": "Aumento delle due resistenze di base da 2.2k a 22k",
+  "scenario_title": "Seconda rottura di simmetria iniziale sulle due basi",
   "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_2",
   "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_2\\run",
   "netlist": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\demo_batch\\web\\agent\\b02\\scenarios\\agent_scenario_2\\run\\07_netlist.cir",
   "applied_actions": [
     {
       "status": "applied",
-      "type": "change_component_value",
-      "target": "resistor22.2",
-      "resolved_component_name": "Rresistor22_2",
-      "tried_component_names": [
-        "resistor22.2",
-        "resistor22_2",
-        "Rresistor22_2"
-      ],
-      "value": "22k",
-      "normalized_component_value": "22k",
-      "old_value": "2.2k",
-      "new_value": "22k",
-      "old_line": "Rresistor22_2 N001 N004 2.2k",
-      "new_line": "Rresistor22_2 N001 N004 22k",
-      "operation": "updated",
+      "type": "set_initial_node_voltage",
+      "target": "N004",
+      "value": "1.2V",
+      "normalized_dc_value": "1.2",
+      "inserted_line": ".ic V(N004)=1.2",
+      "operation": "inserted",
+      "skip_operating_point": true,
+      "transient_startup_operation": "enabled",
       "spice_executed": false,
       "index": 1
     },
     {
       "status": "applied",
-      "type": "change_component_value",
-      "target": "resistor22.3",
-      "resolved_component_name": "Rresistor22_3",
-      "tried_component_names": [
-        "resistor22.3",
-        "resistor22_3",
-        "Rresistor22_3"
-      ],
-      "value": "22k",
-      "normalized_component_value": "22k",
-      "old_value": "2.2k",
-      "new_value": "22k",
-      "old_line": "Rresistor22_3 N001 N006 2.2k",
-      "new_line": "Rresistor22_3 N001 N006 22k",
+      "type": "set_initial_node_voltage",
+      "target": "N006",
+      "value": "0V",
+      "normalized_dc_value": "0",
+      "inserted_line": ".ic V(N004)=1.2 V(N006)=0",
       "operation": "updated",
+      "skip_operating_point": true,
+      "transient_startup_operation": "unchanged",
       "spice_executed": false,
       "index": 2
     }
@@ -92,5 +78,5 @@
     "next_step": "Il comportamento temporale non soddisfa ancora l'obiettivo: prova un'altra correzione."
   },
   "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
-  "created_or_updated_at": "2026-07-21T18:18:16"
+  "created_or_updated_at": "2026-07-22T09:43:33"
 }
