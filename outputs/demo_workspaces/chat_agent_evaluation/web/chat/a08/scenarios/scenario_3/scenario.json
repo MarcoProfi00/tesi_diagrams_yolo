@@ -1,0 +1,32 @@
+{
+  "scenario_id": "scenario_3",
+  "title": "Cambiare la costante di tempo del trigger",
+  "hypothesis": "The RC branch around Ccapacitor4_1 may be producing only edge transients instead of a timing behavior compatible with regular LED blinking.",
+  "intent": "correction",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Ccapacitor4_1",
+      "value": "1u"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N001)",
+    "v(N004)",
+    "@dled12_1[id]"
+  ],
+  "expect": {
+    "v(N001)": "changed",
+    "@dled12_1[id]": "changed"
+  },
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak"
+  },
+  "temporal_expect": {
+    "target": "Dled12_1",
+    "required_state": "blinking",
+    "require_regular_period": true
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "title": "Test di startup con condizioni iniziali asimmetriche moderate",
+  "hypothesis": "Il circuito resta quasi in equilibrio all'avvio e non entra in oscillazione regolare; una piccola asimmetria iniziale sui nodi del condensatore/base puo innescare il lampeggio del LED.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "set_initial_node_voltage",
+      "target": "N001",
+      "value": "0V",
+      "skip_operating_point": true
+    },
+    {
+      "type": "set_initial_node_voltage",
+      "target": "N004",
+      "value": "1.2V",
+      "skip_operating_point": true
+    }
+  ],
+  "compare": [
+    "v(N001)",
+    "v(N004)",
+    "v(N003)",
+    "@dled12_1[id]"
+  ],
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak"
+  },
+  "expect": {
+    "v(N001)": "changed",
+    "v(N004)": "changed",
+    "@dled12_1[id]": "magnitude_increased"
+  },
+  "temporal_expect": {
+    "target": "Dled12_1",
+    "required_state": "blinking",
+    "require_regular_period": true,
+    "min_duty_cycle": 0.05
+  },
+  "scenario_id": "agent_scenario_1"
+}

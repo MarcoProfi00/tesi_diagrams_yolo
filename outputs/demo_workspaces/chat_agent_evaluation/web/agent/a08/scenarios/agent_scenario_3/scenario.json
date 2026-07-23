@@ -1,0 +1,33 @@
+{
+  "title": "Verifica del ruolo di R3 riducendo la resistenza di base",
+  "hypothesis": "R3 (Rresistor22_4), molto piu alta degli altri valori del ramo, limita eccessivamente il pilotaggio della base dal nodo RC N001; ridurla dovrebbe aumentare la modulazione del transistor e rendere il LED piu nettamente intermittente se il collo di bottiglia e il bias di base.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Rresistor22_4",
+      "value": "10k"
+    }
+  ],
+  "compare": [
+    "v(N001)",
+    "v(N004)",
+    "v(N003)",
+    "@dled12_1[id]"
+  ],
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak"
+  },
+  "expect": {
+    "v(N004)": "magnitude_increased",
+    "@dled12_1[id]": "magnitude_increased"
+  },
+  "temporal_expect": {
+    "target": "Dled12_1",
+    "required_state": "blinking",
+    "require_regular_period": true,
+    "min_duty_cycle": 0.05
+  },
+  "scenario_id": "agent_scenario_3"
+}

@@ -1,0 +1,22 @@
+{
+  "scenario_id": "scenario_2",
+  "title": "Applicare un segnale AC all'ingresso VAC",
+  "hypothesis": "Il voltmetro VAC non mostra nulla perche il nodo N001 non riceve alcun segnale nel netlist base.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N001",
+      "negative": "0",
+      "value": "SIN(0 5 50)"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N001)"
+  ],
+  "expect": {
+    "v(N001)": "changed"
+  }
+}

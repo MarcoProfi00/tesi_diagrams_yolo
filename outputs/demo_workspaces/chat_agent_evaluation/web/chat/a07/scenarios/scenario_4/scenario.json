@@ -1,0 +1,35 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Alimentare PWR e pilotare VAC nella stessa simulazione",
+  "hypothesis": "Le due ipotesi gia confermate separatamente sono compatibili nella stessa run: 5 V DC su N002 deve mantenere corrente non nulla nel LED, mentre SIN(0 5 50) su N001 deve rendere variabile la tensione VAC.",
+  "intent": "correction",
+  "actions": [
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N002",
+      "negative": "0",
+      "value": "5V"
+    },
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N001",
+      "negative": "0",
+      "value": "SIN(0 5 50)"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N001)",
+    "v(N002)",
+    "v(N004)",
+    "@dled12_1[id]"
+  ],
+  "expect": {
+    "v(N001)": "changed",
+    "@dled12_1[id]": "nonzero"
+  },
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak"
+  }
+}
