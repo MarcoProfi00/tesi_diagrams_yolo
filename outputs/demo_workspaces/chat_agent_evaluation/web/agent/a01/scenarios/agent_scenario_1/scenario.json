@@ -1,0 +1,28 @@
+{
+  "title": "Alimenta il ramo lampada dal nodo +5 V già presente",
+  "hypothesis": "Il LED è già acceso perché N001 è alimentato da VVCC, ma il ramo lampada resta isolato perché N002 non è collegato alla stessa alimentazione. Se N002 viene alimentato dal nodo sorgente N001, la lampada dovrebbe accendersi attraverso Rresistor22_1 e il LED dovrebbe restare acceso.",
+  "intent": "correction",
+  "analysis": "op",
+  "actions": [
+    {
+      "type": "feed_nodes_from_source_node",
+      "source_node": "N001",
+      "target_nodes": [
+        "N002"
+      ]
+    }
+  ],
+  "compare": [
+    "i(Rlamp13_1)",
+    "i(Dled12_1)",
+    "v(N004)",
+    "v(N002)"
+  ],
+  "expect": {
+    "i(Rlamp13_1)": "activated",
+    "i(Dled12_1)": "unchanged",
+    "v(N004)": "magnitude_increased",
+    "v(N002)": "magnitude_increased"
+  },
+  "scenario_id": "agent_scenario_1"
+}

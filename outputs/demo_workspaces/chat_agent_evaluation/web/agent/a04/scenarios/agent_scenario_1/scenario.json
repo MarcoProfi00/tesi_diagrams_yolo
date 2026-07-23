@@ -1,0 +1,34 @@
+{
+  "title": "Aumentare l'ampiezza della sorgente di ingresso per verificare se il circuito sta gia amplificando un segnale troppo piccolo",
+  "hypothesis": "Il circuito e probabilmente funzionante ma l'ingresso di 10 mV produce un'uscita assoluta percepita come troppo debole. Portando la sorgente a 100 mV di picco, con offset DC invariato a 0 V, l'uscita su N006 dovrebbe aumentare in modo netto e il rapporto di guadagno restare non nullo.",
+  "intent": "correction",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "signal_source23.1",
+      "value": "SIN(0 0.1 100)"
+    }
+  ],
+  "compare": [
+    "v(N002)",
+    "v(N006)",
+    "v(N005)"
+  ],
+  "measure": {
+    "v(N002)": "tran_vpp",
+    "v(N006)": "tran_vpp",
+    "v(N005)": "tran_vpp"
+  },
+  "gain": {
+    "input": "v(N002)",
+    "output": "v(N006)",
+    "min_ratio": 0.5
+  },
+  "expect": {
+    "v(N002)": "magnitude_increased",
+    "v(N006)": "magnitude_increased",
+    "v(N005)": "nonzero"
+  },
+  "scenario_id": "agent_scenario_1"
+}

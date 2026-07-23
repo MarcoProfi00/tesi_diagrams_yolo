@@ -1,0 +1,24 @@
+{
+  "title": "Verifica alimentazione mancante sul ramo di VMON",
+  "hypothesis": "VMON legge 0 V perche il nodo misurato N001 e collegato solo tramite Rresistor22_1 a N003, ma N003 non e alimentato da nessuna sorgente nella netlist base; applicando una sorgente DC tra N003 e massa, la tensione su N001 deve diventare non nulla.",
+  "intent": "diagnostic",
+  "analysis": "op",
+  "actions": [
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N003",
+      "negative": "0",
+      "value": "5V"
+    }
+  ],
+  "compare": [
+    "v(N003)",
+    "v(N001)",
+    "i(Rresistor22_1)"
+  ],
+  "expect": {
+    "v(N003)": "nonzero",
+    "v(N001)": "nonzero"
+  },
+  "scenario_id": "agent_scenario_1"
+}

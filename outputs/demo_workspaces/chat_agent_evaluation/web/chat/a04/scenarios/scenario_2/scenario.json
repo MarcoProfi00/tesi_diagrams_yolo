@@ -1,0 +1,25 @@
+{
+  "scenario_id": "scenario_2",
+  "title": "Modificare il bias della base",
+  "hypothesis": "The current base bias set by Rresistor22_1 and Rresistor22_2 may limit useful output swing.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Rresistor22_2",
+      "value": "10k"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N003)",
+    "v(N004)",
+    "v(N005)",
+    "v(N006)"
+  ],
+  "expect": {
+    "v(N003)": "changed",
+    "v(N006)": "changed"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "title": "Verifica diagnostica del bias di base aumentando la resistenza inferiore del partitore",
+  "hypothesis": "Se la distorsione deriva soprattutto da polarizzazione troppo bassa della base, aumentare il rapporto del partitore alzando la resistenza verso massa dovrebbe spostare il punto di lavoro del transistor in conduzione piu lineare e ridurre la THD all'uscita, pur con lo stesso ingresso da 1 V di picco. Questo confermerebbe che la causa tecnica principale e il bias errato, non un problema di collegamento.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "quality": "thd",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "resistor22.3",
+      "value": "100k"
+    }
+  ],
+  "compare": [
+    "v(N006)",
+    "v(N005)",
+    "v(N002)",
+    "v(N003)",
+    "v(N004)"
+  ],
+  "measure": {
+    "v(N006)": "tran_vpp",
+    "v(N005)": "tran_vpp",
+    "v(N002)": "tran_vpp",
+    "v(N003)": "tran_vpp",
+    "v(N004)": "tran_vpp"
+  },
+  "gain": {
+    "input": "v(N006)",
+    "output": "v(N005)",
+    "min_ratio": 0.05
+  },
+  "expect": {
+    "v(N006)": "changed",
+    "v(N005)": "changed",
+    "v(N002)": "changed",
+    "v(N003)": "changed",
+    "v(N004)": "changed"
+  },
+  "scenario_id": "agent_scenario_2"
+}

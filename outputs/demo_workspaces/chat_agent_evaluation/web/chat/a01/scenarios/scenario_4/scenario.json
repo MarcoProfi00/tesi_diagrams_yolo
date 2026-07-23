@@ -1,0 +1,29 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Ripristinare la continuità tra N001 e N002 mantenendo attivi lampada e LED",
+  "hypothesis": "The user symptom is caused by missing continuity between N001 and N002; restoring that continuity should activate the lamp branch while preserving current in the LED branch already fed from N001.",
+  "intent": "correction",
+  "actions": [
+    {
+      "type": "connect_nodes",
+      "from": "N001",
+      "to": "N002",
+      "resistance": "1m"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N001)",
+    "v(N002)",
+    "v(N004)",
+    "v(N005)",
+    "i(Rlamp13_1)",
+    "i(Rresistor22_2)"
+  ],
+  "expect": {
+    "v(N002)": "changed",
+    "i(Rlamp13_1)": "nonzero",
+    "i(Rresistor22_2)": "nonzero"
+  }
+}

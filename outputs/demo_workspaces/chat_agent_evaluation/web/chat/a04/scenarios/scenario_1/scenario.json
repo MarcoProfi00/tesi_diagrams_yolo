@@ -1,0 +1,22 @@
+{
+  "scenario_id": "scenario_1",
+  "title": "Alleggerire il carico di uscita",
+  "hypothesis": "The output node N006 may be too weak because Rresistor22_5 loads the AC-coupled output too heavily.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Rresistor22_5",
+      "value": "100k"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N005)",
+    "v(N006)"
+  ],
+  "expect": {
+    "v(N006)": "magnitude_increased"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "scenario_id": "scenario_2",
+  "title": "Propagare l’alimentazione esistente da N001 al ramo lampada",
+  "hypothesis": "The lamp branch is inactive because the powered node N001 does not electrically reach branch input N002.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "feed_nodes_from_source_node",
+      "source_node": "N001",
+      "target_nodes": [
+        "N002"
+      ],
+      "resistance": "1m"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N001)",
+    "v(N002)",
+    "v(N004)",
+    "i(Rlamp13_1)"
+  ],
+  "expect": {
+    "v(N002)": "changed",
+    "i(Rlamp13_1)": "nonzero"
+  }
+}

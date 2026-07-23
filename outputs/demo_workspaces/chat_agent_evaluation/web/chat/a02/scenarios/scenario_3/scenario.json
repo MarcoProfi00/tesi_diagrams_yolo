@@ -1,0 +1,25 @@
+{
+  "scenario_id": "scenario_3",
+  "title": "Collegare il positivo N002 al ramo resistivo N004",
+  "hypothesis": "Battery current is zero because the positive node N002 does not reach the resistor branch at N004.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "connect_nodes",
+      "from": "N002",
+      "to": "N004",
+      "resistance": "1m"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N002)",
+    "v(N004)",
+    "i(vbattery2_1#branch)"
+  ],
+  "expect": {
+    "v(N004)": "changed",
+    "i(vbattery2_1#branch)": "nonzero"
+  }
+}

@@ -1,0 +1,216 @@
+{
+  "source_format": "pipeline2.0_experiment_scenario_registry",
+  "batch_name": "batchChatAgentEvaluation",
+  "experiment_name": "chat_agent_evaluation",
+  "circuit_id": "a02",
+  "created_at": "2026-07-23T11:12:23",
+  "updated_at": "2026-07-23T11:13:56",
+  "max_executable_scenarios": 5,
+  "next_scenario_number": 4,
+  "last_added_scenario_id": "scenario_3",
+  "proposals": [
+    {
+      "proposal_id": "proposal_1",
+      "created_at": "2026-07-23T11:12:23",
+      "source_agent_response": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\a02\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_1",
+        "scenario_2",
+        "scenario_3"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_number": 1,
+      "scenario_id": "scenario_1",
+      "title": "Chiudere lo switch di ritorno switch25.1",
+      "hypothesis": "The open switch switch25.1 is preventing a DC reference or return path for N001, contributing to zero battery current.",
+      "actions": [
+        {
+          "type": "close_switch",
+          "target": "switch25.1"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N001)",
+        "v(N002)",
+        "i(vbattery2_1#branch)"
+      ],
+      "measure": {},
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N001)": "changed",
+        "i(vbattery2_1#branch)": "changed"
+      },
+      "rerun_from": "06",
+      "status": "executed",
+      "outcome": "not_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_1",
+      "execution_path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\a02\\scenarios\\scenario_1",
+      "created_at": "2026-07-23T11:12:23",
+      "updated_at": "2026-07-23T11:13:14",
+      "signature": "{\"actions\":[{\"target\":\"switch25.1\",\"type\":\"close_switch\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_1",
+        "title": "Chiudere lo switch di ritorno switch25.1",
+        "hypothesis": "The open switch switch25.1 is preventing a DC reference or return path for N001, contributing to zero battery current.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "close_switch",
+            "target": "switch25.1"
+          }
+        ],
+        "rerun_from": "06",
+        "analysis": "op",
+        "compare": [
+          "v(N001)",
+          "v(N002)",
+          "i(vbattery2_1#branch)"
+        ],
+        "expect": {
+          "v(N001)": "changed",
+          "i(vbattery2_1#branch)": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 2,
+      "scenario_id": "scenario_2",
+      "title": "Alimentare il ramo su connector5.1_pin2",
+      "hypothesis": "The extracted circuit may be inactive because node N004 is an unpowered interface node; energizing it against ground should reveal whether the resistor branch can conduct.",
+      "actions": [
+        {
+          "type": "add_voltage_source_between_nodes",
+          "positive": "N004",
+          "negative": "0",
+          "value": "5V"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N004)",
+        "v(N001)",
+        "i(vbattery2_1#branch)"
+      ],
+      "measure": {},
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N004)": "activated",
+        "i(vbattery2_1#branch)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 2,
+      "original_scenario_id": "scenario_2",
+      "execution_path": null,
+      "created_at": "2026-07-23T11:12:23",
+      "updated_at": "2026-07-23T11:12:23",
+      "signature": "{\"actions\":[{\"negative\":\"0\",\"positive\":\"N004\",\"type\":\"add_voltage_source_between_nodes\",\"value\":\"5V\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_2",
+        "title": "Alimentare il ramo su connector5.1_pin2",
+        "hypothesis": "The extracted circuit may be inactive because node N004 is an unpowered interface node; energizing it against ground should reveal whether the resistor branch can conduct.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "add_voltage_source_between_nodes",
+            "positive": "N004",
+            "negative": "0",
+            "value": "5V"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N004)",
+          "v(N001)",
+          "i(vbattery2_1#branch)"
+        ],
+        "expect": {
+          "v(N004)": "activated",
+          "i(vbattery2_1#branch)": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 3,
+      "scenario_id": "scenario_3",
+      "title": "Collegare il positivo N002 al ramo resistivo N004",
+      "hypothesis": "Battery current is zero because the positive node N002 does not reach the resistor branch at N004.",
+      "actions": [
+        {
+          "type": "connect_nodes",
+          "from": "N002",
+          "to": "N004",
+          "resistance": "1m"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N002)",
+        "v(N004)",
+        "i(vbattery2_1#branch)"
+      ],
+      "measure": {},
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N004)": "changed",
+        "i(vbattery2_1#branch)": "nonzero"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 3,
+      "original_scenario_id": "scenario_3",
+      "execution_path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\a02\\scenarios\\scenario_3",
+      "created_at": "2026-07-23T11:12:23",
+      "updated_at": "2026-07-23T11:13:56",
+      "signature": "{\"actions\":[{\"from\":\"N002\",\"resistance\":\"1m\",\"to\":\"N004\",\"type\":\"connect_nodes\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_3",
+        "title": "Collegare il positivo N002 al ramo resistivo N004",
+        "hypothesis": "Battery current is zero because the positive node N002 does not reach the resistor branch at N004.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "connect_nodes",
+            "from": "N002",
+            "to": "N004",
+            "resistance": "1m"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N002)",
+          "v(N004)",
+          "i(vbattery2_1#branch)"
+        ],
+        "expect": {
+          "v(N004)": "changed",
+          "i(vbattery2_1#branch)": "nonzero"
+        }
+      }
+    }
+  ]
+}

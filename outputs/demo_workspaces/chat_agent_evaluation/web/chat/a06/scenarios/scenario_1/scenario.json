@@ -1,0 +1,24 @@
+{
+  "scenario_id": "scenario_1",
+  "title": "Ridurre l’ampiezza della sorgente di ingresso",
+  "hypothesis": "The output distortion may be caused by overdriving the transistor stage with the present input amplitude.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vsignal_source23_1",
+      "value": "SIN(0 100m 100)"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N006)",
+    "v(N004)",
+    "v(N005)"
+  ],
+  "expect": {
+    "v(N004)": "changed",
+    "v(N005)": "changed"
+  }
+}
