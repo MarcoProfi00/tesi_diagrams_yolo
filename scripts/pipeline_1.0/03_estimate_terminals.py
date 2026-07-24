@@ -24,7 +24,7 @@ Casi speciali:
 
     Per i componenti a 3 terminali non basta dire su quale lato cade il terminale
     ma serve anche capire dove si trova realmente lungo quel lato.
-    Si usa una localizzazione "side peak": 
+    Si usa una localizzazione "side peak":
     prima stimiamo i lati attivi, poi cerchiamo il picco di connessione lungo il lato.
 
 Output:
@@ -41,6 +41,7 @@ import json
 import time
 import cv2
 
+from estimate_terminals._shared_utils import elapsed_ms as _elapsed_ms
 from estimate_terminals.io_utils import io_load_class_metadata, img_build_foreground_binary
 from estimate_terminals.processor import estimate_terminals_for_component
 from estimate_terminals.debug_draw import draw_ic_ocr_summary, draw_terminals
@@ -95,11 +96,6 @@ PIPELINE_IMAGE_IDS = {
 }
 
 
-def _elapsed_ms(start_time: float) -> float:
-    """Converte un timestamp perf_counter in millisecondi arrotondati."""
-    return round((time.perf_counter() - start_time) * 1000.0, 1)
-
-
 def _collect_ic_timing(file_timing: dict, component: dict) -> None:
     """Accumula i tempi OCR di un singolo IC nel riepilogo del file corrente."""
     if not IC_OCR_TIMING_ENABLED or component.get("class_name") != "Integrated_Circuit":
@@ -114,6 +110,18 @@ def _collect_ic_timing(file_timing: dict, component: dict) -> None:
     file_timing["ic_total_ms"] += float(timing.get("total_ms") or 0.0)
     file_timing["pin_side_ocr_ms"] += float(pin_timing.get("side_ocr_ms") or 0.0)
     file_timing["pin_side_fallback_ms"] += float(pin_timing.get("component_fallback_ms") or 0.0)
+
+
+def _empty_ic_timing() -> dict:
+    """Crea un accumulatore vuoto per i tempi OCR degli IC."""
+    return {
+        "ic_count": 0,
+        "marking_ms": 0.0,
+        "pin_ms": 0.0,
+        "ic_total_ms": 0.0,
+        "pin_side_ocr_ms": 0.0,
+        "pin_side_fallback_ms": 0.0,
+    }
 
 
 # =========================================================
@@ -367,8 +375,6 @@ def _public_component(component: dict, class_meta: dict) -> dict:
     if not keep_debug:
         public.pop("connection_side_scores", None)
         public.pop("state_debug", None)
-        for term in public.get("terminals", []):
-            term.pop("terminal_point_debug", None)
 
     return public
 
@@ -437,24 +443,10 @@ def main() -> None:
 
     # Accumulatore opzionale dei tempi OCR: viene popolato solo se
     # IC_OCR_TIMING=1, cosi' l'esecuzione normale resta pulita.
-    batch_timing = {
-        "ic_count": 0,
-        "marking_ms": 0.0,
-        "pin_ms": 0.0,
-        "ic_total_ms": 0.0,
-        "pin_side_ocr_ms": 0.0,
-        "pin_side_fallback_ms": 0.0,
-    }
+    batch_timing = _empty_ic_timing()
 
     for i, json_path in enumerate(json_files, start=1):
-        file_timing = {
-            "ic_count": 0,
-            "marking_ms": 0.0,
-            "pin_ms": 0.0,
-            "ic_total_ms": 0.0,
-            "pin_side_ocr_ms": 0.0,
-            "pin_side_fallback_ms": 0.0,
-        }
+        file_timing = _empty_ic_timing()
         # Ogni JSON di input contiene immagine originale e componenti gia'
         # rilevati/istanziati dagli step 01 e 02.
         with open(json_path, "r", encoding="utf-8") as f:
@@ -526,7 +518,7 @@ def main() -> None:
                     image_bgr=image_bgr,
                 )
                 _collect_ic_timing(file_timing, updated_components[comp_idx])
-        elif ic_component_indexes:
+        else:
             with ThreadPoolExecutor(max_workers=min(2, len(ic_component_indexes))) as executor:
                 futures = {
                     comp_idx: executor.submit(

@@ -14,12 +14,17 @@ Per ogni immagine nella cartella di input:
 from pathlib import Path
 import os
 import json
-import yaml
 import math
 import cv2
 
 from ultralytics import YOLO
-from estimate_terminals.io_utils import img_build_foreground_binary
+from estimate_terminals._shared_utils import (
+    group_close_indices as _group_close_indices,
+)
+from estimate_terminals.io_utils import (
+    img_build_foreground_binary,
+    io_load_yaml as load_yaml,
+)
 from estimate_terminals.probes import (
     get_terminal_class_far_probe_scores,
     get_terminal_class_probe_scores,
@@ -108,19 +113,6 @@ def _clamp_bbox_to_image(box, image_shape):
     x2 = max(0, min(w - 1, int(round(x2))))
     y2 = max(0, min(h - 1, int(round(y2))))
     return x1, y1, x2, y2
-
-#Raggruppa indici vicini per stabilizzare le euristiche basate su proiezione
-def _group_close_indices(indices, max_gap=1):
-    if not indices:
-        return []
-
-    groups = [[indices[0]]]
-    for idx in indices[1:]:
-        if idx <= groups[-1][-1] + max_gap:
-            groups[-1].append(idx)
-        else:
-            groups.append([idx])
-    return groups
 
 #Fonde coordinate troppo vicine per evitare doppi conteggi dello stesso pin/feature
 def _merge_close_values(values, min_gap):
@@ -236,195 +228,9 @@ def _component_areas_in_box(image_binary, box):
     )
 
 
-def _bbox_side_connection_densities(image_binary, box):
-    """Misura quanta evidenza grafica c'è subito fuori dal bbox sui quattro lati."""
-    x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)
-    h, w = image_binary.shape[:2]
-    width = max(x2 - x1 + 1, 1)
-    height = max(y2 - y1 + 1, 1)
-
-    pad = max(3, int(round(min(width, height) * 0.10)))
-    trim_x = max(1, int(round(width * 0.15)))
-    trim_y = max(1, int(round(height * 0.15)))
-
-    ix1 = max(0, min(w - 1, x1 + trim_x))
-    ix2 = max(0, min(w - 1, x2 - trim_x))
-    iy1 = max(0, min(h - 1, y1 + trim_y))
-    iy2 = max(0, min(h - 1, y2 - trim_y))
-
-    if ix2 < ix1:
-        ix1, ix2 = x1, x2
-    if iy2 < iy1:
-        iy1, iy2 = y1, y2
-
-    top_roi = image_binary[max(0, y1 - pad):y1, ix1:ix2 + 1]
-    bottom_roi = image_binary[y2 + 1:min(h, y2 + 1 + pad), ix1:ix2 + 1]
-    left_roi = image_binary[iy1:iy2 + 1, max(0, x1 - pad):x1]
-    right_roi = image_binary[iy1:iy2 + 1, x2 + 1:min(w, x2 + 1 + pad)]
-
-    def density(roi):
-        if roi.size == 0:
-            return 0.0
-        return float(cv2.countNonZero(roi)) / float(max(roi.size, 1))
-
-    return {
-        "top": density(top_roi),
-        "bottom": density(bottom_roi),
-        "left": density(left_roi),
-        "right": density(right_roi),
-    }
-
-
-def has_opposite_side_connections(image_binary, box, min_density=0.06, min_pair_sum=0.16):
-    """True se ci sono connessioni plausibili su una coppia di lati opposti."""
-    d = _bbox_side_connection_densities(image_binary, box)
-
-    tb_ok = d["top"] >= min_density and d["bottom"] >= min_density and (d["top"] + d["bottom"]) >= min_pair_sum
-    lr_ok = d["left"] >= min_density and d["right"] >= min_density and (d["left"] + d["right"]) >= min_pair_sum
-    return tb_ok or lr_ok
-
-
-
-
 # =========================================================
 # VALIDATOR PER CLASSI SPECIFICHE
 # =========================================================
-
-# CLASSI CIRCOLARI - METER - SOURCE
-def is_current_source_like_bbox(image_gray, image_binary, box) -> bool:
-    """Valida Current_Source evitando cerchi numerati/annotazioni scollegate."""
-    x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_gray.shape)
-    width = max(x2 - x1 + 1, 1)
-    height = max(y2 - y1 + 1, 1)
-    ratio = width / float(height)
-
-    if min(width, height) < 36 or not (0.65 <= ratio <= 1.45):
-        return False
-
-    circle_count = _count_hough_circles(
-        image_gray,
-        box,
-        min_dist=max(14, int(round(min(width, height) * 0.28))),
-        param1=80,
-        param2=13,
-        min_radius=max(10, int(round(min(width, height) * 0.18))),
-        max_radius=max(36, int(round(min(width, height) * 0.52))),
-    )
-    if circle_count < 1:
-        return False
-
-    return has_opposite_side_connections(image_binary, box, min_density=0.05, min_pair_sum=0.14)
-
-def is_letter_meter_like_bbox(image_gray, image_binary, box) -> bool:
-    """Riconosce meter con lettera interna (A, V) dentro un cerchio.
-    Serve per correggere casi in cui YOLO li chiama Current_Source.
-    """
-    x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_gray.shape)
-    width = max(x2 - x1 + 1, 1)
-    height = max(y2 - y1 + 1, 1)
-    ratio = width / float(height)
-
-    if min(width, height) < 40 or not (0.65 <= ratio <= 1.45):
-        return False
-
-    circle_count = _count_hough_circles(
-        image_gray,
-        box,
-        min_dist=max(14, int(round(min(width, height) * 0.26))),
-        param1=80,
-        param2=13,
-        min_radius=max(10, int(round(min(width, height) * 0.18))),
-        max_radius=max(36, int(round(min(width, height) * 0.52))),
-    )
-    if circle_count < 1:
-        return False
-
-    if not has_opposite_side_connections(image_binary, box, min_density=0.05, min_pair_sum=0.14):
-        return False
-
-    roi_gray = image_gray[y1:y2 + 1, x1:x2 + 1]
-    roi_bin = image_binary[y1:y2 + 1, x1:x2 + 1]
-    if roi_gray.size == 0 or roi_bin.size == 0:
-        return False
-
-    # Guarda solo il centro, ignorando il bordo del cerchio
-    cx1 = int(round(width * 0.24))
-    cx2 = int(round(width * 0.76))
-    cy1 = int(round(height * 0.24))
-    cy2 = int(round(height * 0.76))
-
-    inner_gray = roi_gray[cy1:cy2, cx1:cx2]
-    inner_bin = roi_bin[cy1:cy2, cx1:cx2]
-    if inner_gray.size == 0 or inner_bin.size == 0:
-        return False
-
-    inner_density = cv2.countNonZero(inner_bin) / float(max(inner_bin.size, 1))
-
-    # Lettere come A/V: abbastanza leggere, non troppo piene
-    if not (0.04 <= inner_density <= 0.22):
-        return False
-
-    edges = cv2.Canny(inner_gray, 50, 150)
-    lines = cv2.HoughLinesP(
-        edges,
-        1,
-        math.pi / 180.0,
-        threshold=10,
-        minLineLength=max(10, int(round(min(inner_gray.shape[:2]) * 0.22))),
-        maxLineGap=4,
-    )
-
-    diag_count = 0
-    horiz_count = 0
-    vert_count = 0
-
-    if lines is not None:
-        for line in lines[:, 0, :]:
-            lx1, ly1, lx2, ly2 = map(int, line)
-            dx = lx2 - lx1
-            dy = ly2 - ly1
-            length = math.hypot(dx, dy)
-            if length < max(10, min(inner_gray.shape[:2]) * 0.18):
-                continue
-
-            angle = abs(math.degrees(math.atan2(dy, dx)))
-            angle = min(angle, 180.0 - angle)
-
-            if angle <= 15.0:
-                horiz_count += 1
-            elif angle >= 75.0:
-                vert_count += 1
-            elif 20.0 <= angle <= 70.0:
-                diag_count += 1
-
-    # A: 2 diagonali + 1 orizzontale
-    # V: 2 diagonali
-    return (diag_count >= 2 and horiz_count >= 1) or (diag_count >= 2 and vert_count == 0)
-
-
-def is_meter_like_bbox(image_gray, image_binary, box) -> bool:
-    """Valida Meter evitando cerchi numerati/annotazioni scollegate."""
-    x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_gray.shape)
-    width = max(x2 - x1 + 1, 1)
-    height = max(y2 - y1 + 1, 1)
-    ratio = width / float(height)
-
-    if min(width, height) < 34 or not (0.65 <= ratio <= 1.45):
-        return False
-
-    circle_count = _count_hough_circles(
-        image_gray,
-        box,
-        min_dist=max(14, int(round(min(width, height) * 0.26))),
-        param1=80,
-        param2=13,
-        min_radius=max(10, int(round(min(width, height) * 0.18))),
-        max_radius=max(36, int(round(min(width, height) * 0.52))),
-    )
-    if circle_count < 1:
-        return False
-
-    return has_opposite_side_connections(image_binary, box, min_density=0.05, min_pair_sum=0.14)
 
 # Verifica se un simbolo circolare con grafica interna e una signal source.
 def is_signal_source_like_bbox(image_gray, image_binary, box) -> bool:
@@ -872,7 +678,7 @@ def is_led_like_diode_box(image_binary, box) -> bool:
     cx2 = min(roi.shape[1] - 1, ox2 + core_margin)
     cy2 = min(roi.shape[0] - 1, oy2 + core_margin)
 
-    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(roi, connectivity=8)
+    num_labels, _, stats, _ = cv2.connectedComponentsWithStats(roi, connectivity=8)
     if num_labels <= 1:
         return False
 
@@ -968,42 +774,6 @@ def is_led_like_diode_box(image_binary, box) -> bool:
 # =========================================================
 # CONNECTOR E ANALOG METER STRUTTURATI
 # =========================================================
-def is_connector_like_bbox(image_binary, box) -> bool:
-    """Verifica se un bbox assomiglia a un connettore multipin verticale del batch v9.1."""
-    x1, y1, x2, y2 = _clamp_bbox_to_image(box, image_binary.shape)
-    width = max(x2 - x1, 1)
-    height = max(y2 - y1, 1)
-
-    if height < width * 1.8 or width < 30 or height < 110:
-        return False
-
-    xc = int(round((x1 + x2) / 2))
-    band_half = max(3, int(round(width * 0.22)))
-    bx1 = max(x1, xc - band_half)
-    bx2 = min(x2, xc + band_half)
-
-    projection = [
-        int(cv2.countNonZero(image_binary[y:y + 1, bx1:bx2 + 1]))
-        for y in range(y1, y2 + 1)
-    ]
-    if not projection:
-        return False
-
-    threshold = max(2, int(round(max(projection) * 0.32)))
-    groups = _group_close_indices(
-        [i for i, score in enumerate(projection) if score >= threshold],
-        max_gap=6,
-    )
-    centers = [
-        y1 + int(round((group[0] + group[-1]) / 2.0))
-        for group in groups
-    ]
-    centers = _merge_close_values(
-        sorted(centers),
-        min_gap=max(18, int(round(height * 0.10))),
-    )
-    return 3 <= len(centers) <= 6
-
 # Estrae i centri dei pin da una proiezione monodimensionale.
 def _extract_connector_pin_centers(projection, axis_offset, axis_span, max_gap=6):
     if not projection:
@@ -1427,7 +1197,7 @@ def find_structured_symbol_candidates(image_gray, image_binary):
     analog_candidates = []
     connector_candidates = []
 
-    for idx, cnt in enumerate(contours):
+    for cnt in contours:
         x, y, w, h = cv2.boundingRect(cnt)
         area = float(cv2.contourArea(cnt))
         extent = area / float(max(w * h, 1))
@@ -1568,7 +1338,7 @@ def remap_special_component(image_gray, image_binary, box, predicted_class_name:
             return "Connector"
         if _ic_can_remap_to_connector(box, connector_layout):
             return "Connector"
-        
+
     if predicted_class_name == "Meter":
         if is_signal_source_like_bbox(image_gray, image_binary, box):
             return "Signal_Source"
@@ -1578,7 +1348,7 @@ def remap_special_component(image_gray, image_binary, box, predicted_class_name:
             return "Analog_Meter"
         if is_analog_meter_like_bbox(image_binary, box):
             return "Analog_Meter"
-        
+
     if predicted_class_name in {"Mosfet", "Integrated_Circuit"}:
         if is_memristor_like_bbox(image_binary, box):
             return "Memristor"
@@ -1736,7 +1506,7 @@ def repair_spst_switch_bank(components, class_meta, class_id_by_name):
             box = comp.get("bbox", [])
             if len(box) != 4:
                 continue
-            sx1, sy1, sx2, sy2 = map(float, box)
+            sx1, _, sx2, sy2 = map(float, box)
             scx, _ = _bbox_center(box)
             if sy2 >= bank_y1 - 40.0:
                 continue
@@ -1817,7 +1587,7 @@ def suppress_conflicting_components(components, image_binary):
                 drop_idx = i if class_a in {"Integrated_Circuit", "Meter", "Inductor"} else j
                 suppressed.add(drop_idx)
                 continue
-            
+
             if pair == {"Analog_Meter", "Connector"}:
                 analog_idx = i if class_a == "Analog_Meter" else j
                 connector_idx = j if analog_idx == i else i
@@ -2101,12 +1871,6 @@ def is_border_supply_terminal_candidate(image_binary, bbox, image_shape) -> bool
     return True
 
 
-def load_yaml(path: Path):
-    """Legge un file YAML e ne restituisce il contenuto gia convertito in strutture Python."""
-    with open(path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
-
-
 def load_class_metadata(class_terminals_path: Path):
     """Carica i metadati delle classi e prepara gli insiemi di classi usate per detection, terminali e masking."""
     data = load_yaml(class_terminals_path)
@@ -2297,8 +2061,6 @@ def predict_components_on_image(
             if yaml_class_name == "Terminal" and not is_terminal_detection_valid(image_binary, box):
                 continue
 
-            #if yaml_class_name == "Switch" and not is_switch_like_bbox(image_gray, box):
-            #    continue
             if yaml_class_name == "Switch":
                 switch_shape_ok = is_switch_like_bbox(image_gray, box)
                 push_button_shape_ok = is_push_button_like_bbox(image_binary, box)
@@ -2313,12 +2075,6 @@ def predict_components_on_image(
                 # al detector, ma senza una vera struttura a piastre non li teniamo.
                 if classify_plate_symbol(image_binary, box) != "Battery":
                     continue
-
-            #if yaml_class_name == "Current_Source" and not is_current_source_like_bbox(image_gray, image_binary, box):
-            #    continue
-
-            #if yaml_class_name == "Meter" and not is_meter_like_bbox(image_gray, image_binary, box):
-            #    continue
 
             if yaml_class_name == "Mosfet":
                 mosfet_shape_ok = is_mosfet_like_bbox(image_gray, box)

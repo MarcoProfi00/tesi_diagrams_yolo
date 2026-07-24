@@ -36,6 +36,9 @@ from typing import Dict, List, Optional, Tuple
 import cv2
 import numpy as np
 
+from ._shared_utils import clamp_bbox as _clamp_bbox
+from ._shared_utils import crop_image_bbox as _crop
+
 _EASYOCR_READER = None
 _EASYOCR_READER_ERROR = None
 
@@ -43,40 +46,6 @@ IC_MARKING_PREFIXES = (
     "NE", "LM", "TDA", "TPS", "ISL", "ADC", "AT",
     "HT", "TC", "CD", "L", "TL", "UA", "MC", "MAX",
 )
-
-
-# =========================================================
-# BASIC GEOMETRY HELPERS
-# =========================================================
-
-def _clamp_bbox(bbox, image_shape):
-    """
-    Limita un bbox ai bordi dell'immagine.
-
-    bbox:
-        [x1, y1, x2, y2]
-
-    image_shape:
-        shape OpenCV, quindi:
-        - (h, w, c) per immagini BGR;
-        - (h, w) per immagini grayscale/binarie.
-    """
-    h, w = image_shape[:2]
-
-    x1, y1, x2, y2 = bbox
-
-    x1 = int(max(0, min(w - 1, round(x1))))
-    y1 = int(max(0, min(h - 1, round(y1))))
-    x2 = int(max(0, min(w - 1, round(x2))))
-    y2 = int(max(0, min(h - 1, round(y2))))
-
-    # Garantisce ordine corretto anche se arriva un bbox invertito.
-    if x2 < x1:
-        x1, x2 = x2, x1
-    if y2 < y1:
-        y1, y2 = y2, y1
-
-    return [x1, y1, x2, y2]
 
 
 def _expand_bbox(bbox, image_shape, pad_x, pad_y):
@@ -89,20 +58,6 @@ def _expand_bbox(bbox, image_shape, pad_x, pad_y):
         [x1 - pad_x, y1 - pad_y, x2 + pad_x, y2 + pad_y],
         image_shape,
     )
-
-
-def _crop(image_bgr, bbox):
-    """
-    Estrae una ROI dall'immagine BGR.
-
-    Ritorna None se il bbox è vuoto.
-    """
-    x1, y1, x2, y2 = bbox
-
-    if x2 <= x1 or y2 <= y1:
-        return None
-
-    return image_bgr[y1:y2 + 1, x1:x2 + 1].copy()
 
 
 def _bbox_center(bbox):
@@ -1250,7 +1205,7 @@ def _add_ocr_words_as_candidates(
     """
     Converte parole OCR in candidate marking usando scoring e filtri comuni.
     """
-    rx1, ry1, rx2, ry2 = region["bbox"]
+    rx1, ry1, rx2, _ = region["bbox"]
     region_w = max(1, rx2 - rx1 + 1)
     ocr_cfg = ((meta.get("ocr") or {}).get("ic_marking") or {})
     edge_margin_px = int(ocr_cfg.get("candidate_edge_touch_margin_px", 2))
@@ -1669,7 +1624,7 @@ def _estimate_seven_segment_shape_evidence(image_bgr, body_bbox: List[int]) -> D
     dark_ratio = float(np.count_nonzero(dark)) / float(dark.size)
 
     mask = dark.astype(np.uint8) * 255
-    n_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
+    n_labels, _, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
 
     min_area = max(20, int(round(inner.size * 0.004)))
     large_components = []
@@ -1713,7 +1668,6 @@ def _estimate_seven_segment_shape_evidence(image_bgr, body_bbox: List[int]) -> D
 
 
 def _strong_seven_segment_shape_only_evidence(
-    component: Dict,
     body_bbox: List[int],
     shape_evidence: Dict,
 ) -> bool:
@@ -1818,7 +1772,7 @@ def _maybe_upgrade_seven_segment_body_bbox(
     }
 
 
-def _detect_seven_segment_display(component: Dict, image_bgr, body_bbox: List[int], region_debug: List[Dict]) -> Optional[Dict]:
+def _detect_seven_segment_display(image_bgr, body_bbox: List[int], region_debug: List[Dict]) -> Optional[Dict]:
     """
     Classifica un Integrated_Circuit senza part number come display a 7 segmenti.
 
@@ -1848,7 +1802,6 @@ def _detect_seven_segment_display(component: Dict, image_bgr, body_bbox: List[in
     has_label_evidence = label_score >= 4
     has_mixed_evidence = label_score >= 3 and shape_evidence.get("has_segment_shape", False)
     has_strong_shape_only_evidence = _strong_seven_segment_shape_only_evidence(
-        component,
         body_bbox,
         shape_evidence,
     )
@@ -1905,8 +1858,6 @@ def _collect_ocr_candidates(
     body_bbox: List[int],
     whitelist: str,
     mode: str = "fast",
-    run_easyocr: bool = False,
-    easyocr_region_names: Optional[set] = None,
 ) -> Tuple[List[Dict], List[Dict]]:
     """
     Esegue un pass OCR e raccoglie candidati/debug.
@@ -1914,11 +1865,13 @@ def _collect_ocr_candidates(
     mode="fast":
       - solo immagini raw;
       - niente bande extra;
-      - normalmente solo Tesseract.
+      - solo Tesseract.
 
     mode="deep":
-      - abilita varianti immagine sulle fasce alte;
-      - puo' usare EasyOCR come secondo motore.
+      - abilita varianti immagine sulle fasce alte.
+
+    L'eventuale fallback EasyOCR viene aggiunto separatamente da
+    _append_easyocr_candidates().
     """
     all_candidates = []
     region_debug = []
@@ -1963,31 +1916,6 @@ def _collect_ocr_candidates(
                 all_candidates=all_candidates,
                 region_info=region_info,
             )
-
-        if run_easyocr and (
-            easyocr_region_names is None
-            or region["name"] in easyocr_region_names
-        ):
-            region_info["engine_debug"]["easyocr"] = {}
-            region_info["raw_words_easyocr"] = []
-
-            for variant in _easyocr_variants_for_region(region["name"], variants):
-                easy_words, easy_debug = _run_easyocr_words(variant["image"], meta)
-                easy_words = _words_to_original_variant_scale(easy_words, variant)
-
-                variant_name = variant.get("name", "raw")
-                region_info["engine_debug"]["easyocr"][variant_name] = easy_debug
-                region_info["raw_words_easyocr"].extend(easy_words)
-
-                _add_ocr_words_as_candidates(
-                    words=easy_words,
-                    region=region,
-                    engine_name="easyocr",
-                    meta=meta,
-                    body_bbox=body_bbox,
-                    all_candidates=all_candidates,
-                    region_info=region_info,
-                )
 
         region_debug.append(region_info)
 
@@ -2120,13 +2048,11 @@ def enrich_ic_marking_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
         body_bbox=body_bbox,
         whitelist=whitelist,
         mode="fast",
-        run_easyocr=False,
     )
 
     subtype_info = None
     if not all_candidates:
         subtype_info = _detect_seven_segment_display(
-            component,
             image_bgr,
             body_bbox,
             region_debug,
@@ -2142,7 +2068,6 @@ def enrich_ic_marking_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
             body_bbox=body_bbox,
             whitelist=whitelist,
             mode="deep",
-            run_easyocr=False,
         )
 
         if bool(easy_cfg.get("enabled", False)) and _should_run_easyocr_fallback(all_candidates, meta):
@@ -2171,7 +2096,6 @@ def enrich_ic_marking_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
 
         if subtype_info is None:
             subtype_info = _detect_seven_segment_display(
-                component,
                 image_bgr,
                 body_bbox,
                 region_debug,
@@ -2219,7 +2143,6 @@ def enrich_ic_marking_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
         subtype_info = _subtype_from_marking_text(marking)
     if subtype_info is None and not _looks_like_ic_family_marking(marking):
         subtype_info = _detect_seven_segment_display(
-            component,
             image_bgr,
             body_bbox,
             region_debug,
@@ -2253,15 +2176,3 @@ def enrich_ic_marking_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
     }
 
     return component
-
-
-def enrich_integrated_circuit_with_ocr(component: Dict, image_bgr, meta: Dict) -> Dict:
-    """
-    Alias comodo per uso futuro.
-
-    Per ora chiama solo enrich_ic_marking_ocr.
-    Quando aggiungeremo OCR dei pin, questa funzione potrà diventare:
-        1. enrich_ic_marking_ocr(...)
-        2. enrich_ic_pin_ocr(...)
-    """
-    return enrich_ic_marking_ocr(component, image_bgr, meta)

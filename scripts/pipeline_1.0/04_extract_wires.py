@@ -791,10 +791,6 @@ def bridge_fragmented_wires(binary_img, components=None):
             FRAGMENTED_WIRE_BRIDGE_KERNEL_LENGTH,
         ),
     )
-    h_detect_kernel = cv2.getStructuringElement(
-        cv2.MORPH_RECT,
-        (FRAGMENTED_WIRE_BRIDGE_DETECT_LENGTH, 1),
-    )
     v_detect_kernel = cv2.getStructuringElement(
         cv2.MORPH_RECT,
         (1, FRAGMENTED_WIRE_BRIDGE_DETECT_LENGTH),

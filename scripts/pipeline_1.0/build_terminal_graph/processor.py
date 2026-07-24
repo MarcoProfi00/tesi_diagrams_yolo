@@ -143,7 +143,6 @@ def build_terminal_graph_for_image(data: dict):
     label_to_terminal_ids = merge_near_horizontal_stub_labels(
         label_to_terminal_ids,
         terminals,
-        terminal_match_debug,
         labels,
     )
     label_to_terminal_ids = merge_near_vertical_stub_labels(
@@ -234,7 +233,6 @@ def build_terminal_graph_for_image(data: dict):
     for terminal_id in terminal_graph:
         terminal_graph[terminal_id] = sorted(set(terminal_graph[terminal_id]))
     simple_terminal_graph = build_simple_terminal_graph(terminal_graph, original_to_simple)
-    simple_terminal_graph = {key: simple_terminal_graph[key] for key in sorted(simple_terminal_graph.keys())}
 
     # Terminali isolati nel grafo finale.
     unconnected_terminals = sorted([

@@ -1,17 +1,23 @@
-# =========================================================
-# PULIZIA SKELETON DENTRO I COMPONENTI A DUE TERMINALI
-# =========================================================
-# Il passo 04 puo' lasciare nello skeleton tratti del corpo del componente
-# (ad esempio la zig-zag del resistore). Se quei pixel restano collegati ai
-# fili esterni, i due capi del componente finiscono nella stessa connected
-# component e il grafo crea un "mega nodo" non reale.
-#
-# Per il passo 05 il corpo di un componente a due terminali non e' un filo:
-# deve separare i due morsetti. Per questo cancelliamo solo l'interno del
-# bbox dei componenti a due terminali, lasciando vivi i piccoli stub esterni
-# vicino ai terminali.
+"""
+Pulizia dello skeleton dentro i corpi dei componenti.
+
+Il passo 04 puo' lasciare nello skeleton tratti del corpo grafico (per esempio
+la zig-zag di un resistore). Qui l'interno dei componenti interessati viene
+cancellato lasciando vivi i piccoli stub esterni vicini ai terminali, cosi' i
+due morsetti non finiscono per errore nella stessa connected component.
+"""
 
 from __future__ import annotations
+
+from pathlib import Path
+
+import cv2
+import numpy as np
+
+from .config import COMPONENT_BODY_ERASE_EXCLUDED_CLASSES, COMPONENT_BODY_ERASE_PADDING
+from .geometry import clamp_window
+from .ids import normalize_class_name
+from .io_utils import load_binary_image
 
 FACING_RESTORE_MAX_AXIS_GAP = 52
 FACING_RESTORE_MAX_LATERAL_DELTA = 14
@@ -232,7 +238,7 @@ def erase_component_bodies_from_skeleton(
         if not should_erase_component_body_from_skeleton(component):
             continue
 
-        bbox = component.get("body_bbox") or component.get("bbox")
+        bbox = _component_bbox(component)
         if not bbox or len(bbox) != 4:
             continue
 
@@ -370,15 +376,3 @@ def load_junction_support_binary(wire_extraction: dict):
             continue
 
     return None
-# Import storicamente posizionati in fondo al file: funzionano perche' le
-# funzioni vengono eseguite solo dopo il caricamento completo del modulo.
-
-from pathlib import Path
-
-import cv2
-import numpy as np
-
-from .config import COMPONENT_BODY_ERASE_EXCLUDED_CLASSES, COMPONENT_BODY_ERASE_PADDING
-from .geometry import clamp_window
-from .ids import normalize_class_name
-from .io_utils import load_binary_image

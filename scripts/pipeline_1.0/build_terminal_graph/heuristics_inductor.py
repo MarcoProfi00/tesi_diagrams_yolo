@@ -18,6 +18,7 @@ from .config import (
 )
 from .geometry import label_bbox
 from .ids import normalize_class_name
+from .label_union import LabelUnionFind, merge_label_groups
 
 
 FACING_VERTICAL_LABEL_MAX_TERMINALS = 2
@@ -30,7 +31,6 @@ FACING_VERTICAL_LABEL_MIN_SUPPORT = 0.45
 def merge_near_horizontal_stub_labels(
     label_to_terminal_ids: dict,
     terminals: list[dict],
-    terminal_match_debug: dict,
     labels: np.ndarray,
 ):
     """
@@ -40,21 +40,7 @@ def merge_near_horizontal_stub_labels(
     tagliato dalla maschera del componente.
     """
     terminal_by_id = {term["terminal_id"]: term for term in terminals}
-    parent = {int(label): int(label) for label in label_to_terminal_ids.keys()}
-
-    def find(label):
-        label = int(label)
-        parent.setdefault(label, label)
-        while parent[label] != label:
-            parent[label] = parent[parent[label]]
-            label = parent[label]
-        return label
-
-    def union(label_a, label_b):
-        root_a = find(label_a)
-        root_b = find(label_b)
-        if root_a != root_b:
-            parent[max(root_a, root_b)] = min(root_a, root_b)
+    union_find = LabelUnionFind(label_to_terminal_ids)
 
     boxes = {
         int(label): label_bbox(labels, int(label))
@@ -84,8 +70,8 @@ def merge_near_horizontal_stub_labels(
         if source_box is None:
             continue
 
-        tx = float(term.get("x"))
-        ty = float(term.get("y"))
+        # Mantiene la validazione storica di entrambe le coordinate.
+        _, ty = float(term.get("x")), float(term.get("y"))
         best = None
 
         for target_label, target_ids in label_to_terminal_ids.items():
@@ -97,7 +83,7 @@ def merge_near_horizontal_stub_labels(
             if target_box is None:
                 continue
 
-            sx1, sy1, sx2, sy2 = source_box
+            sx1, _, sx2, _ = source_box
             tx1, ty1, tx2, ty2 = target_box
             if relative_position == "right":
                 gap = float(tx1 - sx2)
@@ -124,17 +110,9 @@ def merge_near_horizontal_stub_labels(
                 best = (score, target_label)
 
         if best is not None:
-            union(source_label, best[1])
+            union_find.union(source_label, best[1])
 
-    merged = {}
-    for label, terminal_ids in label_to_terminal_ids.items():
-        root = find(int(label))
-        merged.setdefault(root, []).extend(terminal_ids)
-
-    return {
-        int(label): sorted(set(terminal_ids))
-        for label, terminal_ids in merged.items()
-    }
+    return merge_label_groups(label_to_terminal_ids, union_find)
 
 
 def merge_near_vertical_stub_labels(
@@ -153,21 +131,7 @@ def merge_near_vertical_stub_labels(
         return label_to_terminal_ids
 
     terminal_by_id = {term["terminal_id"]: term for term in terminals}
-    parent = {int(label): int(label) for label in label_to_terminal_ids.keys()}
-
-    def find(label):
-        label = int(label)
-        parent.setdefault(label, label)
-        while parent[label] != label:
-            parent[label] = parent[parent[label]]
-            label = parent[label]
-        return label
-
-    def union(label_a, label_b):
-        root_a = find(label_a)
-        root_b = find(label_b)
-        if root_a != root_b:
-            parent[max(root_a, root_b)] = min(root_a, root_b)
+    union_find = LabelUnionFind(label_to_terminal_ids)
 
     boxes = {
         int(label): label_bbox(labels, int(label))
@@ -287,7 +251,7 @@ def merge_near_vertical_stub_labels(
                     if abs(best_overlap - next_overlap) <= float(VERTICAL_STUB_NETWORK_MIN_Y_OVERLAP) * 0.35:
                         continue
 
-        union(source_label, int(best["target_label"]))
+        union_find.union(source_label, int(best["target_label"]))
 
     vertical_terminal_labels = []
     for source_label, terminal_ids in label_to_terminal_ids.items():
@@ -326,7 +290,7 @@ def merge_near_vertical_stub_labels(
 
         for target_info in vertical_terminal_labels[idx + 1:]:
             target_label = int(target_info["label"])
-            if find(source_label) == find(target_label):
+            if union_find.find(source_label) == union_find.find(target_label):
                 continue
 
             tx1, ty1, tx2, ty2 = target_info["box"]
@@ -366,17 +330,9 @@ def merge_near_vertical_stub_labels(
             if support_ratio < float(FACING_VERTICAL_LABEL_MIN_SUPPORT):
                 continue
 
-            union(source_label, target_label)
+            union_find.union(source_label, target_label)
 
-    merged = {}
-    for label, terminal_ids in label_to_terminal_ids.items():
-        root = find(int(label))
-        merged.setdefault(root, []).extend(terminal_ids)
-
-    return {
-        int(label): sorted(set(terminal_ids))
-        for label, terminal_ids in merged.items()
-    }
+    return merge_label_groups(label_to_terminal_ids, union_find)
 
 
 def _find_lateral_edge_pair(

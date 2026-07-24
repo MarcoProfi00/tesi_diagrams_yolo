@@ -1,5 +1,5 @@
 """
-Heuristiche per distinguere incroci, ponticelli e falsi corti nello skeleton.
+Euristiche per distinguere incroci, ponticelli e falsi corti nello skeleton.
 
 Nel grafo terminale una connected component dello skeleton diventa un nodo
 elettrico. Se uno crossing grafico viene letto come una singola component,
@@ -79,6 +79,7 @@ from .config import (
 )
 from .geometry import clamp_window
 from .ids import normalize_class_name
+from .label_union import LabelUnionFind
 from .skeleton_ops import load_junction_support_binary
 
 
@@ -86,7 +87,7 @@ from .skeleton_ops import load_junction_support_binary
 # Se c'è la gobba allora è un ponte
 def has_bridge_hump(binary: np.ndarray, x: int, y: int):
     """Verifica se attorno a un candidato esiste una gobba da ponticello."""
-    h, w = binary.shape[:2]
+    _, w = binary.shape[:2]
     left_count = 0
     right_count = 0
 
@@ -784,14 +785,6 @@ def count_run_after_gap(
 
 def count_vertical_band_pixels(binary: np.ndarray, x: int, y: int, direction: int):
     h, w = binary.shape[:2]
-    x1, y1, x2, y2 = clamp_window(
-        int(x) - MICRO_BRIDGE_VERTICAL_BAND_RADIUS,
-        int(y) + int(direction) * MICRO_BRIDGE_VERTICAL_BAND_DEPTH,
-        int(x) + MICRO_BRIDGE_VERTICAL_BAND_RADIUS + 1,
-        int(y),
-        w,
-        h,
-    )
     if direction > 0:
         x1, y1, x2, y2 = clamp_window(
             int(x) - MICRO_BRIDGE_VERTICAL_BAND_RADIUS,
@@ -801,10 +794,19 @@ def count_vertical_band_pixels(binary: np.ndarray, x: int, y: int, direction: in
             w,
             h,
         )
+    else:
+        x1, y1, x2, y2 = clamp_window(
+            int(x) - MICRO_BRIDGE_VERTICAL_BAND_RADIUS,
+            int(y) + int(direction) * MICRO_BRIDGE_VERTICAL_BAND_DEPTH,
+            int(x) + MICRO_BRIDGE_VERTICAL_BAND_RADIUS + 1,
+            int(y),
+            w,
+            h,
+        )
 
     return int(np.count_nonzero(binary[y1:y2, x1:x2] > 0))
 
-# Verifica se esiste il pallino pieno, se c'è allora il crossing è un nodod reale e non va spezzato
+# Un pallino pieno indica un nodo reale, quindi il crossing non va spezzato.
 def has_filled_junction_dot(junction_binary: np.ndarray | None, x: int, y: int):
     if junction_binary is None:
         return False
@@ -997,7 +999,6 @@ def split_bridge_labels(
         skeleton_binary,
         allow_blue_diode_micro=enable_thick_hump_detection,
     )
-    bridges = raw_bridges
     bridge_labels = {int(bridge["label"]) for bridge in raw_bridges}
     self_short_labels = labels_with_multi_terminal_self_short(
         terminals,
@@ -1025,7 +1026,7 @@ def split_bridge_labels(
         ]
 
     split_points = []
-    for bridge in bridges:
+    for bridge in raw_bridges:
         split_points.append({
             **bridge,
             "split_kind": "bridge_hump",
@@ -1069,23 +1070,7 @@ def split_bridge_labels(
 
     _, split_labels, _, _ = cv2.connectedComponentsWithStats(cut_skeleton, connectivity=8)
 
-    parent = {}
-
-    def find(label):
-        label = int(label)
-        parent.setdefault(label, label)
-        while parent[label] != label:
-            parent[label] = parent[parent[label]]
-            label = parent[label]
-        return label
-
-    def union(label_a, label_b):
-        if label_a is None or label_b is None:
-            return
-        root_a = find(label_a)
-        root_b = find(label_b)
-        if root_a != root_b:
-            parent[max(root_a, root_b)] = min(root_a, root_b)
+    union_find = LabelUnionFind()
 
     for split_point in split_points:
         x = int(split_point["x"])
@@ -1096,8 +1081,8 @@ def split_bridge_labels(
         left_label = nearest_split_label(split_labels, x - probe_distance, y)
         right_label = nearest_split_label(split_labels, x + probe_distance, y)
 
-        union(top_label, bottom_label)
-        union(left_label, right_label)
+        union_find.union(top_label, bottom_label)
+        union_find.union(left_label, right_label)
 
     terminal_by_id = {term["terminal_id"]: term for term in terminals}
     split_groups = {}
@@ -1132,7 +1117,7 @@ def split_bridge_labels(
                 matched_label = terminal_match_debug.get(terminal_id, {}).get("matched_label")
                 split_key = ("unresolved", int(original_label), int(matched_label or original_label))
             else:
-                split_key = ("split", int(original_label), find(split_label))
+                split_key = ("split", int(original_label), union_find.find(split_label))
 
             split_groups.setdefault(split_key, []).append(terminal_id)
 
@@ -1192,15 +1177,10 @@ def split_bridge_labels(
         terminal_match_debug,
     )
 
-    relabeled = {}
-    next_label = 1
-    for terminal_ids in final_groups:
-        while next_label in relabeled:
-            next_label += 1
-        relabeled[next_label] = sorted(set(terminal_ids))
-        next_label += 1
-
-    return relabeled
+    return {
+        next_label: sorted(set(terminal_ids))
+        for next_label, terminal_ids in enumerate(final_groups, start=1)
+    }
 
 
 def _foreground_count(binary: np.ndarray, x1: int, y1: int, x2: int, y2: int):
@@ -1298,21 +1278,6 @@ def split_looped_orthogonal_crossing_groups(
         index: group
         for index, group in enumerate(output_groups, start=1)
     }
-
-
-def has_opamp_aux_singleton_group(related_groups: list[list[str]], terminal_by_id: dict):
-    for group in related_groups:
-        unique_ids = sorted(set(group))
-        if len(unique_ids) != 1:
-            continue
-        term = terminal_by_id.get(unique_ids[0])
-        if term is None:
-            continue
-        class_name = normalize_class_name(term.get("component_class_name"))
-        term_name = str(term.get("name") or "").strip().lower()
-        if class_name == "operational_amplifier" and term_name.startswith("aux"):
-            return True
-    return False
 
 
 def merge_opamp_aux_singleton_groups(related_groups: list[list[str]], terminal_by_id: dict):
@@ -1488,8 +1453,9 @@ def split_group_by_micro_bridge_geometry(
 
     horizontal_ids = []
     vertical_ids = []
-    px = float(point["x"])
-    py = float(point["y"])
+    # La partizione usa la banda orizzontale, ma entrambe le coordinate del
+    # candidato restano validate come nel comportamento storico.
+    _, py = float(point["x"]), float(point["y"])
 
     for terminal_id in terminal_ids:
         term = terminal_by_id.get(terminal_id)
@@ -1498,8 +1464,7 @@ def split_group_by_micro_bridge_geometry(
             continue
 
         try:
-            tx = float(term["x"])
-            ty = float(term["y"])
+            _, ty = float(term["x"]), float(term["y"])
         except (KeyError, TypeError, ValueError):
             vertical_ids.append(terminal_id)
             continue
@@ -1882,23 +1847,7 @@ def build_micro_bridge_split_groups(
         cut_skeleton[y1:y2, x1:x2] = 0
 
     _, split_labels, _, _ = cv2.connectedComponentsWithStats(cut_skeleton, connectivity=8)
-    parent = {}
-
-    def find(label_value):
-        label_value = int(label_value)
-        parent.setdefault(label_value, label_value)
-        while parent[label_value] != label_value:
-            parent[label_value] = parent[parent[label_value]]
-            label_value = parent[label_value]
-        return label_value
-
-    def union(label_a, label_b):
-        if label_a is None or label_b is None:
-            return
-        root_a = find(label_a)
-        root_b = find(label_b)
-        if root_a != root_b:
-            parent[max(root_a, root_b)] = min(root_a, root_b)
+    union_find = LabelUnionFind()
 
     for point in points:
         x = int(point["x"])
@@ -1907,8 +1856,8 @@ def build_micro_bridge_split_groups(
         bottom_label = nearest_split_label(split_labels, x, y + BRIDGE_PROBE_DISTANCE)
         left_label = nearest_split_label(split_labels, x - BRIDGE_PROBE_DISTANCE, y)
         right_label = nearest_split_label(split_labels, x + BRIDGE_PROBE_DISTANCE, y)
-        union(top_label, bottom_label)
-        union(left_label, right_label)
+        union_find.union(top_label, bottom_label)
+        union_find.union(left_label, right_label)
 
     groups = {}
     for terminal_id in terminal_ids:
@@ -1931,7 +1880,7 @@ def build_micro_bridge_split_groups(
         )
         if split_label is None:
             return None
-        groups.setdefault(find(split_label), []).append(terminal_id)
+        groups.setdefault(union_find.find(split_label), []).append(terminal_id)
 
     return groups
 
@@ -1971,16 +1920,8 @@ def label_contains_class(
 
     return False
 
-# =========================================================
-# SPLIT LABEL IN CORRISPONDENZA DEI PONTI
-# =========================================================
-# Nei disegni circuitali un ponticello indica un incrocio senza giunzione.
-# Lo skeleton, pero', puo' trasformarlo in una croce connessa. Rileviamo
-# la gobba sopra l'incrocio e separiamo la label in due reti: verticale e
-# orizzontale.
-
-# Conta quanti pixel ci sono lungo una direzione per capire se ci sono davvero segmenti di filo sufficientemente lunghi nelle 4 direzioni
 def count_run(binary: np.ndarray, x: int, y: int, dx: int, dy: int, limit: int):
+    """Conta i pixel consecutivi lungo una direzione entro il limite dato."""
     h, w = binary.shape[:2]
     count = 0
     cx = int(x) + int(dx)

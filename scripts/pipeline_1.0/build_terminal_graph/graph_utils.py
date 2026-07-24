@@ -40,7 +40,7 @@ def build_terminal_graph(terminals, label_to_terminal_ids: dict):
     graph = {term["terminal_id"]: [] for term in terminals}
     terminal_by_id = {term["terminal_id"]: term for term in terminals}
 
-    for _, terminal_ids in label_to_terminal_ids.items():
+    for terminal_ids in label_to_terminal_ids.values():
         unique_ids = sorted(set(terminal_ids))
         if len(unique_ids) < 2:
             continue

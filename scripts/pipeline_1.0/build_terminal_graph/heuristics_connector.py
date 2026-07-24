@@ -1,4 +1,4 @@
-"""Heuristiche di aggancio per connector e riferimenti GND vicini."""
+"""Euristiche di aggancio per connector e riferimenti GND vicini."""
 
 from .ids import normalize_class_name
 

@@ -5,7 +5,7 @@ Il dispatcher non calcola direttamente tutti i punti terminali: decide quale
 strategia chiamare, restituisce la definizione astratta dei terminali e passa al
 processor le informazioni necessarie per stimare le coordinate reali.
 """
-from .config import *
+from .config import OPAMP_POINT_MODE, THREE_TERMINAL_POINT_MODE
 from .geometry import geom_infer_orientation_from_bbox
 from .strategies_basic import (
     detect_breaker_terminals,
@@ -67,7 +67,7 @@ def resolve_terminal_point_mode(meta: dict):
 
     if strategy in {"analog_meter_by_posts", "transformer_external_wires"}:
         return "strategy_absolute_point"
-    
+
     if strategy == "integrated_circuit_wire_contacts":
         return "strategy_absolute_point"
 
@@ -80,7 +80,7 @@ def resolve_terminal_point_mode(meta: dict):
         "one_terminal_by_orientation",
     }:
         return "two_terminal_side_peak"
-    
+
 
     if class_name in {"LED", "Diode", "Push_Button"}:
         return "two_terminal_side_peak"
@@ -212,7 +212,7 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
         default_orientation = meta.get("default_orientation")
         if default_orientation is None:
             raise ValueError("Manca default_orientation per one_terminal_by_orientation.")
-        
+
         return _get_oriented_terminals(meta, default_orientation), default_orientation, None, side_scores
 
     if strategy in {
@@ -265,14 +265,12 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
         if image_binary is None:
             raise ValueError("terminal_auto_one_or_two richiede image_binary.")
 
-        default_side = meta.get("default_orientation", "right")
         terminals_def, orientation, side_scores = detect_terminal_auto_one_or_two(
             image_binary,
             bbox,
-            default_side=default_side,
         )
         return terminals_def, orientation, None, side_scores
-    
+
     # integrated circuit
     if strategy == "integrated_circuit_wire_contacts":
         # IC: i terminali sono contatti/pin distribuiti sui lati del body.
@@ -311,7 +309,6 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
             raise ValueError("analog_meter_by_posts richiede image_binary.")
 
         terminals_def, orientation, connected_side, side_scores = detect_analog_meter_terminals(
-            meta,
             image_binary,
             bbox,
         )
@@ -339,7 +336,6 @@ def get_terminals_definition(meta: dict, bbox, image_binary=None):
             raise ValueError("transformer_external_wires richiede image_binary.")
 
         terminals_def, orientation, connected_side, side_scores = detect_transformer_terminals(
-            meta,
             image_binary,
             bbox,
         )

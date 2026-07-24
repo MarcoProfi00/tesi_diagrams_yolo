@@ -304,6 +304,23 @@ def build_net_groups(adjacency: dict[str, set[str]], terminal_order: dict[str, i
     return net_groups
 
 
+def _build_model_summary(
+    components: list[dict],
+    terminal_ids: list[str],
+    net_groups: list[dict],
+    warnings: dict,
+) -> dict:
+    """Costruisce il riepilogo condiviso dalle due viste del grafo."""
+    return {
+        "component_count": len(components),
+        "terminal_count": len(terminal_ids),
+        "net_count": len(net_groups),
+        "unconnected_terminals": len(warnings.get("unconnected_terminals", [])),
+        "unmatched_terminals": len(warnings.get("unmatched_terminals", [])),
+        "suspicious_matches": len(warnings.get("suspicious_matches", [])),
+    }
+
+
 def build_visual_model(data: dict) -> dict:
     terminal_metadata = data.get("terminal_metadata", {}) or {}
     warnings = data.get("warnings", {}) or {}
@@ -441,14 +458,7 @@ def build_visual_model(data: dict) -> dict:
         "height": height,
         "nodes": nodes,
         "edges": edges,
-        "summary": {
-            "component_count": len(components),
-            "terminal_count": len(ordered_terminal_ids),
-            "net_count": len(net_groups),
-            "unconnected_terminals": len(warnings.get("unconnected_terminals", [])),
-            "unmatched_terminals": len(warnings.get("unmatched_terminals", [])),
-            "suspicious_matches": len(warnings.get("suspicious_matches", [])),
-        },
+        "summary": _build_model_summary(components, ordered_terminal_ids, net_groups, warnings),
         "warnings": warnings,
     }
 
@@ -577,14 +587,7 @@ def build_compact_visual_model(data: dict) -> dict:
         "height": height,
         "nodes": nodes,
         "edges": edges,
-        "summary": {
-            "component_count": len(components),
-            "terminal_count": len(ordered_terminal_ids),
-            "net_count": len(net_groups),
-            "unconnected_terminals": len(warnings.get("unconnected_terminals", [])),
-            "unmatched_terminals": len(warnings.get("unmatched_terminals", [])),
-            "suspicious_matches": len(warnings.get("suspicious_matches", [])),
-        },
+        "summary": _build_model_summary(components, ordered_terminal_ids, net_groups, warnings),
         "warnings": warnings,
     }
 

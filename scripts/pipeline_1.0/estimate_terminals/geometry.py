@@ -1,6 +1,7 @@
 """Primitive geometriche per posizionare i terminali sui simboli rilevati."""
 
 from .config import *
+from ._shared_utils import group_consecutive_indices
 from .image_ops import img_count_foreground_pixels
 
 # =========================================================
@@ -79,20 +80,6 @@ def _side_peak_scan_margin(length):
     margin = int(round(length * SIDE_PEAK_SCAN_MARGIN_RATIO))
     return max(SIDE_PEAK_SCAN_MARGIN_MIN, margin)
 
-# Raggruppa indici consecutivi.
-def _group_consecutive_indices(indices):
-    if not indices:
-        return []
-
-    groups = [[indices[0]]]
-    for idx in indices[1:]:
-        if idx == groups[-1][-1] + 1:
-            groups[-1].append(idx)
-        else:
-            groups.append([idx])
-    return groups
-
-
 # Seleziona l'indice di picco a partire dagli score.
 def _select_peak_index_from_scores(scores, center_index):
     if not scores:
@@ -135,7 +122,7 @@ def _select_peak_index_from_scores(scores, center_index):
             "selected_run_score": scores[best_idx],
         }
 
-    groups = _group_consecutive_indices(kept)
+    groups = group_consecutive_indices(kept)
 
     # Chiave del gruppo.
     def group_key(group):
@@ -429,7 +416,7 @@ def geom_terminal_point_three_terminal(binary, bbox, orientation: str, relative_
         debug["three_terminal_role"] = "single_side_terminal"
         debug["three_terminal_orientation"] = orientation
         return point, debug
-    
+
     # Nei simboli a tre terminali capita spesso che la coppia laterale sia leggermente specchiata
     pair_bias, pair_bias_debug = _resolve_three_terminal_pair_bias(
         binary,
@@ -763,7 +750,7 @@ def _geom_opamp_mandatory_terminal(binary, bbox, relative_position: str, slot: s
 # =========================================================
 # Calcola il range x per la scansione dei terminali aux dell'op-amp.
 def _opamp_aux_scan_x_range(bbox):
-    x1, y1, x2, y2 = bbox
+    x1, _, x2, _ = bbox
     width = max(x2 - x1, 1)
     start = x1 + int(round(OPAMP_AUX_SCAN_X_START_RATIO * width))
     end = x1 + int(round(OPAMP_AUX_SCAN_X_END_RATIO * width))
@@ -774,7 +761,7 @@ def _opamp_aux_scan_x_range(bbox):
 
 # Misura una run verticale a partire dal bordo dell'op-amp.
 def _opamp_vertical_run_from_edge(binary, bbox, x, side):
-    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    _, y1, _, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     height = max(y2 - y1, 1)
 
     halfspan = OPAMP_AUX_RUN_HALFSPAN
@@ -897,7 +884,7 @@ def _opamp_aux_segment_density(binary, x, y1, y2, side, y, halfspan=1):
 
 # Raffina la y del terminale aux verso la diagonale dell'op-amp.
 def _opamp_refine_aux_y_to_diagonal(binary, bbox, orientation, relative_position, x, base_y):
-    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
+    _, y1, _, y2 = geom_clamp_bbox_to_image(bbox, binary.shape)
     height = max(y2 - y1, 1)
 
     if orientation == "right":
@@ -1029,23 +1016,6 @@ def _opamp_refine_aux_y_to_diagonal(binary, bbox, orientation, relative_position
         "segment_density": round(best["segment_density"], 4),
         "refine_mode": "best_global_fallback",
     }
-
-# Calcola la densità in una banda verticale dell'op-amp.
-def _opamp_vertical_band_density(binary, x, y_start, y_end, halfspan=1):
-    h, w = binary.shape[:2]
-    xa = max(0, int(round(x)) - halfspan)
-    xb = min(w, int(round(x)) + halfspan + 1)
-
-    ya = max(0, min(h - 1, int(round(min(y_start, y_end)))))
-    yb = max(0, min(h - 1, int(round(max(y_start, y_end)))))
-
-    if yb < ya:
-        ya, yb = yb, ya
-
-    pixel_count = img_count_foreground_pixels(binary, xa, ya, xb, yb + 1)
-    area = max(1, (xb - xa) * (yb - ya + 1))
-    return float(pixel_count) / float(area)
-
 
 # Costruisce la binary di appoggio per raffinare gli aux dell'op-amp.
 def _opamp_aux_make_refine_binary(binary, bbox, orientation):
@@ -1191,7 +1161,7 @@ def _geom_opamp_aux_terminal_v1(binary, bbox, orientation, relative_position):
         # opamp left: simmetrico, più a destra
         best = max(kept, key=lambda c: c["x"])
 
-    if best is None or best["run_len"] < OPAMP_AUX_MIN_RUN_LENGTH:
+    if best["run_len"] < OPAMP_AUX_MIN_RUN_LENGTH:
         point = geom_terminal_point_from_bbox(bbox, relative_position)
         return point, {
             "point_mode": "opamp_aux_v1",
