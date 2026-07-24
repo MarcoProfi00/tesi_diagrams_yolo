@@ -1,0 +1,375 @@
+{
+  "circuit_id": "b06",
+  "source_format": "pipeline2.0_values_bound",
+  "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\data\\batchPipeline2.0\\batchChatAgentEvaluation\\values\\b06_values.yaml",
+  "supplies": {},
+  "components": {
+    "antenna1.1": {
+      "class_name": "Antenna",
+      "terminal_nodes": {
+        "t1": "N001"
+      },
+      "value_data": {
+        "source": "graph_json_external_input",
+        "label_text": "Antenna esterna; nessuna sorgente RF nella base run",
+        "viewer_override": {
+          "visual_class": "antenna",
+          "label": "Antenna"
+        }
+      },
+      "status": "unsupported_for_now"
+    },
+    "battery2.1": {
+      "class_name": "Battery",
+      "terminal_nodes": {
+        "positive": "N002",
+        "negative": "0"
+      },
+      "value_data": {
+        "type": "dc",
+        "value": 9,
+        "unit": "V",
+        "source": "manual_from_image_label",
+        "label_text": "B1 9 V"
+      },
+      "status": "bound"
+    },
+    "breaker3.1": {
+      "class_name": "Breaker",
+      "terminal_nodes": {
+        "t1": "N003",
+        "t2": "0"
+      },
+      "value_data": {
+        "spice_override": {
+          "emit_as": "resistive_load",
+          "equivalent_resistance": 8,
+          "resistance_unit": "ohm",
+          "node_order": [
+            "t1",
+            "t2"
+          ],
+          "semantic_role": "speaker_equivalent"
+        },
+        "source": "manual_interpretation_Z1_speaker_equivalent",
+        "label_text": "Z1 altoparlante equivalente: 8 ohm",
+        "viewer_override": {
+          "visual_class": "speaker",
+          "label": "Z1 8 ohm",
+          "tooltip": "Z1 altoparlante; carico SPICE equivalente da 8 ohm"
+        }
+      },
+      "status": "bound"
+    },
+    "diode7.1": {
+      "class_name": "Diode",
+      "terminal_nodes": {
+        "anode": "N001",
+        "cathode": "N004"
+      },
+      "value_data": {
+        "model": "D_GENERIC",
+        "source": "manual_image_part_number_with_generic_spice_detector_model",
+        "label_text": "D1 AA119; modello SPICE rivelatore generico",
+        "viewer_override": {
+          "label": "D1",
+          "display_value": "AA119",
+          "tooltip": "D1 AA119; simulato con modello rivelatore generico"
+        }
+      },
+      "status": "bound"
+    },
+    "gnd9.1": {
+      "class_name": "GND",
+      "terminal_nodes": {
+        "t1": "0"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "inductor10.1": {
+      "class_name": "Inductor",
+      "terminal_nodes": {
+        "t1": "N001",
+        "t2": "0"
+      },
+      "value_data": {
+        "value": 0.00022,
+        "unit": "H",
+        "source": "manual_assumption_inductor_label_ambiguous_220uH",
+        "label_text": "L1 assunta: 220 uH",
+        "viewer_override": {
+          "label": "L1",
+          "display_value": "220 uH",
+          "tooltip": "L1: valore assunto 220 uH dalla label ambigua dell'immagine"
+        }
+      },
+      "status": "bound"
+    },
+    "npn_transistor18.1": {
+      "class_name": "NPN_Transistor",
+      "terminal_nodes": {
+        "B": "N005",
+        "C": "N006",
+        "E": "0"
+      },
+      "value_data": {
+        "model": "2N3904",
+        "source": "manual_from_image_label",
+        "label_text": "Q1 2N3904",
+        "viewer_override": {
+          "label": "Q1",
+          "display_value": "2N3904"
+        }
+      },
+      "status": "bound"
+    },
+    "operational_amplifier19.1": {
+      "class_name": "Operational_Amplifier",
+      "terminal_nodes": {
+        "in1": "N010",
+        "in2": "0",
+        "out": "N009",
+        "aux1": "N007",
+        "aux2": "0"
+      },
+      "value_data": {
+        "model": "LM386_SIMPLE",
+        "source": "manual_image_validation_LM386_pin_mapping",
+        "label_text": "IC1 LM386; equivalente SPICE semplice",
+        "viewer_override": {
+          "visual_class": "operational_amplifier",
+          "label": "LM386",
+          "tooltip": "IC1 LM386; equivalente SPICE lineare semplice"
+        },
+        "spice_override": {
+          "emit_as": "subcircuit",
+          "pin_order": [
+            "INP",
+            "INM",
+            "VCC",
+            "VEE",
+            "OUT"
+          ],
+          "node_refs": {
+            "INP": "operational_amplifier19.1_in1",
+            "INM": "operational_amplifier19.1_in2",
+            "VCC": "operational_amplifier19.1_aux1",
+            "VEE": "operational_amplifier19.1_aux2",
+            "OUT": "operational_amplifier19.1_out"
+          },
+          "resolved_node_refs": {
+            "INP": "N010",
+            "INM": "0",
+            "VCC": "N007",
+            "VEE": "0",
+            "OUT": "N009"
+          }
+        }
+      },
+      "status": "unsupported_for_now"
+    },
+    "polarized_capacitor20.1": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "positive": "N001",
+        "negative": "0"
+      },
+      "value_data": {
+        "value": 365,
+        "unit": "pf",
+        "source": "manual_from_image_label",
+        "label_text": "C1 variabile 365 pF",
+        "viewer_override": {
+          "visual_class": "variable_capacitor",
+          "label": "C1",
+          "display_value": "365 pF"
+        }
+      },
+      "status": "bound"
+    },
+    "polarized_capacitor20.2": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "positive": "N004",
+        "negative": "0"
+      },
+      "value_data": {
+        "value": 100,
+        "unit": "nf",
+        "source": "manual_from_image_label",
+        "label_text": "C2 100 nF",
+        "viewer_override": {
+          "visual_class": "capacitor",
+          "label": "C2",
+          "display_value": "100 nF"
+        }
+      },
+      "status": "bound"
+    },
+    "polarized_capacitor20.3": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "positive": "N004",
+        "negative": "N005"
+      },
+      "value_data": {
+        "value": 100,
+        "unit": "nf",
+        "source": "manual_from_image_label",
+        "label_text": "C3 100 nF",
+        "viewer_override": {
+          "visual_class": "capacitor",
+          "label": "C3",
+          "display_value": "100 nF"
+        }
+      },
+      "status": "bound"
+    },
+    "polarized_capacitor20.4": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "positive": "N006",
+        "negative": "N010"
+      },
+      "value_data": {
+        "value": 100,
+        "unit": "nf",
+        "source": "manual_from_image_label",
+        "label_text": "C4 100 nF",
+        "viewer_override": {
+          "visual_class": "capacitor",
+          "label": "C4",
+          "display_value": "100 nF"
+        }
+      },
+      "status": "bound"
+    },
+    "polarized_capacitor20.5": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "positive": "N009",
+        "negative": "N003"
+      },
+      "value_data": {
+        "value": 220,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "C5 220 uF"
+      },
+      "status": "bound"
+    },
+    "polarized_capacitor20.6": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "positive": "N007",
+        "negative": "0"
+      },
+      "value_data": {
+        "value": 100,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "C6 100 uF"
+      },
+      "status": "bound"
+    },
+    "resistor22.1": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N005",
+        "t2": "N006"
+      },
+      "value_data": {
+        "value": 100,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R1 100 kohm"
+      },
+      "status": "bound"
+    },
+    "resistor22.2": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N007",
+        "t2": "N006"
+      },
+      "value_data": {
+        "value": 10,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R2 10 kohm"
+      },
+      "status": "bound"
+    },
+    "resistor22.3": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N010",
+        "t2": "0"
+      },
+      "value_data": {
+        "value": 10,
+        "unit": "kohm",
+        "source": "manual_from_image_label_fixed_wiper_at_maximum",
+        "label_text": "R3 potenziometro 10 kohm; base run al massimo volume",
+        "viewer_override": {
+          "label": "R3",
+          "display_value": "10 kohm",
+          "label_mode": "tooltip",
+          "tooltip": "R3 potenziometro 10 kohm; cursore base run al massimo volume"
+        }
+      },
+      "status": "bound"
+    },
+    "switch25.1": {
+      "class_name": "Switch",
+      "terminal_nodes": {
+        "t1": "N007",
+        "t2": "N002"
+      },
+      "value_data": {
+        "state": "closed",
+        "state_source": "graph_json_state",
+        "state_confidence": 0.95,
+        "source": "graph_json_state_validated_from_image",
+        "label_text": "S1 chiuso",
+        "viewer_override": {
+          "label": "S1",
+          "label_mode": "reference_only",
+          "tooltip": "S1 chiuso nella base run"
+        }
+      },
+      "status": "bound"
+    }
+  },
+  "nodes": {},
+  "spice_topology_overlay": [
+    {
+      "terminal_id": "operational_amplifier19.1_in1",
+      "from_node": "N008",
+      "to_node": "N010",
+      "status": "applied",
+      "source": "manual_image_validation_R3_wiper_at_maximum_volume"
+    }
+  ],
+  "simulation": {
+    "analyses": [
+      "op",
+      "tran"
+    ],
+    "tran": {
+      "step": "1us",
+      "stop": "5ms"
+    }
+  },
+  "missing": [],
+  "stats": {
+    "components_total": 18,
+    "bound_components": 15,
+    "missing_components": 0,
+    "not_required_components": 1,
+    "unsupported_components": 2,
+    "supplies_count": 0,
+    "manual_nodes_count": 0
+  }
+}

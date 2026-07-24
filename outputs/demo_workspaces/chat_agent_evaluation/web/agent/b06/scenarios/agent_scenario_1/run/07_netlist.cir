@@ -1,0 +1,42 @@
+* pipeline2.0 netlist
+* circuit: b06
+
+Vbattery2_1 N002 0 DC 9
+Rbreaker3_1 N003 0 8
+Ddiode7_1 N001 N004 D_GENERIC
+Linductor10_1 N001 0 0.00022
+Qnpn_transistor18_1 N006 N005 0 2N3904
+Xoperational_amplifier19_1 N010 0 N007 0 N009 LM386_SIMPLE
+Cpolarized_capacitor20_1 N001 0 365p
+Cpolarized_capacitor20_2 N004 0 100n
+Cpolarized_capacitor20_3 N004 N005 100n
+Cpolarized_capacitor20_4 N006 N010 100n
+Cpolarized_capacitor20_5 N009 N003 220u
+Cpolarized_capacitor20_6 N007 0 100u
+Rresistor22_1 N005 N006 100k
+Rresistor22_2 N007 N006 10k
+Rresistor22_3 N010 0 10k
+Rswitch25_1 N007 N002 1m
+
+.model 2N3904 NPN(IS=6.734f BF=416.4 VAF=74.03 IKF=66.78m ISE=6.734f NE=1.259 BR=0.7371 VAR=12.11 IKR=0.0 ISC=0.0 NC=2 RB=10 RC=1 RE=0.1 CJE=4.493p VJE=0.75 MJE=0.2593 CJC=3.638p VJC=0.75 MJC=0.3085 TF=301.2p TR=239.5n)
+.model D_GENERIC D
+.subckt LM386_SIMPLE INP INM VCC VEE OUT
+RIN INP INM 50k
+EAMP NAMP VEE INP INM 20
+ROUT NAMP OUT 5
+RBLEED VCC VEE 100k
+.ends LM386_SIMPLE
+
+VSCENARIO_SUPPLY_N010_0 N010 0 SIN(0 10m 1000)
+.op
+.save all
+.tran 1us 5ms
+
+.control
+set wr_singlescale
+set wr_vecnames
+save all @ddiode7_1[id]
+run
+wrdata 08_tran.csv time v(N001) v(N002) v(N003) v(N004) v(N005) v(N006) v(N007) v(N009) v(N010) @ddiode7_1[id]
+.endc
+.end

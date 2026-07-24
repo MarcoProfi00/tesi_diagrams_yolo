@@ -1,0 +1,32 @@
+{
+  "title": "Batteria più scarica a 10 V",
+  "hypothesis": "Se il caricabatteria funziona, una batteria più scarica dovrebbe aumentare la conduzione nel percorso di carica; misuro sia la corrente della batteria sia un componente reale del percorso di carica.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "VVBAT_TEST",
+      "value": "DC 10"
+    }
+  ],
+  "compare": [
+    "i(VVBAT_TEST)",
+    "@ddiode7_4[id]",
+    "v(N004)",
+    "v(N009,N010)"
+  ],
+  "measure": {
+    "i(VVBAT_TEST)": "op",
+    "@ddiode7_4[id]": "tran_abs_peak",
+    "v(N004)": "tran_vpp",
+    "v(N009,N010)": "tran_vpp"
+  },
+  "expect": {
+    "i(VVBAT_TEST)": "magnitude_increased",
+    "@ddiode7_4[id]": "magnitude_increased",
+    "v(N004)": "nonzero",
+    "v(N009,N010)": "changed"
+  },
+  "scenario_id": "agent_scenario_1"
+}

@@ -1,0 +1,25 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Iniettare un piccolo segnale sul nodo rivelato dopo il diodo",
+  "hypothesis": "Il segnale potrebbe interrompersi tra N004 e N005, cioe tra il rivelatore e l'ingresso dello stadio a transistor.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N004",
+      "negative": "0",
+      "value": "SIN(0 5m 1000)"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N004)",
+    "v(N005)",
+    "v(N010)"
+  ],
+  "expect": {
+    "v(N005)": "changed",
+    "v(N010)": "changed"
+  }
+}

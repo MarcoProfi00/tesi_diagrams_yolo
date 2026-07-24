@@ -1,0 +1,32 @@
+{
+  "title": "Batteria molto più scarica a 8 V",
+  "hypothesis": "Se a 10 V l'aumento è debole o ambiguo, a 8 V dovrebbe evidenziarsi chiaramente un aumento della corrente di carica e della conduzione del diodo di uscita se il circuito regola davvero in funzione della tensione batteria.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "VVBAT_TEST",
+      "value": "DC 8"
+    }
+  ],
+  "compare": [
+    "i(VVBAT_TEST)",
+    "@ddiode7_4[id]",
+    "v(N004)",
+    "v(N009,N010)"
+  ],
+  "measure": {
+    "i(VVBAT_TEST)": "op",
+    "@ddiode7_4[id]": "tran_abs_peak",
+    "v(N004)": "tran_vpp",
+    "v(N009,N010)": "tran_vpp"
+  },
+  "expect": {
+    "i(VVBAT_TEST)": "magnitude_increased",
+    "@ddiode7_4[id]": "magnitude_increased",
+    "v(N004)": "nonzero",
+    "v(N009,N010)": "changed"
+  },
+  "scenario_id": "agent_scenario_2"
+}

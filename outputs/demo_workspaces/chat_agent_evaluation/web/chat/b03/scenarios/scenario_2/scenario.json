@@ -1,0 +1,32 @@
+{
+  "scenario_id": "scenario_2",
+  "title": "Provare una batteria più alta per il caso carica",
+  "hypothesis": "Raising Vbattery2_1 above the base 12 V level should change the active LED pattern and may reveal the charged-battery indication.",
+  "intent": "correction",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "DC 14V"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N002)",
+    "@dled12_1[id]",
+    "@dled12_2[id]",
+    "@dled12_3[id]"
+  ],
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak",
+    "@dled12_2[id]": "tran_abs_peak",
+    "@dled12_3[id]": "tran_abs_peak"
+  },
+  "expect": {
+    "v(N002)": "increased",
+    "@dled12_1[id]": "changed",
+    "@dled12_2[id]": "changed",
+    "@dled12_3[id]": "changed"
+  }
+}

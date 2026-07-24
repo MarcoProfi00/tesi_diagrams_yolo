@@ -1,0 +1,32 @@
+{
+  "scenario_id": "scenario_1",
+  "title": "Provare una batteria più bassa per il caso scarica",
+  "hypothesis": "Lowering Vbattery2_1 below the base 12 V level should change the active LED pattern and may reveal the low-battery indication.",
+  "intent": "correction",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "DC 10V"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N002)",
+    "@dled12_1[id]",
+    "@dled12_2[id]",
+    "@dled12_3[id]"
+  ],
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak",
+    "@dled12_2[id]": "tran_abs_peak",
+    "@dled12_3[id]": "tran_abs_peak"
+  },
+  "expect": {
+    "v(N002)": "decreased",
+    "@dled12_1[id]": "changed",
+    "@dled12_2[id]": "changed",
+    "@dled12_3[id]": "changed"
+  }
+}

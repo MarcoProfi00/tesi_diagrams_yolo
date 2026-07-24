@@ -1,0 +1,39 @@
+{
+  "title": "Chiudere l'interruttore e iniettare un piccolo segnale AM-equivalente sul nodo rivelatore per verificare la presenza di audio in cuffia",
+  "hypothesis": "Se il silenzio dipende principalmente dall'interruttore aperto e dal fatto che nella base run non esiste alcuna eccitazione d'antenna emessa in SPICE, allora chiudendo S1 e applicando un piccolo segnale sinusoidale al nodo N001 si deve osservare una tensione alternata non nulla ai capi della cuffia equivalente Rbreaker3_1, con trasferimento misurabile da ingresso a uscita.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    },
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N001",
+      "negative": "0",
+      "value": "SIN(0 10m 1000)"
+    }
+  ],
+  "compare": [
+    "v(N001)",
+    "v(N003,N004)",
+    "@ddiode7_1[id]"
+  ],
+  "measure": {
+    "v(N001)": "tran_vpp",
+    "v(N003,N004)": "tran_vpp",
+    "@ddiode7_1[id]": "tran_abs_peak"
+  },
+  "gain": {
+    "input": "v(N001)",
+    "output": "v(N003,N004)",
+    "min_ratio": 0.01
+  },
+  "expect": {
+    "v(N001)": "nonzero",
+    "v(N003,N004)": "nonzero",
+    "@ddiode7_1[id]": "nonzero"
+  },
+  "scenario_id": "agent_scenario_2"
+}

@@ -1,0 +1,42 @@
+{
+  "scenario_id": "scenario_1",
+  "title": "Rompere la simmetria iniziale dei due nodi base",
+  "hypothesis": "The circuit may be stuck in a symmetric startup state, so a small asymmetry on N004 and N006 could trigger oscillation.",
+  "intent": "correction",
+  "actions": [
+    {
+      "type": "set_initial_node_voltage",
+      "target": "N004",
+      "value": "0.6V",
+      "skip_operating_point": true
+    },
+    {
+      "type": "set_initial_node_voltage",
+      "target": "N006",
+      "value": "1.0V",
+      "skip_operating_point": true
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N004)",
+    "v(N006)",
+    "@dled12_1[id]",
+    "@dled12_2[id]"
+  ],
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak",
+    "@dled12_2[id]": "tran_abs_peak"
+  },
+  "expect": {
+    "v(N004)": "changed",
+    "@dled12_1[id]": "changed",
+    "@dled12_2[id]": "changed"
+  },
+  "temporal_expect": {
+    "target": "Dled12_1",
+    "required_state": "blinking",
+    "require_regular_period": true
+  }
+}

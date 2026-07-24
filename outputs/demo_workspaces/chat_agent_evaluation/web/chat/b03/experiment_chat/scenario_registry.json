@@ -1,0 +1,345 @@
+{
+  "source_format": "pipeline2.0_experiment_scenario_registry",
+  "batch_name": "batchChatAgentEvaluation",
+  "experiment_name": "chat_agent_evaluation",
+  "circuit_id": "b03",
+  "created_at": "2026-07-24T11:13:05",
+  "updated_at": "2026-07-24T11:17:36",
+  "max_executable_scenarios": 5,
+  "next_scenario_number": 5,
+  "last_added_scenario_id": "scenario_4",
+  "proposals": [
+    {
+      "proposal_id": "proposal_1",
+      "created_at": "2026-07-24T11:14:08",
+      "source_agent_response": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\b03\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_1",
+        "scenario_2",
+        "scenario_3"
+      ]
+    },
+    {
+      "proposal_id": "proposal_2",
+      "created_at": "2026-07-24T11:17:24",
+      "source_agent_response": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\b03\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_4"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_number": 1,
+      "scenario_id": "scenario_1",
+      "title": "Provare una batteria più bassa per il caso scarica",
+      "hypothesis": "Lowering Vbattery2_1 below the base 12 V level should change the active LED pattern and may reveal the low-battery indication.",
+      "actions": [
+        {
+          "type": "change_source_value",
+          "target": "Vbattery2_1",
+          "value": "DC 10V"
+        }
+      ],
+      "intent": "correction",
+      "analysis": "tran",
+      "compare": [
+        "v(N002)",
+        "@dled12_1[id]",
+        "@dled12_2[id]",
+        "@dled12_3[id]"
+      ],
+      "measure": {
+        "@dled12_1[id]": "tran_abs_peak",
+        "@dled12_2[id]": "tran_abs_peak",
+        "@dled12_3[id]": "tran_abs_peak"
+      },
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N002)": "decreased",
+        "@dled12_1[id]": "changed",
+        "@dled12_2[id]": "changed",
+        "@dled12_3[id]": "changed"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_1",
+      "execution_path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\b03\\scenarios\\scenario_1",
+      "created_at": "2026-07-24T11:14:08",
+      "updated_at": "2026-07-24T11:14:50",
+      "signature": "{\"actions\":[{\"target\":\"Vbattery2_1\",\"type\":\"change_source_value\",\"value\":\"DC 10V\"}],\"analysis\":\"tran\"}",
+      "scenario": {
+        "scenario_id": "scenario_1",
+        "title": "Provare una batteria più bassa per il caso scarica",
+        "hypothesis": "Lowering Vbattery2_1 below the base 12 V level should change the active LED pattern and may reveal the low-battery indication.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vbattery2_1",
+            "value": "DC 10V"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N002)",
+          "@dled12_1[id]",
+          "@dled12_2[id]",
+          "@dled12_3[id]"
+        ],
+        "measure": {
+          "@dled12_1[id]": "tran_abs_peak",
+          "@dled12_2[id]": "tran_abs_peak",
+          "@dled12_3[id]": "tran_abs_peak"
+        },
+        "expect": {
+          "v(N002)": "decreased",
+          "@dled12_1[id]": "changed",
+          "@dled12_2[id]": "changed",
+          "@dled12_3[id]": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 2,
+      "scenario_id": "scenario_2",
+      "title": "Provare una batteria più alta per il caso carica",
+      "hypothesis": "Raising Vbattery2_1 above the base 12 V level should change the active LED pattern and may reveal the charged-battery indication.",
+      "actions": [
+        {
+          "type": "change_source_value",
+          "target": "Vbattery2_1",
+          "value": "DC 14V"
+        }
+      ],
+      "intent": "correction",
+      "analysis": "tran",
+      "compare": [
+        "v(N002)",
+        "@dled12_1[id]",
+        "@dled12_2[id]",
+        "@dled12_3[id]"
+      ],
+      "measure": {
+        "@dled12_1[id]": "tran_abs_peak",
+        "@dled12_2[id]": "tran_abs_peak",
+        "@dled12_3[id]": "tran_abs_peak"
+      },
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N002)": "increased",
+        "@dled12_1[id]": "changed",
+        "@dled12_2[id]": "changed",
+        "@dled12_3[id]": "changed"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 2,
+      "original_scenario_id": "scenario_2",
+      "execution_path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\b03\\scenarios\\scenario_2",
+      "created_at": "2026-07-24T11:14:08",
+      "updated_at": "2026-07-24T11:15:00",
+      "signature": "{\"actions\":[{\"target\":\"Vbattery2_1\",\"type\":\"change_source_value\",\"value\":\"DC 14V\"}],\"analysis\":\"tran\"}",
+      "scenario": {
+        "scenario_id": "scenario_2",
+        "title": "Provare una batteria più alta per il caso carica",
+        "hypothesis": "Raising Vbattery2_1 above the base 12 V level should change the active LED pattern and may reveal the charged-battery indication.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vbattery2_1",
+            "value": "DC 14V"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N002)",
+          "@dled12_1[id]",
+          "@dled12_2[id]",
+          "@dled12_3[id]"
+        ],
+        "measure": {
+          "@dled12_1[id]": "tran_abs_peak",
+          "@dled12_2[id]": "tran_abs_peak",
+          "@dled12_3[id]": "tran_abs_peak"
+        },
+        "expect": {
+          "v(N002)": "increased",
+          "@dled12_1[id]": "changed",
+          "@dled12_2[id]": "changed",
+          "@dled12_3[id]": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 3,
+      "scenario_id": "scenario_3",
+      "title": "Applicare una rampa di batteria per osservare le soglie dei LED",
+      "hypothesis": "A time-varying battery source should reveal when each LED turns on or off during a voltage sweep, unlike the constant 12 V base run.",
+      "actions": [
+        {
+          "type": "change_source_value",
+          "target": "Vbattery2_1",
+          "value": "PWL(0s 10V 3s 14V)"
+        }
+      ],
+      "intent": "correction",
+      "analysis": "tran",
+      "compare": [
+        "v(N002)",
+        "@dled12_1[id]",
+        "@dled12_2[id]",
+        "@dled12_3[id]"
+      ],
+      "measure": {
+        "@dled12_1[id]": "tran_abs_peak",
+        "@dled12_2[id]": "tran_abs_peak",
+        "@dled12_3[id]": "tran_abs_peak"
+      },
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N002)": "changed",
+        "@dled12_1[id]": "changed",
+        "@dled12_2[id]": "changed",
+        "@dled12_3[id]": "changed"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 3,
+      "original_scenario_id": "scenario_3",
+      "execution_path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\b03\\scenarios\\scenario_3",
+      "created_at": "2026-07-24T11:14:08",
+      "updated_at": "2026-07-24T11:15:08",
+      "signature": "{\"actions\":[{\"target\":\"Vbattery2_1\",\"type\":\"change_source_value\",\"value\":\"PWL(0s 10V 3s 14V)\"}],\"analysis\":\"tran\"}",
+      "scenario": {
+        "scenario_id": "scenario_3",
+        "title": "Applicare una rampa di batteria per osservare le soglie dei LED",
+        "hypothesis": "A time-varying battery source should reveal when each LED turns on or off during a voltage sweep, unlike the constant 12 V base run.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vbattery2_1",
+            "value": "PWL(0s 10V 3s 14V)"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N002)",
+          "@dled12_1[id]",
+          "@dled12_2[id]",
+          "@dled12_3[id]"
+        ],
+        "measure": {
+          "@dled12_1[id]": "tran_abs_peak",
+          "@dled12_2[id]": "tran_abs_peak",
+          "@dled12_3[id]": "tran_abs_peak"
+        },
+        "expect": {
+          "v(N002)": "changed",
+          "@dled12_1[id]": "changed",
+          "@dled12_2[id]": "changed",
+          "@dled12_3[id]": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 4,
+      "scenario_id": "scenario_4",
+      "title": "Test statico a 16 V per verificare il solo LED verde",
+      "hypothesis": "Raising Vbattery2_1 from the already tested 14 V to a static 16 V may switch the indication from yellow-plus-green to green-only.",
+      "actions": [
+        {
+          "type": "change_source_value",
+          "target": "Vbattery2_1",
+          "value": "DC 16V"
+        }
+      ],
+      "intent": "correction",
+      "analysis": "tran",
+      "compare": [
+        "v(N002)",
+        "@dled12_1[id]",
+        "@dled12_2[id]",
+        "@dled12_3[id]"
+      ],
+      "measure": {
+        "@dled12_1[id]": "tran_abs_peak",
+        "@dled12_2[id]": "tran_abs_peak",
+        "@dled12_3[id]": "tran_abs_peak"
+      },
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N002)": "changed",
+        "@dled12_1[id]": "changed",
+        "@dled12_2[id]": "changed",
+        "@dled12_3[id]": "changed"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_2",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_4",
+      "execution_path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\b03\\scenarios\\scenario_4",
+      "created_at": "2026-07-24T11:17:24",
+      "updated_at": "2026-07-24T11:17:36",
+      "signature": "{\"actions\":[{\"target\":\"Vbattery2_1\",\"type\":\"change_source_value\",\"value\":\"DC 16V\"}],\"analysis\":\"tran\"}",
+      "scenario": {
+        "scenario_id": "scenario_4",
+        "title": "Test statico a 16 V per verificare il solo LED verde",
+        "hypothesis": "Raising Vbattery2_1 from the already tested 14 V to a static 16 V may switch the indication from yellow-plus-green to green-only.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vbattery2_1",
+            "value": "DC 16V"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N002)",
+          "@dled12_1[id]",
+          "@dled12_2[id]",
+          "@dled12_3[id]"
+        ],
+        "measure": {
+          "@dled12_1[id]": "tran_abs_peak",
+          "@dled12_2[id]": "tran_abs_peak",
+          "@dled12_3[id]": "tran_abs_peak"
+        },
+        "expect": {
+          "v(N002)": "changed",
+          "@dled12_1[id]": "changed",
+          "@dled12_2[id]": "changed",
+          "@dled12_3[id]": "changed"
+        }
+      }
+    }
+  ]
+}

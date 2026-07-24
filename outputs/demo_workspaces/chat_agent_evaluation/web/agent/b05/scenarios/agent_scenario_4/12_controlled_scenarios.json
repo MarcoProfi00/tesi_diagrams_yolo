@@ -1,0 +1,84 @@
+{
+  "source_format": "pipeline2.0_controlled_scenario_report",
+  "status": "spice_success",
+  "scenario_id": "agent_scenario_4",
+  "scenario_title": "Chiudere S1 e iniettare un segnale piu grande sul nodo base del primo stadio per verificare se il blocco e tra i due transistor",
+  "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b05\\scenarios\\agent_scenario_4",
+  "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b05\\scenarios\\agent_scenario_4\\run",
+  "netlist": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b05\\scenarios\\agent_scenario_4\\run\\07_netlist.cir",
+  "applied_actions": [
+    {
+      "status": "applied",
+      "type": "close_switch",
+      "target": "switch25.1",
+      "nodes": [
+        "N002",
+        "N004"
+      ],
+      "resistance": "1m",
+      "inserted_line": "RSCENARIO_switch25_1 N002 N004 1m",
+      "operation": "inserted",
+      "spice_executed": false,
+      "index": 1
+    },
+    {
+      "status": "applied",
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N006",
+      "negative": "0",
+      "nodes": [
+        "N006",
+        "0"
+      ],
+      "value": "SIN(0 100m 1000)",
+      "normalized_source_definition": "SIN(0 100m 1000)",
+      "normalized_dc_value": null,
+      "inserted_line": "VSCENARIO_SUPPLY_N006_0 N006 0 SIN(0 100m 1000)",
+      "operation": "inserted",
+      "spice_executed": false,
+      "index": 2
+    }
+  ],
+  "unsupported_actions": [],
+  "failed_actions": [],
+  "spice_executed": true,
+  "spice_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b05\\scenarios\\agent_scenario_4\\run\\08_spice_run.json",
+  "spice_status": "success",
+  "spice_exit_code": 0,
+  "comparison_report_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b05\\scenarios\\agent_scenario_4\\scenario_comparison.json",
+  "comparison_summary": {
+    "requested_count": 3,
+    "changed_count": 2,
+    "activated_count": 2,
+    "missing_count": 0,
+    "expected_count": 3,
+    "expectations_met_count": 2,
+    "expectations_failed_count": 1,
+    "expectations_missing_count": 0,
+    "meaningful_improvement_count": 2,
+    "quality_required": false,
+    "quality_available": false,
+    "quality_improved": false,
+    "quality_acceptable": false,
+    "quality_output_preserved": false,
+    "base_thd": null,
+    "scenario_thd": null,
+    "gain_required": true,
+    "gain_available": true,
+    "gain_sufficient": false,
+    "scenario_gain": 2.0000030838498317e-07,
+    "min_gain_ratio": 0.01
+  },
+  "diagnostic_outcome": {
+    "status": "not_resolved",
+    "technical_label": "Signal gain below threshold",
+    "label": "Trasferimento del segnale insufficiente",
+    "reason": "Il rapporto Vpp uscita/ingresso resta sotto la soglia dichiarata dallo scenario (2e-07 < 0.01).",
+    "user_message": "Lo scenario non ha prodotto un cambiamento utile rispetto alla base.",
+    "stop_automation": false,
+    "confidence": "low",
+    "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
+  },
+  "message": "Scenario actions were applied and ngspice was executed on the scenario run.",
+  "created_or_updated_at": "2026-07-24T12:23:35"
+}

@@ -1,0 +1,110 @@
+{
+  "source_format": "pipeline2.0_experiment_scenario_registry",
+  "batch_name": "batchChatAgentEvaluation",
+  "experiment_name": "chat_agent_evaluation",
+  "circuit_id": "a09",
+  "created_at": "2026-07-24T10:48:54",
+  "updated_at": "2026-07-24T10:49:47",
+  "max_executable_scenarios": 5,
+  "next_scenario_number": 2,
+  "last_added_scenario_id": "scenario_1",
+  "proposals": [
+    {
+      "proposal_id": "proposal_1",
+      "created_at": "2026-07-24T10:48:54",
+      "source_agent_response": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\a09\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_1"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_number": 1,
+      "scenario_id": "scenario_1",
+      "title": "Alimentare entrambi i rami dal nodo BAT_FUSED e chiudere SW2",
+      "hypothesis": "The powered node N003 is not reaching the lamp-input node N004 nor the LED-input node N005, and the lamp branch is also blocked by open switch25.1.",
+      "actions": [
+        {
+          "type": "feed_nodes_from_source_node",
+          "source_node": "N003",
+          "target_nodes": [
+            "N004",
+            "N005"
+          ],
+          "resistance": "1m"
+        },
+        {
+          "type": "close_switch",
+          "target": "switch25.1"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N003)",
+        "v(N004)",
+        "v(N005)",
+        "v(N007)",
+        "i(Rlamp13_1)"
+      ],
+      "measure": {},
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N004)": "changed",
+        "v(N005)": "changed",
+        "v(N007)": "changed",
+        "i(Rlamp13_1)": "nonzero"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_1",
+      "execution_path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\a09\\scenarios\\scenario_1",
+      "created_at": "2026-07-24T10:48:54",
+      "updated_at": "2026-07-24T10:49:47",
+      "signature": "{\"actions\":[{\"resistance\":\"1m\",\"source_node\":\"N003\",\"target_nodes\":[\"N004\",\"N005\"],\"type\":\"feed_nodes_from_source_node\"},{\"target\":\"switch25.1\",\"type\":\"close_switch\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_1",
+        "title": "Alimentare entrambi i rami dal nodo BAT_FUSED e chiudere SW2",
+        "hypothesis": "The powered node N003 is not reaching the lamp-input node N004 nor the LED-input node N005, and the lamp branch is also blocked by open switch25.1.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "feed_nodes_from_source_node",
+            "source_node": "N003",
+            "target_nodes": [
+              "N004",
+              "N005"
+            ],
+            "resistance": "1m"
+          },
+          {
+            "type": "close_switch",
+            "target": "switch25.1"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N003)",
+          "v(N004)",
+          "v(N005)",
+          "v(N007)",
+          "i(Rlamp13_1)"
+        ],
+        "expect": {
+          "v(N004)": "changed",
+          "v(N005)": "changed",
+          "v(N007)": "changed",
+          "i(Rlamp13_1)": "nonzero"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "scenario_id": "scenario_3",
+  "title": "Applicare una rampa di batteria per osservare le soglie dei LED",
+  "hypothesis": "A time-varying battery source should reveal when each LED turns on or off during a voltage sweep, unlike the constant 12 V base run.",
+  "intent": "correction",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "PWL(0s 10V 3s 14V)"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N002)",
+    "@dled12_1[id]",
+    "@dled12_2[id]",
+    "@dled12_3[id]"
+  ],
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak",
+    "@dled12_2[id]": "tran_abs_peak",
+    "@dled12_3[id]": "tran_abs_peak"
+  },
+  "expect": {
+    "v(N002)": "changed",
+    "@dled12_1[id]": "changed",
+    "@dled12_2[id]": "changed",
+    "@dled12_3[id]": "changed"
+  }
+}

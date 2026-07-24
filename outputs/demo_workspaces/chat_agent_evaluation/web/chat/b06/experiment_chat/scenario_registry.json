@@ -1,0 +1,372 @@
+{
+  "source_format": "pipeline2.0_experiment_scenario_registry",
+  "batch_name": "batchChatAgentEvaluation",
+  "experiment_name": "chat_agent_evaluation",
+  "circuit_id": "b06",
+  "created_at": "2026-07-24T16:44:40",
+  "updated_at": "2026-07-24T16:47:53",
+  "max_executable_scenarios": 5,
+  "next_scenario_number": 6,
+  "last_added_scenario_id": "scenario_5",
+  "proposals": [
+    {
+      "proposal_id": "proposal_1",
+      "created_at": "2026-07-24T16:44:40",
+      "source_agent_response": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\b06\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_1",
+        "scenario_2"
+      ]
+    },
+    {
+      "proposal_id": "proposal_2",
+      "created_at": "2026-07-24T16:46:31",
+      "source_agent_response": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\b06\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_3",
+        "scenario_4",
+        "scenario_5"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_number": 1,
+      "scenario_id": "scenario_1",
+      "title": "Iniettare un piccolo segnale audio all'ingresso dell'LM386",
+      "hypothesis": "L'uscita silenziosa dipende dall'assenza di segnale su N010, non necessariamente da un guasto dell'uscita audio.",
+      "actions": [
+        {
+          "type": "add_voltage_source_between_nodes",
+          "positive": "N010",
+          "negative": "0",
+          "value": "SIN(0 5m 1000)"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "tran",
+      "compare": [
+        "v(N010)",
+        "v(N009)",
+        "v(N003)"
+      ],
+      "measure": {},
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N009)": "changed",
+        "v(N003)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_1",
+      "execution_path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\b06\\scenarios\\scenario_1",
+      "created_at": "2026-07-24T16:44:40",
+      "updated_at": "2026-07-24T16:45:22",
+      "signature": "{\"actions\":[{\"negative\":\"0\",\"positive\":\"N010\",\"type\":\"add_voltage_source_between_nodes\",\"value\":\"SIN(0 5m 1000)\"}],\"analysis\":\"tran\"}",
+      "scenario": {
+        "scenario_id": "scenario_1",
+        "title": "Iniettare un piccolo segnale audio all'ingresso dell'LM386",
+        "hypothesis": "L'uscita silenziosa dipende dall'assenza di segnale su N010, non necessariamente da un guasto dell'uscita audio.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "add_voltage_source_between_nodes",
+            "positive": "N010",
+            "negative": "0",
+            "value": "SIN(0 5m 1000)"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N010)",
+          "v(N009)",
+          "v(N003)"
+        ],
+        "expect": {
+          "v(N009)": "changed",
+          "v(N003)": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 2,
+      "scenario_id": "scenario_2",
+      "title": "Applicare una eccitazione esterna al nodo antenna",
+      "hypothesis": "La simulazione base e silenziosa soprattutto perche il nodo antenna N001 non riceve alcuna eccitazione SPICE.",
+      "actions": [
+        {
+          "type": "add_voltage_source_between_nodes",
+          "positive": "N001",
+          "negative": "0",
+          "value": "SIN(0 10m 1000)"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "tran",
+      "compare": [
+        "v(N001)",
+        "v(N004)",
+        "v(N010)",
+        "@ddiode7_1[id]"
+      ],
+      "measure": {
+        "@ddiode7_1[id]": "tran_abs_peak"
+      },
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N004)": "changed",
+        "v(N010)": "changed",
+        "@ddiode7_1[id]": "changed"
+      },
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 3,
+      "original_scenario_id": "scenario_3",
+      "execution_path": null,
+      "created_at": "2026-07-24T16:44:40",
+      "updated_at": "2026-07-24T16:44:40",
+      "signature": "{\"actions\":[{\"negative\":\"0\",\"positive\":\"N001\",\"type\":\"add_voltage_source_between_nodes\",\"value\":\"SIN(0 10m 1000)\"}],\"analysis\":\"tran\"}",
+      "scenario": {
+        "scenario_id": "scenario_2",
+        "title": "Applicare una eccitazione esterna al nodo antenna",
+        "hypothesis": "La simulazione base e silenziosa soprattutto perche il nodo antenna N001 non riceve alcuna eccitazione SPICE.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "add_voltage_source_between_nodes",
+            "positive": "N001",
+            "negative": "0",
+            "value": "SIN(0 10m 1000)"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N001)",
+          "v(N004)",
+          "v(N010)",
+          "@ddiode7_1[id]"
+        ],
+        "expect": {
+          "v(N004)": "changed",
+          "v(N010)": "changed",
+          "@ddiode7_1[id]": "changed"
+        },
+        "measure": {
+          "@ddiode7_1[id]": "tran_abs_peak"
+        }
+      }
+    },
+    {
+      "scenario_number": 3,
+      "scenario_id": "scenario_3",
+      "title": "Iniettare un piccolo segnale sul nodo di base del transistor",
+      "hypothesis": "Il segnale potrebbe interrompersi tra N005, N006 e N010, cioe nello stadio a transistor o nel condensatore Cpolarized_capacitor20_4 verso l'LM386.",
+      "actions": [
+        {
+          "type": "add_voltage_source_between_nodes",
+          "positive": "N005",
+          "negative": "0",
+          "value": "SIN(0.660106 5m 1000)"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "tran",
+      "compare": [
+        "v(N005)",
+        "v(N006)",
+        "v(N010)"
+      ],
+      "measure": {},
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N006)": "changed",
+        "v(N010)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_2",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_2",
+      "execution_path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\b06\\scenarios\\scenario_3",
+      "created_at": "2026-07-24T16:46:31",
+      "updated_at": "2026-07-24T16:47:19",
+      "signature": "{\"actions\":[{\"negative\":\"0\",\"positive\":\"N005\",\"type\":\"add_voltage_source_between_nodes\",\"value\":\"SIN(0.660106 5m 1000)\"}],\"analysis\":\"tran\"}",
+      "scenario": {
+        "scenario_id": "scenario_3",
+        "title": "Iniettare un piccolo segnale sul nodo di base del transistor",
+        "hypothesis": "Il segnale potrebbe interrompersi tra N005, N006 e N010, cioe nello stadio a transistor o nel condensatore Cpolarized_capacitor20_4 verso l'LM386.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "add_voltage_source_between_nodes",
+            "positive": "N005",
+            "negative": "0",
+            "value": "SIN(0.660106 5m 1000)"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N005)",
+          "v(N006)",
+          "v(N010)"
+        ],
+        "expect": {
+          "v(N006)": "changed",
+          "v(N010)": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 4,
+      "scenario_id": "scenario_4",
+      "title": "Iniettare un piccolo segnale sul nodo rivelato dopo il diodo",
+      "hypothesis": "Il segnale potrebbe interrompersi tra N004 e N005, cioe tra il rivelatore e l'ingresso dello stadio a transistor.",
+      "actions": [
+        {
+          "type": "add_voltage_source_between_nodes",
+          "positive": "N004",
+          "negative": "0",
+          "value": "SIN(0 5m 1000)"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "tran",
+      "compare": [
+        "v(N004)",
+        "v(N005)",
+        "v(N010)"
+      ],
+      "measure": {},
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N005)": "changed",
+        "v(N010)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_2",
+      "source_local_index": 2,
+      "original_scenario_id": "scenario_3",
+      "execution_path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\b06\\scenarios\\scenario_4",
+      "created_at": "2026-07-24T16:46:31",
+      "updated_at": "2026-07-24T16:47:53",
+      "signature": "{\"actions\":[{\"negative\":\"0\",\"positive\":\"N004\",\"type\":\"add_voltage_source_between_nodes\",\"value\":\"SIN(0 5m 1000)\"}],\"analysis\":\"tran\"}",
+      "scenario": {
+        "scenario_id": "scenario_4",
+        "title": "Iniettare un piccolo segnale sul nodo rivelato dopo il diodo",
+        "hypothesis": "Il segnale potrebbe interrompersi tra N004 e N005, cioe tra il rivelatore e l'ingresso dello stadio a transistor.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "add_voltage_source_between_nodes",
+            "positive": "N004",
+            "negative": "0",
+            "value": "SIN(0 5m 1000)"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N004)",
+          "v(N005)",
+          "v(N010)"
+        ],
+        "expect": {
+          "v(N005)": "changed",
+          "v(N010)": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 5,
+      "scenario_id": "scenario_5",
+      "title": "Iniettare un segnale di prova sul nodo antenna N001",
+      "hypothesis": "La base run potrebbe non produrre audio solo perche manca una reale eccitazione d'ingresso su N001, dato che antenna1.1 non e emessa nel netlist.",
+      "actions": [
+        {
+          "type": "add_voltage_source_between_nodes",
+          "positive": "N001",
+          "negative": "0",
+          "value": "SIN(0 5m 1000)"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "tran",
+      "compare": [
+        "v(N001)",
+        "v(N004)",
+        "v(N010)",
+        "v(N003)"
+      ],
+      "measure": {},
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N004)": "changed",
+        "v(N010)": "changed",
+        "v(N003)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_2",
+      "source_local_index": 3,
+      "original_scenario_id": "scenario_4",
+      "execution_path": null,
+      "created_at": "2026-07-24T16:46:31",
+      "updated_at": "2026-07-24T16:46:31",
+      "signature": "{\"actions\":[{\"negative\":\"0\",\"positive\":\"N001\",\"type\":\"add_voltage_source_between_nodes\",\"value\":\"SIN(0 5m 1000)\"}],\"analysis\":\"tran\"}",
+      "scenario": {
+        "scenario_id": "scenario_5",
+        "title": "Iniettare un segnale di prova sul nodo antenna N001",
+        "hypothesis": "La base run potrebbe non produrre audio solo perche manca una reale eccitazione d'ingresso su N001, dato che antenna1.1 non e emessa nel netlist.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "add_voltage_source_between_nodes",
+            "positive": "N001",
+            "negative": "0",
+            "value": "SIN(0 5m 1000)"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N001)",
+          "v(N004)",
+          "v(N010)",
+          "v(N003)"
+        ],
+        "expect": {
+          "v(N004)": "changed",
+          "v(N010)": "changed",
+          "v(N003)": "changed"
+        }
+      }
+    }
+  ]
+}

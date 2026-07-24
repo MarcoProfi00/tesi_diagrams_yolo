@@ -1,0 +1,2728 @@
+{
+  "source_format": "chat_agent_evaluation_summary",
+  "schema_version": 1,
+  "generated_at": "2026-07-24T11:26:53+02:00",
+  "case": {
+    "workspace": "chat_agent_evaluation",
+    "circuit_id": "b03",
+    "batch": "batchChatAgentEvaluation",
+    "experiment": "chat_agent_evaluation",
+    "mode": "agent",
+    "symptom": "Voglio capire se il monitor della batteria funziona correttamente quando la batteria passa da scarica a carica. Verifica autonomamente tutti e tre i LED e mostrami anche come cambia l’indicazione nel tempo mentre la tensione aumenta."
+  },
+  "execution": {
+    "model": "gpt-5.4",
+    "status": "completed",
+    "agent_decisions_count": 2,
+    "max_agent_decisions": 8,
+    "max_executable_scenarios": 5,
+    "scenarios_proposed": 1,
+    "scenarios_executed": 1,
+    "successful_spice_runs": 1,
+    "failed_spice_runs": 0,
+    "resolved_candidate_scenarios": 0,
+    "stop_reason": "agent_stop"
+  },
+  "base_evidence": {
+    "graph": {
+      "image_id": "b03",
+      "image_name": "b03.jpg",
+      "components": [
+        {
+          "component_id": "battery2.1",
+          "instance_id": "2.1",
+          "class_name": "Battery",
+          "terminals": [
+            {
+              "terminal_id": "battery2.1_positive",
+              "name": "positive",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "battery2.1_negative",
+              "name": "negative",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "led12.1",
+          "instance_id": "12.1",
+          "class_name": "LED",
+          "terminals": [
+            {
+              "terminal_id": "led12.1_anode",
+              "name": "anode",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "led12.1_cathode",
+              "name": "cathode",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "resistor22.1",
+          "instance_id": "22.1",
+          "class_name": "Resistor",
+          "terminals": [
+            {
+              "terminal_id": "resistor22.1_t1",
+              "name": "t1",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "resistor22.1_t2",
+              "name": "t2",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "npn_transistor18.1",
+          "instance_id": "18.1",
+          "class_name": "NPN_Transistor",
+          "terminals": [
+            {
+              "terminal_id": "npn_transistor18.1_B",
+              "name": "B",
+              "relative_position": "right"
+            },
+            {
+              "terminal_id": "npn_transistor18.1_C",
+              "name": "C",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "npn_transistor18.1_E",
+              "name": "E",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "resistor22.2",
+          "instance_id": "22.2",
+          "class_name": "Resistor",
+          "terminals": [
+            {
+              "terminal_id": "resistor22.2_t1",
+              "name": "t1",
+              "relative_position": "left"
+            },
+            {
+              "terminal_id": "resistor22.2_t2",
+              "name": "t2",
+              "relative_position": "right"
+            }
+          ]
+        },
+        {
+          "component_id": "led12.2",
+          "instance_id": "12.2",
+          "class_name": "LED",
+          "terminals": [
+            {
+              "terminal_id": "led12.2_anode",
+              "name": "anode",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "led12.2_cathode",
+              "name": "cathode",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "resistor22.3",
+          "instance_id": "22.3",
+          "class_name": "Resistor",
+          "terminals": [
+            {
+              "terminal_id": "resistor22.3_t1",
+              "name": "t1",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "resistor22.3_t2",
+              "name": "t2",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "npn_transistor18.2",
+          "instance_id": "18.2",
+          "class_name": "NPN_Transistor",
+          "terminals": [
+            {
+              "terminal_id": "npn_transistor18.2_B",
+              "name": "B",
+              "relative_position": "right"
+            },
+            {
+              "terminal_id": "npn_transistor18.2_C",
+              "name": "C",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "npn_transistor18.2_E",
+              "name": "E",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "diode7.1",
+          "instance_id": "7.1",
+          "class_name": "Diode",
+          "terminals": [
+            {
+              "terminal_id": "diode7.1_cathode",
+              "name": "cathode",
+              "relative_position": "left"
+            },
+            {
+              "terminal_id": "diode7.1_anode",
+              "name": "anode",
+              "relative_position": "right"
+            }
+          ]
+        },
+        {
+          "component_id": "resistor22.4",
+          "instance_id": "22.4",
+          "class_name": "Resistor",
+          "terminals": [
+            {
+              "terminal_id": "resistor22.4_t1",
+              "name": "t1",
+              "relative_position": "left"
+            },
+            {
+              "terminal_id": "resistor22.4_t2",
+              "name": "t2",
+              "relative_position": "right"
+            }
+          ]
+        },
+        {
+          "component_id": "diode7.2",
+          "instance_id": "7.2",
+          "class_name": "Diode",
+          "terminals": [
+            {
+              "terminal_id": "diode7.2_cathode",
+              "name": "cathode",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "diode7.2_anode",
+              "name": "anode",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "resistor22.5",
+          "instance_id": "22.5",
+          "class_name": "Resistor",
+          "terminals": [
+            {
+              "terminal_id": "resistor22.5_t1",
+              "name": "t1",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "resistor22.5_t2",
+              "name": "t2",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "diode7.3",
+          "instance_id": "7.3",
+          "class_name": "Diode",
+          "terminals": [
+            {
+              "terminal_id": "diode7.3_anode",
+              "name": "anode",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "diode7.3_cathode",
+              "name": "cathode",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "diode7.4",
+          "instance_id": "7.4",
+          "class_name": "Diode",
+          "terminals": [
+            {
+              "terminal_id": "diode7.4_anode",
+              "name": "anode",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "diode7.4_cathode",
+              "name": "cathode",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "resistor22.6",
+          "instance_id": "22.6",
+          "class_name": "Resistor",
+          "terminals": [
+            {
+              "terminal_id": "resistor22.6_t1",
+              "name": "t1",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "resistor22.6_t2",
+              "name": "t2",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "led12.3",
+          "instance_id": "12.3",
+          "class_name": "LED",
+          "terminals": [
+            {
+              "terminal_id": "led12.3_anode",
+              "name": "anode",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "led12.3_cathode",
+              "name": "cathode",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "npn_transistor18.3",
+          "instance_id": "18.3",
+          "class_name": "NPN_Transistor",
+          "terminals": [
+            {
+              "terminal_id": "npn_transistor18.3_B",
+              "name": "B",
+              "relative_position": "right"
+            },
+            {
+              "terminal_id": "npn_transistor18.3_E",
+              "name": "E",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "npn_transistor18.3_C",
+              "name": "C",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "resistor22.7",
+          "instance_id": "22.7",
+          "class_name": "Resistor",
+          "terminals": [
+            {
+              "terminal_id": "resistor22.7_t1",
+              "name": "t1",
+              "relative_position": "left"
+            },
+            {
+              "terminal_id": "resistor22.7_t2",
+              "name": "t2",
+              "relative_position": "right"
+            }
+          ]
+        },
+        {
+          "component_id": "resistor22.8",
+          "instance_id": "22.8",
+          "class_name": "Resistor",
+          "terminals": [
+            {
+              "terminal_id": "resistor22.8_t1",
+              "name": "t1",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "resistor22.8_t2",
+              "name": "t2",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "diode7.5",
+          "instance_id": "7.5",
+          "class_name": "Diode",
+          "terminals": [
+            {
+              "terminal_id": "diode7.5_cathode",
+              "name": "cathode",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "diode7.5_anode",
+              "name": "anode",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "diode7.6",
+          "instance_id": "7.6",
+          "class_name": "Diode",
+          "terminals": [
+            {
+              "terminal_id": "diode7.6_anode",
+              "name": "anode",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "diode7.6_cathode",
+              "name": "cathode",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "diode7.7",
+          "instance_id": "7.7",
+          "class_name": "Diode",
+          "terminals": [
+            {
+              "terminal_id": "diode7.7_anode",
+              "name": "anode",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "diode7.7_cathode",
+              "name": "cathode",
+              "relative_position": "bottom"
+            }
+          ]
+        }
+      ],
+      "terminal_metadata": {},
+      "graph": {
+        "battery2.1_negative": [
+          "diode7.5_anode",
+          "led12.3_cathode",
+          "npn_transistor18.1_E",
+          "npn_transistor18.2_E",
+          "resistor22.5_t2"
+        ],
+        "battery2.1_positive": [
+          "diode7.3_anode",
+          "led12.1_anode",
+          "led12.2_anode",
+          "npn_transistor18.3_E",
+          "resistor22.8_t1"
+        ],
+        "diode7.1_anode": [
+          "npn_transistor18.3_C",
+          "resistor22.6_t1"
+        ],
+        "diode7.1_cathode": [
+          "led12.2_cathode",
+          "resistor22.3_t1"
+        ],
+        "diode7.2_anode": [
+          "resistor22.4_t2",
+          "resistor22.5_t1"
+        ],
+        "diode7.2_cathode": [
+          "diode7.4_cathode"
+        ],
+        "diode7.3_anode": [
+          "battery2.1_positive",
+          "led12.1_anode",
+          "led12.2_anode",
+          "npn_transistor18.3_E",
+          "resistor22.8_t1"
+        ],
+        "diode7.3_cathode": [
+          "diode7.4_anode"
+        ],
+        "diode7.4_anode": [
+          "diode7.3_cathode"
+        ],
+        "diode7.4_cathode": [
+          "diode7.2_cathode"
+        ],
+        "diode7.5_anode": [
+          "battery2.1_negative",
+          "led12.3_cathode",
+          "npn_transistor18.1_E",
+          "npn_transistor18.2_E",
+          "resistor22.5_t2"
+        ],
+        "diode7.5_cathode": [
+          "diode7.7_cathode"
+        ],
+        "diode7.6_anode": [
+          "resistor22.7_t2",
+          "resistor22.8_t2"
+        ],
+        "diode7.6_cathode": [
+          "diode7.7_anode"
+        ],
+        "diode7.7_anode": [
+          "diode7.6_cathode"
+        ],
+        "diode7.7_cathode": [
+          "diode7.5_cathode"
+        ],
+        "led12.1_anode": [
+          "battery2.1_positive",
+          "diode7.3_anode",
+          "led12.2_anode",
+          "npn_transistor18.3_E",
+          "resistor22.8_t1"
+        ],
+        "led12.1_cathode": [
+          "resistor22.1_t1"
+        ],
+        "led12.2_anode": [
+          "battery2.1_positive",
+          "diode7.3_anode",
+          "led12.1_anode",
+          "npn_transistor18.3_E",
+          "resistor22.8_t1"
+        ],
+        "led12.2_cathode": [
+          "diode7.1_cathode",
+          "resistor22.3_t1"
+        ],
+        "led12.3_anode": [
+          "resistor22.6_t2"
+        ],
+        "led12.3_cathode": [
+          "battery2.1_negative",
+          "diode7.5_anode",
+          "npn_transistor18.1_E",
+          "npn_transistor18.2_E",
+          "resistor22.5_t2"
+        ],
+        "npn_transistor18.1_B": [
+          "resistor22.2_t1"
+        ],
+        "npn_transistor18.1_C": [
+          "resistor22.1_t2"
+        ],
+        "npn_transistor18.1_E": [
+          "battery2.1_negative",
+          "diode7.5_anode",
+          "led12.3_cathode",
+          "npn_transistor18.2_E",
+          "resistor22.5_t2"
+        ],
+        "npn_transistor18.2_B": [
+          "resistor22.4_t1"
+        ],
+        "npn_transistor18.2_C": [
+          "resistor22.2_t2",
+          "resistor22.3_t2"
+        ],
+        "npn_transistor18.2_E": [
+          "battery2.1_negative",
+          "diode7.5_anode",
+          "led12.3_cathode",
+          "npn_transistor18.1_E",
+          "resistor22.5_t2"
+        ],
+        "npn_transistor18.3_B": [
+          "resistor22.7_t1"
+        ],
+        "npn_transistor18.3_C": [
+          "diode7.1_anode",
+          "resistor22.6_t1"
+        ],
+        "npn_transistor18.3_E": [
+          "battery2.1_positive",
+          "diode7.3_anode",
+          "led12.1_anode",
+          "led12.2_anode",
+          "resistor22.8_t1"
+        ],
+        "resistor22.1_t1": [
+          "led12.1_cathode"
+        ],
+        "resistor22.1_t2": [
+          "npn_transistor18.1_C"
+        ],
+        "resistor22.2_t1": [
+          "npn_transistor18.1_B"
+        ],
+        "resistor22.2_t2": [
+          "npn_transistor18.2_C",
+          "resistor22.3_t2"
+        ],
+        "resistor22.3_t1": [
+          "diode7.1_cathode",
+          "led12.2_cathode"
+        ],
+        "resistor22.3_t2": [
+          "npn_transistor18.2_C",
+          "resistor22.2_t2"
+        ],
+        "resistor22.4_t1": [
+          "npn_transistor18.2_B"
+        ],
+        "resistor22.4_t2": [
+          "diode7.2_anode",
+          "resistor22.5_t1"
+        ],
+        "resistor22.5_t1": [
+          "diode7.2_anode",
+          "resistor22.4_t2"
+        ],
+        "resistor22.5_t2": [
+          "battery2.1_negative",
+          "diode7.5_anode",
+          "led12.3_cathode",
+          "npn_transistor18.1_E",
+          "npn_transistor18.2_E"
+        ],
+        "resistor22.6_t1": [
+          "diode7.1_anode",
+          "npn_transistor18.3_C"
+        ],
+        "resistor22.6_t2": [
+          "led12.3_anode"
+        ],
+        "resistor22.7_t1": [
+          "npn_transistor18.3_B"
+        ],
+        "resistor22.7_t2": [
+          "diode7.6_anode",
+          "resistor22.8_t2"
+        ],
+        "resistor22.8_t1": [
+          "battery2.1_positive",
+          "diode7.3_anode",
+          "led12.1_anode",
+          "led12.2_anode",
+          "npn_transistor18.3_E"
+        ],
+        "resistor22.8_t2": [
+          "diode7.6_anode",
+          "resistor22.7_t2"
+        ]
+      },
+      "warnings": {
+        "unconnected_terminals": [],
+        "unmatched_terminals": [],
+        "suspicious_matches": []
+      }
+    },
+    "node_map": {
+      "circuit_id": "b03",
+      "source_format": "pipeline2.0_node_map",
+      "nodes": [
+        {
+          "node_id": "N001",
+          "kind": "normal",
+          "terminals": [
+            "battery2.1_negative",
+            "diode7.5_anode",
+            "led12.3_cathode",
+            "npn_transistor18.1_E",
+            "npn_transistor18.2_E",
+            "resistor22.5_t2"
+          ],
+          "terminal_count": 6
+        },
+        {
+          "node_id": "N002",
+          "kind": "normal",
+          "terminals": [
+            "battery2.1_positive",
+            "diode7.3_anode",
+            "led12.1_anode",
+            "led12.2_anode",
+            "npn_transistor18.3_E",
+            "resistor22.8_t1"
+          ],
+          "terminal_count": 6
+        },
+        {
+          "node_id": "N003",
+          "kind": "normal",
+          "terminals": [
+            "diode7.1_anode",
+            "npn_transistor18.3_C",
+            "resistor22.6_t1"
+          ],
+          "terminal_count": 3
+        },
+        {
+          "node_id": "N004",
+          "kind": "normal",
+          "terminals": [
+            "diode7.1_cathode",
+            "led12.2_cathode",
+            "resistor22.3_t1"
+          ],
+          "terminal_count": 3
+        },
+        {
+          "node_id": "N005",
+          "kind": "normal",
+          "terminals": [
+            "diode7.2_anode",
+            "resistor22.4_t2",
+            "resistor22.5_t1"
+          ],
+          "terminal_count": 3
+        },
+        {
+          "node_id": "N006",
+          "kind": "normal",
+          "terminals": [
+            "diode7.2_cathode",
+            "diode7.4_cathode"
+          ],
+          "terminal_count": 2
+        },
+        {
+          "node_id": "N007",
+          "kind": "normal",
+          "terminals": [
+            "diode7.3_cathode",
+            "diode7.4_anode"
+          ],
+          "terminal_count": 2
+        },
+        {
+          "node_id": "N008",
+          "kind": "normal",
+          "terminals": [
+            "diode7.5_cathode",
+            "diode7.7_cathode"
+          ],
+          "terminal_count": 2
+        },
+        {
+          "node_id": "N009",
+          "kind": "normal",
+          "terminals": [
+            "diode7.6_anode",
+            "resistor22.7_t2",
+            "resistor22.8_t2"
+          ],
+          "terminal_count": 3
+        },
+        {
+          "node_id": "N010",
+          "kind": "normal",
+          "terminals": [
+            "diode7.6_cathode",
+            "diode7.7_anode"
+          ],
+          "terminal_count": 2
+        },
+        {
+          "node_id": "N011",
+          "kind": "normal",
+          "terminals": [
+            "led12.1_cathode",
+            "resistor22.1_t1"
+          ],
+          "terminal_count": 2
+        },
+        {
+          "node_id": "N012",
+          "kind": "normal",
+          "terminals": [
+            "led12.3_anode",
+            "resistor22.6_t2"
+          ],
+          "terminal_count": 2
+        },
+        {
+          "node_id": "N013",
+          "kind": "normal",
+          "terminals": [
+            "npn_transistor18.1_B",
+            "resistor22.2_t1"
+          ],
+          "terminal_count": 2
+        },
+        {
+          "node_id": "N014",
+          "kind": "normal",
+          "terminals": [
+            "npn_transistor18.1_C",
+            "resistor22.1_t2"
+          ],
+          "terminal_count": 2
+        },
+        {
+          "node_id": "N015",
+          "kind": "normal",
+          "terminals": [
+            "npn_transistor18.2_B",
+            "resistor22.4_t1"
+          ],
+          "terminal_count": 2
+        },
+        {
+          "node_id": "N016",
+          "kind": "normal",
+          "terminals": [
+            "npn_transistor18.2_C",
+            "resistor22.2_t2",
+            "resistor22.3_t2"
+          ],
+          "terminal_count": 3
+        },
+        {
+          "node_id": "N017",
+          "kind": "normal",
+          "terminals": [
+            "npn_transistor18.3_B",
+            "resistor22.7_t1"
+          ],
+          "terminal_count": 2
+        }
+      ],
+      "terminal_to_node": {
+        "battery2.1_negative": "N001",
+        "battery2.1_positive": "N002",
+        "diode7.1_anode": "N003",
+        "diode7.1_cathode": "N004",
+        "diode7.2_anode": "N005",
+        "diode7.2_cathode": "N006",
+        "diode7.3_anode": "N002",
+        "diode7.3_cathode": "N007",
+        "diode7.4_anode": "N007",
+        "diode7.4_cathode": "N006",
+        "diode7.5_anode": "N001",
+        "diode7.5_cathode": "N008",
+        "diode7.6_anode": "N009",
+        "diode7.6_cathode": "N010",
+        "diode7.7_anode": "N010",
+        "diode7.7_cathode": "N008",
+        "led12.1_anode": "N002",
+        "led12.1_cathode": "N011",
+        "led12.2_anode": "N002",
+        "led12.2_cathode": "N004",
+        "led12.3_anode": "N012",
+        "led12.3_cathode": "N001",
+        "npn_transistor18.1_B": "N013",
+        "npn_transistor18.1_C": "N014",
+        "npn_transistor18.1_E": "N001",
+        "npn_transistor18.2_B": "N015",
+        "npn_transistor18.2_C": "N016",
+        "npn_transistor18.2_E": "N001",
+        "npn_transistor18.3_B": "N017",
+        "npn_transistor18.3_C": "N003",
+        "npn_transistor18.3_E": "N002",
+        "resistor22.1_t1": "N011",
+        "resistor22.1_t2": "N014",
+        "resistor22.2_t1": "N013",
+        "resistor22.2_t2": "N016",
+        "resistor22.3_t1": "N004",
+        "resistor22.3_t2": "N016",
+        "resistor22.4_t1": "N015",
+        "resistor22.4_t2": "N005",
+        "resistor22.5_t1": "N005",
+        "resistor22.5_t2": "N001",
+        "resistor22.6_t1": "N003",
+        "resistor22.6_t2": "N012",
+        "resistor22.7_t1": "N017",
+        "resistor22.7_t2": "N009",
+        "resistor22.8_t1": "N002",
+        "resistor22.8_t2": "N009"
+      },
+      "component_terminal_nodes": {
+        "battery2.1": {
+          "positive": "N002",
+          "negative": "N001"
+        },
+        "diode7.1": {
+          "cathode": "N004",
+          "anode": "N003"
+        },
+        "diode7.2": {
+          "cathode": "N006",
+          "anode": "N005"
+        },
+        "diode7.3": {
+          "anode": "N002",
+          "cathode": "N007"
+        },
+        "diode7.4": {
+          "anode": "N007",
+          "cathode": "N006"
+        },
+        "diode7.5": {
+          "cathode": "N008",
+          "anode": "N001"
+        },
+        "diode7.6": {
+          "anode": "N009",
+          "cathode": "N010"
+        },
+        "diode7.7": {
+          "anode": "N010",
+          "cathode": "N008"
+        },
+        "led12.1": {
+          "anode": "N002",
+          "cathode": "N011"
+        },
+        "led12.2": {
+          "anode": "N002",
+          "cathode": "N004"
+        },
+        "led12.3": {
+          "anode": "N012",
+          "cathode": "N001"
+        },
+        "npn_transistor18.1": {
+          "B": "N013",
+          "C": "N014",
+          "E": "N001"
+        },
+        "npn_transistor18.2": {
+          "B": "N015",
+          "C": "N016",
+          "E": "N001"
+        },
+        "npn_transistor18.3": {
+          "B": "N017",
+          "E": "N002",
+          "C": "N003"
+        },
+        "resistor22.1": {
+          "t1": "N011",
+          "t2": "N014"
+        },
+        "resistor22.2": {
+          "t1": "N013",
+          "t2": "N016"
+        },
+        "resistor22.3": {
+          "t1": "N004",
+          "t2": "N016"
+        },
+        "resistor22.4": {
+          "t1": "N015",
+          "t2": "N005"
+        },
+        "resistor22.5": {
+          "t1": "N005",
+          "t2": "N001"
+        },
+        "resistor22.6": {
+          "t1": "N003",
+          "t2": "N012"
+        },
+        "resistor22.7": {
+          "t1": "N017",
+          "t2": "N009"
+        },
+        "resistor22.8": {
+          "t1": "N002",
+          "t2": "N009"
+        }
+      },
+      "warnings": {
+        "ground_groups_count": 0,
+        "multiple_ground_groups_merged_as_node_0": false,
+        "singleton_nodes": [],
+        "original_warnings": {
+          "unconnected_terminals": [],
+          "unmatched_terminals": [],
+          "suspicious_matches": []
+        },
+        "normalization_warnings": []
+      },
+      "stats": {
+        "nodes_count": 17,
+        "normal_nodes_count": 17,
+        "ground_nodes_count": 0,
+        "ground_groups_count": 0,
+        "terminal_to_node_count": 47,
+        "singleton_nodes_count": 0
+      }
+    },
+    "values_bound": {
+      "circuit_id": "b03",
+      "source_format": "pipeline2.0_values_bound",
+      "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\data\\batchPipeline2.0\\batchChatAgentEvaluation\\values\\b03_values.yaml",
+      "supplies": {
+        "VREF_B": {
+          "terminal": "battery2.1_negative",
+          "type": "dc",
+          "value": 0,
+          "unit": "V",
+          "reference": 0,
+          "source": "manual_reference_for_floating_battery_circuit",
+          "label_text": "B: riferimento SPICE 0 V",
+          "node": "N001"
+        }
+      },
+      "components": {
+        "battery2.1": {
+          "class_name": "Battery",
+          "terminal_nodes": {
+            "positive": "N002",
+            "negative": "N001"
+          },
+          "value_data": {
+            "type": "dc",
+            "value": 12,
+            "unit": "V",
+            "source": "manual_from_original_circuit_context",
+            "label_text": "batteria automobilistica nominale 12 V tra A e B"
+          },
+          "status": "bound"
+        },
+        "diode7.1": {
+          "class_name": "Diode",
+          "terminal_nodes": {
+            "cathode": "N004",
+            "anode": "N003"
+          },
+          "value_data": {
+            "model": "D_1N4148_TYP",
+            "source": "manual_from_image_label",
+            "label_text": "D3 1N4148"
+          },
+          "status": "bound"
+        },
+        "diode7.2": {
+          "class_name": "Diode",
+          "terminal_nodes": {
+            "cathode": "N006",
+            "anode": "N005"
+          },
+          "value_data": {
+            "model": "BZX79C10_TYP",
+            "source": "manual_from_image_label",
+            "label_text": "D6 BZX79C10 zener 10 V",
+            "viewer_override": {
+              "visual_class": "zener",
+              "label": "D6",
+              "display_value": "BZX79C10 10 V"
+            }
+          },
+          "status": "bound"
+        },
+        "diode7.3": {
+          "class_name": "Diode",
+          "terminal_nodes": {
+            "anode": "N002",
+            "cathode": "N007"
+          },
+          "value_data": {
+            "model": "D_1N4148_TYP",
+            "source": "manual_from_image_label",
+            "label_text": "D4 1N4148"
+          },
+          "status": "bound"
+        },
+        "diode7.4": {
+          "class_name": "Diode",
+          "terminal_nodes": {
+            "anode": "N007",
+            "cathode": "N006"
+          },
+          "value_data": {
+            "model": "D_1N4148_TYP",
+            "source": "manual_from_image_label",
+            "label_text": "D5 1N4148"
+          },
+          "status": "bound"
+        },
+        "diode7.5": {
+          "class_name": "Diode",
+          "terminal_nodes": {
+            "cathode": "N008",
+            "anode": "N001"
+          },
+          "value_data": {
+            "model": "BZX79C12_TYP",
+            "source": "manual_from_image_label",
+            "label_text": "D10 BZX79C12 zener 12 V",
+            "viewer_override": {
+              "visual_class": "zener",
+              "label": "D10",
+              "display_value": "BZX79C12 12 V"
+            }
+          },
+          "status": "bound"
+        },
+        "diode7.6": {
+          "class_name": "Diode",
+          "terminal_nodes": {
+            "anode": "N009",
+            "cathode": "N010"
+          },
+          "value_data": {
+            "model": "D_1N4148_TYP",
+            "source": "manual_from_image_label",
+            "label_text": "D8 1N4148"
+          },
+          "status": "bound"
+        },
+        "diode7.7": {
+          "class_name": "Diode",
+          "terminal_nodes": {
+            "anode": "N010",
+            "cathode": "N008"
+          },
+          "value_data": {
+            "model": "D_1N4148_TYP",
+            "source": "manual_from_image_label",
+            "label_text": "D9 1N4148"
+          },
+          "status": "bound"
+        },
+        "led12.1": {
+          "class_name": "LED",
+          "terminal_nodes": {
+            "anode": "N002",
+            "cathode": "N011"
+          },
+          "value_data": {
+            "model": "LED_RED_TYP",
+            "source": "manual_from_image_color",
+            "label_text": "D1 LED rosso"
+          },
+          "status": "bound"
+        },
+        "led12.2": {
+          "class_name": "LED",
+          "terminal_nodes": {
+            "anode": "N002",
+            "cathode": "N004"
+          },
+          "value_data": {
+            "model": "LED_YELLOW_TYP",
+            "source": "manual_from_image_color",
+            "label_text": "D2 LED giallo"
+          },
+          "status": "bound"
+        },
+        "led12.3": {
+          "class_name": "LED",
+          "terminal_nodes": {
+            "anode": "N012",
+            "cathode": "N001"
+          },
+          "value_data": {
+            "model": "LED_GREEN_TYP",
+            "source": "manual_from_image_color",
+            "label_text": "D7 LED verde"
+          },
+          "status": "bound"
+        },
+        "npn_transistor18.1": {
+          "class_name": "NPN_Transistor",
+          "terminal_nodes": {
+            "B": "N013",
+            "C": "N014",
+            "E": "N001"
+          },
+          "value_data": {
+            "model": "BC547_TYP",
+            "source": "manual_from_image_label",
+            "label_text": "Q1 BC547 NPN"
+          },
+          "status": "bound"
+        },
+        "npn_transistor18.2": {
+          "class_name": "NPN_Transistor",
+          "terminal_nodes": {
+            "B": "N015",
+            "C": "N016",
+            "E": "N001"
+          },
+          "value_data": {
+            "model": "BC547_TYP",
+            "source": "manual_from_image_label",
+            "label_text": "Q2 BC547 NPN"
+          },
+          "status": "bound"
+        },
+        "npn_transistor18.3": {
+          "class_name": "NPN_Transistor",
+          "terminal_nodes": {
+            "B": "N017",
+            "E": "N002",
+            "C": "N003"
+          },
+          "value_data": {
+            "model": "BC557_TYP",
+            "source": "manual_from_image_label_semantic_correction",
+            "label_text": "Q3 BC557 PNP"
+          },
+          "status": "bound"
+        },
+        "resistor22.1": {
+          "class_name": "Resistor",
+          "terminal_nodes": {
+            "t1": "N011",
+            "t2": "N014"
+          },
+          "value_data": {
+            "value": 1,
+            "unit": "kohm",
+            "source": "manual_from_image_label",
+            "label_text": "R1 1 kohm"
+          },
+          "status": "bound"
+        },
+        "resistor22.2": {
+          "class_name": "Resistor",
+          "terminal_nodes": {
+            "t1": "N013",
+            "t2": "N016"
+          },
+          "value_data": {
+            "value": 100,
+            "unit": "kohm",
+            "source": "manual_from_image_label",
+            "label_text": "R2 100 kohm"
+          },
+          "status": "bound"
+        },
+        "resistor22.3": {
+          "class_name": "Resistor",
+          "terminal_nodes": {
+            "t1": "N004",
+            "t2": "N016"
+          },
+          "value_data": {
+            "value": 1,
+            "unit": "kohm",
+            "source": "manual_from_image_label",
+            "label_text": "R3 1 kohm"
+          },
+          "status": "bound"
+        },
+        "resistor22.4": {
+          "class_name": "Resistor",
+          "terminal_nodes": {
+            "t1": "N015",
+            "t2": "N005"
+          },
+          "value_data": {
+            "value": 3.3,
+            "unit": "kohm",
+            "source": "manual_from_image_label",
+            "label_text": "R4 3.3 kohm"
+          },
+          "status": "bound"
+        },
+        "resistor22.5": {
+          "class_name": "Resistor",
+          "terminal_nodes": {
+            "t1": "N005",
+            "t2": "N001"
+          },
+          "value_data": {
+            "value": 3.3,
+            "unit": "kohm",
+            "source": "manual_from_image_label",
+            "label_text": "R5 3.3 kohm"
+          },
+          "status": "bound"
+        },
+        "resistor22.6": {
+          "class_name": "Resistor",
+          "terminal_nodes": {
+            "t1": "N003",
+            "t2": "N012"
+          },
+          "value_data": {
+            "value": 1,
+            "unit": "kohm",
+            "source": "manual_from_image_label",
+            "label_text": "R6 1 kohm"
+          },
+          "status": "bound"
+        },
+        "resistor22.7": {
+          "class_name": "Resistor",
+          "terminal_nodes": {
+            "t1": "N017",
+            "t2": "N009"
+          },
+          "value_data": {
+            "value": 3.3,
+            "unit": "kohm",
+            "source": "manual_from_image_label",
+            "label_text": "R7 3.3 kohm"
+          },
+          "status": "bound"
+        },
+        "resistor22.8": {
+          "class_name": "Resistor",
+          "terminal_nodes": {
+            "t1": "N002",
+            "t2": "N009"
+          },
+          "value_data": {
+            "value": 3.3,
+            "unit": "kohm",
+            "source": "manual_from_image_label",
+            "label_text": "R8 3.3 kohm"
+          },
+          "status": "bound"
+        }
+      },
+      "nodes": {
+        "battery2.1_negative": {
+          "label": "B",
+          "source": "manual_from_image_label",
+          "label_text": "B: negativo batteria e riferimento SPICE",
+          "node": "N001"
+        },
+        "battery2.1_positive": {
+          "label": "A",
+          "source": "manual_from_image_label",
+          "label_text": "A: positivo batteria",
+          "node": "N002"
+        }
+      },
+      "spice_topology_overlay": [],
+      "simulation": {
+        "analyses": [
+          "op",
+          "tran"
+        ],
+        "tran": {
+          "step": "1ms",
+          "stop": "3s"
+        }
+      },
+      "missing": [],
+      "stats": {
+        "components_total": 22,
+        "bound_components": 22,
+        "missing_components": 0,
+        "not_required_components": 0,
+        "unsupported_components": 0,
+        "supplies_count": 1,
+        "manual_nodes_count": 2
+      }
+    },
+    "component_rules": {
+      "circuit_id": "b03",
+      "source_format": "pipeline2.0_component_rules",
+      "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\data\\batchPipeline2.0\\batchChatAgentEvaluation\\values\\b03_values.yaml",
+      "spice_classes_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\pipeline2_spice_classes.yaml",
+      "supplies": {
+        "VREF_B": {
+          "status": "spice_ready",
+          "spice_prefix": "V",
+          "emit_as": "independent_voltage_source",
+          "nodes": [
+            "N001",
+            "0"
+          ],
+          "parameters": {
+            "terminal": "battery2.1_negative",
+            "type": "dc",
+            "value": 0,
+            "unit": "V",
+            "reference": 0,
+            "source": "manual_reference_for_floating_battery_circuit",
+            "label_text": "B: riferimento SPICE 0 V",
+            "node": "N001"
+          }
+        }
+      },
+      "components": {
+        "battery2.1": {
+          "class_name": "Battery",
+          "status": "spice_ready",
+          "spice_support": "direct",
+          "spice_prefix": "V",
+          "emit_as": "independent_voltage_source",
+          "node_order": [
+            "positive",
+            "negative"
+          ],
+          "nodes": [
+            "N002",
+            "N001"
+          ],
+          "parameters": {
+            "type": "dc",
+            "value": 12,
+            "unit": "V",
+            "source": "manual_from_original_circuit_context",
+            "label_text": "batteria automobilistica nominale 12 V tra A e B"
+          }
+        },
+        "diode7.1": {
+          "class_name": "Diode",
+          "status": "spice_ready",
+          "spice_support": "model",
+          "spice_prefix": "D",
+          "emit_as": "diode",
+          "node_order": [
+            "anode",
+            "cathode"
+          ],
+          "nodes": [
+            "N003",
+            "N004"
+          ],
+          "parameters": {
+            "model": "D_1N4148_TYP",
+            "source": "manual_from_image_label",
+            "label_text": "D3 1N4148"
+          }
+        },
+        "diode7.2": {
+          "class_name": "Diode",
+          "status": "spice_ready",
+          "spice_support": "model",
+          "spice_prefix": "D",
+          "emit_as": "diode",
+          "node_order": [
+            "anode",
+            "cathode"
+          ],
+          "nodes": [
+            "N005",
+            "N006"
+          ],
+          "parameters": {
+            "model": "BZX79C10_TYP",
+            "source": "manual_from_image_label",
+            "label_text": "D6 BZX79C10 zener 10 V",
+            "viewer_override": {
+              "visual_class": "zener",
+              "label": "D6",
+              "display_value": "BZX79C10 10 V"
+            }
+          }
+        },
+        "diode7.3": {
+          "class_name": "Diode",
+          "status": "spice_ready",
+          "spice_support": "model",
+          "spice_prefix": "D",
+          "emit_as": "diode",
+          "node_order": [
+            "anode",
+            "cathode"
+          ],
+          "nodes": [
+            "N002",
+            "N007"
+          ],
+          "parameters": {
+            "model": "D_1N4148_TYP",
+            "source": "manual_from_image_label",
+            "label_text": "D4 1N4148"
+          }
+        },
+        "diode7.4": {
+          "class_name": "Diode",
+          "status": "spice_ready",
+          "spice_support": "model",
+          "spice_prefix": "D",
+          "emit_as": "diode",
+          "node_order": [
+            "anode",
+            "cathode"
+          ],
+          "nodes": [
+            "N007",
+            "N006"
+          ],
+          "parameters": {
+            "model": "D_1N4148_TYP",
+            "source": "manual_from_image_label",
+            "label_text": "D5 1N4148"
+          }
+        },
+        "diode7.5": {
+          "class_name": "Diode",
+          "status": "spice_ready",
+          "spice_support": "model",
+          "spice_prefix": "D",
+          "emit_as": "diode",
+          "node_order": [
+            "anode",
+            "cathode"
+          ],
+          "nodes": [
+            "N001",
+            "N008"
+          ],
+          "parameters": {
+            "model": "BZX79C12_TYP",
+            "source": "manual_from_image_label",
+            "label_text": "D10 BZX79C12 zener 12 V",
+            "viewer_override": {
+              "visual_class": "zener",
+              "label": "D10",
+              "display_value": "BZX79C12 12 V"
+            }
+          }
+        },
+        "diode7.6": {
+          "class_name": "Diode",
+          "status": "spice_ready",
+          "spice_support": "model",
+          "spice_prefix": "D",
+          "emit_as": "diode",
+          "node_order": [
+            "anode",
+            "cathode"
+          ],
+          "nodes": [
+            "N009",
+            "N010"
+          ],
+          "parameters": {
+            "model": "D_1N4148_TYP",
+            "source": "manual_from_image_label",
+            "label_text": "D8 1N4148"
+          }
+        },
+        "diode7.7": {
+          "class_name": "Diode",
+          "status": "spice_ready",
+          "spice_support": "model",
+          "spice_prefix": "D",
+          "emit_as": "diode",
+          "node_order": [
+            "anode",
+            "cathode"
+          ],
+          "nodes": [
+            "N010",
+            "N008"
+          ],
+          "parameters": {
+            "model": "D_1N4148_TYP",
+            "source": "manual_from_image_label",
+            "label_text": "D9 1N4148"
+          }
+        },
+        "led12.1": {
+          "class_name": "LED",
+          "status": "spice_ready",
+          "spice_support": "model",
+          "spice_prefix": "D",
+          "emit_as": "diode",
+          "node_order": [
+            "anode",
+            "cathode"
+          ],
+          "nodes": [
+            "N002",
+            "N011"
+          ],
+          "parameters": {
+            "model": "LED_RED_TYP",
+            "source": "manual_from_image_color",
+            "label_text": "D1 LED rosso"
+          }
+        },
+        "led12.2": {
+          "class_name": "LED",
+          "status": "spice_ready",
+          "spice_support": "model",
+          "spice_prefix": "D",
+          "emit_as": "diode",
+          "node_order": [
+            "anode",
+            "cathode"
+          ],
+          "nodes": [
+            "N002",
+            "N004"
+          ],
+          "parameters": {
+            "model": "LED_YELLOW_TYP",
+            "source": "manual_from_image_color",
+            "label_text": "D2 LED giallo"
+          }
+        },
+        "led12.3": {
+          "class_name": "LED",
+          "status": "spice_ready",
+          "spice_support": "model",
+          "spice_prefix": "D",
+          "emit_as": "diode",
+          "node_order": [
+            "anode",
+            "cathode"
+          ],
+          "nodes": [
+            "N012",
+            "N001"
+          ],
+          "parameters": {
+            "model": "LED_GREEN_TYP",
+            "source": "manual_from_image_color",
+            "label_text": "D7 LED verde"
+          }
+        },
+        "npn_transistor18.1": {
+          "class_name": "NPN_Transistor",
+          "status": "spice_ready",
+          "spice_support": "model",
+          "spice_prefix": "Q",
+          "emit_as": "bjt_npn",
+          "node_order": [
+            "C",
+            "B",
+            "E"
+          ],
+          "nodes": [
+            "N014",
+            "N013",
+            "N001"
+          ],
+          "parameters": {
+            "model": "BC547_TYP",
+            "source": "manual_from_image_label",
+            "label_text": "Q1 BC547 NPN"
+          }
+        },
+        "npn_transistor18.2": {
+          "class_name": "NPN_Transistor",
+          "status": "spice_ready",
+          "spice_support": "model",
+          "spice_prefix": "Q",
+          "emit_as": "bjt_npn",
+          "node_order": [
+            "C",
+            "B",
+            "E"
+          ],
+          "nodes": [
+            "N016",
+            "N015",
+            "N001"
+          ],
+          "parameters": {
+            "model": "BC547_TYP",
+            "source": "manual_from_image_label",
+            "label_text": "Q2 BC547 NPN"
+          }
+        },
+        "npn_transistor18.3": {
+          "class_name": "NPN_Transistor",
+          "status": "spice_ready",
+          "spice_support": "model",
+          "spice_prefix": "Q",
+          "emit_as": "bjt_npn",
+          "node_order": [
+            "C",
+            "B",
+            "E"
+          ],
+          "nodes": [
+            "N003",
+            "N017",
+            "N002"
+          ],
+          "parameters": {
+            "model": "BC557_TYP",
+            "source": "manual_from_image_label_semantic_correction",
+            "label_text": "Q3 BC557 PNP"
+          }
+        },
+        "resistor22.1": {
+          "class_name": "Resistor",
+          "status": "spice_ready",
+          "spice_support": "direct",
+          "spice_prefix": "R",
+          "emit_as": "resistor",
+          "node_order": [
+            "t1",
+            "t2"
+          ],
+          "nodes": [
+            "N011",
+            "N014"
+          ],
+          "parameters": {
+            "value": 1,
+            "unit": "kohm",
+            "source": "manual_from_image_label",
+            "label_text": "R1 1 kohm"
+          }
+        },
+        "resistor22.2": {
+          "class_name": "Resistor",
+          "status": "spice_ready",
+          "spice_support": "direct",
+          "spice_prefix": "R",
+          "emit_as": "resistor",
+          "node_order": [
+            "t1",
+            "t2"
+          ],
+          "nodes": [
+            "N013",
+            "N016"
+          ],
+          "parameters": {
+            "value": 100,
+            "unit": "kohm",
+            "source": "manual_from_image_label",
+            "label_text": "R2 100 kohm"
+          }
+        },
+        "resistor22.3": {
+          "class_name": "Resistor",
+          "status": "spice_ready",
+          "spice_support": "direct",
+          "spice_prefix": "R",
+          "emit_as": "resistor",
+          "node_order": [
+            "t1",
+            "t2"
+          ],
+          "nodes": [
+            "N004",
+            "N016"
+          ],
+          "parameters": {
+            "value": 1,
+            "unit": "kohm",
+            "source": "manual_from_image_label",
+            "label_text": "R3 1 kohm"
+          }
+        },
+        "resistor22.4": {
+          "class_name": "Resistor",
+          "status": "spice_ready",
+          "spice_support": "direct",
+          "spice_prefix": "R",
+          "emit_as": "resistor",
+          "node_order": [
+            "t1",
+            "t2"
+          ],
+          "nodes": [
+            "N015",
+            "N005"
+          ],
+          "parameters": {
+            "value": 3.3,
+            "unit": "kohm",
+            "source": "manual_from_image_label",
+            "label_text": "R4 3.3 kohm"
+          }
+        },
+        "resistor22.5": {
+          "class_name": "Resistor",
+          "status": "spice_ready",
+          "spice_support": "direct",
+          "spice_prefix": "R",
+          "emit_as": "resistor",
+          "node_order": [
+            "t1",
+            "t2"
+          ],
+          "nodes": [
+            "N005",
+            "N001"
+          ],
+          "parameters": {
+            "value": 3.3,
+            "unit": "kohm",
+            "source": "manual_from_image_label",
+            "label_text": "R5 3.3 kohm"
+          }
+        },
+        "resistor22.6": {
+          "class_name": "Resistor",
+          "status": "spice_ready",
+          "spice_support": "direct",
+          "spice_prefix": "R",
+          "emit_as": "resistor",
+          "node_order": [
+            "t1",
+            "t2"
+          ],
+          "nodes": [
+            "N003",
+            "N012"
+          ],
+          "parameters": {
+            "value": 1,
+            "unit": "kohm",
+            "source": "manual_from_image_label",
+            "label_text": "R6 1 kohm"
+          }
+        },
+        "resistor22.7": {
+          "class_name": "Resistor",
+          "status": "spice_ready",
+          "spice_support": "direct",
+          "spice_prefix": "R",
+          "emit_as": "resistor",
+          "node_order": [
+            "t1",
+            "t2"
+          ],
+          "nodes": [
+            "N017",
+            "N009"
+          ],
+          "parameters": {
+            "value": 3.3,
+            "unit": "kohm",
+            "source": "manual_from_image_label",
+            "label_text": "R7 3.3 kohm"
+          }
+        },
+        "resistor22.8": {
+          "class_name": "Resistor",
+          "status": "spice_ready",
+          "spice_support": "direct",
+          "spice_prefix": "R",
+          "emit_as": "resistor",
+          "node_order": [
+            "t1",
+            "t2"
+          ],
+          "nodes": [
+            "N002",
+            "N009"
+          ],
+          "parameters": {
+            "value": 3.3,
+            "unit": "kohm",
+            "source": "manual_from_image_label",
+            "label_text": "R8 3.3 kohm"
+          }
+        }
+      },
+      "simulation": {
+        "analyses": [
+          "op",
+          "tran"
+        ],
+        "tran": {
+          "step": "1ms",
+          "stop": "3s"
+        }
+      },
+      "stats": {
+        "components_total": 22,
+        "spice_ready_components": 22,
+        "not_emitted_components": 0,
+        "measurement_components": 0,
+        "missing_components": 0,
+        "unsupported_components": 0,
+        "pin_aware_components": 0,
+        "invalid_components": 0,
+        "supplies_ready_count": 1
+      }
+    },
+    "spice_emit_report": {
+      "circuit_id": "b03",
+      "source_format": "pipeline2.0_spice_emit_report",
+      "emitted_elements": 23,
+      "skipped_elements": 0,
+      "skipped_components": [],
+      "informational_skips": [],
+      "measurement_points": [],
+      "analyses": [
+        "op",
+        "tran"
+      ],
+      "transient_export": {
+        "path": "08_tran.csv",
+        "nodes": [
+          "N001",
+          "N002",
+          "N003",
+          "N004",
+          "N005",
+          "N006",
+          "N007",
+          "N008",
+          "N009",
+          "N010",
+          "N011",
+          "N012",
+          "N013",
+          "N014",
+          "N015",
+          "N016",
+          "N017"
+        ],
+        "device_currents": [
+          "@ddiode7_1[id]",
+          "@ddiode7_2[id]",
+          "@ddiode7_3[id]",
+          "@ddiode7_4[id]",
+          "@ddiode7_5[id]",
+          "@ddiode7_6[id]",
+          "@ddiode7_7[id]",
+          "@dled12_1[id]",
+          "@dled12_2[id]",
+          "@dled12_3[id]"
+        ]
+      },
+      "models": [
+        "BC547_TYP",
+        "BC557_TYP",
+        "BZX79C10_TYP",
+        "BZX79C12_TYP",
+        "D_1N4148_TYP",
+        "LED_GREEN_TYP",
+        "LED_RED_TYP",
+        "LED_YELLOW_TYP"
+      ],
+      "warnings": []
+    },
+    "spice_run": {
+      "source_format": "pipeline2.0_spice_run",
+      "status": "success",
+      "netlist_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\pipeline2.0\\b03\\07_netlist.cir",
+      "command": [
+        "C:\\Users\\m.profilo\\Spice64\\bin\\ngspice_con.exe",
+        "-b",
+        "07_netlist.cir"
+      ],
+      "exit_code": 0,
+      "stdout_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\pipeline2.0\\b03\\08_ngspice_stdout.txt",
+      "stderr_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\pipeline2.0\\b03\\08_ngspice_stderr.txt",
+      "tran_raw_csv_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\pipeline2.0\\b03\\08_tran_raw.csv",
+      "tran_csv_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\pipeline2.0\\b03\\08_tran.csv",
+      "tran_plot_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\pipeline2.0\\b03\\08_tran_plot.png",
+      "tran_plot_png_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\pipeline2.0\\b03\\08_tran_plot.png",
+      "tran_plot_svg_path": null,
+      "message": "ngspice completed successfully."
+    },
+    "diagnostic_context": {
+      "source_format": "pipeline2.0_diagnostic_context_manifest",
+      "batch_name": "batchChatAgentEvaluation",
+      "experiment_name": "chat_agent_evaluation",
+      "circuit_id": "b03",
+      "user_problem": "Voglio capire se il monitor della batteria funziona correttamente quando la batteria passa da scarica a carica. Verifica autonomamente tutti e tre i LED e mostrami anche come cambia l’indicazione nel tempo mentre la tensione aumenta.",
+      "pipeline2_output_dir": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03",
+      "summary": {
+        "spice_status": "success",
+        "spice_exit_code": 0,
+        "spice_message": "ngspice completed successfully.",
+        "emitted_elements": 23,
+        "skipped_elements": 0,
+        "emit_warnings_count": 0,
+        "skipped_components_count": 0,
+        "node_count": 17,
+        "ground_groups_count": 0,
+        "singleton_nodes_count": 0,
+        "bound_components": 22,
+        "missing_components": 0,
+        "unsupported_components": 0,
+        "spice_ready_components": 22,
+        "rules_missing_components": 0,
+        "has_tran_csv": true,
+        "has_tran_plot": true,
+        "led_profiles": {
+          "Dled12_1": {
+            "state": "off",
+            "regular_period": false,
+            "frequency_hz": null,
+            "duty_cycle": 0.0,
+            "on_fraction": 0.0,
+            "pulse_count": 0,
+            "voltage_min": 0.5181018000000002,
+            "voltage_max": 0.5181018000000002,
+            "anode_node": "N002",
+            "cathode_node": "N011"
+          },
+          "Dled12_2": {
+            "state": "steady_on",
+            "regular_period": false,
+            "frequency_hz": null,
+            "duty_cycle": 1.0,
+            "on_fraction": 1.0,
+            "pulse_count": 1,
+            "voltage_min": 1.8857979,
+            "voltage_max": 1.8857979,
+            "anode_node": "N002",
+            "cathode_node": "N004"
+          },
+          "Dled12_3": {
+            "state": "off",
+            "regular_period": false,
+            "frequency_hz": null,
+            "duty_cycle": 0.0,
+            "on_fraction": 0.0,
+            "pulse_count": 0,
+            "voltage_min": 1.16485884,
+            "voltage_max": 1.16485887,
+            "anode_node": "N012",
+            "cathode_node": "N001"
+          }
+        }
+      },
+      "artifacts": {
+        "graph": {
+          "step": "01",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\01_graph.json",
+          "role": "Graph JSON copied from Pipeline 1.0."
+        },
+        "normalized_circuit": {
+          "step": "02",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\02_normalized_circuit.json",
+          "role": "Normalized circuit representation used by Pipeline 2.0."
+        },
+        "node_map": {
+          "step": "03",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\03_node_map.json",
+          "role": "Maps component terminals to SPICE node names."
+        },
+        "values_bound": {
+          "step": "04",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\04_values_bound.json",
+          "role": "Values and labels bound to graph components."
+        },
+        "component_rules": {
+          "step": "06",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\06_component_rules.json",
+          "role": "SPICE conversion rules for each component."
+        },
+        "netlist": {
+          "step": "07",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\07_netlist.cir",
+          "role": "Generated SPICE netlist."
+        },
+        "spice_emit_report": {
+          "step": "07",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\07_spice_emit_report.json",
+          "role": "Report of emitted, skipped and warning components."
+        },
+        "spice_run": {
+          "step": "08",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\08_spice_run.json",
+          "role": "Structured ngspice execution report."
+        },
+        "ngspice_stdout": {
+          "step": "08",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\08_ngspice_stdout.txt",
+          "role": "Raw ngspice stdout log."
+        },
+        "ngspice_stderr": {
+          "step": "08",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\08_ngspice_stderr.txt",
+          "role": "Raw ngspice stderr log."
+        },
+        "tran_csv": {
+          "step": "08",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\08_tran.csv",
+          "role": "Clean transient CSV, when .tran data is available."
+        },
+        "tran_plot_png": {
+          "step": "08",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\08_tran_plot.png",
+          "role": "Transient plot PNG, when generated."
+        },
+        "tran_plot_svg": {
+          "step": "08",
+          "available": false,
+          "path": null,
+          "role": "Transient plot SVG fallback, when generated."
+        }
+      },
+      "executed_scenarios": [
+        {
+          "scenario_dir": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\scenarios\\agent_scenario_1",
+          "scenario_id": "agent_scenario_1",
+          "title": "Ramp batteria da scarica a carica per osservare la sequenza dei tre LED",
+          "status": "spice_success",
+          "spice_status": "success",
+          "diagnostic_outcome": {
+            "status": "partially_resolved",
+            "technical_label": "Temporal criteria not satisfied",
+            "label": "Criteri temporali non soddisfatti",
+            "reason": "Almeno un criterio temporale non e soddisfatto.",
+            "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+            "stop_automation": false,
+            "confidence": "low",
+            "next_step": "Il comportamento temporale non soddisfa ancora l'obiettivo: prova un'altra correzione."
+          },
+          "comparison_summary": {
+            "requested_count": 7,
+            "changed_count": 7,
+            "activated_count": 3,
+            "missing_count": 0,
+            "expected_count": 7,
+            "expectations_met_count": 7,
+            "expectations_failed_count": 0,
+            "expectations_missing_count": 0,
+            "meaningful_improvement_count": 0,
+            "quality_required": false,
+            "quality_available": false,
+            "quality_improved": false,
+            "quality_acceptable": false,
+            "quality_output_preserved": false,
+            "base_thd": null,
+            "scenario_thd": null,
+            "gain_required": false,
+            "gain_available": false,
+            "gain_sufficient": false,
+            "scenario_gain": null,
+            "min_gain_ratio": null,
+            "temporal_required": true,
+            "temporal_available": true,
+            "temporal_met": false
+          },
+          "led_profiles": {
+            "Dled12_1": {
+              "state": "transient_pulse",
+              "regular_period": false,
+              "frequency_hz": null,
+              "duty_cycle": 0.6366954213669542,
+              "on_fraction": 0.6366954213669542,
+              "pulse_count": 1,
+              "voltage_min": 0.5180883000000005,
+              "voltage_max": 1.6476695999999986,
+              "anode_node": "N002",
+              "cathode_node": "N011"
+            },
+            "Dled12_2": {
+              "state": "transient_pulse",
+              "regular_period": false,
+              "frequency_hz": null,
+              "duty_cycle": 0.39747843397478433,
+              "on_fraction": 0.39747843397478433,
+              "pulse_count": 1,
+              "voltage_min": 1.5274623800000002,
+              "voltage_max": 1.9150627,
+              "anode_node": "N002",
+              "cathode_node": "N004"
+            },
+            "Dled12_3": {
+              "state": "transient_pulse",
+              "regular_period": false,
+              "frequency_hz": null,
+              "duty_cycle": 0.037491705374917056,
+              "on_fraction": 0.037491705374917056,
+              "pulse_count": 1,
+              "voltage_min": 1.16481109,
+              "voltage_max": 2.01693557,
+              "anode_node": "N012",
+              "cathode_node": "N001"
+            }
+          },
+          "artifacts": {
+            "scenario_definition": {
+              "available": true,
+              "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\scenarios\\agent_scenario_1\\scenario.json",
+              "role": "Scenario selected by the user and saved before execution."
+            },
+            "scenario_status": {
+              "available": true,
+              "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\scenarios\\agent_scenario_1\\scenario_status.json",
+              "role": "Current scenario status, SPICE status and diagnostic outcome."
+            },
+            "controlled_scenario_report": {
+              "available": true,
+              "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\scenarios\\agent_scenario_1\\12_controlled_scenarios.json",
+              "role": "Report produced by the controlled scenario runner."
+            },
+            "scenario_comparison": {
+              "available": true,
+              "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\scenarios\\agent_scenario_1\\scenario_comparison.json",
+              "role": "Base-vs-scenario comparison used to evaluate the scenario."
+            }
+          }
+        }
+      ],
+      "scenario_outcome_summary": {
+        "available": true,
+        "best_scenario_id": "agent_scenario_1",
+        "best_outcome_status": "partially_resolved",
+        "best_stop_automation": false,
+        "ranking_status": "verified_best",
+        "interpretation_rule": "If a user asks which scenario resolves the problem, prefer the scenario with outcome_status='resolved_candidate' and stop_automation=true. Partially resolved scenarios without verified expectations are supporting diagnostics and must not be ranked only by changed_count.",
+        "scenarios": [
+          {
+            "scenario_id": "agent_scenario_1",
+            "title": "Ramp batteria da scarica a carica per osservare la sequenza dei tre LED",
+            "status": "spice_success",
+            "spice_status": "success",
+            "outcome_status": "partially_resolved",
+            "outcome_label": "Criteri temporali non soddisfatti",
+            "outcome_technical_label": "Temporal criteria not satisfied",
+            "outcome_reason": "Almeno un criterio temporale non e soddisfatto.",
+            "stop_automation": false,
+            "comparison_summary": {
+              "requested_count": 7,
+              "changed_count": 7,
+              "activated_count": 3,
+              "missing_count": 0,
+              "expected_count": 7,
+              "expectations_met_count": 7,
+              "expectations_failed_count": 0,
+              "expectations_missing_count": 0,
+              "meaningful_improvement_count": 0,
+              "quality_required": false,
+              "quality_available": false,
+              "quality_improved": false,
+              "quality_acceptable": false,
+              "quality_output_preserved": false,
+              "base_thd": null,
+              "scenario_thd": null,
+              "gain_required": false,
+              "gain_available": false,
+              "gain_sufficient": false,
+              "scenario_gain": null,
+              "min_gain_ratio": null,
+              "temporal_required": true,
+              "temporal_available": true,
+              "temporal_met": false
+            },
+            "quantity_summary": {
+              "changed": [
+                "@dled12_1[id]",
+                "@dled12_2[id]",
+                "@dled12_3[id]",
+                "v(N002)",
+                "v(N004)",
+                "v(N011)",
+                "v(N012)"
+              ],
+              "unchanged": [],
+              "missing": []
+            },
+            "led_profiles": {
+              "Dled12_1": {
+                "state": "transient_pulse",
+                "regular_period": false,
+                "frequency_hz": null,
+                "duty_cycle": 0.6366954213669542,
+                "on_fraction": 0.6366954213669542,
+                "pulse_count": 1,
+                "voltage_min": 0.5180883000000005,
+                "voltage_max": 1.6476695999999986,
+                "anode_node": "N002",
+                "cathode_node": "N011"
+              },
+              "Dled12_2": {
+                "state": "transient_pulse",
+                "regular_period": false,
+                "frequency_hz": null,
+                "duty_cycle": 0.39747843397478433,
+                "on_fraction": 0.39747843397478433,
+                "pulse_count": 1,
+                "voltage_min": 1.5274623800000002,
+                "voltage_max": 1.9150627,
+                "anode_node": "N002",
+                "cathode_node": "N004"
+              },
+              "Dled12_3": {
+                "state": "transient_pulse",
+                "regular_period": false,
+                "frequency_hz": null,
+                "duty_cycle": 0.037491705374917056,
+                "on_fraction": 0.037491705374917056,
+                "pulse_count": 1,
+                "voltage_min": 1.16481109,
+                "voltage_max": 2.01693557,
+                "anode_node": "N012",
+                "cathode_node": "N001"
+              }
+            },
+            "ranking_verified": true,
+            "score": 55
+          }
+        ]
+      },
+      "scenario_budget": {
+        "max_executable_scenarios": 5,
+        "executed_scenarios_count": 1,
+        "remaining_executable_scenarios": 4,
+        "budget_exhausted": false,
+        "last_scenario_available": false,
+        "policy": "At most 5 scenarios can be executed for the same circuit. When only one scenario remains, the agent should propose a single final scenario. When no scenario remains, the agent must stop proposing new scenarios and provide a final diagnostic conclusion."
+      },
+      "image_access": {
+        "included_by_default": false,
+        "can_be_requested": true,
+        "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\input\\images\\b03.jpg",
+        "policy": "Only request the image if structured outputs suggest that the Graph JSON may be incomplete or wrong."
+      },
+      "agent_mode": "graph_grounded_readonly",
+      "agent_rules": [
+        "Treat this file as a manifest, not as the full diagnostic evidence.",
+        "Load the referenced artifacts needed for the answer.",
+        "Use graph, node map, component rules, netlist, stdout and stderr as evidence.",
+        "If executed_scenarios are available, use them as evidence for questions about scenario outcomes.",
+        "Do not invent values, connections, models or simulation results.",
+        "Do not use the image unless image_access is explicitly requested.",
+        "If Graph JSON inconsistency is suspected, explain which structured outputs suggest it.",
+        "In read-only mode, do not modify netlists and do not execute scenarios.",
+        "Never exceed 5 executed scenarios for the same circuit.",
+        "When the scenario budget is exhausted, stop proposing new scenarios and provide a final diagnostic conclusion."
+      ]
+    },
+    "netlist": "* pipeline2.0 netlist\n* circuit: b03\n\nVVREF_B N001 0 DC 0\nVbattery2_1 N002 N001 DC 12\nDdiode7_1 N003 N004 D_1N4148_TYP\nDdiode7_2 N005 N006 BZX79C10_TYP\nDdiode7_3 N002 N007 D_1N4148_TYP\nDdiode7_4 N007 N006 D_1N4148_TYP\nDdiode7_5 N001 N008 BZX79C12_TYP\nDdiode7_6 N009 N010 D_1N4148_TYP\nDdiode7_7 N010 N008 D_1N4148_TYP\nDled12_1 N002 N011 LED_RED_TYP\nDled12_2 N002 N004 LED_YELLOW_TYP\nDled12_3 N012 N001 LED_GREEN_TYP\nQnpn_transistor18_1 N014 N013 N001 BC547_TYP\nQnpn_transistor18_2 N016 N015 N001 BC547_TYP\nQnpn_transistor18_3 N003 N017 N002 BC557_TYP\nRresistor22_1 N011 N014 1k\nRresistor22_2 N013 N016 100k\nRresistor22_3 N004 N016 1k\nRresistor22_4 N015 N005 3.3k\nRresistor22_5 N005 N001 3.3k\nRresistor22_6 N003 N012 1k\nRresistor22_7 N017 N009 3.3k\nRresistor22_8 N002 N009 3.3k\n\n.model BC547_TYP NPN(BF=250 VAF=50 IKF=100m)\n.model BC557_TYP PNP(BF=250 VAF=50 IKF=100m)\n.model BZX79C10_TYP D(BV=10 IBV=5m NBV=1.7)\n.model BZX79C12_TYP D(BV=12 IBV=5m NBV=1.9)\n.model D_1N4148_TYP D(IS=6n N=1.9 RS=0.65 BV=100 IBV=100u TT=4n CJO=4p)\n.model LED_GREEN_TYP D(IS=1e-18 N=2 RS=10)\n.model LED_RED_TYP D(IS=1e-15 N=2 RS=10)\n.model LED_YELLOW_TYP D(IS=1e-17 N=2 RS=10)\n\n.op\n.save all\n.tran 1ms 3s\n\n.control\nset wr_singlescale\nset wr_vecnames\nsave all @ddiode7_1[id] @ddiode7_2[id] @ddiode7_3[id] @ddiode7_4[id] @ddiode7_5[id] @ddiode7_6[id] @ddiode7_7[id] @dled12_1[id] @dled12_2[id] @dled12_3[id]\nrun\nwrdata 08_tran.csv time v(N001) v(N002) v(N003) v(N004) v(N005) v(N006) v(N007) v(N008) v(N009) v(N010) v(N011) v(N012) v(N013) v(N014) v(N015) v(N016) v(N017) @ddiode7_1[id] @ddiode7_2[id] @ddiode7_3[id] @ddiode7_4[id] @ddiode7_5[id] @ddiode7_6[id] @ddiode7_7[id] @dled12_1[id] @dled12_2[id] @dled12_3[id]\n.endc\n.end\n",
+    "ngspice_stdout": "\nNote: No compatibility mode selected!\n\n\nCircuit: * pipeline2.0 netlist\n\nDoing analysis at TEMP = 27.000000 and TNOM = 27.000000\n\nUsing SPARSE 1.3 as Direct Linear Solver\n\nNo. of Data Rows : 1\n\nInitial Transient Solution\n--------------------------\n\nNode                                   Voltage\n----                                   -------\nn001                                         0\nn002                                        12\nn003                                   1.16486\nn004                                   10.1142\nn005                                   1.02973\nn006                                   10.9153\nn007                                   11.4577\nn008                                   11.5524\nn009                                   11.9982\nn010                                   11.7753\nn011                                   11.4819\nn012                                   1.16486\nn014                                   11.4819\nn013                                  0.172628\nn016                                  0.172626\nn015                                  0.836539\nn017                                   11.9982\nvbattery2_1#branch                  -0.0103127\nvvref_b#branch                    -2.36532e-11\n\n\nNo. of Data Rows : 3008\nDoing analysis at TEMP = 27.000000 and TNOM = 27.000000\n\nUsing SPARSE 1.3 as Direct Linear Solver\n\nNo. of Data Rows : 1\n\nInitial Transient Solution\n--------------------------\n\nNode                                   Voltage\n----                                   -------\nn001                                         0\nn002                                        12\nn003                                   1.16486\nn004                                   10.1142\nn005                                   1.02973\nn006                                   10.9153\nn007                                   11.4577\nn008                                   11.5524\nn009                                   11.9982\nn010                                   11.7753\nn011                                   11.4819\nn012                                   1.16486\nn014                                   11.4819\nn013                                  0.172628\nn016                                  0.172626\nn015                                  0.836539\nn017                                   11.9982\nvbattery2_1#branch                  -0.0103127\nvvref_b#branch                    -2.36532e-11\n\n\nNo. of Data Rows : 3008\n\tNode                                  Voltage\n\t----                                  -------\n\t----\t-------\n\tn017                             1.199817e+01\n\tn015                             8.365391e-01\n\tn016                             1.726265e-01\n\tn013                             1.726276e-01\n\tn014                             1.148190e+01\n\tn012                             1.164859e+00\n\tn011                             1.148190e+01\n\tn010                             1.177528e+01\n\tn009                             1.199817e+01\n\tn008                             1.155238e+01\n\tn007                             1.145765e+01\n\tn006                             1.091531e+01\n\tn005                             1.029726e+00\n\tn004                             1.011420e+01\n\tn003                             1.164865e+00\n\tn002                             1.200000e+01\n\tn001                             0.000000e+00\n\n\tSource\tCurrent\n\t------\t-------\n\n\t@dled12_3[id]                    6.019785e-09\n\t@dled12_2[id]                    9.941582e-03\n\t@dled12_1[id]                    2.288834e-11\n\t@ddiode7_7[id]                   5.536755e-07\n\t@ddiode7_6[id]                   5.536755e-07\n\t@ddiode7_5[id]                   -5.53676e-07\n\t@ddiode7_4[id]                   3.705798e-04\n\t@ddiode7_3[id]                   3.705798e-04\n\t@ddiode7_2[id]                   -3.70580e-04\n\t@ddiode7_1[id]                   -6.00895e-09\n\tvvref_b#branch                   -2.36532e-11\n\tvbattery2_1#branch               -1.03127e-02\n\n BJT models (Bipolar Junction Transistor)\n      model             bc557_typ             bc547_typ\n\n       type                   pnp                   npn\n       tnom                    27                    27\n         is                 1e-16                 1e-16\n        ibe                     0                     0\n        ibc                     0                     0\n         bf                   250                   250\n         nf                     1                     1\n        vaf                    50                    50\n        ikf                   0.1                   0.1\n        ise                     0                     0\n         ne                   1.5                   1.5\n         br                     1                     1\n         nr                     1                     1\n        var                     0                     0\n        ikr                     0                     0\n        isc                     0                     0\n         nc                     2                     2\n         rb                     0                     0\n        irb                     0                     0\n        rbm                     0                     0\n         re                     0                     0\n         rc                     0                     0\n        cje                     0                     0\n        vje                  0.75                  0.75\n        mje                  0.33                  0.33\n         tf                     0                     0\n        xtf                     0                     0\n        vtf                     0                     0\n        itf                     0                     0\n        ptf                     0                     0\n        cjc                     0                     0\n        vjc                  0.75                  0.75\n        mjc                  0.33                  0.33\n       xcjc                     1                     1\n         tr                     0                     0\n        cjs                     0                     0\n        vjs                  0.75                  0.75\n        mjs                     0                     0\n        xtb                     0                     0\n         eg                  1.11                  1.11\n        xti                     3                     3\n         fc                   0.5                   0.5\n         kf                     0                     0\n         af                     0                     0\n        iss                     0                     0\n         ns                     1                     1\n        rco                  0.01                  0.01\n         vo                    10                    10\n      gamma                 1e-11                 1e-11\n        qco                     0                     0\n       tlev                     0                     0\n      tlevc                     0                     0\n       tbf1                     0                     0\n       tbf2                     0                     0\n       tbr1                     0                     0\n       tbr2                     0                     0\n      tikf1                     0                     0\n      tikf2                     0                     0\n      tikr1                     0                     0\n      tikr2                     0                     0\n      tirb1                     0                     0\n      tirb2                     0                     0\n       tnc1                     0                     0\n       tnc2                     0                     0\n       tne1                     0                     0\n       tne2                     0                     0\n       tnf1                     0                     0\n       tnf2                     0                     0\n       tnr1                     0                     0\n       tnr2                     0                     0\n       trb1                     0                     0\n       trb2                     0                     0\n       trc1                     0                     0\n       trc2                     0                     0\n       tre1                     0                     0\n       tre2                     0                     0\n       trm1                     0                     0\n       trm2                     0                     0\n      tvaf1                     0                     0\n      tvaf2                     0                     0\n      tvar1                     0                     0\n      tvar2                     0                     0\n        ctc                     0                     0\n        cte                     0                     0\n        cts                     0                     0\n       tvjc                     0                     0\n       tvje                     0                     0\n       tvjs                     0                     0\n      titf1                     0                     0\n      titf2                     0                     0\n       ttf1                     0                     0\n       ttf2                     0                     0\n       ttr1                     0                     0\n       ttr2                     0                     0\n      tmje1                     0                     0\n      tmje2                     0                     0\n      tmjc1                     0                     0\n      tmjc2                     0                     0\n      tmjs1                     0                     0\n      tmjs2                     0                     0\n       tns1                     0                     0\n       tns2                     0                     0\n        nkf                   0.5                   0.5\n       tis1                     0                     0\n       tis2                     0                     0\n      tise1                     0                     0\n      tise2                     0                     0\n      tisc1                     0                     0\n      tisc2                     0                     0\n      tiss1                     0                     0\n      tiss2                     0                     0\n   quasimod                     0                     0\n         vg                 1.206                 1.206\n         cn                   2.2                  2.42\n          d                  0.52                  0.87\n    vbe_max                 1e+99                 1e+99\n    vbc_max                 1e+99                 1e+99\n    vce_max                 1e+99                 1e+99\n     pd_max                 1e+99                 1e+99\n     ic_max                 1e+99                 1e+99\n     ib_max                 1e+99                 1e+99\n     te_max                 1e+99                 1e+99\n       rth0                     0                     0\n\n Diode models (Junction Diode model)\n      model         led_green_typ        led_yellow_typ           led_red_typ\n\n      level                     1                     1                     1\n         is                 1e-18                 1e-17                 1e-15\n        jsw                     0                     0                     0\n         rs                    10                    10                    10\n        rsw                     0                     0                     0\n        trs                     0                     0                     0\n       trs2                     0                     0                     0\n          n                     2                     2                     2\n         ns                     1                     1                     1\n         tt                     0                     0                     0\n       ttt1                     0                     0                     0\n       ttt2                     0                     0                     0\n        cjo                     0                     0                     0\n         vj                     1                     1                     1\n          m                   0.5                   0.5                   0.5\n        tm1                     0                     0                     0\n        tm2                     0                     0                     0\n        cjp                     0                     0                     0\n        php                     1                     1                     1\n       mjsw                  0.33                  0.33                  0.33\n        ikf                     0                     0                     0\n        ikr                     0                     0                     0\n        ikp                     0                     0                     0\n        nbv                     2                     2                     2\n       area                     1                     1                     1\n         pj                     0                     0                     0\n       tlev                     0                     0                     0\n      tlevc                     0                     0                     0\n         eg                  1.11                  1.11                  1.11\n       gap1              0.000702              0.000702              0.000702\n       gap2                  1108                  1108                  1108\n        xti                     3                     3                     3\n        cta                     0                     0                     0\n        ctp                     0                     0                     0\n        tpb                     0                     0                     0\n       tphp                     0                     0                     0\n       jtun                     0                     0                     0\n     jtunsw                     0                     0                     0\n       ntun                    30                    30                    30\n     xtitun                     3                     3                     3\n        keg                     1                     1                     1\n         kf                     0                     0                     0\n         af                     1                     1                     1\n         fc                   0.5                   0.5                   0.5\n        fcs                   0.5                   0.5                   0.5\n         bv                     0                     0                     0\n        ibv                 0.001                 0.001                 0.001\n        tcv                     0                     0                     0\n        isr                 1e-14                 1e-14                 1e-14\n         nr                     2                     2                     2\n         vp                     0                     0                     0\n     fv_max                 1e+99                 1e+99                 1e+99\n     bv_max                 1e+99                 1e+99                 1e+99\n     id_max                 1e+99                 1e+99                 1e+99\n     te_max                 1e+99                 1e+99                 1e+99\n     pd_max                 1e+99                 1e+99                 1e+99\n       rth0                     0                     0                     0\n       cth0                 1e-05                 1e-05                 1e-05\n         lm                     0                     0                     0\n         lp                     0                     0                     0\n         wm                     0                     0                     0\n         wp                     0                     0                     0\n        xom                 10000                 10000                 10000\n        xoi                 10000                 10000                 10000\n         xm                     0                     0                     0\n         xp                     0                     0                     0\n         xw                     0                     0                     0\n\n Diode models (Junction Diode model)\n      model          bzx79c12_typ          bzx79c10_typ          d_1n4148_typ\n\n      level                     1                     1                     1\n         is                 1e-14                 1e-14                 6e-09\n        jsw                     0                     0                     0\n         rs                     0                     0                  0.65\n        rsw                     0                     0                     0\n        trs                     0                     0                     0\n       trs2                     0                     0                     0\n          n                     1                     1                   1.9\n         ns                     1                     1                     1\n         tt                     0                     0                 4e-09\n       ttt1                     0                     0                     0\n       ttt2                     0                     0                     0\n        cjo                     0                     0                 4e-12\n         vj                     1                     1                     1\n          m                   0.5                   0.5                   0.5\n        tm1                     0                     0                     0\n        tm2                     0                     0                     0\n        cjp                     0                     0                     0\n        php                     1                     1                     1\n       mjsw                  0.33                  0.33                  0.33\n        ikf                     0                     0                     0\n        ikr                     0                     0                     0\n        ikp                     0                     0                     0\n        nbv                   1.9                   1.7                   1.9\n       area                     1                     1                     1\n         pj                     0                     0                     0\n       tlev                     0                     0                     0\n      tlevc                     0                     0                     0\n         eg                  1.11                  1.11                  1.11\n       gap1              0.000702              0.000702              0.000702\n       gap2                  1108                  1108                  1108\n        xti                     3                     3                     3\n        cta                     0                     0                     0\n        ctp                     0                     0                     0\n        tpb                     0                     0                     0\n       tphp                     0                     0                     0\n       jtun                     0                     0                     0\n     jtunsw                     0                     0                     0\n       ntun                    30                    30                    30\n     xtitun                     3                     3                     3\n        keg                     1                     1                     1\n         kf                     0                     0                     0\n         af                     1                     1                     1\n         fc                   0.5                   0.5                   0.5\n        fcs                   0.5                   0.5                   0.5\n         bv                    12                    10                   100\n        ibv                 0.005                 0.005                0.0001\n        tcv                     0                     0                     0\n        isr                 1e-14                 1e-14                 1e-14\n         nr                     2                     2                     2\n         vp                     0                     0                     0\n     fv_max                 1e+99                 1e+99                 1e+99\n     bv_max                 1e+99                 1e+99                 1e+99\n     id_max                 1e+99                 1e+99                 1e+99\n     te_max                 1e+99                 1e+99                 1e+99\n     pd_max                 1e+99                 1e+99                 1e+99\n       rth0                     0                     0                     0\n       cth0                 1e-05                 1e-05                 1e-05\n         lm                     0                     0                     0\n         lp                     0                     0                     0\n         wm                     0                     0                     0\n         wp                     0                     0                     0\n        xom                 10000                 10000                 10000\n        xoi                 10000                 10000                 10000\n         xm                     0                     0                     0\n         xp                     0                     0                     0\n         xw                     0                     0                     0\n\n Resistor models (Simple linear resistor)\n      model                     R\n\n        rsh                     0\n     narrow                     0\n      short                     0\n        tc1                     0\n        tc2                     0\n        tce                     0\n       defw                 1e-05\n          l                 1e-05\n         kf                     0\n         af                     0\n          r                     0\n     bv_max                 1e+99\n         lf                     1\n         wf                     1\n         ef                     1\n\n BJT: Bipolar Junction Transistor\n     device   qnpn_transistor18_3   qnpn_transistor18_2   qnpn_transistor18_1\n      model             bc557_typ             bc547_typ             bc547_typ\n         ic          -1.08335e-11            0.00994158           1.14064e-11\n         ib          -1.16659e-12           5.85416e-05          -1.11364e-11\n         ie           1.95788e-15            -0.0100001          -1.17519e-11\n        vbe            0.00182728              0.836539              0.172628\n        vbc              -10.8333              0.663913              -11.3093\n         gm           5.04612e-15              0.352358           3.75171e-12\n        gpi           1.00002e-12            0.00172016           1.01224e-12\n        gmu                 1e-12             0.0005432                 1e-12\n         gx                     0                     0                     0\n         go           2.14641e-18             0.0006886           1.58342e-15\n        cpi                     0                     0                     0\n        cmu                     0                     0                     0\n        cbx                     0                     0                     0\n       csub                     0                     0                     0\n\n Diode: Junction Diode model\n     device              dled12_3              dled12_2              dled12_1\n      model         led_green_typ        led_yellow_typ           led_red_typ\n    thermal                     0                     0                     0\n         vd               1.16486               1.78638              0.518102\n         id           6.01978e-09            0.00994158           2.28883e-11\n         gd           1.16348e-07              0.192183           4.33463e-10\n         cd                     0                     0                     0\n\n Diode: Junction Diode model\n     device             ddiode7_5             ddiode7_2             ddiode7_7\n      model          bzx79c12_typ          bzx79c10_typ          d_1n4148_typ\n    thermal                     0                     0                     0\n         vd              -11.5524              -9.88558              0.222894\n         id          -5.53676e-07           -0.00037058           5.53676e-07\n         gd           1.12663e-05            0.00842795           1.13993e-05\n         cd                     0                     0           4.58309e-12\n\n Diode: Junction Diode model\n     device             ddiode7_6             ddiode7_4             ddiode7_3\n      model          d_1n4148_typ          d_1n4148_typ          d_1n4148_typ\n    thermal                     0                     0                     0\n         vd              0.222894              0.542104              0.542104\n         id           5.53676e-07            0.00037058            0.00037058\n         gd           1.13993e-05              0.007541              0.007541\n         cd           4.58309e-12           3.60587e-11           3.60587e-11\n\n Diode: Junction Diode model\n     device             ddiode7_1\n      model          d_1n4148_typ\n    thermal                     0\n         vd              -8.94934\n         id          -6.00895e-09\n         gd           2.95013e-09\n         cd           1.26813e-12\n\n Resistor: Simple linear resistor\n     device         rresistor22_8         rresistor22_7         rresistor22_6\n      model                     R                     R                     R\n resistance                  3300                  3300                  1000\n         ac                  3300                  3300                  1000\n      dtemp                     0                     0                     0\n     bv_max                 1e+99                 1e+99                 1e+99\n      noisy                     1                     1                     1\n          i           5.53698e-07          -2.28298e-11           6.01978e-09\n          p           1.01172e-09           1.71995e-18           3.62378e-14\n\n Resistor: Simple linear resistor\n     device         rresistor22_5         rresistor22_4         rresistor22_3\n      model                     R                     R                     R\n resistance                  3300                  3300                  1000\n         ac                  3300                  3300                  1000\n      dtemp                     0                     0                     0\n     bv_max                 1e+99                 1e+99                 1e+99\n      noisy                     1                     1                     1\n          i           0.000312038          -5.85416e-05            0.00994158\n          p           0.000321314           1.13095e-05             0.0988349\n\n Resistor: Simple linear resistor\n     device         rresistor22_2         rresistor22_1\n      model                     R                     R\n resistance                100000                  1000\n         ac                100000                  1000\n      dtemp                     0                     0\n     bv_max                 1e+99                 1e+99\n      noisy                     1                     1\n          i           1.11364e-11           2.28883e-11\n          p            1.2402e-17           5.23877e-19\n\n Vsource: Independent voltage source\n     device           vbattery2_1               vvref_b\n         dc                    12                     0\n      acmag                     0                     0\n      pulse         -         -\n        sin         -         -\n        exp         -         -\n        pwl         -         -\n       sffm         -         -\n         am         -         -\n    trnoise         -         -\n   trrandom         -         -\n    portnum                     0                     0\n         z0                     0                     0\n        pwr                     0                     0\n       freq                     0                     0\n      phase                     0                     0\n          i            -0.0103127          -2.36478e-11\n          p             -0.123753                    -0\n\n\nTotal analysis time (seconds) = 0.0523544\n\nTotal elapsed time (seconds) = 0.123 \n\nTotal DRAM available = 32239.535 MB.\nDRAM currently available = 15048.766 MB.\nMaximum ngspice program size =   16.875 MB.\nCurrent ngspice program size =   16.625 MB.\n\n",
+    "ngspice_stderr": ""
+  },
+  "decisions": [
+    {
+      "decision_number": 1,
+      "decision": "run_scenarios",
+      "reason": "La base run a 12 V mostra solo il LED giallo acceso in modo stabile, quindi non verifica il comportamento richiesto durante la transizione da batteria scarica a carica né il coinvolgimento di tutti e tre i LED. Serve un test transitorio controllato con aumento della tensione batteria nel tempo.",
+      "scenarios": [
+        {
+          "title": "Ramp batteria da scarica a carica per osservare la sequenza dei tre LED",
+          "hypothesis": "Variando la tensione della batteria con una rampa temporale si puo verificare direttamente come cambiano le correnti dei tre LED e quindi se il monitor passa tra le indicazioni attese durante la carica.",
+          "intent": "diagnostic",
+          "analysis": "tran",
+          "actions": [
+            {
+              "type": "change_source_value",
+              "target": "Vbattery2_1",
+              "value": "PWL(0s 9V 1s 11V 2s 12V 3s 14V)"
+            }
+          ],
+          "compare": [
+            "@dled12_1[id]",
+            "@dled12_2[id]",
+            "@dled12_3[id]",
+            "v(N002)",
+            "v(N004)",
+            "v(N011)",
+            "v(N012)"
+          ],
+          "measure": {
+            "@dled12_1[id]": "tran_abs_peak",
+            "@dled12_2[id]": "tran_abs_peak",
+            "@dled12_3[id]": "tran_abs_peak"
+          },
+          "expect": {
+            "@dled12_1[id]": "changed",
+            "@dled12_2[id]": "changed",
+            "@dled12_3[id]": "changed",
+            "v(N002)": "changed",
+            "v(N004)": "changed",
+            "v(N011)": "changed",
+            "v(N012)": "changed"
+          },
+          "temporal_expect": {
+            "target": "Dled12_2",
+            "required_state": "on"
+          }
+        }
+      ],
+      "final_status": null,
+      "final_answer": null,
+      "final_cause": null,
+      "verified_correction": null,
+      "scenario_results": [
+        {
+          "scenario_id": "agent_scenario_1",
+          "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\scenarios\\agent_scenario_1",
+          "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\scenarios\\agent_scenario_1\\run",
+          "status": "spice_success",
+          "spice_executed": true,
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "comparison_summary": {
+            "requested_count": 7,
+            "changed_count": 7,
+            "activated_count": 3,
+            "missing_count": 0,
+            "expected_count": 7,
+            "expectations_met_count": 7,
+            "expectations_failed_count": 0,
+            "expectations_missing_count": 0,
+            "meaningful_improvement_count": 0,
+            "quality_required": false,
+            "quality_available": false,
+            "quality_improved": false,
+            "quality_acceptable": false,
+            "quality_output_preserved": false,
+            "base_thd": null,
+            "scenario_thd": null,
+            "gain_required": false,
+            "gain_available": false,
+            "gain_sufficient": false,
+            "scenario_gain": null,
+            "min_gain_ratio": null,
+            "temporal_required": true,
+            "temporal_available": true,
+            "temporal_met": false
+          },
+          "diagnostic_outcome": {
+            "status": "partially_resolved",
+            "technical_label": "Temporal criteria not satisfied",
+            "label": "Criteri temporali non soddisfatti",
+            "reason": "Almeno un criterio temporale non e soddisfatto.",
+            "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+            "stop_automation": false,
+            "confidence": "low",
+            "next_step": "Il comportamento temporale non soddisfa ancora l'obiettivo: prova un'altra correzione."
+          },
+          "viewer": {
+            "model": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\scenarios\\agent_scenario_1\\run\\13_viewer_model.json",
+            "layout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\scenarios\\agent_scenario_1\\run\\14_viewer_layout.json",
+            "svg": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\scenarios\\agent_scenario_1\\run\\15_viewer.svg"
+          },
+          "viewer_error": null,
+          "executed_scenarios_count": 1
+        }
+      ]
+    },
+    {
+      "decision_number": 2,
+      "decision": "stop",
+      "reason": "Eseguito uno scenario controllato disponibile. La rampa PWL sulla batteria ha gia verificato direttamente tutti e tre i LED durante l'aumento di tensione, senza evidenza di guasto strutturale o correzione da tentare: i tre LED cambiano stato nel tempo con un singolo impulso ciascuno, quindi il monitor mostra una sequenza di indicazione durante la carica ma non mantiene stati temporali regolari oltre il passaggio di soglia.",
+      "scenarios": [],
+      "final_status": "localized",
+      "final_answer": "Il monitor segue la salita della tensione batteria mostrando in sequenza i tre LED: dal caso base a 12 V il LED giallo e acceso stabilmente, mentre con la rampa 9->11->12->14 V tutti e tre i LED diventano attivi almeno una volta. In particolare il rosso mostra un impulso transitorio con duty circa 0.6367, il giallo un impulso transitorio con duty circa 0.3975 e il verde un impulso breve con duty circa 0.0375. Quindi l'indicazione cambia effettivamente nel tempo mentre la tensione aumenta, ma ciascun LED compare come finestra/transizione singola e non come stato periodico o regolare.",
+      "final_cause": "Il comportamento osservato e coerente con un indicatore a soglie basato su rete di diodi/zener e transistor: a tensione fissa di 12 V il ramo del LED giallo conduce quasi da solo (@dled12_2[id] circa 9.94 mA), mentre il rosso e il verde restano praticamente spenti. Quando la batteria sale con la rampa, i nodi di soglia N004, N011 e N012 cambiano e fanno attraversare ai tre rami le rispettive soglie di conduzione, producendo impulsi transitori su tutti i LED. Non emerge una topologia interrotta; l'evidenza forte e che il circuito indica il passaggio da scarica a carica tramite finestre di accensione successive, non tramite tre stati DC simultanei o temporali regolari.",
+      "verified_correction": "",
+      "scenario_results": []
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_id": "agent_scenario_1",
+      "title": "Ramp batteria da scarica a carica per osservare la sequenza dei tre LED",
+      "hypothesis": "Variando la tensione della batteria con una rampa temporale si puo verificare direttamente come cambiano le correnti dei tre LED e quindi se il monitor passa tra le indicazioni attese durante la carica.",
+      "intent": "diagnostic",
+      "actions": [
+        {
+          "type": "change_source_value",
+          "target": "Vbattery2_1",
+          "value": "PWL(0s 9V 1s 11V 2s 12V 3s 14V)"
+        }
+      ],
+      "analysis": "tran",
+      "compare": [
+        "@dled12_1[id]",
+        "@dled12_2[id]",
+        "@dled12_3[id]",
+        "v(N002)",
+        "v(N004)",
+        "v(N011)",
+        "v(N012)"
+      ],
+      "expect": {
+        "@dled12_1[id]": "changed",
+        "@dled12_2[id]": "changed",
+        "@dled12_3[id]": "changed",
+        "v(N002)": "changed",
+        "v(N004)": "changed",
+        "v(N011)": "changed",
+        "v(N012)": "changed"
+      },
+      "registry_status": "executed",
+      "execution": {
+        "status": "spice_success",
+        "spice_executed": true,
+        "spice_status": "success",
+        "spice_exit_code": 0,
+        "diagnostic_outcome": {
+          "status": "partially_resolved",
+          "technical_label": "Temporal criteria not satisfied",
+          "label": "Criteri temporali non soddisfatti",
+          "reason": "Almeno un criterio temporale non e soddisfatto.",
+          "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+          "stop_automation": false,
+          "confidence": "low",
+          "next_step": "Il comportamento temporale non soddisfa ancora l'obiettivo: prova un'altra correzione."
+        },
+        "comparison_summary": {
+          "requested_count": 7,
+          "changed_count": 7,
+          "activated_count": 3,
+          "missing_count": 0,
+          "expected_count": 7,
+          "expectations_met_count": 7,
+          "expectations_failed_count": 0,
+          "expectations_missing_count": 0,
+          "meaningful_improvement_count": 0,
+          "quality_required": false,
+          "quality_available": false,
+          "quality_improved": false,
+          "quality_acceptable": false,
+          "quality_output_preserved": false,
+          "base_thd": null,
+          "scenario_thd": null,
+          "gain_required": false,
+          "gain_available": false,
+          "gain_sufficient": false,
+          "scenario_gain": null,
+          "min_gain_ratio": null,
+          "temporal_required": true,
+          "temporal_available": true,
+          "temporal_met": false
+        },
+        "quantities": [
+          {
+            "quantity": "@dled12_1[id]",
+            "base_value": 2.28883483e-11,
+            "scenario_value": 0.0099479244,
+            "delta": 0.009947924377111653,
+            "change": "changed",
+            "expectation": "changed",
+            "expectation_met": true,
+            "relative_change": 434628320.34549445,
+            "meaningful_improvement": false,
+            "metric": "@dled12_1[id].abs_peak",
+            "measurement": "tran_abs_peak",
+            "base_details": {
+              "min": 2.28883433e-11,
+              "max": 2.28883483e-11,
+              "mean": 2.2888345816589097e-11,
+              "vpp": 4.999999999655152e-18,
+              "final": 2.28883478e-11,
+              "abs_peak": 2.28883483e-11
+            },
+            "scenario_details": {
+              "min": 2.28825138e-11,
+              "max": 0.0099479244,
+              "mean": 0.0055365448203976795,
+              "vpp": 0.009947924377117487,
+              "final": 2.68646428e-11,
+              "abs_peak": 0.0099479244
+            }
+          },
+          {
+            "quantity": "@dled12_2[id]",
+            "base_value": 0.00994158165,
+            "scenario_value": 0.011926424,
+            "delta": 0.00198484235,
+            "change": "changed",
+            "expectation": "changed",
+            "expectation_met": true,
+            "relative_change": 0.19965056063287476,
+            "meaningful_improvement": false,
+            "metric": "@dled12_2[id].abs_peak",
+            "measurement": "tran_abs_peak",
+            "base_details": {
+              "min": 0.00994158165,
+              "max": 0.00994158165,
+              "mean": 0.00994158165,
+              "vpp": 0.0,
+              "final": 0.00994158165,
+              "abs_peak": 0.00994158165
+            },
+            "scenario_details": {
+              "min": 6.57942708e-05,
+              "max": 0.011926424,
+              "mean": 0.004336662514764067,
+              "vpp": 0.0118606297292,
+              "final": 0.00947930191,
+              "abs_peak": 0.011926424
+            }
+          },
+          {
+            "quantity": "@dled12_3[id]",
+            "base_value": 6.01978515e-09,
+            "scenario_value": 0.0107430422,
+            "delta": 0.010743036180214851,
+            "change": "changed",
+            "expectation": "changed",
+            "expectation_met": true,
+            "relative_change": 1784621.197023095,
+            "meaningful_improvement": false,
+            "metric": "@dled12_3[id].abs_peak",
+            "measurement": "tran_abs_peak",
+            "base_details": {
+              "min": 6.01978142e-09,
+              "max": 6.01978515e-09,
+              "mean": 6.019781610545213e-09,
+              "vpp": 3.729999999865528e-15,
+              "final": 6.01978179e-09,
+              "abs_peak": 6.01978515e-09
+            },
+            "scenario_details": {
+              "min": 6.01422802e-09,
+              "max": 0.0107430422,
+              "mean": 0.0003644971878154393,
+              "vpp": 0.01074303618577198,
+              "final": 0.0107430422,
+              "abs_peak": 0.0107430422
+            }
+          },
+          {
+            "quantity": "v(N002)",
+            "base_value": 0.0,
+            "scenario_value": 5.0,
+            "delta": 5.0,
+            "change": "activated",
+            "expectation": "changed",
+            "expectation_met": true,
+            "relative_change": 5000000000000.0,
+            "meaningful_improvement": false,
+            "metric": "v(n002).vpp",
+            "measurement": "tran_vpp",
+            "base_details": {
+              "min": 12.0,
+              "max": 12.0,
+              "mean": 12.0,
+              "vpp": 0.0,
+              "final": 12.0,
+              "abs_peak": 12.0
+            },
+            "scenario_details": {
+              "min": 9.0,
+              "max": 14.0,
+              "mean": 11.494878151957531,
+              "vpp": 5.0,
+              "final": 14.0,
+              "abs_peak": 14.0
+            }
+          },
+          {
+            "quantity": "v(N004)",
+            "base_value": 0.0,
+            "scenario_value": 4.648752280000001,
+            "delta": 4.648752280000001,
+            "change": "activated",
+            "expectation": "changed",
+            "expectation_met": true,
+            "relative_change": 4648752280000.001,
+            "meaningful_improvement": false,
+            "metric": "v(n004).vpp",
+            "measurement": "tran_vpp",
+            "base_details": {
+              "min": 10.1142021,
+              "max": 10.1142021,
+              "mean": 10.1142021,
+              "vpp": 0.0,
+              "final": 10.1142021,
+              "abs_peak": 10.1142021
+            },
+            "scenario_details": {
+              "min": 7.47253762,
+              "max": 12.1212899,
+              "mean": 9.804686205096218,
+              "vpp": 4.648752280000001,
+              "final": 12.1212899,
+              "abs_peak": 12.1212899
+            }
+          },
+          {
+            "quantity": "v(N011)",
+            "base_value": 0.0,
+            "scenario_value": 6.07785179,
+            "delta": 6.07785179,
+            "change": "activated",
+            "expectation": "changed",
+            "expectation_met": true,
+            "relative_change": 6077851790000.001,
+            "meaningful_improvement": false,
+            "metric": "v(n011).vpp",
+            "measurement": "tran_vpp",
+            "base_details": {
+              "min": 11.4818982,
+              "max": 11.4818982,
+              "mean": 11.4818982,
+              "vpp": 0.0,
+              "final": 11.4818982,
+              "abs_peak": 11.4818982
+            },
+            "scenario_details": {
+              "min": 7.39560011,
+              "max": 13.4734519,
+              "mean": 10.262776539233577,
+              "vpp": 6.07785179,
+              "final": 13.4734519,
+              "abs_peak": 13.4734519
+            }
+          },
+          {
+            "quantity": "v(N012)",
+            "base_value": 3.0000000039720476e-08,
+            "scenario_value": 0.8521244799999999,
+            "delta": 0.8521244499999998,
+            "change": "changed",
+            "expectation": "changed",
+            "expectation_met": true,
+            "relative_change": 28404148.295725785,
+            "meaningful_improvement": false,
+            "metric": "v(n012).vpp",
+            "measurement": "tran_vpp",
+            "base_details": {
+              "min": 1.16485884,
+              "max": 1.16485887,
+              "mean": 1.1648588400199469,
+              "vpp": 3.0000000039720476e-08,
+              "final": 1.16485884,
+              "abs_peak": 1.16485887
+            },
+            "scenario_details": {
+              "min": 1.16481109,
+              "max": 2.01693557,
+              "mean": 1.2288693808095554,
+              "vpp": 0.8521244799999999,
+              "final": 2.01693557,
+              "abs_peak": 2.01693557
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "final": {
+    "status": "localized",
+    "reason": "Eseguito uno scenario controllato disponibile. La rampa PWL sulla batteria ha gia verificato direttamente tutti e tre i LED durante l'aumento di tensione, senza evidenza di guasto strutturale o correzione da tentare: i tre LED cambiano stato nel tempo con un singolo impulso ciascuno, quindi il monitor mostra una sequenza di indicazione durante la carica ma non mantiene stati temporali regolari oltre il passaggio di soglia.",
+    "answer": "Il monitor segue la salita della tensione batteria mostrando in sequenza i tre LED: dal caso base a 12 V il LED giallo e acceso stabilmente, mentre con la rampa 9->11->12->14 V tutti e tre i LED diventano attivi almeno una volta. In particolare il rosso mostra un impulso transitorio con duty circa 0.6367, il giallo un impulso transitorio con duty circa 0.3975 e il verde un impulso breve con duty circa 0.0375. Quindi l'indicazione cambia effettivamente nel tempo mentre la tensione aumenta, ma ciascun LED compare come finestra/transizione singola e non come stato periodico o regolare.",
+    "cause": "Il comportamento osservato e coerente con un indicatore a soglie basato su rete di diodi/zener e transistor: a tensione fissa di 12 V il ramo del LED giallo conduce quasi da solo (@dled12_2[id] circa 9.94 mA), mentre il rosso e il verde restano praticamente spenti. Quando la batteria sale con la rampa, i nodi di soglia N004, N011 e N012 cambiano e fanno attraversare ai tre rami le rispettive soglie di conduzione, producendo impulsi transitori su tutti i LED. Non emerge una topologia interrotta; l'evidenza forte e che il circuito indica il passaggio da scarica a carica tramite finestre di accensione successive, non tramite tre stati DC simultanei o temporali regolari.",
+    "verified_correction": ""
+  },
+  "source_files": [
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\01_graph.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\03_node_map.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\04_values_bound.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\06_component_rules.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\07_netlist.cir",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\07_spice_emit_report.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\08_ngspice_stderr.txt",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\08_ngspice_stdout.txt",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\08_spice_run.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\10_diagnostic_context.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\experiment_chat\\autonomous_diagnosis.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\experiment_chat\\chat_history.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\scenarios\\agent_scenario_1\\scenario.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\scenarios\\agent_scenario_1\\scenario_comparison.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b03\\scenarios\\agent_scenario_1\\scenario_status.json"
+  ]
+}

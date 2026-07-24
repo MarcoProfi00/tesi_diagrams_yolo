@@ -1,0 +1,43 @@
+{
+  "title": "Aumentare entrambe le resistenze di base per ridurre la conduzione simultanea",
+  "hypothesis": "Le resistenze di base da 2.2 kΩ polarizzano troppo fortemente entrambi i 2N3904, impedendo che uno dei due si spenga davvero; aumentando simmetricamente Rresistor22_2 e Rresistor22_3 la corrente di base dovrebbe ridursi, i collettori dovrebbero poter alternare e i LED iniziare a lampeggiare invece di restare entrambi steady_on.",
+  "intent": "correction",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Rresistor22_2",
+      "value": "22k"
+    },
+    {
+      "type": "change_component_value",
+      "target": "Rresistor22_3",
+      "value": "22k"
+    }
+  ],
+  "compare": [
+    "v(N004)",
+    "v(N006)",
+    "v(N005)",
+    "v(N007)",
+    "@dled12_1[id]",
+    "@dled12_2[id]"
+  ],
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak",
+    "@dled12_2[id]": "tran_abs_peak"
+  },
+  "expect": {
+    "v(N005)": "changed",
+    "v(N007)": "changed",
+    "@dled12_1[id]": "changed",
+    "@dled12_2[id]": "changed"
+  },
+  "temporal_expect": {
+    "target": "Dled12_1",
+    "required_state": "blinking",
+    "require_regular_period": true,
+    "min_duty_cycle": 0.1
+  },
+  "scenario_id": "agent_scenario_3"
+}

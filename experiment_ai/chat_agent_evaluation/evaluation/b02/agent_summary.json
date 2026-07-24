@@ -1,0 +1,2700 @@
+{
+  "source_format": "chat_agent_evaluation_summary",
+  "schema_version": 1,
+  "generated_at": "2026-07-24T11:09:36+02:00",
+  "case": {
+    "workspace": "chat_agent_evaluation",
+    "circuit_id": "b02",
+    "batch": "batchChatAgentEvaluation",
+    "experiment": "chat_agent_evaluation",
+    "mode": "agent",
+    "symptom": "Il circuito dovrebbe far lampeggiare alternativamente i due LED, ma nella simulazione restano entrambi accesi. Come mai?"
+  },
+  "execution": {
+    "model": "gpt-5.4",
+    "status": "completed",
+    "agent_decisions_count": 4,
+    "max_agent_decisions": 8,
+    "max_executable_scenarios": 5,
+    "scenarios_proposed": 3,
+    "scenarios_executed": 3,
+    "successful_spice_runs": 3,
+    "failed_spice_runs": 0,
+    "resolved_candidate_scenarios": 0,
+    "stop_reason": "agent_stop"
+  },
+  "base_evidence": {
+    "graph": {
+      "image_id": "b02",
+      "image_name": "b02.jpg",
+      "components": [
+        {
+          "component_id": "led12.1",
+          "instance_id": "12.1",
+          "class_name": "LED",
+          "terminals": [
+            {
+              "terminal_id": "led12.1_anode",
+              "name": "anode",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "led12.1_cathode",
+              "name": "cathode",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "resistor22.1",
+          "instance_id": "22.1",
+          "class_name": "Resistor",
+          "terminals": [
+            {
+              "terminal_id": "resistor22.1_t1",
+              "name": "t1",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "resistor22.1_t2",
+              "name": "t2",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "npn_transistor18.1",
+          "instance_id": "18.1",
+          "class_name": "NPN_Transistor",
+          "terminals": [
+            {
+              "terminal_id": "npn_transistor18.1_B",
+              "name": "B",
+              "relative_position": "right"
+            },
+            {
+              "terminal_id": "npn_transistor18.1_C",
+              "name": "C",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "npn_transistor18.1_E",
+              "name": "E",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "resistor22.2",
+          "instance_id": "22.2",
+          "class_name": "Resistor",
+          "terminals": [
+            {
+              "terminal_id": "resistor22.2_t1",
+              "name": "t1",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "resistor22.2_t2",
+              "name": "t2",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "polarized_capacitor20.1",
+          "instance_id": "20.1",
+          "class_name": "Polarized_Capacitor",
+          "terminals": [
+            {
+              "terminal_id": "polarized_capacitor20.1_positive",
+              "name": "positive",
+              "relative_position": "left"
+            },
+            {
+              "terminal_id": "polarized_capacitor20.1_negative",
+              "name": "negative",
+              "relative_position": "right"
+            }
+          ]
+        },
+        {
+          "component_id": "gnd9.1",
+          "instance_id": "9.1",
+          "class_name": "GND",
+          "terminals": [
+            {
+              "terminal_id": "gnd9.1_t1",
+              "name": "t1",
+              "relative_position": "top"
+            }
+          ]
+        },
+        {
+          "component_id": "polarized_capacitor20.2",
+          "instance_id": "20.2",
+          "class_name": "Polarized_Capacitor",
+          "terminals": [
+            {
+              "terminal_id": "polarized_capacitor20.2_negative",
+              "name": "negative",
+              "relative_position": "left"
+            },
+            {
+              "terminal_id": "polarized_capacitor20.2_positive",
+              "name": "positive",
+              "relative_position": "right"
+            }
+          ]
+        },
+        {
+          "component_id": "resistor22.3",
+          "instance_id": "22.3",
+          "class_name": "Resistor",
+          "terminals": [
+            {
+              "terminal_id": "resistor22.3_t1",
+              "name": "t1",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "resistor22.3_t2",
+              "name": "t2",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "npn_transistor18.2",
+          "instance_id": "18.2",
+          "class_name": "NPN_Transistor",
+          "terminals": [
+            {
+              "terminal_id": "npn_transistor18.2_B",
+              "name": "B",
+              "relative_position": "left"
+            },
+            {
+              "terminal_id": "npn_transistor18.2_C",
+              "name": "C",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "npn_transistor18.2_E",
+              "name": "E",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "resistor22.4",
+          "instance_id": "22.4",
+          "class_name": "Resistor",
+          "terminals": [
+            {
+              "terminal_id": "resistor22.4_t1",
+              "name": "t1",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "resistor22.4_t2",
+              "name": "t2",
+              "relative_position": "bottom"
+            }
+          ]
+        },
+        {
+          "component_id": "led12.2",
+          "instance_id": "12.2",
+          "class_name": "LED",
+          "terminals": [
+            {
+              "terminal_id": "led12.2_anode",
+              "name": "anode",
+              "relative_position": "top"
+            },
+            {
+              "terminal_id": "led12.2_cathode",
+              "name": "cathode",
+              "relative_position": "bottom"
+            }
+          ]
+        }
+      ],
+      "terminal_metadata": {},
+      "graph": {
+        "gnd9.1_t1": [
+          "npn_transistor18.1_E",
+          "npn_transistor18.2_E"
+        ],
+        "led12.1_anode": [
+          "led12.2_anode",
+          "resistor22.2_t1",
+          "resistor22.3_t1"
+        ],
+        "led12.1_cathode": [
+          "resistor22.1_t1"
+        ],
+        "led12.2_anode": [
+          "led12.1_anode",
+          "resistor22.2_t1",
+          "resistor22.3_t1"
+        ],
+        "led12.2_cathode": [
+          "resistor22.4_t1"
+        ],
+        "npn_transistor18.1_B": [
+          "polarized_capacitor20.2_negative",
+          "resistor22.2_t2"
+        ],
+        "npn_transistor18.1_C": [
+          "polarized_capacitor20.1_positive",
+          "resistor22.1_t2"
+        ],
+        "npn_transistor18.1_E": [
+          "gnd9.1_t1",
+          "npn_transistor18.2_E"
+        ],
+        "npn_transistor18.2_B": [
+          "polarized_capacitor20.1_negative",
+          "resistor22.3_t2"
+        ],
+        "npn_transistor18.2_C": [
+          "polarized_capacitor20.2_positive",
+          "resistor22.4_t2"
+        ],
+        "npn_transistor18.2_E": [
+          "gnd9.1_t1",
+          "npn_transistor18.1_E"
+        ],
+        "polarized_capacitor20.1_negative": [
+          "npn_transistor18.2_B",
+          "resistor22.3_t2"
+        ],
+        "polarized_capacitor20.1_positive": [
+          "npn_transistor18.1_C",
+          "resistor22.1_t2"
+        ],
+        "polarized_capacitor20.2_negative": [
+          "npn_transistor18.1_B",
+          "resistor22.2_t2"
+        ],
+        "polarized_capacitor20.2_positive": [
+          "npn_transistor18.2_C",
+          "resistor22.4_t2"
+        ],
+        "resistor22.1_t1": [
+          "led12.1_cathode"
+        ],
+        "resistor22.1_t2": [
+          "npn_transistor18.1_C",
+          "polarized_capacitor20.1_positive"
+        ],
+        "resistor22.2_t1": [
+          "led12.1_anode",
+          "led12.2_anode",
+          "resistor22.3_t1"
+        ],
+        "resistor22.2_t2": [
+          "npn_transistor18.1_B",
+          "polarized_capacitor20.2_negative"
+        ],
+        "resistor22.3_t1": [
+          "led12.1_anode",
+          "led12.2_anode",
+          "resistor22.2_t1"
+        ],
+        "resistor22.3_t2": [
+          "npn_transistor18.2_B",
+          "polarized_capacitor20.1_negative"
+        ],
+        "resistor22.4_t1": [
+          "led12.2_cathode"
+        ],
+        "resistor22.4_t2": [
+          "npn_transistor18.2_C",
+          "polarized_capacitor20.2_positive"
+        ]
+      },
+      "warnings": {
+        "unconnected_terminals": [],
+        "unmatched_terminals": [],
+        "suspicious_matches": []
+      }
+    },
+    "node_map": {
+      "circuit_id": "b02",
+      "source_format": "pipeline2.0_node_map",
+      "nodes": [
+        {
+          "node_id": "0",
+          "kind": "ground",
+          "terminals": [
+            "gnd9.1_t1",
+            "npn_transistor18.1_E",
+            "npn_transistor18.2_E"
+          ],
+          "terminal_count": 3,
+          "source_groups": [
+            [
+              "gnd9.1_t1",
+              "npn_transistor18.1_E",
+              "npn_transistor18.2_E"
+            ]
+          ]
+        },
+        {
+          "node_id": "N001",
+          "kind": "normal",
+          "terminals": [
+            "led12.1_anode",
+            "led12.2_anode",
+            "resistor22.2_t1",
+            "resistor22.3_t1"
+          ],
+          "terminal_count": 4
+        },
+        {
+          "node_id": "N002",
+          "kind": "normal",
+          "terminals": [
+            "led12.1_cathode",
+            "resistor22.1_t1"
+          ],
+          "terminal_count": 2
+        },
+        {
+          "node_id": "N003",
+          "kind": "normal",
+          "terminals": [
+            "led12.2_cathode",
+            "resistor22.4_t1"
+          ],
+          "terminal_count": 2
+        },
+        {
+          "node_id": "N004",
+          "kind": "normal",
+          "terminals": [
+            "npn_transistor18.1_B",
+            "polarized_capacitor20.2_negative",
+            "resistor22.2_t2"
+          ],
+          "terminal_count": 3
+        },
+        {
+          "node_id": "N005",
+          "kind": "normal",
+          "terminals": [
+            "npn_transistor18.1_C",
+            "polarized_capacitor20.1_positive",
+            "resistor22.1_t2"
+          ],
+          "terminal_count": 3
+        },
+        {
+          "node_id": "N006",
+          "kind": "normal",
+          "terminals": [
+            "npn_transistor18.2_B",
+            "polarized_capacitor20.1_negative",
+            "resistor22.3_t2"
+          ],
+          "terminal_count": 3
+        },
+        {
+          "node_id": "N007",
+          "kind": "normal",
+          "terminals": [
+            "npn_transistor18.2_C",
+            "polarized_capacitor20.2_positive",
+            "resistor22.4_t2"
+          ],
+          "terminal_count": 3
+        }
+      ],
+      "terminal_to_node": {
+        "gnd9.1_t1": "0",
+        "led12.1_anode": "N001",
+        "led12.1_cathode": "N002",
+        "led12.2_anode": "N001",
+        "led12.2_cathode": "N003",
+        "npn_transistor18.1_B": "N004",
+        "npn_transistor18.1_C": "N005",
+        "npn_transistor18.1_E": "0",
+        "npn_transistor18.2_B": "N006",
+        "npn_transistor18.2_C": "N007",
+        "npn_transistor18.2_E": "0",
+        "polarized_capacitor20.1_negative": "N006",
+        "polarized_capacitor20.1_positive": "N005",
+        "polarized_capacitor20.2_negative": "N004",
+        "polarized_capacitor20.2_positive": "N007",
+        "resistor22.1_t1": "N002",
+        "resistor22.1_t2": "N005",
+        "resistor22.2_t1": "N001",
+        "resistor22.2_t2": "N004",
+        "resistor22.3_t1": "N001",
+        "resistor22.3_t2": "N006",
+        "resistor22.4_t1": "N003",
+        "resistor22.4_t2": "N007"
+      },
+      "component_terminal_nodes": {
+        "gnd9.1": {
+          "t1": "0"
+        },
+        "led12.1": {
+          "anode": "N001",
+          "cathode": "N002"
+        },
+        "led12.2": {
+          "anode": "N001",
+          "cathode": "N003"
+        },
+        "npn_transistor18.1": {
+          "B": "N004",
+          "C": "N005",
+          "E": "0"
+        },
+        "npn_transistor18.2": {
+          "B": "N006",
+          "C": "N007",
+          "E": "0"
+        },
+        "polarized_capacitor20.1": {
+          "positive": "N005",
+          "negative": "N006"
+        },
+        "polarized_capacitor20.2": {
+          "negative": "N004",
+          "positive": "N007"
+        },
+        "resistor22.1": {
+          "t1": "N002",
+          "t2": "N005"
+        },
+        "resistor22.2": {
+          "t1": "N001",
+          "t2": "N004"
+        },
+        "resistor22.3": {
+          "t1": "N001",
+          "t2": "N006"
+        },
+        "resistor22.4": {
+          "t1": "N003",
+          "t2": "N007"
+        }
+      },
+      "warnings": {
+        "ground_groups_count": 1,
+        "multiple_ground_groups_merged_as_node_0": false,
+        "singleton_nodes": [],
+        "original_warnings": {
+          "unconnected_terminals": [],
+          "unmatched_terminals": [],
+          "suspicious_matches": []
+        },
+        "normalization_warnings": []
+      },
+      "stats": {
+        "nodes_count": 8,
+        "normal_nodes_count": 7,
+        "ground_nodes_count": 1,
+        "ground_groups_count": 1,
+        "terminal_to_node_count": 23,
+        "singleton_nodes_count": 0
+      }
+    },
+    "values_bound": {
+      "circuit_id": "b02",
+      "source_format": "pipeline2.0_values_bound",
+      "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\data\\batchPipeline2.0\\batchChatAgentEvaluation\\values\\b02_values.yaml",
+      "supplies": {
+        "VCC": {
+          "terminal": "led12.1_anode",
+          "type": "dc",
+          "value": 5,
+          "unit": "V",
+          "reference": 0,
+          "source": "manual_from_image_label",
+          "label_text": "+5V",
+          "node": "N001"
+        }
+      },
+      "components": {
+        "gnd9.1": {
+          "class_name": "GND",
+          "terminal_nodes": {
+            "t1": "0"
+          },
+          "value_data": null,
+          "status": "not_required"
+        },
+        "led12.1": {
+          "class_name": "LED",
+          "terminal_nodes": {
+            "anode": "N001",
+            "cathode": "N002"
+          },
+          "value_data": {
+            "model": "LED_RED",
+            "source": "manual_spice_generic_led_model",
+            "label_text": "D1 LED; modello SPICE generico"
+          },
+          "status": "bound"
+        },
+        "led12.2": {
+          "class_name": "LED",
+          "terminal_nodes": {
+            "anode": "N001",
+            "cathode": "N003"
+          },
+          "value_data": {
+            "model": "LED_RED",
+            "source": "manual_spice_generic_led_model",
+            "label_text": "D2 LED; modello SPICE generico"
+          },
+          "status": "bound"
+        },
+        "npn_transistor18.1": {
+          "class_name": "NPN_Transistor",
+          "terminal_nodes": {
+            "B": "N004",
+            "C": "N005",
+            "E": "0"
+          },
+          "value_data": {
+            "model": "2N3904",
+            "source": "manual_from_image_label",
+            "label_text": "Q1 2N3904"
+          },
+          "status": "bound"
+        },
+        "npn_transistor18.2": {
+          "class_name": "NPN_Transistor",
+          "terminal_nodes": {
+            "B": "N006",
+            "C": "N007",
+            "E": "0"
+          },
+          "value_data": {
+            "model": "2N3904",
+            "source": "manual_from_image_label",
+            "label_text": "Q2 2N3904"
+          },
+          "status": "bound"
+        },
+        "polarized_capacitor20.1": {
+          "class_name": "Polarized_Capacitor",
+          "terminal_nodes": {
+            "positive": "N005",
+            "negative": "N006"
+          },
+          "value_data": {
+            "value": 47,
+            "unit": "uf",
+            "source": "manual_from_image_label",
+            "label_text": "C1 47 uF"
+          },
+          "status": "bound"
+        },
+        "polarized_capacitor20.2": {
+          "class_name": "Polarized_Capacitor",
+          "terminal_nodes": {
+            "negative": "N004",
+            "positive": "N007"
+          },
+          "value_data": {
+            "value": 47,
+            "unit": "uf",
+            "source": "manual_from_image_label",
+            "label_text": "C2 47 uF"
+          },
+          "status": "bound"
+        },
+        "resistor22.1": {
+          "class_name": "Resistor",
+          "terminal_nodes": {
+            "t1": "N002",
+            "t2": "N005"
+          },
+          "value_data": {
+            "value": 270,
+            "unit": "ohm",
+            "source": "manual_from_image_label",
+            "label_text": "R1 270 ohm"
+          },
+          "status": "bound"
+        },
+        "resistor22.2": {
+          "class_name": "Resistor",
+          "terminal_nodes": {
+            "t1": "N001",
+            "t2": "N004"
+          },
+          "value_data": {
+            "value": 2.2,
+            "unit": "kohm",
+            "source": "manual_from_image_label",
+            "label_text": "R2 2.2 kohm"
+          },
+          "status": "bound"
+        },
+        "resistor22.3": {
+          "class_name": "Resistor",
+          "terminal_nodes": {
+            "t1": "N001",
+            "t2": "N006"
+          },
+          "value_data": {
+            "value": 2.2,
+            "unit": "kohm",
+            "source": "manual_from_image_label",
+            "label_text": "R4 2.2 kohm"
+          },
+          "status": "bound"
+        },
+        "resistor22.4": {
+          "class_name": "Resistor",
+          "terminal_nodes": {
+            "t1": "N003",
+            "t2": "N007"
+          },
+          "value_data": {
+            "value": 270,
+            "unit": "ohm",
+            "source": "manual_from_image_label",
+            "label_text": "R3 270 ohm"
+          },
+          "status": "bound"
+        }
+      },
+      "nodes": {},
+      "spice_topology_overlay": [],
+      "simulation": {
+        "analyses": [
+          "op",
+          "tran"
+        ],
+        "tran": {
+          "step": "1ms",
+          "stop": "1s"
+        }
+      },
+      "missing": [],
+      "stats": {
+        "components_total": 11,
+        "bound_components": 10,
+        "missing_components": 0,
+        "not_required_components": 1,
+        "unsupported_components": 0,
+        "supplies_count": 1,
+        "manual_nodes_count": 0
+      }
+    },
+    "component_rules": {
+      "circuit_id": "b02",
+      "source_format": "pipeline2.0_component_rules",
+      "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\data\\batchPipeline2.0\\batchChatAgentEvaluation\\values\\b02_values.yaml",
+      "spice_classes_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\pipeline2_spice_classes.yaml",
+      "supplies": {
+        "VCC": {
+          "status": "spice_ready",
+          "spice_prefix": "V",
+          "emit_as": "independent_voltage_source",
+          "nodes": [
+            "N001",
+            "0"
+          ],
+          "parameters": {
+            "terminal": "led12.1_anode",
+            "type": "dc",
+            "value": 5,
+            "unit": "V",
+            "reference": 0,
+            "source": "manual_from_image_label",
+            "label_text": "+5V",
+            "node": "N001"
+          }
+        }
+      },
+      "components": {
+        "gnd9.1": {
+          "class_name": "GND",
+          "status": "not_emitted",
+          "spice_support": "structural",
+          "reason": "GND terminals are already mapped to SPICE node 0."
+        },
+        "led12.1": {
+          "class_name": "LED",
+          "status": "spice_ready",
+          "spice_support": "model",
+          "spice_prefix": "D",
+          "emit_as": "diode",
+          "node_order": [
+            "anode",
+            "cathode"
+          ],
+          "nodes": [
+            "N001",
+            "N002"
+          ],
+          "parameters": {
+            "model": "LED_RED",
+            "source": "manual_spice_generic_led_model",
+            "label_text": "D1 LED; modello SPICE generico"
+          }
+        },
+        "led12.2": {
+          "class_name": "LED",
+          "status": "spice_ready",
+          "spice_support": "model",
+          "spice_prefix": "D",
+          "emit_as": "diode",
+          "node_order": [
+            "anode",
+            "cathode"
+          ],
+          "nodes": [
+            "N001",
+            "N003"
+          ],
+          "parameters": {
+            "model": "LED_RED",
+            "source": "manual_spice_generic_led_model",
+            "label_text": "D2 LED; modello SPICE generico"
+          }
+        },
+        "npn_transistor18.1": {
+          "class_name": "NPN_Transistor",
+          "status": "spice_ready",
+          "spice_support": "model",
+          "spice_prefix": "Q",
+          "emit_as": "bjt_npn",
+          "node_order": [
+            "C",
+            "B",
+            "E"
+          ],
+          "nodes": [
+            "N005",
+            "N004",
+            "0"
+          ],
+          "parameters": {
+            "model": "2N3904",
+            "source": "manual_from_image_label",
+            "label_text": "Q1 2N3904"
+          }
+        },
+        "npn_transistor18.2": {
+          "class_name": "NPN_Transistor",
+          "status": "spice_ready",
+          "spice_support": "model",
+          "spice_prefix": "Q",
+          "emit_as": "bjt_npn",
+          "node_order": [
+            "C",
+            "B",
+            "E"
+          ],
+          "nodes": [
+            "N007",
+            "N006",
+            "0"
+          ],
+          "parameters": {
+            "model": "2N3904",
+            "source": "manual_from_image_label",
+            "label_text": "Q2 2N3904"
+          }
+        },
+        "polarized_capacitor20.1": {
+          "class_name": "Polarized_Capacitor",
+          "status": "spice_ready",
+          "spice_support": "direct",
+          "spice_prefix": "C",
+          "emit_as": "capacitor",
+          "node_order": [
+            "positive",
+            "negative"
+          ],
+          "nodes": [
+            "N005",
+            "N006"
+          ],
+          "parameters": {
+            "value": 47,
+            "unit": "uf",
+            "source": "manual_from_image_label",
+            "label_text": "C1 47 uF"
+          }
+        },
+        "polarized_capacitor20.2": {
+          "class_name": "Polarized_Capacitor",
+          "status": "spice_ready",
+          "spice_support": "direct",
+          "spice_prefix": "C",
+          "emit_as": "capacitor",
+          "node_order": [
+            "positive",
+            "negative"
+          ],
+          "nodes": [
+            "N007",
+            "N004"
+          ],
+          "parameters": {
+            "value": 47,
+            "unit": "uf",
+            "source": "manual_from_image_label",
+            "label_text": "C2 47 uF"
+          }
+        },
+        "resistor22.1": {
+          "class_name": "Resistor",
+          "status": "spice_ready",
+          "spice_support": "direct",
+          "spice_prefix": "R",
+          "emit_as": "resistor",
+          "node_order": [
+            "t1",
+            "t2"
+          ],
+          "nodes": [
+            "N002",
+            "N005"
+          ],
+          "parameters": {
+            "value": 270,
+            "unit": "ohm",
+            "source": "manual_from_image_label",
+            "label_text": "R1 270 ohm"
+          }
+        },
+        "resistor22.2": {
+          "class_name": "Resistor",
+          "status": "spice_ready",
+          "spice_support": "direct",
+          "spice_prefix": "R",
+          "emit_as": "resistor",
+          "node_order": [
+            "t1",
+            "t2"
+          ],
+          "nodes": [
+            "N001",
+            "N004"
+          ],
+          "parameters": {
+            "value": 2.2,
+            "unit": "kohm",
+            "source": "manual_from_image_label",
+            "label_text": "R2 2.2 kohm"
+          }
+        },
+        "resistor22.3": {
+          "class_name": "Resistor",
+          "status": "spice_ready",
+          "spice_support": "direct",
+          "spice_prefix": "R",
+          "emit_as": "resistor",
+          "node_order": [
+            "t1",
+            "t2"
+          ],
+          "nodes": [
+            "N001",
+            "N006"
+          ],
+          "parameters": {
+            "value": 2.2,
+            "unit": "kohm",
+            "source": "manual_from_image_label",
+            "label_text": "R4 2.2 kohm"
+          }
+        },
+        "resistor22.4": {
+          "class_name": "Resistor",
+          "status": "spice_ready",
+          "spice_support": "direct",
+          "spice_prefix": "R",
+          "emit_as": "resistor",
+          "node_order": [
+            "t1",
+            "t2"
+          ],
+          "nodes": [
+            "N003",
+            "N007"
+          ],
+          "parameters": {
+            "value": 270,
+            "unit": "ohm",
+            "source": "manual_from_image_label",
+            "label_text": "R3 270 ohm"
+          }
+        }
+      },
+      "simulation": {
+        "analyses": [
+          "op",
+          "tran"
+        ],
+        "tran": {
+          "step": "1ms",
+          "stop": "1s"
+        }
+      },
+      "stats": {
+        "components_total": 11,
+        "spice_ready_components": 10,
+        "not_emitted_components": 1,
+        "measurement_components": 0,
+        "missing_components": 0,
+        "unsupported_components": 0,
+        "pin_aware_components": 0,
+        "invalid_components": 0,
+        "supplies_ready_count": 1
+      }
+    },
+    "spice_emit_report": {
+      "circuit_id": "b02",
+      "source_format": "pipeline2.0_spice_emit_report",
+      "emitted_elements": 11,
+      "skipped_elements": 1,
+      "skipped_components": [
+        "gnd9.1"
+      ],
+      "informational_skips": [
+        "gnd9.1: structural component not emitted"
+      ],
+      "measurement_points": [],
+      "analyses": [
+        "op",
+        "tran"
+      ],
+      "transient_export": {
+        "path": "08_tran.csv",
+        "nodes": [
+          "N001",
+          "N002",
+          "N003",
+          "N004",
+          "N005",
+          "N006",
+          "N007"
+        ],
+        "device_currents": [
+          "@dled12_1[id]",
+          "@dled12_2[id]"
+        ]
+      },
+      "models": [
+        "2N3904",
+        "LED_RED"
+      ],
+      "warnings": []
+    },
+    "spice_run": {
+      "source_format": "pipeline2.0_spice_run",
+      "status": "success",
+      "netlist_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\pipeline2.0\\b02\\07_netlist.cir",
+      "command": [
+        "C:\\Users\\m.profilo\\Spice64\\bin\\ngspice_con.exe",
+        "-b",
+        "07_netlist.cir"
+      ],
+      "exit_code": 0,
+      "stdout_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\pipeline2.0\\b02\\08_ngspice_stdout.txt",
+      "stderr_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\pipeline2.0\\b02\\08_ngspice_stderr.txt",
+      "tran_raw_csv_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\pipeline2.0\\b02\\08_tran_raw.csv",
+      "tran_csv_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\pipeline2.0\\b02\\08_tran.csv",
+      "tran_plot_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\pipeline2.0\\b02\\08_tran_plot.png",
+      "tran_plot_png_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\pipeline2.0\\b02\\08_tran_plot.png",
+      "tran_plot_svg_path": null,
+      "message": "ngspice completed successfully."
+    },
+    "diagnostic_context": {
+      "source_format": "pipeline2.0_diagnostic_context_manifest",
+      "batch_name": "batchChatAgentEvaluation",
+      "experiment_name": "chat_agent_evaluation",
+      "circuit_id": "b02",
+      "user_problem": "Il circuito dovrebbe far lampeggiare alternativamente i due LED, ma nella simulazione restano entrambi accesi. Come mai?",
+      "pipeline2_output_dir": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02",
+      "summary": {
+        "spice_status": "success",
+        "spice_exit_code": 0,
+        "spice_message": "ngspice completed successfully.",
+        "emitted_elements": 11,
+        "skipped_elements": 1,
+        "emit_warnings_count": 0,
+        "skipped_components_count": 1,
+        "node_count": 8,
+        "ground_groups_count": 1,
+        "singleton_nodes_count": 0,
+        "bound_components": 10,
+        "missing_components": 0,
+        "unsupported_components": 0,
+        "spice_ready_components": 10,
+        "rules_missing_components": 0,
+        "has_tran_csv": true,
+        "has_tran_plot": true,
+        "led_profiles": {
+          "Dled12_1": {
+            "state": "steady_on",
+            "regular_period": false,
+            "frequency_hz": null,
+            "duty_cycle": 1.0,
+            "on_fraction": 1.0,
+            "pulse_count": 1,
+            "voltage_min": 0.7259810499999997,
+            "voltage_max": 0.7259810499999997,
+            "anode_node": "N001",
+            "cathode_node": "N002"
+          },
+          "Dled12_2": {
+            "state": "steady_on",
+            "regular_period": false,
+            "frequency_hz": null,
+            "duty_cycle": 1.0,
+            "on_fraction": 1.0,
+            "pulse_count": 1,
+            "voltage_min": 0.7259810499999997,
+            "voltage_max": 0.7259810499999997,
+            "anode_node": "N001",
+            "cathode_node": "N003"
+          }
+        }
+      },
+      "artifacts": {
+        "graph": {
+          "step": "01",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\01_graph.json",
+          "role": "Graph JSON copied from Pipeline 1.0."
+        },
+        "normalized_circuit": {
+          "step": "02",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\02_normalized_circuit.json",
+          "role": "Normalized circuit representation used by Pipeline 2.0."
+        },
+        "node_map": {
+          "step": "03",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\03_node_map.json",
+          "role": "Maps component terminals to SPICE node names."
+        },
+        "values_bound": {
+          "step": "04",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\04_values_bound.json",
+          "role": "Values and labels bound to graph components."
+        },
+        "component_rules": {
+          "step": "06",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\06_component_rules.json",
+          "role": "SPICE conversion rules for each component."
+        },
+        "netlist": {
+          "step": "07",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\07_netlist.cir",
+          "role": "Generated SPICE netlist."
+        },
+        "spice_emit_report": {
+          "step": "07",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\07_spice_emit_report.json",
+          "role": "Report of emitted, skipped and warning components."
+        },
+        "spice_run": {
+          "step": "08",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\08_spice_run.json",
+          "role": "Structured ngspice execution report."
+        },
+        "ngspice_stdout": {
+          "step": "08",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\08_ngspice_stdout.txt",
+          "role": "Raw ngspice stdout log."
+        },
+        "ngspice_stderr": {
+          "step": "08",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\08_ngspice_stderr.txt",
+          "role": "Raw ngspice stderr log."
+        },
+        "tran_csv": {
+          "step": "08",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\08_tran.csv",
+          "role": "Clean transient CSV, when .tran data is available."
+        },
+        "tran_plot_png": {
+          "step": "08",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\08_tran_plot.png",
+          "role": "Transient plot PNG, when generated."
+        },
+        "tran_plot_svg": {
+          "step": "08",
+          "available": false,
+          "path": null,
+          "role": "Transient plot SVG fallback, when generated."
+        }
+      },
+      "executed_scenarios": [
+        {
+          "scenario_dir": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_1",
+          "scenario_id": "agent_scenario_1",
+          "title": "Rompere la simmetria iniziale delle due basi",
+          "status": "spice_success",
+          "spice_status": "success",
+          "diagnostic_outcome": {
+            "status": "partially_resolved",
+            "technical_label": "Temporal criteria not satisfied",
+            "label": "Criteri temporali non soddisfatti",
+            "reason": "Almeno un criterio temporale non e soddisfatto.",
+            "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+            "stop_automation": false,
+            "confidence": "low",
+            "next_step": "Il comportamento temporale non soddisfa ancora l'obiettivo: prova un'altra correzione."
+          },
+          "comparison_summary": {
+            "requested_count": 4,
+            "changed_count": 4,
+            "activated_count": 2,
+            "missing_count": 0,
+            "expected_count": 4,
+            "expectations_met_count": 4,
+            "expectations_failed_count": 0,
+            "expectations_missing_count": 0,
+            "meaningful_improvement_count": 0,
+            "quality_required": false,
+            "quality_available": false,
+            "quality_improved": false,
+            "quality_acceptable": false,
+            "quality_output_preserved": false,
+            "base_thd": null,
+            "scenario_thd": null,
+            "gain_required": false,
+            "gain_available": false,
+            "gain_sufficient": false,
+            "scenario_gain": null,
+            "min_gain_ratio": null,
+            "temporal_required": true,
+            "temporal_available": true,
+            "temporal_met": false
+          },
+          "led_profiles": {
+            "Dled12_1": {
+              "state": "transient_pulse",
+              "regular_period": false,
+              "frequency_hz": null,
+              "duty_cycle": 0.0007342143906020558,
+              "on_fraction": 0.0007342143906020558,
+              "pulse_count": 1,
+              "voltage_min": 0.5584947299999996,
+              "voltage_max": 0.8566023600000001,
+              "anode_node": "N001",
+              "cathode_node": "N002"
+            },
+            "Dled12_2": {
+              "state": "transient_pulse",
+              "regular_period": false,
+              "frequency_hz": null,
+              "duty_cycle": 0.6461086637298091,
+              "on_fraction": 0.6461086637298091,
+              "pulse_count": 19,
+              "voltage_min": -6478.20099,
+              "voltage_max": 0.7466161600000003,
+              "anode_node": "N001",
+              "cathode_node": "N003"
+            }
+          },
+          "artifacts": {
+            "scenario_definition": {
+              "available": true,
+              "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_1\\scenario.json",
+              "role": "Scenario selected by the user and saved before execution."
+            },
+            "scenario_status": {
+              "available": true,
+              "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_1\\scenario_status.json",
+              "role": "Current scenario status, SPICE status and diagnostic outcome."
+            },
+            "controlled_scenario_report": {
+              "available": true,
+              "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_1\\12_controlled_scenarios.json",
+              "role": "Report produced by the controlled scenario runner."
+            },
+            "scenario_comparison": {
+              "available": true,
+              "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_1\\scenario_comparison.json",
+              "role": "Base-vs-scenario comparison used to evaluate the scenario."
+            }
+          }
+        },
+        {
+          "scenario_dir": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_2",
+          "scenario_id": "agent_scenario_2",
+          "title": "Secondo test di avvio con asimmetria iniziale opposta e più moderata",
+          "status": "spice_success",
+          "spice_status": "success",
+          "diagnostic_outcome": {
+            "status": "partially_resolved",
+            "technical_label": "Temporal criteria not satisfied",
+            "label": "Criteri temporali non soddisfatti",
+            "reason": "Almeno un criterio temporale non e soddisfatto.",
+            "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+            "stop_automation": false,
+            "confidence": "low",
+            "next_step": "Il comportamento temporale non soddisfa ancora l'obiettivo: prova un'altra correzione."
+          },
+          "comparison_summary": {
+            "requested_count": 4,
+            "changed_count": 4,
+            "activated_count": 2,
+            "missing_count": 0,
+            "expected_count": 4,
+            "expectations_met_count": 4,
+            "expectations_failed_count": 0,
+            "expectations_missing_count": 0,
+            "meaningful_improvement_count": 0,
+            "quality_required": false,
+            "quality_available": false,
+            "quality_improved": false,
+            "quality_acceptable": false,
+            "quality_output_preserved": false,
+            "base_thd": null,
+            "scenario_thd": null,
+            "gain_required": false,
+            "gain_available": false,
+            "gain_sufficient": false,
+            "scenario_gain": null,
+            "min_gain_ratio": null,
+            "temporal_required": true,
+            "temporal_available": true,
+            "temporal_met": false
+          },
+          "led_profiles": {
+            "Dled12_1": {
+              "state": "transient_pulse",
+              "regular_period": false,
+              "frequency_hz": null,
+              "duty_cycle": 0.6792452830188679,
+              "on_fraction": 0.6792452830188679,
+              "pulse_count": 19,
+              "voltage_min": -6478.20099,
+              "voltage_max": 0.7466161600000003,
+              "anode_node": "N001",
+              "cathode_node": "N002"
+            },
+            "Dled12_2": {
+              "state": "transient_pulse",
+              "regular_period": false,
+              "frequency_hz": null,
+              "duty_cycle": 0.0007861635220125787,
+              "on_fraction": 0.0007861635220125787,
+              "pulse_count": 1,
+              "voltage_min": 0.5358872699999999,
+              "voltage_max": 0.8566023600000001,
+              "anode_node": "N001",
+              "cathode_node": "N003"
+            }
+          },
+          "artifacts": {
+            "scenario_definition": {
+              "available": true,
+              "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_2\\scenario.json",
+              "role": "Scenario selected by the user and saved before execution."
+            },
+            "scenario_status": {
+              "available": true,
+              "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_2\\scenario_status.json",
+              "role": "Current scenario status, SPICE status and diagnostic outcome."
+            },
+            "controlled_scenario_report": {
+              "available": true,
+              "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_2\\12_controlled_scenarios.json",
+              "role": "Report produced by the controlled scenario runner."
+            },
+            "scenario_comparison": {
+              "available": true,
+              "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_2\\scenario_comparison.json",
+              "role": "Base-vs-scenario comparison used to evaluate the scenario."
+            }
+          }
+        },
+        {
+          "scenario_dir": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_3",
+          "scenario_id": "agent_scenario_3",
+          "title": "Aumentare entrambe le resistenze di base per ridurre la conduzione simultanea",
+          "status": "spice_success",
+          "spice_status": "success",
+          "diagnostic_outcome": {
+            "status": "partially_resolved",
+            "technical_label": "Temporal criteria not satisfied",
+            "label": "Criteri temporali non soddisfatti",
+            "reason": "Almeno un criterio temporale non e soddisfatto.",
+            "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+            "stop_automation": false,
+            "confidence": "low",
+            "next_step": "Il comportamento temporale non soddisfa ancora l'obiettivo: prova un'altra correzione."
+          },
+          "comparison_summary": {
+            "requested_count": 6,
+            "changed_count": 6,
+            "activated_count": 4,
+            "missing_count": 0,
+            "expected_count": 4,
+            "expectations_met_count": 4,
+            "expectations_failed_count": 0,
+            "expectations_missing_count": 0,
+            "meaningful_improvement_count": 0,
+            "quality_required": false,
+            "quality_available": false,
+            "quality_improved": false,
+            "quality_acceptable": false,
+            "quality_output_preserved": false,
+            "base_thd": null,
+            "scenario_thd": null,
+            "gain_required": false,
+            "gain_available": false,
+            "gain_sufficient": false,
+            "scenario_gain": null,
+            "min_gain_ratio": null,
+            "temporal_required": true,
+            "temporal_available": true,
+            "temporal_met": false
+          },
+          "led_profiles": {
+            "Dled12_1": {
+              "state": "transient_pulse",
+              "regular_period": false,
+              "frequency_hz": null,
+              "duty_cycle": 0.5240690281562216,
+              "on_fraction": 0.5240690281562216,
+              "pulse_count": 1,
+              "voltage_min": 0.46790889000000035,
+              "voltage_max": 0.7261896700000001,
+              "anode_node": "N001",
+              "cathode_node": "N002"
+            },
+            "Dled12_2": {
+              "state": "transient_pulse",
+              "regular_period": false,
+              "frequency_hz": null,
+              "duty_cycle": 0.9346049046321526,
+              "on_fraction": 0.9346049046321526,
+              "pulse_count": 2,
+              "voltage_min": 0.6035479500000003,
+              "voltage_max": 0.7261922800000002,
+              "anode_node": "N001",
+              "cathode_node": "N003"
+            }
+          },
+          "artifacts": {
+            "scenario_definition": {
+              "available": true,
+              "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_3\\scenario.json",
+              "role": "Scenario selected by the user and saved before execution."
+            },
+            "scenario_status": {
+              "available": true,
+              "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_3\\scenario_status.json",
+              "role": "Current scenario status, SPICE status and diagnostic outcome."
+            },
+            "controlled_scenario_report": {
+              "available": true,
+              "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_3\\12_controlled_scenarios.json",
+              "role": "Report produced by the controlled scenario runner."
+            },
+            "scenario_comparison": {
+              "available": true,
+              "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_3\\scenario_comparison.json",
+              "role": "Base-vs-scenario comparison used to evaluate the scenario."
+            }
+          }
+        }
+      ],
+      "scenario_outcome_summary": {
+        "available": true,
+        "best_scenario_id": "agent_scenario_1",
+        "best_outcome_status": "partially_resolved",
+        "best_stop_automation": false,
+        "ranking_status": "verified_best",
+        "interpretation_rule": "If a user asks which scenario resolves the problem, prefer the scenario with outcome_status='resolved_candidate' and stop_automation=true. Partially resolved scenarios without verified expectations are supporting diagnostics and must not be ranked only by changed_count.",
+        "scenarios": [
+          {
+            "scenario_id": "agent_scenario_1",
+            "title": "Rompere la simmetria iniziale delle due basi",
+            "status": "spice_success",
+            "spice_status": "success",
+            "outcome_status": "partially_resolved",
+            "outcome_label": "Criteri temporali non soddisfatti",
+            "outcome_technical_label": "Temporal criteria not satisfied",
+            "outcome_reason": "Almeno un criterio temporale non e soddisfatto.",
+            "stop_automation": false,
+            "comparison_summary": {
+              "requested_count": 4,
+              "changed_count": 4,
+              "activated_count": 2,
+              "missing_count": 0,
+              "expected_count": 4,
+              "expectations_met_count": 4,
+              "expectations_failed_count": 0,
+              "expectations_missing_count": 0,
+              "meaningful_improvement_count": 0,
+              "quality_required": false,
+              "quality_available": false,
+              "quality_improved": false,
+              "quality_acceptable": false,
+              "quality_output_preserved": false,
+              "base_thd": null,
+              "scenario_thd": null,
+              "gain_required": false,
+              "gain_available": false,
+              "gain_sufficient": false,
+              "scenario_gain": null,
+              "min_gain_ratio": null,
+              "temporal_required": true,
+              "temporal_available": true,
+              "temporal_met": false
+            },
+            "quantity_summary": {
+              "changed": [
+                "v(N004)",
+                "v(N006)",
+                "@dled12_1[id]",
+                "@dled12_2[id]"
+              ],
+              "unchanged": [],
+              "missing": []
+            },
+            "led_profiles": {
+              "Dled12_1": {
+                "state": "transient_pulse",
+                "regular_period": false,
+                "frequency_hz": null,
+                "duty_cycle": 0.0007342143906020558,
+                "on_fraction": 0.0007342143906020558,
+                "pulse_count": 1,
+                "voltage_min": 0.5584947299999996,
+                "voltage_max": 0.8566023600000001,
+                "anode_node": "N001",
+                "cathode_node": "N002"
+              },
+              "Dled12_2": {
+                "state": "transient_pulse",
+                "regular_period": false,
+                "frequency_hz": null,
+                "duty_cycle": 0.6461086637298091,
+                "on_fraction": 0.6461086637298091,
+                "pulse_count": 19,
+                "voltage_min": -6478.20099,
+                "voltage_max": 0.7466161600000003,
+                "anode_node": "N001",
+                "cathode_node": "N003"
+              }
+            },
+            "ranking_verified": true,
+            "score": 40
+          },
+          {
+            "scenario_id": "agent_scenario_2",
+            "title": "Secondo test di avvio con asimmetria iniziale opposta e più moderata",
+            "status": "spice_success",
+            "spice_status": "success",
+            "outcome_status": "partially_resolved",
+            "outcome_label": "Criteri temporali non soddisfatti",
+            "outcome_technical_label": "Temporal criteria not satisfied",
+            "outcome_reason": "Almeno un criterio temporale non e soddisfatto.",
+            "stop_automation": false,
+            "comparison_summary": {
+              "requested_count": 4,
+              "changed_count": 4,
+              "activated_count": 2,
+              "missing_count": 0,
+              "expected_count": 4,
+              "expectations_met_count": 4,
+              "expectations_failed_count": 0,
+              "expectations_missing_count": 0,
+              "meaningful_improvement_count": 0,
+              "quality_required": false,
+              "quality_available": false,
+              "quality_improved": false,
+              "quality_acceptable": false,
+              "quality_output_preserved": false,
+              "base_thd": null,
+              "scenario_thd": null,
+              "gain_required": false,
+              "gain_available": false,
+              "gain_sufficient": false,
+              "scenario_gain": null,
+              "min_gain_ratio": null,
+              "temporal_required": true,
+              "temporal_available": true,
+              "temporal_met": false
+            },
+            "quantity_summary": {
+              "changed": [
+                "v(N004)",
+                "v(N006)",
+                "@dled12_1[id]",
+                "@dled12_2[id]"
+              ],
+              "unchanged": [],
+              "missing": []
+            },
+            "led_profiles": {
+              "Dled12_1": {
+                "state": "transient_pulse",
+                "regular_period": false,
+                "frequency_hz": null,
+                "duty_cycle": 0.6792452830188679,
+                "on_fraction": 0.6792452830188679,
+                "pulse_count": 19,
+                "voltage_min": -6478.20099,
+                "voltage_max": 0.7466161600000003,
+                "anode_node": "N001",
+                "cathode_node": "N002"
+              },
+              "Dled12_2": {
+                "state": "transient_pulse",
+                "regular_period": false,
+                "frequency_hz": null,
+                "duty_cycle": 0.0007861635220125787,
+                "on_fraction": 0.0007861635220125787,
+                "pulse_count": 1,
+                "voltage_min": 0.5358872699999999,
+                "voltage_max": 0.8566023600000001,
+                "anode_node": "N001",
+                "cathode_node": "N003"
+              }
+            },
+            "ranking_verified": true,
+            "score": 40
+          },
+          {
+            "scenario_id": "agent_scenario_3",
+            "title": "Aumentare entrambe le resistenze di base per ridurre la conduzione simultanea",
+            "status": "spice_success",
+            "spice_status": "success",
+            "outcome_status": "partially_resolved",
+            "outcome_label": "Criteri temporali non soddisfatti",
+            "outcome_technical_label": "Temporal criteria not satisfied",
+            "outcome_reason": "Almeno un criterio temporale non e soddisfatto.",
+            "stop_automation": false,
+            "comparison_summary": {
+              "requested_count": 6,
+              "changed_count": 6,
+              "activated_count": 4,
+              "missing_count": 0,
+              "expected_count": 4,
+              "expectations_met_count": 4,
+              "expectations_failed_count": 0,
+              "expectations_missing_count": 0,
+              "meaningful_improvement_count": 0,
+              "quality_required": false,
+              "quality_available": false,
+              "quality_improved": false,
+              "quality_acceptable": false,
+              "quality_output_preserved": false,
+              "base_thd": null,
+              "scenario_thd": null,
+              "gain_required": false,
+              "gain_available": false,
+              "gain_sufficient": false,
+              "scenario_gain": null,
+              "min_gain_ratio": null,
+              "temporal_required": true,
+              "temporal_available": true,
+              "temporal_met": false
+            },
+            "quantity_summary": {
+              "changed": [
+                "v(N004)",
+                "v(N006)",
+                "v(N005)",
+                "v(N007)",
+                "@dled12_1[id]",
+                "@dled12_2[id]"
+              ],
+              "unchanged": [],
+              "missing": []
+            },
+            "led_profiles": {
+              "Dled12_1": {
+                "state": "transient_pulse",
+                "regular_period": false,
+                "frequency_hz": null,
+                "duty_cycle": 0.5240690281562216,
+                "on_fraction": 0.5240690281562216,
+                "pulse_count": 1,
+                "voltage_min": 0.46790889000000035,
+                "voltage_max": 0.7261896700000001,
+                "anode_node": "N001",
+                "cathode_node": "N002"
+              },
+              "Dled12_2": {
+                "state": "transient_pulse",
+                "regular_period": false,
+                "frequency_hz": null,
+                "duty_cycle": 0.9346049046321526,
+                "on_fraction": 0.9346049046321526,
+                "pulse_count": 2,
+                "voltage_min": 0.6035479500000003,
+                "voltage_max": 0.7261922800000002,
+                "anode_node": "N001",
+                "cathode_node": "N003"
+              }
+            },
+            "ranking_verified": true,
+            "score": 40
+          }
+        ]
+      },
+      "scenario_budget": {
+        "max_executable_scenarios": 5,
+        "executed_scenarios_count": 3,
+        "remaining_executable_scenarios": 2,
+        "budget_exhausted": false,
+        "last_scenario_available": false,
+        "policy": "At most 5 scenarios can be executed for the same circuit. When only one scenario remains, the agent should propose a single final scenario. When no scenario remains, the agent must stop proposing new scenarios and provide a final diagnostic conclusion."
+      },
+      "image_access": {
+        "included_by_default": false,
+        "can_be_requested": true,
+        "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\input\\images\\b02.jpg",
+        "policy": "Only request the image if structured outputs suggest that the Graph JSON may be incomplete or wrong."
+      },
+      "agent_mode": "graph_grounded_readonly",
+      "agent_rules": [
+        "Treat this file as a manifest, not as the full diagnostic evidence.",
+        "Load the referenced artifacts needed for the answer.",
+        "Use graph, node map, component rules, netlist, stdout and stderr as evidence.",
+        "If executed_scenarios are available, use them as evidence for questions about scenario outcomes.",
+        "Do not invent values, connections, models or simulation results.",
+        "Do not use the image unless image_access is explicitly requested.",
+        "If Graph JSON inconsistency is suspected, explain which structured outputs suggest it.",
+        "In read-only mode, do not modify netlists and do not execute scenarios.",
+        "Never exceed 5 executed scenarios for the same circuit.",
+        "When the scenario budget is exhausted, stop proposing new scenarios and provide a final diagnostic conclusion."
+      ]
+    },
+    "netlist": "* pipeline2.0 netlist\n* circuit: b02\n\nVVCC N001 0 DC 5\nDled12_1 N001 N002 LED_RED\nDled12_2 N001 N003 LED_RED\nQnpn_transistor18_1 N005 N004 0 2N3904\nQnpn_transistor18_2 N007 N006 0 2N3904\nCpolarized_capacitor20_1 N005 N006 47u\nCpolarized_capacitor20_2 N007 N004 47u\nRresistor22_1 N002 N005 270\nRresistor22_2 N001 N004 2.2k\nRresistor22_3 N001 N006 2.2k\nRresistor22_4 N003 N007 270\n\n.model 2N3904 NPN(IS=6.734f BF=416.4 VAF=74.03 IKF=66.78m ISE=6.734f NE=1.259 BR=0.7371 VAR=12.11 IKR=0.0 ISC=0.0 NC=2 RB=10 RC=1 RE=0.1 CJE=4.493p VJE=0.75 MJE=0.2593 CJC=3.638p VJC=0.75 MJC=0.3085 TF=301.2p TR=239.5n)\n.model LED_RED D\n\n.op\n.save all\n.tran 1ms 1s\n\n.control\nset wr_singlescale\nset wr_vecnames\nsave all @dled12_1[id] @dled12_2[id]\nrun\nwrdata 08_tran.csv time v(N001) v(N002) v(N003) v(N004) v(N005) v(N006) v(N007) @dled12_1[id] @dled12_2[id]\n.endc\n.end\n",
+    "ngspice_stdout": "\nNote: No compatibility mode selected!\n\n\nCircuit: * pipeline2.0 netlist\n\nDoing analysis at TEMP = 27.000000 and TNOM = 27.000000\n\nUsing SPARSE 1.3 as Direct Linear Solver\n\nNo. of Data Rows : 1\n\nInitial Transient Solution\n--------------------------\n\nNode                                   Voltage\n----                                   -------\nn001                                         5\nn002                                   4.27402\nn003                                   4.27402\nn005                                 0.0936194\nn004                                  0.769966\nn007                                 0.0936194\nn006                                  0.769966\nvvcc#branch                         -0.0348114\n\n\nNo. of Data Rows : 1008\nDoing analysis at TEMP = 27.000000 and TNOM = 27.000000\n\nUsing SPARSE 1.3 as Direct Linear Solver\n\nNo. of Data Rows : 1\n\nInitial Transient Solution\n--------------------------\n\nNode                                   Voltage\n----                                   -------\nn001                                         5\nn002                                   4.27402\nn003                                   4.27402\nn005                                 0.0936194\nn004                                  0.769966\nn007                                 0.0936194\nn006                                  0.769966\nvvcc#branch                         -0.0348114\n\n\nNo. of Data Rows : 1008\n\tNode                                  Voltage\n\t----                                  -------\n\t----\t-------\n\tn006                             7.699664e-01\n\tn007                             9.361940e-02\n\tn004                             7.699664e-01\n\tn005                             9.361940e-02\n\tn003                             4.274019e+00\n\tn002                             4.274019e+00\n\tn001                             5.000000e+00\n\n\tSource\tCurrent\n\t------\t-------\n\n\t@dled12_2[id]                    1.548296e-02\n\t@dled12_1[id]                    1.548296e-02\n\tvvcc#branch                      -3.48114e-02\n\n BJT models (Bipolar Junction Transistor)\n      model                2n3904\n\n       type                   npn\n       tnom                    27\n         is             6.734e-15\n        ibe                     0\n        ibc                     0\n         bf                 416.4\n         nf                     1\n        vaf                 74.03\n        ikf               0.06678\n        ise             6.734e-15\n         ne                 1.259\n         br                0.7371\n         nr                     1\n        var                 12.11\n        ikr                     0\n        isc                     0\n         nc                     2\n         rb                    10\n        irb                     0\n        rbm                    10\n         re                   0.1\n         rc                     1\n        cje             4.493e-12\n        vje                  0.75\n        mje                0.2593\n         tf             3.012e-10\n        xtf                     0\n        vtf                     0\n        itf                     0\n        ptf                     0\n        cjc             3.638e-12\n        vjc                  0.75\n        mjc                0.3085\n       xcjc                     1\n         tr             2.395e-07\n        cjs                     0\n        vjs                  0.75\n        mjs                     0\n        xtb                     0\n         eg                  1.11\n        xti                     3\n         fc                   0.5\n         kf                     0\n         af                     0\n        iss                     0\n         ns                     1\n        rco                  0.01\n         vo                    10\n      gamma                 1e-11\n        qco                     0\n       tlev                     0\n      tlevc                     0\n       tbf1                     0\n       tbf2                     0\n       tbr1                     0\n       tbr2                     0\n      tikf1                     0\n      tikf2                     0\n      tikr1                     0\n      tikr2                     0\n      tirb1                     0\n      tirb2                     0\n       tnc1                     0\n       tnc2                     0\n       tne1                     0\n       tne2                     0\n       tnf1                     0\n       tnf2                     0\n       tnr1                     0\n       tnr2                     0\n       trb1                     0\n       trb2                     0\n       trc1                     0\n       trc2                     0\n       tre1                     0\n       tre2                     0\n       trm1                     0\n       trm2                     0\n      tvaf1                     0\n      tvaf2                     0\n      tvar1                     0\n      tvar2                     0\n        ctc                     0\n        cte                     0\n        cts                     0\n       tvjc                     0\n       tvje                     0\n       tvjs                     0\n      titf1                     0\n      titf2                     0\n       ttf1                     0\n       ttf2                     0\n       ttr1                     0\n       ttr2                     0\n      tmje1                     0\n      tmje2                     0\n      tmjc1                     0\n      tmjc2                     0\n      tmjs1                     0\n      tmjs2                     0\n       tns1                     0\n       tns2                     0\n        nkf                   0.5\n       tis1                     0\n       tis2                     0\n      tise1                     0\n      tise2                     0\n      tisc1                     0\n      tisc2                     0\n      tiss1                     0\n      tiss2                     0\n   quasimod                     0\n         vg                 1.206\n         cn                  2.42\n          d                  0.87\n    vbe_max                 1e+99\n    vbc_max                 1e+99\n    vce_max                 1e+99\n     pd_max                 1e+99\n     ic_max                 1e+99\n     ib_max                 1e+99\n     te_max                 1e+99\n       rth0                     0\n\n Capacitor models (Fixed capacitor)\n      model                     C\n\n        cap                     0\n         cj                     0\n       cjsw                     0\n       defw                 1e-05\n       defl                     0\n     narrow                     0\n      short                     0\n        del                     0\n        tc1                     0\n        tc2                     0\n         di                     0\n      thick                     0\n     bv_max                 1e+99\n\n Diode models (Junction Diode model)\n      model               led_red\n\n      level                     1\n         is                 1e-14\n        jsw                     0\n         rs                     0\n        rsw                     0\n        trs                     0\n       trs2                     0\n          n                     1\n         ns                     1\n         tt                     0\n       ttt1                     0\n       ttt2                     0\n        cjo                     0\n         vj                     1\n          m                   0.5\n        tm1                     0\n        tm2                     0\n        cjp                     0\n        php                     1\n       mjsw                  0.33\n        ikf                     0\n        ikr                     0\n        ikp                     0\n        nbv                     1\n       area                     1\n         pj                     0\n       tlev                     0\n      tlevc                     0\n         eg                  1.11\n       gap1              0.000702\n       gap2                  1108\n        xti                     3\n        cta                     0\n        ctp                     0\n        tpb                     0\n       tphp                     0\n       jtun                     0\n     jtunsw                     0\n       ntun                    30\n     xtitun                     3\n        keg                     1\n         kf                     0\n         af                     1\n         fc                   0.5\n        fcs                   0.5\n         bv                     0\n        ibv                 0.001\n        tcv                     0\n        isr                 1e-14\n         nr                     2\n         vp                     0\n     fv_max                 1e+99\n     bv_max                 1e+99\n     id_max                 1e+99\n     te_max                 1e+99\n     pd_max                 1e+99\n       rth0                     0\n       cth0                 1e-05\n         lm                     0\n         lp                     0\n         wm                     0\n         wp                     0\n        xom                 10000\n        xoi                 10000\n         xm                     0\n         xp                     0\n         xw                     0\n\n Resistor models (Simple linear resistor)\n      model                     R\n\n        rsh                     0\n     narrow                     0\n      short                     0\n        tc1                     0\n        tc2                     0\n        tce                     0\n       defw                 1e-05\n          l                 1e-05\n         kf                     0\n         af                     0\n          r                     0\n     bv_max                 1e+99\n         lf                     1\n         wf                     1\n         ef                     1\n\n BJT: Bipolar Junction Transistor\n     device   qnpn_transistor18_2   qnpn_transistor18_1\n      model                2n3904                2n3904\n         ic              0.015483              0.015483\n         ib            0.00192274            0.00192274\n         ie            -0.0174057            -0.0174057\n        vbe              0.748998              0.748998\n        vbc              0.672603              0.672603\n         gm              0.542628              0.542628\n        gpi            0.00437446            0.00437446\n        gmu               0.06947               0.06947\n         gx                   0.1                   0.1\n         go             0.0370062             0.0370062\n        cpi            1.7928e-10            1.7928e-10\n        cmu           1.22645e-08           1.22645e-08\n        cbx                     0                     0\n       csub                     0                     0\n\n Capacitor: Fixed capacitor\n     device cpolarized_capacitor2 cpolarized_capacitor2\n      model                     C                     C\ncapacitance               4.7e-05               4.7e-05\n      dtemp                     0                     0\n     bv_max                 1e+99                 1e+99\n          i           6.60087e-17            2.3657e-17\n          p          -4.46448e-17          -1.60004e-17\n\n Diode: Junction Diode model\n     device              dled12_2              dled12_1\n      model               led_red               led_red\n    thermal                     0                     0\n         vd              0.725981              0.725981\n         id              0.015483              0.015483\n         gd              0.598609              0.598609\n         cd                     0                     0\n\n Resistor: Simple linear resistor\n     device         rresistor22_4         rresistor22_3         rresistor22_2\n      model                     R                     R                     R\n resistance                   270                  2200                  2200\n         ac                   270                  2200                  2200\n      dtemp                     0                     0                     0\n     bv_max                 1e+99                 1e+99                 1e+99\n      noisy                     1                     1                     1\n          i              0.015483            0.00192274            0.00192274\n          p              0.064725            0.00813327            0.00813327\n\n Resistor: Simple linear resistor\n     device         rresistor22_1\n      model                     R\n resistance                   270\n         ac                   270\n      dtemp                     0\n     bv_max                 1e+99\n      noisy                     1\n          i              0.015483\n          p              0.064725\n\n Vsource: Independent voltage source\n     device                  vvcc\n         dc                     5\n      acmag                     0\n      pulse         -\n        sin         -\n        exp         -\n        pwl         -\n       sffm         -\n         am         -\n    trnoise         -\n   trrandom         -\n    portnum                     0\n         z0                     0\n        pwr                     0\n       freq                     0\n      phase                     0\n          i            -0.0348114\n          p             -0.174057\n\n\nTotal analysis time (seconds) = 0.0202114\n\nTotal elapsed time (seconds) = 0.227 \n\nTotal DRAM available = 32239.535 MB.\nDRAM currently available = 15135.598 MB.\nMaximum ngspice program size =   15.359 MB.\nCurrent ngspice program size =   15.359 MB.\n\n",
+    "ngspice_stderr": ""
+  },
+  "decisions": [
+    {
+      "decision_number": 1,
+      "decision": "run_scenarios",
+      "reason": "La base run mostra un astabile perfettamente simmetrico bloccato in uno stato DC con entrambi i transistor e i LED uguali; serve un test controllato di avvio per verificare se la mancata oscillazione dipende dalla simmetria iniziale della simulazione più che da un errore topologico o di valori.",
+      "scenarios": [
+        {
+          "title": "Rompere la simmetria iniziale delle due basi",
+          "hypothesis": "Il multivibratore astabile è simmetrico e ngspice converge a un punto di equilibrio metastabile con entrambi i transistor parzialmente accesi; imponendo condizioni iniziali diverse sulle due basi l'oscillazione dovrebbe partire e i LED dovrebbero lampeggiare alternati.",
+          "intent": "diagnostic",
+          "analysis": "tran",
+          "actions": [
+            {
+              "type": "set_initial_node_voltage",
+              "target": "N004",
+              "value": "0V",
+              "skip_operating_point": true
+            },
+            {
+              "type": "set_initial_node_voltage",
+              "target": "N006",
+              "value": "1.2V",
+              "skip_operating_point": true
+            }
+          ],
+          "compare": [
+            "v(N004)",
+            "v(N006)",
+            "@dled12_1[id]",
+            "@dled12_2[id]"
+          ],
+          "measure": {
+            "@dled12_1[id]": "tran_abs_peak",
+            "@dled12_2[id]": "tran_abs_peak"
+          },
+          "expect": {
+            "v(N004)": "changed",
+            "v(N006)": "changed",
+            "@dled12_1[id]": "nonzero",
+            "@dled12_2[id]": "nonzero"
+          },
+          "temporal_expect": {
+            "target": "Dled12_1",
+            "required_state": "blinking",
+            "require_regular_period": true,
+            "min_duty_cycle": 0.1
+          }
+        }
+      ],
+      "final_status": null,
+      "final_answer": null,
+      "final_cause": null,
+      "verified_correction": null,
+      "scenario_results": [
+        {
+          "scenario_id": "agent_scenario_1",
+          "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_1",
+          "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_1\\run",
+          "status": "spice_success",
+          "spice_executed": true,
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "comparison_summary": {
+            "requested_count": 4,
+            "changed_count": 4,
+            "activated_count": 2,
+            "missing_count": 0,
+            "expected_count": 4,
+            "expectations_met_count": 4,
+            "expectations_failed_count": 0,
+            "expectations_missing_count": 0,
+            "meaningful_improvement_count": 0,
+            "quality_required": false,
+            "quality_available": false,
+            "quality_improved": false,
+            "quality_acceptable": false,
+            "quality_output_preserved": false,
+            "base_thd": null,
+            "scenario_thd": null,
+            "gain_required": false,
+            "gain_available": false,
+            "gain_sufficient": false,
+            "scenario_gain": null,
+            "min_gain_ratio": null,
+            "temporal_required": true,
+            "temporal_available": true,
+            "temporal_met": false
+          },
+          "diagnostic_outcome": {
+            "status": "partially_resolved",
+            "technical_label": "Temporal criteria not satisfied",
+            "label": "Criteri temporali non soddisfatti",
+            "reason": "Almeno un criterio temporale non e soddisfatto.",
+            "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+            "stop_automation": false,
+            "confidence": "low",
+            "next_step": "Il comportamento temporale non soddisfa ancora l'obiettivo: prova un'altra correzione."
+          },
+          "viewer": {
+            "model": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_1\\run\\13_viewer_model.json",
+            "layout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_1\\run\\14_viewer_layout.json",
+            "svg": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_1\\run\\15_viewer.svg"
+          },
+          "viewer_error": null,
+          "executed_scenarios_count": 1
+        }
+      ]
+    },
+    {
+      "decision_number": 2,
+      "decision": "run_scenarios",
+      "reason": "Il primo test con condizioni iniziali ha rotto la simmetria e ha generato solo impulsi transitori non periodici: questo sostiene fortemente un problema di startup/metastabilità della simulazione, ma non lo verifica ancora in modo robusto. Le evidenze strutturali mostrano inoltre un astabile perfettamente simmetrico con basi polarizzate molto forte (2.2 kΩ a +5 V) e collettori caricati tramite LED+270 Ω; prima di attribuire la causa ai valori del circuito conviene eseguire il secondo e ultimo test di startup richiesto dalla policy, con una coppia di condizioni iniziali materialmente diversa ma ancora fisicamente ammissibile.",
+      "scenarios": [
+        {
+          "title": "Secondo test di avvio con asimmetria iniziale opposta e più moderata",
+          "hypothesis": "Se il problema principale è l'equilibrio simmetrico della simulazione, una seconda coppia di condizioni iniziali distinta sulle due basi dovrebbe ancora produrre dinamica transitoria e possibilmente avviare il lampeggio; se anche questo fallisce, resterà più probabile che i valori di bias tengano entrambi i transistor accesi nello stesso tempo.",
+          "intent": "diagnostic",
+          "analysis": "tran",
+          "actions": [
+            {
+              "type": "set_initial_node_voltage",
+              "target": "N004",
+              "value": "1.2V",
+              "skip_operating_point": true
+            },
+            {
+              "type": "set_initial_node_voltage",
+              "target": "N006",
+              "value": "0V",
+              "skip_operating_point": true
+            }
+          ],
+          "compare": [
+            "v(N004)",
+            "v(N006)",
+            "@dled12_1[id]",
+            "@dled12_2[id]"
+          ],
+          "measure": {
+            "@dled12_1[id]": "tran_abs_peak",
+            "@dled12_2[id]": "tran_abs_peak"
+          },
+          "expect": {
+            "v(N004)": "changed",
+            "v(N006)": "changed",
+            "@dled12_1[id]": "changed",
+            "@dled12_2[id]": "changed"
+          },
+          "temporal_expect": {
+            "target": "Dled12_1",
+            "required_state": "blinking",
+            "require_regular_period": true,
+            "min_duty_cycle": 0.1
+          }
+        }
+      ],
+      "final_status": null,
+      "final_answer": null,
+      "final_cause": null,
+      "verified_correction": null,
+      "scenario_results": [
+        {
+          "scenario_id": "agent_scenario_2",
+          "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_2",
+          "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_2\\run",
+          "status": "spice_success",
+          "spice_executed": true,
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "comparison_summary": {
+            "requested_count": 4,
+            "changed_count": 4,
+            "activated_count": 2,
+            "missing_count": 0,
+            "expected_count": 4,
+            "expectations_met_count": 4,
+            "expectations_failed_count": 0,
+            "expectations_missing_count": 0,
+            "meaningful_improvement_count": 0,
+            "quality_required": false,
+            "quality_available": false,
+            "quality_improved": false,
+            "quality_acceptable": false,
+            "quality_output_preserved": false,
+            "base_thd": null,
+            "scenario_thd": null,
+            "gain_required": false,
+            "gain_available": false,
+            "gain_sufficient": false,
+            "scenario_gain": null,
+            "min_gain_ratio": null,
+            "temporal_required": true,
+            "temporal_available": true,
+            "temporal_met": false
+          },
+          "diagnostic_outcome": {
+            "status": "partially_resolved",
+            "technical_label": "Temporal criteria not satisfied",
+            "label": "Criteri temporali non soddisfatti",
+            "reason": "Almeno un criterio temporale non e soddisfatto.",
+            "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+            "stop_automation": false,
+            "confidence": "low",
+            "next_step": "Il comportamento temporale non soddisfa ancora l'obiettivo: prova un'altra correzione."
+          },
+          "viewer": {
+            "model": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_2\\run\\13_viewer_model.json",
+            "layout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_2\\run\\14_viewer_layout.json",
+            "svg": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_2\\run\\15_viewer.svg"
+          },
+          "viewer_error": null,
+          "executed_scenarios_count": 2
+        }
+      ]
+    },
+    {
+      "decision_number": 3,
+      "decision": "run_scenarios",
+      "reason": "I due test di startup hanno gia verificato che il circuito non e semplicemente bloccato per simmetria iniziale: con condizioni iniziali asimmetriche compaiono solo impulsi transitori non regolari, quindi la causa piu probabile resta il bias troppo forte delle basi. Dalla base run entrambe le basi sono a circa 0.77 V, entrambi i transistor conducono insieme (ic circa 15.5 mA ciascuno) e i due LED restano accesi. Con R2 e R4 da 2.2 kΩ verso +5 V la corrente di base e alta e mantiene entrambi i BJT in forte conduzione; un test di correzione minimo e aumentare insieme le due resistenze di base per verificare se il multivibratore torna a commutare.",
+      "scenarios": [
+        {
+          "title": "Aumentare entrambe le resistenze di base per ridurre la conduzione simultanea",
+          "hypothesis": "Le resistenze di base da 2.2 kΩ polarizzano troppo fortemente entrambi i 2N3904, impedendo che uno dei due si spenga davvero; aumentando simmetricamente Rresistor22_2 e Rresistor22_3 la corrente di base dovrebbe ridursi, i collettori dovrebbero poter alternare e i LED iniziare a lampeggiare invece di restare entrambi steady_on.",
+          "intent": "correction",
+          "analysis": "tran",
+          "actions": [
+            {
+              "type": "change_component_value",
+              "target": "Rresistor22_2",
+              "value": "22k"
+            },
+            {
+              "type": "change_component_value",
+              "target": "Rresistor22_3",
+              "value": "22k"
+            }
+          ],
+          "compare": [
+            "v(N004)",
+            "v(N006)",
+            "v(N005)",
+            "v(N007)",
+            "@dled12_1[id]",
+            "@dled12_2[id]"
+          ],
+          "measure": {
+            "@dled12_1[id]": "tran_abs_peak",
+            "@dled12_2[id]": "tran_abs_peak"
+          },
+          "expect": {
+            "v(N005)": "changed",
+            "v(N007)": "changed",
+            "@dled12_1[id]": "changed",
+            "@dled12_2[id]": "changed"
+          },
+          "temporal_expect": {
+            "target": "Dled12_1",
+            "required_state": "blinking",
+            "require_regular_period": true,
+            "min_duty_cycle": 0.1
+          }
+        }
+      ],
+      "final_status": null,
+      "final_answer": null,
+      "final_cause": null,
+      "verified_correction": null,
+      "scenario_results": [
+        {
+          "scenario_id": "agent_scenario_3",
+          "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_3",
+          "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_3\\run",
+          "status": "spice_success",
+          "spice_executed": true,
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "comparison_summary": {
+            "requested_count": 6,
+            "changed_count": 6,
+            "activated_count": 4,
+            "missing_count": 0,
+            "expected_count": 4,
+            "expectations_met_count": 4,
+            "expectations_failed_count": 0,
+            "expectations_missing_count": 0,
+            "meaningful_improvement_count": 0,
+            "quality_required": false,
+            "quality_available": false,
+            "quality_improved": false,
+            "quality_acceptable": false,
+            "quality_output_preserved": false,
+            "base_thd": null,
+            "scenario_thd": null,
+            "gain_required": false,
+            "gain_available": false,
+            "gain_sufficient": false,
+            "scenario_gain": null,
+            "min_gain_ratio": null,
+            "temporal_required": true,
+            "temporal_available": true,
+            "temporal_met": false
+          },
+          "diagnostic_outcome": {
+            "status": "partially_resolved",
+            "technical_label": "Temporal criteria not satisfied",
+            "label": "Criteri temporali non soddisfatti",
+            "reason": "Almeno un criterio temporale non e soddisfatto.",
+            "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+            "stop_automation": false,
+            "confidence": "low",
+            "next_step": "Il comportamento temporale non soddisfa ancora l'obiettivo: prova un'altra correzione."
+          },
+          "viewer": {
+            "model": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_3\\run\\13_viewer_model.json",
+            "layout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_3\\run\\14_viewer_layout.json",
+            "svg": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_3\\run\\15_viewer.svg"
+          },
+          "viewer_error": null,
+          "executed_scenarios_count": 3
+        }
+      ]
+    },
+    {
+      "decision_number": 4,
+      "decision": "stop",
+      "reason": "Sono gia stati eseguiti tre scenari controllati: due test di startup con condizioni iniziali asimmetriche e una correzione minima sui valori di bias. Nessuno ha soddisfatto il requisito temporale di lampeggio regolare, quindi non e giustificato consumare altro budget su correzioni non ancora sostenute da nuove evidenze strutturali.",
+      "scenarios": [],
+      "final_status": "localized",
+      "final_answer": "In simulazione i due LED restano accesi perche il circuito converge a uno stato quasi perfettamente simmetrico in cui entrambi i transistor risultano contemporaneamente in conduzione, invece di alternarsi. I test di startup mostrano che si puo innescare solo qualche impulso transitorio, ma non un'oscillazione regolare: quindi non e un semplice problema di condizioni iniziali.",
+      "final_cause": "La causa localizzata e un bias eccessivo e simmetrico delle due basi: dalla base run N004=N006 circa 0.77 V, i due 2N3904 hanno entrambi VBE circa 0.749 V e corrente di collettore circa 15.5 mA, con entrambe le correnti LED circa 15.5 mA. Le resistenze di base Rresistor22_2 e Rresistor22_3 da 2.2 kOhm verso +5 V tengono entrambi i BJT accesi insieme; anche aumentando entrambe a 22 kOhm il comportamento resta solo transitorio e non periodico. Quindi il multivibratore, cosi parametrizzato nel netlist, non entra in un regime astabile regolare ma in una conduzione simultanea/metastabile.",
+      "verified_correction": "",
+      "scenario_results": []
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_id": "agent_scenario_1",
+      "title": "Rompere la simmetria iniziale delle due basi",
+      "hypothesis": "Il multivibratore astabile è simmetrico e ngspice converge a un punto di equilibrio metastabile con entrambi i transistor parzialmente accesi; imponendo condizioni iniziali diverse sulle due basi l'oscillazione dovrebbe partire e i LED dovrebbero lampeggiare alternati.",
+      "intent": "diagnostic",
+      "actions": [
+        {
+          "type": "set_initial_node_voltage",
+          "target": "N004",
+          "value": "0V",
+          "skip_operating_point": true
+        },
+        {
+          "type": "set_initial_node_voltage",
+          "target": "N006",
+          "value": "1.2V",
+          "skip_operating_point": true
+        }
+      ],
+      "analysis": "tran",
+      "compare": [
+        "v(N004)",
+        "v(N006)",
+        "@dled12_1[id]",
+        "@dled12_2[id]"
+      ],
+      "expect": {
+        "v(N004)": "changed",
+        "v(N006)": "changed",
+        "@dled12_1[id]": "nonzero",
+        "@dled12_2[id]": "nonzero"
+      },
+      "registry_status": "executed",
+      "execution": {
+        "status": "spice_success",
+        "spice_executed": true,
+        "spice_status": "success",
+        "spice_exit_code": 0,
+        "diagnostic_outcome": {
+          "status": "partially_resolved",
+          "technical_label": "Temporal criteria not satisfied",
+          "label": "Criteri temporali non soddisfatti",
+          "reason": "Almeno un criterio temporale non e soddisfatto.",
+          "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+          "stop_automation": false,
+          "confidence": "low",
+          "next_step": "Il comportamento temporale non soddisfa ancora l'obiettivo: prova un'altra correzione."
+        },
+        "comparison_summary": {
+          "requested_count": 4,
+          "changed_count": 4,
+          "activated_count": 2,
+          "missing_count": 0,
+          "expected_count": 4,
+          "expectations_met_count": 4,
+          "expectations_failed_count": 0,
+          "expectations_missing_count": 0,
+          "meaningful_improvement_count": 0,
+          "quality_required": false,
+          "quality_available": false,
+          "quality_improved": false,
+          "quality_acceptable": false,
+          "quality_output_preserved": false,
+          "base_thd": null,
+          "scenario_thd": null,
+          "gain_required": false,
+          "gain_available": false,
+          "gain_sufficient": false,
+          "scenario_gain": null,
+          "min_gain_ratio": null,
+          "temporal_required": true,
+          "temporal_available": true,
+          "temporal_met": false
+        },
+        "quantities": [
+          {
+            "quantity": "v(N004)",
+            "base_value": 0.0,
+            "scenario_value": 6489.00680291,
+            "delta": 6489.00680291,
+            "change": "activated",
+            "expectation": "changed",
+            "expectation_met": true,
+            "relative_change": 6489006802910000.0,
+            "meaningful_improvement": false,
+            "metric": "v(n004).vpp",
+            "measurement": "tran_vpp",
+            "base_details": {
+              "min": 0.76996644,
+              "max": 0.76996644,
+              "mean": 0.76996644,
+              "vpp": 0.0,
+              "final": 0.76996644,
+              "abs_peak": 0.76996644
+            },
+            "scenario_details": {
+              "min": -8.40377291,
+              "max": 6480.60303,
+              "mean": 4.38989784247315,
+              "vpp": 6489.00680291,
+              "final": -0.662119737,
+              "abs_peak": 6480.60303
+            }
+          },
+          {
+            "quantity": "v(N006)",
+            "base_value": 0.0,
+            "scenario_value": 650.8349549000001,
+            "delta": 650.8349549000001,
+            "change": "activated",
+            "expectation": "changed",
+            "expectation_met": true,
+            "relative_change": 650834954900000.1,
+            "meaningful_improvement": false,
+            "metric": "v(n006).vpp",
+            "measurement": "tran_vpp",
+            "base_details": {
+              "min": 0.76996644,
+              "max": 0.76996644,
+              "mean": 0.76996644,
+              "vpp": 0.0,
+              "final": 0.76996644,
+              "abs_peak": 0.76996644
+            },
+            "scenario_details": {
+              "min": -649.581174,
+              "max": 1.2537809,
+              "mean": -0.7184704366097519,
+              "vpp": 650.8349549000001,
+              "final": 0.702593357,
+              "abs_peak": 649.581174
+            }
+          },
+          {
+            "quantity": "@dled12_1[id]",
+            "base_value": 0.0154829613,
+            "scenario_value": 2.41601484,
+            "delta": 2.4005318787,
+            "change": "changed",
+            "expectation": "nonzero",
+            "expectation_met": true,
+            "relative_change": 155.04345920570117,
+            "meaningful_improvement": false,
+            "metric": "@dled12_1[id].abs_peak",
+            "measurement": "tran_abs_peak",
+            "base_details": {
+              "min": 0.0154829613,
+              "max": 0.0154829613,
+              "mean": 0.0154829613,
+              "vpp": 0.0,
+              "final": 0.0154829613,
+              "abs_peak": 0.0154829613
+            },
+            "scenario_details": {
+              "min": 2.38568396e-05,
+              "max": 2.41601484,
+              "mean": 0.011484584894054111,
+              "vpp": 2.4159909831604,
+              "final": 0.000990101788,
+              "abs_peak": 2.41601484
+            }
+          },
+          {
+            "quantity": "@dled12_2[id]",
+            "base_value": 0.0154829613,
+            "scenario_value": 0.0343823548,
+            "delta": 0.0188993935,
+            "change": "changed",
+            "expectation": "nonzero",
+            "expectation_met": true,
+            "relative_change": 1.220657543076078,
+            "meaningful_improvement": false,
+            "metric": "@dled12_2[id].abs_peak",
+            "measurement": "tran_abs_peak",
+            "base_details": {
+              "min": 0.0154829613,
+              "max": 0.0154829613,
+              "mean": 0.0154829613,
+              "vpp": 0.0,
+              "final": 0.0154829613,
+              "abs_peak": 0.0154829613
+            },
+            "scenario_details": {
+              "min": -6.47821099e-09,
+              "max": 0.0343823548,
+              "mean": 0.010039790563135503,
+              "vpp": 0.03438236127821099,
+              "final": 0.0154665286,
+              "abs_peak": 0.0343823548
+            }
+          }
+        ]
+      }
+    },
+    {
+      "scenario_id": "agent_scenario_2",
+      "title": "Secondo test di avvio con asimmetria iniziale opposta e più moderata",
+      "hypothesis": "Se il problema principale è l'equilibrio simmetrico della simulazione, una seconda coppia di condizioni iniziali distinta sulle due basi dovrebbe ancora produrre dinamica transitoria e possibilmente avviare il lampeggio; se anche questo fallisce, resterà più probabile che i valori di bias tengano entrambi i transistor accesi nello stesso tempo.",
+      "intent": "diagnostic",
+      "actions": [
+        {
+          "type": "set_initial_node_voltage",
+          "target": "N004",
+          "value": "1.2V",
+          "skip_operating_point": true
+        },
+        {
+          "type": "set_initial_node_voltage",
+          "target": "N006",
+          "value": "0V",
+          "skip_operating_point": true
+        }
+      ],
+      "analysis": "tran",
+      "compare": [
+        "v(N004)",
+        "v(N006)",
+        "@dled12_1[id]",
+        "@dled12_2[id]"
+      ],
+      "expect": {
+        "v(N004)": "changed",
+        "v(N006)": "changed",
+        "@dled12_1[id]": "changed",
+        "@dled12_2[id]": "changed"
+      },
+      "registry_status": "executed",
+      "execution": {
+        "status": "spice_success",
+        "spice_executed": true,
+        "spice_status": "success",
+        "spice_exit_code": 0,
+        "diagnostic_outcome": {
+          "status": "partially_resolved",
+          "technical_label": "Temporal criteria not satisfied",
+          "label": "Criteri temporali non soddisfatti",
+          "reason": "Almeno un criterio temporale non e soddisfatto.",
+          "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+          "stop_automation": false,
+          "confidence": "low",
+          "next_step": "Il comportamento temporale non soddisfa ancora l'obiettivo: prova un'altra correzione."
+        },
+        "comparison_summary": {
+          "requested_count": 4,
+          "changed_count": 4,
+          "activated_count": 2,
+          "missing_count": 0,
+          "expected_count": 4,
+          "expectations_met_count": 4,
+          "expectations_failed_count": 0,
+          "expectations_missing_count": 0,
+          "meaningful_improvement_count": 0,
+          "quality_required": false,
+          "quality_available": false,
+          "quality_improved": false,
+          "quality_acceptable": false,
+          "quality_output_preserved": false,
+          "base_thd": null,
+          "scenario_thd": null,
+          "gain_required": false,
+          "gain_available": false,
+          "gain_sufficient": false,
+          "scenario_gain": null,
+          "min_gain_ratio": null,
+          "temporal_required": true,
+          "temporal_available": true,
+          "temporal_met": false
+        },
+        "quantities": [
+          {
+            "quantity": "v(N004)",
+            "base_value": 0.0,
+            "scenario_value": 650.8349549000001,
+            "delta": 650.8349549000001,
+            "change": "activated",
+            "expectation": "changed",
+            "expectation_met": true,
+            "relative_change": 650834954900000.1,
+            "meaningful_improvement": false,
+            "metric": "v(n004).vpp",
+            "measurement": "tran_vpp",
+            "base_details": {
+              "min": 0.76996644,
+              "max": 0.76996644,
+              "mean": 0.76996644,
+              "vpp": 0.0,
+              "final": 0.76996644,
+              "abs_peak": 0.76996644
+            },
+            "scenario_details": {
+              "min": -649.581174,
+              "max": 1.2537809,
+              "mean": -0.8289865224235763,
+              "vpp": 650.8349549000001,
+              "final": 0.809997406,
+              "abs_peak": 649.581174
+            }
+          },
+          {
+            "quantity": "v(N006)",
+            "base_value": 0.0,
+            "scenario_value": 6489.00680291,
+            "delta": 6489.00680291,
+            "change": "activated",
+            "expectation": "changed",
+            "expectation_met": true,
+            "relative_change": 6489006802910000.0,
+            "meaningful_improvement": false,
+            "metric": "v(n006).vpp",
+            "measurement": "tran_vpp",
+            "base_details": {
+              "min": 0.76996644,
+              "max": 0.76996644,
+              "mean": 0.76996644,
+              "vpp": 0.0,
+              "final": 0.76996644,
+              "abs_peak": 0.76996644
+            },
+            "scenario_details": {
+              "min": -8.40377291,
+              "max": 6480.60303,
+              "mean": 4.814079907558184,
+              "vpp": 6489.00680291,
+              "final": -0.392511532,
+              "abs_peak": 6480.60303
+            }
+          },
+          {
+            "quantity": "@dled12_1[id]",
+            "base_value": 0.0154829613,
+            "scenario_value": 0.0343823548,
+            "delta": 0.0188993935,
+            "change": "changed",
+            "expectation": "changed",
+            "expectation_met": true,
+            "relative_change": 1.220657543076078,
+            "meaningful_improvement": false,
+            "metric": "@dled12_1[id].abs_peak",
+            "measurement": "tran_abs_peak",
+            "base_details": {
+              "min": 0.0154829613,
+              "max": 0.0154829613,
+              "mean": 0.0154829613,
+              "vpp": 0.0,
+              "final": 0.0154829613,
+              "abs_peak": 0.0154829613
+            },
+            "scenario_details": {
+              "min": -6.47821099e-09,
+              "max": 0.0343823548,
+              "mean": 0.010516310537366553,
+              "vpp": 0.03438236127821099,
+              "final": 0.015468944,
+              "abs_peak": 0.0343823548
+            }
+          },
+          {
+            "quantity": "@dled12_2[id]",
+            "base_value": 0.0154829613,
+            "scenario_value": 2.41601484,
+            "delta": 2.4005318787,
+            "change": "changed",
+            "expectation": "changed",
+            "expectation_met": true,
+            "relative_change": 155.04345920570117,
+            "meaningful_improvement": false,
+            "metric": "@dled12_2[id].abs_peak",
+            "measurement": "tran_abs_peak",
+            "base_details": {
+              "min": 0.0154829613,
+              "max": 0.0154829613,
+              "mean": 0.0154829613,
+              "vpp": 0.0,
+              "final": 0.0154829613,
+              "abs_peak": 0.0154829613
+            },
+            "scenario_details": {
+              "min": 9.95437395e-06,
+              "max": 2.41601484,
+              "mean": 0.010859592439089898,
+              "vpp": 2.41600488562605,
+              "final": 0.00042232267,
+              "abs_peak": 2.41601484
+            }
+          }
+        ]
+      }
+    },
+    {
+      "scenario_id": "agent_scenario_3",
+      "title": "Aumentare entrambe le resistenze di base per ridurre la conduzione simultanea",
+      "hypothesis": "Le resistenze di base da 2.2 kΩ polarizzano troppo fortemente entrambi i 2N3904, impedendo che uno dei due si spenga davvero; aumentando simmetricamente Rresistor22_2 e Rresistor22_3 la corrente di base dovrebbe ridursi, i collettori dovrebbero poter alternare e i LED iniziare a lampeggiare invece di restare entrambi steady_on.",
+      "intent": "correction",
+      "actions": [
+        {
+          "type": "change_component_value",
+          "target": "Rresistor22_2",
+          "value": "22k"
+        },
+        {
+          "type": "change_component_value",
+          "target": "Rresistor22_3",
+          "value": "22k"
+        }
+      ],
+      "analysis": "tran",
+      "compare": [
+        "v(N004)",
+        "v(N006)",
+        "v(N005)",
+        "v(N007)",
+        "@dled12_1[id]",
+        "@dled12_2[id]"
+      ],
+      "expect": {
+        "v(N005)": "changed",
+        "v(N007)": "changed",
+        "@dled12_1[id]": "changed",
+        "@dled12_2[id]": "changed"
+      },
+      "registry_status": "executed",
+      "execution": {
+        "status": "spice_success",
+        "spice_executed": true,
+        "spice_status": "success",
+        "spice_exit_code": 0,
+        "diagnostic_outcome": {
+          "status": "partially_resolved",
+          "technical_label": "Temporal criteria not satisfied",
+          "label": "Criteri temporali non soddisfatti",
+          "reason": "Almeno un criterio temporale non e soddisfatto.",
+          "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
+          "stop_automation": false,
+          "confidence": "low",
+          "next_step": "Il comportamento temporale non soddisfa ancora l'obiettivo: prova un'altra correzione."
+        },
+        "comparison_summary": {
+          "requested_count": 6,
+          "changed_count": 6,
+          "activated_count": 4,
+          "missing_count": 0,
+          "expected_count": 4,
+          "expectations_met_count": 4,
+          "expectations_failed_count": 0,
+          "expectations_missing_count": 0,
+          "meaningful_improvement_count": 0,
+          "quality_required": false,
+          "quality_available": false,
+          "quality_improved": false,
+          "quality_acceptable": false,
+          "quality_output_preserved": false,
+          "base_thd": null,
+          "scenario_thd": null,
+          "gain_required": false,
+          "gain_available": false,
+          "gain_sufficient": false,
+          "scenario_gain": null,
+          "min_gain_ratio": null,
+          "temporal_required": true,
+          "temporal_available": true,
+          "temporal_met": false
+        },
+        "quantities": [
+          {
+            "quantity": "v(N004)",
+            "base_value": 0.0,
+            "scenario_value": 4.459555463,
+            "delta": 4.459555463,
+            "change": "activated",
+            "expectation": null,
+            "expectation_met": null,
+            "relative_change": 4459555463000.0,
+            "meaningful_improvement": false,
+            "metric": "v(n004).vpp",
+            "measurement": "tran_vpp",
+            "base_details": {
+              "min": 0.76996644,
+              "max": 0.76996644,
+              "mean": 0.76996644,
+              "vpp": 0.0,
+              "final": 0.76996644,
+              "abs_peak": 0.76996644
+            },
+            "scenario_details": {
+              "min": -3.4872019,
+              "max": 0.972353563,
+              "mean": -0.45251422039638506,
+              "vpp": 4.459555463,
+              "final": 0.107912629,
+              "abs_peak": 3.4872019
+            }
+          },
+          {
+            "quantity": "v(N006)",
+            "base_value": 0.0,
+            "scenario_value": 0.737909513,
+            "delta": 0.737909513,
+            "change": "activated",
+            "expectation": null,
+            "expectation_met": null,
+            "relative_change": 737909513000.0,
+            "meaningful_improvement": false,
+            "metric": "v(n006).vpp",
+            "measurement": "tran_vpp",
+            "base_details": {
+              "min": 0.76996644,
+              "max": 0.76996644,
+              "mean": 0.76996644,
+              "vpp": 0.0,
+              "final": 0.76996644,
+              "abs_peak": 0.76996644
+            },
+            "scenario_details": {
+              "min": 0.206230229,
+              "max": 0.944139742,
+              "mean": 0.7210492790526795,
+              "vpp": 0.737909513,
+              "final": 0.721347874,
+              "abs_peak": 0.944139742
+            }
+          },
+          {
+            "quantity": "v(N005)",
+            "base_value": 0.0,
+            "scenario_value": 4.472328407,
+            "delta": 4.472328407,
+            "change": "activated",
+            "expectation": "changed",
+            "expectation_met": true,
+            "relative_change": 4472328407000.0,
+            "meaningful_improvement": false,
+            "metric": "v(n005).vpp",
+            "measurement": "tran_vpp",
+            "base_details": {
+              "min": 0.093619396,
+              "max": 0.093619396,
+              "mean": 0.093619396,
+              "vpp": 0.0,
+              "final": 0.093619396,
+              "abs_peak": 0.093619396
+            },
+            "scenario_details": {
+              "min": 0.059568623,
+              "max": 4.53189703,
+              "mean": 2.276529900696185,
+              "vpp": 4.472328407,
+              "final": 4.47971403,
+              "abs_peak": 4.53189703
+            }
+          },
+          {
+            "quantity": "v(N007)",
+            "base_value": 0.0,
+            "scenario_value": 4.3005389555,
+            "delta": 4.3005389555,
+            "change": "activated",
+            "expectation": "changed",
+            "expectation_met": true,
+            "relative_change": 4300538955500.0005,
+            "meaningful_improvement": false,
+            "metric": "v(n007).vpp",
+            "measurement": "tran_vpp",
+            "base_details": {
+              "min": 0.093619396,
+              "max": 0.093619396,
+              "mean": 0.093619396,
+              "vpp": 0.0,
+              "final": 0.093619396,
+              "abs_peak": 0.093619396
+            },
+            "scenario_details": {
+              "min": 0.0591459745,
+              "max": 4.35968493,
+              "mean": 0.47896121750726617,
+              "vpp": 4.3005389555,
+              "final": 0.203607537,
+              "abs_peak": 4.35968493
+            }
+          },
+          {
+            "quantity": "@dled12_1[id]",
+            "base_value": 0.0154829613,
+            "scenario_value": 0.015608347,
+            "delta": 0.00012538569999999936,
+            "change": "changed",
+            "expectation": "changed",
+            "expectation_met": true,
+            "relative_change": 0.00809830222852778,
+            "meaningful_improvement": false,
+            "metric": "@dled12_1[id].abs_peak",
+            "measurement": "tran_abs_peak",
+            "base_details": {
+              "min": 0.0154829613,
+              "max": 0.0154829613,
+              "mean": 0.0154829613,
+              "vpp": 0.0,
+              "final": 0.0154829613,
+              "abs_peak": 0.0154829613
+            },
+            "scenario_details": {
+              "min": 7.18783514e-07,
+              "max": 0.015608347,
+              "mean": 0.007745049544721607,
+              "vpp": 0.015607628216486,
+              "final": 5.16013272e-06,
+              "abs_peak": 0.015608347
+            }
+          },
+          {
+            "quantity": "@dled12_2[id]",
+            "base_value": 0.0154829613,
+            "scenario_value": 0.0156099223,
+            "delta": 0.0001269610000000001,
+            "change": "changed",
+            "expectation": "changed",
+            "expectation_met": true,
+            "relative_change": 0.008200046330930253,
+            "meaningful_improvement": false,
+            "metric": "@dled12_2[id].abs_peak",
+            "measurement": "tran_abs_peak",
+            "base_details": {
+              "min": 0.0154829613,
+              "max": 0.0154829613,
+              "mean": 0.0154829613,
+              "vpp": 0.0,
+              "final": 0.0154829613,
+              "abs_peak": 0.0154829613
+            },
+            "scenario_details": {
+              "min": 0.000136174491,
+              "max": 0.0156099223,
+              "mean": 0.014082885546581289,
+              "vpp": 0.015473747809,
+              "final": 0.0150781364,
+              "abs_peak": 0.0156099223
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "final": {
+    "status": "localized",
+    "reason": "Sono gia stati eseguiti tre scenari controllati: due test di startup con condizioni iniziali asimmetriche e una correzione minima sui valori di bias. Nessuno ha soddisfatto il requisito temporale di lampeggio regolare, quindi non e giustificato consumare altro budget su correzioni non ancora sostenute da nuove evidenze strutturali.",
+    "answer": "In simulazione i due LED restano accesi perche il circuito converge a uno stato quasi perfettamente simmetrico in cui entrambi i transistor risultano contemporaneamente in conduzione, invece di alternarsi. I test di startup mostrano che si puo innescare solo qualche impulso transitorio, ma non un'oscillazione regolare: quindi non e un semplice problema di condizioni iniziali.",
+    "cause": "La causa localizzata e un bias eccessivo e simmetrico delle due basi: dalla base run N004=N006 circa 0.77 V, i due 2N3904 hanno entrambi VBE circa 0.749 V e corrente di collettore circa 15.5 mA, con entrambe le correnti LED circa 15.5 mA. Le resistenze di base Rresistor22_2 e Rresistor22_3 da 2.2 kOhm verso +5 V tengono entrambi i BJT accesi insieme; anche aumentando entrambe a 22 kOhm il comportamento resta solo transitorio e non periodico. Quindi il multivibratore, cosi parametrizzato nel netlist, non entra in un regime astabile regolare ma in una conduzione simultanea/metastabile.",
+    "verified_correction": ""
+  },
+  "source_files": [
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\01_graph.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\03_node_map.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\04_values_bound.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\06_component_rules.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\07_netlist.cir",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\07_spice_emit_report.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\08_ngspice_stderr.txt",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\08_ngspice_stdout.txt",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\08_spice_run.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\10_diagnostic_context.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\experiment_chat\\autonomous_diagnosis.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\experiment_chat\\chat_history.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_1\\scenario.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_1\\scenario_comparison.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_1\\scenario_status.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_2\\scenario.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_2\\scenario_comparison.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_2\\scenario_status.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_3\\scenario.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_3\\scenario_comparison.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b02\\scenarios\\agent_scenario_3\\scenario_status.json"
+  ]
+}

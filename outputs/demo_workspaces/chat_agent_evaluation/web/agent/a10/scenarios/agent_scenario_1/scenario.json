@@ -1,0 +1,40 @@
+{
+  "title": "Chiudere il percorso di alimentazione dal connettore ai due rami lampada e LED",
+  "hypothesis": "La causa è la mancanza di continuità dal positivo della batteria verso i pin del connettore che alimentano separatamente lampada e resistenza+LED. Chiudendo lo switch esistente e collegando il pin alimentato N002 ai due rami N003 e N004, entrambi i carichi dovrebbero risultare attivi nella stessa simulazione OP.",
+  "intent": "correction",
+  "analysis": "op",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    },
+    {
+      "type": "connect_nodes",
+      "from": "N002",
+      "to": "N003"
+    },
+    {
+      "type": "connect_nodes",
+      "from": "N002",
+      "to": "N004"
+    }
+  ],
+  "compare": [
+    "v(N002)",
+    "v(N003)",
+    "v(N004)",
+    "v(N005)",
+    "i(Rlamp13_1)",
+    "i(Rresistor22_1)",
+    "i(Vbattery2_1)"
+  ],
+  "expect": {
+    "v(N003)": "magnitude_increased",
+    "v(N004)": "magnitude_increased",
+    "v(N005)": "magnitude_increased",
+    "i(Rlamp13_1)": "activated",
+    "i(Rresistor22_1)": "activated",
+    "i(Vbattery2_1)": "magnitude_increased"
+  },
+  "scenario_id": "agent_scenario_1"
+}

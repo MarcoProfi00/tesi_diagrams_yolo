@@ -1,0 +1,36 @@
+{
+  "scenario_id": "scenario_1",
+  "title": "Alimentare entrambi i rami dal nodo BAT_FUSED e chiudere SW2",
+  "hypothesis": "The powered node N003 is not reaching the lamp-input node N004 nor the LED-input node N005, and the lamp branch is also blocked by open switch25.1.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "feed_nodes_from_source_node",
+      "source_node": "N003",
+      "target_nodes": [
+        "N004",
+        "N005"
+      ],
+      "resistance": "1m"
+    },
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N003)",
+    "v(N004)",
+    "v(N005)",
+    "v(N007)",
+    "i(Rlamp13_1)"
+  ],
+  "expect": {
+    "v(N004)": "changed",
+    "v(N005)": "changed",
+    "v(N007)": "changed",
+    "i(Rlamp13_1)": "nonzero"
+  }
+}

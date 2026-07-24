@@ -1,0 +1,361 @@
+{
+  "circuit_id": "b05",
+  "source_format": "pipeline2.0_component_rules",
+  "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\data\\batchPipeline2.0\\batchChatAgentEvaluation\\values\\b05_values.yaml",
+  "spice_classes_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\pipeline2_spice_classes.yaml",
+  "supplies": {},
+  "components": {
+    "antenna1.1": {
+      "class_name": "Antenna",
+      "status": "unsupported_for_now",
+      "spice_support": "unsupported_for_now",
+      "reason": "Conversion deferred to a later step."
+    },
+    "battery2.1": {
+      "class_name": "Battery",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "V",
+      "emit_as": "independent_voltage_source",
+      "node_order": [
+        "positive",
+        "negative"
+      ],
+      "nodes": [
+        "0",
+        "N002"
+      ],
+      "parameters": {
+        "type": "dc",
+        "value": 9,
+        "unit": "V",
+        "source": "manual_assumption_battery_voltage",
+        "label_text": "B1 assunta: 9 V"
+      }
+    },
+    "breaker3.1": {
+      "class_name": "Breaker",
+      "status": "spice_ready",
+      "spice_support": "equivalent",
+      "spice_prefix": "R",
+      "emit_as": "resistive_load",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N003",
+        "N004"
+      ],
+      "parameters": {
+        "spice_override": {
+          "emit_as": "resistive_load",
+          "equivalent_resistance": 2,
+          "resistance_unit": "kohm",
+          "node_order": [
+            "t1",
+            "t2"
+          ],
+          "semantic_role": "headset_equivalent"
+        },
+        "source": "manual_interpretation_headset_from_image",
+        "label_text": "Cuffia J1/J2 equivalente: 2 kohm",
+        "viewer_override": {
+          "visual_class": "headset",
+          "label": "Headset J1/J2",
+          "display_value": "2 kohm eq."
+        },
+        "equivalent_resistance": 2,
+        "resistance_unit": "kohm"
+      },
+      "reason": "Explicit YAML override emitted as an equivalent resistive load."
+    },
+    "diode7.1": {
+      "class_name": "Diode",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "D",
+      "emit_as": "diode",
+      "node_order": [
+        "anode",
+        "cathode"
+      ],
+      "nodes": [
+        "N001",
+        "N005"
+      ],
+      "parameters": {
+        "model": "D_GENERIC",
+        "source": "manual_spice_generic_detector_diode",
+        "label_text": "CR1; modello diodo SPICE generico"
+      }
+    },
+    "gnd9.1": {
+      "class_name": "GND",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    "inductor10.1": {
+      "class_name": "Inductor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "L",
+      "emit_as": "inductor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N001",
+        "0"
+      ],
+      "parameters": {
+        "value": 0.00025,
+        "unit": "H",
+        "source": "manual_assumption_am_tuning_model",
+        "label_text": "L1 assunta: 250 uH"
+      }
+    },
+    "npn_transistor18.1": {
+      "class_name": "PNP_Transistor",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "Q",
+      "emit_as": "bjt_pnp",
+      "node_order": [
+        "C",
+        "B",
+        "E"
+      ],
+      "nodes": [
+        "N007",
+        "N006",
+        "0"
+      ],
+      "parameters": {
+        "model": "PNP_GENERIC",
+        "source": "manual_validation_pnp_from_image",
+        "label_text": "Q1 PNP"
+      }
+    },
+    "npn_transistor18.2": {
+      "class_name": "PNP_Transistor",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "Q",
+      "emit_as": "bjt_pnp",
+      "node_order": [
+        "C",
+        "B",
+        "E"
+      ],
+      "nodes": [
+        "N003",
+        "N008",
+        "0"
+      ],
+      "parameters": {
+        "model": "PNP_GENERIC",
+        "source": "manual_validation_pnp_from_image",
+        "label_text": "Q2 PNP"
+      }
+    },
+    "polarized_capacitor20.1": {
+      "class_name": "Polarized_Capacitor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "C",
+      "emit_as": "capacitor",
+      "node_order": [
+        "positive",
+        "negative"
+      ],
+      "nodes": [
+        "N001",
+        "0"
+      ],
+      "parameters": {
+        "value": 375,
+        "unit": "pf",
+        "source": "manual_from_image_range_midpoint",
+        "label_text": "C1 variabile 250-500 pF; base run a 375 pF",
+        "viewer_override": {
+          "visual_class": "variable_polarized_capacitor",
+          "label": "C1",
+          "display_value": "375 pF"
+        }
+      }
+    },
+    "polarized_capacitor20.2": {
+      "class_name": "Polarized_Capacitor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "C",
+      "emit_as": "capacitor",
+      "node_order": [
+        "positive",
+        "negative"
+      ],
+      "nodes": [
+        "N005",
+        "N006"
+      ],
+      "parameters": {
+        "value": 0.022,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "C2 0.022 uF"
+      }
+    },
+    "polarized_capacitor20.3": {
+      "class_name": "Polarized_Capacitor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "C",
+      "emit_as": "capacitor",
+      "node_order": [
+        "positive",
+        "negative"
+      ],
+      "nodes": [
+        "N007",
+        "N008"
+      ],
+      "parameters": {
+        "value": 0.022,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "C3 0.022 uF"
+      }
+    },
+    "polarized_capacitor20.4": {
+      "class_name": "Polarized_Capacitor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "C",
+      "emit_as": "capacitor",
+      "node_order": [
+        "positive",
+        "negative"
+      ],
+      "nodes": [
+        "N003",
+        "N004"
+      ],
+      "parameters": {
+        "value": 0.001,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "C4 0.001 uF"
+      }
+    },
+    "resistor22.1": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N006",
+        "N004"
+      ],
+      "parameters": {
+        "value": 220,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R1 220 kohm"
+      }
+    },
+    "resistor22.2": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N007",
+        "N004"
+      ],
+      "parameters": {
+        "value": 4.7,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R2 4.7 kohm"
+      }
+    },
+    "resistor22.3": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N008",
+        "N004"
+      ],
+      "parameters": {
+        "value": 220,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R3 220 kohm"
+      }
+    },
+    "switch25.1": {
+      "class_name": "Switch",
+      "status": "spice_ready",
+      "spice_support": "simplified",
+      "spice_prefix": null,
+      "emit_as": null,
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N002",
+        "N004"
+      ],
+      "parameters": {
+        "state": "open",
+        "state_source": "graph_json_state",
+        "state_confidence": 0.95,
+        "source": "graph_json_state_validated_from_image",
+        "label_text": "S1 aperto"
+      },
+      "strategy": "open_circuit"
+    }
+  },
+  "simulation": {
+    "analyses": [
+      "op",
+      "tran"
+    ],
+    "tran": {
+      "step": "1us",
+      "stop": "5ms"
+    }
+  },
+  "stats": {
+    "components_total": 16,
+    "spice_ready_components": 14,
+    "not_emitted_components": 1,
+    "measurement_components": 0,
+    "missing_components": 0,
+    "unsupported_components": 1,
+    "pin_aware_components": 0,
+    "invalid_components": 0,
+    "supplies_ready_count": 0
+  }
+}

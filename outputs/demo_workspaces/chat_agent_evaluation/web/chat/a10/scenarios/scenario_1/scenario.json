@@ -1,0 +1,37 @@
+{
+  "scenario_id": "scenario_1",
+  "title": "Chiudere lo switch e propagare l'alimentazione ai rami LED e lampada",
+  "hypothesis": "The battery is present but the positive supply does not reach the LED and lamp branches because switch25.1 is open and the branch input nodes N003 and N004 are not fed from the switched supply path.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    },
+    {
+      "type": "feed_nodes_from_source_node",
+      "source_node": "N002",
+      "target_nodes": [
+        "N003",
+        "N004"
+      ],
+      "resistance": "1m"
+    }
+  ],
+  "rerun_from": "06",
+  "analysis": "op",
+  "compare": [
+    "v(N002)",
+    "v(N003)",
+    "v(N004)",
+    "v(N005)",
+    "i(Rlamp13_1)",
+    "i(vbattery2_1#branch)"
+  ],
+  "expect": {
+    "v(N003)": "increased",
+    "v(N004)": "increased",
+    "i(Rlamp13_1)": "nonzero",
+    "i(vbattery2_1#branch)": "nonzero"
+  }
+}
