@@ -1352,6 +1352,12 @@ def render_terminal_port(component: dict[str, Any], position: dict[str, Any]) ->
     terminal = (position.get("terminals") or [{}])[0]
     x = float(terminal.get("x", position.get("x") or 0))
     y = float(terminal.get("y", position.get("y") or 0))
+    if component.get("viewer_label_hidden"):
+        return (
+            '<g class="symbol terminal-port">'
+            f'<circle cx="{format_number(x)}" cy="{format_number(y)}" r="5"/>'
+            '</g>'
+        )
     side = str(terminal.get("relative_position") or "right").lower()
     outward = {
         "bottom": (0.0, -1.0),

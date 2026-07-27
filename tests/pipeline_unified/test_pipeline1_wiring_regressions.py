@@ -34,7 +34,12 @@ def load_pipeline1_graph_functions():
 
     try:
         crossings = importlib.import_module("build_terminal_graph.crossings")
-        return crossings.split_looped_orthogonal_crossing_groups
+        return (
+            crossings.split_looped_orthogonal_crossing_groups,
+            crossings.is_symmetric_low_span_thick_hump,
+            crossings.detect_radial_wire_crossings,
+            crossings.split_bridge_labels,
+        )
     finally:
         for name in list(sys.modules):
             if name == prefix or name.startswith(prefix + "."):
@@ -42,7 +47,15 @@ def load_pipeline1_graph_functions():
         sys.modules.update(previous_modules)
 
 
-split_looped_orthogonal_crossing_groups = load_pipeline1_graph_functions()
+(
+    split_looped_orthogonal_crossing_groups,
+    is_symmetric_low_span_thick_hump,
+    detect_radial_wire_crossings,
+    split_bridge_labels,
+) = load_pipeline1_graph_functions()
+
+from estimate_terminals.io_utils import img_build_foreground_binary
+from estimate_terminals.strategies_basic import detect_two_terminal_orientation_capacitor
 
 
 def load_step04_module():
@@ -160,6 +173,227 @@ class LoopedCrossingTests(unittest.TestCase):
         )
 
         self.assertEqual(len(groups), 1)
+
+
+class RadialCrossingTests(unittest.TestCase):
+    """Verifica gli incroci a X senza assumere direzioni cardinali."""
+
+    @staticmethod
+    def crossing_skeleton():
+        """Disegna due diagonali sottili che si intersecano al centro."""
+        skeleton = np.zeros((160, 160), dtype=np.uint8)
+        cv2.line(skeleton, (30, 30), (130, 130), 255, thickness=1)
+        cv2.line(skeleton, (130, 30), (30, 130), 255, thickness=1)
+        return skeleton
+
+    @staticmethod
+    def crossing_ink(with_dot: bool):
+        """Crea l'inchiostro originale, con pallino centrale opzionale."""
+        ink = np.zeros((160, 160), dtype=np.uint8)
+        cv2.line(ink, (30, 30), (130, 130), 255, thickness=3)
+        cv2.line(ink, (130, 30), (30, 130), 255, thickness=3)
+        if with_dot:
+            cv2.circle(ink, (80, 80), 10, 255, thickness=-1)
+        return ink
+
+    @classmethod
+    def crossing_labels(cls):
+        """Etichetta la X come singola connected component iniziale."""
+        _, labels, _, _ = cv2.connectedComponentsWithStats(
+            np.where(cls.crossing_skeleton() > 0, 1, 0).astype(np.uint8),
+            connectivity=8,
+        )
+        return labels
+
+    def test_diagonal_x_without_dot_is_detected(self) -> None:
+        """Una X semplice genera un crossing radiale ad alta confidenza."""
+        crossings = detect_radial_wire_crossings(
+            self.crossing_skeleton(),
+            self.crossing_labels(),
+            self.crossing_ink(with_dot=False),
+        )
+
+        self.assertEqual(len(crossings), 1)
+        self.assertEqual(len(crossings[0]["branch_directions"]), 4)
+        self.assertEqual(len(crossings[0]["branch_pairs"]), 2)
+
+    def test_diagonal_x_with_dot_remains_a_junction(self) -> None:
+        """Un pallino esplicito impedisce lo split della stessa geometria."""
+        crossings = detect_radial_wire_crossings(
+            self.crossing_skeleton(),
+            self.crossing_labels(),
+            self.crossing_ink(with_dot=True),
+        )
+
+        self.assertEqual(crossings, [])
+
+    def test_diagonal_x_is_split_into_straight_pairs(self) -> None:
+        """Lo split completo conserva le due continuita' diagonali."""
+        terminals = [
+            {
+                "terminal_id": terminal_id,
+                "instance_id": terminal_id,
+                "component_class_name": "Resistor",
+                "x": x,
+                "y": y,
+            }
+            for terminal_id, x, y in (
+                ("north_west", 30, 30),
+                ("north_east", 130, 30),
+                ("south_west", 30, 130),
+                ("south_east", 130, 130),
+            )
+        ]
+        terminal_match_debug = {
+            term["terminal_id"]: {
+                "matched_label": 1,
+                "snap_point": [term["x"], term["y"]],
+            }
+            for term in terminals
+        }
+
+        groups = split_bridge_labels(
+            {1: [term["terminal_id"] for term in terminals]},
+            terminals,
+            terminal_match_debug,
+            self.crossing_skeleton(),
+            self.crossing_labels(),
+            wire_extraction={},
+        )
+
+        actual = {frozenset(group) for group in groups.values()}
+        self.assertEqual(
+            actual,
+            {
+                frozenset({"north_west", "south_east"}),
+                frozenset({"north_east", "south_west"}),
+            },
+        )
+
+
+class C01RegressionTests(unittest.TestCase):
+    """Protegge orientazione condensatori e filtro dei falsi ponti di c01."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        image_path = (
+            PROJECT_ROOT
+            / "data"
+            / "batchPipeline2.0"
+            / "batchChatAgentEvaluation"
+            / "c01.jpg"
+        )
+        image = cv2.imread(str(image_path))
+        if image is None:
+            raise RuntimeError(f"Immagine di regressione non leggibile: {image_path}")
+        cls.binary = img_build_foreground_binary(image)
+
+    def test_both_capacitors_use_horizontal_terminals(self) -> None:
+        """Le due coppie di piastre verticali devono produrre pin left/right."""
+        capacitor_bboxes = (
+            [274.93, 113.39, 328.2, 160.71],
+            [653.57, 426.51, 704.87, 476.56],
+        )
+        for bbox in capacitor_bboxes:
+            orientation, debug = detect_two_terminal_orientation_capacitor(
+                self.binary,
+                bbox,
+            )
+            self.assertEqual(orientation, "horizontal", msg=debug)
+
+    def test_symmetric_low_span_hump_is_rejected(self) -> None:
+        """I due bordi simmetrici della giunzione d'uscita non sono ponti."""
+        self.assertTrue(
+            is_symmetric_low_span_thick_hump({
+                "bridge_detector": "thick_hump",
+                "skeleton_y_span": 1,
+                "left_pixels": 104,
+                "right_pixels": 103,
+            })
+        )
+
+    def test_real_hump_with_vertical_shape_is_preserved(self) -> None:
+        """Il ponte R6/pin 7 ha sviluppo verticale e deve sopravvivere."""
+        self.assertFalse(
+            is_symmetric_low_span_thick_hump({
+                "bridge_detector": "thick_hump",
+                "skeleton_y_span": 11,
+                "left_pixels": 201,
+                "right_pixels": 176,
+            })
+        )
+
+
+class C02TopologyRegressionTests(unittest.TestCase):
+    """Protegge la separazione delle due reti incrociate di c02."""
+
+    def test_c02_diagonal_crossing_produces_two_distinct_nets(self) -> None:
+        """Il processor deve associare ciascuna base al ramo diagonale giusto."""
+        step04_path = (
+            PROJECT_ROOT
+            / "outputs"
+            / "demo_workspaces"
+            / "chat_agent_evaluation"
+            / "pipeline1.0"
+            / "04_extract_wires"
+            / "c02.json"
+        )
+        script = (
+            "import json,sys\n"
+            "from pathlib import Path\n"
+            "sys.path.insert(0, sys.argv[1])\n"
+            "from build_terminal_graph.processor import build_terminal_graph_for_image\n"
+            "data=json.loads(Path(sys.argv[2]).read_text(encoding='utf-8'))\n"
+            "result=build_terminal_graph_for_image(data)\n"
+            "print(json.dumps({'graph': result['graph'], 'warnings': result['warnings']}))\n"
+        )
+        completed = subprocess.run(
+            [
+                sys.executable,
+                "-B",
+                "-c",
+                script,
+                str(PIPELINE1_DIR),
+                str(step04_path),
+            ],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 0, msg=completed.stderr)
+        actual = json.loads(completed.stdout)
+        graph = actual["graph"]
+
+        q1_net = {
+            "npn_transistor18.1_B",
+            *graph["npn_transistor18.1_B"],
+        }
+        q2_net = {
+            "npn_transistor18.2_B",
+            *graph["npn_transistor18.2_B"],
+        }
+        self.assertEqual(
+            q1_net,
+            {
+                "npn_transistor18.1_B",
+                "polarized_capacitor20.2_negative",
+                "resistor22.3_t2",
+            },
+        )
+        self.assertEqual(
+            q2_net,
+            {
+                "npn_transistor18.2_B",
+                "polarized_capacitor20.1_negative",
+                "resistor22.2_t2",
+            },
+        )
+        self.assertTrue(q1_net.isdisjoint(q2_net))
+        self.assertEqual(actual["warnings"]["unconnected_terminals"], [])
+        self.assertEqual(actual["warnings"]["unmatched_terminals"], [])
 
 
 class B03TopologyRegressionTests(unittest.TestCase):

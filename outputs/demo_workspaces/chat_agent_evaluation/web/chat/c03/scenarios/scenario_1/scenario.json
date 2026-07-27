@@ -1,0 +1,24 @@
+{
+  "scenario_id": "scenario_1",
+  "title": "Aumentare controllatamente il livello di VAUDIO_IN",
+  "hypothesis": "The simulated low output may be caused mainly by the very small existing input source amplitude.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "VAUDIO_IN",
+      "value": "SIN(0 0.05 1000)"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N005)",
+    "v(N008)",
+    "v(N004)"
+  ],
+  "expect": {
+    "v(N008)": "magnitude_increased",
+    "v(N004)": "magnitude_increased"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "title": "Ridurre la sovrapposizione aumentando la velocita di alternanza",
+  "hypothesis": "Se i due LED appaiono entrambi accesi e quasi non alternati, una possibile causa e che con R2=R3=47k e C1=C2=10uF l'oscillazione sia troppo lenta e con duty circa 50%, producendo una percezione visiva di quasi contemporaneita. Riducendo entrambi i condensatori si dovrebbe mantenere il lampeggio ma renderlo piu evidente.",
+  "intent": "correction",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Cpolarized_capacitor20_1",
+      "value": "1uF"
+    },
+    {
+      "type": "change_component_value",
+      "target": "Cpolarized_capacitor20_2",
+      "value": "1uF"
+    }
+  ],
+  "compare": [
+    "@dled12_1[id]",
+    "@dled12_2[id]",
+    "v(N003)",
+    "v(N004)"
+  ],
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak",
+    "@dled12_2[id]": "tran_abs_peak",
+    "v(N003)": "tran_vpp",
+    "v(N004)": "tran_vpp"
+  },
+  "expect": {
+    "@dled12_1[id]": "nonzero",
+    "@dled12_2[id]": "nonzero",
+    "v(N003)": "changed",
+    "v(N004)": "changed"
+  },
+  "temporal_expect": {
+    "target": "Dled12_1",
+    "required_state": "blinking",
+    "require_regular_period": true,
+    "min_duty_cycle": 0.1
+  },
+  "scenario_id": "agent_scenario_1"
+}

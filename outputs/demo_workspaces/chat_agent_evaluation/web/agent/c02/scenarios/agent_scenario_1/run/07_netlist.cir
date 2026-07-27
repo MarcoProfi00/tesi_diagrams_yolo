@@ -1,0 +1,31 @@
+* pipeline2.0 netlist
+* circuit: c02
+
+VVREF_BATTERY_NEGATIVE N001 0 DC 0
+Vbattery2_1 N002 N001 DC 9
+Dled12_1 N002 N003 LED_RED_TYP
+Dled12_2 N002 N004 LED_RED_TYP
+Qnpn_transistor18_1 N006 N005 N001 BC548_TYP
+Qnpn_transistor18_2 N008 N007 N001 BC548_TYP
+Cpolarized_capacitor20_1 N006 N007 1uF
+Cpolarized_capacitor20_2 N008 N005 1uF
+Rresistor22_1 N003 N006 470
+Rresistor22_2 N002 N007 47k
+Rresistor22_3 N002 N005 47k
+Rresistor22_4 N004 N008 470
+
+.model BC548_TYP NPN(IS=1e-14 BF=250 VAF=30 IKF=100m RB=100 RC=1 RE=0.2 CJE=12p VJE=0.7 MJE=0.33 CJC=4p VJC=0.5 MJC=0.33 TF=0.5n TR=50n)
+.model LED_RED_TYP D(IS=1e-15 N=2 RS=10)
+
+.op
+.save all
+.tran 1ms 3s
+
+.control
+set wr_singlescale
+set wr_vecnames
+save all @dled12_1[id] @dled12_2[id]
+run
+wrdata 08_tran.csv time v(N001) v(N002) v(N003) v(N004) v(N005) v(N006) v(N007) v(N008) @dled12_1[id] @dled12_2[id]
+.endc
+.end

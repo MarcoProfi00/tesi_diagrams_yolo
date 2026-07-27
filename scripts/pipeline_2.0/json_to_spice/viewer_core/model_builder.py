@@ -1319,11 +1319,14 @@ def enrich_structural_terminals(
             return_terminal_id = str(parameters.get("return_terminal") or "")
             viewer_override = parameters.get("viewer_override")
             viewer_override = viewer_override if isinstance(viewer_override, dict) else {}
-            belongs_to_visual_source = any(
-                candidate.startswith(f"{component_id}_")
-                for candidate in (terminal_id, return_terminal_id)
-                if candidate
+            is_primary_terminal = bool(
+                terminal_id and terminal_id.startswith(f"{component_id}_")
             )
+            is_return_terminal = bool(
+                return_terminal_id
+                and return_terminal_id.startswith(f"{component_id}_")
+            )
+            belongs_to_visual_source = is_primary_terminal or is_return_terminal
             if not belongs_to_visual_source:
                 continue
 
@@ -1355,15 +1358,31 @@ def enrich_structural_terminals(
             if source is None:
                 continue
 
-            if viewer_override.get("visual_class") != "battery":
+            if (
+                viewer_override.get("visual_class") != "battery"
+                and is_primary_terminal
+            ):
                 source["viewer_hidden_by_terminal"] = component_id
-            item["is_supply_terminal"] = True
-            item["supply_name"] = str(supply_name)
-            item["display_label"] = str(supply_name)
-            item["display_value"] = compact_source_value(source.get("value"), str(parameters.get("unit") or "V"))
-            for field in ("is_scenario_modified", "scenario_previous_value", "scenario_value"):
-                if source.get(field) is not None:
-                    item[field] = source[field]
+                item["is_supply_terminal"] = True
+                item["supply_name"] = str(supply_name)
+                item["display_label"] = str(supply_name)
+                item["display_value"] = compact_source_value(
+                    source.get("value"),
+                    str(parameters.get("unit") or "V"),
+                )
+                for field in (
+                    "is_scenario_modified",
+                    "scenario_previous_value",
+                    "scenario_value",
+                ):
+                    if source.get(field) is not None:
+                        item[field] = source[field]
+            elif is_return_terminal:
+                # Il ritorno resta elettricamente parte della sorgente, ma nel
+                # viewer non ripete nome e valore del segnale. Il port resta
+                # visibile e il simbolo GND adiacente ne chiarisce il ruolo.
+                item["is_supply_return_terminal"] = True
+                item["viewer_label_hidden"] = True
             break
         enriched.append(item)
 

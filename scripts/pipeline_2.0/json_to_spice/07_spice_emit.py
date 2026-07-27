@@ -158,7 +158,7 @@ def emit_supply(name: str, supply: dict[str, Any]) -> tuple[str | None, str | No
     line = (
         f"{element_name('V', str(name))} "
         f"{nodes[0]} {nodes[1]} "
-        f"{source_kind(parameters)} {spice_value(parameters.get('value'), parameters.get('unit'))}"
+        f"{voltage_source_expression(parameters)}"
     )
     return line, None
 

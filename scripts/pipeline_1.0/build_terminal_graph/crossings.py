@@ -50,6 +50,7 @@ from .config import (
     BRIDGE_THICK_HUMP_STRONG_SCORE_MIN,
     BRIDGE_THICK_HUMP_MIN_SKELETON_Y_SPAN,
     BRIDGE_THICK_HUMP_MIN_VERTICAL_PIXELS,
+    BRIDGE_THICK_HUMP_LOW_SPAN_SYMMETRY_REJECT_MIN,
     BRIDGE_THICK_HUMP_VERTICAL_SEARCH_RADIUS,
     BRIDGE_THICK_HUMP_X_MAX,
     BRIDGE_THICK_HUMP_Y_MAX,
@@ -75,6 +76,12 @@ from .config import (
     PLAIN_CROSSING_MIN_PIXELS_PER_DIRECTION,
     PLAIN_CROSSING_MIN_RUN,
     PLAIN_CROSSING_PROBE_DISTANCE,
+    RADIAL_CROSSING_AXIS_DOT_MAX,
+    RADIAL_CROSSING_CLUSTER_RADIUS,
+    RADIAL_CROSSING_CUT_HALF_SIZE,
+    RADIAL_CROSSING_MIN_BRANCH_PIXELS,
+    RADIAL_CROSSING_MIN_TERMINALS,
+    RADIAL_CROSSING_OPPOSITE_DOT_MAX,
     TERMINAL_SQUARE_FALLBACK_RADIUS,
 )
 from .geometry import clamp_window
@@ -394,6 +401,9 @@ def detect_thick_hump_bridge(
         "hump_direction": int(shape["hump_direction"]),
         "hump_score": float(shape["hump_score"]) + float(vertical_support),
         "vertical_support": int(vertical_support),
+        "skeleton_y_span": int(skeleton_y_span),
+        "left_pixels": int(shape["left_pixels"]),
+        "right_pixels": int(shape["right_pixels"]),
     }
 
 
@@ -571,6 +581,34 @@ def collapse_bridge_candidates(candidates: list[dict], skeleton_binary: np.ndarr
     return sorted(collapsed, key=lambda item: (int(item["y"]), int(item["x"])))
 
 
+def is_symmetric_low_span_thick_hump(candidate: dict):
+    """
+    Riconosce il falso arco prodotto dai bordi di una giunzione spessa.
+
+    Il detector thick-hump deve restare tollerante prima del collapse: in
+    questo modo i falsi archi assorbono i micro-gap della stessa giunzione.
+    Dopo il collapse possiamo invece scartare il candidato se non mostra
+    sviluppo verticale e i due lati sono quasi perfettamente simmetrici.
+    """
+    if candidate.get("bridge_detector") != "thick_hump":
+        return False
+
+    try:
+        skeleton_y_span = int(candidate.get("skeleton_y_span", 0))
+        left_pixels = int(candidate.get("left_pixels", 0))
+        right_pixels = int(candidate.get("right_pixels", 0))
+    except (TypeError, ValueError):
+        return False
+
+    if skeleton_y_span >= int(BRIDGE_THICK_HUMP_MIN_SKELETON_Y_SPAN):
+        return False
+    if min(left_pixels, right_pixels) <= 0:
+        return False
+
+    side_balance = min(left_pixels, right_pixels) / float(max(left_pixels, right_pixels))
+    return side_balance >= float(BRIDGE_THICK_HUMP_LOW_SPAN_SYMMETRY_REJECT_MIN)
+
+
 # Rileva ponte sullo skeleton
 # Cerca punti con:
 #   continuita nelle 4 dir
@@ -653,8 +691,13 @@ def detect_wire_bridges(
     return [
         candidate
         for candidate in collapsed
-        if candidate.get("bridge_style") == "micro_gap"
-        or bridge_split_branch_quality(binary, candidate) >= BRIDGE_HUMP_MIN_ANCHOR_QUALITY
+        if (
+            candidate.get("bridge_style") == "micro_gap"
+            or (
+                not is_symmetric_low_span_thick_hump(candidate)
+                and bridge_split_branch_quality(binary, candidate) >= BRIDGE_HUMP_MIN_ANCHOR_QUALITY
+            )
+        )
     ]
 
 
@@ -896,6 +939,238 @@ def detect_plain_wire_crossings(
 
     return collapsed
 
+
+def load_crossing_ink_binary(
+    wire_extraction: dict,
+    fallback_binary: np.ndarray | None,
+):
+    """
+    Carica l'inchiostro originale, prima delle dilatazioni dello step 04.
+
+    Nella maschera filtered due diagonali spesse riempiono naturalmente il
+    centro della X e sembrano un pallino. La masked gray conserva invece la
+    differenza fra la semplice sovrapposizione dei tratti e una giunzione
+    esplicitamente marcata.
+    """
+    path = wire_extraction.get("masked_gray_path")
+    if path:
+        gray = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
+        if gray is not None:
+            _, ink_binary = cv2.threshold(
+                gray,
+                0,
+                255,
+                cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU,
+            )
+            return ink_binary
+
+    return fallback_binary
+
+
+def local_radial_split_branches(
+    skeleton_binary: np.ndarray,
+    x: int,
+    y: int,
+    cut_half_size: int,
+    probe_distance: int,
+):
+    """
+    Restituisce i rami che escono radialmente da uno split locale.
+
+    Ogni ramo contiene la label locale e un versore diretto dal centro verso
+    l'esterno. Non assumiamo pendenze orizzontali, verticali o a 45 gradi.
+    """
+    h, w = skeleton_binary.shape[:2]
+    roi_margin = int(probe_distance) + int(cut_half_size) + 14
+    roi_x1, roi_y1, roi_x2, roi_y2 = clamp_window(
+        int(x) - roi_margin,
+        int(y) - roi_margin,
+        int(x) + roi_margin + 1,
+        int(y) + roi_margin + 1,
+        w,
+        h,
+    )
+    cut_skeleton = skeleton_binary[roi_y1:roi_y2, roi_x1:roi_x2].copy()
+    local_x = int(x) - int(roi_x1)
+    local_y = int(y) - int(roi_y1)
+
+    cut_x1, cut_y1, cut_x2, cut_y2 = clamp_window(
+        local_x - int(cut_half_size),
+        local_y - int(cut_half_size),
+        local_x + int(cut_half_size) + 1,
+        local_y + int(cut_half_size) + 1,
+        cut_skeleton.shape[1],
+        cut_skeleton.shape[0],
+    )
+    cut_skeleton[cut_y1:cut_y2, cut_x1:cut_x2] = 0
+
+    _, split_labels, _, _ = cv2.connectedComponentsWithStats(
+        np.where(cut_skeleton > 0, 1, 0).astype(np.uint8),
+        connectivity=8,
+    )
+    yy, xx = np.indices(split_labels.shape)
+    dx = xx.astype(np.float32) - float(local_x)
+    dy = yy.astype(np.float32) - float(local_y)
+    radius = np.hypot(dx, dy)
+    inner_limit = float(np.sqrt(2.0) * (int(cut_half_size) + 1) + 2.0)
+    outer_limit = float(int(probe_distance) + 10)
+    branches = []
+
+    for branch_label in np.unique(split_labels):
+        if int(branch_label) <= 0:
+            continue
+
+        branch_mask = (
+            (split_labels == int(branch_label))
+            & (radius >= float(int(cut_half_size) + 1))
+            & (radius <= outer_limit)
+        )
+        branch_pixels = int(np.count_nonzero(branch_mask))
+        if branch_pixels < int(RADIAL_CROSSING_MIN_BRANCH_PIXELS):
+            continue
+
+        branch_radii = radius[branch_mask]
+        if (
+            float(np.min(branch_radii)) > inner_limit
+            or float(np.max(branch_radii)) < float(probe_distance)
+        ):
+            continue
+
+        direction_mask = branch_mask & (
+            radius >= float(max(int(cut_half_size) + 2, int(probe_distance) // 2))
+        )
+        mean_dx = float(np.mean(dx[direction_mask]))
+        mean_dy = float(np.mean(dy[direction_mask]))
+        norm = float(np.hypot(mean_dx, mean_dy))
+        if norm <= 1e-6:
+            continue
+
+        branches.append({
+            "label": int(branch_label),
+            "direction": [mean_dx / norm, mean_dy / norm],
+            "pixels": branch_pixels,
+        })
+
+    return branches
+
+
+def pair_opposite_radial_branches(branches: list[dict]):
+    """
+    Accoppia quattro rami scegliendo le due continuazioni piu' rettilinee.
+
+    Lo split viene accettato solo se entrambi i tratti hanno direzioni
+    opposte e i due assi risultanti non sono quasi paralleli.
+    """
+    if len(branches) != 4:
+        return None
+
+    directions = [
+        np.asarray(branch["direction"], dtype=np.float64)
+        for branch in branches
+    ]
+    pairings = (
+        ((0, 1), (2, 3)),
+        ((0, 2), (1, 3)),
+        ((0, 3), (1, 2)),
+    )
+    best_pairs = min(
+        pairings,
+        key=lambda pairs: sum(
+            float(np.dot(directions[index_a], directions[index_b]))
+            for index_a, index_b in pairs
+        ),
+    )
+    opposite_scores = [
+        float(np.dot(directions[index_a], directions[index_b]))
+        for index_a, index_b in best_pairs
+    ]
+    if any(
+        score > float(RADIAL_CROSSING_OPPOSITE_DOT_MAX)
+        for score in opposite_scores
+    ):
+        return None
+
+    first_axis = directions[best_pairs[0][0]]
+    second_axis = directions[best_pairs[1][0]]
+    if abs(float(np.dot(first_axis, second_axis))) > float(RADIAL_CROSSING_AXIS_DOT_MAX):
+        return None
+
+    return [
+        [int(index_a), int(index_b)]
+        for index_a, index_b in best_pairs
+    ]
+
+
+def detect_radial_wire_crossings(
+    skeleton_binary: np.ndarray,
+    labels: np.ndarray,
+    junction_ink_binary: np.ndarray | None,
+):
+    """
+    Rileva crossing a quattro rami con orientazione arbitraria e senza pallino.
+
+    I pixel di diramazione vicini vengono prima raggruppati: una X spessa puo'
+    infatti produrre piu' branchpoint adiacenti durante la skeletonizzazione.
+    """
+    binary = np.where(skeleton_binary > 0, 1, 0).astype(np.uint8)
+    neighbor_kernel = np.ones((3, 3), dtype=np.uint8)
+    neighbor_count = cv2.filter2D(binary, cv2.CV_16S, neighbor_kernel) - binary
+    branch_seed = np.where((binary > 0) & (neighbor_count >= 3), 255, 0).astype(np.uint8)
+    if not np.any(branch_seed):
+        return []
+
+    cluster_radius = int(RADIAL_CROSSING_CLUSTER_RADIUS)
+    cluster_kernel = np.ones(
+        (2 * cluster_radius + 1, 2 * cluster_radius + 1),
+        dtype=np.uint8,
+    )
+    clustered_seed = cv2.dilate(branch_seed, cluster_kernel, iterations=1)
+    cluster_count, cluster_labels, _, _ = cv2.connectedComponentsWithStats(
+        clustered_seed,
+        connectivity=8,
+    )
+    crossings = []
+
+    for cluster_label in range(1, int(cluster_count)):
+        seed_y, seed_x = np.where(
+            (cluster_labels == int(cluster_label))
+            & (branch_seed > 0)
+        )
+        if len(seed_x) == 0:
+            continue
+
+        x = int(round(float(np.mean(seed_x))))
+        y = int(round(float(np.mean(seed_y))))
+        source_label = nearest_split_label(labels, x, y, radius=8)
+        if source_label is None:
+            continue
+        if has_filled_junction_dot(junction_ink_binary, x, y):
+            continue
+
+        branches = local_radial_split_branches(
+            skeleton_binary,
+            x,
+            y,
+            RADIAL_CROSSING_CUT_HALF_SIZE,
+            PLAIN_CROSSING_PROBE_DISTANCE,
+        )
+        branch_pairs = pair_opposite_radial_branches(branches)
+        if branch_pairs is None:
+            continue
+
+        crossings.append({
+            "x": int(x),
+            "y": int(y),
+            "label": int(source_label),
+            "branch_directions": [
+                list(branch["direction"])
+                for branch in branches
+            ],
+            "branch_pairs": branch_pairs,
+        })
+
+    return crossings
+
 def labels_with_multi_terminal_self_short(
     terminals: list[dict],
     terminal_match_debug: dict,
@@ -1004,11 +1279,16 @@ def split_bridge_labels(
         terminals,
         terminal_match_debug,
     )
+    crossing_ink_binary = load_crossing_ink_binary(
+        wire_extraction or {},
+        junction_binary,
+    )
 
     # Nello stile blu/circuitstoday-like un incrocio semplice e' un nodo:
     # separiamo solo una gobba esplicita. Sugli altri stili manteniamo il
     # comportamento storico per non muovere immagini gia' validate.
     plain_crossings = []
+    radial_crossings = []
     if PLAIN_CROSSING_SPLIT_ENABLE and not enable_thick_hump_detection:
         plain_crossings = [
             crossing
@@ -1023,6 +1303,18 @@ def split_bridge_labels(
                 PLAIN_CROSSING_CUT_HALF_HEIGHT,
                 PLAIN_CROSSING_PROBE_DISTANCE,
             )
+        ]
+        radial_crossings = [
+            crossing
+            for crossing in detect_radial_wire_crossings(
+                skeleton_binary,
+                labels,
+                crossing_ink_binary,
+            )
+            if int(crossing["label"]) not in bridge_labels
+            and len(
+                set(label_to_terminal_ids.get(int(crossing["label"]), []))
+            ) >= int(RADIAL_CROSSING_MIN_TERMINALS)
         ]
 
     split_points = []
@@ -1041,6 +1333,15 @@ def split_bridge_labels(
             "split_kind": "plain_crossing_without_dot",
             "cut_half_width": PLAIN_CROSSING_CUT_HALF_WIDTH,
             "cut_half_height": PLAIN_CROSSING_CUT_HALF_HEIGHT,
+            "probe_distance": PLAIN_CROSSING_PROBE_DISTANCE,
+        })
+
+    for crossing in radial_crossings:
+        split_points.append({
+            **crossing,
+            "split_kind": "radial_crossing_without_dot",
+            "cut_half_width": RADIAL_CROSSING_CUT_HALF_SIZE,
+            "cut_half_height": RADIAL_CROSSING_CUT_HALF_SIZE,
             "probe_distance": PLAIN_CROSSING_PROBE_DISTANCE,
         })
 
@@ -1076,6 +1377,22 @@ def split_bridge_labels(
         x = int(split_point["x"])
         y = int(split_point["y"])
         probe_distance = int(split_point["probe_distance"])
+        if split_point.get("split_kind") == "radial_crossing_without_dot":
+            branch_labels = []
+            for direction_x, direction_y in split_point["branch_directions"]:
+                probe_x = int(round(float(x) + float(direction_x) * probe_distance))
+                probe_y = int(round(float(y) + float(direction_y) * probe_distance))
+                branch_labels.append(
+                    nearest_split_label(split_labels, probe_x, probe_y, radius=4)
+                )
+
+            for index_a, index_b in split_point["branch_pairs"]:
+                union_find.union(
+                    branch_labels[int(index_a)],
+                    branch_labels[int(index_b)],
+                )
+            continue
+
         top_label = nearest_split_label(split_labels, x, y - probe_distance)
         bottom_label = nearest_split_label(split_labels, x, y + probe_distance)
         left_label = nearest_split_label(split_labels, x - probe_distance, y)

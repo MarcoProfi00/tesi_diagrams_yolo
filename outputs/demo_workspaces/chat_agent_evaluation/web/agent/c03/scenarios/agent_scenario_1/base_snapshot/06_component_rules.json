@@ -1,0 +1,493 @@
+{
+  "circuit_id": "c03",
+  "source_format": "pipeline2.0_component_rules",
+  "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\data\\batchPipeline2.0\\batchChatAgentEvaluation\\values\\c03_values.yaml",
+  "spice_classes_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\pipeline2_spice_classes.yaml",
+  "supplies": {
+    "AUDIO_IN": {
+      "status": "spice_ready",
+      "spice_prefix": "V",
+      "emit_as": "independent_voltage_source",
+      "nodes": [
+        "N005",
+        "0"
+      ],
+      "parameters": {
+        "terminal": "terminal26.1_t1",
+        "return_terminal": "terminal26.2_t1",
+        "reference": 0,
+        "type": "sin",
+        "waveform": "sin",
+        "value": 0.02,
+        "unit": "V",
+        "offset": 0,
+        "amplitude": 0.02,
+        "frequency": 1000,
+        "frequency_unit": "Hz",
+        "source": "manual_testbench_assumption",
+        "label_text": "Audio IN: sinusoidale 20 mV picco, 1 kHz",
+        "node": "N005",
+        "return_node": "0"
+      }
+    },
+    "VCC_18": {
+      "status": "spice_ready",
+      "spice_prefix": "V",
+      "emit_as": "independent_voltage_source",
+      "nodes": [
+        "N001",
+        "0"
+      ],
+      "parameters": {
+        "terminal": "terminal26.3_t1",
+        "value": 18,
+        "unit": "V",
+        "reference": 0,
+        "type": "dc",
+        "source": "manual_from_image_label",
+        "label_text": "+18 V DC",
+        "node": "N001"
+      }
+    }
+  },
+  "components": {
+    "gnd9.1": {
+      "class_name": "GND",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    "gnd9.2": {
+      "class_name": "GND",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    "gnd9.3": {
+      "class_name": "GND",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    "gnd9.4": {
+      "class_name": "GND",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    "gnd9.5": {
+      "class_name": "GND",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    "operational_amplifier19.1": {
+      "class_name": "Operational_Amplifier",
+      "status": "spice_ready",
+      "spice_support": "subcircuit",
+      "spice_prefix": "X",
+      "emit_as": "subcircuit",
+      "node_order": [
+        "INP",
+        "INM",
+        "VCC",
+        "VEE",
+        "OUT"
+      ],
+      "nodes": [
+        "N002",
+        "N003",
+        "N001",
+        "0",
+        "N004"
+      ],
+      "parameters": {
+        "model": "TDA2003_SIMPLE",
+        "source": "manual_image_validation_TDA2003_pin_mapping",
+        "label_text": "IC1 TDA2003; modello funzionale SPICE",
+        "viewer_override": {
+          "visual_class": "operational_amplifier",
+          "label": "IC1",
+          "display_value": "TDA2003",
+          "tooltip": "IC1 TDA2003; equivalente funzionale per il testbench"
+        },
+        "spice_override": {
+          "emit_as": "subcircuit",
+          "pin_order": [
+            "INP",
+            "INM",
+            "VCC",
+            "VEE",
+            "OUT"
+          ],
+          "node_refs": {
+            "INP": "operational_amplifier19.1_in1",
+            "INM": "operational_amplifier19.1_in2",
+            "VCC": "operational_amplifier19.1_aux1",
+            "VEE": "operational_amplifier19.1_aux2",
+            "OUT": "operational_amplifier19.1_out"
+          },
+          "resolved_node_refs": {
+            "INP": "N002",
+            "INM": "N003",
+            "VCC": "N001",
+            "VEE": "0",
+            "OUT": "N004"
+          }
+        }
+      },
+      "reason": "Explicit YAML override emitted as a SPICE subcircuit."
+    },
+    "polarized_capacitor20.1": {
+      "class_name": "Polarized_Capacitor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "C",
+      "emit_as": "capacitor",
+      "node_order": [
+        "positive",
+        "negative"
+      ],
+      "nodes": [
+        "N002",
+        "N005"
+      ],
+      "parameters": {
+        "value": 10,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "C7 10 uF",
+        "viewer_override": {
+          "label": "C7",
+          "display_value": "10 uF"
+        }
+      }
+    },
+    "polarized_capacitor20.2": {
+      "class_name": "Polarized_Capacitor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "C",
+      "emit_as": "capacitor",
+      "node_order": [
+        "positive",
+        "negative"
+      ],
+      "nodes": [
+        "N003",
+        "N006"
+      ],
+      "parameters": {
+        "value": 470,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "C4 470 uF",
+        "viewer_override": {
+          "label": "C4",
+          "display_value": "470 uF"
+        }
+      }
+    },
+    "polarized_capacitor20.3": {
+      "class_name": "Polarized_Capacitor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "C",
+      "emit_as": "capacitor",
+      "node_order": [
+        "positive",
+        "negative"
+      ],
+      "nodes": [
+        "N001",
+        "0"
+      ],
+      "parameters": {
+        "value": 1000,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "C1 1000 uF",
+        "viewer_override": {
+          "label": "C1",
+          "display_value": "1000 uF"
+        }
+      }
+    },
+    "polarized_capacitor20.4": {
+      "class_name": "Polarized_Capacitor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "C",
+      "emit_as": "capacitor",
+      "node_order": [
+        "positive",
+        "negative"
+      ],
+      "nodes": [
+        "N004",
+        "N007"
+      ],
+      "parameters": {
+        "value": 39,
+        "unit": "nf",
+        "source": "manual_from_image_label",
+        "label_text": "C3 39 nF",
+        "viewer_override": {
+          "label": "C3",
+          "display_value": "39 nF"
+        }
+      }
+    },
+    "polarized_capacitor20.5": {
+      "class_name": "Polarized_Capacitor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "C",
+      "emit_as": "capacitor",
+      "node_order": [
+        "positive",
+        "negative"
+      ],
+      "nodes": [
+        "N001",
+        "0"
+      ],
+      "parameters": {
+        "value": 100,
+        "unit": "nf",
+        "source": "manual_from_image_label",
+        "label_text": "C2 100 nF",
+        "viewer_override": {
+          "label": "C2",
+          "display_value": "100 nF"
+        }
+      }
+    },
+    "polarized_capacitor20.6": {
+      "class_name": "Polarized_Capacitor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "C",
+      "emit_as": "capacitor",
+      "node_order": [
+        "positive",
+        "negative"
+      ],
+      "nodes": [
+        "N004",
+        "N008"
+      ],
+      "parameters": {
+        "value": 1000,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "C5 1000 uF",
+        "viewer_override": {
+          "label": "C5",
+          "display_value": "1000 uF"
+        }
+      }
+    },
+    "polarized_capacitor20.7": {
+      "class_name": "Polarized_Capacitor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "C",
+      "emit_as": "capacitor",
+      "node_order": [
+        "positive",
+        "negative"
+      ],
+      "nodes": [
+        "N008",
+        "N009"
+      ],
+      "parameters": {
+        "value": 100,
+        "unit": "nf",
+        "source": "manual_from_image_label",
+        "label_text": "C6 100 nF",
+        "viewer_override": {
+          "label": "C6",
+          "display_value": "100 nF"
+        }
+      }
+    },
+    "resistor22.1": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N007",
+        "N003"
+      ],
+      "parameters": {
+        "value": 39,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "R1 39 ohm",
+        "viewer_override": {
+          "label": "R1",
+          "display_value": "39 ohm"
+        }
+      }
+    },
+    "resistor22.2": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N006",
+        "0"
+      ],
+      "parameters": {
+        "value": 2.2,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "R3 2.2 ohm",
+        "viewer_override": {
+          "label": "R3",
+          "display_value": "2.2 ohm"
+        }
+      }
+    },
+    "resistor22.3": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N004",
+        "N006"
+      ],
+      "parameters": {
+        "value": 220,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "R2 220 ohm",
+        "viewer_override": {
+          "label": "R2",
+          "display_value": "220 ohm"
+        }
+      }
+    },
+    "resistor22.4": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N009",
+        "0"
+      ],
+      "parameters": {
+        "value": 1,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "R4 1 ohm",
+        "viewer_override": {
+          "label": "R4",
+          "display_value": "1 ohm"
+        }
+      }
+    },
+    "speaker24.1": {
+      "class_name": "Speaker",
+      "status": "spice_ready",
+      "spice_support": "equivalent",
+      "spice_prefix": "R",
+      "emit_as": "resistive_load",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N008",
+        "0"
+      ],
+      "parameters": {
+        "spice_override": {
+          "emit_as": "resistive_load",
+          "equivalent_resistance": 4,
+          "resistance_unit": "ohm",
+          "node_order": [
+            "t1",
+            "t2"
+          ],
+          "semantic_role": "speaker_equivalent"
+        },
+        "source": "manual_from_image_label",
+        "label_text": "K1 speaker equivalente 4 ohm",
+        "viewer_override": {
+          "visual_class": "speaker",
+          "label": "K1",
+          "display_value": "4 ohm"
+        },
+        "equivalent_resistance": 4,
+        "resistance_unit": "ohm"
+      },
+      "reason": "Explicit YAML override emitted as an equivalent resistive load."
+    },
+    "terminal26.1": {
+      "class_name": "Terminal",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "External terminal/label; useful for nodes and interface handling."
+    },
+    "terminal26.2": {
+      "class_name": "Terminal",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "External terminal/label; useful for nodes and interface handling."
+    },
+    "terminal26.3": {
+      "class_name": "Terminal",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "External terminal/label; useful for nodes and interface handling."
+    }
+  },
+  "simulation": {
+    "analyses": [
+      "op",
+      "tran"
+    ],
+    "tran": {
+      "step": "10us",
+      "stop": "20ms"
+    }
+  },
+  "stats": {
+    "components_total": 21,
+    "spice_ready_components": 13,
+    "not_emitted_components": 8,
+    "measurement_components": 0,
+    "missing_components": 0,
+    "unsupported_components": 0,
+    "pin_aware_components": 0,
+    "invalid_components": 0,
+    "supplies_ready_count": 2
+  }
+}

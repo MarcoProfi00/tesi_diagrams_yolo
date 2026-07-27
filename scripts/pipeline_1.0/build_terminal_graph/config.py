@@ -128,6 +128,12 @@ BRIDGE_THICK_HUMP_STRONG_MIN_FOOT_PIXELS = 4
 BRIDGE_THICK_HUMP_STRONG_MIN_VERTICAL_PIXELS = 10
 BRIDGE_THICK_HUMP_VERTICAL_SEARCH_RADIUS = 8
 BRIDGE_THICK_HUMP_MIN_VERTICAL_PIXELS = 6
+# Un candidato con arco quasi privo di sviluppo verticale e supporto
+# perfettamente simmetrico sui due lati e' tipicamente il bordo di una
+# giunzione a T/croce, non un vero ponticello. La soglia viene applicata solo
+# dopo il collapse dei candidati, cosi' il falso arco puo' comunque assorbire
+# i micro-gap prodotti dalla stessa giunzione.
+BRIDGE_THICK_HUMP_LOW_SPAN_SYMMETRY_REJECT_MIN = 0.85
 BRIDGE_HUMP_MIN_ANCHOR_QUALITY = 3
 BRIDGE_SINGLETON_MIN_HUMP_DISTANCE = 8.0
 BRIDGE_BLUE_STYLE_THICK_HUMP_ONLY = True
@@ -157,6 +163,17 @@ PLAIN_CROSSING_DOT_AREA_MIN = 210
 PLAIN_CROSSING_CUT_HALF_WIDTH = 4
 PLAIN_CROSSING_CUT_HALF_HEIGHT = 4
 PLAIN_CROSSING_PROBE_DISTANCE = 18
+
+# Gli incroci obliqui non attraversano necessariamente i quattro punti
+# cardinali usati dall'euristica storica. Li rileviamo tramite quattro rami
+# radiali, richiedendo due coppie quasi rettilinee e almeno quattro terminali
+# sulla label da dividere.
+RADIAL_CROSSING_CLUSTER_RADIUS = 6
+RADIAL_CROSSING_CUT_HALF_SIZE = 6
+RADIAL_CROSSING_MIN_BRANCH_PIXELS = 8
+RADIAL_CROSSING_MIN_TERMINALS = 4
+RADIAL_CROSSING_OPPOSITE_DOT_MAX = -0.72
+RADIAL_CROSSING_AXIS_DOT_MAX = 0.92
 
 # =========================================================
 # DEBUG VISIVO

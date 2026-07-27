@@ -47,9 +47,31 @@ class SharedContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         """Carica i moduli numerati coinvolti nei contratti condivisi."""
+        cls.spice_emit = load_numbered_module("07_spice_emit.py")
         cls.web_chat = load_numbered_module("09_web_chat.py")
         cls.context_builder = load_numbered_module("10_build_diagnostic_context.py")
         cls.step12 = load_numbered_module("12_controlled_scenarios.py")
+
+    def test_manual_sinusoidal_source_uses_the_shared_voltage_expression(self) -> None:
+        """Una sorgente YAML sinusoidale viene emessa con sintassi SPICE valida."""
+        line, warning = self.spice_emit.emit_supply(
+            "AUDIO_IN",
+            {
+                "status": "spice_ready",
+                "nodes": ["N001", "0"],
+                "parameters": {
+                    "value": 0.1,
+                    "unit": "V",
+                    "type": "sin",
+                    "offset": 0,
+                    "amplitude": 0.1,
+                    "frequency": 1000,
+                },
+            },
+        )
+
+        self.assertIsNone(warning)
+        self.assertEqual(line, "VAUDIO_IN N001 0 SIN(0 0.1 1000)")
 
     def test_action_registries_are_aligned(self) -> None:
         """Ogni azione ammessa dall'agente deve avere un handler eseguibile."""

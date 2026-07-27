@@ -649,6 +649,23 @@ def detect_two_terminal_orientation_capacitor(binary, bbox, default_orientation=
             "col_max": int(col_max),
         }
 
+        # Se solo una delle due proiezioni contiene chiaramente le due piastre,
+        # quella evidenza e' piu' affidabile del rapporto tra i massimi. Nei
+        # simboli piccoli una label o un tratto vicino puo' infatti alzare di
+        # poco il massimo dell'altra proiezione e ribaltare l'asse, anche se le
+        # due piastre restano visibili senza ambiguita'.
+        if row_peaks >= 2 and col_peaks < 2:
+            return "vertical", {
+                "decision_mode": "capacitor_unique_internal_plate_axis_vertical",
+                **projection_debug,
+            }
+
+        if col_peaks >= 2 and row_peaks < 2:
+            return "horizontal", {
+                "decision_mode": "capacitor_unique_internal_plate_axis_horizontal",
+                **projection_debug,
+            }
+
         # Due piastre orizzontali -> terminali top/bottom -> orientazione vertical.
         if row_peaks >= 2 and row_max >= col_max * 1.10:
             return "vertical", {

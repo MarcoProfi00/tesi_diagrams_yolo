@@ -1,0 +1,243 @@
+{
+  "circuit_id": "c02",
+  "source_format": "pipeline2.0_values_bound",
+  "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\data\\batchPipeline2.0\\batchChatAgentEvaluation\\values\\c02_values.yaml",
+  "supplies": {
+    "VREF_BATTERY_NEGATIVE": {
+      "terminal": "battery2.1_negative",
+      "type": "dc",
+      "value": 0,
+      "unit": "V",
+      "reference": 0,
+      "source": "manual_reference_for_floating_battery_circuit",
+      "label_text": "Negativo batteria: riferimento SPICE",
+      "node": "N001"
+    }
+  },
+  "components": {
+    "battery2.1": {
+      "class_name": "Battery",
+      "terminal_nodes": {
+        "positive": "N002",
+        "negative": "N001"
+      },
+      "value_data": {
+        "type": "dc",
+        "value": 9,
+        "unit": "V",
+        "source": "manual_from_image_label",
+        "label_text": "Batteria 9 V"
+      },
+      "status": "bound"
+    },
+    "led12.1": {
+      "class_name": "LED",
+      "terminal_nodes": {
+        "anode": "N002",
+        "cathode": "N003"
+      },
+      "value_data": {
+        "model": "LED_RED_TYP",
+        "source": "manual_testbench_assumption",
+        "label_text": "L1 LED, colore non specificato",
+        "viewer_override": {
+          "label": "L1",
+          "display_value": "LED"
+        }
+      },
+      "status": "bound"
+    },
+    "led12.2": {
+      "class_name": "LED",
+      "terminal_nodes": {
+        "anode": "N002",
+        "cathode": "N004"
+      },
+      "value_data": {
+        "model": "LED_RED_TYP",
+        "source": "manual_testbench_assumption",
+        "label_text": "L2 LED, colore non specificato",
+        "viewer_override": {
+          "label": "L2",
+          "display_value": "LED"
+        }
+      },
+      "status": "bound"
+    },
+    "npn_transistor18.1": {
+      "class_name": "NPN_Transistor",
+      "terminal_nodes": {
+        "B": "N005",
+        "C": "N006",
+        "E": "N001"
+      },
+      "value_data": {
+        "model": "BC548_TYP",
+        "source": "manual_from_image_label",
+        "label_text": "Q1 BC548",
+        "viewer_override": {
+          "label": "Q1",
+          "display_value": "BC548"
+        }
+      },
+      "status": "bound"
+    },
+    "npn_transistor18.2": {
+      "class_name": "NPN_Transistor",
+      "terminal_nodes": {
+        "B": "N007",
+        "C": "N008",
+        "E": "N001"
+      },
+      "value_data": {
+        "model": "BC548_TYP",
+        "source": "manual_from_image_label",
+        "label_text": "Q2 BC548",
+        "viewer_override": {
+          "label": "Q2",
+          "display_value": "BC548"
+        }
+      },
+      "status": "bound"
+    },
+    "polarized_capacitor20.1": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "positive": "N006",
+        "negative": "N007"
+      },
+      "value_data": {
+        "value": 10,
+        "unit": "uf",
+        "source": "manual_testbench_assumption",
+        "label_text": "C1 10 uF nominale (valore non visibile)"
+      },
+      "status": "bound"
+    },
+    "polarized_capacitor20.2": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "negative": "N005",
+        "positive": "N008"
+      },
+      "value_data": {
+        "value": 10,
+        "unit": "uf",
+        "source": "manual_testbench_assumption",
+        "label_text": "C2 10 uF nominale (valore non visibile)"
+      },
+      "status": "bound"
+    },
+    "resistor22.1": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N003",
+        "t2": "N006"
+      },
+      "value_data": {
+        "value": 470,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "R1 470 ohm"
+      },
+      "status": "bound"
+    },
+    "resistor22.2": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N002",
+        "t2": "N007"
+      },
+      "value_data": {
+        "value": 47,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R2 47 kohm"
+      },
+      "status": "bound"
+    },
+    "resistor22.3": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N002",
+        "t2": "N005"
+      },
+      "value_data": {
+        "value": 47,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R3 47 kohm"
+      },
+      "status": "bound"
+    },
+    "resistor22.4": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N004",
+        "t2": "N008"
+      },
+      "value_data": {
+        "value": 470,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "R4 470 ohm"
+      },
+      "status": "bound"
+    }
+  },
+  "nodes": {
+    "battery2.1_negative": {
+      "label": "GND",
+      "source": "manual_from_battery_reference",
+      "label_text": "Polo negativo batteria",
+      "node": "N001"
+    },
+    "battery2.1_positive": {
+      "label": "VCC",
+      "source": "manual_from_image_label",
+      "label_text": "+9 V",
+      "node": "N002"
+    },
+    "npn_transistor18.1_B": {
+      "label": "Q1_BASE",
+      "source": "inferred_from_validated_graph",
+      "node": "N005"
+    },
+    "npn_transistor18.1_C": {
+      "label": "Q1_COLLECTOR_L1",
+      "source": "inferred_from_validated_graph",
+      "node": "N006"
+    },
+    "npn_transistor18.2_B": {
+      "label": "Q2_BASE",
+      "source": "inferred_from_validated_graph",
+      "node": "N007"
+    },
+    "npn_transistor18.2_C": {
+      "label": "Q2_COLLECTOR_L2",
+      "source": "inferred_from_validated_graph",
+      "node": "N008"
+    }
+  },
+  "spice_topology_overlay": [],
+  "simulation": {
+    "analyses": [
+      "op",
+      "tran"
+    ],
+    "tran": {
+      "step": "1ms",
+      "stop": "3s"
+    }
+  },
+  "missing": [],
+  "stats": {
+    "components_total": 11,
+    "bound_components": 11,
+    "missing_components": 0,
+    "not_required_components": 0,
+    "unsupported_components": 0,
+    "supplies_count": 1,
+    "manual_nodes_count": 6
+  }
+}

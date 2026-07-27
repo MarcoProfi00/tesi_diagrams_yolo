@@ -41,6 +41,23 @@ models:
     # Modello PNP minimale per schemi che non riportano un part number.
     line: ".model PNP_GENERIC PNP"
 
+  BC108_TYP:
+    # Q1 e' indicato come AC108 nell'immagine c01, ma simbolo e Darlington
+    # inferiore sono NPN. Il modello segue la topologia elettrica rappresentata.
+    line: ".model BC108_TYP NPN(BF=120 VAF=50 IKF=100m)"
+
+  BC178_TYP:
+    # Driver PNP di piccolo segnale del Darlington superiore di c01.
+    line: ".model BC178_TYP PNP(BF=120 VAF=50 IKF=100m)"
+
+  2N5294_TYP:
+    # Transistor finale NPN: modello tipico semplificato per analisi funzionali.
+    line: ".model 2N5294_TYP NPN(BF=40 VAF=50 IKF=3)"
+
+  2N6107_TYP:
+    # Transistor finale PNP: modello tipico semplificato per analisi funzionali.
+    line: ".model 2N6107_TYP PNP(BF=40 VAF=50 IKF=3)"
+
   2N2222:
     line: ".model 2N2222 NPN(IS=14.34f BF=255.9 VAF=74.03 IKF=0.2847 ISE=14.34f NE=1.307 BR=6.092 NR=1.005 VAR=11.96 IKR=0.0 ISC=0.0 NC=2 RB=10 RC=1 RE=0.1 CJE=22.01p VJE=0.75 MJE=0.377 CJC=7.306p VJC=0.75 MJC=0.3416 TF=411.1p TR=46.91n)"
 
@@ -56,6 +73,13 @@ models:
     # Modello tipico isolato per circuiti di soglia. BF=250 assume il gruppo
     # intermedio B quando il suffisso A/B/C non e leggibile nello schema.
     line: ".model BC547_TYP NPN(BF=250 VAF=50 IKF=100m)"
+
+  BC548_TYP:
+    # Modello funzionale tipico del BC548 per circuiti a bassa tensione.
+    # Il gruppo di guadagno A/B/C non e indicato nell'immagine c02. Le
+    # resistenze e capacita parassite evitano la commutazione ideale che rende
+    # numericamente singolare il multivibratore, senza alterarne la topologia.
+    line: ".model BC548_TYP NPN(IS=1e-14 BF=250 VAF=30 IKF=100m RB=100 RC=1 RE=0.2 CJE=12p VJE=0.7 MJE=0.33 CJC=4p VJC=0.5 MJC=0.33 TF=0.5n TR=50n)"
 
   BC557_TYP:
     # Complementare PNP del modello tipico BC547 usato nello stesso banco.
@@ -122,3 +146,62 @@ models:
       output_resistance: "ROUT NAMP OUT 5"
       supply_bleed: "RBLEED VCC VEE 100k"
       footer: ".ends LM386_SIMPLE"
+
+  TDA2003_SIMPLE:
+    # Equivalente funzionale generale a cinque terminali per amplificatori
+    # audio di potenza TDA2003 in configurazione ad alimentazione singola.
+    # Conserva ingresso differenziale, polarizzazione interna a meta'
+    # alimentazione, saturazione entro i rail e bassa resistenza d'uscita.
+    # Non modella protezioni, limite di corrente, dinamica termica o THD del
+    # componente reale e va quindi usato solo per verifiche funzionali della
+    # rete esterna e del percorso audio.
+    lines:
+      header: ".subckt TDA2003_SIMPLE INP INM VCC VEE OUT"
+      mid_supply: "EREF VREF VEE VCC VEE 0.5"
+      input_bias_non_inverting: "RINP INP VREF 1Meg"
+      input_bias_inverting: "RINM INM VREF 1Meg"
+      limited_amplifier: "BAMP NAMP VEE V={0.75+(V(VCC,VEE)-1.5)*(0.5+0.5*tanh((100000*V(INP,INM))/(0.5*(V(VCC,VEE)-1.5))))}"
+      output_resistance: "ROUT NAMP OUT 0.2"
+      supply_bleed: "RBLEED VCC VEE 100k"
+      footer: ".ends TDA2003_SIMPLE"
+
+  UA741_TI:
+    # Macromodello PSpice ufficiale TI SLOJ138. A differenza di un VCVS
+    # ideale conserva l'interazione con le alimentazioni, necessaria in c01
+    # perche i pin 7 e 4 pilotano i due Darlington attraverso R3 e R2.
+    # Ordine pin: IN+, IN-, VCC+, VCC-, OUT.
+    lines:
+      header: ".SUBCKT UA741_TI 1 2 3 4 5"
+      c1: "C1 11 12 4.664E-12"
+      c2: "C2 6 7 20.00E-12"
+      dc: "DC 5 53 DX"
+      de: "DE 54 5 DX"
+      dlp: "DLP 90 91 DX"
+      dln: "DLN 92 90 DX"
+      dp: "DP 4 3 DX"
+      egnd: "EGND 99 0 POLY(2) (3,0) (4,0) 0 .5 .5"
+      fb: "FB 7 99 POLY(5) VB VC VE VLP VLN 0 10.61E6 -10E6 10E6 10E6 -10E6"
+      ga: "GA 6 0 11 12 137.7E-6"
+      gcm: "GCM 0 6 10 99 2.574E-9"
+      iee: "IEE 10 4 DC 10.16E-6"
+      hlim: "HLIM 90 0 VLIM 1K"
+      q1: "Q1 11 2 13 QX"
+      q2: "Q2 12 1 14 QX"
+      r2: "R2 6 9 100.0E3"
+      rc1: "RC1 3 11 7.957E3"
+      rc2: "RC2 3 12 7.957E3"
+      re1: "RE1 13 10 2.740E3"
+      re2: "RE2 14 10 2.740E3"
+      ree: "REE 10 99 19.69E6"
+      ro1: "RO1 8 5 150"
+      ro2: "RO2 7 99 150"
+      rp: "RP 3 4 18.11E3"
+      vb: "VB 9 0 DC 0"
+      vc: "VC 3 53 DC 2.600"
+      ve: "VE 54 4 DC 2.600"
+      vlim: "VLIM 7 8 DC 0"
+      vlp: "VLP 91 0 DC 25"
+      vln: "VLN 0 92 DC 25"
+      model_dx: ".MODEL DX D(IS=800.0E-18)"
+      model_qx: ".MODEL QX NPN(IS=800.0E-18 BF=62.50)"
+      footer: ".ENDS UA741_TI"
