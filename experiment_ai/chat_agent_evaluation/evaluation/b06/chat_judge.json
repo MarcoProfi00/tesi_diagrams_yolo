@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "metadata": {
+    "circuit_id": "b06",
+    "mode": "chat",
+    "judge_model": "gpt-5.5",
+    "reasoning_effort": "medium",
+    "prompt_version": "v1",
+    "packet_schema_version": 3,
+    "prompt_sha256": "d17f518aca6f6b3505a98982020c735e8c8472457e1ad7689f19388f580e916f",
+    "response_schema_sha256": "aeb6c6559232490d3b870ef82e3870ea1e200eace7ae4d06ed10128cdf2f2a3c",
+    "packet_sha256": "f0e89252cb396ca4716142f2199d186307867827a41d010656e4520ff3bb3a0d",
+    "summary_sha256": "e65788781f62eec5e38a5c1b08dc7a9ecd9e694a8b202a6534862637a1f86b5f"
+  },
+  "task": {
+    "type": "diagnosis",
+    "outcome": "success",
+    "outcome_reason": "La traiettoria localizza in modo supportato il silenzio alla mancanza di segnale d'ingresso/front-end nella simulazione, escludendo come primi sospetti l'uscita LM386, il carico e il tratto N004-N010 modellato."
+  },
+  "criteria": {
+    "task_achievement": {
+      "score": 4,
+      "reason": "Risponde alla richiesta diagnostica indicando il problema più probabile nel modello: assenza di eccitazione dal lato antenna/front-end, non guasto dimostrato dell'altoparlante o LM386."
+    },
+    "technical_correctness": {
+      "score": 4,
+      "reason": "Il ragionamento è coerente con alimentazione presente, nodi di uscita nulli in base run e propagazione del segnale quando iniettato a valle."
+    },
+    "scenario_quality": {
+      "score": 3,
+      "reason": "Gli scenari di iniezione su N010, N005 e N004 sono pertinenti e localizzano per stadi; manca solo un test eseguito su N001/antenna per chiudere completamente il front-end."
+    },
+    "evidence_interpretation": {
+      "score": 4,
+      "reason": "Le variazioni Vpp e le aspettative soddisfatte sono lette correttamente; la conclusione distingue diagnosi parziale da correzione del sintomo."
+    },
+    "conclusion_quality": {
+      "score": 4,
+      "reason": "Conclusione chiara, cauta e proporzionata: non dichiara riparazione né guasto fisico certo, ma delimita il problema nel modello simulato."
+    }
+  },
+  "critical_errors": {
+    "false_success": {
+      "present": false,
+      "reason": ""
+    },
+    "unsupported_claims": {
+      "present": false,
+      "reason": ""
+    },
+    "wrong_interpretation": {
+      "present": false,
+      "reason": ""
+    }
+  },
+  "evidence": [
+    "Base run: alimentazione presente con N002=9 V e N007≈9 V, ma N010=0, N009=0 e N003=0.",
+    "spice_emit_report: antenna1.1 skipped/unsupported, quindi nessuna sorgente RF emessa nella base run.",
+    "scenario_1: iniezione SIN(0 5m 1000) su N010 produce v(N009)=0.1249347616 Vpp e v(N003)=0.1247464258 Vpp.",
+    "scenario_3: iniezione su N005 attiva v(N006)=1.250800063 Vpp e v(N010)=1.221923666 Vpp.",
+    "scenario_4: iniezione su N004 produce v(N005)=0.004141652 Vpp e v(N010)=0.497822874 Vpp."
+  ],
+  "final_assessment": "Diagnosi ben supportata: nel modello SPICE la catena audio e il tratto dal rivelatore verso l'LM386 rispondono quando stimolati, mentre la base run resta muta perché manca un segnale utile d'ingresso, coerentemente con l'antenna non emessa. L'esperimento non dimostra una correzione, ma per un compito diagnostico la localizzazione è sufficiente.",
+  "computed_score": {
+    "weighted_total": 95,
+    "maximum": 100
+  }
+}

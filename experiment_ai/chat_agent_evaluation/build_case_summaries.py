@@ -17,6 +17,23 @@ from typing import Any
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parents[1]
 DEFAULT_OUTPUT_DIR = SCRIPT_DIR / "evaluation"
+MAX_COMPARISON_SEQUENCE_ITEMS = 64
+COMPARISON_ADMIN_FIELDS = {
+    "source_format",
+    "scenario_id",
+    "scenario_title",
+    "scenario_intent",
+    "base_output_dir",
+    "scenario_run_dir",
+    "base_stdout",
+    "scenario_stdout",
+    "base_stderr",
+    "scenario_stderr",
+    "quantities",
+    "summary",
+    "diagnostic_outcome",
+    "created_or_updated_at",
+}
 
 
 def read_json(path: Path, *, required: bool = True) -> Any:
@@ -80,6 +97,54 @@ def compact_turn(turn: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def compact_comparison_value(value: Any) -> Any:
+    """Mantiene le prove strutturate senza copiare sequenze temporali enormi."""
+    if isinstance(value, dict):
+        return {
+            str(key): compact_comparison_value(item)
+            for key, item in value.items()
+        }
+    if isinstance(value, list):
+        if len(value) > MAX_COMPARISON_SEQUENCE_ITEMS:
+            return {
+                "sequence_omitted": True,
+                "item_count": len(value),
+            }
+        return [compact_comparison_value(item) for item in value]
+    return value
+
+
+def select_comparison_evidence(comparison: dict[str, Any] | None) -> dict[str, Any]:
+    """Seleziona dinamicamente le prove aggiuntive prodotte dal confronto."""
+    if not isinstance(comparison, dict):
+        return {}
+    return {
+        key: compact_comparison_value(value)
+        for key, value in comparison.items()
+        if key not in COMPARISON_ADMIN_FIELDS and value is not None
+    }
+
+
+def select_led_profiles(scenario_dir: Path | None) -> dict[str, Any]:
+    """Raccoglie i profili temporali di tutti i LED dello scenario."""
+    if scenario_dir is None:
+        return {}
+    viewer = read_json(
+        scenario_dir / "run" / "13_viewer_model.json",
+        required=False,
+    )
+    if not isinstance(viewer, dict):
+        return {}
+    profiles = ((viewer.get("transient") or {}).get("led_profiles") or {})
+    if not isinstance(profiles, dict):
+        return {}
+    return {
+        str(component_id): compact_comparison_value(profile)
+        for component_id, profile in profiles.items()
+        if isinstance(profile, dict)
+    }
+
+
 def base_evidence(run_dir: Path) -> tuple[dict[str, Any], list[str]]:
     json_files = {
         "graph": "01_graph.json",
@@ -125,6 +190,7 @@ def scenario_summary(
         definition_path = scenario_dir / "scenario.json"
         status_path = scenario_dir / "scenario_status.json"
         comparison_path = scenario_dir / "scenario_comparison.json"
+        viewer_path = scenario_dir / "run" / "13_viewer_model.json"
 
         saved_definition = read_json(definition_path, required=False)
         if isinstance(saved_definition, dict):
@@ -138,6 +204,8 @@ def scenario_summary(
         comparison = read_json(comparison_path, required=False)
         if comparison is not None:
             sources.append(project_path(comparison_path))
+        if viewer_path.is_file():
+            sources.append(project_path(viewer_path))
 
     return (
         {
@@ -162,6 +230,8 @@ def scenario_summary(
                     comparison.get("summary") if comparison else None
                 ),
                 "quantities": comparison.get("quantities", []) if comparison else [],
+                "comparison_evidence": select_comparison_evidence(comparison),
+                "led_profiles": select_led_profiles(scenario_dir),
             },
         },
         sources,

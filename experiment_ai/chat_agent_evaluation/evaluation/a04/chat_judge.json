@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "metadata": {
+    "circuit_id": "a04",
+    "mode": "chat",
+    "judge_model": "gpt-5.5",
+    "reasoning_effort": "medium",
+    "prompt_version": "v1",
+    "packet_schema_version": 3,
+    "prompt_sha256": "d17f518aca6f6b3505a98982020c735e8c8472457e1ad7689f19388f580e916f",
+    "response_schema_sha256": "aeb6c6559232490d3b870ef82e3870ea1e200eace7ae4d06ed10128cdf2f2a3c",
+    "packet_sha256": "0b4fa89a35126d654099840ca920e1bc5056425ab2feec6b6056a2c0b80186ae",
+    "summary_sha256": "b41992e470112d7072aa0ca859e6a72c1775cae4b32106a59749eb6ea2a119b6"
+  },
+  "task": {
+    "type": "diagnosis",
+    "outcome": "success",
+    "outcome_reason": "La causa è stata localizzata nel condensatore di accoppiamento d’ingresso Ccapacitor4_1 e la correzione a 1u è stata verificata con aumento di Vpp su N003 e N006 secondo lo scenario eseguito."
+  },
+  "criteria": {
+    "task_achievement": {
+      "score": 4,
+      "reason": "Soddisfa l’obiettivo iniziale: individua una causa plausibile e verifica una correzione funzionante con misure prima/dopo."
+    },
+    "technical_correctness": {
+      "score": 4,
+      "reason": "Il ragionamento è coerente: il trasferimento N002→N003 era attenuato e l’aumento di C1 migliora sia il nodo base sia l’uscita."
+    },
+    "scenario_quality": {
+      "score": 4,
+      "reason": "Gli scenari coprono carico, bias e infine C1; lo scenario 4 è mirato al sintomo e ha criteri misurabili su N003 e N006."
+    },
+    "evidence_interpretation": {
+      "score": 4,
+      "reason": "Le misure Vpp e i confronti sono riportati correttamente: carico marginale, bias peggiorativo/non risolutivo, C1 risolutivo."
+    },
+    "conclusion_quality": {
+      "score": 4,
+      "reason": "Conclusione chiara, diretta, con valori prima/dopo e limiti esplicitati senza proporre altri scenari."
+    }
+  },
+  "critical_errors": {
+    "false_success": {
+      "present": false,
+      "reason": ""
+    },
+    "unsupported_claims": {
+      "present": false,
+      "reason": ""
+    },
+    "wrong_interpretation": {
+      "present": false,
+      "reason": ""
+    }
+  },
+  "evidence": [
+    "scenario_4: Ccapacitor4_1 modificato da 100n a 1u con SPICE status success.",
+    "scenario_4: v(N003) Vpp aumenta da 0.00671298 V a 0.01909394 V, expectation increased soddisfatta.",
+    "scenario_4: v(N006) Vpp aumenta da 0.0923912478 V a 0.228683082 V, expectation increased soddisfatta.",
+    "scenario_4: rapporto Vpp(N003)/Vpp(N002) passa da 0.3357009501 a 0.9548447632, sopra min_ratio 0.5.",
+    "scenario_3: modifica Rresistor22_2 a 33k non risolve, v(N006) cala a 0.0857268783 Vpp e gain 4.287 < 5."
+  ],
+  "final_assessment": "Traiettoria riuscita: dopo test non risolutivi su carico e bias, lo scenario su C1 verifica materialmente l’attenuazione d’ingresso e mostra una correzione efficace che aumenta l’ampiezza d’uscita. La conclusione è ben supportata dai dati SPICE disponibili.",
+  "computed_score": {
+    "weighted_total": 100,
+    "maximum": 100
+  }
+}

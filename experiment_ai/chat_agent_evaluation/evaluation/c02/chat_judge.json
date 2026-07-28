@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "metadata": {
+    "circuit_id": "c02",
+    "mode": "chat",
+    "judge_model": "gpt-5.5",
+    "reasoning_effort": "medium",
+    "prompt_version": "v1",
+    "packet_schema_version": 3,
+    "prompt_sha256": "d17f518aca6f6b3505a98982020c735e8c8472457e1ad7689f19388f580e916f",
+    "response_schema_sha256": "aeb6c6559232490d3b870ef82e3870ea1e200eace7ae4d06ed10128cdf2f2a3c",
+    "packet_sha256": "f1f434599f4dc063fa00b23ec4d61a8d8d637260b0f5f91ad4bdac99dc108884",
+    "summary_sha256": "2b497308d2f93d8f403b79f4df5cad966692d09148ded0702565e6c4b074bff3"
+  },
+  "task": {
+    "type": "diagnosis",
+    "outcome": "partial_success",
+    "outcome_reason": "La traiettoria esclude correttamente che il circuito simulato resti fisso acceso e mostra che C1 influenza il timing, ma non identifica una causa verificata del sintomo reale riferito dall'utente."
+  },
+  "criteria": {
+    "task_achievement": {
+      "score": 2,
+      "reason": "Fornisce un risultato utile sul modello SPICE e un'indicazione su C1, ma non chiude la diagnosi del montaggio reale né verifica una causa alternativa."
+    },
+    "technical_correctness": {
+      "score": 3,
+      "reason": "Il ragionamento sul multivibratore e sul lampeggio regolare è coerente; alcune affermazioni su assunzioni dei componenti e sul sintomo finale sono meno supportate."
+    },
+    "scenario_quality": {
+      "score": 2,
+      "reason": "Lo scenario su C1 è pertinente alla costante di tempo, ma verifica soprattutto una sensibilità generica e non direttamente il sintomo 'entrambi accesi senza alternarsi'."
+    },
+    "evidence_interpretation": {
+      "score": 3,
+      "reason": "Interpreta correttamente led_profiles e confronto scenario/base, riconoscendo che scenario_3 è solo parziale; non dichiara una correzione non dimostrata."
+    },
+    "conclusion_quality": {
+      "score": 3,
+      "reason": "Conclusione chiara e prudente: il circuito simulato lampeggia e C1 è un parametro di temporizzazione. C'è però una carenza nel dire che non vi sia un sintomo specifico oltre a 'Concludi esperimento'."
+    }
+  },
+  "critical_errors": {
+    "false_success": {
+      "present": false,
+      "reason": ""
+    },
+    "unsupported_claims": {
+      "present": true,
+      "reason": "Viene ripetuto che i condensatori da 10 uF sono una 'manual_testbench_assumption', ma nei dati strutturati forniti i valori risultano semplicemente bound senza tale fonte."
+    },
+    "wrong_interpretation": {
+      "present": false,
+      "reason": ""
+    }
+  },
+  "evidence": [
+    "Base: spice_status success, skipped_elements 0, singleton_nodes_count 0.",
+    "Base led_profiles: Dled12_1 e Dled12_2 sono entrambi state='blinking' con regular_period=true e frequenza circa 1.668 Hz.",
+    "Scenario_3: Cpolarized_capacitor20_1 cambiato da 10u a 4.7u, SPICE success.",
+    "Scenario_3 comparison_summary: aspettative 2/2 soddisfatte, temporal_met=true, ma diagnostic_outcome='partially_resolved' e stop_automation=false.",
+    "Scenario_3 led_profiles: lampeggio ancora regolare, frequenze circa 2.273 Hz e 2.274 Hz."
+  ],
+  "final_assessment": "La diagnosi è utile ma non completa: dimostra che nel modello simulato i LED non restano stabilmente accesi e che C1 modifica il timing, quindi lo scenario non spiega definitivamente il sintomo reale. La conclusione evita un falso successo, ma include qualche affermazione non supportata dai dati strutturati disponibili.",
+  "computed_score": {
+    "weighted_total": 65,
+    "maximum": 100
+  }
+}

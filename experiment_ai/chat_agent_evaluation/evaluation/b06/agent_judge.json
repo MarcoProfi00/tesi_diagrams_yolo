@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "metadata": {
+    "circuit_id": "b06",
+    "mode": "agent",
+    "judge_model": "gpt-5.5",
+    "reasoning_effort": "medium",
+    "prompt_version": "v1",
+    "packet_schema_version": 3,
+    "prompt_sha256": "d17f518aca6f6b3505a98982020c735e8c8472457e1ad7689f19388f580e916f",
+    "response_schema_sha256": "aeb6c6559232490d3b870ef82e3870ea1e200eace7ae4d06ed10128cdf2f2a3c",
+    "packet_sha256": "28f20ed137c6864cfcf96419756ba316362dfbc8d023849e9f72ab3a77af7109",
+    "summary_sha256": "2972612418d04840a18ccc5272abe2d7697c92fbd1aa09232527ea35b53f482b"
+  },
+  "task": {
+    "type": "diagnosis",
+    "outcome": "success",
+    "outcome_reason": "La traiettoria localizza in modo supportato il silenzio a monte dell'amplificatore audio, escludendo come guasto principale LM386 e carico altoparlante nel modello simulato."
+  },
+  "criteria": {
+    "task_achievement": {
+      "score": 3,
+      "reason": "Risponde al sintomo con una localizzazione utile; non isola un singolo componente del percorso RF/rivelazione."
+    },
+    "technical_correctness": {
+      "score": 3,
+      "reason": "Il ragionamento è coerente: con segnale in ingresso il ramo audio produce uscita, mentre in base manca eccitazione. La causa resta formulata a livello di blocco."
+    },
+    "scenario_quality": {
+      "score": 3,
+      "reason": "Lo scenario di iniezione su N010 è pertinente per separare stadio audio e parte a monte; manca un test ulteriore sul rivelatore o sul percorso RF."
+    },
+    "evidence_interpretation": {
+      "score": 4,
+      "reason": "Le misure sono lette correttamente: ingresso iniettato non nullo, uscita sul carico aumentata e aspettative soddisfatte."
+    },
+    "conclusion_quality": {
+      "score": 3,
+      "reason": "Conclusione chiara e prudente, con corretto richiamo ai limiti SPICE; leggermente ampia nel citare tutto il tratto antenna-rivelazione."
+    }
+  },
+  "critical_errors": {
+    "false_success": {
+      "present": false,
+      "reason": ""
+    },
+    "unsupported_claims": {
+      "present": false,
+      "reason": ""
+    },
+    "wrong_interpretation": {
+      "present": false,
+      "reason": ""
+    }
+  },
+  "evidence": [
+    "Scenario agent_scenario_1: v(N010) passa da 1.28e-11 Vpp a 0.0200 Vpp con sorgente SIN applicata.",
+    "Scenario agent_scenario_1: v(N009,N003) passa da 1.04e-11 Vpp a 0.0296 Vpp, aspettativa magnitude_increased soddisfatta.",
+    "Scenario agent_scenario_1: gain_comparison disponibile e sufficiente, scenario_gain circa 1.48 maggiore del minimo 0.5.",
+    "Base run: N010 e N009 sono a 0 V in operating point, coerenti con assenza di segnale audio.",
+    "spice_emit_report: antenna1.1 non emessa/supportata, quindi il nodo antenna/RF non è eccitato nel modello."
+  ],
+  "final_assessment": "Diagnosi sostanzialmente corretta: lo stadio audio simulato risponde a un segnale applicato e il silenzio è localizzato a monte dell'ingresso LM386. Le prove non identificano il componente esatto nel percorso antenna/rivelazione, ma sono sufficienti per la domanda posta.",
+  "computed_score": {
+    "weighted_total": 80,
+    "maximum": 100
+  }
+}

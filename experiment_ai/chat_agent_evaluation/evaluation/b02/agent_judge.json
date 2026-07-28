@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "metadata": {
+    "circuit_id": "b02",
+    "mode": "agent",
+    "judge_model": "gpt-5.5",
+    "reasoning_effort": "medium",
+    "prompt_version": "v1",
+    "packet_schema_version": 3,
+    "prompt_sha256": "d17f518aca6f6b3505a98982020c735e8c8472457e1ad7689f19388f580e916f",
+    "response_schema_sha256": "aeb6c6559232490d3b870ef82e3870ea1e200eace7ae4d06ed10128cdf2f2a3c",
+    "packet_sha256": "dc6354347a20c9fee520cc6397a714d413461a0390b647400e8403b9aa40d5d1",
+    "summary_sha256": "0f298ad19704c00f9614f620b988d564bd863374913e49063cf16ad64032127e"
+  },
+  "task": {
+    "type": "diagnosis",
+    "outcome": "partial_success",
+    "outcome_reason": "La traiettoria conferma che nella simulazione base entrambi i LED sono steady_on e che i tentativi non producono lampeggio regolare, ma la causa specifica attribuita al bias eccessivo delle basi non è dimostrata in modo conclusivo."
+  },
+  "criteria": {
+    "task_achievement": {
+      "score": 2,
+      "reason": "Risponde parzialmente al sintomo localizzando la conduzione simultanea, ma non isola con certezza la causa primaria del mancato astabile."
+    },
+    "technical_correctness": {
+      "score": 2,
+      "reason": "È corretto osservare lo stato simmetrico con entrambi i transistor accesi; è invece debole la conclusione che i 2.2 kΩ siano la causa, dato che la correzione a 22 kΩ non verifica il lampeggio."
+    },
+    "scenario_quality": {
+      "score": 3,
+      "reason": "I due test di startup e il test sui resistori di base sono pertinenti e includono aspettative temporali; alcune aspettative di semplice cambiamento/nonzero sono però insufficienti da sole per l'obiettivo di lampeggio alternato."
+    },
+    "evidence_interpretation": {
+      "score": 3,
+      "reason": "Interpreta correttamente il fallimento dei criteri temporali e lo steady_on di base, ma trasforma evidenze parziali in una diagnosi causale troppo forte."
+    },
+    "conclusion_quality": {
+      "score": 2,
+      "reason": "La conclusione è chiara e ammette che non c'è correzione verificata, ma presenta come localizzata una causa non pienamente provata."
+    }
+  },
+  "critical_errors": {
+    "false_success": {
+      "present": true,
+      "reason": "Dichiara una causa localizzata nonostante tutti gli scenari con requisito temporale abbiano temporal_met=false e la correzione proposta non abbia prodotto oscillazione regolare."
+    },
+    "unsupported_claims": {
+      "present": true,
+      "reason": "L'affermazione che le resistenze di base da 2.2 kΩ siano la causa del blocco è solo un'ipotesi: lo scenario che le porta a 22 kΩ resta non periodico e non conferma la correzione."
+    },
+    "wrong_interpretation": {
+      "present": false,
+      "reason": ""
+    }
+  },
+  "evidence": [
+    "Simulazione base: Dled12_1 e Dled12_2 hanno state=steady_on, duty_cycle=1.0 e correnti LED circa 0.01548 A.",
+    "Punto operativo base: N004=N006 circa 0.76997 V e N005=N007 circa 0.09362 V, coerente con stato simmetrico.",
+    "Scenario 1 e scenario 2: SPICE success, ma temporal_expectation per Dled12_1 met=false con state=transient_pulse e regular_period=false.",
+    "Scenario 3: Rresistor22_2 e Rresistor22_3 cambiati a 22k, ma temporal_met=false; Dled12_1 resta transient_pulse e non blinking regolare."
+  ],
+  "final_assessment": "Diagnosi utile ma solo parziale: il comportamento simulato con entrambi i rami in conduzione è supportato, mentre la causa specifica del bias eccessivo e la localizzazione definitiva non sono verificate dalle prove disponibili.",
+  "computed_score": {
+    "weighted_total": 60,
+    "maximum": 100
+  }
+}

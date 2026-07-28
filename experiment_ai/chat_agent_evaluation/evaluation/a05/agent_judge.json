@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "metadata": {
+    "circuit_id": "a05",
+    "mode": "agent",
+    "judge_model": "gpt-5.5",
+    "reasoning_effort": "medium",
+    "prompt_version": "v1",
+    "packet_schema_version": 3,
+    "prompt_sha256": "d17f518aca6f6b3505a98982020c735e8c8472457e1ad7689f19388f580e916f",
+    "response_schema_sha256": "aeb6c6559232490d3b870ef82e3870ea1e200eace7ae4d06ed10128cdf2f2a3c",
+    "packet_sha256": "d7f3245f41778d0032c1d869ca364d9ecbbd99ccda3b0f1e4d8eeabe975eacd4",
+    "summary_sha256": "036e04e44288aef97bd9a13c1963fa8568585c186eab3c3fb6c893a30b7f7e6b"
+  },
+  "task": {
+    "type": "diagnosis",
+    "outcome": "success",
+    "outcome_reason": "La traiettoria localizza in modo supportato il problema principale: il nodo misurato da VMON resta a 0 V perché il ramo N003/N001 non è alimentato nella netlist base."
+  },
+  "criteria": {
+    "task_achievement": {
+      "score": 4,
+      "reason": "Risponde direttamente al sintomo indicando una causa plausibile e localizzata, senza richiedere una correzione non domandata."
+    },
+    "technical_correctness": {
+      "score": 4,
+      "reason": "Il ragionamento è coerente con la topologia: VMON misura N001 verso massa, N001 dipende da N003 tramite 1 kΩ, e N003 non ha sorgenti nella base."
+    },
+    "scenario_quality": {
+      "score": 4,
+      "reason": "Lo scenario è pertinente: aggiunge una sorgente controllata su N003 e verifica se N003 e N001 diventano non nulli, testando l'ipotesi di alimentazione mancante."
+    },
+    "evidence_interpretation": {
+      "score": 4,
+      "reason": "Interpreta correttamente i dati SPICE: base a 0 V con warning su n003, scenario con v(N003)=5 V e v(N001)=5 V."
+    },
+    "conclusion_quality": {
+      "score": 4,
+      "reason": "Conclusione chiara, proporzionata alle prove e distingue diagnosi da correzione verificata."
+    }
+  },
+  "critical_errors": {
+    "false_success": {
+      "present": false,
+      "reason": ""
+    },
+    "unsupported_claims": {
+      "present": false,
+      "reason": ""
+    },
+    "wrong_interpretation": {
+      "present": false,
+      "reason": ""
+    }
+  },
+  "evidence": [
+    "Netlist base: solo C N002-0 e R N003-N001; nessuna sorgente emessa.",
+    "Base operating point: v(n001)=0.0, v(n003)=0.0, v(n002)=0.0.",
+    "ngspice stderr: warning di singular matrix sul nodo n003.",
+    "Scenario agent_scenario_1: sorgente 5 V tra N003 e massa, SPICE success.",
+    "Scenario agent_scenario_1: v(N003) passa da 0 a 5 V e v(N001) da 0 a 5 V; entrambe le aspettative nonzero sono soddisfatte."
+  ],
+  "final_assessment": "Diagnosi riuscita: le evidenze supportano che la lettura a 0 V deriva dall'assenza di alimentazione/connessione su N003, non da un problema dimostrato del voltmetro.",
+  "computed_score": {
+    "weighted_total": 100,
+    "maximum": 100
+  }
+}

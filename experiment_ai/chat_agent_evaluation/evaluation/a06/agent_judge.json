@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "metadata": {
+    "circuit_id": "a06",
+    "mode": "agent",
+    "judge_model": "gpt-5.5",
+    "reasoning_effort": "medium",
+    "prompt_version": "v1",
+    "packet_schema_version": 3,
+    "prompt_sha256": "d17f518aca6f6b3505a98982020c735e8c8472457e1ad7689f19388f580e916f",
+    "response_schema_sha256": "aeb6c6559232490d3b870ef82e3870ea1e200eace7ae4d06ed10128cdf2f2a3c",
+    "packet_sha256": "a9490d6d319b140015acaea9fe45f66e86bc5a22f92129b1e86b9e4fb6c9f1e7",
+    "summary_sha256": "9763fc65092e0e0f60a89bf8abb81e8788eacb2f416cca597f1f1707d5ced937"
+  },
+  "task": {
+    "type": "diagnosis",
+    "outcome": "partial_success",
+    "outcome_reason": "La traiettoria identifica in modo utile il sovrapilotaggio dell’ingresso come causa importante della distorsione, ma attribuisce anche il problema a un bias quasi interdetto con valori non coerenti con l’OP SPICE."
+  },
+  "criteria": {
+    "task_achievement": {
+      "score": 3,
+      "reason": "Risponde al sintomo indicando un problema plausibile e verificato di overdrive, ma la localizzazione sul bias è solo parziale e contiene affermazioni errate."
+    },
+    "technical_correctness": {
+      "score": 2,
+      "reason": "Il ragionamento sul segnale troppo grande è corretto; invece VBE≈0.117 V, gm quasi nullo e transistor quasi interdetto non sono supportati dai dati operativi forniti."
+    },
+    "scenario_quality": {
+      "score": 3,
+      "reason": "Lo scenario di riduzione ingresso è pertinente e diagnostico. Lo scenario sul partitore è meno conclusivo perché le aspettative verificano solo cambiamenti di nodi, non direttamente una riduzione efficace della THD."
+    },
+    "evidence_interpretation": {
+      "score": 2,
+      "reason": "Interpreta correttamente il calo di THD con ingresso ridotto e il mancato miglioramento del secondo test, ma legge in modo incompatibile il punto di lavoro del BJT."
+    },
+    "conclusion_quality": {
+      "score": 2,
+      "reason": "La conclusione è chiara e utile sul sovrapilotaggio, ma presenta con troppa certezza una diagnosi di polarizzazione errata/quasi interdizione non dimostrata."
+    }
+  },
+  "critical_errors": {
+    "false_success": {
+      "present": false,
+      "reason": ""
+    },
+    "unsupported_claims": {
+      "present": true,
+      "reason": "La conclusione afferma gm quasi nullo e transistor quasi interdetto senza misure SPICE riportate che lo supportino."
+    },
+    "wrong_interpretation": {
+      "present": true,
+      "reason": "Il punto operativo indica N002=3.664 V e N003=3.024458 V, quindi VBE≈0.64 V, non circa 0.117 V."
+    }
+  },
+  "evidence": [
+    "Base OP: v(N002)=3.664 V e v(N003)=3.024458 V, quindi VBE≈0.64 V.",
+    "Scenario 1: riducendo Vsignal da 1 Vpk a 50 mVpk, la THD di v(N005) scende da 0.8302 a 0.2238.",
+    "Scenario 1: il guadagno resta disponibile/sufficiente, con scenario_gain≈62.75.",
+    "Scenario 1: quality_acceptable=false e resolved=false, quindi la distorsione migliora ma non risulta pienamente risolta.",
+    "Scenario 2: modificando resistor22.3 a 100k, la THD resta alta, 0.7527, con quality_improved=false e quality_acceptable=false."
+  ],
+  "final_assessment": "Diagnosi parzialmente riuscita: il sovrapilotaggio rispetto alla zona lineare disponibile è ben sostenuto dal confronto THD, ma la parte sulla polarizzazione quasi interdetta è tecnicamente errata rispetto al punto operativo SPICE e indebolisce la localizzazione complessiva.",
+  "computed_score": {
+    "weighted_total": 60,
+    "maximum": 100
+  }
+}

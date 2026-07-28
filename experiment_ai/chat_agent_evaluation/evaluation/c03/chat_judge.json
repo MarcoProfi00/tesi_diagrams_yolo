@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "metadata": {
+    "circuit_id": "c03",
+    "mode": "chat",
+    "judge_model": "gpt-5.5",
+    "reasoning_effort": "medium",
+    "prompt_version": "v1",
+    "packet_schema_version": 3,
+    "prompt_sha256": "d17f518aca6f6b3505a98982020c735e8c8472457e1ad7689f19388f580e916f",
+    "response_schema_sha256": "aeb6c6559232490d3b870ef82e3870ea1e200eace7ae4d06ed10128cdf2f2a3c",
+    "packet_sha256": "b16678295df47956cd0961d220e0e8d7723a3b2c62afe0f7b4ef6f1440d0ce03",
+    "summary_sha256": "8cecace6b4669741a0e4a78dc770a3fd1331cfd1e17e7dc42ae2b909fa454620"
+  },
+  "task": {
+    "type": "diagnosis",
+    "outcome": "partial_success",
+    "outcome_reason": "L’esperimento conferma che aumentando l’ampiezza di ingresso aumenta proporzionalmente l’uscita, quindi l’ingresso basso è una causa plausibile nel modello simulato. Non isola però in modo definitivo la causa del volume basso né verifica un target di volume o qualità."
+  },
+  "criteria": {
+    "task_achievement": {
+      "score": 3,
+      "reason": "Fornisce una diagnosi utile e prudente: ingresso di test probabilmente troppo basso. Mancano però prove su cause alternative e un criterio di volume sufficiente."
+    },
+    "technical_correctness": {
+      "score": 3,
+      "reason": "Il ragionamento su alimentazione, percorso del segnale e risposta proporzionale è corretto. La causalità verso il sintomo resta parziale perché aumentare l’ingresso dimostra sensibilità, non esclusività della causa."
+    },
+    "scenario_quality": {
+      "score": 3,
+      "reason": "Lo scenario eseguito è pertinente per testare l’ipotesi del livello di ingresso e ha aspettative coerenti. La copertura diagnostica è limitata a una sola ipotesi e non distingue rete di guadagno/feedback da livello sorgente."
+    },
+    "evidence_interpretation": {
+      "score": 4,
+      "reason": "Le misure SPICE sono lette correttamente: v(N005), v(N004) e v(N008) aumentano, e i rapporti Vpp sono coerenti con una risposta proporzionale."
+    },
+    "conclusion_quality": {
+      "score": 3,
+      "reason": "La conclusione è chiara e qualificata come non definitiva. Alcune frasi sono leggermente forti nel parlare di causa reale, ma vengono compensate dalle cautele esplicite."
+    }
+  },
+  "critical_errors": {
+    "false_success": {
+      "present": false,
+      "reason": ""
+    },
+    "unsupported_claims": {
+      "present": false,
+      "reason": ""
+    },
+    "wrong_interpretation": {
+      "present": false,
+      "reason": ""
+    }
+  },
+  "evidence": [
+    "scenario_1 modifica VAUDIO_IN da SIN(0 0.02 1000) a SIN(0 0.05 1000) con ngspice status success.",
+    "v(N005).vpp aumenta da 0.0399988024 a 0.0999986278.",
+    "v(N004).vpp aumenta da 3.99475765 a 9.98515868, expectation_met=true.",
+    "v(N008).vpp aumenta da 4.05576527 a 10.13823537, expectation_met=true.",
+    "diagnostic_outcome dello scenario_1 è partially_resolved, non una risoluzione completa."
+  ],
+  "final_assessment": "Traiettoria complessivamente corretta e utile: conferma una diagnosi plausibile legata al basso livello di ingresso nel modello simulato, mantenendo un livello di certezza adeguato. Non raggiunge un successo pieno perché non dimostra che questa sia l’unica causa del volume basso né che il sintomo sia risolto rispetto a un criterio quantitativo.",
+  "computed_score": {
+    "weighted_total": 80,
+    "maximum": 100
+  }
+}

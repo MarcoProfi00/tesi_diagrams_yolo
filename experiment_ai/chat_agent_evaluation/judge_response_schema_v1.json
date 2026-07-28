@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ChatAgentJudgeResponseV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "task",
+    "criteria",
+    "critical_errors",
+    "evidence",
+    "final_assessment"
+  ],
+  "properties": {
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "outcome",
+        "outcome_reason"
+      ],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "diagnosis",
+            "functional_verification",
+            "configuration_goal"
+          ]
+        },
+        "outcome": {
+          "type": "string",
+          "enum": [
+            "success",
+            "partial_success",
+            "failure",
+            "inconclusive"
+          ]
+        },
+        "outcome_reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "criteria": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_achievement",
+        "technical_correctness",
+        "scenario_quality",
+        "evidence_interpretation",
+        "conclusion_quality"
+      ],
+      "properties": {
+        "task_achievement": {
+          "$ref": "#/$defs/scoredCriterion"
+        },
+        "technical_correctness": {
+          "$ref": "#/$defs/scoredCriterion"
+        },
+        "scenario_quality": {
+          "$ref": "#/$defs/scoredCriterion"
+        },
+        "evidence_interpretation": {
+          "$ref": "#/$defs/scoredCriterion"
+        },
+        "conclusion_quality": {
+          "$ref": "#/$defs/scoredCriterion"
+        }
+      }
+    },
+    "critical_errors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "false_success",
+        "unsupported_claims",
+        "wrong_interpretation"
+      ],
+      "properties": {
+        "false_success": {
+          "$ref": "#/$defs/criticalError"
+        },
+        "unsupported_claims": {
+          "$ref": "#/$defs/criticalError"
+        },
+        "wrong_interpretation": {
+          "$ref": "#/$defs/criticalError"
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "final_assessment": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "$defs": {
+    "scoredCriterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "score",
+        "reason"
+      ],
+      "properties": {
+        "score": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "criticalError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "present",
+        "reason"
+      ],
+      "properties": {
+        "present": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

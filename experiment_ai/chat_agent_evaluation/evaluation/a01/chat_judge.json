@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "metadata": {
+    "circuit_id": "a01",
+    "mode": "chat",
+    "judge_model": "gpt-5.5",
+    "reasoning_effort": "medium",
+    "prompt_version": "v1",
+    "packet_schema_version": 3,
+    "prompt_sha256": "d17f518aca6f6b3505a98982020c735e8c8472457e1ad7689f19388f580e916f",
+    "response_schema_sha256": "aeb6c6559232490d3b870ef82e3870ea1e200eace7ae4d06ed10128cdf2f2a3c",
+    "packet_sha256": "da79ebc9087ea5a5a79fb935ac1a756e483a03774d723b090a333cf2b765cd40",
+    "summary_sha256": "2afe997f9ae6b186e2d2a9b328918a29d4523c057ee43eb7850feab7fd0b7e03"
+  },
+  "task": {
+    "type": "diagnosis",
+    "outcome": "success",
+    "outcome_reason": "La traiettoria individua la mancata continuità/alimentazione tra N001 e N002 come causa e verifica una correzione che attiva la lampada mantenendo corrente nel LED."
+  },
+  "criteria": {
+    "task_achievement": {
+      "score": 4,
+      "reason": "Diagnosi, localizzazione e obiettivo correttivo richiesto sono soddisfatti dagli scenari eseguiti."
+    },
+    "technical_correctness": {
+      "score": 4,
+      "reason": "Il ragionamento è coerente con la topologia: N001 alimentato, N002 non alimentato nel base, ramo lampada attivato collegando N001 a N002."
+    },
+    "scenario_quality": {
+      "score": 4,
+      "reason": "Gli scenari eseguiti sono pertinenti: scenario_2 conferma l’ipotesi diagnostica e scenario_4 testa direttamente la correzione e la preservazione del LED."
+    },
+    "evidence_interpretation": {
+      "score": 4,
+      "reason": "Le misure SPICE sono lette correttamente: tensioni e correnti del ramo lampada aumentano, mentre il ramo LED resta invariato e conduttivo."
+    },
+    "conclusion_quality": {
+      "score": 4,
+      "reason": "La conclusione è chiara, distingue causa elettrica da causa fisica reale e riporta limiti appropriati senza proporre altri scenari."
+    }
+  },
+  "critical_errors": {
+    "false_success": {
+      "present": false,
+      "reason": ""
+    },
+    "unsupported_claims": {
+      "present": false,
+      "reason": ""
+    },
+    "wrong_interpretation": {
+      "present": false,
+      "reason": ""
+    }
+  },
+  "evidence": [
+    "Base run: v(N001)=5.0 V, v(N002)=0.0 V, v(N004)=0.0 V e i(Rlamp13_1)=0.0.",
+    "Scenario_2: collegamento N001->N002 porta v(N002)=4.999995 V e i(Rlamp13_1)=0.0047619 A, confermando l’ipotesi diagnostica.",
+    "Scenario_4: connect_nodes N001-N002 con 1m, SPICE success e diagnostic_outcome resolved_candidate.",
+    "Scenario_4: i(Rlamp13_1) passa da 0.0 a 0.0047619 A e l’aspettativa nonzero è soddisfatta.",
+    "Scenario_4: i(Rresistor22_2) resta non nulla e invariata a 0.0194008 A, con v(N005)=0.7318156 V invariata."
+  ],
+  "final_assessment": "Valutazione positiva: la traiettoria usa evidenze SPICE adeguate per diagnosticare la mancata continuità tra N001 e N002 e verifica una correzione coerente che alimenta la lampada senza spegnere il LED. I limiti dichiarati sulla causa fisica reale e sulla modellazione sono appropriati.",
+  "computed_score": {
+    "weighted_total": 100,
+    "maximum": 100
+  }
+}

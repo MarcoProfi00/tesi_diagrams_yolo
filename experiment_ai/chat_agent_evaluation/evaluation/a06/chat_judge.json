@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "metadata": {
+    "circuit_id": "a06",
+    "mode": "chat",
+    "judge_model": "gpt-5.5",
+    "reasoning_effort": "medium",
+    "prompt_version": "v1",
+    "packet_schema_version": 3,
+    "prompt_sha256": "d17f518aca6f6b3505a98982020c735e8c8472457e1ad7689f19388f580e916f",
+    "response_schema_sha256": "aeb6c6559232490d3b870ef82e3870ea1e200eace7ae4d06ed10128cdf2f2a3c",
+    "packet_sha256": "95c62363c13727b65b13c5a4c3befbc8ce3b14958cb35e260f34cbf1210c90fb",
+    "summary_sha256": "883962173e3f6c9da8680af15dfc03d257fb1cd88fb335c127295e0a580e22cf"
+  },
+  "task": {
+    "type": "diagnosis",
+    "outcome": "partial_success",
+    "outcome_reason": "La traiettoria isola in modo plausibile il sovrapilotaggio e verifica il mantenimento del guadagno con SPICE, ma la correzione THD <10% è dichiarata usando valori forniti dall’utente e non presenti nei campi automatici o nelle misure SPICE eseguite."
+  },
+  "criteria": {
+    "task_achievement": {
+      "score": 2,
+      "reason": "Diagnosi utile e scenario correttivo coerente, ma l’obiettivo esplicito THD <10% non è dimostrato dai dati SPICE disponibili."
+    },
+    "technical_correctness": {
+      "score": 2,
+      "reason": "I calcoli Vpp/gain sono coerenti, ma la conclusione di correzione verificata e di causa isolata è più forte delle evidenze automatiche."
+    },
+    "scenario_quality": {
+      "score": 2,
+      "reason": "Gli scenari di riduzione ingresso sono pertinenti e verificano il guadagno, ma lo scenario finale non include una verifica THD automatica nonostante fosse requisito centrale."
+    },
+    "evidence_interpretation": {
+      "score": 2,
+      "reason": "Riporta correttamente Vpp e gain e riconosce THD null, ma usa comunque la THD esterna come prova di successo."
+    },
+    "conclusion_quality": {
+      "score": 2,
+      "reason": "Conclusione chiara e con limiti esplicitati, ma dichiara una correzione verificata che le evidenze del pacchetto non certificano."
+    }
+  },
+  "critical_errors": {
+    "false_success": {
+      "present": true,
+      "reason": "La risposta finale dichiara 'correzione verificata' e THD sotto soglia, ma in scenario_5 base_thd e scenario_thd sono null e l’esito operativo resta partially_resolved."
+    },
+    "unsupported_claims": {
+      "present": true,
+      "reason": "Il 'guadagno fondamentale circa 77×' e i valori THD 83,0% -> 9,79% sono assunti dalla richiesta utente, non confermati dai campi SPICE automatici del pacchetto."
+    },
+    "wrong_interpretation": {
+      "present": false,
+      "reason": ""
+    }
+  },
+  "evidence": [
+    "scenario_5: spice_success, v(N006) Vpp 1.999999632 -> 0.03999381 e v(N005) Vpp 7.47417467 -> 3.11524658.",
+    "scenario_5: gain_comparison scenario_gain 77.8932184755591, min_ratio 5.0, sufficient true.",
+    "scenario_5 comparison_summary: base_thd null, scenario_thd null, quality_required false, quality_available false.",
+    "scenario_5 diagnostic_outcome: status partially_resolved, label 'Variazione non ancora significativa'.",
+    "scenario_1: riduzione a 100 mV soddisfa le aspettative changed su N004 e N005, sostenendo solo una diagnosi parziale di sovrapilotaggio."
+  ],
+  "final_assessment": "Traiettoria tecnicamente utile per indicare il sovrapilotaggio come causa probabile e per mostrare che a 20 mV il trasferimento N006→N005 resta ampio. Tuttavia il requisito finale di qualità, THD su N005 sotto il 10%, non è verificato da SPICE nel pacchetto: è riportato dall’utente e gli stessi campi automatici indicano THD assente. L’esito complessivo è quindi parziale, con una dichiarazione finale di successo troppo forte.",
+  "computed_score": {
+    "weighted_total": 50,
+    "maximum": 100
+  }
+}
