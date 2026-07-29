@@ -1,32 +1,34 @@
 {
-  "title": "Batteria più scarica a 10 V",
-  "hypothesis": "Se il caricabatteria funziona, una batteria più scarica dovrebbe aumentare la conduzione nel percorso di carica; misuro sia la corrente della batteria sia un componente reale del percorso di carica.",
+  "title": "Batteria piu scarica: verifica aumento corrente di carica",
+  "hypothesis": "Se la batteria viene resa piu scarica rispetto ai 12 V nominali della base run, la differenza tra secondario raddrizzato e batteria aumenta e il percorso di carica dovrebbe condurre di piu. Questo conferma se la bassa carica osservata dipende soprattutto dallo stato di carica della batteria e non da un guasto topologico.",
   "intent": "diagnostic",
   "analysis": "tran",
   "actions": [
     {
       "type": "change_source_value",
       "target": "VVBAT_TEST",
-      "value": "DC 10"
+      "value": "DC 10V"
     }
   ],
   "compare": [
-    "i(VVBAT_TEST)",
+    "i(Rresistor22_6)",
+    "i(Rfuse8_1)",
     "@ddiode7_4[id]",
-    "v(N004)",
+    "v(N004,N010)",
     "v(N009,N010)"
   ],
   "measure": {
-    "i(VVBAT_TEST)": "op",
+    "i(Rresistor22_6)": "op",
+    "i(Rfuse8_1)": "op",
     "@ddiode7_4[id]": "tran_abs_peak",
-    "v(N004)": "tran_vpp",
-    "v(N009,N010)": "tran_vpp"
+    "v(N004,N010)": "op",
+    "v(N009,N010)": "op"
   },
   "expect": {
-    "i(VVBAT_TEST)": "magnitude_increased",
+    "i(Rresistor22_6)": "magnitude_increased",
+    "i(Rfuse8_1)": "magnitude_increased",
     "@ddiode7_4[id]": "magnitude_increased",
-    "v(N004)": "nonzero",
-    "v(N009,N010)": "changed"
+    "v(N009,N010)": "decreased"
   },
   "scenario_id": "agent_scenario_1"
 }

@@ -1,7 +1,7 @@
 {
   "source_format": "pipeline2.0_scenario_comparison",
   "scenario_id": "agent_scenario_2",
-  "scenario_title": "Batteria molto più scarica a 8 V",
+  "scenario_title": "Batteria meno scarica a 13.5 V: verifica diminuzione corrente di carica",
   "scenario_intent": "diagnostic",
   "base_output_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b04",
   "scenario_run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b04\\scenarios\\agent_scenario_2\\run",
@@ -11,16 +11,31 @@
   "scenario_stderr": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b04\\scenarios\\agent_scenario_2\\run\\08_ngspice_stderr.txt",
   "quantities": [
     {
-      "quantity": "i(VVBAT_TEST)",
+      "quantity": "i(Rresistor22_6)",
       "base_value": -0.0124225,
-      "scenario_value": -0.00843212,
-      "delta": 0.00399038,
+      "scenario_value": -0.0140185,
+      "delta": -0.0015960000000000002,
       "change": "changed",
-      "expectation": "magnitude_increased",
+      "expectation": "magnitude_decreased",
       "expectation_met": false,
-      "relative_change": 0.32122197625276716,
+      "relative_change": 0.12847655463876034,
       "meaningful_improvement": false,
-      "metric": "i(vvbat_test)",
+      "metric": "i(rresistor22_6)",
+      "measurement": "op",
+      "base_details": {},
+      "scenario_details": {}
+    },
+    {
+      "quantity": "i(Rfuse8_1)",
+      "base_value": -0.0124225,
+      "scenario_value": -0.0140185,
+      "delta": -0.0015960000000000002,
+      "change": "changed",
+      "expectation": "magnitude_decreased",
+      "expectation_met": false,
+      "relative_change": 0.12847655463876034,
+      "meaningful_improvement": false,
+      "metric": "i(rfuse8_1)",
       "measurement": "op",
       "base_details": {},
       "scenario_details": {}
@@ -28,13 +43,13 @@
     {
       "quantity": "@ddiode7_4[id]",
       "base_value": 0.334752846,
-      "scenario_value": 0.33659804,
-      "delta": 0.0018451939999999944,
+      "scenario_value": 0.298862619,
+      "delta": -0.035890227,
       "change": "changed",
-      "expectation": "magnitude_increased",
+      "expectation": "magnitude_decreased",
       "expectation_met": true,
-      "relative_change": 0.005512108476592293,
-      "meaningful_improvement": false,
+      "relative_change": 0.10721410565692396,
+      "meaningful_improvement": true,
       "metric": "@ddiode7_4[id].abs_peak",
       "measurement": "tran_abs_peak",
       "base_details": {
@@ -46,83 +61,55 @@
         "abs_peak": 0.334752846
       },
       "scenario_details": {
-        "min": -0.000198073885,
-        "max": 0.33659804,
-        "mean": 0.07180282364196779,
-        "vpp": 0.33679611388499997,
-        "final": -0.000191011172,
-        "abs_peak": 0.33659804
+        "min": -0.000118876607,
+        "max": 0.298862619,
+        "mean": 0.050658344713151324,
+        "vpp": 0.298981495607,
+        "final": -2.8118941e-05,
+        "abs_peak": 0.298862619
       }
+    },
+    {
+      "quantity": "v(N009)",
+      "base_value": 12.0,
+      "scenario_value": 13.5,
+      "delta": 1.5,
+      "change": "changed",
+      "expectation": "increased",
+      "expectation_met": true,
+      "relative_change": 0.125,
+      "meaningful_improvement": true,
+      "metric": "v(n009)",
+      "measurement": "op",
+      "base_details": {},
+      "scenario_details": {}
     },
     {
       "quantity": "v(N004)",
-      "base_value": 0.9987514999999991,
-      "scenario_value": 4.95415869,
-      "delta": 3.9554071900000007,
+      "base_value": 11.98761,
+      "scenario_value": 13.486,
+      "delta": 1.4983900000000006,
       "change": "changed",
-      "expectation": "nonzero",
-      "expectation_met": true,
-      "relative_change": 3.9603516890838253,
+      "expectation": null,
+      "expectation_met": null,
+      "relative_change": 0.12499489055783435,
       "meaningful_improvement": false,
-      "metric": "v(n004).vpp",
-      "measurement": "tran_vpp",
-      "base_details": {
-        "min": 11.9875351,
-        "max": 12.9862866,
-        "mean": 12.155920647809523,
-        "vpp": 0.9987514999999991,
-        "final": 11.9875651,
-        "abs_peak": 12.9862866
-      },
-      "scenario_details": {
-        "min": 7.99154431,
-        "max": 12.945703,
-        "mean": 9.223737259005736,
-        "vpp": 4.95415869,
-        "final": 7.99155945,
-        "abs_peak": 12.945703
-      }
-    },
-    {
-      "quantity": "v(N009,N010)",
-      "base_value": 0.0,
-      "scenario_value": 0.0,
-      "delta": 0.0,
-      "change": "unchanged",
-      "expectation": "changed",
-      "expectation_met": false,
-      "relative_change": 0.0,
-      "meaningful_improvement": false,
-      "metric": "v(n009,n010).vpp",
-      "measurement": "tran_vpp",
-      "base_details": {
-        "min": 12.0,
-        "max": 12.0,
-        "mean": 12.0,
-        "vpp": 0.0,
-        "final": 12.0,
-        "abs_peak": 12.0
-      },
-      "scenario_details": {
-        "min": 8.0,
-        "max": 8.0,
-        "mean": 8.0,
-        "vpp": 0.0,
-        "final": 8.0,
-        "abs_peak": 8.0
-      }
+      "metric": "v(n004)",
+      "measurement": "op",
+      "base_details": {},
+      "scenario_details": {}
     }
   ],
   "summary": {
-    "requested_count": 4,
-    "changed_count": 3,
+    "requested_count": 5,
+    "changed_count": 5,
     "activated_count": 0,
     "missing_count": 0,
     "expected_count": 4,
     "expectations_met_count": 2,
     "expectations_failed_count": 2,
     "expectations_missing_count": 0,
-    "meaningful_improvement_count": 0,
+    "meaningful_improvement_count": 2,
     "quality_required": false,
     "quality_available": false,
     "quality_improved": false,
@@ -148,5 +135,5 @@
     "confidence": "low",
     "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
   },
-  "created_or_updated_at": "2026-07-24T11:39:01"
+  "created_or_updated_at": "2026-07-28T18:52:19"
 }

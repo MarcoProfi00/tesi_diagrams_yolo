@@ -12,7 +12,7 @@ Ho l’impressione che la batteria si carichi poco. Se fosse più scarica, il ca
 - Usa soltanto queste primitive: add_resistor_between_nodes, add_voltage_source_between_nodes, change_component_value, change_source_value, close_switch, connect_nodes, drive_node_voltage, feed_nodes_from_source_node, set_initial_node_voltage.
 - Ogni scenario deve essere self-contained e partire dalla base run.
 - Puoi proporre al massimo 2 scenari indipendenti.
-- Budget residuo: 3 run scenario.
+- Budget residuo: 4 run scenario.
 - Se il budget e zero devi restituire decision=stop.
 - Prima di una conclusione diagnostica devi eseguire almeno uno scenario controllato
   quando il budget e disponibile: la sola base run localizza un sospetto, ma non lo verifica.
@@ -261,68 +261,39 @@ oppure
     "decision_number": 1,
     "decision": {
       "decision": "run_scenarios",
-      "reason": "La base run suggerisce che la batteria assorbe circa 12.4 mA a 12 V, mentre il trasformatore contribuisce quasi nulla in DC/op; serve un test controllato per verificare se abbassando la tensione batteria la corrente nel percorso di carica aumenta davvero e se il percorso AC/rettifica parte.",
+      "reason": "La base run mostra una corrente di carica DC non nulla attraverso Rresistor22_6/Rfuse8_1 e un secondario AC presente, ma non verifica l'ipotesi dell'utente su come cambia la corrente al variare della tensione batteria. Serve un test controllato modificando solo la sorgente batteria e misurando direttamente il ramo di carica e un diodo del percorso.",
       "scenarios": [
         {
-          "title": "Batteria più scarica a 10 V",
-          "hypothesis": "Se il caricabatteria funziona, una batteria più scarica dovrebbe aumentare la conduzione nel percorso di carica; misuro sia la corrente della batteria sia un componente reale del percorso di carica.",
+          "title": "Batteria piu scarica: verifica aumento corrente di carica",
+          "hypothesis": "Se la batteria viene resa piu scarica rispetto ai 12 V nominali della base run, la differenza tra secondario raddrizzato e batteria aumenta e il percorso di carica dovrebbe condurre di piu. Questo conferma se la bassa carica osservata dipende soprattutto dallo stato di carica della batteria e non da un guasto topologico.",
           "intent": "diagnostic",
           "analysis": "tran",
           "actions": [
             {
               "type": "change_source_value",
               "target": "VVBAT_TEST",
-              "value": "DC 10"
+              "value": "DC 10V"
             }
           ],
           "compare": [
-            "i(VVBAT_TEST)",
+            "i(Rresistor22_6)",
+            "i(Rfuse8_1)",
             "@ddiode7_4[id]",
-            "v(N004)",
+            "v(N004,N010)",
             "v(N009,N010)"
           ],
           "measure": {
-            "i(VVBAT_TEST)": "op",
+            "i(Rresistor22_6)": "op",
+            "i(Rfuse8_1)": "op",
             "@ddiode7_4[id]": "tran_abs_peak",
-            "v(N004)": "tran_vpp",
-            "v(N009,N010)": "tran_vpp"
+            "v(N004,N010)": "op",
+            "v(N009,N010)": "op"
           },
           "expect": {
-            "i(VVBAT_TEST)": "magnitude_increased",
+            "i(Rresistor22_6)": "magnitude_increased",
+            "i(Rfuse8_1)": "magnitude_increased",
             "@ddiode7_4[id]": "magnitude_increased",
-            "v(N004)": "nonzero",
-            "v(N009,N010)": "changed"
-          }
-        },
-        {
-          "title": "Batteria molto più scarica a 8 V",
-          "hypothesis": "Se a 10 V l'aumento è debole o ambiguo, a 8 V dovrebbe evidenziarsi chiaramente un aumento della corrente di carica e della conduzione del diodo di uscita se il circuito regola davvero in funzione della tensione batteria.",
-          "intent": "diagnostic",
-          "analysis": "tran",
-          "actions": [
-            {
-              "type": "change_source_value",
-              "target": "VVBAT_TEST",
-              "value": "DC 8"
-            }
-          ],
-          "compare": [
-            "i(VVBAT_TEST)",
-            "@ddiode7_4[id]",
-            "v(N004)",
-            "v(N009,N010)"
-          ],
-          "measure": {
-            "i(VVBAT_TEST)": "op",
-            "@ddiode7_4[id]": "tran_abs_peak",
-            "v(N004)": "tran_vpp",
-            "v(N009,N010)": "tran_vpp"
-          },
-          "expect": {
-            "i(VVBAT_TEST)": "magnitude_increased",
-            "@ddiode7_4[id]": "magnitude_increased",
-            "v(N004)": "nonzero",
-            "v(N009,N010)": "changed"
+            "v(N009,N010)": "decreased"
           }
         }
       ]
@@ -341,14 +312,14 @@ oppure
         "spice_status": "success",
         "spice_exit_code": 0,
         "comparison_summary": {
-          "requested_count": 4,
+          "requested_count": 5,
           "changed_count": 3,
           "activated_count": 0,
-          "missing_count": 0,
+          "missing_count": 2,
           "expected_count": 4,
-          "expectations_met_count": 2,
+          "expectations_met_count": 1,
           "expectations_failed_count": 2,
-          "expectations_missing_count": 0,
+          "expectations_missing_count": 1,
           "meaningful_improvement_count": 0,
           "quality_required": false,
           "quality_available": false,
@@ -367,7 +338,7 @@ oppure
           "status": "partially_resolved",
           "technical_label": "Partially resolved",
           "label": "Criteri verificati solo in parte",
-          "reason": "Solo una parte dei comportamenti attesi dichiarati dallo scenario e stata verificata.",
+          "reason": "Almeno una misura necessaria ai criteri di successo non e disponibile negli output SPICE dello scenario.",
           "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
           "stop_automation": false,
           "confidence": "low",
@@ -380,55 +351,6 @@ oppure
         },
         "viewer_error": null,
         "executed_scenarios_count": 1
-      },
-      {
-        "scenario_id": "agent_scenario_2",
-        "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b04\\scenarios\\agent_scenario_2",
-        "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b04\\scenarios\\agent_scenario_2\\run",
-        "status": "spice_success",
-        "spice_executed": true,
-        "spice_status": "success",
-        "spice_exit_code": 0,
-        "comparison_summary": {
-          "requested_count": 4,
-          "changed_count": 3,
-          "activated_count": 0,
-          "missing_count": 0,
-          "expected_count": 4,
-          "expectations_met_count": 2,
-          "expectations_failed_count": 2,
-          "expectations_missing_count": 0,
-          "meaningful_improvement_count": 0,
-          "quality_required": false,
-          "quality_available": false,
-          "quality_improved": false,
-          "quality_acceptable": false,
-          "quality_output_preserved": false,
-          "base_thd": null,
-          "scenario_thd": null,
-          "gain_required": false,
-          "gain_available": false,
-          "gain_sufficient": false,
-          "scenario_gain": null,
-          "min_gain_ratio": null
-        },
-        "diagnostic_outcome": {
-          "status": "partially_resolved",
-          "technical_label": "Partially resolved",
-          "label": "Criteri verificati solo in parte",
-          "reason": "Solo una parte dei comportamenti attesi dichiarati dallo scenario e stata verificata.",
-          "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
-          "stop_automation": false,
-          "confidence": "low",
-          "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
-        },
-        "viewer": {
-          "model": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b04\\scenarios\\agent_scenario_2\\run\\13_viewer_model.json",
-          "layout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b04\\scenarios\\agent_scenario_2\\run\\14_viewer_layout.json",
-          "svg": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b04\\scenarios\\agent_scenario_2\\run\\15_viewer.svg"
-        },
-        "viewer_error": null,
-        "executed_scenarios_count": 2
       }
     ]
   },
@@ -436,48 +358,52 @@ oppure
     "decision_number": 2,
     "decision": {
       "decision": "run_scenarios",
-      "reason": "I due test già eseguiti indicano che abbassare la tensione batteria modifica il ramo di carica e la conduzione di Ddiode7_4, ma il criterio precedente su v(N009,N010) era formulato in modo non valido. Serve un ultimo scenario diagnostico self-contained, senza vincoli di preservazione non richiesti, per verificare in modo pulito se una batteria più scarica aumenta davvero la conduzione nel percorso di carica misurando sia la corrente della batteria sia un componente reale del percorso.",
+      "reason": "Il primo scenario ha gia dato un indizio utile: cambiando la tensione batteria si sono mosse proprio le grandezze del ramo di carica. Pero le aspettative erano appoggiate anche a due tensioni differenziali risultate mancanti, quindi conviene fare un secondo test controllato piu robusto e self-contained, basato solo su misure sicuramente disponibili o gia osservate. L'obiettivo e verificare direttamente la relazione domanda utente: batteria piu scarica -> piu corrente nel ramo di carica e maggiore conduzione del diodo di carica.",
       "scenarios": [
         {
-          "title": "Verifica pulita con batteria a 8 V",
-          "hypothesis": "Se il caricabatteria risponde allo stato di scarica, portando la batteria a 8 V deve aumentare il modulo della corrente assorbita dalla batteria e crescere la conduzione di Ddiode7_4 nel transitorio; la tensione sul nodo N004 deve comunque mostrare attività AC non nulla dal secondario/raddrizzamento.",
+          "title": "Batteria piu scarica a 10 V: conferma robusta dell'aumento di corrente di carica",
+          "hypothesis": "Nel circuito base la batteria a 12 V assorbe gia circa 12.4 mA nel ramo R6-fusibile. Se la batteria viene resa piu scarica a 10 V, la differenza di potenziale rispetto al secondario raddrizzato aumenta e devono aumentare in modulo sia la corrente in Rresistor22_6 e Rfuse8_1 sia il picco di conduzione di Ddiode7_4, confermando che la bassa corrente osservata dipende soprattutto dal fatto che la batteria base non e molto sotto la tensione del caricatore.",
           "intent": "diagnostic",
           "analysis": "tran",
           "actions": [
             {
               "type": "change_source_value",
               "target": "VVBAT_TEST",
-              "value": "DC 8"
+              "value": "DC 10V"
             }
           ],
           "compare": [
-            "i(VVBAT_TEST)",
+            "i(Rresistor22_6)",
+            "i(Rfuse8_1)",
             "@ddiode7_4[id]",
-            "v(N004)"
+            "v(N004)",
+            "v(N009)"
           ],
           "measure": {
-            "i(VVBAT_TEST)": "op",
+            "i(Rresistor22_6)": "op",
+            "i(Rfuse8_1)": "op",
             "@ddiode7_4[id]": "tran_abs_peak",
-            "v(N004)": "tran_vpp"
+            "v(N004)": "op",
+            "v(N009)": "op"
           },
           "expect": {
-            "i(VVBAT_TEST)": "magnitude_increased",
+            "i(Rresistor22_6)": "magnitude_increased",
+            "i(Rfuse8_1)": "magnitude_increased",
             "@ddiode7_4[id]": "magnitude_increased",
-            "v(N004)": "nonzero"
+            "v(N009)": "decreased"
           }
         }
       ]
     },
     "prompt_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b04\\experiment_chat\\autonomous_prompt_2.md",
     "response_paths": [
-      "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b04\\experiment_chat\\autonomous_response_2_attempt_1.txt",
-      "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b04\\experiment_chat\\autonomous_response_2_attempt_2.txt"
+      "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b04\\experiment_chat\\autonomous_response_2_attempt_1.txt"
     ],
     "scenario_results": [
       {
-        "scenario_id": "agent_scenario_3",
+        "scenario_id": "agent_scenario_2",
         "status": "rejected",
-        "error": "Scenario duplicato: agent_scenario_2",
+        "error": "Scenario duplicato: agent_scenario_1",
         "spice_executed": false
       }
     ]
@@ -1880,28 +1806,28 @@ Current ngspice program size =   15.754 MB.
     {
       "scenario_dir": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b04\\scenarios\\agent_scenario_1",
       "scenario_id": "agent_scenario_1",
-      "title": "Batteria più scarica a 10 V",
+      "title": "Batteria piu scarica: verifica aumento corrente di carica",
       "status": "spice_success",
       "spice_status": "success",
       "diagnostic_outcome": {
         "status": "partially_resolved",
         "technical_label": "Partially resolved",
         "label": "Criteri verificati solo in parte",
-        "reason": "Solo una parte dei comportamenti attesi dichiarati dallo scenario e stata verificata.",
+        "reason": "Almeno una misura necessaria ai criteri di successo non e disponibile negli output SPICE dello scenario.",
         "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
         "stop_automation": false,
         "confidence": "low",
         "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
       },
       "comparison_summary": {
-        "requested_count": 4,
+        "requested_count": 5,
         "changed_count": 3,
         "activated_count": 0,
-        "missing_count": 0,
+        "missing_count": 2,
         "expected_count": 4,
-        "expectations_met_count": 2,
+        "expectations_met_count": 1,
         "expectations_failed_count": 2,
-        "expectations_missing_count": 0,
+        "expectations_missing_count": 1,
         "meaningful_improvement_count": 0,
         "quality_required": false,
         "quality_available": false,
@@ -1939,69 +1865,6 @@ Current ngspice program size =   15.754 MB.
           "role": "Base-vs-scenario comparison used to evaluate the scenario."
         }
       }
-    },
-    {
-      "scenario_dir": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b04\\scenarios\\agent_scenario_2",
-      "scenario_id": "agent_scenario_2",
-      "title": "Batteria molto più scarica a 8 V",
-      "status": "spice_success",
-      "spice_status": "success",
-      "diagnostic_outcome": {
-        "status": "partially_resolved",
-        "technical_label": "Partially resolved",
-        "label": "Criteri verificati solo in parte",
-        "reason": "Solo una parte dei comportamenti attesi dichiarati dallo scenario e stata verificata.",
-        "user_message": "Lo scenario conferma utilmente l'ipotesi sul ramo o nodo testato.",
-        "stop_automation": false,
-        "confidence": "low",
-        "next_step": "Puo avere senso un altro scenario, oppure una conclusione diagnostica piu mirata."
-      },
-      "comparison_summary": {
-        "requested_count": 4,
-        "changed_count": 3,
-        "activated_count": 0,
-        "missing_count": 0,
-        "expected_count": 4,
-        "expectations_met_count": 2,
-        "expectations_failed_count": 2,
-        "expectations_missing_count": 0,
-        "meaningful_improvement_count": 0,
-        "quality_required": false,
-        "quality_available": false,
-        "quality_improved": false,
-        "quality_acceptable": false,
-        "quality_output_preserved": false,
-        "base_thd": null,
-        "scenario_thd": null,
-        "gain_required": false,
-        "gain_available": false,
-        "gain_sufficient": false,
-        "scenario_gain": null,
-        "min_gain_ratio": null
-      },
-      "led_profiles": {},
-      "artifacts": {
-        "scenario_definition": {
-          "available": true,
-          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b04\\scenarios\\agent_scenario_2\\scenario.json",
-          "role": "Scenario selected by the user and saved before execution."
-        },
-        "scenario_status": {
-          "available": true,
-          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b04\\scenarios\\agent_scenario_2\\scenario_status.json",
-          "role": "Current scenario status, SPICE status and diagnostic outcome."
-        },
-        "controlled_scenario_report": {
-          "available": true,
-          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b04\\scenarios\\agent_scenario_2\\12_controlled_scenarios.json",
-          "role": "Report produced by the controlled scenario runner."
-        },
-        "scenario_comparison": {
-          "available": true,
-          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\b04\\scenarios\\agent_scenario_2\\scenario_comparison.json",
-          "role": "Base-vs-scenario comparison used to evaluate the scenario."
-        }
-      }
     }
   ],
   "scenario_outcome_summary": {
@@ -2014,23 +1877,23 @@ Current ngspice program size =   15.754 MB.
     "scenarios": [
       {
         "scenario_id": "agent_scenario_1",
-        "title": "Batteria più scarica a 10 V",
+        "title": "Batteria piu scarica: verifica aumento corrente di carica",
         "status": "spice_success",
         "spice_status": "success",
         "outcome_status": "partially_resolved",
         "outcome_label": "Criteri verificati solo in parte",
         "outcome_technical_label": "Partially resolved",
-        "outcome_reason": "Solo una parte dei comportamenti attesi dichiarati dallo scenario e stata verificata.",
+        "outcome_reason": "Almeno una misura necessaria ai criteri di successo non e disponibile negli output SPICE dello scenario.",
         "stop_automation": false,
         "comparison_summary": {
-          "requested_count": 4,
+          "requested_count": 5,
           "changed_count": 3,
           "activated_count": 0,
-          "missing_count": 0,
+          "missing_count": 2,
           "expected_count": 4,
-          "expectations_met_count": 2,
+          "expectations_met_count": 1,
           "expectations_failed_count": 2,
-          "expectations_missing_count": 0,
+          "expectations_missing_count": 1,
           "meaningful_improvement_count": 0,
           "quality_required": false,
           "quality_available": false,
@@ -2047,73 +1910,26 @@ Current ngspice program size =   15.754 MB.
         },
         "quantity_summary": {
           "changed": [
-            "i(VVBAT_TEST)",
-            "@ddiode7_4[id]",
-            "v(N004)"
+            "i(Rresistor22_6)",
+            "i(Rfuse8_1)",
+            "@ddiode7_4[id]"
           ],
-          "unchanged": [
+          "unchanged": [],
+          "missing": [
+            "v(N004,N010)",
             "v(N009,N010)"
-          ],
-          "missing": []
+          ]
         },
         "led_profiles": {},
         "ranking_verified": true,
-        "score": 30
-      },
-      {
-        "scenario_id": "agent_scenario_2",
-        "title": "Batteria molto più scarica a 8 V",
-        "status": "spice_success",
-        "spice_status": "success",
-        "outcome_status": "partially_resolved",
-        "outcome_label": "Criteri verificati solo in parte",
-        "outcome_technical_label": "Partially resolved",
-        "outcome_reason": "Solo una parte dei comportamenti attesi dichiarati dallo scenario e stata verificata.",
-        "stop_automation": false,
-        "comparison_summary": {
-          "requested_count": 4,
-          "changed_count": 3,
-          "activated_count": 0,
-          "missing_count": 0,
-          "expected_count": 4,
-          "expectations_met_count": 2,
-          "expectations_failed_count": 2,
-          "expectations_missing_count": 0,
-          "meaningful_improvement_count": 0,
-          "quality_required": false,
-          "quality_available": false,
-          "quality_improved": false,
-          "quality_acceptable": false,
-          "quality_output_preserved": false,
-          "base_thd": null,
-          "scenario_thd": null,
-          "gain_required": false,
-          "gain_available": false,
-          "gain_sufficient": false,
-          "scenario_gain": null,
-          "min_gain_ratio": null
-        },
-        "quantity_summary": {
-          "changed": [
-            "i(VVBAT_TEST)",
-            "@ddiode7_4[id]",
-            "v(N004)"
-          ],
-          "unchanged": [
-            "v(N009,N010)"
-          ],
-          "missing": []
-        },
-        "led_profiles": {},
-        "ranking_verified": true,
-        "score": 30
+        "score": 25
       }
     ]
   },
   "scenario_budget": {
     "max_executable_scenarios": 5,
-    "executed_scenarios_count": 2,
-    "remaining_executable_scenarios": 3,
+    "executed_scenarios_count": 1,
+    "remaining_executable_scenarios": 4,
     "budget_exhausted": false,
     "last_scenario_available": false,
     "policy": "At most 5 scenarios can be executed for the same circuit. When only one scenario remains, the agent should propose a single final scenario. When no scenario remains, the agent must stop proposing new scenarios and provide a final diagnostic conclusion."

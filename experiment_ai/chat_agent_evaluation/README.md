@@ -45,9 +45,9 @@ artefatti.
 ### Note sul protocollo
 
 In 16 casi CHAT e AGENT hanno ricevuto lo stesso testo. In `b03` le domande
-sono formulate diversamente, ma richiedono entrambe di verificare i tre LED
-durante il passaggio della batteria da scarica a carica. I risultati verranno
-quindi aggregati sia con tutti i 17 circuiti sia escludendo `b03`.
+sono formulate in modo leggermente diverso, ma richiedono entrambe di
+verificare i tre LED durante il passaggio della batteria da scarica a carica.
+Il caso viene quindi incluso normalmente nell'aggregazione dei 17 circuiti.
 
 Uno scenario AGENT di `a08` ha prodotto un errore SPICE. Il fallimento rimane
 nel dataset e contribuisce alla valutazione dell'affidabilità.
@@ -225,13 +225,13 @@ L'esito complessivo assume uno dei seguenti valori:
 
 Ogni criterio riceve un punteggio intero da 0 a 4 e ha peso **20%**.
 
-| Criterio | Peso | Significato |
-|---|---:|---|
-| Raggiungimento dell'obiettivo | 20% | Quanto è stato soddisfatto il bisogno dell'utente |
-| Correttezza tecnica | 20% | Correttezza di diagnosi, localizzazione e ragionamento elettrico |
-| Qualità degli scenari | 20% | Utilità e validità delle azioni eseguite |
-| Interpretazione delle evidenze | 20% | Coerenza fra risultati SPICE e interpretazione |
-| Qualità della conclusione | 20% | Chiarezza e livello di certezza appropriato |
+| Campo JSON | Criterio | Peso | Cosa valuta |
+|---|---|---:|---|
+| `task_achievement` | Raggiungimento dell'obiettivo | 20% | Quanto è stato raggiunto l'obiettivo richiesto dall'utente |
+| `technical_correctness` | Correttezza tecnica | 20% | Correttezza elettrica, diagnostica e della localizzazione proposta |
+| `scenario_quality` | Qualità degli scenari | 20% | Pertinenza e utilità degli scenari di verifica scelti |
+| `evidence_interpretation` | Interpretazione delle evidenze | 20% | Coerenza delle conclusioni con le misure SPICE ottenute |
+| `conclusion_quality` | Qualità della conclusione | 20% | Chiarezza, completezza e livello di certezza della risposta finale |
 
 Scala:
 
@@ -364,6 +364,10 @@ Per controllare l'affidabilità del judge:
 Le eventuali divergenze vengono documentate come limite e non corrette
 selettivamente.
 
+La revisione manuale di tutte le 10 valutazioni con almeno un errore critico è
+documentata in `_aggregate/manual_critical_error_review.md`. Il controllo
+copre tutti i 18 flag positivi e non modifica punteggi o judge ufficiali.
+
 ## Processo operativo
 
 1. congelare le 34 esecuzioni;
@@ -374,8 +378,7 @@ selettivamente.
 6. calcolare il punteggio su 100;
 7. estrarre le metriche operative;
 8. aggregare i risultati appaiati CHAT-AGENT;
-9. ripetere l'aggregazione escludendo `b03`;
-10. revisionare i casi critici e il sottoinsieme di stabilità.
+9. revisionare i casi critici e il sottoinsieme di stabilità.
 
 ## Risultati aggregati
 
@@ -399,3 +402,66 @@ Grafici consigliati:
 
 I file completi della pipeline restano nel workspace. I summary contengono le
 informazioni necessarie per valutare l'intera traiettoria diagnostica.
+
+## Script di aggregazione
+
+Lo script `aggregate_results.py` legge soltanto le sottocartelle ufficiali di
+`evaluation/`; la cartella `retries/` non viene mai inclusa. Prima di produrre
+i risultati verifica:
+
+- presenza di CHAT e AGENT per ogni circuito;
+- identità di circuito e modalità nei summary e nei judge;
+- corrispondenza SHA-256 tra ogni judge e il summary valutato;
+- uniformità di modello, reasoning effort, prompt e schema;
+- coerenza tra i cinque criteri e il totale su 100.
+
+L'aggregazione comprende tutti i circuiti ufficiali:
+
+```powershell
+.venv312\Scripts\python.exe experiment_ai\chat_agent_evaluation\aggregate_results.py
+```
+
+Gli output vengono salvati in `_aggregate/`:
+
+- `runs.csv`: una riga per judge, incluse motivazioni e metriche operative;
+- `pairs.csv`: confronto CHAT–AGENT appaiato per circuito;
+- `criteria_long.csv`: dati nel formato adatto ai grafici dei criteri;
+- `mode_summary.csv`: media, mediana, deviazione standard ed esiti;
+- `paired_summary.csv`: differenze, vittorie e pareggi;
+- `criteria_summary.csv`: statistiche dei cinque criteri;
+- `outcome_counts.csv` e `critical_error_counts.csv`: frequenze;
+- `aggregate_results.json`: aggregato completo e tracciabile;
+- `report.md`: tabelle principali già leggibili.
+- `manual_critical_error_review.md`: revisione manuale dei flag critici.
+
+Il punteggio del judge misura la qualità del risultato. Numero di scenari,
+run SPICE, turni CHAT e decisioni AGENT restano metriche descrittive separate:
+non vengono combinate in un indice arbitrario di autonomia.
+
+## Figure
+
+Dopo aver eseguito l'aggregazione, le figure dei risultati si generano con:
+
+```powershell
+.venv312\Scripts\python.exe experiment_ai\chat_agent_evaluation\make_figure_01_scores_by_circuit.py
+```
+
+Lo script legge `pairs.csv` e `criteria_summary.csv` e salva in
+`_aggregate/figures/`:
+
+1. il confronto a barre affiancate CHAT–AGENT per circuito;
+2. il confronto dei punteggi medi nei cinque criteri del judge.
+3. la doppia heatmap dei criteri per circuito e modalità.
+4. il confronto in due pannelli tra qualità media e guida umana intermedia.
+
+Le figure sono esportate in PNG a 320 dpi. `fig01_caption.md`,
+`fig02_caption.md`, `fig03_caption.md` e `fig04_caption.md` contengono le
+rispettive didascalie complete per la tesi. Il testo interno di tutte le
+figure è in inglese; le didascalie restano in italiano.
+
+## Testo per il capitolo dei risultati
+
+`capitolo_risultati_chat_agent.md` raccoglie una trattazione completa in stile
+tesi magistrale: obiettivo, protocollo essenziale, razionale delle metriche,
+tabelle, quattro figure con didascalie, analisi appaiata, controllo manuale
+del judge, limiti e sintesi dei risultati.
