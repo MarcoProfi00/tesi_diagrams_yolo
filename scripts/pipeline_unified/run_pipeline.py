@@ -45,6 +45,7 @@ PIPELINE2_REQUIRED_ARTIFACTS = (
     "04_values_bound.json",
     "06_component_rules.json",
     "07_netlist.cir",
+    "07_external_models.lib",
     "07_spice_emit_report.json",
     "08_spice_run.json",
     "08_ngspice_stdout.txt",
@@ -589,6 +590,12 @@ def build_spice_plans(
     pipeline1_dir = workspace_path / "pipeline1.0"
     pipeline2_dir = workspace_path / "pipeline2.0"
     manifest_circuits = manifest.get("circuits") or {}
+    spice_models_path = PROJECT_ROOT / "metadata" / "pipeline2_spice_models.yaml"
+    spice_models = pipeline2_module.values.load_simple_yaml(spice_models_path)
+    spice_models_sha256 = pipeline2_module.spice_emit.build_model_registry_fingerprint(
+        spice_models,
+        spice_models_path,
+    )
     plans: list[dict[str, Any]] = []
 
     for circuit_id in circuit_ids:
@@ -622,6 +629,7 @@ def build_spice_plans(
                 "graph_sha256": sha256_file(graph_path),
                 "values_path": values_path,
                 "values_sha256": sha256_file(values_path),
+                "spice_models_sha256": spice_models_sha256,
                 "output_dir": (pipeline2_dir / circuit_id).resolve(),
             }
         )
@@ -638,6 +646,11 @@ def pipeline2_state_is_current(
     if state.get("graph_sha256") != plan["graph_sha256"]:
         return False
     if state.get("values_sha256") != plan["values_sha256"]:
+        return False
+    if (
+        plan.get("spice_models_sha256") is not None
+        and state.get("spice_models_sha256") != plan["spice_models_sha256"]
+    ):
         return False
 
     output_dir = Path(plan["output_dir"])
@@ -1022,6 +1035,7 @@ def spice_command(args: argparse.Namespace) -> int:
                 graph_sha256=plan["graph_sha256"],
                 values_yaml=str(plan["values_path"]),
                 values_sha256=plan["values_sha256"],
+                spice_models_sha256=plan["spice_models_sha256"],
                 output_dir=str(output_dir),
                 error=None,
             )

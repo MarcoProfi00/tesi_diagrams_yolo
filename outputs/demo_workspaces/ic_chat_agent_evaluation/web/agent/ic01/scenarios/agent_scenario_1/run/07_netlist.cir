@@ -1,0 +1,29 @@
+* pipeline2.0 netlist
+* circuit: ic01
+
+VVCC_9 N003 0 DC 9
+Ccapacitor4_1 N001 0 1u
+Ccapacitor4_2 N002 0 1u
+Ccapacitor4_3 N003 0 1u
+Xintegrated_circuit11_1 N001 N002 N001 N003 N005 N004 N003 0 TLC555_6
+Dled12_1 N006 0 LED_RED
+Rresistor22_1 N004 N001 1k
+Rresistor22_2 N003 N004 1k
+Rresistor22_3 N005 N006 1k
+
+.model LED_RED D
+.include "07_external_models.lib"
+
+.save all
+* pipeline2 scenario initial conditions
+.ic V(N001)=0 V(N002)=1
+.tran 5us 100ms UIC
+
+.control
+set wr_singlescale
+set wr_vecnames
+save all @dled12_1[id]
+run
+wrdata 08_tran.csv time v(N001) v(N002) v(N003) v(N004) v(N005) v(N006) @dled12_1[id]
+.endc
+.end

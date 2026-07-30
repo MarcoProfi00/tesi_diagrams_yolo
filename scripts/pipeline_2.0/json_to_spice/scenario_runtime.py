@@ -31,6 +31,7 @@ SCENARIO_BASE_FILES = (
     "04_values_bound.json",
     "06_component_rules.json",
     "07_netlist.cir",
+    "07_external_models.lib",
     "07_spice_emit_report.json",
     "08_spice_run.json",
     "08_ngspice_stdout.txt",

@@ -5,6 +5,20 @@
 # i modelli effettivamente richiesti dai componenti del circuito.
 
 models:
+  TLC555_6:
+    # Macromodello PSpice ufficiale TI per TLC555/TLC556, package SLFJ002E
+    # Rev. E. Il file resta esterno al registro per conservarlo identico al
+    # rilascio del produttore; lo step 07 ne verifica l'hash e lo inserisce nel
+    # bundle 07_external_models.lib solo quando viene effettivamente richiesto.
+    file: "spice_models/ti/tlc555/slfj002e/TLC555_6.LIB"
+    sha256: "7C091782CC4931DDA4FEBF25605083F47161C5E1592C076689B04B70DD749034"
+    vendor: "Texas Instruments"
+    package: "SLFJ002E"
+    revision: "E"
+    source_url: "https://www.ti.com/lit/zip/slfj002"
+    ngspice_defines:
+      ngbehavior: ps
+
   D_GENERIC:
     # Modello minimale per diodi rettificatori o di rivelazione senza part number.
     line: ".model D_GENERIC D"

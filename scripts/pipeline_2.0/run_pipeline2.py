@@ -112,6 +112,7 @@ def run_technical_pipeline(
         output_dir=output_dir,
         component_rules=component_rules_data,
         spice_models=spice_models,
+        spice_models_source=spice_models_path,
     )
     spice_emit_report_path = io.write_json(
         output_dir / "07_spice_emit_report.json",

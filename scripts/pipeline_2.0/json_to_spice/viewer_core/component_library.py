@@ -6,6 +6,8 @@ from typing import Any
 
 
 # Ogni simbolo usa dimensioni stabili indipendenti dalla bbox dell'immagine.
+# I circuiti integrati fanno eccezione nel layout: questa misura e' soltanto
+# il fallback quando la Pipeline 1.0 non ha prodotto una bbox valida.
 COMPONENT_SPECS: dict[str, dict[str, float]] = {
     "resistor": {"width": 92.0, "height": 34.0},
     "capacitor": {"width": 58.0, "height": 48.0},
@@ -37,6 +39,7 @@ COMPONENT_SPECS: dict[str, dict[str, float]] = {
     "headset": {"width": 104.0, "height": 76.0},
     "speaker": {"width": 104.0, "height": 76.0},
     "operational_amplifier": {"width": 112.0, "height": 98.0},
+    "integrated_circuit": {"width": 68.0, "height": 46.0},
     "terminal": {"width": 18.0, "height": 18.0},
     "connection": {"width": 68.0, "height": 68.0},
     "structural": {"width": 68.0, "height": 46.0},
@@ -65,6 +68,9 @@ def normalize_component_type(class_name: Any, layout_kind: Any = "") -> str:
         "speaker": "speaker",
         "operational_amplifier": "operational_amplifier",
         "opamp": "operational_amplifier",
+        "integrated_circuit": "integrated_circuit",
+        "integrated-circuit": "integrated_circuit",
+        "ic": "integrated_circuit",
         "scr": "scr",
         "thyristor": "scr",
         "transformer": "transformer",

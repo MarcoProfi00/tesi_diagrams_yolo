@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import csv
 import html
+import json
 import re
 import shutil
 import subprocess
@@ -33,6 +34,47 @@ NGSPICE_CANDIDATES = (
     "ngspice",
     "ngspice.exe",
 )
+
+
+def load_ngspice_defines(output_dir: str | Path) -> dict[str, str]:
+    """Legge dal report di emissione le variabili richieste dai modelli usati."""
+    report_path = Path(output_dir) / "07_spice_emit_report.json"
+    if not report_path.is_file():
+        return {}
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"Invalid SPICE emit report: {report_path}") from exc
+
+    raw_defines = report.get("ngspice_defines") if isinstance(report, dict) else None
+    if raw_defines in (None, ""):
+        return {}
+    if not isinstance(raw_defines, dict):
+        raise ValueError("07_spice_emit_report.json: ngspice_defines must be a mapping")
+
+    defines: dict[str, str] = {}
+    for raw_name, raw_value in raw_defines.items():
+        name = str(raw_name).strip()
+        value = str(raw_value).strip()
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+            raise ValueError(f"Invalid ngspice define name: {name!r}")
+        if not value or any(character in value for character in "\r\n\x00"):
+            raise ValueError(f"Invalid value for ngspice define {name}")
+        defines[name] = value
+    return dict(sorted(defines.items()))
+
+
+def build_ngspice_command(
+    ngspice_path: str,
+    netlist_name: str,
+    defines: dict[str, str] | None = None,
+) -> list[str]:
+    """Costruisce il comando batch aggiungendo solo define dichiarate e validate."""
+    command = [ngspice_path]
+    for name, value in sorted((defines or {}).items()):
+        command.extend(["-D", f"{name}={value}"])
+    command.extend(["-b", netlist_name])
+    return command
 
 
 def find_ngspice_executable(executable: str | None = None) -> str | None:
@@ -317,7 +359,11 @@ def run_ngspice(
     # ngspice viene eseguito con cwd nella cartella del circuito, quindi gli
     # passiamo solo il nome della netlist. In questo modo funziona sia con
     # output_dir assoluti sia con output_dir relativi.
-    command = [ngspice_path, "-b", netlist_path.name]
+    command = build_ngspice_command(
+        ngspice_path,
+        netlist_path.name,
+        defines=load_ngspice_defines(circuit_dir),
+    )
 
     try:
         # Lo step 08 registra il risultato grezzo, senza correggere il circuito.

@@ -1,0 +1,26 @@
+* Standalone ngspice probe for the official TI TLC555 TINA model.
+.include tina/TLC555_TINA_AIO/TLC555.LIB
+
+VVCC vcc 0 DC 9
+R1 vcc disc 1k
+R2 disc timing 1k
+C1 timing 0 1u
+C2 control 0 1u
+C3 vcc 0 1u
+R3 out led_anode 1k
+DLED led_anode 0 LED_RED
+.model LED_RED D
+
+* TI port order: THRES CONT TRIG RESET OUT DISC VCC GND
+XTIMER timing control timing vcc out disc vcc 0 TLC555
+
+.tran 2u 20m
+
+.control
+set wr_singlescale
+set wr_vecnames
+run
+wrdata test_tina_ic01.csv time v(out) v(timing) v(disc) v(control)
+.endc
+
+.end

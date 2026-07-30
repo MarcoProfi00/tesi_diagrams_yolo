@@ -1,0 +1,35 @@
+{
+  "title": "Riduzione del condensatore sul pin control per stabilizzare l’avvio del TLC555",
+  "hypothesis": "L’irregolarita iniziale e causata principalmente dal condensatore da 1 uF sul nodo CONT (N002), troppo grande per il pin di controllo del 555; riducendolo drasticamente il comparatore interno dovrebbe assestarsi piu rapidamente e il LED dovrebbe lampeggiare con periodo regolare gia dall’avvio.",
+  "intent": "correction",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Ccapacitor4_2",
+      "value": "10n"
+    }
+  ],
+  "compare": [
+    "v(N001)",
+    "v(N002)",
+    "v(N005)",
+    "v(N006)",
+    "@dled12_1[id]"
+  ],
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak"
+  },
+  "expect": {
+    "v(N002)": "changed",
+    "v(N005)": "changed",
+    "@dled12_1[id]": "nonzero"
+  },
+  "temporal_expect": {
+    "target": "Dled12_1",
+    "required_state": "blinking",
+    "require_regular_period": true,
+    "min_duty_cycle": 0.1
+  },
+  "scenario_id": "agent_scenario_3"
+}

@@ -1542,7 +1542,11 @@ def render_transformer(
     )
 
 
-def render_multi_terminal(component_id: str, position: dict[str, Any]) -> str:
+def render_multi_terminal(
+    component_id: str,
+    position: dict[str, Any],
+    component: dict[str, Any] | None = None,
+) -> str:
     """Disegna un simbolo generico leggibile per componenti con tre o più terminali."""
     x = float(position.get("x") or 0)
     y = float(position.get("y") or 0)
@@ -1551,8 +1555,43 @@ def render_multi_terminal(component_id: str, position: dict[str, Any]) -> str:
         f'<path d="M{format_number(x)} {format_number(y)} L{format_number(item["x"])} {format_number(item["y"])}"/>'
         for item in terminals
     )
-    label = escape(component_id.split(".")[0])
+    label = escape(
+        str((component or {}).get("viewer_label") or position.get("label") or component_id)
+    )
     return f'<g class="symbol multi">{leads}<circle cx="{format_number(x)}" cy="{format_number(y)}" r="25"/><text class="component-label" x="{format_number(x)}" y="{format_number(y-34)}">{label}</text></g>'
+
+
+def render_integrated_circuit(
+    component: dict[str, Any],
+    position: dict[str, Any],
+) -> str:
+    """Disegna un IC come la bbox rettangolare estratta dalla Pipeline 1.0."""
+    bbox = position.get("bbox")
+    if isinstance(bbox, list) and len(bbox) == 4:
+        left, top, right, bottom = (float(value) for value in bbox)
+    else:
+        center_x = float(position.get("x") or 0)
+        center_y = float(position.get("y") or 0)
+        size = position.get("symbol_size") or {}
+        width = float(size.get("width") or 68.0)
+        height = float(size.get("height") or 46.0)
+        left, top = center_x - width / 2, center_y - height / 2
+        right, bottom = center_x + width / 2, center_y + height / 2
+    center_x = (left + right) / 2
+    center_y = (top + bottom) / 2
+    label_svg = render_component_label(
+        component_label_lines(component, position),
+        center_x,
+        center_y,
+        "middle",
+    )
+    return (
+        '<g class="symbol integrated-circuit">'
+        f'<rect x="{format_number(left)}" y="{format_number(top)}" '
+        f'width="{format_number(right-left)}" height="{format_number(bottom-top)}"/>'
+        f'{label_svg}'
+        '</g>'
+    )
 
 
 def rectangles_overlap(first: tuple[float, float, float, float], second: tuple[float, float, float, float]) -> float:
@@ -1564,6 +1603,18 @@ def rectangles_overlap(first: tuple[float, float, float, float], second: tuple[f
 
 def component_obstacle(position: dict[str, Any]) -> tuple[float, float, float, float]:
     """Stima l'ingombro visuale di un simbolo posizionato nel layout."""
+    bbox = position.get("bbox")
+    if (
+        str(position.get("component_type") or "") == "integrated_circuit"
+        and isinstance(bbox, list)
+        and len(bbox) == 4
+    ):
+        return (
+            float(bbox[0]) - 6,
+            float(bbox[1]) - 6,
+            float(bbox[2]) + 6,
+            float(bbox[3]) + 6,
+        )
     x = float(position.get("x") or 0)
     y = float(position.get("y") or 0)
     size = position.get("symbol_size") or {}
@@ -1822,6 +1873,8 @@ def render_components(
             )
         elif visual_class == "operational_amplifier":
             symbol = render_operational_amplifier(component, position)
+        elif visual_class == "integrated_circuit":
+            symbol = render_integrated_circuit(component, position)
         elif visual_class in {"npn_transistor", "pnp_transistor", "bjt"}:
             symbol = render_bjt_transistor(
                 str(component_id),
@@ -1840,7 +1893,7 @@ def render_components(
                 str(component_id), component, position, transient_ids
             )
         elif terminal_count > 2:
-            symbol = render_multi_terminal(str(component_id), position)
+            symbol = render_multi_terminal(str(component_id), position, component)
         else:
             symbol = render_two_terminal_symbol(
                 str(component_id),

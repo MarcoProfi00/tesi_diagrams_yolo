@@ -647,6 +647,12 @@ def validate_decision(
             raise AutonomousDecisionError(
                 "Prima della conclusione serve almeno uno scenario controllato eseguito"
             )
+        if require_verified_correction:
+            raise AutonomousDecisionError(
+                "L'utente ha chiesto anche una correzione e resta budget disponibile: "
+                "prima di fermarti prova uno scenario correttivo distinto e sostenuto "
+                "dagli artefatti"
+            )
         if require_joint_objective_verification:
             raise AutonomousDecisionError(
                 "Prima della conclusione serve una singola run self-contained che verifichi "

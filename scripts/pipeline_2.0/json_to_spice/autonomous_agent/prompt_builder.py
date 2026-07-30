@@ -71,9 +71,11 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
 - Se il sintomo utente richiede esplicitamente di correggere, risolvere, attivare,
   disattivare o ripristinare un comportamento, prova una correzione distinta e
   sostenuta dagli artefatti finche ne esiste una non ancora verificata.
-- Se una correzione e gia fallita e restano soltanto scenari duplicati oppure
-  modifiche non sostenute dagli artefatti, fermati con `localized`,
-  `partially_localized` o `inconclusive` e lascia `verified_correction` vuoto.
+- Quando l'utente chiede una correzione e resta budget, `decision=stop` non e
+  ammessa finche non esiste una correzione verificata: passa a un'ipotesi
+  elettricamente distinta e sostenuta dagli artefatti. Se nessuna risolve il
+  sintomo, fermati con `inconclusive` soltanto a budget esaurito e lascia
+  `verified_correction` vuoto.
 - Se uno scenario migliora il sintomo ma viola un vincolo richiesto (per esempio
   perde regolarita, spegne un componente da preservare o degrada l'uscita), trattalo
   come evidenza diagnostica e non come correzione finale.

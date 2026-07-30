@@ -1,0 +1,281 @@
+{
+  "circuit_id": "ic01",
+  "source_format": "pipeline2.0_values_bound",
+  "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\data\\batchPipeline2.0\\batchICChatAgentEvaluation\\values\\ic01_values.yaml",
+  "supplies": {
+    "VCC_9": {
+      "terminal": "terminal26.1_t1",
+      "type": "dc",
+      "value": 9,
+      "unit": "V",
+      "reference": 0,
+      "source": "manual_from_image_label",
+      "label_text": "+9 V DC",
+      "viewer_override": {
+        "visual_class": "voltage_source",
+        "label": "+9 V",
+        "display_value": "9 V DC"
+      },
+      "node": "N003"
+    }
+  },
+  "components": {
+    "capacitor4.1": {
+      "class_name": "Capacitor",
+      "terminal_nodes": {
+        "t1": "N001",
+        "t2": "0"
+      },
+      "value_data": {
+        "value": 1,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "C1 1 uF",
+        "viewer_override": {
+          "label": "C1",
+          "display_value": "1 uF"
+        }
+      },
+      "status": "bound"
+    },
+    "capacitor4.2": {
+      "class_name": "Capacitor",
+      "terminal_nodes": {
+        "t1": "N002",
+        "t2": "0"
+      },
+      "value_data": {
+        "value": 1,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "C2 1 uF",
+        "viewer_override": {
+          "label": "C2",
+          "display_value": "1 uF"
+        }
+      },
+      "status": "bound"
+    },
+    "capacitor4.3": {
+      "class_name": "Capacitor",
+      "terminal_nodes": {
+        "t1": "N003",
+        "t2": "0"
+      },
+      "value_data": {
+        "value": 1,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "C3 1 uF",
+        "viewer_override": {
+          "label": "C3",
+          "display_value": "1 uF"
+        }
+      },
+      "status": "bound"
+    },
+    "gnd9.1": {
+      "class_name": "GND",
+      "terminal_nodes": {
+        "t1": "0"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "integrated_circuit11.1": {
+      "class_name": "Integrated_Circuit",
+      "terminal_nodes": {
+        "left_1": "N004",
+        "left_2": "N001",
+        "right_1": "N005",
+        "right_2": "N002",
+        "top_1": "N003",
+        "top_2": "N003",
+        "bottom_1": "N001",
+        "bottom_2": "0"
+      },
+      "value_data": {
+        "model": "TLC555_6",
+        "source": "ti_official_slfj002e_pspice_model",
+        "label_text": "IC1 555 Timer; modello ufficiale TI TLC555_6 Rev. E",
+        "viewer_override": {
+          "label": "IC1",
+          "display_value": "TLC555",
+          "tooltip": "IC1 TLC555; modello ufficiale TI PSpice Rev. E SLFJ002E"
+        },
+        "spice_override": {
+          "emit_as": "subcircuit",
+          "pin_order": [
+            "THRES",
+            "CONT",
+            "TRIG",
+            "RESET",
+            "OUT",
+            "DISC",
+            "VCC",
+            "GND"
+          ],
+          "node_refs": {
+            "THRES": "integrated_circuit11.1_left_2",
+            "CONT": "integrated_circuit11.1_right_2",
+            "TRIG": "integrated_circuit11.1_bottom_1",
+            "RESET": "integrated_circuit11.1_top_1",
+            "OUT": "integrated_circuit11.1_right_1",
+            "DISC": "integrated_circuit11.1_left_1",
+            "VCC": "integrated_circuit11.1_top_2",
+            "GND": "integrated_circuit11.1_bottom_2"
+          },
+          "resolved_node_refs": {
+            "THRES": "N001",
+            "CONT": "N002",
+            "TRIG": "N001",
+            "RESET": "N003",
+            "OUT": "N005",
+            "DISC": "N004",
+            "VCC": "N003",
+            "GND": "0"
+          }
+        }
+      },
+      "status": "unsupported_for_now"
+    },
+    "led12.1": {
+      "class_name": "LED",
+      "terminal_nodes": {
+        "anode": "N006",
+        "cathode": "0"
+      },
+      "value_data": {
+        "model": "LED_RED",
+        "source": "manual_assumption_standard_red_led",
+        "label_text": "LED rosso standard; part number non specificato",
+        "viewer_override": {
+          "label": "LED",
+          "display_value": "red",
+          "tooltip": "LED rosso standard assunto; part number non indicato nello schema"
+        }
+      },
+      "status": "bound"
+    },
+    "resistor22.1": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N004",
+        "t2": "N001"
+      },
+      "value_data": {
+        "value": 1,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R2 1 kohm",
+        "viewer_override": {
+          "label": "R2",
+          "display_value": "1 kohm"
+        }
+      },
+      "status": "bound"
+    },
+    "resistor22.2": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N003",
+        "t2": "N004"
+      },
+      "value_data": {
+        "value": 1,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R1 1 kohm",
+        "viewer_override": {
+          "label": "R1",
+          "display_value": "1 kohm"
+        }
+      },
+      "status": "bound"
+    },
+    "resistor22.3": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N005",
+        "t2": "N006"
+      },
+      "value_data": {
+        "value": 1,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R3 1 kohm",
+        "viewer_override": {
+          "label": "R3",
+          "display_value": "1 kohm"
+        }
+      },
+      "status": "bound"
+    },
+    "terminal26.1": {
+      "class_name": "Terminal",
+      "terminal_nodes": {
+        "t1": "N003"
+      },
+      "value_data": null,
+      "status": "not_required"
+    }
+  },
+  "nodes": {
+    "gnd9.1_t1": {
+      "label": "GND",
+      "source": "graph_json_ground",
+      "node": "0"
+    },
+    "integrated_circuit11.1_bottom_1": {
+      "label": "TIMER_TRIGGER",
+      "source": "manual_from_validated_graph_pin2",
+      "node": "N001"
+    },
+    "integrated_circuit11.1_left_1": {
+      "label": "TIMER_DISCHARGE",
+      "source": "manual_from_validated_graph_pin7",
+      "node": "N004"
+    },
+    "integrated_circuit11.1_left_2": {
+      "label": "TIMER_THRESHOLD",
+      "source": "manual_from_validated_graph_pin6",
+      "node": "N001"
+    },
+    "integrated_circuit11.1_right_1": {
+      "label": "TIMER_OUT",
+      "source": "manual_from_validated_graph_pin3",
+      "node": "N005"
+    },
+    "integrated_circuit11.1_right_2": {
+      "label": "TIMER_CONTROL",
+      "source": "manual_from_validated_graph_pin5",
+      "node": "N002"
+    },
+    "terminal26.1_t1": {
+      "label": "VCC_9",
+      "source": "manual_from_image_label",
+      "label_text": "+9 V",
+      "node": "N003"
+    }
+  },
+  "spice_topology_overlay": [],
+  "simulation": {
+    "analyses": [
+      "tran"
+    ],
+    "tran": {
+      "step": "5us",
+      "stop": "100ms"
+    }
+  },
+  "missing": [],
+  "stats": {
+    "components_total": 10,
+    "bound_components": 7,
+    "missing_components": 0,
+    "not_required_components": 2,
+    "unsupported_components": 1,
+    "supplies_count": 1,
+    "manual_nodes_count": 7
+  }
+}

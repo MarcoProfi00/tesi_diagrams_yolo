@@ -215,6 +215,23 @@ def transform_point(x: Any, y: Any, transform: dict[str, float]) -> dict[str, fl
     }
 
 
+def transform_bbox(bbox: Any, transform: dict[str, float]) -> list[float] | None:
+    """Converte una bbox immagine nel rettangolo equivalente del canvas."""
+    if not isinstance(bbox, (list, tuple)) or len(bbox) != 4:
+        return None
+    try:
+        first = transform_point(bbox[0], bbox[1], transform)
+        second = transform_point(bbox[2], bbox[3], transform)
+    except (TypeError, ValueError):
+        return None
+    return [
+        min(first["x"], second["x"]),
+        min(first["y"], second["y"]),
+        max(first["x"], second["x"]),
+        max(first["y"], second["y"]),
+    ]
+
+
 def visual_source_id(component: dict[str, Any]) -> str:
     """Restituisce l'id Pipeline 1.0 associato a un componente del modello."""
     return str(component.get("source_component_id") or component.get("id") or "")
@@ -351,6 +368,11 @@ def standardize_terminals(
     center_x, center_y = float(center["x"]), float(center["y"])
     standardized = [dict(terminal) for terminal in terminals]
 
+    if component_type == "integrated_circuit":
+        # Per gli IC la bbox della Pipeline 1.0 e le coordinate dei pin sono
+        # gia' il simbolo: non li proiettiamo su un ingombro standard.
+        return standardized
+
     if component_type == "connector":
         # Tutti i connector usano pin centrati, equidistanti e indipendenti dalla bbox.
         ordered = sorted(standardized, key=lambda item: float(item.get("y") or 0))
@@ -478,12 +500,57 @@ def standardize_terminals(
     return standardized
 
 
+def align_integrated_circuit_terminals_to_bbox(
+    terminals: list[dict[str, Any]],
+    bbox: list[float] | None,
+) -> list[dict[str, Any]]:
+    """Porta i pin IC sul bordo della bbox senza alterarne la quota sul lato."""
+    if not bbox:
+        return terminals
+    left, top, right, bottom = (float(value) for value in bbox)
+    aligned = [dict(terminal) for terminal in terminals]
+    for terminal in aligned:
+        side = str(terminal.get("relative_position") or "").lower()
+        if side == "left":
+            terminal["x"] = left
+        elif side == "right":
+            terminal["x"] = right
+        elif side == "top":
+            terminal["y"] = top
+        elif side == "bottom":
+            terminal["y"] = bottom
+        else:
+            x = float(terminal.get("x") or (left + right) / 2)
+            y = float(terminal.get("y") or (top + bottom) / 2)
+            nearest_side = min(
+                (
+                    (abs(x - left), "left"),
+                    (abs(x - right), "right"),
+                    (abs(y - top), "top"),
+                    (abs(y - bottom), "bottom"),
+                ),
+                key=lambda item: item[0],
+            )[1]
+            if nearest_side == "left":
+                terminal["x"] = left
+            elif nearest_side == "right":
+                terminal["x"] = right
+            elif nearest_side == "top":
+                terminal["y"] = top
+            else:
+                terminal["y"] = bottom
+    return aligned
+
+
 def move_component_to_lane(component: dict[str, Any], lane_y: float) -> None:
     """Sposta un componente orizzontale e tutti i suoi terminali sulla corsia indicata."""
     delta_y = lane_y - float(component.get("y") or lane_y)
     component["y"] = lane_y
     for terminal in component.get("terminals") or []:
         terminal["y"] = float(terminal.get("y") or 0) + delta_y
+    bbox = component.get("bbox")
+    if isinstance(bbox, list) and len(bbox) == 4:
+        component["bbox"] = [bbox[0], bbox[1] + delta_y, bbox[2], bbox[3] + delta_y]
 
 
 def align_horizontal_branches(positioned: dict[str, dict[str, Any]]) -> None:
@@ -654,6 +721,14 @@ def component_visual_bounds(component: dict[str, Any]) -> tuple[float, float, fl
     center_x = float(component.get("x") or 0)
     center_y = float(component.get("y") or 0)
     terminals = component.get("terminals") or []
+    bbox = component.get("bbox")
+    if component_type == "integrated_circuit" and isinstance(bbox, list) and len(bbox) == 4:
+        return (
+            float(bbox[0]) - 12.0,
+            float(bbox[1]) - 12.0,
+            float(bbox[2]) + 12.0,
+            float(bbox[3]) + 12.0,
+        )
     if component_type == "connector" and terminals:
         spec = component_spec("connector", "connector", len(terminals))
         top = min(float(item["y"]) for item in terminals) - 36.0
@@ -687,6 +762,9 @@ def component_symbol_bounds(component: dict[str, Any]) -> tuple[float, float, fl
     center_x = float(component.get("x") or 0)
     center_y = float(component.get("y") or 0)
     terminals = component.get("terminals") or []
+    bbox = component.get("bbox")
+    if component_type == "integrated_circuit" and isinstance(bbox, list) and len(bbox) == 4:
+        return tuple(float(value) for value in bbox)
     if component_type == "connector" and terminals:
         spec = component_spec("connector", "connector", len(terminals))
         top = min(float(item["y"]) for item in terminals) - 20.0
@@ -717,6 +795,14 @@ def translate_component(component: dict[str, Any], delta_x: float, delta_y: floa
     for terminal in component.get("terminals") or []:
         terminal["x"] = float(terminal.get("x") or 0) + delta_x
         terminal["y"] = float(terminal.get("y") or 0) + delta_y
+    bbox = component.get("bbox")
+    if isinstance(bbox, list) and len(bbox) == 4:
+        component["bbox"] = [
+            float(bbox[0]) + delta_x,
+            float(bbox[1]) + delta_y,
+            float(bbox[2]) + delta_x,
+            float(bbox[3]) + delta_y,
+        ]
 
 
 def separate_supply_switch_chain_from_parallel_capacitor(
@@ -1429,15 +1515,28 @@ def build_image_guided_components(
         )
         component_type = normalize_component_type(visual_class_name, component.get("layout_kind"))
         raw_terminals = match_geometry_terminals(component, geometry_component, transform)
+        bbox = (
+            transform_bbox(geometry_component.get("bbox"), transform)
+            if component_type == "integrated_circuit"
+            else None
+        )
         terminals = standardize_terminals(raw_terminals, position, component_type, orientation)
+        if component_type == "integrated_circuit":
+            terminals = align_integrated_circuit_terminals_to_bbox(terminals, bbox)
         spec = component_spec(component_type, component.get("layout_kind"), len(terminals))
+        symbol_size = (
+            {"width": bbox[2] - bbox[0], "height": bbox[3] - bbox[1]}
+            if bbox
+            else {"width": spec["width"], "height": spec["height"]}
+        )
         positioned[component_id] = {
             **position,
             "source_component_id": source_id,
             "layout_kind": component.get("layout_kind"),
             "visual_class_name": visual_class_name,
             "component_type": component_type,
-            "symbol_size": {"width": spec["width"], "height": spec["height"]},
+            "symbol_size": symbol_size,
+            "bbox": bbox,
             "label": component.get("label"),
             "orientation": orientation,
             "terminals": terminals,

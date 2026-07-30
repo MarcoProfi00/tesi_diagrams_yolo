@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import sys
 import unittest
 from unittest import mock
@@ -20,6 +21,7 @@ from autonomous_agent.contracts import (  # noqa: E402
     ACTION_REQUIRED_FIELDS,
     ALLOWED_ACTION_TYPES,
     AutonomousDecisionError,
+    validate_decision,
     validate_scenario,
 )
 from autonomous_agent.controller import (  # noqa: E402
@@ -39,6 +41,8 @@ from viewer_core.model_builder import (  # noqa: E402
     led_current_states_with_hysteresis,
     led_transient_profiles,
 )
+from viewer_core.layout_builder import build_image_guided_components  # noqa: E402
+from viewer_core.svg_renderer import render_integrated_circuit  # noqa: E402
 
 
 class SharedContractTests(unittest.TestCase):
@@ -48,9 +52,55 @@ class SharedContractTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         """Carica i moduli numerati coinvolti nei contratti condivisi."""
         cls.spice_emit = load_numbered_module("07_spice_emit.py")
+        cls.spice_run = load_numbered_module("08_spice_run.py")
         cls.web_chat = load_numbered_module("09_web_chat.py")
         cls.context_builder = load_numbered_module("10_build_diagnostic_context.py")
         cls.step12 = load_numbered_module("12_controlled_scenarios.py")
+
+    def test_integrated_circuit_viewer_preserves_bbox_and_pin_coordinates(self) -> None:
+        """Il simbolo IC usa la bbox Pipeline 1.0 senza riposizionare i pin."""
+        components = [
+            {
+                "id": "XU1",
+                "source_component_id": "integrated_circuit1.1",
+                "layout_kind": "structural",
+                "nodes": ["N001", "N002", "0"],
+                "terminal_names": ["left_1", "right_1", "bottom_1"],
+                "viewer_label": "IC1",
+                "viewer_value": "DEVICE",
+            }
+        ]
+        geometry_seed = {
+            "components": {
+                "integrated_circuit1.1": {
+                    "class_name": "Integrated_Circuit",
+                    "bbox": [10.0, 20.0, 50.0, 80.0],
+                    "center": {"x": 30.0, "y": 50.0},
+                    "estimated_orientation": "multi_side",
+                    "terminals": {
+                        "left_1": {"id": "pin1", "x": 13.0, "y": 35.0, "relative_position": "left"},
+                        "right_1": {"id": "pin2", "x": 47.0, "y": 35.0, "relative_position": "right"},
+                        "bottom_1": {"id": "pin3", "x": 30.0, "y": 76.0, "relative_position": "bottom"},
+                    },
+                }
+            }
+        }
+        transform = {"scale": 2.0, "offset_x": 5.0, "offset_y": -3.0}
+
+        positioned, warnings = build_image_guided_components(components, geometry_seed, transform)
+        integrated_circuit = positioned["XU1"]
+
+        self.assertEqual(warnings, [])
+        self.assertEqual(integrated_circuit["component_type"], "integrated_circuit")
+        self.assertEqual(integrated_circuit["bbox"], [25.0, 37.0, 105.0, 157.0])
+        self.assertEqual(integrated_circuit["symbol_size"], {"width": 80.0, "height": 120.0})
+        self.assertEqual(
+            [(terminal["x"], terminal["y"]) for terminal in integrated_circuit["terminals"]],
+            [(25.0, 67.0), (105.0, 67.0), (65.0, 157.0)],
+        )
+        svg = render_integrated_circuit(components[0], integrated_circuit)
+        self.assertIn('<rect x="25" y="37" width="80" height="120"/>', svg)
+        self.assertIn("IC1", svg)
 
     def test_manual_sinusoidal_source_uses_the_shared_voltage_expression(self) -> None:
         """Una sorgente YAML sinusoidale viene emessa con sintassi SPICE valida."""
@@ -72,6 +122,109 @@ class SharedContractTests(unittest.TestCase):
 
         self.assertIsNone(warning)
         self.assertEqual(line, "VAUDIO_IN N001 0 SIN(0 0.1 1000)")
+
+    def test_external_spice_model_is_verified_inlined_and_declares_runtime(self) -> None:
+        """Un modello su file resta generico, verificabile e autosufficiente."""
+        with isolated_directory("external_spice_model") as temporary_root:
+            models_dir = temporary_root / "models"
+            models_dir.mkdir()
+            model_path = models_dir / "device.lib"
+            model_text = ".SUBCKT DEVICE IN OUT\nR1 IN OUT 1k\n.ENDS DEVICE\n"
+            model_path.write_text(model_text, encoding="utf-8")
+            model_sha256 = hashlib.sha256(model_path.read_bytes()).hexdigest()
+            registry_path = temporary_root / "models.yaml"
+            registry_path.write_text("# registry used as a relative path anchor\n", encoding="utf-8")
+            registry = {
+                "models": {
+                    "DEVICE": {
+                        "file": "models/device.lib",
+                        "sha256": model_sha256,
+                        "ngspice_defines": {"ngbehavior": "ps"},
+                    }
+                }
+            }
+            rules = {
+                "circuit_id": "external_model_test",
+                "components": {
+                    "integrated_circuit1.1": {
+                        "status": "spice_ready",
+                        "spice_support": "subcircuit",
+                        "nodes": ["N001", "N002"],
+                        "parameters": {"model": "DEVICE"},
+                    }
+                },
+                "simulation": {"analyses": ["op"]},
+            }
+
+            emitted = self.spice_emit.build_spice_netlist(
+                rules,
+                spice_models=registry,
+                spice_models_source=registry_path,
+            )
+
+            self.assertIn("Xintegrated_circuit1_1 N001 N002 DEVICE", emitted["netlist_text"])
+            self.assertIn('.include "07_external_models.lib"', emitted["netlist_text"])
+            self.assertIn(
+                ".SUBCKT DEVICE IN OUT",
+                emitted["external_model_bundle_text"],
+            )
+            self.assertEqual(
+                emitted["report"]["ngspice_defines"],
+                {"ngbehavior": "ps"},
+            )
+            self.assertEqual(
+                emitted["report"]["external_model_sources"][0]["sha256"],
+                model_sha256.upper(),
+            )
+
+    def test_external_spice_model_rejects_a_hash_mismatch(self) -> None:
+        """Il registro non puo caricare silenziosamente un file differente."""
+        with isolated_directory("external_spice_model_bad_hash") as temporary_root:
+            model_path = temporary_root / "device.lib"
+            model_path.write_text(".SUBCKT DEVICE A B\n.ENDS DEVICE\n", encoding="utf-8")
+            registry_path = temporary_root / "models.yaml"
+            registry_path.write_text("# registry\n", encoding="utf-8")
+            registry = {
+                "models": {
+                    "DEVICE": {
+                        "file": "device.lib",
+                        "sha256": "0" * 64,
+                    }
+                }
+            }
+
+            with self.assertRaisesRegex(ValueError, "SHA-256 mismatch"):
+                self.spice_emit.resolve_model_entries(
+                    spice_models=registry,
+                    spice_models_source=registry_path,
+                    requested_models={"DEVICE"},
+                )
+
+    def test_ngspice_command_uses_only_report_defines_before_batch_mode(self) -> None:
+        """Le opzioni del modello vengono aggiunte senza conoscere il dispositivo."""
+        self.assertEqual(
+            self.spice_run.build_ngspice_command(
+                "ngspice",
+                "07_netlist.cir",
+                {"ngbehavior": "ps"},
+            ),
+            ["ngspice", "-D", "ngbehavior=ps", "-b", "07_netlist.cir"],
+        )
+
+    def test_scenario_copy_keeps_the_external_model_bundle(self) -> None:
+        """Una run scenario deve restare eseguibile nella propria cartella."""
+        with isolated_directory("scenario_external_model_bundle") as temporary_root:
+            output_dir = temporary_root / "base"
+            scenario_dir = output_dir / "scenarios" / "scenario_1"
+            output_dir.mkdir()
+            bundle_name = "07_external_models.lib"
+            (output_dir / bundle_name).write_text("* model bundle\n", encoding="utf-8")
+
+            copied = scenario_runtime.copy_base_run(output_dir, scenario_dir)
+
+            self.assertIn(bundle_name, copied["copied_files"])
+            self.assertTrue((scenario_dir / "base_snapshot" / bundle_name).is_file())
+            self.assertTrue((scenario_dir / "run" / bundle_name).is_file())
 
     def test_action_registries_are_aligned(self) -> None:
         """Ogni azione ammessa dall'agente deve avere un handler eseguibile."""
@@ -511,6 +664,34 @@ class SharedContractTests(unittest.TestCase):
         self.assertEqual(guarded["final_status"], "inconclusive")
         self.assertEqual(guarded["final_cause"], "")
         self.assertIn("non si puo concludere", guarded["final_answer"])
+
+    def test_requested_correction_cannot_stop_while_budget_remains(self) -> None:
+        """AGENT deve usare il budget per una correzione distinta prima dello stop."""
+        decision = {
+            "decision": "stop",
+            "reason": "I test diagnostici non hanno risolto il sintomo.",
+            "final_status": "inconclusive",
+            "final_answer": "Non e stata verificata una correzione.",
+            "final_cause": "",
+            "verified_correction": "",
+        }
+
+        with self.assertRaisesRegex(
+            AutonomousDecisionError,
+            "scenario correttivo distinto",
+        ):
+            validate_decision(
+                decision,
+                remaining_budget=3,
+                require_verified_correction=True,
+            )
+
+        accepted = validate_decision(
+            decision,
+            remaining_budget=3,
+            require_verified_correction=False,
+        )
+        self.assertEqual(accepted["final_status"], "inconclusive")
 
     def test_successful_initial_condition_trial_keeps_the_agent_conclusion(self) -> None:
         """Una prova `.ic` che soddisfa il criterio temporale non viene alterata."""

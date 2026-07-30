@@ -21,31 +21,177 @@ Responsabilita:
 
 from __future__ import annotations
 
+import hashlib
 import re
 import math
 from pathlib import Path
 from typing import Any
 
 
-def build_model_lines(spice_models: dict[str, Any] | None = None) -> dict[str, str]:
-    """Costruisce il dizionario dei modelli SPICE letti dai metadata."""
-    model_lines: dict[str, str] = {}
+EXTERNAL_MODELS_BUNDLE_NAME = "07_external_models.lib"
+
+
+def resolve_model_file(
+    relative_path: str,
+    spice_models_source: str | Path | None,
+) -> tuple[Path, str]:
+    """Risolve un modello esterno confinandolo alla cartella del registro."""
+    if spice_models_source is None:
+        raise ValueError("External SPICE models require the model registry source path.")
+
+    registry_path = Path(spice_models_source).resolve()
+    registry_dir = registry_path.parent if registry_path.is_file() else registry_path
+    requested_path = Path(relative_path)
+    if requested_path.is_absolute():
+        raise ValueError(f"External SPICE model paths must be relative: {relative_path}")
+
+    model_path = (registry_dir / requested_path).resolve()
+    try:
+        model_path.relative_to(registry_dir)
+    except ValueError as exc:
+        raise ValueError(
+            f"External SPICE model escapes the registry directory: {relative_path}"
+        ) from exc
+    if not model_path.is_file():
+        raise FileNotFoundError(f"External SPICE model not found: {model_path}")
+    return model_path, requested_path.as_posix()
+
+
+def validate_ngspice_defines(
+    model_name: str,
+    raw_defines: Any,
+) -> dict[str, str]:
+    """Valida le variabili ngspice dichiarate da un modello nel registro."""
+    if raw_defines in (None, ""):
+        return {}
+    if not isinstance(raw_defines, dict):
+        raise ValueError(f"{model_name}: ngspice_defines must be a mapping")
+
+    defines: dict[str, str] = {}
+    for raw_name, raw_value in raw_defines.items():
+        name = str(raw_name).strip()
+        value = str(raw_value).strip()
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+            raise ValueError(f"{model_name}: invalid ngspice define name: {name!r}")
+        if not value or any(character in value for character in "\r\n\x00"):
+            raise ValueError(f"{model_name}: invalid value for ngspice define {name}")
+        defines[name] = value
+    return dict(sorted(defines.items()))
+
+
+def resolve_model_entries(
+    spice_models: dict[str, Any] | None = None,
+    spice_models_source: str | Path | None = None,
+    requested_models: set[str] | list[str] | tuple[str, ...] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Carica solo i modelli richiesti e ne conserva i requisiti di runtime."""
+    resolved: dict[str, dict[str, Any]] = {}
     yaml_models = (spice_models or {}).get("models") or {}
+    selected = (
+        sorted({str(model) for model in requested_models})
+        if requested_models is not None
+        else sorted(str(model) for model in yaml_models)
+    )
 
     # I modelli SPICE non vengono definiti nel codice: lo step 07 legge solo il
-    # file metadata/pipeline2_spice_models.yaml e usa le righe richieste.
-    for model_name, model_data in yaml_models.items():
+    # registro metadata e risolve esclusivamente quelli richiesti dalla netlist.
+    for model_name in selected:
+        model_data = yaml_models.get(model_name)
+        if model_data is None:
+            continue
+
+        source: dict[str, Any] | None = None
         if isinstance(model_data, dict):
             line = model_data.get("line")
             lines = model_data.get("lines")
             if isinstance(lines, dict):
                 line = "\n".join(str(item) for item in lines.values() if item not in (None, ""))
+            model_file = model_data.get("file")
+            if model_file not in (None, ""):
+                model_path, portable_path = resolve_model_file(
+                    str(model_file),
+                    spice_models_source,
+                )
+                model_bytes = model_path.read_bytes()
+                actual_sha256 = hashlib.sha256(model_bytes).hexdigest().upper()
+                expected_sha256 = str(model_data.get("sha256") or "").strip().upper()
+                if not expected_sha256:
+                    raise ValueError(
+                        f"{model_name}: external SPICE model requires a sha256 value"
+                    )
+                if actual_sha256 != expected_sha256:
+                    raise ValueError(
+                        f"{model_name}: external SPICE model SHA-256 mismatch "
+                        f"(expected {expected_sha256}, found {actual_sha256})"
+                    )
+                line = (
+                    model_bytes.decode("utf-8-sig")
+                    .replace("\r\n", "\n")
+                    .replace("\r", "\n")
+                    .rstrip()
+                )
+                source = {
+                    "model": model_name,
+                    "kind": "file",
+                    "file": portable_path,
+                    "sha256": actual_sha256,
+                }
+            defines = validate_ngspice_defines(
+                model_name,
+                model_data.get("ngspice_defines"),
+            )
         else:
             line = model_data
+            defines = {}
         if line:
-            model_lines[str(model_name)] = str(line)
+            resolved[model_name] = {
+                "text": str(line),
+                "source": source,
+                "ngspice_defines": defines,
+            }
 
-    return model_lines
+    return resolved
+
+
+def build_model_lines(
+    spice_models: dict[str, Any] | None = None,
+    spice_models_source: str | Path | None = None,
+    requested_models: set[str] | list[str] | tuple[str, ...] | None = None,
+) -> dict[str, str]:
+    """Costruisce il dizionario testuale dei modelli SPICE richiesti."""
+    return {
+        model_name: str(entry["text"])
+        for model_name, entry in resolve_model_entries(
+            spice_models=spice_models,
+            spice_models_source=spice_models_source,
+            requested_models=requested_models,
+        ).items()
+    }
+
+
+def build_model_registry_fingerprint(
+    spice_models: dict[str, Any],
+    spice_models_source: str | Path,
+) -> str:
+    """Firma il registro e i file esterni, validandoli prima della cache."""
+    registry_path = Path(spice_models_source).resolve()
+    if not registry_path.is_file():
+        raise FileNotFoundError(f"SPICE model registry not found: {registry_path}")
+
+    resolved = resolve_model_entries(
+        spice_models=spice_models,
+        spice_models_source=registry_path,
+    )
+    digest = hashlib.sha256()
+    digest.update(registry_path.read_bytes())
+    for model_name, entry in sorted(resolved.items()):
+        source = entry.get("source")
+        if not isinstance(source, dict):
+            continue
+        digest.update(str(model_name).encode("utf-8"))
+        digest.update(str(source.get("file") or "").encode("utf-8"))
+        digest.update(str(source.get("sha256") or "").encode("ascii"))
+    return digest.hexdigest()
 
 
 def safe_name(raw_name: str) -> str:
@@ -342,10 +488,10 @@ def build_control_lines(
 def build_spice_netlist(
     component_rules: dict[str, Any],
     spice_models: dict[str, Any] | None = None,
+    spice_models_source: str | Path | None = None,
 ) -> dict[str, Any]:
     """Costruisce il testo della netlist e un report compatto di emissione."""
     circuit_id = component_rules.get("circuit_id") or "unknown"
-    model_lines = build_model_lines(spice_models)
     lines = [
         f"* pipeline2.0 netlist",
         f"* circuit: {circuit_id}",
@@ -415,15 +561,40 @@ def build_spice_netlist(
         if warning:
             warnings.append(warning)
 
+    resolved_models = resolve_model_entries(
+        spice_models=spice_models,
+        spice_models_source=spice_models_source,
+        requested_models=models,
+    )
+    external_model_sources: list[dict[str, Any]] = []
+    external_model_texts: list[tuple[str, str]] = []
+    ngspice_defines: dict[str, str] = {}
     if models:
         lines.append("")
         for model in sorted(models):
-            model_line = model_lines.get(model)
-            if model_line:
-                lines.append(model_line)
+            model_entry = resolved_models.get(model)
+            if model_entry:
+                source = model_entry.get("source")
+                if isinstance(source, dict):
+                    external_model_sources.append(dict(source))
+                    external_model_texts.append((model, str(model_entry["text"])))
+                else:
+                    lines.append(str(model_entry["text"]))
+                for define_name, define_value in (
+                    model_entry.get("ngspice_defines") or {}
+                ).items():
+                    previous_value = ngspice_defines.get(str(define_name))
+                    if previous_value is not None and previous_value != str(define_value):
+                        raise ValueError(
+                            f"Conflicting ngspice define {define_name}: "
+                            f"{previous_value!r} vs {define_value!r}"
+                        )
+                    ngspice_defines[str(define_name)] = str(define_value)
             else:
                 warnings.append(f"{model}: SPICE model not found in pipeline2_spice_models.yaml")
                 lines.append(f"* missing model: {model}")
+        if external_model_texts:
+            lines.append(f'.include "{EXTERNAL_MODELS_BUNDLE_NAME}"')
 
     analysis_lines, analyses = build_analysis_lines(component_rules.get("simulation") or {})
     probe_nodes = sorted(transient_nodes)
@@ -448,9 +619,27 @@ def build_spice_netlist(
         "models": sorted(models),
         "warnings": warnings,
     }
+    if external_model_sources:
+        report["external_model_sources"] = external_model_sources
+    if ngspice_defines:
+        report["ngspice_defines"] = dict(sorted(ngspice_defines.items()))
 
+    bundle_sections = [
+        (
+            f"* model: {model_name}\n"
+            f"{model_text.rstrip()}"
+        )
+        for model_name, model_text in external_model_texts
+    ]
     return {
         "netlist_text": "\n".join(lines) + "\n",
+        "external_model_bundle_text": (
+            "* pipeline2.0 external SPICE model bundle\n\n"
+            + "\n\n".join(bundle_sections)
+            + "\n"
+            if bundle_sections
+            else "* pipeline2.0 external SPICE model bundle: no external models\n"
+        ),
         "report": report,
     }
 
@@ -459,10 +648,17 @@ def write_spice_outputs(
     output_dir: str | Path,
     component_rules: dict[str, Any],
     spice_models: dict[str, Any] | None = None,
+    spice_models_source: str | Path | None = None,
 ) -> tuple[Path, dict[str, Any]]:
     """Scrive `07_netlist.cir` e restituisce il report di emissione."""
     output_path = Path(output_dir)
-    result = build_spice_netlist(component_rules, spice_models=spice_models)
+    result = build_spice_netlist(
+        component_rules,
+        spice_models=spice_models,
+        spice_models_source=spice_models_source,
+    )
     netlist_path = output_path / "07_netlist.cir"
     netlist_path.write_text(result["netlist_text"], encoding="utf-8")
+    bundle_path = output_path / EXTERNAL_MODELS_BUNDLE_NAME
+    bundle_path.write_text(result["external_model_bundle_text"], encoding="utf-8")
     return netlist_path, result["report"]

@@ -109,6 +109,7 @@ class SpiceWorkspaceTests(unittest.TestCase):
                 plans[0]["values_path"].name,
                 f"{circuit_id}_values.yaml",
             )
+            self.assertTrue(plans[0]["spice_models_sha256"])
 
     def test_plan_rejects_a_yaml_for_a_different_circuit(self) -> None:
         """Un file omonimo non puo' dichiarare valori per un altro circuito."""
@@ -140,12 +141,14 @@ class SpiceWorkspaceTests(unittest.TestCase):
             plan = {
                 "graph_sha256": "graph-hash",
                 "values_sha256": "values-hash",
+                "spice_models_sha256": "models-hash",
                 "output_dir": output_dir,
             }
             state = {
                 "status": "completed",
                 "graph_sha256": "graph-hash",
                 "values_sha256": "values-hash",
+                "spice_models_sha256": "models-hash",
             }
 
             self.assertTrue(self.launcher.pipeline2_state_is_current(state, plan))
