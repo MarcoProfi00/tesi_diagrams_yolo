@@ -23,6 +23,13 @@ ALLOWED_ACTION_TYPES = frozenset(
         "add_resistor_between_nodes",
     }
 )
+SOURCE_STIMULUS_ACTION_TYPES = frozenset(
+    {
+        "drive_node_voltage",
+        "change_source_value",
+        "add_voltage_source_between_nodes",
+    }
+)
 FINAL_STATUSES = frozenset(
     {
         "resolved",
@@ -193,7 +200,12 @@ def normalize_temporal_expectation(
                 f"Scenario {scenario_index}: temporal_expect.require_regular_period deve essere booleano"
             )
         normalized_temporal_expectation["require_regular_period"] = regular_period
-    for field in ("min_duty_cycle", "min_relative_duty_increase"):
+    for field in (
+        "min_duty_cycle",
+        "min_relative_duty_increase",
+        "max_frequency_hz",
+        "min_relative_period_increase",
+    ):
         value = raw_temporal_expectation.get(field)
         if value is None:
             continue
@@ -204,6 +216,10 @@ def normalize_temporal_expectation(
         if field == "min_duty_cycle" and value > 1:
             raise AutonomousDecisionError(
                 f"Scenario {scenario_index}: temporal_expect.min_duty_cycle deve essere compreso tra 0 e 1"
+            )
+        if field == "max_frequency_hz" and value <= 0:
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: temporal_expect.max_frequency_hz deve essere positivo"
             )
         normalized_temporal_expectation[field] = float(value)
     if len(normalized_temporal_expectation) == 1:
@@ -385,6 +401,10 @@ def normalize_quality(
 ) -> None:
     """Normalizza il criterio di qualita quando richiesto dal sintomo."""
     if not require_quality_analysis:
+        # Una metrica accessoria proposta dal modello non deve trasformarsi in
+        # un requisito di successo quando l'obiettivo utente non riguarda la
+        # qualita del segnale.
+        normalized.pop("quality", None)
         return
     quality = str(scenario.get("quality") or "").strip().lower()
     if intent == "correction" and analysis != "tran":
@@ -486,6 +506,7 @@ def validate_scenario(
     require_variable_signal_measurement: bool = False,
     require_direct_component_measurement: bool = False,
     require_temporal_expectation: bool = False,
+    forbid_source_stimulus_actions: bool = False,
 ) -> dict[str, Any]:
     """Valida uno scenario self-contained proposto dall'agente."""
     if not isinstance(scenario, dict):
@@ -572,6 +593,20 @@ def validate_scenario(
         validate_action(action, scenario_index, action_index)
         for action_index, action in enumerate(actions, start=1)
     ]
+    if forbid_source_stimulus_actions:
+        forbidden = sorted(
+            {
+                str(action.get("type") or "")
+                for action in normalized_actions
+                if str(action.get("type") or "") in SOURCE_STIMULUS_ACTION_TYPES
+            }
+        )
+        if forbidden:
+            raise AutonomousDecisionError(
+                f"Scenario {scenario_index}: il vincolo utente vieta modifiche o "
+                "iniezioni sul segnale di ingresso; azioni non consentite: "
+                + ", ".join(forbidden)
+            )
     conflicts = repeated_target_assignments(normalized_actions)
     if conflicts:
         raise AutonomousDecisionError(
@@ -635,6 +670,7 @@ def validate_decision(
     require_joint_objective_verification: bool = False,
     require_temporal_expectation: bool = False,
     require_signal_amplitude_followup: bool = False,
+    forbid_source_stimulus_actions: bool = False,
 ) -> dict[str, Any]:
     """Valida e normalizza una decisione `run_scenarios` oppure `stop`."""
     decision = str(data.get("decision") or "").strip()
@@ -714,6 +750,7 @@ def validate_decision(
             require_variable_signal_measurement=require_variable_signal_measurement,
             require_direct_component_measurement=require_direct_component_measurement,
             require_temporal_expectation=require_temporal_expectation,
+            forbid_source_stimulus_actions=forbid_source_stimulus_actions,
         )
         for index, scenario in enumerate(scenarios, start=1)
     ]
@@ -739,6 +776,7 @@ def parse_and_validate_decision(
     require_joint_objective_verification: bool = False,
     require_temporal_expectation: bool = False,
     require_signal_amplitude_followup: bool = False,
+    forbid_source_stimulus_actions: bool = False,
 ) -> dict[str, Any]:
     """Converte il testo del modello in una decisione autonoma valida."""
     return validate_decision(
@@ -755,4 +793,5 @@ def parse_and_validate_decision(
         require_joint_objective_verification=require_joint_objective_verification,
         require_temporal_expectation=require_temporal_expectation,
         require_signal_amplitude_followup=require_signal_amplitude_followup,
+        forbid_source_stimulus_actions=forbid_source_stimulus_actions,
     )

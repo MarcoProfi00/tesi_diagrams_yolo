@@ -964,6 +964,73 @@ def relax_component_spacing(positioned: dict[str, dict[str, Any]]) -> None:
             break
 
 
+def align_external_terminal_ports(positioned: dict[str, dict[str, Any]]) -> None:
+    """Porta ogni port esterno fuori dal simbolo direttamente collegato.
+
+    I bipoli del viewer hanno dimensioni standard e possono diventare piu'
+    larghi della bbox trasformata. Il rilassamento non deve trascinare i port
+    attraverso il circuito: questa passata usa lato e nodo del contatto
+    Pipeline 1.0 per riancorarlo appena oltre il componente adiacente.
+    """
+    terminal_components = [
+        component
+        for component in positioned.values()
+        if component.get("component_type") == "terminal"
+        and component.get("terminals")
+    ]
+    gap = 14.0
+    for component in terminal_components:
+        terminals = component.get("terminals") or []
+        primary_terminal_id = str(component.get("viewer_primary_terminal_id") or "")
+        primary = next(
+            (
+                terminal for terminal in terminals
+                if primary_terminal_id
+                and str(terminal.get("terminal_id") or "") == primary_terminal_id
+            ),
+            terminals[0],
+        )
+        node_id = str(primary.get("node_id") or "")
+        if not node_id:
+            continue
+
+        candidates: list[tuple[float, dict[str, Any], dict[str, Any]]] = []
+        primary_x = float(primary.get("x") or component.get("x") or 0)
+        primary_y = float(primary.get("y") or component.get("y") or 0)
+        for other in positioned.values():
+            if other is component or other.get("component_type") in {"ground", "terminal"}:
+                continue
+            for other_terminal in other.get("terminals") or []:
+                if str(other_terminal.get("node_id") or "") != node_id:
+                    continue
+                distance = math.hypot(
+                    float(other_terminal.get("x") or 0) - primary_x,
+                    float(other_terminal.get("y") or 0) - primary_y,
+                )
+                candidates.append((distance, other, other_terminal))
+        if not candidates:
+            continue
+
+        _, adjacent, adjacent_terminal = min(candidates, key=lambda item: item[0])
+        left, top, right, bottom = component_symbol_bounds(adjacent)
+        side = str(primary.get("relative_position") or "").lower()
+        if side == "left":
+            target_x = right + gap
+            target_y = float(adjacent_terminal.get("y") or primary_y)
+        elif side == "right":
+            target_x = left - gap
+            target_y = float(adjacent_terminal.get("y") or primary_y)
+        elif side == "top":
+            target_x = float(adjacent_terminal.get("x") or primary_x)
+            target_y = bottom + gap
+        elif side == "bottom":
+            target_x = float(adjacent_terminal.get("x") or primary_x)
+            target_y = top - gap
+        else:
+            continue
+        translate_component(component, target_x - primary_x, target_y - primary_y)
+
+
 def realign_parallel_branches(positioned: dict[str, dict[str, Any]]) -> None:
     """Ripristina l'allineamento dei rami paralleli dopo la separazione dagli ostacoli."""
     for component in positioned.values():
@@ -1033,7 +1100,7 @@ def align_near_perpendicular_leads(positioned: dict[str, dict[str, Any]]) -> Non
     for component_id, component in positioned.items():
         for terminal in component.get("terminals") or []:
             node_id = str(terminal.get("node_id") or "")
-            if node_id:
+            if node_id and node_id != "0":
                 terminals_by_node.setdefault(node_id, []).append((component_id, terminal))
 
     proposed_x: dict[str, list[float]] = {}
@@ -1520,7 +1587,15 @@ def build_image_guided_components(
             if component_type == "integrated_circuit"
             else None
         )
-        terminals = standardize_terminals(raw_terminals, position, component_type, orientation)
+        # Un port esterno puo avere contatti su lati diversi (per esempio
+        # segnale e ritorno a massa di un jack). Le coordinate Pipeline 1.0
+        # sono gia' i suoi punti elettrici reali: appiattirle come un normale
+        # bipolo crea fili fittizi e puo scegliere il contatto sbagliato.
+        terminals = (
+            [dict(terminal) for terminal in raw_terminals]
+            if component_type == "terminal"
+            else standardize_terminals(raw_terminals, position, component_type, orientation)
+        )
         if component_type == "integrated_circuit":
             terminals = align_integrated_circuit_terminals_to_bbox(terminals, bbox)
         spec = component_spec(component_type, component.get("layout_kind"), len(terminals))
@@ -1540,6 +1615,7 @@ def build_image_guided_components(
             "label": component.get("label"),
             "orientation": orientation,
             "terminals": terminals,
+            "viewer_primary_terminal_id": component.get("viewer_primary_terminal_id"),
             "state": (component.get("parameters") or {}).get("state") or geometry_component.get("state"),
             "is_structural": bool(component.get("is_structural")),
         }
@@ -1692,6 +1768,7 @@ def build_image_guided_components(
     # Le bbox definiscono la topologia; questa passata aggiunge lo spazio necessario ai simboli reali.
     relax_component_spacing(positioned)
     realign_parallel_branches(positioned)
+    align_external_terminal_ports(positioned)
     return positioned, warnings
 
 
@@ -2342,8 +2419,9 @@ def relocate_overlapping_ground_symbols(
         for component_id, component in positioned.items():
             if component is ground or component.get("component_type") == "ground":
                 continue
-            bounds = component_visual_bounds(component)
-            if not point_in_rectangle((terminal_x, terminal_y), bounds):
+            bounds = component_symbol_bounds(component)
+            ground_bounds = component_symbol_bounds(ground)
+            if rectangle_overlap_area(ground_bounds, bounds) <= 1.0:
                 continue
             contacts = [
                 candidate
@@ -2360,33 +2438,15 @@ def relocate_overlapping_ground_symbols(
             side = str(contact.get("relative_position") or "bottom").lower()
             contact_x = float(contact.get("x") or 0)
             contact_y = float(contact.get("y") or 0)
+            symbol_gap = 4.0
             if side == "top":
-                terminal_x, terminal_y = contact_x, bounds[1] - 10.0
+                terminal_x, terminal_y = contact_x, bounds[1] - symbol_gap
             elif side == "left":
-                terminal_x, terminal_y = bounds[0] - 10.0, contact_y
+                terminal_x, terminal_y = bounds[0] - symbol_gap, contact_y
             elif side == "right":
-                terminal_x, terminal_y = bounds[2] + 10.0, contact_y
+                terminal_x, terminal_y = bounds[2] + symbol_gap, contact_y
             else:
-                terminal_x, terminal_y = contact_x, bounds[3] + 10.0
-
-            # Una massa appena estratta dal primo simbolo puo' ricadere in un secondo.
-            for _ in range(3):
-                blockers = [
-                    component_visual_bounds(other)
-                    for other in positioned.values()
-                    if other is not ground and other.get("component_type") != "ground"
-                    and point_in_rectangle((terminal_x, terminal_y), component_visual_bounds(other))
-                ]
-                if not blockers:
-                    break
-                if side == "top":
-                    terminal_y = min(blocker[1] for blocker in blockers) - 10.0
-                elif side == "left":
-                    terminal_x = min(blocker[0] for blocker in blockers) - 10.0
-                elif side == "right":
-                    terminal_x = max(blocker[2] for blocker in blockers) + 10.0
-                else:
-                    terminal_y = max(blocker[3] for blocker in blockers) + 10.0
+                terminal_x, terminal_y = contact_x, bounds[3] + symbol_gap
 
             terminal["x"] = terminal_x
             terminal["y"] = terminal_y
@@ -2394,6 +2454,83 @@ def relocate_overlapping_ground_symbols(
             ground["x"] = terminal_x
             ground["y"] = terminal_y + float(spec["height"]) / 2
             break
+
+
+def separate_ground_symbol_collisions(
+    positioned: dict[str, dict[str, Any]],
+) -> None:
+    """Scosta lateralmente le masse che coprono simboli o altre masse.
+
+    Il collegamento viene instradato dopo questa passata, quindi una piccola
+    traslazione orizzontale produce un gomito leggibile senza cambiare il nodo
+    elettrico o allungare il ramo attraverso il componente che lo blocca.
+    """
+    non_ground_obstacles = [
+        component_symbol_bounds(component)
+        for component in positioned.values()
+        if component.get("component_type") != "ground"
+    ]
+    placed_ground_bounds: list[tuple[float, float, float, float]] = []
+    grounds = sorted(
+        (
+            component
+            for component in positioned.values()
+            if component.get("component_type") == "ground"
+        ),
+        key=lambda component: str(component.get("source_component_id") or ""),
+    )
+    clearance = 8.0
+    canvas_margin = 12.0
+
+    for ground in grounds:
+        obstacles = non_ground_obstacles + placed_ground_bounds
+        for _ in range(4):
+            current = component_symbol_bounds(ground)
+            blockers = [
+                obstacle
+                for obstacle in obstacles
+                if rectangle_overlap_area(current, obstacle) > 1.0
+            ]
+            if not blockers:
+                break
+
+            candidates: list[tuple[float, float, float]] = []
+            for blocker in blockers:
+                # Le soluzioni laterali conservano il simbolo sotto il proprio
+                # ramo; quelle verticali sono soltanto fallback ai bordi.
+                candidates.extend(
+                    [
+                        (0.0, blocker[0] - clearance - current[2], 0.0),
+                        (0.0, blocker[2] + clearance - current[0], 0.0),
+                        (1.0, 0.0, blocker[3] + clearance - current[1]),
+                        (2.0, 0.0, blocker[1] - clearance - current[3]),
+                    ]
+                )
+
+            scored: list[tuple[float, float, float]] = []
+            for axis_penalty, delta_x, delta_y in candidates:
+                candidate = (
+                    current[0] + delta_x,
+                    current[1] + delta_y,
+                    current[2] + delta_x,
+                    current[3] + delta_y,
+                )
+                if (
+                    candidate[0] < canvas_margin
+                    or candidate[1] < canvas_margin
+                    or candidate[2] > VIEWER_CONTENT_WIDTH - canvas_margin
+                    or candidate[3] > VIEWER_CANVAS_HEIGHT - canvas_margin
+                ):
+                    continue
+                if any(rectangle_overlap_area(candidate, obstacle) > 1.0 for obstacle in obstacles):
+                    continue
+                score = axis_penalty * 10_000.0 + abs(delta_x) + abs(delta_y)
+                scored.append((score, delta_x, delta_y))
+            if not scored:
+                break
+            _, delta_x, delta_y = min(scored, key=lambda candidate: candidate[0])
+            translate_component(ground, delta_x, delta_y)
+        placed_ground_bounds.append(component_symbol_bounds(ground))
 
 
 def build_viewer_layout(run_dir: Path) -> dict[str, Any]:
@@ -2412,6 +2549,7 @@ def build_viewer_layout(run_dir: Path) -> dict[str, Any]:
     realign_connector_bridges(component_positions)
     align_connector_ground_symbols(component_positions, model)
     align_direct_vertical_ground_symbols(component_positions, model)
+    separate_ground_symbol_collisions(component_positions)
     node_points = collect_node_points(component_positions)
     node_positions = build_node_positions(model, node_points)
     connections = route_layout_connections(build_node_connections(node_points, model), component_positions)

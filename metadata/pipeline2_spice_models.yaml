@@ -5,6 +5,34 @@
 # i modelli effettivamente richiesti dai componenti del circuito.
 
 models:
+  LM317_TRANS:
+    # Modello transitorio PSpice ufficiale TI non cifrato per LM317,
+    # pacchetto SLVMC40 Final 1.00. Il file resta esterno al registro per
+    # conservarlo identico al rilascio del produttore; lo step 07 ne verifica
+    # l'hash e lo inserisce nel bundle solo quando viene richiesto.
+    file: "spice_models/ti/lm317/slvmc40/LM317_TRANS.LIB"
+    sha256: "9B56D7C68B75D3C0FD1E0B55F5DDC448F89F82984F026FF31ACDF89BDE4BD7E1"
+    vendor: "Texas Instruments"
+    package: "SLVMC40"
+    revision: "Final 1.00"
+    source_url: "https://www.ti.com/lit/zip/slvmc40"
+    ngspice_defines:
+      ngbehavior: ps
+
+  LM1875_0:
+    # Macromodello PSpice ufficiale TI per l'amplificatore audio LM1875,
+    # pacchetto SNAM066A Rev. A. Il file resta esterno al registro per
+    # conservarlo identico al rilascio del produttore; lo step 07 ne verifica
+    # l'hash e lo inserisce nel bundle soltanto quando viene richiesto.
+    file: "spice_models/ti/lm1875/snam066a/LM1875.lib"
+    sha256: "28BF3FC1D14AD5929C3151A7BCB6F97922BD59B38539FE334B7018522551B1F2"
+    vendor: "Texas Instruments"
+    package: "SNAM066A"
+    revision: "A"
+    source_url: "https://www.ti.com/lit/zip/snam066"
+    ngspice_defines:
+      ngbehavior: ps
+
   TLC555_6:
     # Macromodello PSpice ufficiale TI per TLC555/TLC556, package SLFJ002E
     # Rev. E. Il file resta esterno al registro per conservarlo identico al

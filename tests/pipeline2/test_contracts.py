@@ -25,9 +25,15 @@ from autonomous_agent.contracts import (  # noqa: E402
     validate_scenario,
 )
 from autonomous_agent.controller import (  # noqa: E402
+    apply_temporal_correction_policy,
+    expose_verified_correction_in_answer,
     guard_initial_condition_conclusion,
+    symptom_forbids_source_stimulus_changes,
+    symptom_requests_correction,
+    temporal_correction_policy_for_symptom,
 )
 from autonomous_agent.prompt_builder import build_autonomous_prompt  # noqa: E402
+from agent_readonly.scenario_prompt import build_scenario_answer_format  # noqa: E402
 from autonomous_agent.state_store import (  # noqa: E402
     MAX_EXECUTABLE_SCENARIOS as AGENT_SCENARIO_LIMIT,
 )
@@ -38,11 +44,19 @@ import controlled_scenarios.measurements as scenario_measurements  # noqa: E402
 import scenario_runtime  # noqa: E402
 import web_chat_core  # noqa: E402
 from viewer_core.model_builder import (  # noqa: E402
+    enrich_structural_terminals,
     led_current_states_with_hysteresis,
     led_transient_profiles,
+    pulsating_load_transient_profiles,
 )
-from viewer_core.layout_builder import build_image_guided_components  # noqa: E402
-from viewer_core.svg_renderer import render_integrated_circuit  # noqa: E402
+from viewer_core.layout_builder import (  # noqa: E402
+    align_near_perpendicular_leads,
+    build_image_guided_components,
+    component_symbol_bounds,
+    rectangle_overlap_area,
+    separate_ground_symbol_collisions,
+)
+from viewer_core.svg_renderer import render_integrated_circuit, render_terminal_port  # noqa: E402
 
 
 class SharedContractTests(unittest.TestCase):
@@ -101,6 +115,212 @@ class SharedContractTests(unittest.TestCase):
         svg = render_integrated_circuit(components[0], integrated_circuit)
         self.assertIn('<rect x="25" y="37" width="80" height="120"/>', svg)
         self.assertIn("IC1", svg)
+
+    def test_external_terminal_preserves_contacts_and_stays_outside_series_component(self) -> None:
+        """Un jack conserva segnale/ritorno e non viene coperto dal bipolo adiacente."""
+        components = [
+            {
+                "id": "terminal1",
+                "source_component_id": "terminal1",
+                "viewer_kind": "terminal",
+                "layout_kind": "terminal",
+                # L'ordine elettrico mette intenzionalmente prima il ritorno.
+                "nodes": ["0", "NIN"],
+                "terminal_names": ["t2", "t1"],
+                "viewer_primary_terminal_id": "terminal1_t1",
+                "display_label": "AUDIO IN",
+                "display_value": "20 mVpk @ 1 kHz",
+                "is_structural": True,
+            },
+            {
+                "id": "R1",
+                "source_component_id": "resistor1",
+                "layout_kind": "resistor",
+                "nodes": ["NIN", "N002"],
+                "terminal_names": ["t1", "t2"],
+            },
+        ]
+        geometry_seed = {
+            "components": {
+                "terminal1": {
+                    "class_name": "Terminal",
+                    "bbox": [0.0, 0.0, 20.0, 40.0],
+                    "center": {"x": 10.0, "y": 20.0},
+                    "estimated_orientation": "corner_right_bottom",
+                    "terminals": {
+                        "t1": {
+                            "id": "terminal1_t1",
+                            "x": 20.0,
+                            "y": 20.0,
+                            "relative_position": "right",
+                            "node_id": "NIN",
+                        },
+                        "t2": {
+                            "id": "terminal1_t2",
+                            "x": 10.0,
+                            "y": 40.0,
+                            "relative_position": "bottom",
+                            "node_id": "0",
+                        },
+                    },
+                },
+                "resistor1": {
+                    "class_name": "Resistor",
+                    "bbox": [30.0, 10.0, 70.0, 30.0],
+                    "center": {"x": 50.0, "y": 20.0},
+                    "estimated_orientation": "horizontal",
+                    "terminals": {
+                        "t1": {
+                            "id": "resistor1_t1",
+                            "x": 26.0,
+                            "y": 20.0,
+                            "relative_position": "left",
+                            "node_id": "NIN",
+                        },
+                        "t2": {
+                            "id": "resistor1_t2",
+                            "x": 74.0,
+                            "y": 20.0,
+                            "relative_position": "right",
+                            "node_id": "N002",
+                        },
+                    },
+                },
+            }
+        }
+        transform = {"scale": 1.0, "offset_x": 0.0, "offset_y": 0.0}
+
+        positioned, warnings = build_image_guided_components(components, geometry_seed, transform)
+        terminal = positioned["terminal1"]
+        contacts = {item["name"]: item for item in terminal["terminals"]}
+
+        self.assertEqual(warnings, [])
+        self.assertEqual(contacts["t2"]["y"] - contacts["t1"]["y"], 20.0)
+        self.assertLess(contacts["t1"]["x"], positioned["R1"]["terminals"][0]["x"])
+        svg = render_terminal_port(components[0], terminal)
+        self.assertIn(
+            f'cx="{contacts["t1"]["x"]:g}" cy="{contacts["t1"]["y"]:g}"',
+            svg,
+        )
+
+    def test_supply_terminal_uses_viewer_override_and_primary_contact(self) -> None:
+        """Label compatte e contatto principale arrivano dal values.yaml."""
+        structural = [
+            {
+                "id": "terminal1",
+                "class_name": "Terminal",
+                "nodes": {"t2": "0", "t1": "NIN"},
+            }
+        ]
+        components = [
+            {
+                "id": "VAUDIO_IN",
+                "spice_name": "VAUDIO_IN",
+                "kind": "voltage_source",
+                "nodes": ["NIN", "0"],
+                "value": "SIN(0 0.02 1000)",
+            }
+        ]
+        rules = {
+            "supplies": {
+                "AUDIO_IN": {
+                    "nodes": ["NIN", "0"],
+                    "parameters": {
+                        "terminal": "terminal1_t1",
+                        "return_terminal": "terminal1_t2",
+                        "type": "sin",
+                        "unit": "V",
+                        "viewer_override": {
+                            "label": "AUDIO IN",
+                            "display_value": "20 mVpk @ 1 kHz",
+                            "tooltip": "Testbench SPICE: SIN(0 20m 1k)",
+                        },
+                    },
+                }
+            }
+        }
+
+        enriched, netlist = enrich_structural_terminals(
+            structural,
+            components,
+            rules,
+            {},
+        )
+
+        terminal = enriched[0]
+        self.assertEqual(terminal["viewer_primary_terminal_id"], "terminal1_t1")
+        self.assertEqual(terminal["display_label"], "AUDIO IN")
+        self.assertEqual(terminal["display_value"], "20 mVpk @ 1 kHz")
+        self.assertEqual(terminal["viewer_tooltip"], "Testbench SPICE: SIN(0 20m 1k)")
+        self.assertEqual(netlist[0]["viewer_hidden_by_terminal"], "terminal1")
+
+    def test_ground_layout_ignores_unrelated_zero_node_and_removes_symbol_overlap(self) -> None:
+        """Masse graficamente separate non si allineano tra loro e non coprono componenti."""
+        positioned = {
+            "C1": {
+                "x": 100.0,
+                "y": 80.0,
+                "component_type": "polarized_capacitor",
+                "orientation": "vertical",
+                "symbol_size": {"width": 58.0, "height": 48.0},
+                "terminals": [
+                    {
+                        "name": "negative",
+                        "node_id": "0",
+                        "relative_position": "bottom",
+                        "x": 100.0,
+                        "y": 109.0,
+                    }
+                ],
+            },
+            "speaker": {
+                "x": 170.0,
+                "y": 80.0,
+                "component_type": "speaker",
+                "orientation": "horizontal",
+                "symbol_size": {"width": 104.0, "height": 76.0},
+                "terminals": [
+                    {
+                        "name": "t2",
+                        "node_id": "0",
+                        "relative_position": "left",
+                        "x": 118.0,
+                        "y": 102.0,
+                    }
+                ],
+            },
+            "gnd1": {
+                "x": 112.0,
+                "y": 117.0,
+                "source_component_id": "gnd1",
+                "component_type": "ground",
+                "orientation": "vertical",
+                "symbol_size": {"width": 50.0, "height": 34.0},
+                "terminals": [
+                    {
+                        "name": "t1",
+                        "node_id": "0",
+                        "relative_position": "top",
+                        "x": 112.0,
+                        "y": 100.0,
+                    }
+                ],
+            },
+        }
+        original_x = positioned["gnd1"]["x"]
+
+        align_near_perpendicular_leads(positioned)
+        self.assertEqual(positioned["gnd1"]["x"], original_x)
+
+        separate_ground_symbol_collisions(positioned)
+        ground_bounds = component_symbol_bounds(positioned["gnd1"])
+        self.assertTrue(
+            all(
+                rectangle_overlap_area(ground_bounds, component_symbol_bounds(component)) <= 1.0
+                for component_id, component in positioned.items()
+                if component_id != "gnd1"
+            )
+        )
 
     def test_manual_sinusoidal_source_uses_the_shared_voltage_expression(self) -> None:
         """Una sorgente YAML sinusoidale viene emessa con sintassi SPICE valida."""
@@ -200,6 +420,39 @@ class SharedContractTests(unittest.TestCase):
                     requested_models={"DEVICE"},
                 )
 
+    def test_external_spice_model_accepts_legacy_cp1252_text(self) -> None:
+        """I modelli vendor legacy restano byte-identici e vengono decodificati."""
+        with isolated_directory("external_spice_model_cp1252") as temporary_root:
+            model_path = temporary_root / "device.lib"
+            model_bytes = "* curva tensione–corrente\n.SUBCKT DEVICE A B\n.ENDS DEVICE\n".encode(
+                "cp1252"
+            )
+            model_path.write_bytes(model_bytes)
+            model_sha256 = hashlib.sha256(model_bytes).hexdigest()
+            registry_path = temporary_root / "models.yaml"
+            registry_path.write_text("# registry\n", encoding="utf-8")
+            registry = {
+                "models": {
+                    "DEVICE": {
+                        "file": "device.lib",
+                        "sha256": model_sha256,
+                    }
+                }
+            }
+
+            resolved = self.spice_emit.resolve_model_entries(
+                spice_models=registry,
+                spice_models_source=registry_path,
+                requested_models={"DEVICE"},
+            )
+
+            self.assertIn("tensione–corrente", resolved["DEVICE"]["text"])
+            self.assertEqual(resolved["DEVICE"]["source"]["encoding"], "cp1252")
+            self.assertEqual(
+                resolved["DEVICE"]["source"]["sha256"],
+                model_sha256.upper(),
+            )
+
     def test_ngspice_command_uses_only_report_defines_before_batch_mode(self) -> None:
         """Le opzioni del modello vengono aggiunte senza conoscere il dispositivo."""
         self.assertEqual(
@@ -251,6 +504,197 @@ class SharedContractTests(unittest.TestCase):
             "non usare `activated`, neppure se il profilo base e classificato",
             prompt,
         )
+
+    def test_agent_prompt_requires_gain_threshold_for_all_signal_scenarios(self) -> None:
+        """Il prompt deve allinearsi al validatore sui sintomi di guadagno."""
+        prompt = build_autonomous_prompt(
+            JSON_TO_SPICE_DIR,
+            {"symptom": "L'audio e troppo basso", "iterations": []},
+            remaining_budget=5,
+        )
+
+        self.assertIn("sia `correction` sia `diagnostic`", prompt)
+        self.assertIn('"min_ratio": NUMERO_POSITIVO', prompt)
+        self.assertIn("`min_ratio` e' obbligatorio", prompt)
+
+    def test_agent_prompt_keeps_causality_and_quality_objective_driven(self) -> None:
+        """Le regole generali evitano falsi colli di bottiglia e THD accessoria."""
+        prompt = build_autonomous_prompt(
+            JSON_TO_SPICE_DIR,
+            {"symptom": "Il segnale e debole", "iterations": []},
+            remaining_budget=5,
+        )
+
+        self.assertIn("rapporto gia prossimo all'unita", prompt)
+        self.assertIn("meaningful_improvement_count", prompt)
+        self.assertIn('Usa `quality="thd"` soltanto quando', prompt)
+
+    def test_agent_prompt_does_not_use_diode_timing_as_audio_evidence(self) -> None:
+        """Un diodo periodico non prova che la modulazione sonora sia migliorata."""
+        prompt = build_autonomous_prompt(
+            JSON_TO_SPICE_DIR,
+            {
+                "symptom": "La sirena emette quasi sempre lo stesso tono",
+                "iterations": [],
+            },
+            remaining_budget=5,
+        )
+
+        self.assertIn("Un normale diodo non e un indicatore luminoso", prompt)
+        self.assertIn("nodo che controlla la", prompt)
+        self.assertIn("resistenza in serie tra un oscillatore modulante", prompt)
+
+    def test_input_source_constraint_rejects_source_stimulus_actions(self) -> None:
+        """Un vincolo esplicito sull'ingresso e applicato dal contratto, non dal modello."""
+        self.assertTrue(
+            symptom_forbids_source_stimulus_changes(
+                "Aumenta il volume senza modificare il segnale in ingresso"
+            )
+        )
+        scenario = {
+            "title": "Iniezione interna",
+            "hypothesis": "Isola uno stadio",
+            "intent": "diagnostic",
+            "analysis": "tran",
+            "actions": [
+                {
+                    "type": "add_voltage_source_between_nodes",
+                    "positive": "N001",
+                    "negative": "0",
+                    "value": "SIN(0 1m 1k)",
+                }
+            ],
+            "compare": ["v(N001)", "v(N002)"],
+            "gain": {"input": "v(N001)", "output": "v(N002)", "min_ratio": 1.0},
+            "expect": {"v(N002)": "magnitude_increased"},
+        }
+
+        with self.assertRaisesRegex(AutonomousDecisionError, "vincolo utente"):
+            validate_scenario(
+                scenario,
+                1,
+                require_gain_comparison=True,
+                forbid_source_stimulus_actions=True,
+            )
+
+    def test_optional_quality_does_not_become_unrequested_success_criterion(self) -> None:
+        """La THD proposta spontaneamente viene ignorata fuori dai sintomi di qualita."""
+        scenario = {
+            "title": "Aumenta uscita",
+            "hypothesis": "La modifica aumenta il trasferimento",
+            "intent": "correction",
+            "analysis": "tran",
+            "actions": [{"type": "change_component_value", "target": "R1", "value": "2k"}],
+            "compare": ["v(N001)", "v(N002)"],
+            "gain": {"input": "v(N001)", "output": "v(N002)", "min_ratio": 2.0},
+            "quality": "thd",
+            "expect": {"v(N002)": "magnitude_increased"},
+        }
+
+        normalized = validate_scenario(scenario, 1, require_gain_comparison=True)
+
+        self.assertNotIn("quality", normalized)
+        self.assertTrue(symptom_requests_correction("Vorrei aumentare il volume"))
+
+    def test_excessive_temporal_rate_implies_a_correction_request(self) -> None:
+        """Un ritmo esplicitamente eccessivo non si chiude con la sola localizzazione."""
+        self.assertTrue(
+            symptom_requests_correction(
+                "La lampada lampeggia troppo velocemente: quale parte conviene controllare?"
+            )
+        )
+        self.assertTrue(symptom_requests_correction("Vorrei rallentare il lampeggio"))
+        self.assertTrue(symptom_requests_correction("The indicator is blinking too fast"))
+        self.assertFalse(
+            symptom_requests_correction(
+                "La lampada lampeggia: quale parte del circuito imposta il periodo?"
+            )
+        )
+
+    def test_qualitative_blinking_policy_is_fixed_across_corrections(self) -> None:
+        """Una richiesta qualitativa non permette soglie Hz variabili tra run."""
+        policy = temporal_correction_policy_for_symptom(
+            "La lampada lampeggia troppo velocemente."
+        )
+        self.assertEqual(policy["kind"], "min_relative_period_increase")
+        self.assertEqual(policy["min_relative_period_increase"], 0.25)
+
+        decision = {
+            "decision": "run_scenarios",
+            "scenarios": [
+                {
+                    "intent": "correction",
+                    "temporal_expect": {
+                        "target": "Rlamp1",
+                        "required_state": "blinking",
+                        "require_regular_period": True,
+                        "max_frequency_hz": 2.53,
+                        "min_relative_period_increase": 0.1,
+                    },
+                },
+                {
+                    "intent": "diagnostic",
+                    "temporal_expect": {
+                        "target": "Rlamp1",
+                        "max_frequency_hz": 3.0,
+                    },
+                },
+            ],
+        }
+        normalized = apply_temporal_correction_policy(decision, policy)
+        correction = normalized["scenarios"][0]["temporal_expect"]
+        diagnostic = normalized["scenarios"][1]["temporal_expect"]
+
+        self.assertNotIn("max_frequency_hz", correction)
+        self.assertEqual(correction["min_relative_period_increase"], 0.25)
+        self.assertEqual(diagnostic["max_frequency_hz"], 3.0)
+
+    def test_explicit_blinking_frequency_becomes_session_policy(self) -> None:
+        """Una soglia numerica dichiarata dall'utente non viene sostituita."""
+        policy = temporal_correction_policy_for_symptom(
+            "La lampada lampeggia troppo velocemente: portala sotto 1,8 Hz."
+        )
+        self.assertEqual(policy["kind"], "max_frequency_hz")
+        self.assertEqual(policy["max_frequency_hz"], 1.8)
+
+        decision = {
+            "decision": "run_scenarios",
+            "scenarios": [
+                {
+                    "intent": "correction",
+                    "temporal_expect": {
+                        "target": "Rlamp1",
+                        "max_frequency_hz": 2.5,
+                        "min_relative_period_increase": 0.1,
+                    },
+                }
+            ],
+        }
+        expectation = apply_temporal_correction_policy(
+            decision, policy
+        )["scenarios"][0]["temporal_expect"]
+        self.assertEqual(expectation["max_frequency_hz"], 1.8)
+        self.assertNotIn("min_relative_period_increase", expectation)
+
+    def test_resolved_answer_exposes_verified_correction(self) -> None:
+        """La UI non perde la modifica misurata presente nel campo strutturato."""
+        decision = {
+            "decision": "stop",
+            "final_status": "resolved",
+            "final_answer": "Controlla la rete di temporizzazione.",
+            "verified_correction": "C4 da 10 uF a 22 uF riduce la frequenza.",
+        }
+        exposed = expose_verified_correction_in_answer(decision)
+        self.assertIn("Correzione verificata:", exposed["final_answer"])
+        self.assertIn("C4 da 10 uF a 22 uF", exposed["final_answer"])
+
+    def test_chat_scenario_prompt_requires_gain_threshold_for_low_volume(self) -> None:
+        """CHAT deve rendere esplicito il contratto applicato al registry."""
+        prompt = "\n".join(build_scenario_answer_format())
+
+        self.assertIn("volume basso", prompt)
+        self.assertIn("sia `correction` sia `diagnostic`", prompt)
+        self.assertIn("`min_ratio` e' obbligatorio", prompt)
 
     def test_transient_startup_uic_is_enabled_once(self) -> None:
         """La modalita di avvio aggiunge UIC senza duplicarlo sulla `.tran`."""
@@ -438,6 +882,125 @@ class SharedContractTests(unittest.TestCase):
         self.assertEqual(profile["state"], "blinking")
         self.assertTrue(profile["regular_period"])
         self.assertEqual(profile["pulse_count"], 4)
+
+    def test_diode_viewer_override_disables_led_temporal_profile(self) -> None:
+        """La classe semantica risolta prevale su un falso rilevamento LED."""
+        times = [index * 0.1 for index in range(12)]
+        profiles = led_transient_profiles(
+            [
+                {
+                    "id": "Dled12_1",
+                    "source_component_id": "led12.1",
+                    "kind": "diode",
+                    "viewer_kind": "diode",
+                    "nodes": ["N001", "N002"],
+                }
+            ],
+            times,
+            {
+                "N001": [5.0, 5.0, 0.0, 0.0] * 3,
+                "N002": [0.0] * 12,
+            },
+        )
+
+        self.assertEqual(profiles, {})
+
+    def test_pulsating_lamp_profile_uses_complete_differential_trace(self) -> None:
+        """Una lampada espone periodo e frequenza senza dipendere da un profilo LED."""
+        times = [index * 0.1 for index in range(24)]
+        waveform = ([0.0, 0.0, 12.0, 12.0] * 6)
+        profiles = pulsating_load_transient_profiles(
+            [
+                {
+                    "id": "RLAMP1",
+                    "source_component_id": "lamp1.1",
+                    "kind": "resistor",
+                    "nodes": ["N001", "0"],
+                    "class_name": "Lamp",
+                    "viewer_kind": "lamp",
+                    "parameters": {
+                        "spice_override": {"semantic_role": "lamp_equivalent"}
+                    },
+                }
+            ],
+            times,
+            {"N001": waveform, "0": [0.0] * len(times)},
+        )
+        profile = profiles["RLAMP1"]
+        self.assertEqual(profile["source_component_id"], "lamp1.1")
+        self.assertEqual(profile["state"], "blinking")
+        self.assertTrue(profile["regular_period"])
+        self.assertAlmostEqual(profile["period_s"], 0.4)
+        self.assertAlmostEqual(profile["frequency_hz"], 2.5)
+        self.assertAlmostEqual(profile["duty_cycle"], 0.5)
+        with isolated_directory("load_profile_alias") as run_dir:
+            scenario_runtime.write_json(
+                run_dir / "13_viewer_model.json",
+                {"transient": {"load_profiles": profiles}},
+            )
+            self.assertEqual(
+                scenario_runtime.load_transient_component_profile(run_dir, "lamp1.1"),
+                profile,
+            )
+
+    def test_lamp_rate_scenario_requires_a_measurable_temporal_correction(self) -> None:
+        """CHAT non registra un generico changed come prova di rallentamento."""
+        scenario = {
+            "title": "Rallentare il lampeggio della lampada",
+            "hypothesis": "Aumentare la costante RC dovrebbe ridurre la frequenza della lampada",
+            "intent": "correction",
+            "analysis": "tran",
+            "actions": [
+                {"type": "change_component_value", "target": "C1", "value": "22u"}
+            ],
+            "compare": ["v(N001)"],
+            "expect": {"v(N001)": "changed"},
+        }
+        self.assertFalse(self.web_chat.scenario_is_executable(scenario))
+
+        scenario["temporal_expect"] = {
+            "target": "RLAMP1",
+            "required_state": "blinking",
+            "require_regular_period": True,
+            "max_frequency_hz": 1.5,
+            "min_relative_period_increase": 0.5,
+        }
+        self.assertTrue(self.web_chat.scenario_is_executable(scenario))
+        self.assertEqual(
+            validate_scenario(
+                scenario,
+                1,
+                require_temporal_expectation=True,
+            ),
+            scenario,
+        )
+
+        evaluation = scenario_runtime.evaluate_temporal_expectation(
+            {
+                "state": "blinking",
+                "regular_period": True,
+                "period_s": 0.35,
+                "frequency_hz": 2.86,
+            },
+            {
+                "state": "blinking",
+                "regular_period": True,
+                "period_s": 0.78,
+                "frequency_hz": 1.28,
+            },
+            scenario["temporal_expect"],
+        )
+        self.assertTrue(evaluation["available"])
+        self.assertTrue(evaluation["met"])
+        self.assertEqual(
+            [condition["criterion"] for condition in evaluation["conditions"]],
+            [
+                "required_state",
+                "require_regular_period",
+                "max_frequency_hz",
+                "min_relative_period_increase",
+            ],
+        )
 
     def test_scenario_limits_are_aligned(self) -> None:
         """CHAT, contesto, runtime e AGENT devono condividere lo stesso budget."""

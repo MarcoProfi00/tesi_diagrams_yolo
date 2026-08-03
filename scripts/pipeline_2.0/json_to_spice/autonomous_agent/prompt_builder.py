@@ -42,6 +42,10 @@ def build_autonomous_prompt(
     evidence = collect_evidence(output_dir)
     allowed = ", ".join(sorted(ALLOWED_ACTION_TYPES))
     history = json.dumps(state.get("iterations") or [], indent=2, ensure_ascii=False)
+    temporal_policy = json.dumps(
+        state.get("temporal_correction_policy") or {},
+        ensure_ascii=False,
+    )
     artifacts = "\n\n".join(
         f"## {name}\n```text\n{content}\n```"
         for name, content in evidence.items()
@@ -53,6 +57,9 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
 
 ## Sintomo utente
 {state.get('symptom')}
+
+## Politica temporale della sessione
+{temporal_policy}
 
 ## Vincoli obbligatori
 - Rispondi con un solo oggetto JSON valido, senza Markdown o testo esterno.
@@ -79,6 +86,13 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
 - Se uno scenario migliora il sintomo ma viola un vincolo richiesto (per esempio
   perde regolarita, spegne un componente da preservare o degrada l'uscita), trattalo
   come evidenza diagnostica e non come correzione finale.
+- La politica temporale della sessione e' derivata una sola volta dal sintomo.
+  Ogni scenario con intent="correction" deve usarla senza aggiungere, rimuovere
+  o rilassare soglie. Gli scenari diagnostici non costituiscono una correzione.
+- Rispetta alla lettera i vincoli negativi della richiesta. Se l'utente chiede di
+  non modificare il segnale o la sorgente di ingresso, non usare
+  `change_source_value`, `drive_node_voltage` o `add_voltage_source_between_nodes`,
+  neppure su un nodo interno del percorso del segnale.
 - Non consumare altro budget per trasformare una localizzazione gia verificata in
   una correzione topologica inventata o non sostenuta dagli artefatti.
 - Non usare resolved_candidate come prova automatica di soluzione definitiva.
@@ -110,15 +124,15 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
   un LED/diodo si sia attivato almeno una volta durante la run TRAN.
 - Un voltmetro VAC, un segnale AC o una tensione alternata devono essere verificati
   con analysis="tran" e `tran_vpp`: un valore DC non dimostra il funzionamento AC.
-- Per sintomi di amplificazione o guadagno, ogni scenario con intent="correction" deve includere
-  `gain: {{"input":"v(NODO_IN)","output":"v(NODO_OUT)"}}`; entrambe le
-  tensioni devono essere presenti in compare e possono anche usare la forma
-  differenziale `v(NODO1,NODO2)`. Valuta il guadagno come
-  Vpp(output) / Vpp(input), senza confondere due nodi entrambi di uscita.
-- Per verificare propagazione o attenuazione di un segnale, anche uno scenario
-  diagnostico deve aggiungere `gain.min_ratio` con una soglia positiva motivata
-  dall'obiettivo dello scenario. Non usare il solo `changed` per concludere che
-  un segnale non nullo ma trascurabile arrivi utilmente all'uscita.
+- Per sintomi di amplificazione, volume basso, propagazione o attenuazione di un
+  segnale, **ogni scenario**, sia `correction` sia `diagnostic`, deve includere
+  `gain: {{"input":"v(NODO_IN)","output":"v(NODO_OUT)","min_ratio": NUMERO_POSITIVO}}`.
+  Entrambe le tensioni devono essere presenti in compare e possono anche usare la
+  forma differenziale `v(NODO1,NODO2)`. `min_ratio` e' obbligatorio: scegli una
+  soglia positiva motivata dall'obiettivo dello scenario. Valuta il guadagno come
+  Vpp(output) / Vpp(input), senza confondere due nodi entrambi di uscita. Non usare
+  il solo `changed` per concludere che un segnale non nullo ma trascurabile arrivi
+  utilmente all'uscita.
 - Quando aggiungi una sorgente `SIN(...)` a un nodo o tra due nodi gia esistenti,
   ricava prima dalla base run la tensione di punto operativo dello stesso nodo o
   della stessa coppia. Se la differenza DC e significativa, conserva quel valore
@@ -146,9 +160,20 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
   soltanto una forzatura su un nodo di alimentazione.
 - Prima di attribuire un'uscita assoluta debole a un guasto, verifica se il
   circuito sta gia amplificando un ingresso molto piccolo.
+- Prima di localizzare un'attenuazione su un tratto del circuito, confronta le
+  ampiezze base ai suoi estremi: un rapporto gia prossimo all'unita non sostiene
+  l'ipotesi di un collo di bottiglia significativo su quel tratto.
+- Distingui sempre `expectations_met_count` da `meaningful_improvement_count`:
+  una direzione corretta ma sotto la soglia relativa non verifica una correzione.
+  Non riutilizzare in una correzione combinata un'azione che, provata da sola,
+  non ha prodotto un miglioramento significativo, salvo che sia indispensabile
+  per un altro vincolo esplicito e misurato.
 - Per sintomi di distorsione, clipping, saturazione o segnale poco pulito,
   ogni scenario transitorio deve dichiarare quality="thd" e il blocco gain
   deve identificare ingresso e uscita.
+- Usa `quality="thd"` soltanto quando il sintomo o un vincolo utente riguarda
+  distorsione, clipping, saturazione o qualita del segnale. Non aggiungerla come
+  requisito precauzionale a scenari che perseguono un obiettivo diverso.
 - La pipeline calcola la THD sulle armoniche 2-5 nelle ultime tre oscillazioni
   complete della sorgente SIN. Una correzione e risolutiva soltanto se la THD
   diminuisce almeno del 20%, scende sotto il 10% e il guadagno fondamentale
@@ -218,10 +243,26 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
   di accensione, ogni scenario deve dichiarare `temporal_expect`.
   Questo blocco usa il profilo transitorio del componente nel viewer: `target`,
   `required_state` opzionale, `require_regular_period` opzionale,
-  `min_duty_cycle` opzionale tra 0 e 1 e `min_relative_duty_increase` opzionale.
+  `min_duty_cycle` opzionale tra 0 e 1, `min_relative_duty_increase` opzionale,
+  `max_frequency_hz` opzionale positivo e `min_relative_period_increase` opzionale.
 - Scegli soglie coerenti con il sintomo: per esempio un lampeggio chiaramente visibile
   puo richiedere stato `blinking`, periodicita regolare e un duty cycle minimo.
+  Un lampeggio troppo rapido richiede anche una frequenza massima oppure un aumento
+  relativo minimo del periodo, espresso come frazione (`0.5` significa +50%, non
+  `1.5`); una variazione generica della forma d'onda non basta.
   Se un test aumenta il duty cycle ma perde la periodicita richiesta, non e risolutivo.
+- Usa `temporal_expect` soltanto per il comportamento temporale di un carico
+  luminoso o pulsante richiesto dal sintomo e realmente presente in
+  `temporal_profiles`. Un normale diodo non e un indicatore luminoso: la sua
+  conduzione periodica non dimostra lampeggio, modulazione audio o qualita del suono.
+- Se il sintomo riguarda un tono quasi costante o una modulazione audio poco
+  evidente, non usare il profilo temporale di LED, diodi o lampade come criterio
+  di successo. Confronta in TRAN l'escursione del nodo che controlla la
+  modulazione e la tensione differenziale sul carico audio. Una correzione deve
+  rafforzare la variazione di controllo senza spegnere o degradare l'uscita.
+- Per una resistenza in serie tra un oscillatore modulante e un nodo di controllo,
+  non assumere che aumentare la resistenza rafforzi o rallenti la modulazione:
+  deduci la direzione dalle connessioni e verifica `tran_vpp` prima di concludere.
 - Quando usi `set_initial_node_voltage` per rompere un equilibrio simmetrico,
   scegli una tensione iniziale fisicamente ammissibile ma chiaramente separata
   dal punto di lavoro del nodo mostrato dagli artefatti. Una variazione di pochi
@@ -265,6 +306,9 @@ Devi scegliere il prossimo test controllato oppure fermarti con una conclusione.
   il componente target sia gli eventuali componenti che devono restare attivi.
 - Se final_status="resolved", verified_correction deve descrivere la correzione
   realmente verificata da uno scenario con intent="correction".
+- La final_answer di uno stato resolved deve riferire esplicitamente la stessa
+  modifica e le misure riportate in verified_correction; non fermarti a una
+  raccomandazione generica sul gruppo di componenti.
 - Preferisci modifiche minime su componenti, valori e collegamenti gia esistenti.
 - Usa nuove sorgenti o nuovi rami resistivi solo quando le evidenze tecniche li giustificano.
 - Non usare `drive_node_voltage` su un nodo gia vincolato a una sorgente attiva,

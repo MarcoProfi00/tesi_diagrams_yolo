@@ -51,6 +51,7 @@ from .config import (
     BRIDGE_THICK_HUMP_MIN_SKELETON_Y_SPAN,
     BRIDGE_THICK_HUMP_MIN_VERTICAL_PIXELS,
     BRIDGE_THICK_HUMP_LOW_SPAN_SYMMETRY_REJECT_MIN,
+    BRIDGE_THICK_HUMP_LOW_SPAN_VERTICAL_SUPPORT_KEEP_MIN,
     BRIDGE_THICK_HUMP_VERTICAL_SEARCH_RADIUS,
     BRIDGE_THICK_HUMP_X_MAX,
     BRIDGE_THICK_HUMP_Y_MAX,
@@ -597,10 +598,15 @@ def is_symmetric_low_span_thick_hump(candidate: dict):
         skeleton_y_span = int(candidate.get("skeleton_y_span", 0))
         left_pixels = int(candidate.get("left_pixels", 0))
         right_pixels = int(candidate.get("right_pixels", 0))
+        vertical_support = int(candidate.get("vertical_support", 0))
     except (TypeError, ValueError):
         return False
 
     if skeleton_y_span >= int(BRIDGE_THICK_HUMP_MIN_SKELETON_Y_SPAN):
+        return False
+    if vertical_support >= int(
+        BRIDGE_THICK_HUMP_LOW_SPAN_VERTICAL_SUPPORT_KEEP_MIN
+    ):
         return False
     if min(left_pixels, right_pixels) <= 0:
         return False

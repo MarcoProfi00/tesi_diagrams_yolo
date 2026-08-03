@@ -710,15 +710,13 @@ def scenario_requires_signal_gain(scenario: dict[str, Any]) -> bool:
     return any(marker in text for marker in transfer_markers)
 
 
-def scenario_requires_led_temporal_expectation(scenario: dict[str, Any]) -> bool:
-    """Riconosce scenari che pretendono di correggere un lampeggio LED."""
+def scenario_requires_temporal_expectation(scenario: dict[str, Any]) -> bool:
+    """Riconosce scenari che pretendono di correggere un comportamento periodico."""
     compared = [str(item or "").strip().lower() for item in scenario.get("compare") or []]
     has_led_observable = any(
         quantity.startswith("@d") and quantity.endswith("[id]")
         for quantity in compared
     )
-    if not has_led_observable:
-        return False
     text = " ".join(
         str(scenario.get(field) or "").strip().lower()
         for field in ("title", "hypothesis")
@@ -732,6 +730,12 @@ def scenario_requires_led_temporal_expectation(scenario: dict[str, Any]) -> bool
         "impuls",
         "oscill",
         "astabil",
+        "frequen",
+        "veloc",
+        "rapid",
+        "fast",
+        "slow",
+        "rallent",
     )
     startup_action = any(
         isinstance(action, dict)
@@ -739,10 +743,34 @@ def scenario_requires_led_temporal_expectation(scenario: dict[str, Any]) -> bool
         and action.get("skip_operating_point") is True
         for action in scenario.get("actions") or []
     )
-    mentions_led = "led" in text or "diodo luminos" in text
+    mentions_temporal_load = any(
+        marker in text
+        for marker in ("led", "diodo luminos", "lamp", "carico pulsante")
+    )
     has_temporal_claim = any(marker in text for marker in temporal_markers)
     return (has_led_observable and (startup_action or has_temporal_claim)) or (
-        mentions_led and has_temporal_claim
+        mentions_temporal_load and has_temporal_claim
+    )
+
+
+def scenario_requires_rate_expectation(scenario: dict[str, Any]) -> bool:
+    """Riconosce una correzione che deve dimostrare un ritmo piu lento."""
+    text = " ".join(
+        str(scenario.get(field) or "").strip().lower()
+        for field in ("title", "hypothesis")
+    )
+    return any(
+        marker in text
+        for marker in (
+            "frequen",
+            "veloc",
+            "rapid",
+            "fast",
+            "slow",
+            "rallent",
+            "period",
+            "flash rate",
+        )
     )
 
 
@@ -759,6 +787,21 @@ def temporal_expectation_is_valid(scenario: dict[str, Any]) -> bool:
         return False
     if expectation.get("require_regular_period") is not True:
         return False
+    if scenario_requires_rate_expectation(scenario):
+        maximum_frequency = expectation.get("max_frequency_hz")
+        minimum_period_increase = expectation.get("min_relative_period_increase")
+        valid_maximum = (
+            isinstance(maximum_frequency, (int, float))
+            and not isinstance(maximum_frequency, bool)
+            and maximum_frequency > 0
+        )
+        valid_relative_increase = (
+            isinstance(minimum_period_increase, (int, float))
+            and not isinstance(minimum_period_increase, bool)
+            and minimum_period_increase >= 0
+        )
+        if not (valid_maximum or valid_relative_increase):
+            return False
     return True
 
 
@@ -818,7 +861,7 @@ def scenario_is_executable(scenario: dict[str, Any]) -> bool:
     if repeated_target_assignments(actions):
         return False
     analysis = str(scenario.get("analysis") or "op").strip().lower()
-    if scenario_requires_led_temporal_expectation(scenario):
+    if scenario_requires_temporal_expectation(scenario):
         if analysis != "tran":
             return False
         if str(scenario.get("intent") or "").strip().lower() != "correction":

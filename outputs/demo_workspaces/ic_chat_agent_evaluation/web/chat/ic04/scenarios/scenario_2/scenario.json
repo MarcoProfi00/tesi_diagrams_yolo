@@ -1,0 +1,30 @@
+{
+  "scenario_id": "scenario_2",
+  "title": "Aumentare il collegamento di modulazione tra i due 555",
+  "hypothesis": "Il tono cambia poco perche la modulazione dal primo 555 al secondo, attraverso Rresistor22_3, e troppo debole.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Rresistor22_3",
+      "value": "4.7k"
+    }
+  ],
+  "rerun_from": "04",
+  "analysis": "tran",
+  "compare": [
+    "v(N004)",
+    "v(N006)",
+    "v(N009)",
+    "v(N010)"
+  ],
+  "expect": {
+    "v(N006)": "changed",
+    "v(N010)": "changed"
+  },
+  "gain": {
+    "input": "v(N004)",
+    "output": "v(N010)",
+    "min_ratio": 0.05
+  }
+}

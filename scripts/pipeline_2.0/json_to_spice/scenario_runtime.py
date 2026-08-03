@@ -206,9 +206,19 @@ def load_transient_component_profile(run_dir: Path, target: str) -> dict[str, An
     """Legge il profilo transitorio di un componente dal modello viewer della run."""
     model = read_json_safe(run_dir / VIEWER_MODEL_NAME)
     transient = model.get("transient") if isinstance(model.get("transient"), dict) else {}
-    profiles = transient.get("led_profiles") if isinstance(transient.get("led_profiles"), dict) else {}
-    profile = profiles.get(target)
-    return profile if isinstance(profile, dict) else {}
+    for profile_key in ("led_profiles", "load_profiles"):
+        profiles = transient.get(profile_key) if isinstance(transient.get(profile_key), dict) else {}
+        profile = profiles.get(target)
+        if isinstance(profile, dict):
+            return profile
+        normalized_target = target.strip().lower()
+        for candidate in profiles.values():
+            if not isinstance(candidate, dict):
+                continue
+            source_component_id = str(candidate.get("source_component_id") or "").strip().lower()
+            if source_component_id and source_component_id == normalized_target:
+                return candidate
+    return {}
 
 
 def evaluate_temporal_expectation(
@@ -283,6 +293,48 @@ def evaluate_temporal_expectation(
                 "expected": minimum_relative_increase,
                 "actual": relative_increase,
                 "met": relative_increase_met,
+            }
+        )
+
+    scenario_frequency = scenario_profile.get("frequency_hz")
+    maximum_frequency = expectation.get("max_frequency_hz")
+    if maximum_frequency is not None:
+        conditions.append(
+            {
+                "criterion": "max_frequency_hz",
+                "expected": maximum_frequency,
+                "actual": scenario_frequency,
+                "met": (
+                    isinstance(scenario_frequency, (int, float))
+                    and not isinstance(scenario_frequency, bool)
+                    and scenario_frequency <= maximum_frequency
+                ),
+            }
+        )
+
+    base_period = base_profile.get("period_s")
+    scenario_period = scenario_profile.get("period_s")
+    minimum_relative_period_increase = expectation.get("min_relative_period_increase")
+    if minimum_relative_period_increase is not None:
+        relative_period_increase = None
+        relative_period_increase_met = False
+        if (
+            isinstance(base_period, (int, float))
+            and not isinstance(base_period, bool)
+            and isinstance(scenario_period, (int, float))
+            and not isinstance(scenario_period, bool)
+            and base_period > 1e-12
+        ):
+            relative_period_increase = (scenario_period - base_period) / base_period
+            relative_period_increase_met = (
+                relative_period_increase >= minimum_relative_period_increase
+            )
+        conditions.append(
+            {
+                "criterion": "min_relative_period_increase",
+                "expected": minimum_relative_period_increase,
+                "actual": relative_period_increase,
+                "met": relative_period_increase_met,
             }
         )
 

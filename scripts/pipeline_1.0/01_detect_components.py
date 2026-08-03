@@ -1846,6 +1846,7 @@ def is_terminal_detection_valid(image_binary, bbox) -> bool:
 
 
 def is_border_supply_terminal_candidate(image_binary, bbox, image_shape) -> bool:
+    """Accetta Terminal esterni deboli, inclusi piccoli jack a due contatti."""
     x1, y1, x2, y2 = _clamp_bbox_to_image(bbox, image_shape)
     h, w = image_shape[:2]
     border_margin = 28
@@ -1866,7 +1867,20 @@ def is_border_supply_terminal_candidate(image_binary, bbox, image_shape) -> bool
     height = max(1, y2 - y1 + 1)
     area = width * height
     if area > 1600:
-        return False
+        # Il vecchio limite compatto resta valido per i morsetti a un solo
+        # contatto. Un jack sul bordo puo' essere un po' piu' grande, ma deve
+        # mostrare due lati connessi in modo netto per non recuperare simboli
+        # interni rumorosi classificati come Terminal a bassa confidenza.
+        near_scores = get_terminal_class_probe_scores(image_binary, bbox)
+        far_scores = get_terminal_class_far_probe_scores(image_binary, bbox)
+        combined_scores = {
+            side: float(near_scores.get(side, 0))
+            + 0.8 * float(far_scores.get(side, 0))
+            for side in ("top", "bottom", "left", "right")
+        }
+        strong_sides = sum(score >= 18.0 for score in combined_scores.values())
+        if area > 2800 or strong_sides < 2:
+            return False
 
     return True
 

@@ -484,8 +484,8 @@ def build_prompt_operating_rules() -> list[str]:
         "If a next scenario needs an enabling condition demonstrated by an earlier scenario, include that enabling action again in the new scenario JSON.",
         "If the user asks what to try next after executed scenarios, propose the next most informative scenario based on scenario_comparison.json.",
         "If the user explicitly asks for a final conclusion, a final diagnosis, a summary of executed scenarios, or whether it makes sense to stop, switch to final-conclusion mode instead of default next-scenario mode.",
-        "For LED blinking symptoms, use `led_profiles` as primary temporal evidence: compare state, regular_period, frequency_hz, duty_cycle, on_fraction and pulse_count.",
-        "Do not claim that a pulse-regularity metric is missing when `led_profiles` is available.",
+        "For blinking symptoms, use `temporal_profiles` as primary temporal evidence for LEDs and profiled loads: compare state, regular_period, period_s, frequency_hz, duty_cycle, on_fraction and pulse_count.",
+        "Do not infer the whole transient from the visible beginning of a truncated CSV when a complete `temporal_profiles` summary is available.",
         "In final-conclusion mode, use the executed scenarios and their comparisons as the primary evidence, together with the base run.",
         "In final-conclusion mode, do not automatically generate another scenario just because the budget is not exhausted.",
         "In final-conclusion mode, suggest one more scenario only if it is clearly the single remaining decisive test and explain why the already executed scenarios are not enough without it.",
@@ -604,6 +604,11 @@ def build_executed_scenario_index(executed_scenarios: list[dict[str, Any]]) -> l
         led_profiles = scenario.get("led_profiles") or {}
         if led_profiles:
             lines.append(f"  LED profiles: `{json.dumps(led_profiles, ensure_ascii=False)}`")
+        temporal_profiles = scenario.get("temporal_profiles") or {}
+        if temporal_profiles:
+            lines.append(
+                f"  Temporal profiles: `{json.dumps(temporal_profiles, ensure_ascii=False)}`"
+            )
     return lines
 
 

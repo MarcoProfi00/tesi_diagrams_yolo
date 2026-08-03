@@ -134,6 +134,10 @@ BRIDGE_THICK_HUMP_MIN_VERTICAL_PIXELS = 6
 # dopo il collapse dei candidati, cosi' il falso arco puo' comunque assorbire
 # i micro-gap prodotti dalla stessa giunzione.
 BRIDGE_THICK_HUMP_LOW_SPAN_SYMMETRY_REJECT_MIN = 0.85
+# Un arco ampio puo' avere uno skeleton locale quasi orizzontale nel punto
+# candidato, ma resta sostenuto da una colonna verticale lunga. Questa evidenza
+# distingue un vero ponticello dai due bordi corti di una giunzione spessa.
+BRIDGE_THICK_HUMP_LOW_SPAN_VERTICAL_SUPPORT_KEEP_MIN = 40
 BRIDGE_HUMP_MIN_ANCHOR_QUALITY = 3
 BRIDGE_SINGLETON_MIN_HUMP_DISTANCE = 8.0
 BRIDGE_BLUE_STYLE_THICK_HUMP_ONLY = True

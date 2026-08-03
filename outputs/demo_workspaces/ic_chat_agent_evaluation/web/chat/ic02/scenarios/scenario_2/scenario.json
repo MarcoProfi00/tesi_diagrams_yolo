@@ -1,0 +1,27 @@
+{
+  "scenario_id": "scenario_2",
+  "title": "Alleggerire il carico di uscita",
+  "hypothesis": "Il volume basso dipende dal carico Rspeaker24_1 da 4 ohm che riduce troppo l'ampiezza utile su N007.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Rspeaker24_1",
+      "value": "8"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N011)",
+    "v(N007)"
+  ],
+  "expect": {
+    "v(N007)": "increased"
+  },
+  "gain": {
+    "input": "v(N011)",
+    "output": "v(N007)",
+    "min_ratio": 5
+  }
+}

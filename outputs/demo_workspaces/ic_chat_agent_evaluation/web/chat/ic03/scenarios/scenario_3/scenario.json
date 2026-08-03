@@ -1,0 +1,31 @@
+{
+  "scenario_id": "scenario_3",
+  "title": "Aumentare R1 per testare la costante di tempo resistiva",
+  "hypothesis": "Rresistor22_3 è una delle resistenze che fissano il periodo e un suo valore troppo basso accelera il lampeggio.",
+  "intent": "correction",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Rresistor22_3",
+      "value": "22k"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N001)",
+    "v(N004)",
+    "v(N003)"
+  ],
+  "expect": {
+    "v(N001)": "changed",
+    "v(N004)": "changed",
+    "v(N003)": "changed"
+  },
+  "temporal_expect": {
+    "target": "Rlamp13_1",
+    "required_state": "blinking",
+    "require_regular_period": true,
+    "max_frequency_hz": 2.0
+  }
+}

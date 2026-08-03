@@ -1,0 +1,35 @@
+{
+  "title": "Aumentare il condensatore tra uscita e ADJ del timer",
+  "hypothesis": "Se il lampeggio troppo rapido e dominato dalla costante di tempo del ramo LM317 ADJ/OUT, aumentare Cpolarized_capacitor20_3 deve allungare il periodo della lampada di almeno il 25% mantenendo il lampeggio regolare; questo confermerebbe che conviene controllare soprattutto il ramo Rresistor22_3-Cpolarized_capacitor20_3.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Cpolarized_capacitor20_3",
+      "value": "15u"
+    }
+  ],
+  "compare": [
+    "v(N003)",
+    "v(N001)",
+    "v(N004)"
+  ],
+  "measure": {
+    "v(N003)": "tran_vpp",
+    "v(N001)": "tran_vpp",
+    "v(N004)": "tran_vpp"
+  },
+  "expect": {
+    "v(N003)": "changed",
+    "v(N001)": "changed",
+    "v(N004)": "changed"
+  },
+  "temporal_expect": {
+    "target": "Rlamp13_1",
+    "required_state": "blinking",
+    "require_regular_period": true,
+    "min_relative_period_increase": 0.25
+  },
+  "scenario_id": "agent_scenario_3"
+}

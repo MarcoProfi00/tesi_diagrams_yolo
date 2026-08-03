@@ -1,0 +1,27 @@
+* pipeline2.0 netlist
+* circuit: ic03
+
+VVCC_12 N006 0 DC 12
+Xintegrated_circuit11_1 N002 N001 N003 N003 LM317_TRANS
+Rlamp13_1 N003 0 12
+Cpolarized_capacitor20_1 N002 0 2.2u
+Cpolarized_capacitor20_2 N003 N004 10u
+Cpolarized_capacitor20_3 N003 N001 10u
+Cpolarized_capacitor20_4 N003 N005 10u
+Rresistor22_1 N004 N005 10k
+Rresistor22_2 N005 0 10k
+Rresistor22_3 N001 N004 10k
+Rswitch25_1 N006 N002 1m
+
+.include "07_external_models.lib"
+
+.save all
+.tran 2ms 20s
+
+.control
+set wr_singlescale
+set wr_vecnames
+run
+wrdata 08_tran.csv time v(N001) v(N002) v(N003) v(N004) v(N005) v(N006)
+.endc
+.end

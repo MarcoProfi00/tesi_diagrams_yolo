@@ -493,6 +493,12 @@ def component_transient_activity(
 
 def is_led_component(component: dict[str, Any]) -> bool:
     """Riconosce i LED distinguendoli dai diodi privi di emissione luminosa."""
+    viewer_kind = str(component.get("viewer_kind") or "").strip().lower()
+    if viewer_kind:
+        # La semantica risolta dal values.yaml prevale sulla classe riconosciuta
+        # nell'immagine. In particolare, un simbolo rilevato come LED ma corretto
+        # a diodo non deve produrre un profilo di lampeggio diagnostico.
+        return viewer_kind in {"led", "indicator_led", "light_emitting_diode"}
     source_id = str(component.get("source_component_id") or "").lower()
     return str(component.get("kind") or "").lower() == "diode" and source_id.startswith("led")
 
@@ -789,6 +795,136 @@ def led_transient_profiles(
     return profiles
 
 
+def is_profiled_pulsating_load(component: dict[str, Any]) -> bool:
+    """Riconosce carichi visivi a due terminali per cui il ritmo e significativo.
+
+    La selezione usa solo metadati semantici gia presenti nel modello viewer;
+    non dipende da identificatori, batch o modelli SPICE specifici.
+    """
+    viewer_kind = str(component.get("viewer_kind") or "").strip().lower()
+    class_name = str(component.get("class_name") or "").strip().lower()
+    parameters = component.get("parameters") if isinstance(component.get("parameters"), dict) else {}
+    spice_override = (
+        parameters.get("spice_override")
+        if isinstance(parameters.get("spice_override"), dict)
+        else {}
+    )
+    semantic_role = str(spice_override.get("semantic_role") or "").strip().lower()
+    return (
+        viewer_kind in {"lamp", "indicator_lamp"}
+        or class_name in {"lamp", "indicator lamp"}
+        or semantic_role in {"lamp", "lamp_equivalent", "indicator_lamp"}
+    )
+
+
+def pulsating_load_transient_profiles(
+    components: list[dict[str, Any]],
+    times: list[float],
+    node_series: dict[str, list[float]],
+) -> dict[str, dict[str, Any]]:
+    """Misura stato, periodo e duty cycle dei carichi visivi pulsanti.
+
+    Per un carico a due terminali usa il modulo della tensione differenziale e
+    una soglia relativa a meta dell'escursione misurata. Questo rende il profilo
+    valido anche per carichi non riferiti direttamente a massa e non impone una
+    soglia elettrica specifica del componente.
+    """
+    profiles: dict[str, dict[str, Any]] = {}
+    if len(times) < 2:
+        return profiles
+
+    time_window = max(0.0, times[-1] - times[0])
+    for component in components:
+        if not is_profiled_pulsating_load(component):
+            continue
+        component_id = str(component.get("id") or "")
+        nodes = [normalize_node(node_id) for node_id in component.get("nodes") or []]
+        if not component_id or len(nodes) != 2:
+            continue
+        positive_values = node_series.get(nodes[0])
+        negative_values = node_series.get(nodes[1])
+        if not positive_values or not negative_values:
+            continue
+
+        differential_voltages = [
+            positive - negative
+            for positive, negative in zip(positive_values, negative_values)
+        ]
+        voltage_magnitudes = [abs(value) for value in differential_voltages]
+        if not voltage_magnitudes:
+            continue
+        magnitude_min = min(voltage_magnitudes)
+        magnitude_max = max(voltage_magnitudes)
+        if magnitude_max - magnitude_min < TRANSIENT_VARIATION_EPSILON:
+            continue
+        threshold_v = magnitude_min + 0.5 * (magnitude_max - magnitude_min)
+        states = [value >= threshold_v for value in voltage_magnitudes]
+        rising_indices = [
+            index
+            for index, state in enumerate(states)
+            if state and (index == 0 or not states[index - 1])
+        ]
+        periods = [
+            times[current] - times[previous]
+            for previous, current in zip(rising_indices, rising_indices[1:])
+            if times[current] > times[previous]
+        ]
+        period_candidate = median(periods) if periods else None
+        coherent_periods = [
+            current_period
+            for current_period in periods
+            if period_candidate
+            and abs(current_period - period_candidate) / period_candidate
+            <= LED_PERIOD_RELATIVE_TOLERANCE
+        ]
+        regular_period = bool(
+            period_candidate
+            and len(coherent_periods) >= 2
+            and len(coherent_periods) / len(periods) >= 0.75
+        )
+        period = period_candidate if regular_period else None
+        on_fraction = sum(states) / len(states)
+        durations = led_on_durations(times, states, rising_indices)
+        duty_cycle = (
+            min(1.0, max(0.0, median(durations) / period))
+            if period and durations
+            else on_fraction
+        )
+        if not any(states):
+            state = "off"
+        elif all(states):
+            state = "steady_on"
+        elif period:
+            state = "blinking"
+        else:
+            state = "transient_pulse"
+
+        timeline_key_times, timeline_states = led_state_timeline(times, states)
+        profiles[component_id] = {
+            "status": "measured",
+            "source_component_id": str(component.get("source_component_id") or ""),
+            "state": state,
+            "profile_method": "differential_voltage_relative_threshold",
+            "positive_node": nodes[0],
+            "negative_node": nodes[1],
+            "threshold_v": threshold_v,
+            "on_fraction": on_fraction,
+            "duty_cycle": duty_cycle,
+            "regular_period": regular_period,
+            "period_s": period,
+            "frequency_hz": (1.0 / period) if period else None,
+            "pulse_count": len(rising_indices),
+            "timeline_key_times": timeline_key_times,
+            "timeline_states": timeline_states,
+            "voltage_min": min(differential_voltages),
+            "voltage_max": max(differential_voltages),
+            "voltage_magnitude_min": magnitude_min,
+            "voltage_magnitude_max": magnitude_max,
+            "time_window_s": time_window,
+        }
+    return profiles
+
+
 def downsample_indices(sample_count: int, maximum: int) -> list[int]:
     """Seleziona indici equidistanti preservando primo e ultimo campione."""
     if sample_count <= maximum:
@@ -879,7 +1015,7 @@ def parse_transient_csv(
         for node_id, values in node_series.items()
         if values
     }
-    return {
+    transient = {
         "status": "loaded" if times else "empty",
         "sample_count": len(times),
         "time_start": times[0] if times else None,
@@ -899,6 +1035,14 @@ def parse_transient_csv(
         ),
         "traces": build_transient_traces(times, node_series),
     }
+    load_profiles = pulsating_load_transient_profiles(
+        components,
+        times,
+        node_series,
+    )
+    if load_profiles:
+        transient["load_profiles"] = load_profiles
+    return transient
 
 
 def select_transient_quantities(
@@ -1365,11 +1509,22 @@ def enrich_structural_terminals(
                 source["viewer_hidden_by_terminal"] = component_id
                 item["is_supply_terminal"] = True
                 item["supply_name"] = str(supply_name)
-                item["display_label"] = str(supply_name)
-                item["display_value"] = compact_source_value(
-                    source.get("value"),
-                    str(parameters.get("unit") or "V"),
+                item["viewer_primary_terminal_id"] = terminal_id
+                item["display_label"] = str(
+                    viewer_override.get("label")
+                    if viewer_override.get("label") is not None
+                    else supply_name
                 )
+                item["display_value"] = str(
+                    viewer_override.get("display_value")
+                    if viewer_override.get("display_value") is not None
+                    else compact_source_value(
+                        source.get("value"),
+                        str(parameters.get("unit") or "V"),
+                    )
+                )
+                if viewer_override.get("tooltip") is not None:
+                    item["viewer_tooltip"] = str(viewer_override.get("tooltip") or "")
                 for field in (
                     "is_scenario_modified",
                     "scenario_previous_value",
@@ -1617,6 +1772,10 @@ def build_viewer_model(run_dir: Path) -> dict[str, Any]:
     components = enrich_components_with_rules(components, rules)
     components = enrich_bjt_kind_from_spice_models(components, directives)
     components = enrich_manual_dc_supplies(components, rules)
+    # Il profiling transitorio deve vedere la classe semantica finale. Applicare
+    # gli override dopo il parsing farebbe ancora apparire come LED un normale
+    # diodo corretto nel values.yaml.
+    components = apply_manual_viewer_overrides(components, values_bound)
     measurements = parse_ngspice_stdout(run_dir / "08_ngspice_stdout.txt")
     transient = parse_transient_csv(run_dir / "08_tran.csv", components)
     scenario = read_json(scenario_dir / "scenario.json") if scenario_dir else None
@@ -1636,7 +1795,6 @@ def build_viewer_model(run_dir: Path) -> dict[str, Any]:
     )
     # Gli override sono dichiarati per componente nel file valori: il meccanismo
     # resta generale e non introduce eccezioni legate a uno specifico circuito.
-    components = apply_manual_viewer_overrides(components, values_bound)
     structural_components = apply_manual_viewer_overrides(structural_components, values_bound)
     if scenario:
         structural_components = apply_scenario_visual_overrides(structural_components, scenario, components)

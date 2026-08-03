@@ -338,7 +338,7 @@ def _plus_marker_scores_by_side(
 
 
 def _polarized_capacitor_vertical_plus_scores(binary, bbox):
-    x1, y1, x2, _, width, height = _bbox_dims(bbox, binary)
+    x1, y1, x2, y2, width, height = _bbox_dims(bbox, binary)
 
     patch_half_w = max(3, int(round(width * 0.14)))
     patch_half_h = max(3, int(round(height * 0.10)))
@@ -352,8 +352,32 @@ def _polarized_capacitor_vertical_plus_scores(binary, bbox):
     bottom_left = _plus_like_patch_score(binary, left_cx, bottom_cy, patch_half_w, patch_half_h)
     bottom_right = _plus_like_patch_score(binary, right_cx, bottom_cy, patch_half_w, patch_half_h)
 
-    top_score = max(top_left, top_right)
-    bottom_score = max(bottom_left, bottom_right)
+    # Nei simboli reali il marker `+` e' spesso appena fuori dalla bbox YOLO,
+    # sopra o sotto la piastra. Campionare soltanto l'interno confonde quindi
+    # la piastra curva con il marker e puo' invertire la polarita. Le tre patch
+    # esterne restano laterali, dove compare il `+`, e non seguono il filo
+    # centrale del condensatore.
+    top_external_ys = [
+        int(round(y1 - height * ratio))
+        for ratio in (0.28, 0.18, 0.08)
+    ]
+    bottom_external_ys = [
+        int(round(y2 + height * ratio))
+        for ratio in (0.08, 0.18, 0.28)
+    ]
+    top_external = max(
+        _plus_like_patch_score(binary, cx, cy, patch_half_w, patch_half_h)
+        for cx in (left_cx, right_cx)
+        for cy in top_external_ys
+    )
+    bottom_external = max(
+        _plus_like_patch_score(binary, cx, cy, patch_half_w, patch_half_h)
+        for cx in (left_cx, right_cx)
+        for cy in bottom_external_ys
+    )
+
+    top_score = max(top_left, top_right, top_external)
+    bottom_score = max(bottom_left, bottom_right, bottom_external)
 
     return {
         "top": round(float(top_score), 4),
@@ -368,6 +392,10 @@ def _polarized_capacitor_vertical_plus_scores(binary, bbox):
         "top_right_score": round(float(top_right), 4),
         "bottom_left_score": round(float(bottom_left), 4),
         "bottom_right_score": round(float(bottom_right), 4),
+        "top_external_score": round(float(top_external), 4),
+        "bottom_external_score": round(float(bottom_external), 4),
+        "top_external_ys": top_external_ys,
+        "bottom_external_ys": bottom_external_ys,
         "score_mode": "polarized_capacitor_plus_marker_vertical_lateral",
     }
 

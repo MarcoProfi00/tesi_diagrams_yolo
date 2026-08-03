@@ -1,0 +1,26 @@
+.title ic03 slower timing probe with official TI LM317 model
+
+.include "extracted/LM317_TRANS.LIB"
+
+VVCC_12 N006 0 DC 12
+XIC1 N002 N001 N003 N003 LM317_TRANS
+RLAMP N003 0 12
+C1 N002 0 2.2u
+C3 N003 N004 22u
+C2 N003 N001 22u
+C4 N003 N005 22u
+R2 N004 N005 10k
+R3 N005 0 10k
+R1 N001 N004 10k
+RSWITCH N006 N002 1m
+
+.save all
+.tran 2ms 40s
+
+.control
+set wr_singlescale
+set wr_vecnames
+run
+wrdata ic03_slow_timing.csv time v(N003)
+.endc
+.end

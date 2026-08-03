@@ -1,0 +1,565 @@
+{
+  "circuit_id": "ic02",
+  "source_format": "pipeline2.0_values_bound",
+  "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\data\\batchPipeline2.0\\batchICChatAgentEvaluation\\values\\ic02_values.yaml",
+  "supplies": {
+    "AUDIO_IN": {
+      "terminal": "terminal26.1_t1",
+      "return_terminal": "terminal26.1_t2",
+      "type": "sin",
+      "waveform": "sin",
+      "value": 0.02,
+      "unit": "V",
+      "offset": 0,
+      "amplitude": 0.02,
+      "frequency": 1000,
+      "frequency_unit": "Hz",
+      "reference": 0,
+      "source": "manual_testbench_assumption",
+      "label_text": "Audio IN: sinusoidale 20 mV picco, 1 kHz",
+      "viewer_override": {
+        "label": "AUDIO IN",
+        "display_value": "20 mVpk @ 1 kHz",
+        "tooltip": "Testbench SPICE: SIN(0 20m 1k)"
+      },
+      "node": "N011",
+      "return_node": "0"
+    },
+    "VCC_25": {
+      "terminal": "terminal26.2_t1",
+      "type": "dc",
+      "value": 25,
+      "unit": "V",
+      "reference": 0,
+      "source": "manual_from_image_label",
+      "label_text": "+25 V DC",
+      "viewer_override": {
+        "visual_class": "voltage_source",
+        "label": "VCC",
+        "display_value": "+25 V"
+      },
+      "node": "N004"
+    },
+    "VEE_N25": {
+      "terminal": "terminal26.3_t1",
+      "type": "dc",
+      "value": -25,
+      "unit": "V",
+      "reference": 0,
+      "source": "manual_from_image_label",
+      "label_text": "-25 V DC",
+      "viewer_override": {
+        "visual_class": "voltage_source",
+        "label": "VEE",
+        "display_value": "-25 V"
+      },
+      "node": "N002"
+    }
+  },
+  "components": {
+    "fuse8.1": {
+      "class_name": "Fuse",
+      "terminal_nodes": {
+        "t1": "N001",
+        "t2": "N002"
+      },
+      "value_data": {
+        "state": "closed",
+        "current_rating": 2,
+        "current_rating_unit": "A",
+        "source": "manual_from_image_label",
+        "label_text": "F2 2 A, chiuso",
+        "viewer_override": {
+          "label": "F2",
+          "display_value": "2 A"
+        }
+      },
+      "status": "bound"
+    },
+    "fuse8.2": {
+      "class_name": "Fuse",
+      "terminal_nodes": {
+        "t1": "N003",
+        "t2": "N004"
+      },
+      "value_data": {
+        "state": "closed",
+        "current_rating": 2,
+        "current_rating_unit": "A",
+        "source": "manual_from_image_label",
+        "label_text": "F1 2 A, chiuso",
+        "viewer_override": {
+          "label": "F1",
+          "display_value": "2 A"
+        }
+      },
+      "status": "bound"
+    },
+    "gnd9.1": {
+      "class_name": "GND",
+      "terminal_nodes": {
+        "t1": "0"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "gnd9.2": {
+      "class_name": "GND",
+      "terminal_nodes": {
+        "t1": "0"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "gnd9.3": {
+      "class_name": "GND",
+      "terminal_nodes": {
+        "t1": "0"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "gnd9.4": {
+      "class_name": "GND",
+      "terminal_nodes": {
+        "t1": "0"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "gnd9.5": {
+      "class_name": "GND",
+      "terminal_nodes": {
+        "t1": "0"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "gnd9.6": {
+      "class_name": "GND",
+      "terminal_nodes": {
+        "t1": "0"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "gnd9.7": {
+      "class_name": "GND",
+      "terminal_nodes": {
+        "t1": "0"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "gnd9.8": {
+      "class_name": "GND",
+      "terminal_nodes": {
+        "t1": "0"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "gnd9.9": {
+      "class_name": "GND",
+      "terminal_nodes": {
+        "t1": "0"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "integrated_circuit11.1": {
+      "class_name": "Integrated_Circuit",
+      "terminal_nodes": {
+        "left_1": "N005",
+        "left_2": "N006",
+        "right_1": "N007",
+        "top_1": "N003",
+        "bottom_1": "N001"
+      },
+      "value_data": {
+        "model": "LM1875_0",
+        "source": "ti_official_snam066a_pspice_model",
+        "label_text": "IC1 LM1875; modello ufficiale TI Rev. A",
+        "viewer_override": {
+          "label": "IC1",
+          "display_value": "LM1875",
+          "tooltip": "IC1 LM1875; modello ufficiale TI PSpice Rev. A SNAM066A"
+        },
+        "spice_override": {
+          "emit_as": "subcircuit",
+          "pin_order": [
+            "VIN",
+            "VIP",
+            "VSS",
+            "VDD",
+            "VOUT"
+          ],
+          "node_refs": {
+            "VIN": "integrated_circuit11.1_left_2",
+            "VIP": "integrated_circuit11.1_left_1",
+            "VSS": "integrated_circuit11.1_bottom_1",
+            "VDD": "integrated_circuit11.1_top_1",
+            "VOUT": "integrated_circuit11.1_right_1"
+          },
+          "resolved_node_refs": {
+            "VIN": "N006",
+            "VIP": "N005",
+            "VSS": "N001",
+            "VDD": "N003",
+            "VOUT": "N007"
+          }
+        }
+      },
+      "status": "unsupported_for_now"
+    },
+    "polarized_capacitor20.1": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "negative": "N008",
+        "positive": "N005"
+      },
+      "value_data": {
+        "value": 1,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "C4 1 uF",
+        "viewer_override": {
+          "label": "C4",
+          "display_value": "1 uF"
+        }
+      },
+      "status": "bound"
+    },
+    "polarized_capacitor20.2": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "positive": "N009",
+        "negative": "0"
+      },
+      "value_data": {
+        "value": 22,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "C1 22 uF",
+        "viewer_override": {
+          "label": "C1",
+          "display_value": "22 uF"
+        }
+      },
+      "status": "bound"
+    },
+    "polarized_capacitor20.3": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "positive": "N001",
+        "negative": "0"
+      },
+      "value_data": {
+        "value": 100,
+        "unit": "nf",
+        "source": "manual_from_image_label",
+        "label_text": "C2 100 nF",
+        "viewer_override": {
+          "label": "C2",
+          "display_value": "100 nF"
+        }
+      },
+      "status": "bound"
+    },
+    "polarized_capacitor20.4": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "positive": "N003",
+        "negative": "0"
+      },
+      "value_data": {
+        "value": 100,
+        "unit": "nf",
+        "source": "manual_from_image_label",
+        "label_text": "C6 100 nF",
+        "viewer_override": {
+          "label": "C6",
+          "display_value": "100 nF"
+        }
+      },
+      "status": "bound"
+    },
+    "polarized_capacitor20.5": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "positive": "N001",
+        "negative": "0"
+      },
+      "value_data": {
+        "value": 220,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "C3 220 uF",
+        "viewer_override": {
+          "label": "C3",
+          "display_value": "220 uF"
+        }
+      },
+      "status": "bound"
+    },
+    "polarized_capacitor20.6": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "positive": "N003",
+        "negative": "0"
+      },
+      "value_data": {
+        "value": 220,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "C5 220 uF",
+        "viewer_override": {
+          "label": "C5",
+          "display_value": "220 uF"
+        }
+      },
+      "status": "bound"
+    },
+    "polarized_capacitor20.7": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "positive": "N010",
+        "negative": "0"
+      },
+      "value_data": {
+        "value": 0.22,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "C7 0.22 uF",
+        "viewer_override": {
+          "label": "C7",
+          "display_value": "0.22 uF"
+        }
+      },
+      "status": "bound"
+    },
+    "resistor22.1": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N011",
+        "t2": "N008"
+      },
+      "value_data": {
+        "value": 1,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R5 1 kohm",
+        "viewer_override": {
+          "label": "R5",
+          "display_value": "1 kohm"
+        }
+      },
+      "status": "bound"
+    },
+    "resistor22.2": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N008",
+        "t2": "0"
+      },
+      "value_data": {
+        "value": 1,
+        "unit": "Mohm",
+        "source": "manual_from_image_label",
+        "label_text": "R4 1 Mohm",
+        "viewer_override": {
+          "label": "R4",
+          "display_value": "1 Mohm"
+        }
+      },
+      "status": "bound"
+    },
+    "resistor22.3": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N005",
+        "t2": "0"
+      },
+      "value_data": {
+        "value": 22,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R3 22 kohm",
+        "viewer_override": {
+          "label": "R3",
+          "display_value": "22 kohm"
+        }
+      },
+      "status": "bound"
+    },
+    "resistor22.4": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N006",
+        "t2": "N009"
+      },
+      "value_data": {
+        "value": 10,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R2 10 kohm",
+        "viewer_override": {
+          "label": "R2",
+          "display_value": "10 kohm"
+        }
+      },
+      "status": "bound"
+    },
+    "resistor22.5": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N006",
+        "t2": "N007"
+      },
+      "value_data": {
+        "value": 180,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R1 180 kohm",
+        "viewer_override": {
+          "label": "R1",
+          "display_value": "180 kohm"
+        }
+      },
+      "status": "bound"
+    },
+    "resistor22.6": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N007",
+        "t2": "N010"
+      },
+      "value_data": {
+        "value": 1,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "R6 1 ohm",
+        "viewer_override": {
+          "label": "R6",
+          "display_value": "1 ohm"
+        }
+      },
+      "status": "bound"
+    },
+    "speaker24.1": {
+      "class_name": "Speaker",
+      "terminal_nodes": {
+        "t1": "N007",
+        "t2": "0"
+      },
+      "value_data": {
+        "spice_override": {
+          "emit_as": "resistive_load",
+          "equivalent_resistance": 4,
+          "resistance_unit": "ohm",
+          "node_order": [
+            "t1",
+            "t2"
+          ],
+          "semantic_role": "speaker_equivalent"
+        },
+        "source": "manual_from_image_label",
+        "label_text": "K1 speaker equivalente 4 ohm",
+        "viewer_override": {
+          "visual_class": "speaker",
+          "label": "K1",
+          "display_value": "4 ohm"
+        }
+      },
+      "status": "bound"
+    },
+    "terminal26.1": {
+      "class_name": "Terminal",
+      "terminal_nodes": {
+        "t1": "N011",
+        "t2": "0"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "terminal26.2": {
+      "class_name": "Terminal",
+      "terminal_nodes": {
+        "t1": "N004"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "terminal26.3": {
+      "class_name": "Terminal",
+      "terminal_nodes": {
+        "t1": "N002"
+      },
+      "value_data": null,
+      "status": "not_required"
+    }
+  },
+  "nodes": {
+    "integrated_circuit11.1_left_1": {
+      "label": "NON_INVERTING_INPUT",
+      "source": "manual_from_validated_graph_pin1",
+      "node": "N005"
+    },
+    "integrated_circuit11.1_left_2": {
+      "label": "INVERTING_INPUT",
+      "source": "manual_from_validated_graph_pin2",
+      "node": "N006"
+    },
+    "integrated_circuit11.1_right_1": {
+      "label": "AUDIO_OUTPUT",
+      "source": "manual_from_validated_graph_pin4",
+      "node": "N007"
+    },
+    "terminal26.1_t1": {
+      "label": "AUDIO_IN",
+      "source": "manual_from_image_label",
+      "label_text": "Ingresso audio",
+      "node": "N011"
+    },
+    "terminal26.1_t2": {
+      "label": "AUDIO_RETURN",
+      "spice_node": 0,
+      "source": "manual_from_image_ground",
+      "label_text": "Ritorno ingresso audio a massa",
+      "node": "0"
+    },
+    "terminal26.2_t1": {
+      "label": "VCC_25",
+      "source": "manual_from_image_label",
+      "label_text": "+25 V DC",
+      "node": "N004"
+    },
+    "terminal26.3_t1": {
+      "label": "VEE_N25",
+      "source": "manual_from_image_label",
+      "label_text": "-25 V DC",
+      "node": "N002"
+    }
+  },
+  "spice_topology_overlay": [],
+  "simulation": {
+    "analyses": [
+      "op",
+      "tran"
+    ],
+    "tran": {
+      "step": "10us",
+      "stop": "20ms"
+    }
+  },
+  "missing": [],
+  "stats": {
+    "components_total": 29,
+    "bound_components": 16,
+    "missing_components": 0,
+    "not_required_components": 12,
+    "unsupported_components": 1,
+    "supplies_count": 3,
+    "manual_nodes_count": 7
+  }
+}

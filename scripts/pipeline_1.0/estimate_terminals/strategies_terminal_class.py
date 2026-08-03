@@ -546,6 +546,72 @@ def _border_inward_one_side(binary, bbox, combined_scores, far_scores):
     return max(valid, key=lambda side: combined_scores.get(side, 0))
 
 
+def _border_adjacent_two_side_evidence(
+    inward_side,
+    local_scores,
+    far_scores,
+    combined_scores,
+):
+    """Riconosce un jack sul bordo con segnale interno e massa adiacente."""
+    if inward_side is None:
+        return {
+            "valid": False,
+            "orientation": None,
+            "reason": "not_near_border",
+        }
+
+    adjacent_sides = [
+        side
+        for side in ("top", "bottom", "left", "right")
+        if _are_adjacent_sides(inward_side, side)
+    ]
+    second_side = max(
+        adjacent_sides,
+        key=lambda side: float(combined_scores.get(side, 0)),
+    )
+    remaining_sides = [
+        side
+        for side in ("top", "bottom", "left", "right")
+        if side not in {inward_side, second_side}
+    ]
+
+    inward_score = float(combined_scores.get(inward_side, 0))
+    second_score = float(combined_scores.get(second_side, 0))
+    third_score = max(
+        (float(combined_scores.get(side, 0)) for side in remaining_sides),
+        default=0.0,
+    )
+    strongest_score = max(
+        (float(score) for score in combined_scores.values()),
+        default=0.0,
+    )
+
+    valid = (
+        inward_score >= strongest_score
+        and inward_score >= TERMINAL_BORDER_ADJACENT_INWARD_MIN
+        and second_score >= TERMINAL_BORDER_ADJACENT_SECOND_MIN
+        and float(local_scores.get(inward_side, 0)) >= TERMINAL_BORDER_ADJACENT_LOCAL_MIN
+        and float(local_scores.get(second_side, 0)) >= TERMINAL_BORDER_ADJACENT_LOCAL_MIN
+        and float(far_scores.get(inward_side, 0)) >= TERMINAL_BORDER_ADJACENT_FAR_MIN
+        and float(far_scores.get(second_side, 0)) >= TERMINAL_BORDER_ADJACENT_FAR_MIN
+        and second_score >= max(
+            TERMINAL_BORDER_ADJACENT_SECOND_MIN,
+            third_score * TERMINAL_BORDER_ADJACENT_THIRD_MARGIN,
+        )
+    )
+
+    orientation = f"corner_{inward_side}_{second_side}" if valid else None
+    return {
+        "valid": valid,
+        "orientation": orientation,
+        "inward_side": inward_side,
+        "second_side": second_side,
+        "inward_score": inward_score,
+        "second_score": second_score,
+        "third_score": third_score,
+    }
+
+
 # Classify terminal cardinality.
 def classify_terminal_cardinality(binary, bbox, text_suppression_debug=None):
     local_scores = get_terminal_class_probe_scores(binary, bbox)
@@ -617,6 +683,17 @@ def classify_terminal_cardinality(binary, bbox, text_suppression_debug=None):
         far_scores,
     )
     local_scores["border_inward_one_side"] = border_inward_side
+    border_adjacent_eval = _border_adjacent_two_side_evidence(
+        border_inward_side,
+        local_scores,
+        far_scores,
+        single_eval["combined_scores"],
+    )
+    local_scores["border_adjacent_two_side_evaluation"] = border_adjacent_eval
+
+    if border_adjacent_eval["valid"]:
+        local_scores["decision_mode"] = "terminal_cardinality_two_border_adjacent"
+        return 2, border_adjacent_eval["orientation"], local_scores
 
     if border_inward_side is not None:
         local_scores["decision_mode"] = "terminal_cardinality_border_inward_one"
@@ -882,7 +959,11 @@ def detect_terminal_two_sides(binary, bbox, precomputed_scores=None):
     if far_scores is None:
         far_scores = get_terminal_class_far_probe_scores(binary, bbox)
 
-    adjacent_eval = scores.get("adjacent_two_side_evaluation") or {}
+    adjacent_eval = (
+        scores.get("adjacent_two_side_evaluation")
+        or scores.get("border_adjacent_two_side_evaluation")
+        or {}
+    )
     orientation = adjacent_eval.get("orientation")
     if isinstance(orientation, str) and orientation.startswith("corner_"):
         _, side_a, side_b = orientation.split("_", 2)

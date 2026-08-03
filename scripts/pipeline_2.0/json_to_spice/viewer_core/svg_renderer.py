@@ -1349,7 +1349,20 @@ def render_ground(position: dict[str, Any]) -> str:
 
 def render_terminal_port(component: dict[str, Any], position: dict[str, Any]) -> str:
     """Disegna un terminale esterno pulito, orientato secondo la bbox."""
-    terminal = (position.get("terminals") or [{}])[0]
+    terminals = position.get("terminals") or [{}]
+    primary_terminal_id = str(
+        position.get("viewer_primary_terminal_id")
+        or component.get("viewer_primary_terminal_id")
+        or ""
+    )
+    terminal = next(
+        (
+            item for item in terminals
+            if primary_terminal_id
+            and str(item.get("terminal_id") or "") == primary_terminal_id
+        ),
+        terminals[0],
+    )
     x = float(terminal.get("x", position.get("x") or 0))
     y = float(terminal.get("y", position.get("y") or 0))
     if component.get("viewer_label_hidden"):

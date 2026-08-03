@@ -38,6 +38,10 @@ _CONTROLLER_LOCK = threading.Lock()
 # Tre livelli falliti consentono una localizzazione piu robusta del limite di
 # trasferimento; una risposta utile interrompe comunque subito lo sweep.
 MIN_FAILED_SIGNAL_AMPLITUDES_BEFORE_LOCALIZATION = 3
+# Per una richiesta qualitativa di rallentamento serve un miglioramento
+# chiaramente misurabile ma indipendente dallo specifico circuito. La soglia
+# resta invariata per tutta la sessione autonoma.
+DEFAULT_QUALITATIVE_PERIOD_INCREASE = 0.25
 
 
 class AutonomousControllerError(RuntimeError):
@@ -191,6 +195,8 @@ def symptom_requests_correction(symptom: str) -> bool:
         r"\bcorregg\w*",
         r"\bripar\w*",
         r"\bripristin\w*",
+        r"\baument\w*",
+        r"\bmiglior\w*",
         r"\baccend\w*",
         r"\battiv\w*",
         r"\bspegn\w*",
@@ -199,9 +205,110 @@ def symptom_requests_correction(symptom: str) -> bool:
         r"\bcorrect\w*",
         r"\brepair\w*",
         r"\brestore\w*",
+        r"\b(?:increase|improve|boost|raise)\w*",
         r"\bturn\s+(?:on|off)\b",
+        # Un comportamento dichiarato eccessivamente rapido/lento contiene
+        # gia un obiettivo correttivo implicito, anche quando l'utente formula
+        # la richiesta come "quale parte conviene controllare?".
+        r"\btropp\w*\s+(?:veloc\w*|rapid\w*|lent\w*)\b",
+        r"\b(?:too\s+(?:fast|slow)|overly\s+(?:fast|slow))\b",
+        r"\brallent\w*",
+        r"\bslow\s+down\b",
     )
     return any(re.search(pattern, normalized) for pattern in correction_patterns)
+
+
+def temporal_correction_policy_for_symptom(symptom: str) -> dict[str, Any]:
+    """Deriva una politica temporale stabile dalla richiesta dell'utente.
+
+    Una frequenza esplicitamente indicata dall'utente ha precedenza. Quando il
+    sintomo e' soltanto qualitativo ("lampeggia troppo velocemente"), si usa un
+    incremento relativo del periodo, evitando soglie assolute inventate dal
+    modello e non confrontabili tra scenari.
+    """
+    normalized = str(symptom or "").strip().lower().replace(",", ".")
+    too_fast_patterns = (
+        r"\btropp\w*\s+(?:veloc\w*|rapid\w*)\b",
+        r"\b(?:too\s+fast|overly\s+fast)\b",
+        r"\brallent\w*",
+        r"\bslow\s+down\b",
+    )
+    if not any(re.search(pattern, normalized) for pattern in too_fast_patterns):
+        return {}
+
+    frequency_match = re.search(
+        r"(?<![\w.])(\d+(?:\.\d+)?)\s*(?:hz|hertz)\b",
+        normalized,
+    )
+    if frequency_match:
+        frequency_hz = float(frequency_match.group(1))
+        if frequency_hz > 0:
+            return {
+                "kind": "max_frequency_hz",
+                "max_frequency_hz": frequency_hz,
+                "source": "user_explicit",
+            }
+
+    return {
+        "kind": "min_relative_period_increase",
+        "min_relative_period_increase": DEFAULT_QUALITATIVE_PERIOD_INCREASE,
+        "source": "qualitative_default",
+    }
+
+
+def apply_temporal_correction_policy(
+    decision: dict[str, Any],
+    policy: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Impedisce che l'obiettivo temporale venga rilassato tra correzioni."""
+    if decision.get("decision") != "run_scenarios" or not policy:
+        return decision
+
+    kind = str(policy.get("kind") or "")
+    for scenario in decision.get("scenarios") or []:
+        if not isinstance(scenario, dict) or scenario.get("intent") != "correction":
+            continue
+        expectation = scenario.get("temporal_expect")
+        if not isinstance(expectation, dict):
+            continue
+        expectation["required_state"] = "blinking"
+        expectation["require_regular_period"] = True
+        if kind == "max_frequency_hz":
+            expectation["max_frequency_hz"] = float(policy["max_frequency_hz"])
+            expectation.pop("min_relative_period_increase", None)
+        elif kind == "min_relative_period_increase":
+            expectation["min_relative_period_increase"] = float(
+                policy["min_relative_period_increase"]
+            )
+            expectation.pop("max_frequency_hz", None)
+    return decision
+
+
+def expose_verified_correction_in_answer(decision: dict[str, Any]) -> dict[str, Any]:
+    """Rende visibile nella risposta finale la correzione strutturata verificata."""
+    if decision.get("decision") != "stop" or decision.get("final_status") != "resolved":
+        return decision
+    correction = str(decision.get("verified_correction") or "").strip()
+    if not correction:
+        return decision
+    answer = str(decision.get("final_answer") or "").strip()
+    if correction.casefold() not in answer.casefold():
+        decision["final_answer"] = (
+            f"{answer.rstrip('.')}\n\nCorrezione verificata: {correction}"
+            if answer
+            else f"Correzione verificata: {correction}"
+        )
+    return decision
+
+
+def symptom_forbids_source_stimulus_changes(symptom: str) -> bool:
+    """Rileva il vincolo esplicito di non alterare il segnale di ingresso."""
+    normalized = str(symptom or "").strip().lower()
+    patterns = (
+        r"\bsenza\s+(?:modificare|cambiare|alterare|toccare)\b.{0,40}\b(?:segnale|sorgente|ingresso)\b",
+        r"\bwithout\s+(?:modifying|changing|altering|touching)\b.{0,40}\b(?:signal|source|input)\b",
+    )
+    return any(re.search(pattern, normalized) for pattern in patterns)
 
 
 def symptom_requires_gain_comparison(symptom: str) -> bool:
@@ -484,6 +591,7 @@ def request_valid_decision(
     require_joint_objective_verification: bool,
     require_temporal_expectation: bool,
     require_signal_amplitude_followup: bool,
+    forbid_source_stimulus_actions: bool,
     provider: DecisionProvider,
 ) -> tuple[dict[str, Any], list[str]]:
     """Richiede una decisione e consente un solo tentativo di correzione JSON."""
@@ -510,6 +618,7 @@ def request_valid_decision(
                 require_joint_objective_verification=require_joint_objective_verification,
                 require_temporal_expectation=require_temporal_expectation,
                 require_signal_amplitude_followup=require_signal_amplitude_followup,
+                forbid_source_stimulus_actions=forbid_source_stimulus_actions,
             ), response_paths
         except AutonomousDecisionError as exc:
             last_error = exc
@@ -536,7 +645,12 @@ def start_diagnosis(output_dir: Path, symptom: str, model: str) -> dict[str, Any
         raise AutonomousControllerError(
             "Il workspace contiene scenari precedenti: usa Pulisci prima di una nuova diagnosi"
         )
-    return create_state(output_dir, clean_symptom, model)
+    state = create_state(output_dir, clean_symptom, model)
+    state["temporal_correction_policy"] = temporal_correction_policy_for_symptom(
+        clean_symptom
+    )
+    write_state(output_dir, state)
+    return state
 
 
 def complete_with_guardrail(
@@ -603,6 +717,9 @@ def run_iteration(
         require_quality_analysis = symptom_requires_quality_analysis(
             str(state.get("symptom") or "")
         )
+        forbid_source_stimulus_actions = symptom_forbids_source_stimulus_changes(
+            str(state.get("symptom") or "")
+        )
         # Un obiettivo VAC deve essere verificato sull'ampiezza transitoria, non sul solo punto DC.
         require_variable_signal_measurement = symptom_requires_variable_signal_measurement(
             str(state.get("symptom") or "")
@@ -661,6 +778,7 @@ def run_iteration(
                 require_joint_objective_verification=require_joint_objective_verification,
                 require_temporal_expectation=require_temporal_expectation,
                 require_signal_amplitude_followup=require_signal_amplitude_followup,
+                forbid_source_stimulus_actions=forbid_source_stimulus_actions,
                 provider=provider or default_decision_provider,
             )
         except Exception as exc:
@@ -671,7 +789,12 @@ def run_iteration(
             return state
 
         state["agent_decisions_count"] = decision_number
+        decision = apply_temporal_correction_policy(
+            decision,
+            state.get("temporal_correction_policy"),
+        )
         decision = guard_initial_condition_conclusion(state, decision)
+        decision = expose_verified_correction_in_answer(decision)
         iteration: dict[str, Any] = {
             "decision_number": decision_number,
             "decision": decision,

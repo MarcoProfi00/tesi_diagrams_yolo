@@ -1,0 +1,34 @@
+{
+  "title": "Aumentare il guadagno riducendo R1",
+  "hypothesis": "Rresistor22_5 (180 kohm) e Rresistor22_4 (10 kohm) formano la rete di feedback dell'ingresso invertente; ridurre R1 dovrebbe aumentare il rapporto di guadagno chiuso e quindi il Vpp in uscita sullo speaker senza modificare il segnale di ingresso.",
+  "intent": "correction",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Rresistor22_5",
+      "value": "100k"
+    }
+  ],
+  "compare": [
+    "v(N011)",
+    "v(N007)",
+    "v(N006)"
+  ],
+  "measure": {
+    "v(N011)": "tran_vpp",
+    "v(N007)": "tran_vpp",
+    "v(N006)": "tran_vpp"
+  },
+  "gain": {
+    "input": "v(N011)",
+    "output": "v(N007)",
+    "min_ratio": 5.0
+  },
+  "expect": {
+    "v(N011)": "nonzero",
+    "v(N007)": "magnitude_increased",
+    "v(N006)": "changed"
+  },
+  "scenario_id": "agent_scenario_1"
+}

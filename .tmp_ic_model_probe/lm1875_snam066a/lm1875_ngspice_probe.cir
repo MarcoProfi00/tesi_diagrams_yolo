@@ -1,0 +1,26 @@
+* Verifica autonoma ngspice del modello ufficiale TI LM1875 SNAM066A.
+.include "extracted/LM1875.lib"
+
+VDD vdd 0 25
+VSS vss 0 -25
+VSIG source 0 SIN(0 20m 1k)
+
+CIN source vip 1u
+RBIAS vip 0 22k
+RFB out vin 180k
+RGAIN vin gain_return 10k
+CGAIN gain_return 0 22u
+RLOAD out 0 4
+RZOBEL out zobel 1
+CZOBEL zobel 0 0.22u
+
+XU1 vin vip vss vdd out LM1875_0
+
+.tran 2u 10m
+.control
+set filetype=ascii
+run
+wrdata lm1875_ngspice_probe.csv time v(source) v(vip) v(out)
+quit
+.endc
+.end

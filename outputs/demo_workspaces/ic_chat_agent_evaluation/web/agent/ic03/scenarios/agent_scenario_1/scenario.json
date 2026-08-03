@@ -1,0 +1,32 @@
+{
+  "title": "Aumentare il resistore verso massa del timer",
+  "hypothesis": "Il periodo di lampeggio e limitato soprattutto dalla costante di tempo del ramo N005-0; se Rresistor22_2 aumenta, la carica/scarica della rete RC rallenta e i lampi diventano piu distinguibili.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Rresistor22_2",
+      "value": "15k"
+    }
+  ],
+  "compare": [
+    "v(N003)",
+    "v(N005)"
+  ],
+  "measure": {
+    "v(N003)": "tran_vpp",
+    "v(N005)": "tran_vpp"
+  },
+  "expect": {
+    "v(N003)": "changed",
+    "v(N005)": "changed"
+  },
+  "temporal_expect": {
+    "target": "Rlamp13_1",
+    "required_state": "blinking",
+    "require_regular_period": true,
+    "min_relative_period_increase": 0.25
+  },
+  "scenario_id": "agent_scenario_1"
+}

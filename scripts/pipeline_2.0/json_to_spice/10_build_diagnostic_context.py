@@ -211,7 +211,7 @@ def build_summary(output_dir: Path) -> dict[str, Any]:
     emit_report = read_json_safe(output_dir / "07_spice_emit_report.json")
     spice_run = read_json_safe(output_dir / "08_spice_run.json")
 
-    return {
+    summary = {
         "spice_status": spice_run.get("status"),
         "spice_exit_code": spice_run.get("exit_code"),
         "spice_message": spice_run.get("message"),
@@ -231,6 +231,11 @@ def build_summary(output_dir: Path) -> dict[str, Any]:
         "has_tran_plot": (output_dir / "08_tran_plot.png").exists() or (output_dir / "08_tran_plot.svg").exists(),
         "led_profiles": build_led_profile_summary(output_dir),
     }
+    load_profiles = build_load_profile_summary(output_dir)
+    if load_profiles:
+        summary["load_profiles"] = load_profiles
+        summary["temporal_profiles"] = build_temporal_profile_summary(output_dir)
+    return summary
 
 
 def build_led_profile_summary(run_dir: Path) -> dict[str, dict[str, Any]]:
@@ -254,6 +259,39 @@ def build_led_profile_summary(run_dir: Path) -> dict[str, dict[str, Any]]:
             "cathode_node": profile.get("cathode_node"),
         }
     return compact
+
+
+def build_load_profile_summary(run_dir: Path) -> dict[str, dict[str, Any]]:
+    """Estrae le metriche temporali dei carichi visivi a due terminali."""
+    model = read_json_safe(run_dir / VIEWER_MODEL_FILENAME)
+    profiles = ((model.get("transient") or {}).get("load_profiles") or {})
+    compact: dict[str, dict[str, Any]] = {}
+    for component_id, profile in profiles.items():
+        if not isinstance(profile, dict):
+            continue
+        compact[str(component_id)] = {
+            "source_component_id": profile.get("source_component_id"),
+            "state": profile.get("state"),
+            "regular_period": profile.get("regular_period"),
+            "period_s": profile.get("period_s"),
+            "frequency_hz": profile.get("frequency_hz"),
+            "duty_cycle": profile.get("duty_cycle"),
+            "on_fraction": profile.get("on_fraction"),
+            "pulse_count": profile.get("pulse_count"),
+            "voltage_min": profile.get("voltage_min"),
+            "voltage_max": profile.get("voltage_max"),
+            "positive_node": profile.get("positive_node"),
+            "negative_node": profile.get("negative_node"),
+        }
+    return compact
+
+
+def build_temporal_profile_summary(run_dir: Path) -> dict[str, dict[str, Any]]:
+    """Unifica i profili temporali disponibili senza rimuovere le chiavi legacy."""
+    return {
+        **build_led_profile_summary(run_dir),
+        **build_load_profile_summary(run_dir),
+    }
 
 
 def build_agent_rules() -> list[str]:
@@ -302,8 +340,7 @@ def build_executed_scenarios(
                 "role": metadata["role"],
             }
 
-        scenarios.append(
-            {
+        scenario_summary = {
                 "scenario_dir": relative_or_absolute(scenario_dir, project_root),
                 "scenario_id": status.get("scenario_id") or scenario.get("scenario_id") or scenario_dir.name,
                 "title": scenario.get("title") or status.get("scenario_id") or scenario_dir.name,
@@ -314,7 +351,13 @@ def build_executed_scenarios(
                 "led_profiles": build_led_profile_summary(scenario_dir / "run"),
                 "artifacts": artifacts,
             }
-        )
+        load_profiles = build_load_profile_summary(scenario_dir / "run")
+        if load_profiles:
+            scenario_summary["load_profiles"] = load_profiles
+            scenario_summary["temporal_profiles"] = build_temporal_profile_summary(
+                scenario_dir / "run"
+            )
+        scenarios.append(scenario_summary)
 
     return scenarios
 
@@ -417,6 +460,9 @@ def build_scenario_outcome_summary(
             "ranking_verified": ranking_verified,
             "score": score,
         }
+        if scenario.get("load_profiles"):
+            compact["load_profiles"] = scenario.get("load_profiles")
+            compact["temporal_profiles"] = scenario.get("temporal_profiles") or {}
         scenarios.append(compact)
 
         if ranking_verified and (best is None or score > int(best.get("score") or 0)):

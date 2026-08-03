@@ -16,6 +16,7 @@ import numpy as np
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PIPELINE1_DIR = PROJECT_ROOT / "scripts" / "pipeline_1.0"
+STEP01_PATH = PIPELINE1_DIR / "01_detect_components.py"
 STEP04_PATH = PIPELINE1_DIR / "04_extract_wires.py"
 if str(PIPELINE1_DIR) not in sys.path:
     sys.path.insert(0, str(PIPELINE1_DIR))
@@ -54,7 +55,9 @@ def load_pipeline1_graph_functions():
     split_bridge_labels,
 ) = load_pipeline1_graph_functions()
 
+from estimate_terminals.dispatcher import get_terminals_definition
 from estimate_terminals.io_utils import img_build_foreground_binary
+from estimate_terminals.semantic_two_terminal import resolve_two_terminal_semantics
 from estimate_terminals.strategies_basic import detect_two_terminal_orientation_capacitor
 
 
@@ -66,6 +69,61 @@ def load_step04_module():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def load_step01_module():
+    """Carica lo step 01 per testare i fallback senza eseguire YOLO."""
+    spec = importlib.util.spec_from_file_location("pipeline1_step01_detection", STEP01_PATH)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Impossibile caricare lo step 01: {STEP01_PATH}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+class PolarizedCapacitorSemanticTests(unittest.TestCase):
+    """Regressioni per i marker di polarita appena fuori dalla bbox YOLO."""
+
+    def test_vertical_external_plus_marker_selects_top_terminal(self) -> None:
+        binary = np.zeros((100, 100), dtype=np.uint8)
+        bbox = [30, 30, 70, 70]
+        # Marker + esterno sopra la bbox, come negli elettrolitici di ic02.
+        cv2.line(binary, (32, 20), (44, 20), 255, 2)
+        cv2.line(binary, (38, 14), (38, 26), 255, 2)
+        # Piastra diritta e piastra curva interne al simbolo.
+        cv2.line(binary, (34, 42), (66, 42), 255, 2)
+        cv2.ellipse(binary, (50, 56), (16, 5), 0, 0, 180, 255, 2)
+        terminals = [
+            {"instance_id": "20.1", "relative_position": "top"},
+            {"instance_id": "20.1", "relative_position": "bottom"},
+        ]
+        meta = {
+            "semantic_terminal_strategy": "polarized_capacitor_positive_from_marker",
+            "semantic_roles": {
+                "marker_side": "positive",
+                "other_side": "negative",
+            },
+        }
+
+        resolved = resolve_two_terminal_semantics(
+            binary,
+            bbox,
+            "vertical",
+            terminals,
+            meta,
+        )
+
+        self.assertEqual(
+            {
+                terminal["relative_position"]: terminal["semantic_terminal_name"]
+                for terminal in resolved
+            },
+            {"top": "positive", "bottom": "negative"},
+        )
+        self.assertEqual(
+            resolved[0]["semantic_resolution_debug"]["scores"]["projection_mode"],
+            "polarized_capacitor_plus_marker_override",
+        )
 
 
 class EvidenceKeepTests(unittest.TestCase):
@@ -321,6 +379,63 @@ class C01RegressionTests(unittest.TestCase):
                 "left_pixels": 201,
                 "right_pixels": 176,
             })
+        )
+
+
+class IC02RegressionTests(unittest.TestCase):
+    """Protegge il ponticello e il jack d'ingresso del circuito LM1875."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.step01 = load_step01_module()
+        cls.image_path = (
+            PROJECT_ROOT
+            / "data"
+            / "batchPipeline2.0"
+            / "batchICChatAgentEvaluation"
+            / "ic02.jpg"
+        )
+        cls.image = cv2.imread(str(cls.image_path))
+        if cls.image is None:
+            raise RuntimeError(f"Immagine di regressione non leggibile: {cls.image_path}")
+        cls.binary = img_build_foreground_binary(cls.image)
+        cls.class_meta, *_ = cls.step01.load_class_metadata(
+            cls.step01.CLASS_TERMINALS_PATH
+        )
+
+    def test_low_span_hump_with_strong_vertical_support_is_preserved(self) -> None:
+        """Il vero arco sul feedback non viene scambiato per una giunzione."""
+        self.assertFalse(
+            is_symmetric_low_span_thick_hump({
+                "bridge_detector": "thick_hump",
+                "skeleton_y_span": 3,
+                "vertical_support": 50,
+                "left_pixels": 173,
+                "right_pixels": 195,
+            })
+        )
+
+    def test_border_input_jack_is_a_valid_low_confidence_terminal(self) -> None:
+        """Il jack IN a due contatti supera il fallback geometrico sul bordo."""
+        self.assertTrue(
+            self.step01.is_border_supply_terminal_candidate(
+                self.binary,
+                [13.84, 333.5, 47.95, 396.47],
+                self.image.shape,
+            )
+        )
+
+    def test_border_input_jack_has_signal_and_ground_contacts(self) -> None:
+        """Il jack IN espone il contatto destro e quello inferiore verso massa."""
+        terminals, orientation, _, _ = get_terminals_definition(
+            self.class_meta[26],
+            [13.84, 333.5, 47.95, 396.47],
+            image_binary=self.binary,
+        )
+        self.assertEqual(orientation, "corner_right_bottom")
+        self.assertEqual(
+            {term["relative_position"] for term in terminals},
+            {"right", "bottom"},
         )
 
 

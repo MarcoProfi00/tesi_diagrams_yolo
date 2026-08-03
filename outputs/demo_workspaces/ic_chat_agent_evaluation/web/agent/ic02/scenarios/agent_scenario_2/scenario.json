@@ -1,0 +1,34 @@
+{
+  "title": "Aumentare il guadagno riducendo R2",
+  "hypothesis": "Se il volume basso dipende da un guadagno chiuso troppo contenuto, ridurre Rresistor22_4 (10 kohm) aumenta il rapporto R1/R2 della controreazione e dovrebbe far crescere il Vpp d'uscita; questo testa una causa distinta dalla sola riduzione del ramo di feedback superiore.",
+  "intent": "correction",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Rresistor22_4",
+      "value": "4.7k"
+    }
+  ],
+  "compare": [
+    "v(N011)",
+    "v(N007)",
+    "v(N006)"
+  ],
+  "measure": {
+    "v(N011)": "tran_vpp",
+    "v(N007)": "tran_vpp",
+    "v(N006)": "tran_vpp"
+  },
+  "gain": {
+    "input": "v(N011)",
+    "output": "v(N007)",
+    "min_ratio": 10.0
+  },
+  "expect": {
+    "v(N011)": "nonzero",
+    "v(N007)": "magnitude_increased",
+    "v(N006)": "changed"
+  },
+  "scenario_id": "agent_scenario_2"
+}

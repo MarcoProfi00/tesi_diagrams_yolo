@@ -1,0 +1,22 @@
+.title ic03 topology probe with official TI LM317 transient model
+
+.include "extracted/LM317_TRANS.LIB"
+
+VSUPPLY IN 0 DC 12
+XIC1 IN ADJ OUT OUT LM317_TRANS
+C1 IN 0 2.2u
+R1 ADJ N_R1_R2 10k
+R2 N_R1_R2 N_R2_R3 10k
+R3 N_R2_R3 0 10k
+C2 OUT ADJ 10u
+C3 OUT N_R1_R2 10u
+C4 OUT N_R2_R3 10u
+RLAMP OUT 0 {RLAMP_EQ}
+.param RLAMP_EQ=12
+
+.tran 2m 20s
+.measure tran vout_min MIN v(OUT) FROM=10s TO=20s
+.measure tran vout_max MAX v(OUT) FROM=10s TO=20s
+.measure tran vout_avg AVG v(OUT) FROM=10s TO=20s
+
+.end

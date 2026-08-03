@@ -31,6 +31,16 @@ from typing import Any
 EXTERNAL_MODELS_BUNDLE_NAME = "07_external_models.lib"
 
 
+def decode_external_model(model_bytes: bytes) -> tuple[str, str]:
+    """Decodifica modelli SPICE moderni o legacy senza alterare l'asset sorgente."""
+    for encoding in ("utf-8-sig", "cp1252"):
+        try:
+            return model_bytes.decode(encoding), encoding
+        except UnicodeDecodeError:
+            continue
+    raise ValueError("External SPICE model uses an unsupported text encoding")
+
+
 def resolve_model_file(
     relative_path: str,
     spice_models_source: str | Path | None,
@@ -124,17 +134,14 @@ def resolve_model_entries(
                         f"{model_name}: external SPICE model SHA-256 mismatch "
                         f"(expected {expected_sha256}, found {actual_sha256})"
                     )
-                line = (
-                    model_bytes.decode("utf-8-sig")
-                    .replace("\r\n", "\n")
-                    .replace("\r", "\n")
-                    .rstrip()
-                )
+                decoded_model, model_encoding = decode_external_model(model_bytes)
+                line = decoded_model.replace("\r\n", "\n").replace("\r", "\n").rstrip()
                 source = {
                     "model": model_name,
                     "kind": "file",
                     "file": portable_path,
                     "sha256": actual_sha256,
+                    "encoding": model_encoding,
                 }
             defines = validate_ngspice_defines(
                 model_name,

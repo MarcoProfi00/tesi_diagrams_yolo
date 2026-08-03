@@ -1,0 +1,18 @@
+.title TI LM317_TRANS standalone ngspice probe
+
+.include "extracted/LM317_TRANS.LIB"
+
+VINPUT IN 0 DC 12
+XREG IN ADJ OUT OUT LM317_TRANS
+RSET OUT ADJ 240
+RADJ ADJ 0 1.5k
+RLOAD OUT 0 100
+CLOAD OUT 0 1u
+
+.op
+.tran 10u 10m
+.measure tran vout_final FIND v(OUT) AT=10m
+.measure tran vout_min MIN v(OUT) FROM=8m TO=10m
+.measure tran vout_max MAX v(OUT) FROM=8m TO=10m
+
+.end
