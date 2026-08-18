@@ -1,0 +1,25 @@
+{
+  "title": "Prova statica batteria scarica",
+  "hypothesis": "Riducendo la batteria sotto la soglia osservata a 12 V, la corrente del LED giallo deve diminuire o spegnersi, verificando il comportamento del ramo di sottotensione rispetto allo stato base.",
+  "intent": "diagnostic",
+  "analysis": "op",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "9V"
+    }
+  ],
+  "compare": [
+    "@dled12_1[id]",
+    "@dled12_2[id]",
+    "@dled12_3[id]",
+    "v(N004)",
+    "v(N005)",
+    "v(N009)"
+  ],
+  "expect": {
+    "@dled12_2[id]": "decreased"
+  },
+  "scenario_id": "agent_scenario_1"
+}

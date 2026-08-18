@@ -1,0 +1,266 @@
+{
+  "circuit_id": "b02",
+  "source_format": "pipeline2.0_component_rules",
+  "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\data\\batchPipeline2.0\\batchChatAgentEvaluation\\values\\b02_values.yaml",
+  "spice_classes_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\pipeline2_spice_classes.yaml",
+  "supplies": {
+    "VCC": {
+      "status": "spice_ready",
+      "spice_prefix": "V",
+      "emit_as": "independent_voltage_source",
+      "nodes": [
+        "N001",
+        "0"
+      ],
+      "parameters": {
+        "terminal": "led12.1_anode",
+        "type": "dc",
+        "value": 5,
+        "unit": "V",
+        "reference": 0,
+        "source": "manual_from_image_label",
+        "label_text": "+5V",
+        "node": "N001"
+      }
+    }
+  },
+  "components": {
+    "gnd9.1": {
+      "class_name": "GND",
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    "led12.1": {
+      "class_name": "LED",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "D",
+      "emit_as": "diode",
+      "node_order": [
+        "anode",
+        "cathode"
+      ],
+      "nodes": [
+        "N001",
+        "N002"
+      ],
+      "parameters": {
+        "model": "LED_RED",
+        "source": "manual_spice_generic_led_model",
+        "label_text": "D1 LED; modello SPICE generico"
+      }
+    },
+    "led12.2": {
+      "class_name": "LED",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "D",
+      "emit_as": "diode",
+      "node_order": [
+        "anode",
+        "cathode"
+      ],
+      "nodes": [
+        "N001",
+        "N003"
+      ],
+      "parameters": {
+        "model": "LED_RED",
+        "source": "manual_spice_generic_led_model",
+        "label_text": "D2 LED; modello SPICE generico"
+      }
+    },
+    "npn_transistor18.1": {
+      "class_name": "NPN_Transistor",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "Q",
+      "emit_as": "bjt_npn",
+      "node_order": [
+        "C",
+        "B",
+        "E"
+      ],
+      "nodes": [
+        "N005",
+        "N004",
+        "0"
+      ],
+      "parameters": {
+        "model": "2N3904",
+        "source": "manual_from_image_label",
+        "label_text": "Q1 2N3904"
+      }
+    },
+    "npn_transistor18.2": {
+      "class_name": "NPN_Transistor",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "Q",
+      "emit_as": "bjt_npn",
+      "node_order": [
+        "C",
+        "B",
+        "E"
+      ],
+      "nodes": [
+        "N007",
+        "N006",
+        "0"
+      ],
+      "parameters": {
+        "model": "2N3904",
+        "source": "manual_from_image_label",
+        "label_text": "Q2 2N3904"
+      }
+    },
+    "polarized_capacitor20.1": {
+      "class_name": "Polarized_Capacitor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "C",
+      "emit_as": "capacitor",
+      "node_order": [
+        "positive",
+        "negative"
+      ],
+      "nodes": [
+        "N005",
+        "N006"
+      ],
+      "parameters": {
+        "value": 47,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "C1 47 uF"
+      }
+    },
+    "polarized_capacitor20.2": {
+      "class_name": "Polarized_Capacitor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "C",
+      "emit_as": "capacitor",
+      "node_order": [
+        "positive",
+        "negative"
+      ],
+      "nodes": [
+        "N007",
+        "N004"
+      ],
+      "parameters": {
+        "value": 47,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "C2 47 uF"
+      }
+    },
+    "resistor22.1": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N002",
+        "N005"
+      ],
+      "parameters": {
+        "value": 270,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "R1 270 ohm"
+      }
+    },
+    "resistor22.2": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N001",
+        "N004"
+      ],
+      "parameters": {
+        "value": 2.2,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R2 2.2 kohm"
+      }
+    },
+    "resistor22.3": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N001",
+        "N006"
+      ],
+      "parameters": {
+        "value": 2.2,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R4 2.2 kohm"
+      }
+    },
+    "resistor22.4": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N003",
+        "N007"
+      ],
+      "parameters": {
+        "value": 270,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "R3 270 ohm"
+      }
+    }
+  },
+  "simulation": {
+    "analyses": [
+      "op",
+      "tran"
+    ],
+    "tran": {
+      "step": "1ms",
+      "stop": "1s"
+    }
+  },
+  "stats": {
+    "components_total": 11,
+    "spice_ready_components": 10,
+    "not_emitted_components": 1,
+    "measurement_components": 0,
+    "missing_components": 0,
+    "unsupported_components": 0,
+    "pin_aware_components": 0,
+    "invalid_components": 0,
+    "supplies_ready_count": 1
+  }
+}

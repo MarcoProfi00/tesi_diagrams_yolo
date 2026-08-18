@@ -10,6 +10,7 @@ from .config import (
 from .geometry import horizontal_bbox_gap, min_label_distance
 from .grouping import build_component_bbox_by_instance
 from .ids import get_preferred_terminal_public_name, normalize_class_name
+from .label_union import LabelUnionFind, merge_label_groups
 
 
 # =========================================================
@@ -48,21 +49,7 @@ def merge_mosfet_gate_aligned_labels(
     La fusione e' volutamente conservativa: accetta solo gruppi composti da gate
     MOSFET, allineati e vicini, evitando di unire reti gia' complete.
     """
-    parent = {int(label): int(label) for label in label_to_terminal_ids.keys()}
-
-    def find(label):
-        label = int(label)
-        parent.setdefault(label, label)
-        while parent[label] != label:
-            parent[label] = parent[parent[label]]
-            label = parent[label]
-        return label
-
-    def union(label_a, label_b):
-        root_a = find(label_a)
-        root_b = find(label_b)
-        if root_a != root_b:
-            parent[max(root_a, root_b)] = min(root_a, root_b)
+    union_find = LabelUnionFind(label_to_terminal_ids)
 
     bbox_by_instance = build_component_bbox_by_instance(components)
     gate_terms = [term for term in terminals if is_mosfet_gate_terminal(term)]
@@ -118,17 +105,9 @@ def merge_mosfet_gate_aligned_labels(
             if label_gap is None or label_gap > MOSFET_GATE_LABEL_MAX_GAP:
                 continue
 
-            union(int(label_a), int(label_b))
+            union_find.union(int(label_a), int(label_b))
 
-    merged = {}
-    for label, terminal_ids in label_to_terminal_ids.items():
-        root = find(int(label))
-        merged.setdefault(root, []).extend(terminal_ids)
-
-    return {
-        int(label): sorted(set(terminal_ids))
-        for label, terminal_ids in merged.items()
-    }
+    return merge_label_groups(label_to_terminal_ids, union_find)
 
 # Unisce gruppi composti solo da terminali MOSFET, se rappresentano la stessa rail di gate.
 def merge_mosfet_gate_rail_groups(
@@ -145,21 +124,7 @@ def merge_mosfet_gate_rail_groups(
     terminal_by_id = {term["terminal_id"]: term for term in terminals}
     bbox_by_instance = build_component_bbox_by_instance(components)
 
-    parent = {int(label): int(label) for label in label_to_terminal_ids.keys()}
-
-    def find(label):
-        label = int(label)
-        parent.setdefault(label, label)
-        while parent[label] != label:
-            parent[label] = parent[parent[label]]
-            label = parent[label]
-        return label
-
-    def union(label_a, label_b):
-        root_a = find(label_a)
-        root_b = find(label_b)
-        if root_a != root_b:
-            parent[max(root_a, root_b)] = min(root_a, root_b)
+    union_find = LabelUnionFind(label_to_terminal_ids)
 
     def known_terms_for_label(label):
         return [
@@ -220,14 +185,6 @@ def merge_mosfet_gate_rail_groups(
             if best_pair is None:
                 continue
 
-            union(int(label_a), int(label_b))
+            union_find.union(int(label_a), int(label_b))
 
-    merged = {}
-    for label, terminal_ids in label_to_terminal_ids.items():
-        root = find(int(label))
-        merged.setdefault(root, []).extend(terminal_ids)
-
-    return {
-        int(label): sorted(set(terminal_ids))
-        for label, terminal_ids in merged.items()
-    }
+    return merge_label_groups(label_to_terminal_ids, union_find)

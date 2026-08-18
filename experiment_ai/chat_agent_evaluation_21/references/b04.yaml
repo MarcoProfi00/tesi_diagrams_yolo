@@ -1,0 +1,149 @@
+schema_version: 1
+circuit_id: "b04"
+review_status: frozen
+circuit_description: |
+  Caricabatteria a semionda con secondario equivalente da 15 V RMS, SCR
+  2N3668, transistor BC148, rete di regolazione e fusibile da 2 A. La batteria
+  esterna è rappresentata da una sorgente ideale. Il Graph JSON originale
+  aveva classificato lo SCR come diodo e fuso il gate con il nodo di uscita:
+  il values.yaml applica un overlay SPICE esplicito che separa H1_GATE e usa
+  un sottocircuito SCR a tre terminali.
+task_type: "diagnosi della corrente di carica al variare della batteria"
+user_symptom: |
+  Ho l’impressione che la batteria si carichi poco. Se fosse più scarica, il caricabatteria dovrebbe darle più corrente?
+
+circuit_inventory:
+  component_count: 18
+  node_count: 13
+  component_types:
+    - "Diode"
+    - "Fuse"
+    - "NPN_Transistor"
+    - "Resistor"
+    - "Terminal"
+    - "Transformer"
+  analysis_types:
+    - "op"
+    - "tran"
+
+required_evidence:
+  - id: testbench_and_model_limits
+    description: |
+      L'immagine non indica la tensione della batteria: 12 V è un'assunzione
+      del testbench. Il trasformatore è sostituito da una sinusoide ideale da
+      15 V RMS, lo SCR è un modello comportamentale non latchante, D2 è
+      generico, R4 è fissato a metà corsa e la batteria non ha dinamica di
+      stato di carica né resistenza interna.
+  - id: battery_current_quantity
+    description: |
+      La risposta deve usare la corrente del ramo batteria nel transitorio,
+      non la sola corrente di D4. Poiché N008 collega soltanto R6 e il fusibile,
+      la corrente verso il positivo batteria è ricavabile esattamente come
+      (v(N004)-v(N009))/(1 ohm+1 milliohm). Segno positivo indica carica.
+  - id: steady_cycle_comparison
+    description: |
+      Sugli ultimi 40 ms del transitorio a 50 Hz, la corrente media netta
+      cresce al diminuire della batteria: circa 0.164 A a 12 V, 0.678 A a
+      10 V e 1.281 A a 8 V. A 13.5 V scende a circa 0.0385 A.
+  - id: pulse_current_comparison
+    description: |
+      I picchi corrispondenti sono circa 0.985 A a 12 V, 2.955 A a 10 V,
+      4.941 A a 8 V e 0.285 A a 13.5 V. Anche la frazione del ciclo con
+      corrente positiva aumenta scendendo da 12 V a 10 V e 8 V.
+  - id: op_not_charge_measure
+    description: |
+      Il punto operativo valuta la sorgente sinusoidale a fase zero e mostra
+      corrente dalla batteria verso il caricatore: circa 12.42 mA a 12 V,
+      10.27 mA a 10 V e 14.02 mA a 13.5 V in modulo. Non rappresenta la
+      corrente media trasferita durante i cicli AC e non deve guidare la
+      conclusione sulla carica.
+  - id: fuse_limit
+    description: |
+      I picchi simulati a 10 V e 8 V superano la targa di 2 A. Il fusibile è
+      modellato come resistenza chiusa da 1 milliohm e non può aprirsi; la
+      simulazione non dimostra quindi sicurezza o compatibilità col fusibile.
+
+success_conditions:
+  - id: trend_answered
+    description: |
+      La conclusione risponde che, nel modello verificato, una batteria a
+      tensione più bassa riceve una corrente media e impulsiva maggiore.
+  - id: direct_current_supported
+    description: |
+      Il trend è sostenuto dalla corrente transitoria del ramo batteria con
+      almeno un confronto quantitativo 12 V contro 10 V, non dal solo D4.
+  - id: ac_and_op_distinguished
+    description: |
+      La risposta distingue il punto operativo a fase zero dalla media su
+      cicli completi della sorgente a 50 Hz.
+  - id: protection_caveat
+    description: |
+      La conclusione segnala che i picchi possono superare 2 A e che il
+      modello del fusibile non simula l'intervento.
+  - id: conclusion_calibrated
+    description: |
+      I risultati sono presentati come comportamento del testbench SPICE
+      semplificato, non come curva di carica o garanzia per una batteria reale.
+
+acceptable_solutions:
+  - id: compare_transient_battery_current
+    description: |
+      Variare soltanto VBAT_TEST e confrontare media, picco e segno della
+      corrente nel ramo R6-fusibile-batteria dopo il transitorio iniziale.
+    verified_reference_values: |
+      Ultimi 40 ms: 12 V media 0.16427 A e picco 0.98515 A; 10 V media
+      0.67807 A e picco 2.95477 A; 8 V media 1.28054 A e picco 4.94069 A;
+      13.5 V media 0.03846 A e picco 0.28453 A.
+  - id: compare_12v_and_10v_only
+    description: |
+      Il confronto transitorio 12 V contro 10 V è già sufficiente per
+      rispondere alla domanda: la media aumenta di oltre quattro volte. Le
+      prove a 8 V e 13.5 V rafforzano la tendenza e mostrano i limiti.
+  - id: d4_and_control_node_only
+    acceptance: partial_only
+    description: |
+      Misurare D4 e N004 dimostra che il controllo reagisce alla batteria, ma
+      non quantifica direttamente la corrente utile di carica.
+  - id: operating_point_branch_current
+    acceptance: rejected
+    description: |
+      Usare i(R6) o i(fusibile) soltanto nella .op porta a una lettura della
+      fase zero con verso di scarica e non descrive il trasferimento medio AC.
+
+unsupported_conclusions:
+  - |
+    Affermare che la lieve variazione del picco di D4, circa 0.335-0.337 A,
+    dimostri da sola un aumento della corrente di carica della batteria.
+  - |
+    Usare le correnti .op da 10-14 mA come prova che una batteria più scarica
+    assorba più corrente: a 10 V il loro modulo diminuisce e il verso è dalla
+    batteria verso il circuito.
+  - |
+    Concludere che la corrente di carica resti necessariamente bassa: nel
+    transitorio la media raggiunge circa 0.678 A a 10 V e 1.281 A a 8 V.
+  - |
+    Dichiarare il funzionamento sicuro perché la corrente media è sotto 2 A:
+    i picchi a 10 e 8 V superano la targa del fusibile.
+  - |
+    Affermare che il fusibile sia stato verificato o che intervenga: il modello
+    SPICE usato resta sempre una resistenza chiusa.
+  - |
+    Presentare le correnti come previsione affidabile dell'hardware: SCR,
+    batteria, trasformatore, potenziometro e D2 sono tutti semplificati.
+  - |
+    Confrontare livelli DC tramite tran_vpp: una sorgente costante da 8, 10 o
+    12 V ha sempre Vpp nullo; servono min, max, media o valore finale.
+
+review_notes: |
+  Immagine e values canonici provengono da
+  data/batchPipeline2.0/batchChatAgentEvaluation. La simulazione usa un overlay
+  topologico documentato per correggere esclusivamente il gate dello SCR nella
+  netlist. CHAT esegue 10 V e 8 V ma osserva D4/N004; riconosce correttamente
+  di non avere ancora misurato la corrente di batteria e propone il passo
+  giusto, quindi è prudente ma non completa la diagnosi. AGENT esegue 10 V e
+  13.5 V e risponde correttamente sul verso generale della tendenza, ma le
+  misure dichiarate sono .op e contraddicono le sue aspettative. La sua frase
+  secondo cui la corrente resta bassa non è supportata dai CSV. La ground
+  truth è stata ricavata direttamente dalle tensioni transitorie ai capi della
+  serie R6+fusibile, considerando gli ultimi due cicli a 50 Hz. La scheda deve
+  essere approvata manualmente prima dello stato frozen.

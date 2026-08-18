@@ -1,0 +1,28 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Ridurre la resistenza verso N009 nella rete di feedback",
+  "hypothesis": "Il volume basso e determinato soprattutto dalla rete di guadagno attorno a N006/N009, non dal carico Rspeaker24_1.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Rresistor22_4",
+      "value": "4.7k"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N011)",
+    "v(N006)",
+    "v(N007)"
+  ],
+  "expect": {
+    "v(N007)": "increased"
+  },
+  "gain": {
+    "input": "v(N011)",
+    "output": "v(N007)",
+    "min_ratio": 20
+  }
+}

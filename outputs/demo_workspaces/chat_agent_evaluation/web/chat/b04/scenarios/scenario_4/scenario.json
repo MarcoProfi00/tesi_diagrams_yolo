@@ -1,0 +1,27 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Abbassare la batteria di prova e osservare D4 nel tempo",
+  "hypothesis": "Reducing VVBAT_TEST below the nominal 12 V changes the transient current through Ddiode7_4.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "VVBAT_TEST",
+      "value": "DC 10V"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N009)",
+    "v(N004)",
+    "@ddiode7_4[id]"
+  ],
+  "expect": {
+    "v(N009)": "decreased",
+    "@ddiode7_4[id]": "changed"
+  },
+  "measure": {
+    "@ddiode7_4[id]": "tran_abs_peak"
+  }
+}

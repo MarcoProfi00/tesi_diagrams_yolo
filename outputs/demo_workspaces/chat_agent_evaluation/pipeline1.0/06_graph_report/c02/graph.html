@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Graph c02</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
+      color: #1f2d3a;
+    }
+    .page {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .topbar h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .links a {
+      text-decoration: none;
+      color: #144a7b;
+      background: #ffffff;
+      border: 1px solid #d8e1ea;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font-weight: 600;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .summary-item {
+      background: rgba(255,255,255,0.88);
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .summary-item .k {
+      color: #5f7184;
+      font-size: 13px;
+    }
+    .summary-item .v {
+      font-size: 24px;
+      font-weight: 700;
+    }
+    .panel-grid {
+      display: grid;
+      grid-template-columns: minmax(280px, 420px) 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+    .panel {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #d8e1ea;
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 12px 24px rgba(27, 53, 82, 0.06);
+    }
+    .panel h2 {
+      margin: 0 0 12px 0;
+      font-size: 18px;
+    }
+    .preview-image {
+      width: 100%;
+      display: block;
+      border-radius: 12px;
+      border: 1px solid #d8e1ea;
+      background: #fff;
+    }
+    .preview-missing {
+      min-height: 220px;
+      display: grid;
+      place-items: center;
+      border-radius: 12px;
+      border: 1px dashed #c6d2de;
+      color: #6f8093;
+      background: #f9fbfd;
+    }
+    .graph-wrap {
+      overflow: hidden;
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      background: #f8fbff;
+      cursor: grab;
+      min-height: 720px;
+    }
+    .graph-wrap:active {
+      cursor: grabbing;
+    }
+    #graph-svg {
+      width: 100%;
+      height: 760px;
+      display: block;
+      user-select: none;
+    }
+    .node-label {
+      fill: #314457;
+      font-size: 11px;
+      font-weight: 600;
+      pointer-events: none;
+    }
+    .node-label.small {
+      font-size: 10px;
+    }
+    .legend {
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      font-size: 13px;
+      color: #55687d;
+    }
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .warning-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .warning-box {
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .warning-box h3 {
+      margin: 0 0 10px 0;
+      font-size: 15px;
+    }
+    .warning-box p, .warning-box li {
+      color: #526274;
+      font-size: 13px;
+    }
+    details {
+      margin-top: 18px;
+      background: rgba(255,255,255,0.92);
+      border: 1px solid #d8e1ea;
+      border-radius: 14px;
+      padding: 14px 16px;
+    }
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+    }
+    pre {
+      margin: 14px 0 0 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+      color: #314457;
+    }
+    .note {
+      color: #5c6f82;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    @media (max-width: 980px) {
+      .panel-grid {
+        grid-template-columns: 1fr;
+      }
+      #graph-svg {
+        height: 600px;
+      }
+      .graph-wrap {
+        min-height: 560px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="topbar">
+      <h1>Graph c02</h1>
+      <div class="links">
+        <a href="graph_compact.html">Vista compatta HTML</a><a href="graph_compact.png">Vista compatta PNG</a>
+        <a href="c02.json">JSON finale 05</a>
+        <a href="graph.png">Graph PNG</a>
+        <a href="../index.html">Batch index</a>
+      </div>
+    </div>
+
+    <div class="summary-grid"><div class="summary-item"><span class="k">Componenti</span><span class="v">11</span></div><div class="summary-item"><span class="k">Terminali</span><span class="v">24</span></div><div class="summary-item"><span class="k">Nodi elettrici</span><span class="v">8</span></div><div class="summary-item"><span class="k">Isolati</span><span class="v">0</span></div><div class="summary-item"><span class="k">Unmatched</span><span class="v">0</span></div><div class="summary-item"><span class="k">Suspicious</span><span class="v">0</span></div></div>
+
+    <div class="panel-grid">
+      <section class="panel">
+        <h2>Circuito</h2>
+        <img src="c02.jpg" alt="Circuito c02" class="preview-image">
+        <p class="note">Il grafo sotto e costruito solo a partire dal JSON del passo 05. La lettura va da sinistra a destra: circuito, classi, componenti, terminali e nodi elettrici.</p>
+      </section>
+
+      <section class="panel">
+        <h2>Graph interattivo</h2>
+        <div class="graph-wrap" id="graph-wrap"><svg id="graph-svg" viewBox="0 1010.9 1260 920" data-full-width="1260" data-full-height="2949" xmlns="http://www.w3.org/2000/svg" aria-label="Graph"><line x1="90.0" y1="1470.9" x2="270.0" y2="125.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="125.0" x2="500.0" y2="125.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="125.0" x2="780.0" y2="82.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="125.0" x2="780.0" y2="168.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="90.0" y1="1470.9" x2="270.0" y2="754.9" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="754.9" x2="500.0" y2="426.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="426.0" x2="780.0" y2="383.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="426.0" x2="780.0" y2="469.0" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="754.9" x2="500.0" y2="645.3" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="645.3" x2="780.0" y2="602.3" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="645.3" x2="780.0" y2="688.3" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="754.9" x2="500.0" y2="864.6" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="864.6" x2="780.0" y2="821.6" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="864.6" x2="780.0" y2="907.6" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="754.9" x2="500.0" y2="1083.9" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1083.9" x2="780.0" y2="1040.9" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1083.9" x2="780.0" y2="1126.9" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="90.0" y1="1470.9" x2="270.0" y2="1580.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1580.5" x2="500.0" y2="1427.9" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1427.9" x2="780.0" y2="1341.9" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1427.9" x2="780.0" y2="1427.9" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1427.9" x2="780.0" y2="1513.9" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="1580.5" x2="500.0" y2="1733.2" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1733.2" x2="780.0" y2="1647.2" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1733.2" x2="780.0" y2="1733.2" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="1733.2" x2="780.0" y2="1819.2" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="90.0" y1="1470.9" x2="270.0" y2="2186.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="2186.8" x2="500.0" y2="2077.2" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2077.2" x2="780.0" y2="2034.2" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2077.2" x2="780.0" y2="2120.2" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="2186.8" x2="500.0" y2="2296.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2296.5" x2="780.0" y2="2253.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2296.5" x2="780.0" y2="2339.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="90.0" y1="1470.9" x2="270.0" y2="2707.2" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="2707.2" x2="500.0" y2="2597.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2597.5" x2="780.0" y2="2554.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2597.5" x2="780.0" y2="2640.5" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="270.0" y1="2707.2" x2="500.0" y2="2816.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2816.8" x2="780.0" y2="2773.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="500.0" y1="2816.8" x2="780.0" y2="2859.8" stroke="#c8cdd4" stroke-width="1.2" stroke-opacity="0.55"></line><line x1="780.0" y1="82.0" x2="1080.0" y2="1158.7" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2034.2" x2="1080.0" y2="1158.7" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="602.3" x2="1080.0" y2="1158.7" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="821.6" x2="1080.0" y2="1158.7" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2253.5" x2="1080.0" y2="1158.7" stroke="#85c1e9" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="168.0" x2="1080.0" y2="1192.7" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1513.9" x2="1080.0" y2="1192.7" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1819.2" x2="1080.0" y2="1192.7" stroke="#7fb3d5" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="383.0" x2="1080.0" y2="1251.6" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2120.2" x2="1080.0" y2="1251.6" stroke="#d98880" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="469.0" x2="1080.0" y2="1483.8" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1427.9" x2="1080.0" y2="1483.8" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2554.5" x2="1080.0" y2="1483.8" stroke="#82e0aa" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1341.9" x2="1080.0" y2="1692.7" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="907.6" x2="1080.0" y2="1692.7" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2773.8" x2="1080.0" y2="1692.7" stroke="#f8c471" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2640.5" x2="1080.0" y2="1658.7" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="688.3" x2="1080.0" y2="1658.7" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1647.2" x2="1080.0" y2="1658.7" stroke="#c39bd3" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2859.8" x2="1080.0" y2="1906.6" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1733.2" x2="1080.0" y2="1906.6" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1126.9" x2="1080.0" y2="1906.6" stroke="#76d7c4" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="1040.9" x2="1080.0" y2="1726.7" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><line x1="780.0" y1="2339.5" x2="1080.0" y2="1726.7" stroke="#f1948a" stroke-width="2" stroke-opacity="0.82"></line><g class="node-group" data-node-type="root"><title>Circuito c02
+Componenti: 11
+Terminali: 24
+Nodi elettrici: 8</title><circle cx="90.0" cy="1470.9" r="36.0" fill="#f26a63" stroke="#d4534c" stroke-width="2"></circle><text x="90.0" y="1474.9" text-anchor="middle" class="node-label">c02</text></g><g class="node-group" data-node-type="class"><title>Classe: Battery
+Componenti: 1</title><circle cx="270.0" cy="125.0" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="129.0" text-anchor="middle" class="node-label">Battery</text></g><g class="node-group" data-node-type="component"><title>Componente: battery2.1
+Classe: Battery
+Instance: 2.1</title><circle cx="500.0" cy="125.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="129.0" text-anchor="middle" class="node-label">battery2.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: battery2.1_positive
+Componente: battery2.1
+Nome: positive
+Posizione: top</title><circle cx="780.0" cy="82.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="86.0" text-anchor="middle" class="node-label">positive</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: battery2.1_negative
+Componente: battery2.1
+Nome: negative
+Posizione: bottom</title><circle cx="780.0" cy="168.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="172.0" text-anchor="middle" class="node-label">negative</text></g><g class="node-group" data-node-type="class"><title>Classe: Resistor
+Componenti: 4</title><circle cx="270.0" cy="754.9" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="758.9" text-anchor="middle" class="node-label">Resistor</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.1
+Classe: Resistor
+Instance: 22.1</title><circle cx="500.0" cy="426.0" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="430.0" text-anchor="middle" class="node-label">resistor22.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.1_t1
+Componente: resistor22.1
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="383.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="387.0" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.1_t2
+Componente: resistor22.1
+Nome: t2
+Posizione: bottom</title><circle cx="780.0" cy="469.0" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="473.0" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.2
+Classe: Resistor
+Instance: 22.2</title><circle cx="500.0" cy="645.3" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="649.3" text-anchor="middle" class="node-label">resistor22.2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.2_t1
+Componente: resistor22.2
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="602.3" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="606.3" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.2_t2
+Componente: resistor22.2
+Nome: t2
+Posizione: bottom</title><circle cx="780.0" cy="688.3" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="692.3" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.3
+Classe: Resistor
+Instance: 22.3</title><circle cx="500.0" cy="864.6" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="868.6" text-anchor="middle" class="node-label">resistor22.3</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.3_t1
+Componente: resistor22.3
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="821.6" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="825.6" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.3_t2
+Componente: resistor22.3
+Nome: t2
+Posizione: bottom</title><circle cx="780.0" cy="907.6" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="911.6" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="component"><title>Componente: resistor22.4
+Classe: Resistor
+Instance: 22.4</title><circle cx="500.0" cy="1083.9" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1087.9" text-anchor="middle" class="node-label">resistor22.4</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.4_t1
+Componente: resistor22.4
+Nome: t1
+Posizione: top</title><circle cx="780.0" cy="1040.9" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1044.9" text-anchor="middle" class="node-label">t1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: resistor22.4_t2
+Componente: resistor22.4
+Nome: t2
+Posizione: bottom</title><circle cx="780.0" cy="1126.9" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1130.9" text-anchor="middle" class="node-label">t2</text></g><g class="node-group" data-node-type="class"><title>Classe: NPN_Transistor
+Componenti: 2</title><circle cx="270.0" cy="1580.5" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="1584.5" text-anchor="middle" class="node-label">NPN Transistor</text></g><g class="node-group" data-node-type="component"><title>Componente: npn_transistor18.1
+Classe: NPN_Transistor
+Instance: 18.1</title><circle cx="500.0" cy="1427.9" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1424.9" text-anchor="middle" class="node-label small">npn</text><text x="500.0" y="1438.9" text-anchor="middle" class="node-label small">transistor18.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: npn_transistor18.1_B
+Componente: npn_transistor18.1
+Nome: B
+Posizione: right</title><circle cx="780.0" cy="1341.9" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1345.9" text-anchor="middle" class="node-label">B</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: npn_transistor18.1_C
+Componente: npn_transistor18.1
+Nome: C
+Posizione: top</title><circle cx="780.0" cy="1427.9" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1431.9" text-anchor="middle" class="node-label">C</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: npn_transistor18.1_E
+Componente: npn_transistor18.1
+Nome: E
+Posizione: bottom</title><circle cx="780.0" cy="1513.9" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1517.9" text-anchor="middle" class="node-label">E</text></g><g class="node-group" data-node-type="component"><title>Componente: npn_transistor18.2
+Classe: NPN_Transistor
+Instance: 18.2</title><circle cx="500.0" cy="1733.2" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="1730.2" text-anchor="middle" class="node-label small">npn</text><text x="500.0" y="1744.2" text-anchor="middle" class="node-label small">transistor18.2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: npn_transistor18.2_B
+Componente: npn_transistor18.2
+Nome: B
+Posizione: left</title><circle cx="780.0" cy="1647.2" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1651.2" text-anchor="middle" class="node-label">B</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: npn_transistor18.2_C
+Componente: npn_transistor18.2
+Nome: C
+Posizione: top</title><circle cx="780.0" cy="1733.2" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1737.2" text-anchor="middle" class="node-label">C</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: npn_transistor18.2_E
+Componente: npn_transistor18.2
+Nome: E
+Posizione: bottom</title><circle cx="780.0" cy="1819.2" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="1823.2" text-anchor="middle" class="node-label">E</text></g><g class="node-group" data-node-type="class"><title>Classe: LED
+Componenti: 2</title><circle cx="270.0" cy="2186.8" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="2190.8" text-anchor="middle" class="node-label">LED</text></g><g class="node-group" data-node-type="component"><title>Componente: led12.1
+Classe: LED
+Instance: 12.1</title><circle cx="500.0" cy="2077.2" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="2081.2" text-anchor="middle" class="node-label">led12.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: led12.1_anode
+Componente: led12.1
+Nome: anode
+Posizione: top</title><circle cx="780.0" cy="2034.2" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2038.2" text-anchor="middle" class="node-label">anode</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: led12.1_cathode
+Componente: led12.1
+Nome: cathode
+Posizione: bottom</title><circle cx="780.0" cy="2120.2" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2124.2" text-anchor="middle" class="node-label">cathode</text></g><g class="node-group" data-node-type="component"><title>Componente: led12.2
+Classe: LED
+Instance: 12.2</title><circle cx="500.0" cy="2296.5" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="2300.5" text-anchor="middle" class="node-label">led12.2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: led12.2_anode
+Componente: led12.2
+Nome: anode
+Posizione: top</title><circle cx="780.0" cy="2253.5" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2257.5" text-anchor="middle" class="node-label">anode</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: led12.2_cathode
+Componente: led12.2
+Nome: cathode
+Posizione: bottom</title><circle cx="780.0" cy="2339.5" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2343.5" text-anchor="middle" class="node-label">cathode</text></g><g class="node-group" data-node-type="class"><title>Classe: Polarized_Capacitor
+Componenti: 2</title><circle cx="270.0" cy="2707.2" r="32.0" fill="#dcc9a5" stroke="#bea77d" stroke-width="2"></circle><text x="270.0" y="2704.2" text-anchor="middle" class="node-label small">Polarized</text><text x="270.0" y="2718.2" text-anchor="middle" class="node-label small">Capacitor</text></g><g class="node-group" data-node-type="component"><title>Componente: polarized_capacitor20.1
+Classe: Polarized_Capacitor
+Instance: 20.1</title><circle cx="500.0" cy="2597.5" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="2594.5" text-anchor="middle" class="node-label small">polarized</text><text x="500.0" y="2608.5" text-anchor="middle" class="node-label small">capacitor20.1</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: polarized_capacitor20.1_positive
+Componente: polarized_capacitor20.1
+Nome: positive
+Posizione: left</title><circle cx="780.0" cy="2554.5" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2558.5" text-anchor="middle" class="node-label">positive</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: polarized_capacitor20.1_negative
+Componente: polarized_capacitor20.1
+Nome: negative
+Posizione: right</title><circle cx="780.0" cy="2640.5" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2644.5" text-anchor="middle" class="node-label">negative</text></g><g class="node-group" data-node-type="component"><title>Componente: polarized_capacitor20.2
+Classe: Polarized_Capacitor
+Instance: 20.2</title><circle cx="500.0" cy="2816.8" r="40.0" fill="#85d68d" stroke="#57b766" stroke-width="2"></circle><text x="500.0" y="2813.8" text-anchor="middle" class="node-label small">polarized</text><text x="500.0" y="2827.8" text-anchor="middle" class="node-label small">capacitor20.2</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: polarized_capacitor20.2_negative
+Componente: polarized_capacitor20.2
+Nome: negative
+Posizione: left</title><circle cx="780.0" cy="2773.8" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2777.8" text-anchor="middle" class="node-label">negative</text></g><g class="node-group" data-node-type="terminal"><title>Terminal: polarized_capacitor20.2_positive
+Componente: polarized_capacitor20.2
+Nome: positive
+Posizione: right</title><circle cx="780.0" cy="2859.8" r="23.0" fill="#f4abc7" stroke="#d57ca0" stroke-width="2"></circle><text x="780.0" y="2863.8" text-anchor="middle" class="node-label">positive</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 1
+Terminali collegati: 5
+battery2.1_positive
+led12.1_anode
+resistor22.2_t1
+resistor22.3_t1
+led12.2_anode</title><circle cx="1080.0" cy="1158.7" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="1162.7" text-anchor="middle" class="node-label">1</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 2
+Terminali collegati: 3
+battery2.1_negative
+npn_transistor18.1_E
+npn_transistor18.2_E</title><circle cx="1080.0" cy="1192.7" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="1196.7" text-anchor="middle" class="node-label">2</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 3
+Terminali collegati: 2
+resistor22.1_t1
+led12.1_cathode</title><circle cx="1080.0" cy="1251.6" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="1255.6" text-anchor="middle" class="node-label">3</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 4
+Terminali collegati: 3
+resistor22.1_t2
+npn_transistor18.1_C
+polarized_capacitor20.1_positive</title><circle cx="1080.0" cy="1483.8" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="1487.8" text-anchor="middle" class="node-label">4</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 5
+Terminali collegati: 3
+npn_transistor18.1_B
+resistor22.3_t2
+polarized_capacitor20.2_negative</title><circle cx="1080.0" cy="1692.7" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="1696.7" text-anchor="middle" class="node-label">5</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 6
+Terminali collegati: 3
+polarized_capacitor20.1_negative
+resistor22.2_t2
+npn_transistor18.2_B</title><circle cx="1080.0" cy="1658.7" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="1662.7" text-anchor="middle" class="node-label">6</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 7
+Terminali collegati: 3
+polarized_capacitor20.2_positive
+npn_transistor18.2_C
+resistor22.4_t2</title><circle cx="1080.0" cy="1906.6" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="1910.6" text-anchor="middle" class="node-label">7</text></g><g class="node-group" data-node-type="net"><title>Nodo elettrico 8
+Terminali collegati: 2
+resistor22.4_t1
+led12.2_cathode</title><circle cx="1080.0" cy="1726.7" r="12.0" fill="#ffd65a" stroke="#d3a61d" stroke-width="2"></circle><text x="1080.0" y="1730.7" text-anchor="middle" class="node-label">8</text></g></svg></div>
+        <div class="legend">
+          <span><i class="dot" style="background:#f26a63"></i> circuito</span>
+          <span><i class="dot" style="background:#dcc9a5"></i> classe</span>
+          <span><i class="dot" style="background:#85d68d"></i> componente</span>
+          <span><i class="dot" style="background:#f4abc7"></i> terminale</span>
+          <span><i class="dot" style="background:#ffd65a"></i> nodo elettrico</span>
+        </div>
+      </section>
+    </div>
+
+    <div class="warning-grid"><div class="warning-box"><h3>Unconnected Terminals</h3><p>Nessun elemento.</p></div><div class="warning-box"><h3>Unmatched Terminals</h3><p>Nessun elemento.</p></div><div class="warning-box"><h3>Suspicious Matches</h3><p>Nessun elemento.</p></div></div>
+
+    <details>
+      <summary>Mostra JSON finale completo</summary>
+      <pre>{
+  &quot;image_id&quot;: &quot;c02&quot;,
+  &quot;image_name&quot;: &quot;c02.jpg&quot;,
+  &quot;components&quot;: [
+    {
+      &quot;component_id&quot;: &quot;battery2.1&quot;,
+      &quot;instance_id&quot;: &quot;2.1&quot;,
+      &quot;class_name&quot;: &quot;Battery&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;battery2.1_positive&quot;,
+          &quot;name&quot;: &quot;positive&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;battery2.1_negative&quot;,
+          &quot;name&quot;: &quot;negative&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.1&quot;,
+      &quot;instance_id&quot;: &quot;22.1&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.1_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.1_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;npn_transistor18.1&quot;,
+      &quot;instance_id&quot;: &quot;18.1&quot;,
+      &quot;class_name&quot;: &quot;NPN_Transistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;npn_transistor18.1_B&quot;,
+          &quot;name&quot;: &quot;B&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;npn_transistor18.1_C&quot;,
+          &quot;name&quot;: &quot;C&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;npn_transistor18.1_E&quot;,
+          &quot;name&quot;: &quot;E&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;led12.1&quot;,
+      &quot;instance_id&quot;: &quot;12.1&quot;,
+      &quot;class_name&quot;: &quot;LED&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;led12.1_anode&quot;,
+          &quot;name&quot;: &quot;anode&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;led12.1_cathode&quot;,
+          &quot;name&quot;: &quot;cathode&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;polarized_capacitor20.1&quot;,
+      &quot;instance_id&quot;: &quot;20.1&quot;,
+      &quot;class_name&quot;: &quot;Polarized_Capacitor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;polarized_capacitor20.1_positive&quot;,
+          &quot;name&quot;: &quot;positive&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;polarized_capacitor20.1_negative&quot;,
+          &quot;name&quot;: &quot;negative&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.2&quot;,
+      &quot;instance_id&quot;: &quot;22.2&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.2_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.2_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.3&quot;,
+      &quot;instance_id&quot;: &quot;22.3&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.3_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.3_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;polarized_capacitor20.2&quot;,
+      &quot;instance_id&quot;: &quot;20.2&quot;,
+      &quot;class_name&quot;: &quot;Polarized_Capacitor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;polarized_capacitor20.2_negative&quot;,
+          &quot;name&quot;: &quot;negative&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;polarized_capacitor20.2_positive&quot;,
+          &quot;name&quot;: &quot;positive&quot;,
+          &quot;relative_position&quot;: &quot;right&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;npn_transistor18.2&quot;,
+      &quot;instance_id&quot;: &quot;18.2&quot;,
+      &quot;class_name&quot;: &quot;NPN_Transistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;npn_transistor18.2_B&quot;,
+          &quot;name&quot;: &quot;B&quot;,
+          &quot;relative_position&quot;: &quot;left&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;npn_transistor18.2_C&quot;,
+          &quot;name&quot;: &quot;C&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;npn_transistor18.2_E&quot;,
+          &quot;name&quot;: &quot;E&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;resistor22.4&quot;,
+      &quot;instance_id&quot;: &quot;22.4&quot;,
+      &quot;class_name&quot;: &quot;Resistor&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.4_t1&quot;,
+          &quot;name&quot;: &quot;t1&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;resistor22.4_t2&quot;,
+          &quot;name&quot;: &quot;t2&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    },
+    {
+      &quot;component_id&quot;: &quot;led12.2&quot;,
+      &quot;instance_id&quot;: &quot;12.2&quot;,
+      &quot;class_name&quot;: &quot;LED&quot;,
+      &quot;terminals&quot;: [
+        {
+          &quot;terminal_id&quot;: &quot;led12.2_anode&quot;,
+          &quot;name&quot;: &quot;anode&quot;,
+          &quot;relative_position&quot;: &quot;top&quot;
+        },
+        {
+          &quot;terminal_id&quot;: &quot;led12.2_cathode&quot;,
+          &quot;name&quot;: &quot;cathode&quot;,
+          &quot;relative_position&quot;: &quot;bottom&quot;
+        }
+      ]
+    }
+  ],
+  &quot;terminal_metadata&quot;: {},
+  &quot;graph&quot;: {
+    &quot;battery2.1_negative&quot;: [
+      &quot;npn_transistor18.1_E&quot;,
+      &quot;npn_transistor18.2_E&quot;
+    ],
+    &quot;battery2.1_positive&quot;: [
+      &quot;led12.1_anode&quot;,
+      &quot;led12.2_anode&quot;,
+      &quot;resistor22.2_t1&quot;,
+      &quot;resistor22.3_t1&quot;
+    ],
+    &quot;led12.1_anode&quot;: [
+      &quot;battery2.1_positive&quot;,
+      &quot;led12.2_anode&quot;,
+      &quot;resistor22.2_t1&quot;,
+      &quot;resistor22.3_t1&quot;
+    ],
+    &quot;led12.1_cathode&quot;: [
+      &quot;resistor22.1_t1&quot;
+    ],
+    &quot;led12.2_anode&quot;: [
+      &quot;battery2.1_positive&quot;,
+      &quot;led12.1_anode&quot;,
+      &quot;resistor22.2_t1&quot;,
+      &quot;resistor22.3_t1&quot;
+    ],
+    &quot;led12.2_cathode&quot;: [
+      &quot;resistor22.4_t1&quot;
+    ],
+    &quot;npn_transistor18.1_B&quot;: [
+      &quot;polarized_capacitor20.2_negative&quot;,
+      &quot;resistor22.3_t2&quot;
+    ],
+    &quot;npn_transistor18.1_C&quot;: [
+      &quot;polarized_capacitor20.1_positive&quot;,
+      &quot;resistor22.1_t2&quot;
+    ],
+    &quot;npn_transistor18.1_E&quot;: [
+      &quot;battery2.1_negative&quot;,
+      &quot;npn_transistor18.2_E&quot;
+    ],
+    &quot;npn_transistor18.2_B&quot;: [
+      &quot;polarized_capacitor20.1_negative&quot;,
+      &quot;resistor22.2_t2&quot;
+    ],
+    &quot;npn_transistor18.2_C&quot;: [
+      &quot;polarized_capacitor20.2_positive&quot;,
+      &quot;resistor22.4_t2&quot;
+    ],
+    &quot;npn_transistor18.2_E&quot;: [
+      &quot;battery2.1_negative&quot;,
+      &quot;npn_transistor18.1_E&quot;
+    ],
+    &quot;polarized_capacitor20.1_negative&quot;: [
+      &quot;npn_transistor18.2_B&quot;,
+      &quot;resistor22.2_t2&quot;
+    ],
+    &quot;polarized_capacitor20.1_positive&quot;: [
+      &quot;npn_transistor18.1_C&quot;,
+      &quot;resistor22.1_t2&quot;
+    ],
+    &quot;polarized_capacitor20.2_negative&quot;: [
+      &quot;npn_transistor18.1_B&quot;,
+      &quot;resistor22.3_t2&quot;
+    ],
+    &quot;polarized_capacitor20.2_positive&quot;: [
+      &quot;npn_transistor18.2_C&quot;,
+      &quot;resistor22.4_t2&quot;
+    ],
+    &quot;resistor22.1_t1&quot;: [
+      &quot;led12.1_cathode&quot;
+    ],
+    &quot;resistor22.1_t2&quot;: [
+      &quot;npn_transistor18.1_C&quot;,
+      &quot;polarized_capacitor20.1_positive&quot;
+    ],
+    &quot;resistor22.2_t1&quot;: [
+      &quot;battery2.1_positive&quot;,
+      &quot;led12.1_anode&quot;,
+      &quot;led12.2_anode&quot;,
+      &quot;resistor22.3_t1&quot;
+    ],
+    &quot;resistor22.2_t2&quot;: [
+      &quot;npn_transistor18.2_B&quot;,
+      &quot;polarized_capacitor20.1_negative&quot;
+    ],
+    &quot;resistor22.3_t1&quot;: [
+      &quot;battery2.1_positive&quot;,
+      &quot;led12.1_anode&quot;,
+      &quot;led12.2_anode&quot;,
+      &quot;resistor22.2_t1&quot;
+    ],
+    &quot;resistor22.3_t2&quot;: [
+      &quot;npn_transistor18.1_B&quot;,
+      &quot;polarized_capacitor20.2_negative&quot;
+    ],
+    &quot;resistor22.4_t1&quot;: [
+      &quot;led12.2_cathode&quot;
+    ],
+    &quot;resistor22.4_t2&quot;: [
+      &quot;npn_transistor18.2_C&quot;,
+      &quot;polarized_capacitor20.2_positive&quot;
+    ]
+  },
+  &quot;warnings&quot;: {
+    &quot;unconnected_terminals&quot;: [],
+    &quot;unmatched_terminals&quot;: [],
+    &quot;suspicious_matches&quot;: []
+  }
+}</pre>
+    </details>
+  </div>
+
+  <script>
+    (() => {
+      const svg = document.getElementById("graph-svg");
+      const viewBox = svg.viewBox.baseVal;
+      let isDragging = false;
+      let startX = 0;
+      let startY = 0;
+      let startViewX = viewBox.x;
+      let startViewY = viewBox.y;
+
+      function pointFromEvent(event) {
+        const rect = svg.getBoundingClientRect();
+        return {
+          x: (event.clientX - rect.left) * (viewBox.width / rect.width),
+          y: (event.clientY - rect.top) * (viewBox.height / rect.height),
+        };
+      }
+
+      svg.addEventListener("wheel", (event) => {
+        event.preventDefault();
+        const scale = event.deltaY < 0 ? 0.92 : 1.08;
+        const point = pointFromEvent(event);
+        const newWidth = viewBox.width * scale;
+        const newHeight = viewBox.height * scale;
+        viewBox.x = point.x - (point.x - viewBox.x) * scale;
+        viewBox.y = point.y - (point.y - viewBox.y) * scale;
+        viewBox.width = Math.max(480, newWidth);
+        viewBox.height = Math.max(360, newHeight);
+      }, { passive: false });
+
+      svg.addEventListener("pointerdown", (event) => {
+        isDragging = true;
+        svg.setPointerCapture(event.pointerId);
+        startX = event.clientX;
+        startY = event.clientY;
+        startViewX = viewBox.x;
+        startViewY = viewBox.y;
+      });
+
+      svg.addEventListener("pointermove", (event) => {
+        if (!isDragging) return;
+        const rect = svg.getBoundingClientRect();
+        const dx = (event.clientX - startX) * (viewBox.width / rect.width);
+        const dy = (event.clientY - startY) * (viewBox.height / rect.height);
+        viewBox.x = startViewX - dx;
+        viewBox.y = startViewY - dy;
+      });
+
+      svg.addEventListener("pointerup", () => {
+        isDragging = false;
+      });
+
+      svg.addEventListener("pointerleave", () => {
+        isDragging = false;
+      });
+    })();
+  </script>
+</body>
+</html>

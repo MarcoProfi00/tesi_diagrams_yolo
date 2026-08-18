@@ -410,6 +410,13 @@ Esempi di condizioni in cui l'agente puo richiedere l'immagine:
 - componenti complessi rappresentati in modo parziale, come rele o
   trasformatore.
 
+Per un componente segnato `pending` nei `spice_override` del YAML, l'agente
+deve considerare la base run non pronta: non puo proporre di interpretare una
+simulazione ottenuta sostituendo o collegando automaticamente il pin mancante.
+Un `spice_topology_overlay` gia presente negli artefatti e invece una
+correzione manuale tracciata: l'agente deve citarla come assunzione tecnica,
+senza presentarla come topologia osservata direttamente nel Graph.
+
 Se ngspice fallisce con forti segnali di topologia incoerente, l'agente deve
 prima leggere graph, node map, netlist e stderr. Solo dopo aver rilevato
 evidenze come sorgente spezzata, nodi singleton, ramo non chiuso o componente
@@ -836,6 +843,7 @@ Primitive attualmente supportate da `12_controlled_scenarios.py`:
 ```text
 Scenari elettrici / di pilotaggio:
 - drive_node_voltage
+- set_initial_node_voltage
 - add_voltage_source_between_nodes
 - change_source_value
 - change_component_value
@@ -867,6 +875,39 @@ Questa azione viene tradotta nella netlist scenario in:
 ```spice
 VSCENARIO_N002 N002 0 DC 5
 ```
+
+`set_initial_node_voltage` e una primitiva diversa: e valida soltanto con
+`analysis: "tran"` e inserisce `.ic V(NODO)=valore` nella copia della netlist
+scenario. Non aggiunge una sorgente permanente e non modifica topologia, valori
+o alimentazione. Per impostazione predefinita mantiene il normale punto
+operativo; l'opzione booleana `skip_operating_point: true` aggiunge `UIC` alla
+`.tran` e rappresenta invece un vero avvio dalle condizioni iniziali. L'agente
+la usa soltanto per verificare un possibile equilibrio iniziale artificialmente
+simmetrico.
+
+La tensione iniziale deve essere fisicamente ammissibile e chiaramente distinta
+dal punto di lavoro base osservato: una variazione di pochi punti percentuali
+attorno allo stesso bias non costituisce un test sufficiente. Inoltre, una sola
+prova `.ic` negativa non autorizza una diagnosi di valori o topologia errati. Se
+non esistono altre evidenze strutturali, il controller mantiene la conclusione
+`inconclusive`.
+
+Esempio:
+
+```json
+{
+  "type": "set_initial_node_voltage",
+  "target": "N004",
+  "value": "0.5V",
+  "skip_operating_point": true
+}
+```
+
+Con `skip_operating_point: true` il valore deve introdurre una reale asimmetria:
+un valore nullo su un nodo, mentre tutti gli altri nodi non specificati partono
+gia da zero, non rompe da solo una simmetria perfetta. Quando il circuito espone
+due nodi di controllo simmetrici, lo scenario deve inizializzarli a due livelli
+distinti e fisicamente ammissibili.
 
 `add_voltage_source_between_nodes` aggiunge invece una sorgente tra due nodi
 gia esistenti della node map. Questa e la primitiva piu naturale quando il
@@ -1260,10 +1301,14 @@ Primitive attualmente implementate nella Pipeline 2.0:
 
 ```text
 drive_node_voltage
+set_initial_node_voltage
 change_source_value
 change_component_value
 close_switch
 connect_nodes
+feed_nodes_from_source_node
+add_voltage_source_between_nodes
+add_resistor_between_nodes
 ```
 
 Questa e la lista controllata corrente. Per adesso l'agente puo proporre uno
@@ -2103,6 +2148,12 @@ scelta scenario -> copia base/run -> modifica netlist scenario -> ngspice scenar
 -> scenario_comparison.json.
 ```
 
+Il ciclo include anche `set_initial_node_voltage` per le sole run `tran`:
+aggiunge una direttiva `.ic` alla copia scenario senza creare una sorgente
+permanente e senza modificare la base run. L'opzione
+`skip_operating_point: true` abilita inoltre `.tran ... UIC` per i test di
+accensione nei quali il punto operativo DC manterrebbe una simmetria artificiale.
+
 Implementato anche il rientro dei risultati scenario nell'agente:
 
 ```text
@@ -2274,8 +2325,10 @@ Prossimi esperimenti:
 
 2. **Esperimento 3 - visualizzatore/simulatore del circuito**
 
-   Obiettivo: costruire una visualizzazione stile simulatore, non un nuovo
-   motore SPICE.
+   Stato: concluso sul Batch A per `a01`, `a02`, `a04`-`a10`; `a03` resta
+   escluso dalla prima fase per il suo caso topologico/SPICE non stabile.
+
+   Risultato: visualizzazione stile simulatore, non un nuovo motore SPICE.
 
    La regola centrale e:
 
@@ -2285,63 +2338,219 @@ Prossimi esperimenti:
 
    Quindi:
 
-   - base run e scenario run possono avere netlist diverse;
-   - se uno scenario cambia topologia, il viewer deve visualizzare quella
-     topologia scenario;
+   - base run e scenario run con netlist diverse hanno viewer diversi;
+   - se uno scenario cambia topologia, il viewer visualizza quella topologia;
    - ngspice resta il motore di simulazione;
    - il viewer usa netlist, node map, coordinate immagine e risultati SPICE per
      mostrare nodi, tensioni, correnti e rami attivi.
 
-3. **Esperimento 4 - automazione agentica degli scenari**
+   Gli step `13_build_viewer_model.py`, `14_build_viewer_layout.py` e
+   `15_render_viewer_svg.py` sono integrati in `09_web_chat.py`: la base run e
+   ogni nuova run scenario ricevono automaticamente `13_viewer_model.json`,
+   `14_viewer_layout.json` e `15_viewer.svg`.
 
-   Obiettivo: far eseguire all'agente piu scenari in sequenza, entro un limite
-   controllato, per provare a risolvere o localizzare il problema.
+3. **Esperimento 3.1 - validazione end-to-end agente e viewer**
 
-   Questa fase non parte finche Experiment 3 non produce viewer generali per
-   base run e scenari di tutti i circuiti Batch A. Il viewer deve diventare una
-   evidenza leggibile accanto a netlist, stdout ngspice e confronto scenario.
+   Stato: concluso sul Batch A.
 
-   Flusso desiderato:
+   Obiettivo raggiunto: ripartire da workspace puliti, chiedere la diagnosi all'agente,
+   eseguire gli scenari che propone e verificare che chat, runner, confronto e
+   viewer scenario restino coerenti senza scenari pre-caricati.
+
+   La sessione chat/registry e stata resa disponibile anche su
+   `experiment3_1` nella cartella `experiment_chat/`; le root `experiment2*`
+   mantengono la cartella storica `experiment2_chat/`.
+
+   Copertura: `a01`, `a02`, `a04`-`a10`, per 18 run scenario; `a03` resta
+   escluso per il limite topologico/SPICE gia documentato. Ogni run ha prodotto
+   il confronto e il viewer della netlist effettivamente simulata.
+
+4. **Esperimento 4 - automazione agentica degli scenari**
+
+   Stato: implementata e validata in una prima passata OpenAI su `a01`, `a02`
+   e `a04`-`a10`; `a03` resta escluso per il noto limite topologico/SPICE.
+
+   Obiettivo: confrontare due modalita selezionabili nella stessa web app:
+
+   - `CHAT`, che mantiene il flusso guidato validato in Experiment 3.1;
+   - `AGENT`, che propone, esegue e confronta scenari automaticamente.
+
+   Le due modalita devono usare workspace separati:
 
    ```text
-   sintomo utente
-   -> agente propone scenario
-   -> pipeline esegue scenario
-   -> pipeline genera viewer dello scenario
-   -> agente legge scenario_comparison.json
-   -> agente decide se fermarsi o provare un altro scenario
-   -> massimo 5 scenari
-   -> conclusione finale
+   experiment4/chat/<circuit>
+   experiment4/agent/<circuit>
    ```
 
-   Modalita operative previste:
+   Condividono soltanto la stessa base tecnica iniziale. Conversazione,
+   registry, scenari, viewer scenario, run selezionata e stato diagnostico non
+   devono passare da una modalita all'altra.
 
-   - diagnosi guidata: l'utente descrive il sintomo e l'agente propone scenari;
-   - comando diretto: l'utente chiede azioni come "chiudi lo switch",
-     "aggiungi una resistenza", "collega due nodi" o "aggiungi una sorgente";
-   - ciclo autonomo controllato: l'agente esegue piu scenari, confronta i
-     risultati e si ferma quando ha una conclusione sufficiente.
+   Il ciclo autonomo procede una iterazione alla volta:
 
-   Le prime azioni dirette devono mappare solo primitive gia supportate:
+   ```text
+   sintomo
+   -> decisione strutturata dell'agente
+   -> validazione pipeline
+   -> scenario + ngspice + viewer
+   -> nuovo contesto e confronto
+   -> stop oppure iterazione successiva
+   ```
+
+   Contratto minimo della decisione:
+
+   ```json
+   {"decision":"run_scenarios","reason":"...","scenarios":[{"intent":"correction|diagnostic","analysis":"op|tran"}]}
+   {"decision":"stop","final_status":"resolved|localized|partially_localized|topology_issue|inconclusive","reason":"...","final_answer":"..."}
+   ```
+
+   Il controller deve salvare in
+   `experiment_chat/autonomous_diagnosis.json` almeno sintomo iniziale, modello,
+   iterazione, scenari eseguiti, ultima decisione, motivo di arresto e diagnosi
+   finale. Il frontend richiama una sola iterazione per volta e permette
+   all'utente di arrestare il ciclo.
+
+   Primitive autonome consentite:
 
    ```text
    close_switch
-   connect_nodes
+connect_nodes
+drive_node_voltage
+set_initial_node_voltage
+change_component_value
+   change_source_value
    feed_nodes_from_source_node
    add_voltage_source_between_nodes
    add_resistor_between_nodes
-   drive_node_voltage
-   change_component_value
-   change_source_value
    ```
 
-   Ogni comando naturale viene prima trasformato in uno `scenario.json`
-   validato. La pipeline controlla nodi e componenti con `03_node_map.json`,
-   `06_component_rules.json` e `07_netlist.cir`; poi `12_controlled_scenarios.py`
-   crea la run scenario e gli step `13/14/15` creano il viewer corrispondente.
+   L'agente deve preferire modifiche minime su valori, componenti e
+   collegamenti esistenti. L'aggiunta di sorgenti o rami resistivi resta
+   consentita quando e motivata dagli output tecnici e dall'ipotesi testata.
+   `feed_nodes_from_source_node` indica distribuzione da un nodo gia misurato
+   come alimentato; `connect_nodes` indica invece continuita generica. Non
+   devono essere proposte insieme sulla stessa relazione nella medesima
+   decisione. `add_resistor_between_nodes` resta una ipotesi resistiva distinta.
 
-   Questa fase deve partire solo dopo aver reso solide sia le primitive
-   dell'Esperimento 2 sia la leggibilita delle run/scenario run nel viewer.
+   L'agente non modifica direttamente file o netlist. La pipeline valida sempre
+   nodi, componenti, azioni e firma dello scenario, quindi usa un runtime comune
+   ai flussi `CHAT` e `AGENT` per richiamare `12`-`15`.
+
+   Nel flusso `CHAT`, uno scenario privo di `intent` viene normalizzato in modo
+   prudente come `diagnostic`. In questo modo un test che chiude uno switch o
+   dimostra soltanto la presenza dell'alimentazione puo confermare una
+   precondizione, ma non produrre uno stop risolutivo. `intent=correction` deve
+   essere esplicito e deve verificare direttamente il sintomo; per audio o
+   segnali variabili cio richiede `analysis=tran` e una misura `tran_vpp`
+   dell'uscita, differenziale quando il carico e collegato tra due nodi.
+
+   Regole di arresto:
+
+   - massimo 5 run scenario realmente eseguite;
+   - massimo 2 scenari indipendenti per decisione e 8 decisioni complessive;
+   - campo `analysis` obbligatorio: `op` per il punto di lavoro DC e `tran`
+     per ampiezza, guadagno, frequenza e forme d'onda;
+   - campo `intent` obbligatorio: `correction` per migliorare il sintomo e
+     `diagnostic` per isolare o confermare una causa;
+   - una richiesta esplicita di correzione non puo chiudere come sola
+     `localized` finche resta budget; una run che dichiara e soddisfa i
+     criteri della correzione puo essere promossa senza rieseguire azioni
+     duplicate;
+   - la mappa opzionale `measure` seleziona `op`, `tran_vpp` oppure
+     `tran_abs_peak` per ogni grandezza in `compare`, consentendo test misti
+     nello stesso scenario;
+- `tran_abs_peak` e riservata alle correnti interne di diodi/LED
+  `@dNOME[id]` esportate nel CSV e confronta il picco assoluto della run;
+- per un sintomo di ricarica, la sola magnitudine di `i(V...)` non prova la
+  corrente entrante nella batteria: il segno dipende dalla polarita SPICE della
+  sorgente. Una correzione deve quindi usare TRAN e una corrente del percorso di
+  carica giustificato dal netlist; per un diodo raddrizzatore interno si usa
+  `@dNOME[id]` con `tran_abs_peak`;
+- una proposta CHAT `tran` che include `@dNOME[id]` deve dichiarare
+  esplicitamente `measure: {"@dNOME[id]":"tran_abs_peak"}`; in sua assenza
+  non viene registrata come scenario eseguibile;
+   - in `tran`, correnti e potenze possono essere criteri `expect` quando
+     `measure` le dichiara esplicitamente come `op`; per un LED/diodo che deve
+     accendersi in una fase della run si usa invece `tran_abs_peak`;
+   - un obiettivo AC/VAC richiede almeno una tensione misurata come `tran_vpp`:
+     una tensione DC non dimostra il funzionamento di un voltmetro AC;
+   - se il sintomo riguarda lo stato di un LED o di una lampada, una correzione
+     richiede anche una corrente o potenza diretta tra i criteri `expect`;
+   - se lo stesso sintomo combina AC/VAC e LED/lampada, anche i test diagnostici
+     devono verificare entrambi nello stesso scenario misto;
+   - `unchanged` e ammesso soltanto per un vincolo di preservazione richiesto
+     esplicitamente dall'utente;
+   - `final_status=resolved` richiede una correzione verificata non vuota;
+   - `final_status=localized` puo chiudere il ciclo dopo un test diagnostico
+     forte, senza inventare una riparazione per consumare il budget residuo;
+   - una correzione richiede almeno un miglioramento relativo del 10%, una vera
+     attivazione/disattivazione oppure criteri temporali completamente
+     soddisfatti;
+   - per lampeggio, periodicita, regolarita, duty cycle o durata di accensione,
+     ogni scenario `tran` dichiara `temporal_expect`; il runtime confronta i
+     profili viewer base/scenario e non accetta come risolutivo un test che
+     viola la periodicita richiesta. Un cambio qualitativo verificato, come
+     `steady_on -> blinking`, non richiede anche un incremento scalare del 10%;
+   - la modalita CHAT applica lo stesso contratto minimo: una correzione del
+     lampeggio entra nel registro eseguibile solo con analisi transitoria,
+     `intent=correction` e criterio temporale `blinking` regolare;
+   - nei test di avvio simmetrico le condizioni iniziali sui nodi di controllo
+     interni sono ricavate dal bias e dal ruolo del dispositivo; non si usa il
+     rail di alimentazione come valore predefinito per una base BJT;
+   - per due basi BJT simmetriche il primo tentativo usa la massa documentata
+     sul ramo basso e un livello moderato vicino al bias sull'altro; un profilo
+     `transient_pulse` rende obbligatoria una seconda prova `.ic` distinta prima
+     di spostare la diagnosi sui valori dei componenti;
+   - il budget e soltanto un tetto massimo: l'agente puo fermarsi prima quando
+     restano soltanto scenari duplicati, speculativi o privi di supporto negli
+     artefatti;
+   - per sintomi di amplificazione, gli scenari correttivi dichiarano
+     `gain.input` e `gain.output`, entrambi presenti in `compare`, per misurare
+     `Vpp(output) / Vpp(input)`;
+   - per propagazione o attenuazione, anche uno scenario diagnostico puo
+     dichiarare `gain.min_ratio`; una uscita non nulla ma sotto la soglia non
+     conferma un trasferimento utile e non deve essere descritta come segnale
+     realmente arrivato al carico;
+   - `gain.min_ratio` e un criterio positivo motivato dallo scenario, non una
+     costante globale imposta a ogni famiglia circuitale;
+- non e ammessa una nuova run con le stesse azioni e la stessa analisi soltanto
+  per aggiungere misure o soglie: una modifica puo invece essere verificata una
+  volta in `op` e una volta in `tran` quando la seconda run risponde a una
+  domanda temporale; dopo un trasferimento insufficiente l'agente deve spostare
+  il confine di isolamento oppure testare una causa distinta;
+   - per distorsione e clipping con sorgente SIN, gli scenari transitori
+     dichiarano quality=thd; la pipeline usa le ultime tre oscillazioni,
+     fondamentale e armoniche 2-5;
+   - una correzione della distorsione richiede riduzione THD di almeno il 20%,
+     THD finale non superiore al 10% e guadagno fondamentale non annullato;
+   - pin distinti dello stesso connector restano reti separate salvo evidenza
+     topologica esplicita; non vengono collegati solo per attivare due funzioni;
+   - un pin collegato soltanto a uno switch verso massa non viene reinterpretato
+     come ingresso di alimentazione senza evidenze tecniche esplicite;
+   - un solo retry per una risposta JSON non valida;
+   - stop quando il problema e risolto o sufficientemente localizzato;
+   - stop se non esistono scenari validi nuovi;
+   - stop per errore non recuperabile o richiesta utente;
+   - conclusione obbligatoria quando termina il budget.
+
+   Limite noto: le sequenze temporali tra componenti non sono ancora
+   verificabili quando la base run contiene solo `.op`. Serviranno una `.tran`
+   aggiungibile dallo scenario, profili per lampade e un criterio di ordine
+   temporale tra componenti.
+
+   `resolved_candidate` dello step 12 e soltanto un'indicazione tecnica. La
+   decisione finale deve restare semantica e distinguere una soluzione reale da
+   una semplice localizzazione, per esempio una sorgente aggiunta che dimostra
+   la mancanza di alimentazione.
+
+   Ordine di implementazione:
+
+   1. estrarre il runtime scenario condiviso da `09_web_chat.py`;
+   2. rendere coerente il conteggio delle sole run SPICE eseguite;
+   3. usare i workspace e il selettore `CHAT` / `AGENT` gia predisposti;
+   4. implementare controller e stato autonomo;
+   5. validare `a01`, poi tutto il Batch A escluso `a03`;
+   6. aggiungere dopo il ciclo base i comandi diretti in linguaggio naturale.
 
 ## Stato dopo il primo esperimento Batch A
 
@@ -2382,6 +2591,28 @@ sintomo utente
 La prossima validazione non deve cambiare continuamente il prompt circuito per
 circuito. Deve invece misurare quanto bene lo stesso schema generale regge su
 piu casi, usando i report Batch A come riferimento.
+
+## Esperimento 5 - Generalizzazione Batch B
+
+Experiment 5 ha applicato la stessa pipeline al Batch B senza introdurre regole
+legate a un singolo circuito. Nel perimetro validato sono stati completati
+`b02`, `b03`, `b04`, `b05`, `b06` e `b10`, nelle modalita CHAT e AGENT.
+
+Ordine operativo seguito:
+
+1. costruire le base run Batch B fino agli artefatti `01-08` e al viewer;
+2. leggere per ogni circuito immagine, Graph JSON, node map, netlist e output
+   SPICE per classificare i bisogni reali;
+3. provare prima `CHAT` con le primitive gia abilitate;
+4. introdurre una nuova primitiva soltanto se il limite e ricorrente e
+   generalizzabile come trasformazione netlist;
+5. eseguire `AGENT` sugli stessi sintomi e confrontare run, decisioni, evidenze
+   e conclusione con la modalita guidata.
+
+Il viewer resta lo stesso sistema run-aware: non deve essere ridisegnato per
+Batch B. Nuovi simboli o layout sono ammessi solo se rappresentano una classe
+di componenti riusabile. I report uniformi di Batch A e Batch B costituiscono
+ora la base per la successiva valutazione con judge, tabelle e statistiche.
 
 ## Limiti da dichiarare
 

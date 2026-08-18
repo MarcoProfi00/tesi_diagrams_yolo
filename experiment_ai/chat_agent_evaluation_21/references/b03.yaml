@@ -1,0 +1,145 @@
+schema_version: 1
+circuit_id: "b03"
+review_status: frozen
+circuit_description: |
+  Monitor di tensione per batteria a tre LED: rosso D1, giallo D2 e verde D7.
+  Due transistor BC547 NPN e un BC557 PNP, insieme alle reti di diodi 1N4148
+  e agli zener da 10 V e 12 V, creano finestre di indicazione dipendenti dalla
+  tensione. Il Graph JSON coincide con l'immagine. Q3 conserva un ID storico
+  di classe NPN, ma è correttamente modellato in SPICE come BC557 PNP.
+task_type: "caratterizzazione statica e dinamica di un indicatore a soglie"
+user_symptom: |
+  Voglio verificare tutti e tre i LED: prova batteria scarica, normale e carica, poi fai una rampa di tensione per vedere come si accendono e spengono nel tempo.
+
+circuit_inventory:
+  component_count: 22
+  node_count: 17
+  component_types:
+    - "Battery"
+    - "Diode"
+    - "LED"
+    - "NPN_Transistor"
+    - "Resistor"
+  analysis_types:
+    - "op"
+    - "tran"
+
+required_evidence:
+  - id: model_assumptions
+    description: |
+      L'immagine non riporta il valore della batteria e non contiene un
+      simbolo di massa. Il values.yaml assume una batteria automobilistica
+      nominale da 12 V e aggiunge una sorgente ideale da 0 V sul terminale B
+      come riferimento SPICE. Queste scelte devono restare esplicite.
+  - id: base_12v_state
+    description: |
+      A 12 V il LED rosso conduce circa 2.29e-11 A, il giallo circa 9.942 mA
+      e il verde circa 6.02e-9 A: soltanto il giallo è operativamente acceso.
+  - id: static_low_high_states
+    description: |
+      A 10 V il rosso conduce circa 8.238 mA e gli altri sono spenti secondo
+      la soglia di 0.1 mA. A 14 V il giallo conduce circa 9.48 mA e il verde
+      circa 10.743 mA, mentre il rosso è spento. A 16 V resta acceso soltanto
+      il verde, con circa 13.823 mA.
+  - id: monotonic_ramp
+    description: |
+      Una rampa crescente della batteria deve verificare le correnti di tutti
+      e tre i LED nel tempo. I profili transient_pulse rappresentano finestre
+      di conduzione attraversate una sola volta, non un lampeggio periodico.
+  - id: threshold_windows
+    description: |
+      Analizzando direttamente i CSV con soglia LED di 0.1 mA, la rampa mostra:
+      rosso solo fino a circa 11.53 V; rosso+giallo da circa 11.53 a 11.92 V;
+      giallo solo da circa 11.92 a 13.59 V; giallo+verde da circa 13.59 a
+      14 V. Una prova statica a 16 V mostra poi il verde da solo.
+
+success_conditions:
+  - id: all_three_leds_checked
+    description: |
+      La valutazione usa direttamente le correnti SPICE di rosso, giallo e
+      verde e dimostra che ciascuno diventa attivo in una parte dell'intervallo.
+  - id: low_normal_high_explained
+    description: |
+      La conclusione descrive correttamente almeno gli stati a 10 V, 12 V e
+      14 V: rosso; giallo; giallo+verde.
+  - id: ramp_sequence_explained
+    description: |
+      La rampa viene interpretata come sequenza di finestre di indicazione
+      rosso, transizione rosso-giallo, giallo, transizione giallo-verde.
+  - id: overlap_acknowledged
+    description: |
+      La conclusione non presenta il monitor come comparatore perfettamente
+      esclusivo: sono presenti intervalli nei quali conducono due LED.
+  - id: conclusion_calibrated
+    description: |
+      Soglie e correnti sono riferite ai modelli SPICE e alla soglia operativa
+      scelta; non vengono presentate come misure garantite sull'hardware reale.
+
+acceptable_solutions:
+  - id: static_points_plus_ramp
+    description: |
+      Eseguire prove statiche a 10 V, 12 V e 14 V e una rampa 10-14 V,
+      confrontando le tre correnti LED. La prova a 16 V è un'estensione utile
+      per dimostrare lo stato verde-only.
+    verified_reference_values: |
+      10 V: rosso 8.238 mA, giallo 0.0756 mA, verde trascurabile. 12 V:
+      giallo 9.942 mA, rosso e verde trascurabili. 14 V: giallo circa
+      9.48 mA e verde 10.743 mA. 16 V: verde 13.823 mA, altri trascurabili.
+  - id: single_ramp_with_base
+    description: |
+      Usare il caso base a 12 V insieme a una sola rampa monotona 9-14 V è
+      sufficiente per verificare che tutti e tre i LED si attivino e per
+      ricostruire la sequenza, purché siano esaminate le tre correnti e non
+      soltanto le etichette automatiche.
+    verified_reference_values: |
+      Nella rampa AGENT 9-14 V i massimi sono circa 9.948 mA per il rosso,
+      11.926 mA per il giallo e 10.743 mA per il verde. Con soglia 0.1 mA le
+      finestre risultano coerenti con la rampa CHAT 10-14 V.
+  - id: static_tests_without_ramp
+    acceptance: partial_only
+    description: |
+      I soli punti statici verificano alcuni stati, ma non mostrano l'ordine
+      temporale delle transizioni richiesto dall'utente.
+  - id: ramp_without_individual_currents
+    acceptance: partial_only
+    description: |
+      Osservare soltanto la tensione della batteria o un unico LED non basta
+      per dichiarare verificato il monitor a tre indicazioni.
+
+unsupported_conclusions:
+  - |
+    Trattare Q3 come NPN a causa dell'ID del componente: l'immagine indica
+    BC557 e la netlist usa correttamente un modello PNP.
+  - |
+    Presentare i 12 V come valore letto nell'immagine: è un'assunzione basata
+    sul contesto automobilistico del circuito originale.
+  - |
+    Interpretare transient_pulse durante una rampa monotona come lampeggio o
+    instabilità: ogni soglia viene attraversata una sola volta.
+  - |
+    Affermare che a 14 V sia acceso soltanto il verde: SPICE mostra giallo e
+    verde contemporaneamente; il verde-only è verificato a 16 V.
+  - |
+    Dichiarare perfettamente esclusive le indicazioni: i CSV mostrano sia una
+    fascia rosso+giallo sia una fascia giallo+verde.
+  - |
+    Considerare fallita la rampa AGENT perché D2 non soddisfa required_state=on:
+    il criterio è inadatto a una finestra transitoria, mentre le correnti
+    dimostrano correttamente il passaggio di tutti e tre i LED.
+  - |
+    Usare tran_vpp per confrontare due tensioni DC costanti: 10, 12, 14 e
+    16 V hanno tutti Vpp nullo; occorrono valore medio, finale, minimo o massimo.
+
+review_notes: |
+  Immagine e values canonici provengono da
+  data/batchPipeline2.0/batchChatAgentEvaluation. Entrambe le modalità
+  completano ngspice senza stderr. I prompt CHAT e AGENT non sono testualmente
+  identici ma richiedono la stessa caratterizzazione da batteria scarica a
+  carica. CHAT è più completa sui punti statici e aggiunge la prova a 16 V;
+  riconosce la sovrapposizione giallo-verde ma non ricava esplicitamente la
+  più stretta fascia rosso-giallo. AGENT usa una sola rampa ben scelta e
+  verifica correttamente tutti i LED; il suo outcome automatico parziale è
+  causato da un criterio temporale non adatto, non da un fallimento tecnico.
+  Le soglie numeriche della ground truth sono state ricavate direttamente dai
+  CSV con soglia di corrente pari a 0.1 mA. La scheda deve essere approvata
+  manualmente prima dello stato frozen.

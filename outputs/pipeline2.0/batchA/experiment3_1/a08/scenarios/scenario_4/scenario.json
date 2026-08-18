@@ -1,0 +1,21 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Rafforzare l'accoppiamento resistivo tra TRIGGER e base",
+  "hypothesis": "The existing resistive coupling from N001 to N004 may be too weak; adding a parallel resistive branch between the trigger node and the transistor base should increase the base drive if weak coupling is the limiting factor.",
+  "actions": [
+    {
+      "type": "add_resistor_between_nodes",
+      "from": "N001",
+      "to": "N004",
+      "value": "33k"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N001)",
+    "v(N003)",
+    "v(N004)",
+    "v(N005)"
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "title": "Aumentare l'escursione della modulazione riducendo R5 tra il primo 555 e il pin CONT del secondo",
+  "hypothesis": "Rresistor22_3=10k puo attenuare troppo la variazione proveniente da N004 verso N006, lasciando il secondo 555 con frequenza quasi fissa. Riducendo R5 dovrebbe aumentare il Vpp su N006 e rendere piu evidente la variazione del tono senza spegnere l'uscita audio.",
+  "intent": "correction",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Rresistor22_3",
+      "value": "2.2k"
+    }
+  ],
+  "compare": [
+    "v(N004)",
+    "v(N006)",
+    "v(N009,N010)"
+  ],
+  "measure": {
+    "v(N004)": "tran_vpp",
+    "v(N006)": "tran_vpp",
+    "v(N009,N010)": "tran_vpp"
+  },
+  "gain": {
+    "input": "v(N004)",
+    "output": "v(N006)",
+    "min_ratio": 0.2
+  },
+  "expect": {
+    "v(N006)": "magnitude_increased",
+    "v(N009,N010)": "nonzero"
+  },
+  "scenario_id": "agent_scenario_1"
+}

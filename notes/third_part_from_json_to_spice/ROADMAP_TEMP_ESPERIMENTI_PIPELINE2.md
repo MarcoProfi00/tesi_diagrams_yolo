@@ -579,12 +579,13 @@ scenarios/<scenario_id>/scenario_comparison.json
 
 ## Esperimento 3 - Viewer / simulatore visuale
 
-Stato: futuro, dopo Esperimento 2.
+Stato: concluso sul Batch A, con `a03` escluso dalla prima fase per il suo
+caso topologico/SPICE non stabile.
 
 Obiettivo:
 
-creare una visualizzazione stile simulatore, ispirata a strumenti come Falstad,
-ma basata sui nostri output Pipeline 1.0 / Pipeline 2.0 e sui risultati ngspice.
+creare una visualizzazione stile simulatore, ispirata a Falstad ma senza usarlo
+come motore, basata sugli output Pipeline 1.0 / Pipeline 2.0 e su ngspice.
 
 Regola centrale:
 
@@ -599,97 +600,347 @@ Questo e importante perche:
 - se uno scenario cambia topologia, anche il circuito visualizzato cambia;
 - quindi il viewer non deve assumere una sola topologia fissa.
 
-Dati utili:
+Risultato realizzato:
 
 ```text
-run/07_netlist.cir
-run/08_ngspice_stdout.txt
-run/08_tran.csv
-run/08_tran_plot.png
-03_node_map.json
-coordinate/componenti da Pipeline 1.0
-immagine originale del circuito
+13_build_viewer_model.py  -> contratto elettrico e strutturale della run
+14_build_viewer_layout.py -> layout image-guided e routing generale
+15_render_viewer_svg.py   -> SVG interattivo con vocabolario componenti
+09_web_chat.py            -> carica/genera il viewer della run selezionata
 ```
 
-Prima versione possibile:
+Il viewer usa:
 
-- mostrare immagine del circuito;
-- sovrapporre marker su componenti e terminali;
-- colorare nodi in base alla tensione;
-- animare componenti o rami con corrente non nulla;
-- mostrare differenze tra base run e scenario run.
+- `07_netlist.cir` come verita elettrica;
+- `03_node_map.json` e `06_component_rules.json` per elementi strutturali;
+- bbox, terminali e orientamenti della Pipeline 1.0 come geometry seed;
+- output OP/TRAN ngspice per tensioni, correnti, animazioni e scope transienti.
+
+Copertura Batch A:
+
+- base run e run scenario di `a01`, `a02`, `a04`-`a10`;
+- varianti topologiche `connect_nodes`, `feed_nodes_from_source_node`,
+  `add_voltage_source_between_nodes` e `add_resistor_between_nodes`;
+- switch aperti/chiusi, componenti aggiunti e modifiche di sorgenti/valori;
+- zoom, pan, routing ortogonale e piccoli ponti per attraversamenti senza
+  giunzione elettrica.
+
+Il viewer non ricostruisce lo schema pixel-perfect: mantiene un circuito
+equivalente leggibile, generale e coerente con la netlist simulata.
+
+## Esperimento 3.1 - Validazione end-to-end agente e viewer
+
+Stato: concluso sul Batch A.
+
+Obiettivo raggiunto:
+
+ripartire da workspace puliti per ogni circuito, chiedere la diagnosi
+all'agente, far proporre scenari nuovi ed eseguirli dalla web chat, verificando
+che ogni run scenario generi automaticamente il proprio viewer.
+
+Flusso da validare:
+
+```text
+base run pulita
+-> sintomo utente
+-> agente propone scenario.json
+-> utente conferma "esegui scenario ..."
+-> 12_controlled_scenarios.py crea e simula la run
+-> 09_web_chat.py genera 13/14/15 sulla run scenario
+-> sidebar e pannello centrale mostrano il nuovo viewer
+-> agente interpreta scenario_comparison.json
+```
+
+Esito:
+
+- validati `a01`, `a02`, `a04`-`a10`; `a03` resta escluso per il noto limite
+  topologico/SPICE;
+- eseguite 18 run scenario, tutte con viewer della run effettivamente simulata;
+- verificate proposte agente, scenario registry, esecuzione controllata,
+  confronto base/scenario, sidebar e risposta successiva dell'agente;
+- verificati scenari non topologici e topologici, inclusi switch chiusi,
+  continuita, feed di nodi, sorgenti e resistenze aggiunte;
+- le correzioni emerse dal viewer sono rimaste regole generali di layout e
+  rendering, senza eccezioni legate a un singolo circuito.
+
+Sessione interattiva:
+
+- `experiment3_1` e abilitato nella web chat con history e scenario registry;
+- i file della nuova sessione vivono in `experiment_chat/`, mentre le root
+  `experiment2*` mantengono la cartella storica `experiment2_chat/`;
+- base run e struttura dei file restano immutabili fino all'esecuzione di uno
+  scenario confermato dall'utente.
 
 ## Esperimento 4 - Automazione agentica
 
-Stato: futuro, dopo viewer generale Batch A e primitive scenario consolidate.
+Stato: implementata e validata in una prima passata OpenAI su `a01`, `a02`
+e `a04`-`a10`; `a03` resta escluso per il noto limite topologico/SPICE.
 
 Obiettivo:
 
-far eseguire all'agente piu scenari in sequenza, entro un limite controllato,
-per arrivare a una diagnosi finale o a una localizzazione del problema.
+confrontare il flusso guidato attuale con un agente che propone, esegue e
+confronta scenari in autonomia controllata, fino a una conclusione o al limite
+di 5 scenari.
 
-Prima di questa fase devono essere stabili:
+### Due modalita separate
 
-- viewer base run e viewer scenario per tutti i circuiti Batch A;
-- generazione viewer separata da `09_web_chat.py`;
-- primitive scenario gia validate in `12_controlled_scenarios.py`;
-- confronto base/scenario leggibile dall'agente.
+La stessa web app deve offrire due modalita selezionabili:
 
-Flusso desiderato:
+- `CHAT`: flusso guidato gia validato, con conferma umana prima dello scenario;
+- `AGENT`: ciclo autonomo, con massimo due scenari indipendenti per decisione.
+
+Le due modalita non condividono chat, registry, scenari, run selezionata o stato
+diagnostico. Condividono soltanto la stessa base tecnica iniziale `01-08`.
+
+Struttura prevista:
+
+```text
+outputs/pipeline2.0/batchA/experiment4/
+|-- chat/<circuit>/
+`-- agent/<circuit>/
+```
+
+Ogni workspace mantiene base run, viewer, `experiment_chat/` e `scenarios/`
+indipendenti. La pagina cambia interamente contesto quando si passa da `CHAT`
+a `AGENT`.
+
+### Ciclo autonomo
+
+Flusso implementato:
 
 ```text
 sintomo utente
--> agente propone scenario
--> pipeline crea run scenario
--> pipeline esegue ngspice
--> pipeline crea viewer dello scenario
--> pipeline crea scenario_comparison.json
--> agente legge il confronto
--> agente decide se fermarsi o proporre altro
--> massimo 5 scenari
+-> agente sceglie stop oppure uno/due scenari
+-> pipeline valida scenario e budget
+-> runner condiviso crea ed esegue la run
+-> 13/14/15 generano il viewer della run
+-> agente legge contesto e scenario_comparison.json aggiornati
+-> agente decide stop oppure iterazione successiva
+-> massimo 5 run scenario realmente eseguite
 -> conclusione finale
 ```
 
-Modalita da supportare:
+Il browser deve richiedere una iterazione alla volta, mostrare l'avanzamento e
+permettere l'arresto manuale. Lo stato persistente e
+`experiment_chat/autonomous_diagnosis.json`.
 
-- diagnosi guidata: l'utente descrive il sintomo e l'agente propone scenari;
-- comando diretto: l'utente chiede "chiudi lo switch", "aggiungi una resistenza",
-  "collega due nodi" o "aggiungi una sorgente";
-- ciclo autonomo controllato: l'agente propone, esegue, confronta e decide se
-  fermarsi o continuare.
+La presentazione `AGENT` e ora distinta dalle bolle della modalita `CHAT`:
 
-Primitive operative iniziali:
+- riepilogo di run, scenari e decisioni;
+- piano derivato dallo stato reale del controller;
+- timeline di ipotesi, primitive, esito SPICE ed evidenze;
+- riconoscimento uniforme di confronti OP e TRAN;
+- collegamenti a viewer e grafici nella run centrale;
+- conclusione separata in causa, correzione verificata e prove disponibili.
+
+Questa vista e costruita da `autonomous_agent/presentation.py` usando gli
+artefatti della sessione e non contiene regole specifiche per Batch A.
+
+Decisioni strutturate dell'agente:
+
+```json
+{"decision":"run_scenarios","reason":"...","scenarios":[{}]}
+{"decision":"stop","final_status":"resolved|localized|partially_localized|topology_issue|inconclusive","reason":"...","final_answer":"...","final_cause":"...","verified_correction":"..."}
+```
+
+`resolved_candidate` prodotto dallo step 12 resta un esito tecnico del
+confronto: non basta da solo a dichiarare risolto il sintomo dell'utente.
+
+### Regole e arresto
+
+- l'agente non modifica direttamente netlist o output;
+- ogni proposta passa dalla validazione della pipeline;
+- base run e workspace dell'altra modalita restano immutati;
+- scenari duplicati o non validi non consumano il budget;
+- il budget conta soltanto run con SPICE realmente eseguito;
+- il ciclo termina per conclusione sufficiente, budget esaurito, assenza di
+  scenari validi, errore non recuperabile o arresto utente;
+- una conclusione deve distinguere `resolved` da `localized`.
+
+`09`, `10` e `12` contano ora in modo coerente soltanto gli scenari realmente
+eseguiti.
+
+### Primitive autonome
+
+Primitive operative abilitate:
 
 - `close_switch`;
 - `connect_nodes`;
-- `feed_nodes_from_source_node`;
-- `add_voltage_source_between_nodes`;
-- `add_resistor_between_nodes`;
 - `drive_node_voltage`;
 - `change_component_value`;
-- `change_source_value`.
+- `change_source_value`;
+- `feed_nodes_from_source_node`;
+- `add_voltage_source_between_nodes`;
+- `add_resistor_between_nodes`.
 
-Regole:
+L'agente deve preferire modifiche minime su componenti e collegamenti
+esistenti. Nuove sorgenti o nuovi rami resistivi sono ammessi solo quando
+l'ipotesi e sostenuta dagli output tecnici della run corrente.
 
-- l'agente non modifica file direttamente;
-- la pipeline valida sempre lo scenario;
-- ogni scenario deve essere tracciabile;
-- ogni comando diretto viene tradotto in uno `scenario.json` riproducibile;
-- la base run non viene mai modificata;
-- se uno scenario risolve o localizza abbastanza il problema, l'agente si ferma;
-- se il budget finisce, l'agente produce una conclusione finale;
-- se serve correggere il Graph JSON, l'agente deve dichiararlo esplicitamente.
+`feed_nodes_from_source_node` va usata quando un nodo e gia misurato come
+alimentato e deve alimentare altri rami. `connect_nodes` resta il test di una
+continuita generica. Le due primitive non possono descrivere la stessa
+relazione nella stessa decisione. `add_resistor_between_nodes` resta distinta,
+perche rappresenta un accoppiamento resistivo con valore significativo.
 
-Step essenziali:
+Per obiettivi che richiedono di attivare, spegnere o mantenere attivo un
+componente, ogni scenario deve confrontare anche una misura diretta del
+componente tramite il nome emesso in `07_netlist.cir`, per esempio
+`i(Rlamp13_1)` o `i(Dled12_1)`. Le tensioni dei nodi restano utili per
+localizzare la causa, ma da sole non dimostrano lo stato del componente.
 
-1. chiudere Experiment 3 su base run e scenari Batch A;
-2. aggiungere parser leggero per comandi scenario diretti;
-3. validare nodi/componenti richiesti contro `03_node_map.json`,
-   `06_component_rules.json` e `07_netlist.cir`;
-4. eseguire lo scenario con `12_controlled_scenarios.py`;
-5. generare il viewer scenario con gli step `13/14/15`;
-6. far leggere all'agente `scenario_comparison.json` e viewer disponibile;
-7. valutare il ciclo autonomo su tutti i circuiti Batch A.
+Le decisioni autonome dichiarano inoltre un oggetto `expect` che assegna a
+ogni misura decisiva il comportamento atteso, per esempio `activated` per il
+carico da accendere e `unchanged` per il LED da preservare. Il comparatore usa
+questi criteri per distinguere una correzione verificata da una variazione
+generica. Gli scenari precedenti senza `expect` restano compatibili.
+
+Ogni nuovo scenario AGENT dichiara anche `intent: correction | diagnostic`.
+Una modifica che mira direttamente al sintomo deve essere una `correction`.
+Un test `diagnostic` puo confermare la causa, ma non basta a chiudere un
+obiettivo che richiede esplicitamente una riparazione: con budget residuo
+l'agente deve cercare una correzione verificata. Se un test iniziale dichiara
+esplicitamente i criteri dell'obiettivo e li soddisfa, il runtime lo promuove
+senza ripetere la stessa azione come scenario duplicato.
+`unchanged` e ammesso solo quando il sintomo chiede esplicitamente di
+preservare un comportamento. In `tran`, correnti e potenze senza traccia CSV
+restano osservazioni OP, oppure diventano criteri `expect` se la mappa
+opzionale `measure` le seleziona esplicitamente come `op`. La stessa mappa
+permette di verificare nello scenario una tensione `tran_vpp` insieme a
+grandezze DC. Gli obiettivi AC/VAC richiedono almeno una misura `tran_vpp`.
+Gli obiettivi sullo stato di LED o lampade richiedono inoltre una corrente o
+potenza diretta tra i criteri di successo della correzione.
+Quando lo stesso sintomo combina AC/VAC e LED/lampada, ogni test verifica
+insieme i due obiettivi con una misura mista `tran_vpp` + `op`.
+Una correzione richiede inoltre almeno un miglioramento relativo del 10% o
+una vera attivazione/disattivazione. Per sintomi di amplificazione, gli
+scenari correttivi dichiarano ingresso e uscita nel blocco `gain`, e il
+confronto salva il rapporto `Vpp(output) / Vpp(input)`.
+
+Per lampeggio, periodicita, regolarita, duty cycle o durata di accensione, lo
+scenario `tran` dichiara anche `temporal_expect`. Il runtime confronta i
+profili del viewer della base e della scenario run: stato del componente,
+periodicita e soglie di duty cycle. Un miglioramento elettrico che perde una
+periodicita richiesta resta parziale e non puo produrre `resolved_candidate`.
+
+Limite noto: non sono ancora supportate sequenze temporali tra componenti,
+per esempio "LED acceso prima, poi lampada lampeggiante", quando la base run
+ha solo `.op`. Serviranno una `.tran` aggiungibile dallo scenario, profili
+temporali per lampade e un criterio di ordine tra profili.
+
+### Implementazione essenziale
+
+1. preparare `experiment4/chat/` e `experiment4/agent/` dalla stessa base
+   `experiment3_1`, senza scenari pre-caricati;
+2. estrarre da `09_web_chat.py` un runtime scenario condiviso dal flusso
+   guidato e da quello autonomo;
+3. correggere e centralizzare conteggio budget, validazione e firma duplicati;
+4. aggiungere controller e stato persistente del ciclo autonomo;
+5. usare il selettore `CHAT` / `AGENT` gia collegato ai due workspace;
+6. validare `a01`, `a02`, `a04`-`a10` con stesso sintomo, modello e budget
+   nelle due modalita; completato nella prima passata Batch A;
+7. aggiungere solo dopo il ciclo base il parser dei comandi diretti, riusando lo
+   stesso runtime.
+
+Script/moduli implementati:
+
+```text
+scenario_runtime.py
+scenario_expectations.py
+transient_signal_quality.py
+16_autonomous_diagnosis.py
+autonomous_agent/
+autonomous_agent/presentation.py
+```
+
+Guardrail implementati:
+
+- massimo 2 scenari per decisione, entrambi dalla base run;
+- esecuzione sequenziale per evitare concorrenza ngspice inutile;
+- massimo 5 run scenario e massimo 8 decisioni agentiche;
+- un solo retry per JSON malformato;
+- whitelist rigida delle nove primitive gia implementate e validate dal
+  runner controllato;
+- firma duplicati, stop manuale e persistenza file-based;
+- le decisioni aggiuntive lasciano due tentativi di recupero per proposte
+  rifiutate senza aumentare il budget delle simulazioni SPICE;
+- gli scenari AGENT distinguono obbligatoriamente `op` e `tran`; per sintomi
+  dinamici il confronto usa il Vpp delle tracce CSV e non il valore DC `.op`;
+- gli scenari misti possono scegliere `op` o `tran_vpp` per singola grandezza
+  tramite `measure`, senza separare artificialmente rami DC e uscite AC;
+- pin distinti dello stesso connector non vengono uniti senza un'evidenza
+  topologica esplicita negli artefatti;
+- il viewer distingue automaticamente sorgenti DC e forme `SIN`/`PULSE`, e i
+  meter AC ricavano attivita e lettura Vpp dalle tracce transitorie;
+- gli scenari distinguono obbligatoriamente test `diagnostic` e modifiche
+  `correction`; una richiesta esplicita di correzione non puo chiudere come
+  sola localizzazione finche resta budget;
+- i sintomi temporali richiedono `temporal_expect`; stato, periodicita e duty
+  cycle del profilo viewer devono soddisfare le soglie dichiarate prima dello
+  stop risolutivo;
+- `final_status=resolved` richiede una `verified_correction` non vuota;
+- una causa confermata puo terminare come `localized` senza forzare una
+  correzione topologica non sostenuta dagli artefatti;
+- una variazione inferiore al 10% resta evidenza utile ma non arresta il ciclo;
+- le correzioni di guadagno confrontano esplicitamente ingresso e uscita;
+- per sorgenti SIN, i sintomi di distorsione usano la THD sulle armoniche
+  2-5 nelle ultime tre oscillazioni complete;
+- una correzione della distorsione richiede almeno il 20% di riduzione della
+  THD, THD finale non superiore al 10% e guadagno fondamentale preservato;
+- forme d'onda non supportate restano parziali e non producono stop automatico;
+- nessun database.
+
+### Valutazione Experiment 4
+
+Per ogni prova vanno salvati almeno:
+
+```text
+interaction_mode: chat | agent
+model
+symptom
+executed_scenario_count
+scenario_primitives
+stop_reason
+final_diagnosis_category
+human_notes
+```
+
+Il confronto tra le due modalita deve usare lo stesso circuito, sintomo,
+modello e budget.
+
+## Esperimento 5 - Generalizzazione sul Batch B
+
+Stato: in corso sul Batch B; b02 ha base run SPICE e primo scenario CHAT
+validati.
+
+Obiettivo: verificare che pipeline, viewer, scenari controllati e modalita
+`CHAT` / `AGENT` funzionino su circuiti non usati per progettare le regole del
+Batch A.
+
+Protocollo essenziale:
+
+1. preparare per ogni circuito del Batch B la base run fino a `01-08` e il
+   viewer della base;
+2. studiare immagini, Graph JSON, node map, regole componenti, netlist e
+   risultati SPICE prima di modificare il codice;
+3. riusare inizialmente le nove primitive scenario gia disponibili e validare
+   prima il flusso `CHAT`;
+4. aggiungere una nuova primitiva soltanto se un limite compare in piu casi e
+   puo essere espresso come operazione generale sulla netlist;
+5. ripetere sugli stessi sintomi il flusso `AGENT`, confrontando numero di
+   run, decisioni, esito SPICE, viewer e conclusione;
+6. registrare gli esiti nella griglia di valutazione comune Batch A vs Batch B.
+
+Regole metodologiche:
+
+- non ricostruire il viewer per singolo circuito: si riusano `13-15` e il loro
+  vocabolario componenti, intervenendo solo su lacune generali;
+- non introdurre scenari cuciti su un solo schema; una nuova azione deve avere
+  semantica netlist chiara, validazione, confronto e rappresentazione viewer;
+- `a03` non definisce una regola per Batch B: eventuali problemi Graph/immagine
+  vanno classificati separatamente da un problema delle primitive scenario;
+- le sequenze temporali tra componenti restano fuori dal primo giro Batch B
+  finche non verra progettata l'estensione `.tran` dedicata.
 
 ## Valutazione trasversale degli esperimenti
 
@@ -813,7 +1064,8 @@ della diagnosi quando aumentano le capacita dell'agente.
 Esperimento 1 = baseline Batch A chiusa
 Esperimento 2 = scenari piu potenti e netlist editing controllato
 Esperimento 3 = viewer visuale basato sulla netlist della run selezionata
-Esperimento 4 = agente che prova scenari in autonomia controllata
+Esperimento 4 = confronto CHAT vs AGENT con scenari autonomi controllati
+Esperimento 5 = generalizzazione controllata su Batch B
 Valutazione = metriche comuni, CSV/JSON aggregati e grafici finali
 ```
 

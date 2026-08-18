@@ -1,5 +1,5 @@
 """
-Interfaccia web locale temporanea per la chat diagnostica.
+Interfaccia web locale per CHAT e AGENT.
 
 Questo script avvia un piccolo server locale, senza database e senza stato
 persistente obbligatorio. Serve come step 09 della Pipeline 2.0 per
@@ -9,7 +9,7 @@ scenari controllati.
 La parte HTML vive in `web_chat/templates/`, cosi il layout puo crescere senza
 trasformare questo script in un file troppo grande.
 
-Responsabilita della versione corrente:
+Responsabilita:
 
 - aprire una pagina locale nel browser;
 - mostrare la base run e le eventuali scenario run del circuito selezionato;
@@ -36,23 +36,58 @@ import mimetypes
 import os
 import re
 import shutil
+import threading
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 from agent_readonly.openai_runner import write_agent_response
 from agent_readonly.preview_builder import write_agent_input_preview
 from agent_readonly.prompt_builder import write_agent_prompt
+from autonomous_agent.controller import (
+    AutonomousControllerError,
+    clear_diagnosis,
+    read_state as read_autonomous_state,
+    run_iteration as run_autonomous_iteration,
+    start_diagnosis as start_autonomous_diagnosis,
+    stop_diagnosis as stop_autonomous_diagnosis,
+    summarize_state as summarize_autonomous_state,
+)
+from scenario_runtime import (
+    ScenarioRuntimeError,
+    count_executed_scenarios,
+    execute_scenario as execute_shared_scenario,
+    scenario_signature,
+)
+from scenario_actions import repeated_target_assignments
+from scenario_expectations import ALLOWED_EXPECTATIONS
+from run_sources import get_run_source_path
+from viewer_core.contracts import (
+    VIEWER_LAYOUT_NAME,
+    VIEWER_LAYOUT_SCHEMA_VERSION,
+    VIEWER_MODEL_NAME,
+    VIEWER_MODEL_SCHEMA_VERSION,
+    VIEWER_RENDER_VERSION,
+    VIEWER_SVG_NAME,
+)
+from web_chat_core import (
+    escape_block,
+    is_safe_path_name,
+    read_json_safe,
+    read_text_safe,
+    unescape_html_entities,
+)
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 WEB_CHAT_DIR = Path(__file__).resolve().parent / "web_chat"
 TEMPLATE_DIR = WEB_CHAT_DIR / "templates"
 INDEX_TEMPLATE = TEMPLATE_DIR / "index.html"
+AGENT_VIEW_STYLE = WEB_CHAT_DIR / "agent_view.css"
+AGENT_VIEW_SCRIPT = WEB_CHAT_DIR / "agent_view.js"
 STEP10_PATH = Path(__file__).resolve().parent / "10_build_diagnostic_context.py"
-STEP12_PATH = Path(__file__).resolve().parent / "12_controlled_scenarios.py"
 STEP13_PATH = Path(__file__).resolve().parent / "13_build_viewer_model.py"
 STEP14_PATH = Path(__file__).resolve().parent / "14_build_viewer_layout.py"
 STEP15_PATH = Path(__file__).resolve().parent / "15_render_viewer_svg.py"
@@ -75,26 +110,12 @@ CHAT_PROMPT_NAME = "11_agent_prompt_chat.md"
 CHAT_RESPONSE_NAME = "11_agent_response_chat.md"
 MAX_EXECUTABLE_SCENARIOS = 5
 EXPERIMENT2_CHAT_DIRNAME = "experiment2_chat"
+INTERACTIVE_CHAT_DIRNAME = "experiment_chat"
+MULTI_WORKSPACE_EXPERIMENTS = {"experiment4", "experiment5"}
 CHAT_HISTORY_JSON_NAME = "chat_history.json"
 CHAT_HISTORY_MD_NAME = "chat_history.md"
 SCENARIO_REGISTRY_JSON_NAME = "scenario_registry.json"
 SCENARIO_REGISTRY_MD_NAME = "scenario_registry.md"
-
-SCENARIO_BASE_FILES = [
-    "01_graph.json",
-    "02_normalized_circuit.json",
-    "03_node_map.json",
-    "04_values_bound.json",
-    "06_component_rules.json",
-    "07_netlist.cir",
-    "07_spice_emit_report.json",
-    "08_spice_run.json",
-    "08_ngspice_stdout.txt",
-    "08_ngspice_stderr.txt",
-    "08_tran.csv",
-    "08_tran_plot.png",
-    "08_tran_plot.svg",
-]
 
 SCENARIO_WORD_TO_INDEX = {
     "primo": 1,
@@ -134,54 +155,6 @@ SCENARIO_ROOT_ARTIFACTS = [
 
 
 IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg"]
-
-
-def is_safe_path_name(name: str | None) -> bool:
-    """Accetta solo nomi semplici per segmenti di path controllati da CLI."""
-    if name is None:
-        return True
-    return bool(re.fullmatch(r"[A-Za-z0-9_.-]+", name)) and name not in {".", ".."}
-
-def read_text_safe(path: Path) -> str:
-    """Legge un file testuale senza far fallire il server se manca."""
-    if not path.exists():
-        return "File not available yet."
-    try:
-        return path.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
-        return path.read_text(encoding="utf-8", errors="replace")
-
-
-def read_json_safe(path: Path) -> dict[str, Any]:
-    """Legge un JSON quando possibile, altrimenti restituisce un dizionario vuoto."""
-    if not path.exists():
-        return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, UnicodeDecodeError):
-        return {}
-    return data if isinstance(data, dict) else {}
-
-
-def unescape_html_entities(value: Any) -> Any:
-    """
-    Decodifica entita HTML dentro stringhe, liste e dizionari semplici.
-
-    Ci serve per evitare che testi come `dell&#x27;emettitore` finiscano visibili
-    nella UI quando uno scenario e stato salvato con caratteri gia escapati.
-    """
-    if isinstance(value, str):
-        return html.unescape(value)
-    if isinstance(value, list):
-        return [unescape_html_entities(item) for item in value]
-    if isinstance(value, dict):
-        return {key: unescape_html_entities(item) for key, item in value.items()}
-    return value
-
-
-def escape_block(text: str) -> str:
-    """Prepara testo tecnico da mostrare dentro un blocco pre."""
-    return html.escape(text, quote=False)
 
 
 def repair_common_mojibake(text: str) -> str:
@@ -319,15 +292,17 @@ def project_relative(path: Path) -> str:
 
 
 def is_experiment2_history_enabled(experiment: str | None) -> bool:
-    """Abilita history/registry server-side per Esperimento 2 e sottofasi."""
-    return bool(experiment) and str(experiment).startswith("experiment2")
+    """Abilita history e registry per ogni sessione interattiva nominata."""
+    return bool(str(experiment or "").strip())
 
 
 def build_experiment2_chat_dir(output_dir: Path, experiment: str | None) -> Path | None:
-    """Restituisce la cartella della chat history ufficiale di Esperimento 2."""
+    """Restituisce la cartella sessione mantenendo compatibilita con Experiment 2."""
     if not is_experiment2_history_enabled(experiment):
         return None
-    return output_dir / EXPERIMENT2_CHAT_DIRNAME
+    if str(experiment or "").startswith("experiment2"):
+        return output_dir / EXPERIMENT2_CHAT_DIRNAME
+    return output_dir / INTERACTIVE_CHAT_DIRNAME
 
 
 def empty_experiment2_chat_history(batch: str, circuit: str, experiment: str) -> dict[str, Any]:
@@ -488,7 +463,7 @@ def clear_experiment2_chat_history(
     circuit: str,
     experiment: str | None,
 ) -> bool:
-    """Azzera la chat history ufficiale di Esperimento 2."""
+    """Azzera la chat history della sessione interattiva corrente."""
     chat_dir = build_experiment2_chat_dir(output_dir, experiment)
     if chat_dir is None:
         return False
@@ -503,7 +478,7 @@ def clear_experiment2_scenario_registry(
     circuit: str,
     experiment: str | None,
 ) -> bool:
-    """Azzera il registry scenari ufficiale di Esperimento 2."""
+    """Azzera il registry scenari della sessione interattiva corrente."""
     chat_dir = build_experiment2_chat_dir(output_dir, experiment)
     if chat_dir is None:
         return False
@@ -533,7 +508,7 @@ def clear_experiment2_session_state(
     experiment: str | None,
 ) -> dict[str, Any]:
     """
-    Reset completo della sessione Experiment 2 per un circuito.
+    Reset completo della sessione interattiva per un circuito.
 
     Non tocca gli output base 01-08 copiati nell'esperimento. Azzera solo la
     conversazione, il registry, le run scenario e gli artefatti chat 10/11.
@@ -541,7 +516,7 @@ def clear_experiment2_session_state(
     if not is_experiment2_history_enabled(experiment):
         return {
             "cleared": False,
-            "reason": "Experiment 2 session clear is only enabled for experiment2.",
+            "reason": "Session clear is only enabled for supported interactive experiments.",
             "removed_files": [],
             "removed_dirs": [],
         }
@@ -571,10 +546,10 @@ def clear_experiment2_session_state(
 
 
 def empty_experiment2_scenario_registry(batch: str, circuit: str, experiment: str) -> dict[str, Any]:
-    """Costruisce il registro scenari file-based di Esperimento 2."""
+    """Costruisce il registro scenari file-based della sessione interattiva."""
     timestamp = datetime.now().isoformat(timespec="seconds")
     return {
-        "source_format": "pipeline2.0_experiment2_scenario_registry",
+        "source_format": "pipeline2.0_experiment_scenario_registry",
         "batch_name": batch,
         "experiment_name": experiment,
         "circuit_id": circuit,
@@ -594,7 +569,7 @@ def read_experiment2_scenario_registry(
     circuit: str,
     experiment: str | None,
 ) -> dict[str, Any] | None:
-    """Legge il registro scenari ufficiale di Esperimento 2."""
+    """Legge il registro scenari della sessione interattiva corrente."""
     chat_dir = build_experiment2_chat_dir(output_dir, experiment)
     if chat_dir is None:
         return None
@@ -611,7 +586,7 @@ def read_experiment2_scenario_registry(
     if not isinstance(data, dict):
         return empty_experiment2_scenario_registry(batch, circuit, str(experiment))
 
-    data.setdefault("source_format", "pipeline2.0_experiment2_scenario_registry")
+    data.setdefault("source_format", "pipeline2.0_experiment_scenario_registry")
     data.setdefault("batch_name", batch)
     data.setdefault("experiment_name", experiment)
     data.setdefault("circuit_id", circuit)
@@ -639,7 +614,7 @@ def write_experiment2_scenario_registry_files(chat_dir: Path, registry: dict[str
 def build_experiment2_scenario_registry_markdown(registry: dict[str, Any]) -> str:
     """Crea una vista Markdown del registro scenari."""
     lines = [
-        "# Experiment 2 scenario registry",
+        "# Pipeline 2.0 scenario registry",
         "",
         f"- Batch: `{registry.get('batch_name')}`",
         f"- Experiment: `{registry.get('experiment_name')}`",
@@ -692,21 +667,248 @@ def next_proposal_id(registry: dict[str, Any]) -> str:
 
 
 def registered_scenario_signature(scenario: dict[str, Any]) -> str:
-    """Firma semplice per evitare di registrare duplicati identici."""
+    """Firma uno scenario con la stessa logica tecnica usata dal runtime."""
+    actions = scenario.get("actions")
+    if isinstance(actions, list) and actions:
+        # L'analisi fa parte della prova elettrica: le stesse azioni eseguite
+        # prima in OP e poi in TRAN producono evidenze diverse e non devono
+        # essere eliminate dal registro come duplicati.
+        return scenario_signature(
+            {
+                "actions": actions,
+                "analysis": scenario.get("analysis") or "op",
+            }
+        )
+
+    # Le proposte non eseguibili restano distinte tramite il loro significato.
     comparable = {
         "title": scenario.get("title"),
         "hypothesis": scenario.get("hypothesis"),
-        "actions": scenario.get("actions") or [],
-        "analysis": scenario.get("analysis"),
-        "compare": scenario.get("compare") or [],
     }
     return json.dumps(comparable, sort_keys=True, ensure_ascii=False)
 
 
+def scenario_requires_signal_gain(scenario: dict[str, Any]) -> bool:
+    """Riconosce scenari transitori che dichiarano un obiettivo di trasferimento."""
+    if str(scenario.get("analysis") or "").strip().lower() != "tran":
+        return False
+    text = " ".join(
+        str(scenario.get(field) or "").strip().lower()
+        for field in ("title", "hypothesis")
+    )
+    transfer_markers = (
+        "gain",
+        "guadagn",
+        "amplif",
+        "attenuat",
+        "propagat",
+        "trasfer",
+        "signal transfer",
+        "signal path",
+        "percorso del segnale",
+    )
+    return any(marker in text for marker in transfer_markers)
+
+
+def scenario_requires_temporal_expectation(scenario: dict[str, Any]) -> bool:
+    """Riconosce scenari che pretendono di correggere un comportamento periodico."""
+    compared = [str(item or "").strip().lower() for item in scenario.get("compare") or []]
+    has_led_observable = any(
+        quantity.startswith("@d") and quantity.endswith("[id]")
+        for quantity in compared
+    )
+    text = " ".join(
+        str(scenario.get(field) or "").strip().lower()
+        for field in ("title", "hypothesis")
+    )
+    temporal_markers = (
+        "blink",
+        "lampegg",
+        "period",
+        "altern",
+        "duty",
+        "impuls",
+        "oscill",
+        "astabil",
+        "frequen",
+        "veloc",
+        "rapid",
+        "fast",
+        "slow",
+        "rallent",
+    )
+    startup_action = any(
+        isinstance(action, dict)
+        and str(action.get("type") or "").strip() == "set_initial_node_voltage"
+        and action.get("skip_operating_point") is True
+        for action in scenario.get("actions") or []
+    )
+    mentions_temporal_load = any(
+        marker in text
+        for marker in ("led", "diodo luminos", "lamp", "carico pulsante")
+    )
+    has_temporal_claim = any(marker in text for marker in temporal_markers)
+    return (has_led_observable and (startup_action or has_temporal_claim)) or (
+        mentions_temporal_load and has_temporal_claim
+    )
+
+
+def scenario_requires_rate_expectation(scenario: dict[str, Any]) -> bool:
+    """Riconosce una correzione che deve dimostrare un ritmo piu lento."""
+    text = " ".join(
+        str(scenario.get(field) or "").strip().lower()
+        for field in ("title", "hypothesis")
+    )
+    return any(
+        marker in text
+        for marker in (
+            "frequen",
+            "veloc",
+            "rapid",
+            "fast",
+            "slow",
+            "rallent",
+            "period",
+            "flash rate",
+        )
+    )
+
+
+def temporal_expectation_is_valid(scenario: dict[str, Any]) -> bool:
+    """Valida la forma minima del criterio temporale registrabile da CHAT."""
+    expectation = scenario.get("temporal_expect")
+    if not isinstance(expectation, dict):
+        return False
+    target = expectation.get("target")
+    if not isinstance(target, str) or not target.strip():
+        return False
+    required_state = str(expectation.get("required_state") or "").strip().lower()
+    if required_state != "blinking":
+        return False
+    if expectation.get("require_regular_period") is not True:
+        return False
+    if scenario_requires_rate_expectation(scenario):
+        maximum_frequency = expectation.get("max_frequency_hz")
+        minimum_period_increase = expectation.get("min_relative_period_increase")
+        valid_maximum = (
+            isinstance(maximum_frequency, (int, float))
+            and not isinstance(maximum_frequency, bool)
+            and maximum_frequency > 0
+        )
+        valid_relative_increase = (
+            isinstance(minimum_period_increase, (int, float))
+            and not isinstance(minimum_period_increase, bool)
+            and minimum_period_increase >= 0
+        )
+        if not (valid_maximum or valid_relative_increase):
+            return False
+    return True
+
+
+def is_transient_diode_current(quantity: str) -> bool:
+    """Riconosce una corrente interna di diodo esportabile nel CSV transitorio."""
+    return bool(re.fullmatch(r"@d[^\[\]\s]+\[id\]", str(quantity or "").strip(), flags=re.IGNORECASE))
+
+
+def complete_transient_current_measurements(scenario: dict[str, Any]) -> dict[str, Any]:
+    """Completa le misure TRAN implicite senza cambiare azioni o aspettative."""
+    if str(scenario.get("analysis") or "op").strip().lower() != "tran":
+        return scenario
+
+    raw_measurements = scenario.get("measure")
+    if raw_measurements is not None and not isinstance(raw_measurements, dict):
+        return scenario
+
+    measurements = dict(raw_measurements or {})
+    normalized_names = {
+        str(quantity).strip().lower()
+        for quantity in measurements
+        if str(quantity).strip()
+    }
+    changed = False
+    for quantity in scenario.get("compare") or []:
+        quantity_text = str(quantity).strip()
+        if not is_transient_diode_current(quantity_text):
+            continue
+        if quantity_text.lower() in normalized_names:
+            continue
+        # La corrente e gia stata richiesta esplicitamente dal modello: qui
+        # aggiungiamo soltanto il metodo deterministico necessario a leggerla
+        # dal CSV, senza inventare grandezze o modifiche elettriche.
+        measurements[quantity_text] = "tran_abs_peak"
+        normalized_names.add(quantity_text.lower())
+        changed = True
+
+    if not changed:
+        return scenario
+    completed = dict(scenario)
+    completed["measure"] = measurements
+    return completed
+
+
 def scenario_is_executable(scenario: dict[str, Any]) -> bool:
-    """Uno scenario e eseguibile da step 12 solo se contiene azioni."""
+    """Accetta scenari con azioni e criteri `expect` direttamente verificabili."""
     actions = scenario.get("actions")
-    return isinstance(actions, list) and bool(actions)
+    expectations = scenario.get("expect")
+    gain = scenario.get("gain")
+    compared = {
+        str(item).strip().lower()
+        for item in scenario.get("compare") or []
+        if str(item).strip()
+    }
+    if not isinstance(actions, list) or not actions or not isinstance(expectations, dict) or not expectations:
+        return False
+    if repeated_target_assignments(actions):
+        return False
+    analysis = str(scenario.get("analysis") or "op").strip().lower()
+    if scenario_requires_temporal_expectation(scenario):
+        if analysis != "tran":
+            return False
+        if str(scenario.get("intent") or "").strip().lower() != "correction":
+            return False
+        if not temporal_expectation_is_valid(scenario):
+            return False
+    measurements = scenario.get("measure") or {}
+    if not isinstance(measurements, dict):
+        return False
+    normalized_measures = {
+        str(quantity).strip().lower(): str(measurement).strip().lower()
+        for quantity, measurement in measurements.items()
+        if str(quantity).strip()
+    }
+    # Una corrente interna di diodo e disponibile nel CSV soltanto come serie
+    # temporale. In una run TRAN richiede quindi il picco assoluto esplicito,
+    # altrimenti il confronto ricadrebbe impropriamente sul punto operativo.
+    if analysis == "tran":
+        for quantity in compared:
+            if is_transient_diode_current(quantity) and normalized_measures.get(quantity) != "tran_abs_peak":
+                return False
+    gain_required = scenario_requires_signal_gain(scenario)
+    if gain_required and not isinstance(gain, dict):
+        return False
+    if gain is not None:
+        if not isinstance(gain, dict) or analysis != "tran":
+            return False
+        gain_input = str(gain.get("input") or "").strip().lower()
+        gain_output = str(gain.get("output") or "").strip().lower()
+        if not gain_input or not gain_output or gain_input == gain_output:
+            return False
+        if gain_input not in compared or gain_output not in compared:
+            return False
+        raw_min_ratio = gain.get("min_ratio")
+        if gain_required and raw_min_ratio is None:
+            return False
+        if raw_min_ratio is not None:
+            try:
+                if float(raw_min_ratio) <= 0:
+                    return False
+            except (TypeError, ValueError):
+                return False
+    return all(
+        str(quantity).strip().lower() in compared
+        and str(expectation).strip().lower() in ALLOWED_EXPECTATIONS
+        for quantity, expectation in expectations.items()
+    )
 
 
 def register_experiment2_scenarios_from_response(
@@ -716,7 +918,7 @@ def register_experiment2_scenarios_from_response(
     experiment: str | None,
     response_text: str,
 ) -> dict[str, Any] | None:
-    """Estrae gli scenari da una risposta agente e li accoda al registry."""
+    """Registra solo gli scenari con azioni tecniche realmente eseguibili."""
     registry = read_experiment2_scenario_registry(output_dir, batch, circuit, experiment)
     chat_dir = build_experiment2_chat_dir(output_dir, experiment)
     if registry is None or chat_dir is None:
@@ -726,10 +928,13 @@ def register_experiment2_scenarios_from_response(
     if not extracted:
         return {"added": [], "summary": ""}
 
+    # Ricalcola anche le firme dei registry precedenti al formato action-only.
     existing_signatures = {
-        str(item.get("signature"))
+        registered_scenario_signature(
+            item.get("scenario") if isinstance(item.get("scenario"), dict) else item
+        )
         for item in registry.get("scenarios", [])
-        if isinstance(item, dict) and item.get("signature")
+        if isinstance(item, dict)
     }
     proposal_id = next_proposal_id(registry)
     proposal = {
@@ -744,6 +949,19 @@ def register_experiment2_scenarios_from_response(
     for local_index, raw_scenario in enumerate(extracted, start=1):
         scenario = normalize_human_text(json.dumps(unescape_html_entities(raw_scenario), ensure_ascii=False))
         scenario = json.loads(scenario)
+        # Compatibilita prudente con risposte CHAT precedenti: se il modello
+        # omette `intent`, lo scenario verifica un'ipotesi ma non puo fermare
+        # la diagnosi come correzione del sintomo.
+        scenario["intent"] = (
+            "correction"
+            if str(scenario.get("intent") or "").strip().lower() == "correction"
+            else "diagnostic"
+        )
+        scenario = complete_transient_current_measurements(scenario)
+        if not scenario_is_executable(scenario):
+            # Una conclusione o un dato mancante non deve occupare un numero
+            # scenario ne' essere suggerito come comando eseguibile.
+            continue
         signature = registered_scenario_signature(scenario)
         if signature in existing_signatures:
             continue
@@ -760,8 +978,13 @@ def register_experiment2_scenarios_from_response(
             "title": scenario.get("title") or scenario_id,
             "hypothesis": scenario.get("hypothesis"),
             "actions": scenario.get("actions") or [],
+            "intent": scenario.get("intent"),
             "analysis": scenario.get("analysis") or "op",
             "compare": scenario.get("compare") or [],
+            "measure": scenario.get("measure") or {},
+            "gain": scenario.get("gain"),
+            "temporal_expect": scenario.get("temporal_expect"),
+            "expect": scenario.get("expect") or {},
             "rerun_from": scenario.get("rerun_from"),
             "status": "proposed",
             "outcome": None,
@@ -1035,6 +1258,10 @@ def build_output_dir(
 
 def find_input_image_path(batch: str, circuit: str, output_dir: Path) -> Path | None:
     """Trova l'immagine originale usata dalla Pipeline 1.0, quando disponibile."""
+    declared_image = get_run_source_path(output_dir, "input_image")
+    if declared_image is not None and declared_image.is_file():
+        return declared_image
+
     graph = read_json_safe(output_dir / "01_graph.json")
     image_name = graph.get("image_name")
     image_candidates: list[Path] = []
@@ -1142,13 +1369,26 @@ def outcome_status_class(status: str) -> str:
     return "neutral"
 
 
-def render_run_selector(output_dir: Path, active_run: str) -> str:
+def append_workspace_mode(url: str, workspace_mode: str | None) -> str:
+    """Aggiunge la modalita workspace a un URL interno della web chat."""
+    if not workspace_mode:
+        return url
+    separator = "&" if "?" in url else "?"
+    return f"{url}{separator}mode={workspace_mode}"
+
+
+def render_run_selector(
+    output_dir: Path,
+    active_run: str,
+    workspace_mode: str | None = None,
+) -> str:
     """Crea la sidebar con base run e scenari disponibili."""
     base_status = build_status(output_dir)
     base_active = " active" if active_run == "base" else ""
+    base_url = append_workspace_mode("/", workspace_mode)
     sections = [
         f"""
-        <a class="run-item{base_active}" href="/">
+        <a class="run-item{base_active}" href="{html.escape(base_url)}">
           <strong>Base run</strong>
           <span>{html.escape(str(base_status["spice_status"]))}</span>
         </a>
@@ -1170,9 +1410,13 @@ def render_run_selector(output_dir: Path, active_run: str) -> str:
     for scenario in scenarios:
         scenario_active = " active" if active_run == scenario["id"] else ""
         state_class = run_status_class(scenario["status"])
+        scenario_url = append_workspace_mode(
+            f"/?run={html.escape(scenario['id'])}",
+            workspace_mode,
+        )
         sections.append(
             f"""
-            <a class="run-item scenario-run{scenario_active}" href="/?run={html.escape(scenario["id"])}">
+            <a class="run-item scenario-run{scenario_active}" href="{scenario_url}">
               <strong>{html.escape(scenario["scenario_id"])}</strong>
               <span class="{state_class}">{html.escape(scenario["status"])}</span>
               <small>{html.escape(scenario["title"])}</small>
@@ -1226,9 +1470,14 @@ def render_artifact_sections(artifact_dir: Path, artifacts: list[tuple[str, str,
     return "\n".join(sections)
 
 
-def render_artifacts(output_dir: Path, plot_url: str = "/artifact/08_tran_plot.png") -> str:
+def render_artifacts(
+    output_dir: Path,
+    plot_url: str = "/artifact/08_tran_plot.png",
+    workspace_mode: str | None = None,
+) -> str:
     """Crea i pannelli richiudibili con gli artefatti della pipeline."""
     sections: list[str] = [render_artifact_sections(output_dir, ARTIFACTS)]
+    plot_url = append_workspace_mode(plot_url, workspace_mode)
 
     plot_path = output_dir / "08_tran_plot.png"
     if plot_path.exists():
@@ -1284,9 +1533,9 @@ def load_step15_module() -> Any:
 
 def load_or_build_viewer_model(run_dir: Path) -> dict[str, Any]:
     """Legge o genera `13_viewer_model.json` senza bloccare la web chat."""
-    model_path = run_dir / "13_viewer_model.json"
+    model_path = run_dir / VIEWER_MODEL_NAME
     model = read_json_safe(model_path)
-    if model and int(model.get("schema_version") or 0) >= 10:
+    if model and int(model.get("schema_version") or 0) >= VIEWER_MODEL_SCHEMA_VERSION:
         return model
     step13 = load_step13_module()
     built = step13.write_viewer_model(run_dir)
@@ -1295,9 +1544,9 @@ def load_or_build_viewer_model(run_dir: Path) -> dict[str, Any]:
 
 def load_or_build_viewer_layout(run_dir: Path) -> dict[str, Any]:
     """Legge o genera `14_viewer_layout.json` nel formato generale corrente."""
-    layout_path = run_dir / "14_viewer_layout.json"
+    layout_path = run_dir / VIEWER_LAYOUT_NAME
     layout = read_json_safe(layout_path)
-    if layout and int(layout.get("schema_version") or 0) >= 23:
+    if layout and int(layout.get("schema_version") or 0) >= VIEWER_LAYOUT_SCHEMA_VERSION:
         return layout
     step14 = load_step14_module()
     built = step14.write_viewer_layout(run_dir)
@@ -1306,12 +1555,14 @@ def load_or_build_viewer_layout(run_dir: Path) -> dict[str, Any]:
 
 def load_or_build_viewer_svg(run_dir: Path) -> str:
     """Legge o genera `15_viewer.svg` senza inserire logica grafica nella web chat."""
-    svg_path = run_dir / "15_viewer.svg"
-    model_path = run_dir / "13_viewer_model.json"
-    layout_path = run_dir / "14_viewer_layout.json"
+    svg_path = run_dir / VIEWER_SVG_NAME
+    model_path = run_dir / VIEWER_MODEL_NAME
+    layout_path = run_dir / VIEWER_LAYOUT_NAME
     dependencies = [path for path in (model_path, layout_path) if path.exists()]
     if svg_path.exists() and dependencies and svg_path.stat().st_mtime >= max(path.stat().st_mtime for path in dependencies):
-        return svg_path.read_text(encoding="utf-8")
+        svg = svg_path.read_text(encoding="utf-8")
+        if f'data-viewer-version="{VIEWER_RENDER_VERSION}"' in svg:
+            return svg
     step15 = load_step15_module()
     svg = step15.write_viewer_svg(run_dir)
     return svg if isinstance(svg, str) else ""
@@ -1497,7 +1748,11 @@ def render_comparison_summary(scenario_dir: Path) -> str:
     """
 
 
-def render_scenario_content(output_dir: Path, scenario_name: str) -> dict[str, str]:
+def render_scenario_content(
+    output_dir: Path,
+    scenario_name: str,
+    workspace_mode: str | None = None,
+) -> dict[str, str]:
     """Renderizza titolo, stato e artefatti per una scenario run."""
     if not is_safe_scenario_name(scenario_name):
         return {
@@ -1527,6 +1782,7 @@ def render_scenario_content(output_dir: Path, scenario_name: str) -> dict[str, s
     run_artifacts = render_artifacts(
         run_dir,
         plot_url=f"/scenario-artifact/{html.escape(scenario_name)}/run/08_tran_plot.png",
+        workspace_mode=workspace_mode,
     )
 
     return {
@@ -1538,7 +1794,12 @@ def render_scenario_content(output_dir: Path, scenario_name: str) -> dict[str, s
     }
 
 
-def render_image_section(batch: str, circuit: str, output_dir: Path) -> str:
+def render_image_section(
+    batch: str,
+    circuit: str,
+    output_dir: Path,
+    workspace_mode: str | None = None,
+) -> str:
     """Crea il pannello con l'immagine originale del circuito."""
     image_path = find_input_image_path(batch, circuit, output_dir)
     if image_path is None:
@@ -1554,6 +1815,7 @@ def render_image_section(batch: str, circuit: str, output_dir: Path) -> str:
         </details>
         """
 
+    image_url = append_workspace_mode("/input-image", workspace_mode)
     return f"""
     <details class="artifact" open>
       <summary>
@@ -1561,7 +1823,7 @@ def render_image_section(batch: str, circuit: str, output_dir: Path) -> str:
         <small>{html.escape(project_relative(image_path))}</small>
       </summary>
       <div class="image-wrap">
-        <img src="/input-image" alt="Original circuit image">
+        <img src="{html.escape(image_url)}" alt="Original circuit image">
       </div>
     </details>
     """
@@ -1587,29 +1849,84 @@ def fill_template(template: str, values: dict[str, str]) -> str:
     return rendered
 
 
+def render_workspace_switch(
+    active_mode: str | None,
+    available_modes: tuple[str, ...],
+) -> str:
+    """Crea lo switch CHAT/AGENT quando il server espone piu workspace."""
+    if len(available_modes) < 2:
+        return ""
+
+    items: list[str] = []
+    for mode in available_modes:
+        active_class = " active" if mode == active_mode else ""
+        label = "AGENT" if mode == "agent" else mode.upper()
+        items.append(
+            f'<a class="workspace-tab{active_class}" href="/?mode={html.escape(mode)}">'
+            f"{html.escape(label)}</a>"
+        )
+    return '<nav class="workspace-switch" aria-label="Modalita diagnostica">' + "".join(items) + "</nav>"
+
+
 def render_page(
     batch: str,
     circuit: str,
     output_dir: Path,
     active_run: str = "base",
     experiment: str | None = None,
+    workspace_mode: str | None = None,
+    available_workspace_modes: tuple[str, ...] = (),
 ) -> str:
     """Renderizza la pagina HTML principale usando il template esterno."""
     template = read_text_safe(INDEX_TEMPLATE)
     active_run = active_run if active_run else "base"
     circuit_label = f"{batch} / {experiment} / {circuit}" if experiment else f"{batch} / {circuit}"
+    if workspace_mode:
+        circuit_label = f"{batch} / {experiment} / {workspace_mode} / {circuit}"
+    workspace_storage_suffix = f"_{workspace_mode}" if workspace_mode else ""
     chat_storage_key = (
-        f"pipeline2_chat_{batch}_{experiment}_{circuit}"
+        f"pipeline2_chat_{batch}_{experiment}_{circuit}{workspace_storage_suffix}"
         if experiment
         else f"pipeline2_chat_{batch}_{circuit}"
     )
     model_storage_key = (
-        f"pipeline2_chat_model_{batch}_{experiment}_{circuit}"
+        f"pipeline2_chat_model_{batch}_{experiment}_{circuit}{workspace_storage_suffix}"
         if experiment
         else f"pipeline2_chat_model_{batch}_{circuit}"
     )
     server_chat_history_items = build_server_chat_history_items(output_dir, batch, circuit, experiment)
     chat_history_enabled = is_experiment2_history_enabled(experiment)
+    chat_panel_title = "Agente diagnostico" if workspace_mode == "agent" else "Chat diagnostica"
+    chat_panel_description = (
+        "Segui ipotesi, test controllati ed evidenze prodotte dalla diagnosi autonoma."
+        if workspace_mode == "agent"
+        else "Descrivi il sintomo e l'agente analizzera gli output SPICE e gli scenari gia eseguiti."
+    )
+    workspace_label = "AGENT" if workspace_mode == "agent" else "CHAT"
+    layout_mode_class = " agent-layout" if workspace_mode == "agent" else ""
+    chat_mode_class = " agent-workspace" if workspace_mode == "agent" else ""
+    chat_actions_class = " agent-mode" if workspace_mode == "agent" else ""
+    agent_header_status = (
+        '<span class="agent-header-status neutral" id="agentHeaderStatus">'
+        '<i aria-hidden="true"></i><span>Pronto</span></span>'
+        if workspace_mode == "agent"
+        else ""
+    )
+    agent_stop_button = (
+        '<button class="agent-stop" id="stopAgentButton" type="button">Stop</button>'
+        if workspace_mode == "agent"
+        else ""
+    )
+    welcome_message = (
+        "Descrivi il sintomo: l'agente eseguira test controllati fino alla conclusione o al limite di sicurezza."
+        if workspace_mode == "agent"
+        else "Descrivi il sintomo del circuito e analizzero gli output correnti della pipeline."
+    )
+    chat_input_placeholder = (
+        "Descrivi il comportamento desiderato per il circuito..."
+        if workspace_mode == "agent"
+        else "Esempio: Perche il LED non si accende?"
+    )
 
     if active_run == "base":
         status = build_status(output_dir)
@@ -1618,27 +1935,59 @@ def render_page(
         title = "Base run"
         subtitle = project_relative(output_dir)
         status_cards = render_status_cards(status)
-        image_section = render_viewer_section(output_dir) + render_image_section(batch, circuit, output_dir)
-        artifacts = render_artifacts(output_dir)
+        image_section = render_viewer_section(output_dir) + render_image_section(
+            batch,
+            circuit,
+            output_dir,
+            workspace_mode,
+        )
+        artifacts = render_artifacts(output_dir, workspace_mode=workspace_mode)
     else:
         available_scenarios = {scenario["id"] for scenario in list_scenario_runs(output_dir)}
         if active_run not in available_scenarios:
-            return render_page(batch, circuit, output_dir, active_run="base", experiment=experiment)
-        scenario_content = render_scenario_content(output_dir, active_run)
+            return render_page(
+                batch,
+                circuit,
+                output_dir,
+                active_run="base",
+                experiment=experiment,
+                workspace_mode=workspace_mode,
+                available_workspace_modes=available_workspace_modes,
+            )
+        scenario_content = render_scenario_content(output_dir, active_run, workspace_mode)
         scenario_state = read_scenario_status(output_dir / "scenarios" / active_run).get("status") or "not available"
         header_meta = f"{circuit_label} - {active_run} - {scenario_state}"
         title = scenario_content["title"]
         subtitle = scenario_content.get("subtitle") or scenario_content["output_dir"]
         status_cards = scenario_content["status_cards"]
         scenario_run_dir = output_dir / "scenarios" / active_run / "run"
-        image_section = render_viewer_section(scenario_run_dir) + render_image_section(batch, circuit, output_dir)
+        image_section = render_viewer_section(scenario_run_dir) + render_image_section(
+            batch,
+            circuit,
+            output_dir,
+            workspace_mode,
+        )
         artifacts = scenario_content["artifacts"]
 
     return fill_template(
         template,
         {
             "PAGE_TITLE": html.escape(f"Pipeline 2.0 Diagnostic Chat - {circuit}"),
+            "AGENT_VIEW_STYLES": read_text_safe(AGENT_VIEW_STYLE),
+            "AGENT_VIEW_SCRIPT": read_text_safe(AGENT_VIEW_SCRIPT),
             "HEADER_META": html.escape(header_meta),
+            "WORKSPACE_SWITCH": render_workspace_switch(workspace_mode, available_workspace_modes),
+            "ACTIVE_WORKSPACE_MODE": html.escape(workspace_mode or ""),
+            "CHAT_PANEL_TITLE": html.escape(chat_panel_title),
+            "CHAT_PANEL_DESCRIPTION": html.escape(chat_panel_description),
+            "WORKSPACE_LABEL": html.escape(workspace_label),
+            "LAYOUT_MODE_CLASS": layout_mode_class,
+            "CHAT_MODE_CLASS": chat_mode_class,
+            "CHAT_ACTIONS_CLASS": chat_actions_class,
+            "AGENT_HEADER_STATUS": agent_header_status,
+            "AGENT_STOP_BUTTON": agent_stop_button,
+            "WELCOME_MESSAGE": html.escape(welcome_message),
+            "CHAT_INPUT_PLACEHOLDER": html.escape(chat_input_placeholder),
             "CHAT_STORAGE_KEY": html.escape(chat_storage_key),
             "MODEL_STORAGE_KEY": html.escape(model_storage_key),
             "DEFAULT_CHAT_MODEL": html.escape(CHAT_MODEL),
@@ -1646,7 +1995,7 @@ def render_page(
             "SERVER_CHAT_HISTORY_JSON": json_for_html(server_chat_history_items),
             "SERVER_CHAT_HISTORY_ENABLED": "true" if chat_history_enabled else "false",
             "MODEL_OPTIONS": render_model_options(CHAT_MODEL),
-            "RUN_SELECTOR": render_run_selector(output_dir, active_run),
+            "RUN_SELECTOR": render_run_selector(output_dir, active_run, workspace_mode),
             "ACTIVE_RUN_TITLE": html.escape(title),
             "OUTPUT_DIR": html.escape(subtitle),
             "STATUS_CARDS": status_cards,
@@ -1661,17 +2010,6 @@ def load_step10_module() -> Any:
     spec = importlib.util.spec_from_file_location("pipeline2_step10", STEP10_PATH)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"Unable to load step 10 from {STEP10_PATH}")
-
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-def load_step12_module() -> Any:
-    """Carica lo step 12 anche se il file inizia con un numero."""
-    spec = importlib.util.spec_from_file_location("pipeline2_step12", STEP12_PATH)
-    if spec is None or spec.loader is None:
-        raise RuntimeError(f"Unable to load step 12 from {STEP12_PATH}")
 
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -1910,126 +2248,13 @@ def safe_scenario_dir_name(scenario_id: str) -> str:
 
 
 def count_existing_scenario_dirs(output_dir: Path) -> int:
-    """Conta quante cartelle scenario esistono gia per il circuito."""
-    scenarios_root = output_dir / "scenarios"
-    if not scenarios_root.exists() or not scenarios_root.is_dir():
-        return 0
-    return sum(1 for path in scenarios_root.iterdir() if path.is_dir())
+    """Conta le run scenario realmente eseguite, non le sole cartelle."""
+    return count_executed_scenarios(output_dir)
 
 
 def is_safe_scenario_name(name: str) -> bool:
     """Accetta solo nomi scenario semplici usabili come directory locali."""
     return bool(re.fullmatch(r"[A-Za-z0-9_.-]+", name)) and name not in {".", ".."}
-
-
-def prepare_scenario_folder(
-    output_dir: Path,
-    selected: dict[str, Any],
-    requested_index: int | str,
-    response_path: Path,
-) -> dict[str, Path]:
-    """
-    Prepara la cartella dello scenario senza eseguirlo.
-
-    Questo e lo step 2: salviamo solo i metadati necessari alla futura
-    esecuzione controllata, senza modificare la base run e senza chiamare SPICE.
-    """
-    fallback_id = "scenario_latest" if requested_index == "latest" else f"scenario_{requested_index}"
-    scenario_id = str(selected.get("scenario_id") or fallback_id)
-    scenario_dir = output_dir / "scenarios" / safe_scenario_dir_name(scenario_id)
-    scenario_dir.mkdir(parents=True, exist_ok=True)
-
-    scenario_path = scenario_dir / "scenario.json"
-    status_path = scenario_dir / "scenario_status.json"
-    scenario_payload = {
-        key: value
-        for key, value in selected.items()
-        if not str(key).startswith("_registry_")
-    }
-
-    status = {
-        "status": "prepared",
-        "stage": "scenario_folder_created",
-        "message": "Scenario selected and saved. No pipeline files were modified and SPICE was not executed.",
-        "scenario_id": scenario_id,
-        "requested_index": requested_index,
-        "base_output_dir": project_relative(output_dir),
-        "source_agent_response": project_relative(response_path),
-        "scenario_file": project_relative(scenario_path),
-        "created_or_updated_at": datetime.now().isoformat(timespec="seconds"),
-        "next_step": "Implement controlled scenario execution in 12_controlled_scenarios.py.",
-    }
-
-    scenario_path.write_text(json.dumps(scenario_payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    status_path.write_text(json.dumps(status, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-
-    return {
-        "scenario_dir": scenario_dir,
-        "scenario_path": scenario_path,
-        "status_path": status_path,
-    }
-
-
-def copy_base_run_for_scenario(output_dir: Path, scenario_dir: Path) -> dict[str, Any]:
-    """
-    Crea le cartelle base_snapshot e run dello scenario.
-
-    base_snapshot conserva una copia degli output originali 01-08.
-    run contiene la copia che in futuro potra essere modificata dallo scenario.
-    """
-    base_snapshot_dir = scenario_dir / "base_snapshot"
-    run_dir = scenario_dir / "run"
-    base_snapshot_dir.mkdir(parents=True, exist_ok=True)
-    run_dir.mkdir(parents=True, exist_ok=True)
-
-    copied_files: list[str] = []
-    missing_files: list[str] = []
-
-    for filename in SCENARIO_BASE_FILES:
-        source_path = output_dir / filename
-        if not source_path.exists() or not source_path.is_file():
-            missing_files.append(filename)
-            continue
-
-        shutil.copy2(source_path, base_snapshot_dir / filename)
-        shutil.copy2(source_path, run_dir / filename)
-        copied_files.append(filename)
-
-    manifest = {
-        "status": "copied",
-        "message": "Base run copied into base_snapshot and run. No scenario action was applied.",
-        "base_output_dir": project_relative(output_dir),
-        "base_snapshot_dir": project_relative(base_snapshot_dir),
-        "run_dir": project_relative(run_dir),
-        "copied_files": copied_files,
-        "missing_optional_files": missing_files,
-        "created_or_updated_at": datetime.now().isoformat(timespec="seconds"),
-    }
-    manifest_path = scenario_dir / "scenario_copy_manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-
-    return {
-        "base_snapshot_dir": base_snapshot_dir,
-        "run_dir": run_dir,
-        "manifest_path": manifest_path,
-        "copied_files": copied_files,
-        "missing_files": missing_files,
-    }
-
-
-def apply_controlled_scenario(
-    scenario_dir: Path,
-    run_spice: bool = True,
-    ngspice_executable: str | None = None,
-) -> dict[str, Any]:
-    """Chiama lo step 12 per applicare le azioni supportate ed eseguire SPICE."""
-    step12 = load_step12_module()
-    report = step12.apply_scenario(
-        scenario_dir,
-        run_spice=run_spice,
-        ngspice_executable=ngspice_executable,
-    )
-    return report if isinstance(report, dict) else {}
 
 
 def build_scenario_result_explanation(
@@ -2104,16 +2329,30 @@ def build_scenario_result_explanation(
                 *changed_lines,
             ]
         )
-    lines.extend(
-        [
-            "",
-            (
-                "Interpretazione pratica: il comportamento osservato nello scenario spiega il sintomo meglio della run base, quindi per ora non serve continuare automaticamente con altri scenari."
-                if stop_automation
-                else "Interpretazione pratica: il comportamento osservato nello scenario aggiunge evidenza utile rispetto alla run base, ma non chiude ancora da solo la diagnosi."
-            ),
-        ]
+    practical_sentence = {
+        "resolved_candidate": (
+            "Interpretazione pratica: il comportamento osservato spiega il sintomo "
+            "meglio della run base e fornisce evidenza sufficiente per fermare i test automatici."
+            if stop_automation
+            else "Interpretazione pratica: il comportamento osservato supporta fortemente l'ipotesi testata."
+        ),
+        "partially_resolved": (
+            "Interpretazione pratica: lo scenario aggiunge evidenza utile sul ramo testato, "
+            "ma non chiude ancora da solo la diagnosi."
+        ),
+        "not_resolved": (
+            "Interpretazione pratica: lo scenario non supporta l'ipotesi testata; "
+            "conviene valutare un'ipotesi diversa usando le evidenze gia raccolte."
+        ),
+        "unknown": (
+            "Interpretazione pratica: il confronto resta inconcludente e non permette "
+            "di confermare o escludere l'ipotesi testata."
+        ),
+    }.get(
+        outcome_status,
+        "Interpretazione pratica: il risultato richiede ancora una valutazione diagnostica mirata.",
     )
+    lines.extend(["", practical_sentence])
     return "\n".join(lines)
 
 
@@ -2160,6 +2399,17 @@ def handle_scenario_request(
         registry = sync_scenario_registry_with_existing_runs(output_dir, batch, circuit, experiment)
     selected = select_scenario_from_registry(registry, requested_index) if registry else None
     scenarios: list[dict[str, Any]] = []
+
+    if selected is None and registry is not None:
+        return {
+            "reply": (
+                f"Ho riconosciuto la richiesta per lo scenario {requested_label}, "
+                "ma quello scenario non risulta registrato come eseguibile.\n\n"
+                "Non eseguo direttamente blocchi tecnici scartati dal registro. "
+                "Puoi scrivere `mostra scenari` oppure chiedere una nuova proposta eseguibile."
+            ),
+            "debug": ["Blocked execution of an unregistered scenario"],
+        }
 
     if selected is None:
         if not response_path.exists():
@@ -2215,34 +2465,51 @@ def handle_scenario_request(
             ],
         }
 
-    scenario_paths = prepare_scenario_folder(
-        output_dir=output_dir,
-        selected=selected,
-        requested_index=requested_index,
-        response_path=response_path,
-    )
-    copy_result = copy_base_run_for_scenario(
-        output_dir=output_dir,
-        scenario_dir=scenario_paths["scenario_dir"],
-    )
-    apply_report = apply_controlled_scenario(
-        scenario_paths["scenario_dir"],
-        run_spice=True,
-        ngspice_executable=ngspice_executable,
-    )
-    viewer_model_path = copy_result["run_dir"] / "13_viewer_model.json"
-    viewer_layout_path = copy_result["run_dir"] / "14_viewer_layout.json"
-    viewer_debug = ""
+    scenario_payload = {
+        key: value
+        for key, value in selected.items()
+        if not str(key).startswith("_registry_")
+    }
     try:
-        load_or_build_viewer_model(copy_result["run_dir"])
-        load_or_build_viewer_layout(copy_result["run_dir"])
-        load_or_build_viewer_svg(copy_result["run_dir"])
-        viewer_debug = (
-            f"Viewer model: {project_relative(viewer_model_path)}; "
-            f"layout: {project_relative(viewer_layout_path)}"
+        runtime_result = execute_shared_scenario(
+            output_dir=output_dir,
+            scenario=scenario_payload,
+            ngspice_executable=ngspice_executable,
+            source_label="guided_chat",
+            reject_duplicates=True,
         )
-    except Exception as exc:
-        viewer_debug = f"Generazione viewer fallita: {exc}"
+    except ScenarioRuntimeError as exc:
+        return {
+            "reply": f"Lo scenario non e stato eseguito: {exc}",
+            "debug": [f"Scenario runtime rejected: {exc}"],
+        }
+
+    scenario_dir = Path(str(runtime_result["scenario_dir"]))
+    run_dir = Path(str(runtime_result["run_dir"]))
+    # Ricostruisce i percorsi prodotti dal runtime condiviso per la risposta CHAT.
+    scenario_paths = {
+        "scenario_dir": scenario_dir,
+        "scenario_path": scenario_dir / "scenario.json",
+        "status_path": scenario_dir / "scenario_status.json",
+    }
+    copy_manifest = read_json_safe(scenario_dir / "scenario_copy_manifest.json")
+    copy_result = {
+        "base_snapshot_dir": scenario_dir / "base_snapshot",
+        "run_dir": run_dir,
+        "manifest_path": scenario_dir / "scenario_copy_manifest.json",
+        "copied_files": list(copy_manifest.get("copied_files") or []),
+    }
+    apply_report = read_json_safe(scenario_dir / "12_controlled_scenarios.json")
+    viewer_data = runtime_result.get("viewer") if isinstance(runtime_result.get("viewer"), dict) else {}
+    viewer_model_path = Path(str(viewer_data.get("model") or run_dir / VIEWER_MODEL_NAME))
+    viewer_layout_path = Path(str(viewer_data.get("layout") or run_dir / VIEWER_LAYOUT_NAME))
+    viewer_svg_path = Path(str(viewer_data.get("svg") or run_dir / VIEWER_SVG_NAME))
+    viewer_debug = (
+        f"Viewer model: {project_relative(Path(str(viewer_data.get('model'))))}; "
+        f"layout: {project_relative(Path(str(viewer_data.get('layout'))))}"
+        if viewer_data
+        else f"Generazione viewer fallita: {runtime_result.get('viewer_error') or 'output non disponibile'}"
+    )
     applied_actions = apply_report.get("applied_actions") or []
     failed_actions = apply_report.get("failed_actions") or []
     unsupported_actions = apply_report.get("unsupported_actions") or []
@@ -2332,6 +2599,7 @@ def handle_scenario_request(
             project_relative(scenario_paths["scenario_dir"] / "scenario_comparison.json"),
             project_relative(viewer_model_path),
             project_relative(viewer_layout_path),
+            project_relative(viewer_svg_path),
         ],
         "used_image": False,
         "debug": [
@@ -2359,7 +2627,7 @@ def handle_scenario_request(
 
 
 class WebChatHandler(BaseHTTPRequestHandler):
-    """Gestisce la pagina web e le piccole API locali dello scheletro."""
+    """Gestisce la pagina web e le API locali della sessione diagnostica."""
 
     server: "WebChatServer"
 
@@ -2387,7 +2655,22 @@ class WebChatHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         """Serve pagina HTML principale e artefatti statici della run."""
         parsed = urlparse(self.path)
+        workspace_mode = self.server.bind_request_workspace(parsed.query)
         path = parsed.path
+
+        if path == "/api/agent/state":
+            if workspace_mode != "agent":
+                self.send_text(403, "AGENT workspace required")
+                return
+            body = json.dumps(
+                summarize_autonomous_state(
+                    read_autonomous_state(self.server.output_dir),
+                    self.server.output_dir,
+                ),
+                ensure_ascii=False,
+            )
+            self.send_text(200, body, "application/json; charset=utf-8")
+            return
 
         if path == "/":
             query = parsed.query
@@ -2402,6 +2685,8 @@ class WebChatHandler(BaseHTTPRequestHandler):
                 self.server.output_dir,
                 active_run=active_run,
                 experiment=self.server.experiment,
+                workspace_mode=workspace_mode,
+                available_workspace_modes=self.server.available_workspace_modes,
             )
             self.send_text(200, page, "text/html; charset=utf-8")
             return
@@ -2466,6 +2751,78 @@ class WebChatHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         """Riceve messaggi chat e restituisce una risposta placeholder."""
         parsed = urlparse(self.path)
+        workspace_mode = self.server.bind_request_workspace(parsed.query)
+
+        if parsed.path.startswith("/api/agent/"):
+            if workspace_mode != "agent":
+                self.send_text(403, "AGENT workspace required")
+                return
+            content_length = int(self.headers.get("Content-Length") or 0)
+            raw_body = self.rfile.read(content_length) if content_length else b"{}"
+            try:
+                payload = json.loads(raw_body.decode("utf-8"))
+            except json.JSONDecodeError:
+                payload = {}
+            if not isinstance(payload, dict):
+                payload = {}
+
+            try:
+                if parsed.path == "/api/agent/start":
+                    symptom = str(payload.get("message") or "").strip()
+                    model = normalize_chat_model(str(payload.get("model") or "").strip() or None)
+                    start_autonomous_diagnosis(self.server.output_dir, symptom, model)
+                    append_experiment2_chat_event(
+                        output_dir=self.server.output_dir,
+                        batch=self.server.batch,
+                        circuit=self.server.circuit,
+                        experiment=self.server.experiment,
+                        role="user",
+                        content=symptom,
+                        model=None,
+                        selected_run="base",
+                        used_image=False,
+                    )
+                    state = run_autonomous_iteration(
+                        output_dir=self.server.output_dir,
+                        batch=self.server.batch,
+                        circuit=self.server.circuit,
+                        experiment=str(self.server.experiment or "experiment4"),
+                        ngspice_executable=self.server.ngspice_executable,
+                    )
+                elif parsed.path == "/api/agent/step":
+                    state = run_autonomous_iteration(
+                        output_dir=self.server.output_dir,
+                        batch=self.server.batch,
+                        circuit=self.server.circuit,
+                        experiment=str(self.server.experiment or "experiment4"),
+                        ngspice_executable=self.server.ngspice_executable,
+                    )
+                elif parsed.path == "/api/agent/stop":
+                    state = stop_autonomous_diagnosis(self.server.output_dir)
+                else:
+                    self.send_text(404, "Not found")
+                    return
+            except AutonomousControllerError as exc:
+                body = json.dumps({"status": "error", "continue": False, "reply": str(exc)}, ensure_ascii=False)
+                self.send_text(400, body, "application/json; charset=utf-8")
+                return
+
+            summary = summarize_autonomous_state(state, self.server.output_dir)
+            append_experiment2_chat_event(
+                output_dir=self.server.output_dir,
+                batch=self.server.batch,
+                circuit=self.server.circuit,
+                experiment=self.server.experiment,
+                role="system" if parsed.path == "/api/agent/stop" else "assistant",
+                content=str(summary.get("reply") or ""),
+                model=str(state.get("model") or "") or None,
+                selected_run=str(summary.get("last_active_run") or "base"),
+                used_image=False,
+            )
+            body = json.dumps(summary, ensure_ascii=False)
+            self.send_text(200, body, "application/json; charset=utf-8")
+            return
+
         if parsed.path == "/api/chat-history/clear":
             clear_result = clear_experiment2_session_state(
                 output_dir=self.server.output_dir,
@@ -2473,6 +2830,8 @@ class WebChatHandler(BaseHTTPRequestHandler):
                 circuit=self.server.circuit,
                 experiment=self.server.experiment,
             )
+            if workspace_mode == "agent":
+                clear_result["autonomous_state_cleared"] = clear_diagnosis(self.server.output_dir)
             body = json.dumps(clear_result, ensure_ascii=False)
             self.send_text(200, body, "application/json; charset=utf-8")
             return
@@ -2652,13 +3011,119 @@ class WebChatServer(ThreadingHTTPServer):
         output_dir: Path,
         experiment: str | None = None,
         ngspice_executable: str | None = None,
+        workspace_dirs: dict[str, Path] | None = None,
+        default_workspace_mode: str | None = None,
     ) -> None:
+        """Inizializza il server e gli eventuali workspace selezionabili."""
         super().__init__(server_address, handler_class)
         self.batch = batch
         self.circuit = circuit
         self.experiment = experiment
-        self.output_dir = output_dir
+        self._default_output_dir = output_dir
+        self.workspace_dirs = dict(workspace_dirs or {})
+        self.default_workspace_mode = default_workspace_mode
+        self._request_workspace = threading.local()
         self.ngspice_executable = ngspice_executable
+
+    @property
+    def output_dir(self) -> Path:
+        """Restituisce la root associata alla richiesta HTTP corrente."""
+        return getattr(self._request_workspace, "output_dir", self._default_output_dir)
+
+    @property
+    def available_workspace_modes(self) -> tuple[str, ...]:
+        """Elenca in ordine stabile le modalita offerte dalla pagina."""
+        return tuple(self.workspace_dirs.keys())
+
+    def bind_request_workspace(self, query: str) -> str | None:
+        """Associa la richiesta corrente al workspace indicato nell'URL."""
+        if not self.workspace_dirs:
+            self._request_workspace.output_dir = self._default_output_dir
+            self._request_workspace.mode = None
+            return None
+
+        requested_mode = str((parse_qs(query).get("mode") or [""])[0]).strip().lower()
+        selected_mode = requested_mode if requested_mode in self.workspace_dirs else self.default_workspace_mode
+        if selected_mode not in self.workspace_dirs:
+            selected_mode = next(iter(self.workspace_dirs))
+
+        self._request_workspace.output_dir = self.workspace_dirs[selected_mode]
+        self._request_workspace.mode = selected_mode
+        return selected_mode
+
+
+def serve_web_chat(
+    *,
+    batch: str,
+    circuit: str,
+    output_dir: Path,
+    experiment: str | None = None,
+    variant: str | None = None,
+    host: str = "127.0.0.1",
+    port: int = 8765,
+    ngspice_executable: str | None = None,
+    workspace_dirs: dict[str, Path] | None = None,
+    default_workspace_mode: str | None = None,
+    open_browser: bool = True,
+) -> None:
+    """Avvia la webchat su directory gia risolte dal chiamante.
+
+    L'interfaccia esplicita permette all'orchestratore unificato di fornire le
+    due copie CHAT/AGENT senza dipendere dalla struttura storica degli output.
+    """
+    resolved_output_dir = Path(output_dir).resolve()
+    resolved_workspaces = {
+        mode: Path(path).resolve()
+        for mode, path in (workspace_dirs or {}).items()
+    }
+    missing_workspaces = [
+        mode for mode, path in resolved_workspaces.items() if not path.is_dir()
+    ]
+    if missing_workspaces:
+        raise FileNotFoundError(
+            "Workspace web mancanti: " + ", ".join(missing_workspaces)
+        )
+    if not resolved_output_dir.is_dir():
+        raise FileNotFoundError(
+            f"Directory output Pipeline 2.0 non trovata: {resolved_output_dir}"
+        )
+    if not INDEX_TEMPLATE.is_file():
+        raise FileNotFoundError(f"Template webchat non trovato: {INDEX_TEMPLATE}")
+
+    server = WebChatServer(
+        (host, port),
+        WebChatHandler,
+        batch=batch,
+        circuit=circuit,
+        experiment=experiment,
+        output_dir=resolved_output_dir,
+        ngspice_executable=ngspice_executable,
+        workspace_dirs=resolved_workspaces,
+        default_workspace_mode=default_workspace_mode,
+    )
+
+    url = f"http://{host}:{port}/"
+    if default_workspace_mode:
+        url += f"?mode={default_workspace_mode}"
+    print(f"Pipeline 2.0 diagnostic web chat: {url}")
+    if experiment:
+        print(f"Experiment: {experiment}")
+    if variant:
+        print(f"Variant: {variant}")
+    if resolved_workspaces:
+        print(f"Workspace modes: {', '.join(resolved_workspaces)}")
+    print(f"Output directory: {resolved_output_dir}")
+    print("Press Ctrl+C to stop the temporary local server.")
+
+    if open_browser and os.environ.get("PIPELINE2_NO_BROWSER") != "1":
+        webbrowser.open(url)
+
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nStopping web chat server.")
+    finally:
+        server.server_close()
 
 
 def parse_args() -> argparse.Namespace:
@@ -2687,7 +3152,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
-    """Avvia il server locale temporaneo."""
+    """Avvia il server diagnostico locale."""
     args = parse_args()
     if not is_safe_path_name(args.experiment):
         raise SystemExit(f"Invalid experiment name: {args.experiment}")
@@ -2696,41 +3161,40 @@ def main() -> None:
     if args.variant and not args.experiment:
         raise SystemExit("--variant requires --experiment.")
 
-    output_dir = build_output_dir(args.batch, args.circuit, args.experiment, args.variant)
-
-    if not output_dir.exists():
-        raise SystemExit(f"Pipeline 2.0 output directory not found: {output_dir}")
-    if not INDEX_TEMPLATE.exists():
-        raise SystemExit(f"Web chat template not found: {INDEX_TEMPLATE}")
-
-    server = WebChatServer(
-        (args.host, args.port),
-        WebChatHandler,
-        batch=args.batch,
-        circuit=args.circuit,
-        experiment=args.experiment,
-        output_dir=output_dir,
-        ngspice_executable=args.ngspice_executable,
-    )
-
-    url = f"http://{args.host}:{args.port}/"
-    print(f"Pipeline 2.0 diagnostic web chat: {url}")
-    if args.experiment:
-        print(f"Experiment: {args.experiment}")
-    if args.variant:
-        print(f"Variant: {args.variant}")
-    print(f"Output directory: {output_dir}")
-    print("Press Ctrl+C to stop the temporary local server.")
-
-    if not args.no_browser and os.environ.get("PIPELINE2_NO_BROWSER") != "1":
-        webbrowser.open(url)
+    workspace_dirs: dict[str, Path] = {}
+    default_workspace_mode: str | None = None
+    # CHAT e AGENT devono leggere due copie indipendenti della stessa base 01-08.
+    if args.experiment in MULTI_WORKSPACE_EXPERIMENTS and not args.variant:
+        workspace_dirs = {
+            "chat": build_output_dir(args.batch, args.circuit, args.experiment, "chat"),
+            "agent": build_output_dir(args.batch, args.circuit, args.experiment, "agent"),
+        }
+        default_workspace_mode = "chat"
+        missing_workspaces = [mode for mode, path in workspace_dirs.items() if not path.is_dir()]
+        if missing_workspaces:
+            raise SystemExit(
+                f"Missing {args.experiment} workspace(s): " + ", ".join(missing_workspaces)
+            )
+        output_dir = workspace_dirs[default_workspace_mode]
+    else:
+        output_dir = build_output_dir(args.batch, args.circuit, args.experiment, args.variant)
 
     try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        print("\nStopping web chat server.")
-    finally:
-        server.server_close()
+        serve_web_chat(
+            batch=args.batch,
+            circuit=args.circuit,
+            experiment=args.experiment,
+            variant=args.variant,
+            output_dir=output_dir,
+            host=args.host,
+            port=args.port,
+            ngspice_executable=args.ngspice_executable,
+            workspace_dirs=workspace_dirs,
+            default_workspace_mode=default_workspace_mode,
+            open_browser=not args.no_browser,
+        )
+    except FileNotFoundError as error:
+        raise SystemExit(str(error)) from error
 
 
 if __name__ == "__main__":

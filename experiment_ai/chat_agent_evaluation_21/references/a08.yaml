@@ -1,0 +1,125 @@
+schema_version: 1
+circuit_id: "a08"
+review_status: frozen
+circuit_description: |
+  Circuito di pilotaggio temporizzato di un LED mediante transistor NPN 2N3904.
+  La sorgente quadra alimenta il nodo N002; R1 e C1 formano il ramo RC sul
+  nodo N001, collegato alla base del transistor tramite R3. Il LED è posto
+  tra N002 e il collettore N003. R7 e R6 polarizzano l'emettitore N005.
+  L'arco disegnato sul conduttore del trigger è un ponte grafico e non una
+  giunzione: il Graph JSON conserva correttamente separate le due reti.
+task_type: "diagnosi e correzione di un lampeggio LED irregolare"
+user_symptom: |
+  Il LED non lampeggia come mi aspetterei. Quale potrebbe essere il problema?
+
+circuit_inventory:
+  component_count: 10
+  node_count: 6
+  component_types:
+    - "Capacitor"
+    - "GND"
+    - "LED"
+    - "NPN_Transistor"
+    - "Resistor"
+    - "Signal_Source"
+  analysis_types:
+    - "op"
+    - "tran"
+
+required_evidence:
+  - id: base_source_periodic
+    description: |
+      La sorgente della netlist è periodica a 10 Hz: PULSE da 0 V a 5 V,
+      durata alta 50 ms e periodo 100 ms. L'ampiezza 0-5 V è un'assunzione
+      esplicita del values.yaml; dall'immagine sono ricavati soltanto forma
+      quadra e frequenza di 10 Hz.
+  - id: base_led_not_regular
+    description: |
+      Nel transitorio base il LED non segue regolarmente la sorgente: il
+      profilo misurato è transient_pulse, regular_period=false, senza
+      frequenza determinabile, con 2 impulsi e duty cycle circa 0.60%.
+  - id: rc_timing_relevant
+    description: |
+      R1=10 kohm e C1=10 uF producono una costante di tempo nominale di
+      0.10 s, dello stesso ordine del periodo di ingresso di 0.10 s. È quindi
+      necessario verificare il ramo temporale RC, non limitarsi al picco di
+      corrente del LED o alla sola riuscita di ngspice.
+  - id: corrected_temporal_profile
+    description: |
+      Una correzione deve essere verificata sul profilo temporale del LED:
+      periodicità regolare, frequenza coerente con i 10 Hz della sorgente,
+      più impulsi osservabili e duty cycle non trascurabile.
+
+success_conditions:
+  - id: symptom_reproduced
+    description: |
+      La diagnosi riconosce che il caso base genera soltanto impulsi brevi e
+      non un lampeggio regolare, pur avendo una simulazione ngspice riuscita.
+  - id: timing_cause_identified
+    description: |
+      La conclusione localizza il problema nel dimensionamento temporale del
+      ramo R1-C1 oppure in un parametro equivalente dimostrato con una prova
+      controllata, senza attribuire automaticamente un guasto a LED o Q1.
+  - id: correction_verified
+    description: |
+      Lo scenario corretto termina con ngspice success e produce un profilo
+      LED regolare vicino a 10 Hz, con duty cycle almeno 5% e chiaramente
+      superiore a quello base.
+  - id: conclusion_calibrated
+    description: |
+      La conclusione distingue una correzione verificata in simulazione dal
+      valore nominale definitivo per un eventuale circuito fisico.
+
+acceptable_solutions:
+  - id: reduce_c1_to_1u
+    description: |
+      Ridurre C1 (Ccapacitor4_1) da 10 uF a 1 uF, mantenendo invariati gli
+      altri componenti e la sorgente.
+    verified_reference_values: |
+      ngspice success; stato LED blinking; regular_period=true; frequenza
+      10.0033 Hz; duty cycle 32.90%; on_fraction 31.93%; 3 impulsi nel
+      profilo analizzato; corrente LED di picco circa 3.005 mA. La costante
+      R1*C1 passa da circa 100 ms a circa 10 ms.
+  - id: equivalent_rc_change
+    acceptance: conditional
+    description: |
+      Un'altra modifica del ramo temporale può essere accettata soltanto se
+      è simulata e soddisfa gli stessi criteri temporali. Non basta affermare
+      per analogia che qualunque riduzione di R1 o C1 sia risolutiva.
+  - id: reduce_r3_to_10k
+    acceptance: partial_only
+    description: |
+      Ridurre R3 da 68 kohm a 10 kohm rende gli impulsi regolari a circa
+      10.013 Hz e aumenta il picco di corrente, ma il duty cycle resta circa
+      0.43%, sotto la soglia del 5%. È evidenza diagnostica parziale, non una
+      correzione finale del sintomo.
+
+unsupported_conclusions:
+  - |
+    Dichiarare risolto il problema perché ngspice termina correttamente: la
+    simulazione base riesce ma il profilo LED rimane non periodico.
+  - |
+    Usare la sola etichetta state=blinking ignorando periodicità e duty cycle:
+    lo scenario R3=10 kohm è classificato blinking ma resta quasi sempre spento.
+  - |
+    Concludere che R3=68 kohm è la causa principale e che R3=10 kohm è una
+    correzione completa: la prova disponibile soddisfa solo parte dei criteri.
+  - |
+    Considerare risolutivi i test con condizioni iniziali: il primo conserva
+    transient_pulse e non supera i criteri; il secondo fallisce in ngspice.
+  - |
+    Unire elettricamente i fili nel punto contrassegnato graficamente da un
+    arco: è un attraversamento a ponte, non un nodo del circuito.
+  - |
+    Presentare l'ampiezza 0-5 V come dato certo letto dall'immagine oppure
+    affermare che 1 uF sia l'unico valore fisicamente corretto possibile.
+
+review_notes: |
+  Immagine e values canonici provengono da
+  data/batchPipeline2.0/batchChatAgentEvaluation. La topologia del Graph JSON
+  coincide con l'immagine, compreso il crossover non connesso. Il caso è utile
+  per la valutazione perché separa una semplice variazione elettrica da una
+  vera correzione temporale. CHAT ha verificato la soluzione C1=1 uF; AGENT si
+  è fermato su una localizzazione parziale di R3 senza produrre una correzione
+  verificata. Le etichette automatiche delle esecuzioni non sono ground truth.
+  La scheda deve essere approvata manualmente prima dello stato frozen.

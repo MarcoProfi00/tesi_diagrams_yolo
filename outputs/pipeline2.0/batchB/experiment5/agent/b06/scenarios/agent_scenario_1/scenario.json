@@ -1,0 +1,37 @@
+{
+  "title": "Test progressivo da Q1 verso ingresso LM386",
+  "hypothesis": "Se la catena da Q1 attraverso C4 fino a N010 funziona, un piccolo segnale sulla base di Q1 deve produrre Vpp non nullo e utile al collettore N006 e poi all'ingresso LM386 N010. Se N006 risponde ma N010 no, il primo blocco e tra Q1 e ingresso LM386 (accoppiamento C4/R3).",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N005",
+      "negative": "0",
+      "value": "SIN(0.660106 0.005 1000)"
+    }
+  ],
+  "compare": [
+    "v(N005)",
+    "v(N006)",
+    "v(N010)",
+    "v(N003)"
+  ],
+  "measure": {
+    "v(N005)": "tran_vpp",
+    "v(N006)": "tran_vpp",
+    "v(N010)": "tran_vpp",
+    "v(N003)": "tran_vpp"
+  },
+  "expect": {
+    "v(N006)": "nonzero",
+    "v(N010)": "nonzero",
+    "v(N003)": "nonzero"
+  },
+  "gain": {
+    "input": "v(N005)",
+    "output": "v(N010)",
+    "min_ratio": 0.05
+  },
+  "scenario_id": "agent_scenario_1"
+}

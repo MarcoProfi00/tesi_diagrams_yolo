@@ -1,0 +1,33 @@
+{
+  "scenario_id": "scenario_6",
+  "title": "Iniettare su N001 un segnale piu ampio con switch chiuso",
+  "hypothesis": "With switch25.1 closed, the previous stimulus at N001 may have been too small to drive useful transfer through diode7.1; a larger sinusoidal input at N001 should test whether a usable signal can then reach v(N003,N004).",
+  "intent": "correction",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    },
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N001",
+      "negative": "0",
+      "value": "SIN(0 1 1000)"
+    }
+  ],
+  "rerun_from": "06",
+  "analysis": "tran",
+  "compare": [
+    "v(N001)",
+    "v(N003,N004)"
+  ],
+  "expect": {
+    "v(N001)": "activated",
+    "v(N003,N004)": "changed"
+  },
+  "gain": {
+    "input": "v(N001)",
+    "output": "v(N003,N004)",
+    "min_ratio": 0.05
+  }
+}

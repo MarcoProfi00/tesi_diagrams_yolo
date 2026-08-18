@@ -1,0 +1,31 @@
+{
+  "title": "Verifica alimentazione esterna sul connettore con controllo simultaneo LED+VAC",
+  "hypothesis": "Il circuito base non contiene alcuna sorgente di alimentazione; se il pin N002 del connettore viene alimentato rispetto a massa, la corrente nel ramo R-LED deve diventare non nulla e il voltmetro VAC su N001 dovrebbe restare nullo, confermando che il LED dipende da alimentazione assente e che il voltmetro e su un nodo separato non alimentato.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N002",
+      "negative": "0",
+      "value": "5"
+    }
+  ],
+  "compare": [
+    "v(N001)",
+    "v(N002)",
+    "v(N004)",
+    "@dled12_1[id]"
+  ],
+  "measure": {
+    "v(N001)": "tran_vpp",
+    "v(N002)": "tran_vpp",
+    "v(N004)": "tran_vpp",
+    "@dled12_1[id]": "tran_abs_peak"
+  },
+  "expect": {
+    "v(N002)": "nonzero",
+    "@dled12_1[id]": "activated"
+  },
+  "scenario_id": "agent_scenario_1"
+}

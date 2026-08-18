@@ -73,7 +73,7 @@ def remove_non_shorting_component_self_matches(
             cleaned[int(label)] = unique_ids
             continue
 
-        if _is_valid_same_ic_external_branch(unique_ids, terms, label, terminal_match_debug, terminal_by_id):
+        if _is_valid_same_ic_external_branch(terms):
             cleaned[int(label)] = unique_ids
             continue
 
@@ -92,13 +92,7 @@ def remove_non_shorting_component_self_matches(
     return cleaned
 
 
-def _is_valid_same_ic_external_branch(
-    terminal_ids: list[str],
-    terms: list[dict],
-    label: int,
-    terminal_match_debug: dict,
-    terminal_by_id: dict,
-):
+def _is_valid_same_ic_external_branch(terms: list[dict]):
     """
     Eccezione per alcuni rami esterni dello stesso IC.
 
@@ -407,8 +401,6 @@ def _split_group_on_grounded_polarized_capacitor(
 
     return [sorted(grounded_ids), sorted(other_ids)]
 
-# Costruisce una mappa instance_id -> bbox
-# è usato in molte euristiche che confrontano distanze tra componenti
 def merge_split_grounded_ic_side_branches(
     label_to_terminal_ids: dict,
     terminals: list[dict],

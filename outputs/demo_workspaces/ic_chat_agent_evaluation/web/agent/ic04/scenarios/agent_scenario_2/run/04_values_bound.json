@@ -1,0 +1,443 @@
+{
+  "circuit_id": "ic04",
+  "source_format": "pipeline2.0_values_bound",
+  "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\data\\batchPipeline2.0\\batchICChatAgentEvaluation\\values\\ic04_values.yaml",
+  "supplies": {
+    "VCC_12": {
+      "terminal": "terminal26.1_t1",
+      "type": "dc",
+      "value": 12,
+      "unit": "V",
+      "reference": 0,
+      "source": "manual_from_image_label",
+      "label_text": "+12 V DC",
+      "viewer_override": {
+        "visual_class": "voltage_source",
+        "label": "VCC",
+        "display_value": "+12 V"
+      },
+      "node": "N005"
+    }
+  },
+  "components": {
+    "gnd9.1": {
+      "class_name": "GND",
+      "terminal_nodes": {
+        "t1": "0"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "integrated_circuit11.1": {
+      "class_name": "Integrated_Circuit",
+      "terminal_nodes": {
+        "left_1": "N002",
+        "left_2": "N003",
+        "left_3": "N003",
+        "right_1": "N004",
+        "top_1": "N005",
+        "top_2": "N005",
+        "bottom_1": "0",
+        "bottom_2": "N001"
+      },
+      "value_data": {
+        "model": "TLC555_6",
+        "source": "ti_official_slfj002e_pspice_model",
+        "label_text": "IC1 NE555; modello ufficiale TI TLC555_6 Rev. E",
+        "viewer_override": {
+          "label": "IC1",
+          "display_value": "NE555",
+          "tooltip": "NE555 simulato con il modello ufficiale TI TLC555_6 Rev. E SLFJ002E"
+        },
+        "spice_override": {
+          "emit_as": "subcircuit",
+          "pin_order": [
+            "THRES",
+            "CONT",
+            "TRIG",
+            "RESET",
+            "OUT",
+            "DISC",
+            "VCC",
+            "GND"
+          ],
+          "node_refs": {
+            "THRES": "integrated_circuit11.1_left_2",
+            "CONT": "integrated_circuit11.1_bottom_2",
+            "TRIG": "integrated_circuit11.1_left_3",
+            "RESET": "integrated_circuit11.1_top_1",
+            "OUT": "integrated_circuit11.1_right_1",
+            "DISC": "integrated_circuit11.1_left_1",
+            "VCC": "integrated_circuit11.1_top_2",
+            "GND": "integrated_circuit11.1_bottom_1"
+          },
+          "resolved_node_refs": {
+            "THRES": "N003",
+            "CONT": "N001",
+            "TRIG": "N003",
+            "RESET": "N005",
+            "OUT": "N004",
+            "DISC": "N002",
+            "VCC": "N005",
+            "GND": "0"
+          }
+        }
+      },
+      "status": "unsupported_for_now"
+    },
+    "integrated_circuit11.2": {
+      "class_name": "Integrated_Circuit",
+      "terminal_nodes": {
+        "left_1": "N007",
+        "left_2": "N008",
+        "left_3": "N008",
+        "right_1": "N009",
+        "top_1": "N005",
+        "top_2": "N005",
+        "bottom_1": "0",
+        "bottom_2": "N006"
+      },
+      "value_data": {
+        "model": "TLC555_6",
+        "source": "ti_official_slfj002e_pspice_model",
+        "label_text": "Secondo NE555 (IC1 ripetuto nello schema); normalizzato a IC2",
+        "viewer_override": {
+          "label": "IC2",
+          "display_value": "NE555",
+          "tooltip": "Secondo NE555; modello ufficiale TI TLC555_6 Rev. E SLFJ002E"
+        },
+        "spice_override": {
+          "emit_as": "subcircuit",
+          "pin_order": [
+            "THRES",
+            "CONT",
+            "TRIG",
+            "RESET",
+            "OUT",
+            "DISC",
+            "VCC",
+            "GND"
+          ],
+          "node_refs": {
+            "THRES": "integrated_circuit11.2_left_2",
+            "CONT": "integrated_circuit11.2_bottom_2",
+            "TRIG": "integrated_circuit11.2_left_3",
+            "RESET": "integrated_circuit11.2_top_1",
+            "OUT": "integrated_circuit11.2_right_1",
+            "DISC": "integrated_circuit11.2_left_1",
+            "VCC": "integrated_circuit11.2_top_2",
+            "GND": "integrated_circuit11.2_bottom_1"
+          },
+          "resolved_node_refs": {
+            "THRES": "N008",
+            "CONT": "N006",
+            "TRIG": "N008",
+            "RESET": "N005",
+            "OUT": "N009",
+            "DISC": "N007",
+            "VCC": "N005",
+            "GND": "0"
+          }
+        }
+      },
+      "status": "unsupported_for_now"
+    },
+    "led12.1": {
+      "class_name": "LED",
+      "terminal_nodes": {
+        "anode": "N002",
+        "cathode": "N003"
+      },
+      "value_data": {
+        "model": "D_1N4001_TYP",
+        "source": "manual_from_image_label_and_registered_typical_model",
+        "label_text": "D1 1N4001",
+        "viewer_override": {
+          "visual_class": "diode",
+          "label": "D1",
+          "display_value": "1N4001",
+          "tooltip": "Diodo 1N4001; modello tipico semplificato registrato per SPICE"
+        }
+      },
+      "status": "bound"
+    },
+    "polarized_capacitor20.1": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "positive": "N003",
+        "negative": "0"
+      },
+      "value_data": {
+        "value": 10,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "C1 10 uF polarizzato",
+        "viewer_override": {
+          "label": "C1",
+          "display_value": "10 uF"
+        }
+      },
+      "status": "bound"
+    },
+    "polarized_capacitor20.2": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "positive": "N001",
+        "negative": "0"
+      },
+      "value_data": {
+        "value": 10,
+        "unit": "nf",
+        "source": "manual_from_image_label",
+        "label_text": "C2 10 nF polarizzato",
+        "viewer_override": {
+          "label": "C2",
+          "display_value": "10 nF"
+        }
+      },
+      "status": "bound"
+    },
+    "polarized_capacitor20.3": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "positive": "N008",
+        "negative": "0"
+      },
+      "value_data": {
+        "value": 100,
+        "unit": "nf",
+        "source": "manual_from_image_label",
+        "label_text": "C3 100 nF polarizzato",
+        "viewer_override": {
+          "label": "C3",
+          "display_value": "100 nF"
+        }
+      },
+      "status": "bound"
+    },
+    "polarized_capacitor20.4": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "positive": "N009",
+        "negative": "N010"
+      },
+      "value_data": {
+        "value": 100,
+        "unit": "uf",
+        "source": "manual_from_image_label",
+        "label_text": "C4 100 uF polarizzato",
+        "viewer_override": {
+          "label": "C4",
+          "display_value": "100 uF"
+        }
+      },
+      "status": "bound"
+    },
+    "resistor22.1": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N002",
+        "t2": "N003"
+      },
+      "value_data": {
+        "value": 68,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R2 68 kohm",
+        "viewer_override": {
+          "label": "R2",
+          "display_value": "68 kohm"
+        }
+      },
+      "status": "bound"
+    },
+    "resistor22.2": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N005",
+        "t2": "N002"
+      },
+      "value_data": {
+        "value": 68,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R1 68 kohm",
+        "viewer_override": {
+          "label": "R1",
+          "display_value": "68 kohm"
+        }
+      },
+      "status": "bound"
+    },
+    "resistor22.3": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N004",
+        "t2": "N006"
+      },
+      "value_data": {
+        "value": 10,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R5 10 kohm",
+        "viewer_override": {
+          "label": "R5",
+          "display_value": "10 kohm"
+        }
+      },
+      "status": "bound"
+    },
+    "resistor22.4": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N007",
+        "t2": "N008"
+      },
+      "value_data": {
+        "value": 8.2,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R4 8.2 kohm",
+        "viewer_override": {
+          "label": "R4",
+          "display_value": "8.2 kohm"
+        }
+      },
+      "status": "bound"
+    },
+    "resistor22.5": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N005",
+        "t2": "N007"
+      },
+      "value_data": {
+        "value": 8.2,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R3 8.2 kohm",
+        "viewer_override": {
+          "label": "R3",
+          "display_value": "8.2 kohm"
+        }
+      },
+      "status": "bound"
+    },
+    "speaker24.1": {
+      "class_name": "Speaker",
+      "terminal_nodes": {
+        "t1": "N010",
+        "t2": "0"
+      },
+      "value_data": {
+        "nominal_power": 500,
+        "power_unit": "mW",
+        "source": "manual_from_image_label",
+        "label_text": "K1 speaker 64 ohm, 500 mW",
+        "spice_override": {
+          "emit_as": "resistive_load",
+          "equivalent_resistance": 64,
+          "resistance_unit": "ohm",
+          "node_order": [
+            "t1",
+            "t2"
+          ],
+          "semantic_role": "speaker_equivalent"
+        },
+        "viewer_override": {
+          "visual_class": "speaker",
+          "label": "K1",
+          "display_value": "64 ohm",
+          "tooltip": "Speaker 64 ohm, 500 mW; equivalente SPICE resistivo"
+        }
+      },
+      "status": "bound"
+    },
+    "terminal26.1": {
+      "class_name": "Terminal",
+      "terminal_nodes": {
+        "t1": "N005"
+      },
+      "value_data": null,
+      "status": "not_required"
+    }
+  },
+  "nodes": {
+    "gnd9.1_t1": {
+      "label": "GND",
+      "source": "graph_json_ground",
+      "node": "0"
+    },
+    "integrated_circuit11.1_bottom_2": {
+      "label": "SLOW_CONTROL",
+      "source": "manual_from_validated_graph_pin5",
+      "node": "N001"
+    },
+    "integrated_circuit11.1_left_1": {
+      "label": "SLOW_DISCHARGE",
+      "source": "manual_from_validated_graph_pin7",
+      "node": "N002"
+    },
+    "integrated_circuit11.1_left_2": {
+      "label": "SLOW_TIMING",
+      "source": "manual_from_validated_graph_pins2_6",
+      "node": "N003"
+    },
+    "integrated_circuit11.1_right_1": {
+      "label": "MODULATOR_OUTPUT",
+      "source": "manual_from_validated_graph_pin3",
+      "node": "N004"
+    },
+    "integrated_circuit11.2_bottom_2": {
+      "label": "AUDIO_CONTROL",
+      "source": "manual_from_validated_graph_pin5",
+      "node": "N006"
+    },
+    "integrated_circuit11.2_left_1": {
+      "label": "AUDIO_DISCHARGE",
+      "source": "manual_from_validated_graph_pin7",
+      "node": "N007"
+    },
+    "integrated_circuit11.2_left_2": {
+      "label": "AUDIO_TIMING",
+      "source": "manual_from_validated_graph_pins2_6",
+      "node": "N008"
+    },
+    "integrated_circuit11.2_right_1": {
+      "label": "AUDIO_OUTPUT",
+      "source": "manual_from_validated_graph_pin3",
+      "node": "N009"
+    },
+    "speaker24.1_t1": {
+      "label": "SPEAKER_INPUT",
+      "source": "manual_from_validated_graph",
+      "node": "N010"
+    },
+    "terminal26.1_t1": {
+      "label": "VCC_12",
+      "source": "manual_from_image_label",
+      "label_text": "+12 V DC",
+      "node": "N005"
+    }
+  },
+  "spice_topology_overlay": [],
+  "simulation": {
+    "analyses": [
+      "tran"
+    ],
+    "tran": {
+      "step": "50us",
+      "stop": "2s"
+    }
+  },
+  "missing": [],
+  "stats": {
+    "components_total": 15,
+    "bound_components": 11,
+    "missing_components": 0,
+    "not_required_components": 2,
+    "unsupported_components": 2,
+    "supplies_count": 1,
+    "manual_nodes_count": 11
+  }
+}

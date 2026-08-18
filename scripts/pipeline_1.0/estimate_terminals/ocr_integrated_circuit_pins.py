@@ -2,8 +2,9 @@
 OCR locale dei pin per Integrated_Circuit.
 
 Strategia side_lane_candidates_v1:
-- non crea terminali;
-- usa i terminali geometrici gia' stimati;
+- usa come base i terminali geometrici gia' stimati;
+- puo' recuperare terminali mancanti solo sui piccoli IC quando l'evidenza OCR
+  al bordo e' coerente;
 - per ogni lato dell'IC costruisce una banda stretta che attraversa il bordo;
 - assegna le parole OCR alla "corsia" del terminale piu' vicino sullo stesso lato;
 - separa pin_number e pin_label_text.
@@ -43,6 +44,9 @@ from typing import Dict, List, Optional, Tuple
 import cv2
 import numpy as np
 
+from ._shared_utils import clamp_bbox as _clamp_bbox
+from ._shared_utils import crop_image_bbox as _crop
+from ._shared_utils import elapsed_ms as _elapsed_ms
 from .config import TERMINAL_OUTWARD_OFFSET
 from .ocr_integrated_circuit import get_ic_body_bbox_from_component
 
@@ -98,31 +102,6 @@ def _get_marking_bbox(component: Dict) -> Optional[List[int]]:
 def _timing_enabled() -> bool:
     value = str(os.environ.get("IC_OCR_TIMING", "")).strip().lower()
     return value in {"1", "true", "yes", "on"}
-
-
-def _elapsed_ms(start_time: float) -> float:
-    return round((time.perf_counter() - start_time) * 1000.0, 1)
-
-
-def _clamp_bbox(bbox, image_shape) -> List[int]:
-    h, w = image_shape[:2]
-    x1, y1, x2, y2 = bbox
-    x1 = int(max(0, min(w - 1, round(x1))))
-    y1 = int(max(0, min(h - 1, round(y1))))
-    x2 = int(max(0, min(w - 1, round(x2))))
-    y2 = int(max(0, min(h - 1, round(y2))))
-    if x2 < x1:
-        x1, x2 = x2, x1
-    if y2 < y1:
-        y1, y2 = y2, y1
-    return [x1, y1, x2, y2]
-
-
-def _crop(image_bgr, bbox):
-    x1, y1, x2, y2 = bbox
-    if x2 <= x1 or y2 <= y1:
-        return None
-    return image_bgr[y1:y2 + 1, x1:x2 + 1].copy()
 
 
 def _terminal_side(term: Dict) -> Optional[str]:
@@ -399,7 +378,7 @@ def _extract_digit_components(image_bgr, band_bbox: List[int], cfg: Dict) -> Lis
     _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     cleaned = _remove_long_lines(binary, cfg)
     inv = 255 - cleaned
-    count, labels, stats, centroids = cv2.connectedComponentsWithStats(inv, 8)
+    count, _, stats, centroids = cv2.connectedComponentsWithStats(inv, 8)
 
     x0, y0, _, _ = band_bbox
     components = []
@@ -507,7 +486,6 @@ def _ocr_digit_variants(image_bgr, bbox: List[int], variants: List[Tuple[int, fl
 def _ocr_digit_candidates_batch(
     image_bgr,
     candidates: List[Dict],
-    cfg: Dict,
     expanded_variants: bool = False,
 ) -> Dict[int, Dict[str, int]]:
     """
@@ -687,17 +665,6 @@ def _best_voted_number(votes: Dict[str, int], component_count: int, cfg: Dict) -
         filtered,
         key=lambda item: (-filtered[item], abs(len(item) - max(1, component_count)), -len(item)),
     )[0]
-
-
-def _ocr_single_digit_component(image_bgr, bbox: List[int], cfg: Dict) -> Optional[str]:
-    variants = [
-        (4, 4.0, "bin", 6),
-        (4, 4.0, "bin", 10),
-        (6, 6.0, "bin", 10),
-        (10, 6.0, "bin", 10),
-    ]
-    text = _best_voted_number(_ocr_digit_variants(image_bgr, bbox, variants), 1, cfg)
-    return text if text and len(text) == 1 else None
 
 
 def _ocr_digit_component_candidate(image_bgr, bbox: List[int], component_count: int, cfg: Dict) -> Optional[Dict]:
@@ -899,7 +866,6 @@ def _component_number_words(image_bgr, side_run: Dict, cfg: Dict, target_lanes: 
     votes_by_candidate = _ocr_digit_candidates_batch(
         image_bgr,
         candidates,
-        cfg,
         expanded_variants=expanded_variants,
     )
     words = []
@@ -1050,7 +1016,7 @@ def _closest_body_side(word: Dict, body_bbox: List[float]) -> str:
     return min(distances, key=distances.get)
 
 
-def _word_matches_numeric_side(word: Dict, side: str, body_bbox: List[float], cfg: Dict) -> bool:
+def _word_matches_numeric_side(word: Dict, side: str, body_bbox: List[float]) -> bool:
     """
     Decide se una parola numerica vicina al bordo puo' essere associata a un lato.
 
@@ -1308,7 +1274,7 @@ def _is_label_guard_candidate(word: Dict, cfg: Dict) -> bool:
     return _is_label_candidate(word, cfg)
 
 
-def _label_pick_distance(side: str, cfg: Dict) -> float:
+def _label_pick_distance(cfg: Dict) -> float:
     return float(cfg["max_label_distance_px"])
 
 
@@ -1578,8 +1544,9 @@ def _run_easyocr_body_label_words(image_bgr, body_bbox: List[int], cfg: Dict) ->
     """
     Fallback EasyOCR sulle label nel body.
 
-    Viene usato solo quando non c'e' ic_marking: se abbiamo il part number,
-    preferiamo ricavare il significato dei pin dal datasheet.
+    Viene usato quando manca ic_marking e, per package grandi, anche come
+    arricchimento complementare. Quando disponibile, il part number resta la
+    fonte preferita per ricavare il significato dei pin dal datasheet.
     """
     if not cfg.get("easyocr_label_enabled", True):
         return [], {"ok": True, "skipped": "easyocr_label_disabled"}
@@ -1968,7 +1935,7 @@ def _assign_lane_semantics(
             word for word in lane_text_words
             if word["confidence"] >= cfg["label_min_confidence"]
             and _is_number_text(word["text"], cfg)
-            and _word_matches_numeric_side(word, side, body_bbox, cfg)
+            and _word_matches_numeric_side(word, side, body_bbox)
         ]
         numeric_from_text.extend(_inner_strip_numeric_candidates(
             lane_text_words,
@@ -1984,7 +1951,7 @@ def _assign_lane_semantics(
             word for word in lane_number_words
             if word["confidence"] >= cfg["number_min_confidence"]
             and _is_number_text(word["text"], cfg)
-            and _word_matches_numeric_side(word, side, body_bbox, cfg)
+            and _word_matches_numeric_side(word, side, body_bbox)
         ]
 
         if label_candidates:
@@ -1999,7 +1966,7 @@ def _assign_lane_semantics(
             lane=lane,
             side=side,
             body_bbox=body_bbox,
-            max_distance_px=_label_pick_distance(side, cfg),
+            max_distance_px=_label_pick_distance(cfg),
         )
         best_number = _pick_best_word(
             numeric_from_text,
@@ -2066,7 +2033,7 @@ def _assign_component_number_fallback(
         candidates = [
             word for word in component_map.get(lane["terminal_id"], [])
             if _is_number_text(word["text"], cfg)
-            and _word_matches_numeric_side(word, side, body_bbox, cfg)
+            and _word_matches_numeric_side(word, side, body_bbox)
             and not _overlaps_any_label_guard(word, lane_label_guards, cfg)
         ]
         best = _pick_best_lane_word(
@@ -2912,7 +2879,7 @@ def _score_label_for_lane(word: Dict, lane: Dict, side: str, body_bbox: List[flo
         lane=lane,
         side=side,
         body_bbox=body_bbox,
-        max_distance_px=_label_pick_distance(side, cfg),
+        max_distance_px=_label_pick_distance(cfg),
     )
     if chosen is None:
         return None
@@ -3062,7 +3029,7 @@ def _repair_sequential_pin_labels(component: Dict) -> None:
                 support = best_desc[1]
             prefix_upper = str(prefix or "").upper()
             is_port_sequence = re.fullmatch(r"P[0-3]\.?", prefix_upper) is not None
-            if support < (2 if is_port_sequence else 2):
+            if support < 2:
                 continue
 
             positions = [pos for pos, _, _ in entries]
@@ -3280,7 +3247,10 @@ def _cluster_side_candidate_words(words: List[Dict], side: str, gap_px: float) -
         weights = [max(0.35, float(word.get("confidence") or 0.0)) for word in cluster]
         coords = [_side_axis_from_word(word, side) for word in cluster]
         weighted_coord = sum(coord * weight for coord, weight in zip(coords, weights)) / max(sum(weights), 1e-6)
-        best = max(cluster, key=lambda item: (float(item.get("confidence") or 0.0), -_word_edge_distance(item, side, [0, 0, 0, 0]) if False else 0.0))
+        best = max(
+            cluster,
+            key=lambda item: float(item.get("confidence") or 0.0),
+        )
         merged.append({
             "coord": round(float(weighted_coord), 2),
             "words": cluster,
@@ -4138,8 +4108,9 @@ def normalize_seven_segment_display_terminals(component: Dict) -> int:
     """
     Normalizza i terminali dei display a 7 segmenti gia' arricchiti dall'OCR.
 
-    E' un wrapper pubblico usato anche dallo step 03 prima dell'export: non
-    aggiunge dati nuovi, rende solo coerenti lato/nome dei terminali letti.
+    E' un wrapper pubblico usato anche dallo step 03 prima dell'export:
+    normalizza lato/nome, trasferisce i dati OCR coerenti e scarta i terminali
+    incompatibili con il layout riconosciuto.
     """
     return _prune_seven_segment_display_terminals(component)
 

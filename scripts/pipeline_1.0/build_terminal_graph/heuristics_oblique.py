@@ -22,6 +22,7 @@ from .config import (
 )
 from .geometry import clamp_window
 from .ids import normalize_class_name
+from .label_union import LabelUnionFind, merge_label_groups
 
 
 def merge_short_oblique_branch_labels(
@@ -45,21 +46,7 @@ def merge_short_oblique_branch_labels(
         int(label): [terminal_by_id.get(terminal_id) for terminal_id in terminal_ids]
         for label, terminal_ids in label_to_terminal_ids.items()
     }
-    parent = {int(label): int(label) for label in label_to_terminal_ids.keys()}
-
-    def find(label: int):
-        label = int(label)
-        parent.setdefault(label, label)
-        while parent[label] != label:
-            parent[label] = parent[parent[label]]
-            label = parent[label]
-        return label
-
-    def union(label_a: int, label_b: int):
-        root_a = find(label_a)
-        root_b = find(label_b)
-        if root_a != root_b:
-            parent[max(root_a, root_b)] = min(root_a, root_b)
+    union_find = LabelUnionFind(label_to_terminal_ids)
 
     for term in terminals:
         class_name = normalize_class_name(term.get("component_class_name"))
@@ -91,17 +78,9 @@ def merge_short_oblique_branch_labels(
         if best is None:
             continue
 
-        union(source_label, int(best["target_label"]))
+        union_find.union(source_label, int(best["target_label"]))
 
-    merged = {}
-    for label, terminal_ids in label_to_terminal_ids.items():
-        root = find(int(label))
-        merged.setdefault(root, []).extend(terminal_ids)
-
-    return {
-        int(label): sorted(set(terminal_ids))
-        for label, terminal_ids in merged.items()
-    }
+    return merge_label_groups(label_to_terminal_ids, union_find)
 
 
 def _best_oblique_target(

@@ -101,4 +101,4 @@ def build_simple_terminal_graph(terminal_graph: dict, original_to_simple: dict):
 
 def build_simple_list(values: list[str], original_to_simple: dict):
     """Converte una lista di id interni in una lista di id pubblici."""
-    return sorted([original_to_simple.get(v, v) for v in values])
+    return sorted(original_to_simple.get(value, value) for value in values)

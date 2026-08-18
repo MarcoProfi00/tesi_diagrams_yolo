@@ -1,0 +1,23 @@
+{
+  "scenario_id": "scenario_1",
+  "title": "Chiudere lo switch di ritorno switch25.1",
+  "hypothesis": "The open switch switch25.1 is preventing a DC reference or return path for N001, contributing to zero battery current.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    }
+  ],
+  "rerun_from": "06",
+  "analysis": "op",
+  "compare": [
+    "v(N001)",
+    "v(N002)",
+    "i(vbattery2_1#branch)"
+  ],
+  "expect": {
+    "v(N001)": "changed",
+    "i(vbattery2_1#branch)": "changed"
+  }
+}

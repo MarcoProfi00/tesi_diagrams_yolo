@@ -1,0 +1,156 @@
+{
+  "source_format": "pipeline2.0_experiment_scenario_registry",
+  "batch_name": "batchB",
+  "experiment_name": "experiment5",
+  "circuit_id": "b06",
+  "created_at": "2026-07-20T15:58:25",
+  "updated_at": "2026-07-20T16:00:50",
+  "max_executable_scenarios": 5,
+  "next_scenario_number": 3,
+  "last_added_scenario_id": "scenario_2",
+  "proposals": [
+    {
+      "proposal_id": "proposal_1",
+      "created_at": "2026-07-20T15:59:17",
+      "source_agent_response": "outputs\\pipeline2.0\\batchB\\experiment5\\chat\\b06\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_1",
+        "scenario_2"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_number": 1,
+      "scenario_id": "scenario_1",
+      "title": "Iniettare un piccolo segnale all'ingresso del LM386_SIMPLE",
+      "hypothesis": "The audio stage may be functional but inactive because node N010 receives no useful signal in the base run.",
+      "actions": [
+        {
+          "type": "add_voltage_source_between_nodes",
+          "positive": "N010",
+          "negative": "0",
+          "value": "SIN(0 5m 1000)"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "tran",
+      "compare": [
+        "v(N010)",
+        "v(N009)",
+        "v(N003)"
+      ],
+      "measure": {},
+      "gain": null,
+      "expect": {
+        "v(N009)": "changed",
+        "v(N003)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_1",
+      "execution_path": "outputs\\pipeline2.0\\batchB\\experiment5\\chat\\b06\\scenarios\\scenario_1",
+      "created_at": "2026-07-20T15:59:17",
+      "updated_at": "2026-07-20T16:00:07",
+      "signature": "{\"actions\":[{\"negative\":\"0\",\"positive\":\"N010\",\"type\":\"add_voltage_source_between_nodes\",\"value\":\"SIN(0 5m 1000)\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_1",
+        "title": "Iniettare un piccolo segnale all'ingresso del LM386_SIMPLE",
+        "hypothesis": "The audio stage may be functional but inactive because node N010 receives no useful signal in the base run.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "add_voltage_source_between_nodes",
+            "positive": "N010",
+            "negative": "0",
+            "value": "SIN(0 5m 1000)"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N010)",
+          "v(N009)",
+          "v(N003)"
+        ],
+        "expect": {
+          "v(N009)": "changed",
+          "v(N003)": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 2,
+      "scenario_id": "scenario_2",
+      "title": "Iniettare un piccolo segnale sulla base del transistor Qnpn_transistor18_1",
+      "hypothesis": "The signal may be getting lost in or before the transistor stage, while the transistor still has a valid DC bias point.",
+      "actions": [
+        {
+          "type": "add_voltage_source_between_nodes",
+          "positive": "N005",
+          "negative": "0",
+          "value": "SIN(0.660106 5m 1000)"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "tran",
+      "compare": [
+        "v(N005)",
+        "v(N006)",
+        "v(N010)",
+        "v(N009)",
+        "v(N003)"
+      ],
+      "measure": {},
+      "gain": null,
+      "expect": {
+        "v(N006)": "changed",
+        "v(N009)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 3,
+      "original_scenario_id": "scenario_3",
+      "execution_path": "outputs\\pipeline2.0\\batchB\\experiment5\\chat\\b06\\scenarios\\scenario_2",
+      "created_at": "2026-07-20T15:59:17",
+      "updated_at": "2026-07-20T16:00:50",
+      "signature": "{\"actions\":[{\"negative\":\"0\",\"positive\":\"N005\",\"type\":\"add_voltage_source_between_nodes\",\"value\":\"SIN(0.660106 5m 1000)\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_2",
+        "title": "Iniettare un piccolo segnale sulla base del transistor Qnpn_transistor18_1",
+        "hypothesis": "The signal may be getting lost in or before the transistor stage, while the transistor still has a valid DC bias point.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "add_voltage_source_between_nodes",
+            "positive": "N005",
+            "negative": "0",
+            "value": "SIN(0.660106 5m 1000)"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N005)",
+          "v(N006)",
+          "v(N010)",
+          "v(N009)",
+          "v(N003)"
+        ],
+        "expect": {
+          "v(N006)": "changed",
+          "v(N009)": "changed"
+        }
+      }
+    }
+  ]
+}

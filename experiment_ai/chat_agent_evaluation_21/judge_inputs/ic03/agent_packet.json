@@ -1,0 +1,912 @@
+{
+  "packet_schema_version": 1,
+  "packet_id": "ic03_run_2",
+  "reference": {
+    "schema_version": 1,
+    "circuit_id": "ic03",
+    "circuit_description": "Lampeggiatore per lampada a 12 V basato su LM317T. Il regolatore riceve\nl'alimentazione attraverso S1; tre resistenze da 10 kohm formano una scala\ncollegata al pin ADJ e tre condensatori da 10 uF riportano l'uscita sui nodi\ndella scala. Questa rete genera l'oscillazione dell'uscita che alimenta la\nlampada. C1=2.2 uF disaccoppia l'ingresso.\n",
+    "task_type": "diagnosi e correzione di lampeggio troppo rapido",
+    "user_symptom": "La lampada lampeggia troppo velocemente e i singoli lampi sono difficili da distinguere. Quale parte del circuito conviene controllare?\n",
+    "circuit_inventory": {
+      "component_count": 13,
+      "node_count": 7,
+      "component_types": [
+        "GND",
+        "Integrated_Circuit",
+        "Lamp",
+        "Polarized_Capacitor",
+        "Resistor",
+        "Switch",
+        "Terminal"
+      ],
+      "analysis_types": [
+        "tran"
+      ]
+    },
+    "required_evidence": [
+      {
+        "id": "explicit_testbench_assumptions",
+        "description": "Alimentazione da 12 V, valori della rete RC e stato chiuso di S1 sono\nricavati dallo schema. La lampada e' indicata soltanto come 12 V: il\ntestbench assume 12 W nominali e la rappresenta con una resistenza da\n12 ohm. Non sono modellati resistenza a freddo, riscaldamento, inerzia\ndel filamento o luminosita'.\n"
+      },
+      {
+        "id": "official_model_provenance",
+        "description": "IC1 usa il modello transitorio PSpice ufficiale Texas Instruments\nLM317_TRANS, pacchetto SLVMC40 Final 1.00 del 2014-12-11. Il file non\nmodificato ha SHA-256\n9B56D7C68B75D3C0FD1E0B55F5DDC448F89F82984F026FF31ACDF89BDE4BD7E1\ned e' eseguito da ngspice in compatibilita' PSpice. Non esiste logica\nspecifica del LM317 implementata nel codice Python.\n"
+      },
+      {
+        "id": "topology_and_pinout_valid",
+        "description": "Graph, node map e netlist coincidono con l'immagine. IN=N002, ADJ=N001 e\nOUT=N003; la porta TI inutilizzata OUT_1 e' associata allo stesso pin OUT\nfisico. S1 collega VCC=N006 a IN, la lampada collega N003 a massa e la\nrete R1-R2-R3/C2-C3-C4 conserva tutti i nodi dello schema. Esiste un solo\ngruppo GND e non risultano singleton, terminali scollegati o warning di\nemissione.\n"
+      },
+      {
+        "id": "base_electrical_profile",
+        "description": "La base oscilla regolarmente fra circa 0.040 e 11.500 V su N003. Negli\nultimi 10 s l'analisi indipendente misura periodo mediano circa 0.3552 s,\nfrequenza 2.816 Hz, impulso sopra la soglia intermedia di circa 40.2 ms\ne duty circa 11.3%. Il profiler della pipeline fornisce 0.3553 s e\n2.8148 Hz, in accordo con la misura diretta.\n"
+      },
+      {
+        "id": "moderate_run_sweep",
+        "description": "RUN confronta variazioni del +50% su tre elementi. R3 verso massa da\n10 a 15 kohm porta circa 2.535 Hz; C2 tra OUT e ADJ da 10 a 15 uF porta\ncirca 2.534 Hz; R1 tra ADJ e N004 da 10 a 15 kohm porta circa 2.395 Hz.\nTutti rallentano il circuito, ma a parita' di variazione relativa R1 ha\nl'effetto maggiore tra le tre prove eseguite.\n"
+      },
+      {
+        "id": "r1_22k_validation",
+        "description": "Portare R1/Rresistor22_3 da 10 a 22 kohm produce lo stesso CSV in RUN e\nRUN: periodo circa 0.4820 s, frequenza circa 2.075 Hz, impulso alto\ncirca 55.9 ms e duty circa 11.6%. Il periodo cresce di circa 35.5% e il\nlampeggio resta regolare; e' una correzione valida al sintomo qualitativo.\n"
+      },
+      {
+        "id": "r1_33k_validation",
+        "description": "RUN porta R1 a 33 kohm e misura periodo circa 0.5552 s, frequenza\n1.801 Hz, impulso alto circa 64.3 ms e duty circa 11.6%. E' la prova che\nrallenta maggiormente fra quelle eseguite e soddisfa anche la soglia\nesplicita di RUN, inferiore o uguale a 2 Hz.\n"
+      },
+      {
+        "id": "outcome_labels_depend_on_declared_threshold",
+        "description": "La medesima run R1=22 kohm e' partially_resolved in RUN perche' non\nsoddisfa max_frequency_hz=2.0, ma resolved_candidate in RUN perche'\nsoddisfa min_relative_period_increase=0.25. I dati SPICE sono identici:\nlo stato automatico dipende dal criterio scelto dalla modalita' e non\ncostituisce una verita' tecnica indipendente.\n"
+      },
+      {
+        "id": "electrical_flash_not_visual_validation",
+        "description": "Il modello verifica che gli impulsi elettrici diventino meno frequenti e\npiu' lunghi. Con il carico resistivo, la potenza media calcolata resta\ncirca 1.2-1.3 W nelle run considerate, ma cio' non predice direttamente\nla percezione dei lampi di una lampada a filamento reale.\n"
+      }
+    ],
+    "success_conditions": [
+      {
+        "id": "timing_network_identified",
+        "description": "La diagnosi individua la rete R1-R2-R3/C2-C3-C4 attorno ad ADJ e OUT come\nresponsabile del periodo, indicando R1 come leva meglio supportata dalle\nprove eseguite.\n"
+      },
+      {
+        "id": "baseline_quantified",
+        "description": "La risposta riconosce che la base lampeggia gia' regolarmente e quantifica\nil ritmo iniziale vicino a 2.8 Hz; il problema e' la velocita' desiderata,\nnon la mancata oscillazione.\n"
+      },
+      {
+        "id": "correction_uses_temporal_measurement",
+        "description": "Il successo e' dimostrato attraverso periodo o frequenza della lampada,\nnon soltanto con tensioni di nodo classificate come changed.\n"
+      },
+      {
+        "id": "r1_change_supported",
+        "description": "R1=22 kohm e R1=33 kohm sono entrambi riconosciuti come modifiche che\nrallentano realmente il lampeggio; 33 kohm produce l'effetto maggiore e\nscende sotto 2 Hz.\n"
+      },
+      {
+        "id": "subjective_target_calibrated",
+        "description": "Poiche' il sintomo non definisce una frequenza obiettivo, 2 Hz e +25% di\nperiodo sono trattati come criteri sperimentali scelti nelle sessioni,\nnon come limiti universali di visibilita'.\n"
+      },
+      {
+        "id": "automatic_labels_not_ground_truth",
+        "description": "La differenza di esito automatico per la stessa run R1=22 kohm viene\nricondotta alle diverse soglie dichiarate; non viene usato il solo\nresolved_candidate per preferire una modalita'.\n"
+      },
+      {
+        "id": "model_scope_stated",
+        "description": "La conclusione e' limitata al modello TI e alla lampada resistiva. Una\ndichiarazione sulla visibilita' reale richiederebbe modello termico o\nmisura sul carico fisico.\n"
+      }
+    ],
+    "acceptable_solutions": [
+      {
+        "id": "increase_r1_to_22k",
+        "description": "Aumentare R1 da 10 a 22 kohm. Il periodo cresce del 35.5%, da circa\n0.355 a 0.482 s, e gli impulsi si allungano da circa 40 a 56 ms.\n"
+      },
+      {
+        "id": "increase_r1_to_33k",
+        "description": "Aumentare R1 a 33 kohm. Il periodo arriva a circa 0.555 s e la frequenza\na 1.801 Hz; e' la correzione piu' marcata verificata in questa sessione.\n"
+      },
+      {
+        "id": "tune_timing_network_to_explicit_target",
+        "acceptance": "followup",
+        "description": "Definire prima una frequenza o un periodo desiderato e poi dimensionare\nR1 o gli altri elementi della rete RC, verificando che oscillazione,\ntensione di picco e durata dell'impulso restino accettabili.\n"
+      },
+      {
+        "id": "inspect_other_timing_elements",
+        "acceptance": "diagnostic_only",
+        "description": "R3=15 kohm e C2=15 uF rallentano entrambi la base a circa 2.53 Hz. Sono\nprove causali valide sulla rete, ma meno efficaci della variazione\nrelativa equivalente applicata a R1.\n"
+      }
+    ],
+    "unsupported_conclusions": [
+      "Affermare che la base non lampeggi o sia irregolare: il profilo elettrico\ne' periodico e stabile a circa 2.816 Hz.\n",
+      "Dichiarare R1=10 kohm fisicamente guasta o errata. Le simulazioni mostrano\nche R1 controlla efficacemente il periodo, non che il componente reale sia\ndiverso dallo schema.\n",
+      "Considerare 2 Hz una soglia fisiologica o normativa universale. E' un\nobiettivo scelto da RUN; RUN usa invece un incremento minimo del 25%.\n",
+      "Dire che R1=22 kohm fallisca in RUN ma funzioni in RUN dal punto di\nvista elettrico: le due run sono uguali e differiscono solo i criteri.\n",
+      "Usare il cambiamento del Vpp dei nodi N001/N004/N003 come prova sufficiente\ndel rallentamento senza misurare gli intervalli temporali.\n",
+      "Concludere che R3 o C2 non influenzino il periodo: le prove a 15 kohm/15 uF\nlo aumentano di circa 11%, pur senza raggiungere la soglia RUN del 25%.\n",
+      "Dichiarare verificata la maggiore distinguibilita' ottica della lampada.\nIl modello resistivo non include emissione luminosa o inerzia termica.\n",
+      "Generalizzare frequenza, corrente o potenza a qualsiasi lampada da 12 V:\nla resistenza da 12 ohm deriva da una potenza di 12 W assunta, non letta\nnell'immagine.\n"
+    ]
+  },
+  "rubric": {
+    "score_scale": {
+      "0": "errato o assente",
+      "1": "utile ma incompleto o con limiti rilevanti",
+      "2": "corretto e adeguatamente verificato"
+    },
+    "criteria": [
+      "diagnostic_correctness",
+      "test_quality",
+      "evidence_interpretation",
+      "goal_achievement",
+      "conclusion_quality"
+    ]
+  },
+  "run": {
+    "initial_request": "La lampada lampeggia troppo velocemente e i singoli lampi sono difficili da distinguere. Quale parte del circuito conviene controllare?",
+    "technical_status": "completed",
+    "base_spice": {
+      "status": "success",
+      "exit_code": 0,
+      "message": "ngspice completed successfully.",
+      "analyses": [
+        "tran"
+      ]
+    },
+    "execution_counts": {
+      "scenarios_proposed": 4,
+      "scenarios_executed": 4,
+      "successful_spice_runs": 4,
+      "failed_spice_runs": 0
+    },
+    "scenarios": [
+      {
+        "scenario_id": "scenario_1",
+        "title": "Aumentare il resistore verso massa del timer",
+        "hypothesis": "Il periodo di lampeggio e limitato soprattutto dalla costante di tempo del ramo N005-0; se Rresistor22_2 aumenta, la carica/scarica della rete RC rallenta e i lampi diventano piu distinguibili.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Rresistor22_2",
+            "value": "15k"
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "v(N003)",
+          "v(N005)"
+        ],
+        "expect": {
+          "v(N003)": "changed",
+          "v(N005)": "changed"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N003)",
+              "metric": "v(n003).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 11.4595468254,
+              "scenario_value": 11.453276151499999,
+              "delta": -0.006270673900001356,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": 0.0401859746,
+                "max": 11.4997328,
+                "mean": 1.4967378960588031,
+                "vpp": 11.4595468254,
+                "final": 0.0493115416,
+                "abs_peak": 11.4997328
+              },
+              "scenario_details": {
+                "min": 0.0462896485,
+                "max": 11.4995658,
+                "mean": 1.4831000334155962,
+                "vpp": 11.453276151499999,
+                "final": 0.054283392,
+                "abs_peak": 11.4995658
+              }
+            },
+            {
+              "quantity": "v(N005)",
+              "metric": "v(n005).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 13.83029131,
+              "scenario_value": 13.11325063,
+              "delta": -0.7170406800000002,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": -3.17839051,
+                "max": 10.6519008,
+                "mean": 0.07771967473793728,
+                "vpp": 13.83029131,
+                "final": -0.855077738,
+                "abs_peak": 10.6519008
+              },
+              "scenario_details": {
+                "min": -2.55340083,
+                "max": 10.5598498,
+                "mean": 0.09350828096195718,
+                "vpp": 13.11325063,
+                "final": -0.994551196,
+                "abs_peak": 10.5598498
+              }
+            }
+          ],
+          "comparison_evidence": {
+            "temporal_expectation": {
+              "target": "Rlamp13_1",
+              "available": true,
+              "met": false,
+              "reason": "Almeno un criterio temporale non e soddisfatto.",
+              "base_profile": {
+                "status": "measured",
+                "source_component_id": "lamp13.1",
+                "state": "blinking",
+                "profile_method": "differential_voltage_relative_threshold",
+                "positive_node": "N003",
+                "negative_node": "0",
+                "threshold_v": 5.7699593873,
+                "on_fraction": 0.10587539432176656,
+                "duty_cycle": 0.11259206265928588,
+                "regular_period": true,
+                "period_s": 0.3552648299999994,
+                "frequency_hz": 2.8148015664821133,
+                "pulse_count": 50,
+                "timeline_key_times": {
+                  "sequence_omitted": true,
+                  "item_count": 102
+                },
+                "timeline_states": {
+                  "sequence_omitted": true,
+                  "item_count": 102
+                },
+                "voltage_min": 0.0401859746,
+                "voltage_max": 11.4997328,
+                "voltage_magnitude_min": 0.0401859746,
+                "voltage_magnitude_max": 11.4997328,
+                "time_window_s": 20.0
+              },
+              "scenario_profile": {
+                "status": "measured",
+                "source_component_id": "lamp13.1",
+                "state": "blinking",
+                "profile_method": "differential_voltage_relative_threshold",
+                "positive_node": "N003",
+                "negative_node": "0",
+                "threshold_v": 5.77292772425,
+                "on_fraction": 0.10108374384236453,
+                "duty_cycle": 0.1105195656612151,
+                "regular_period": true,
+                "period_s": 0.39430049999999994,
+                "frequency_hz": 2.5361367789287614,
+                "pulse_count": 44,
+                "timeline_key_times": {
+                  "sequence_omitted": true,
+                  "item_count": 90
+                },
+                "timeline_states": {
+                  "sequence_omitted": true,
+                  "item_count": 90
+                },
+                "voltage_min": 0.0462896485,
+                "voltage_max": 11.4995658,
+                "voltage_magnitude_min": 0.0462896485,
+                "voltage_magnitude_max": 11.4995658,
+                "time_window_s": 20.0
+              },
+              "conditions": [
+                {
+                  "criterion": "required_state",
+                  "expected": "blinking",
+                  "actual": "blinking",
+                  "met": true
+                },
+                {
+                  "criterion": "require_regular_period",
+                  "expected": true,
+                  "actual": true,
+                  "met": true
+                },
+                {
+                  "criterion": "min_relative_period_increase",
+                  "expected": 0.25,
+                  "actual": 0.1098776650646803,
+                  "met": false
+                }
+              ]
+            }
+          },
+          "led_profiles": {}
+        }
+      },
+      {
+        "scenario_id": "scenario_2",
+        "title": "Aumentare il resistore tra ADJ e nodo N004 del timer",
+        "hypothesis": "Se il lampeggio troppo rapido e determinato soprattutto dalla rete RC che coinvolge N001, N004 e l'ADJ del LM317, aumentare Rresistor22_3 deve allungare in modo piu marcato il periodo della lampada mantenendo il lampeggio regolare.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Rresistor22_3",
+            "value": "15k"
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "v(N003)",
+          "v(N001)",
+          "v(N004)"
+        ],
+        "expect": {
+          "v(N003)": "changed",
+          "v(N001)": "changed",
+          "v(N004)": "changed"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N003)",
+              "metric": "v(n003).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 11.4595468254,
+              "scenario_value": 11.461148487400001,
+              "delta": 0.0016016620000005588,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": 0.0401859746,
+                "max": 11.4997328,
+                "mean": 1.4967378960588031,
+                "vpp": 11.4595468254,
+                "final": 0.0493115416,
+                "abs_peak": 11.4997328
+              },
+              "scenario_details": {
+                "min": 0.0384013126,
+                "max": 11.4995498,
+                "mean": 1.5171884236004636,
+                "vpp": 11.461148487400001,
+                "final": 11.4991378,
+                "abs_peak": 11.4995498
+              }
+            },
+            {
+              "quantity": "v(N001)",
+              "metric": "v(n001).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 11.83920076,
+              "scenario_value": 11.86926906,
+              "delta": 0.030068299999999937,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": -1.56278436,
+                "max": 10.2764164,
+                "mean": 0.08648327066114969,
+                "vpp": 11.83920076,
+                "final": -1.4960299,
+                "abs_peak": 10.2764164
+              },
+              "scenario_details": {
+                "min": -1.58968886,
+                "max": 10.2795802,
+                "mean": 0.09769569452613579,
+                "vpp": 11.86926906,
+                "final": 10.2716505,
+                "abs_peak": 10.2795802
+              }
+            },
+            {
+              "quantity": "v(N004)",
+              "metric": "v(n004).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 12.27032565,
+              "scenario_value": 12.53124539,
+              "delta": 0.2609197400000003,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": -1.81453185,
+                "max": 10.4557938,
+                "mean": 0.08590050285344784,
+                "vpp": 12.27032565,
+                "final": -1.34353832,
+                "abs_peak": 10.4557938
+              },
+              "scenario_details": {
+                "min": -1.99194499,
+                "max": 10.5393004,
+                "mean": 0.09899894079515552,
+                "vpp": 12.53124539,
+                "final": 10.0624053,
+                "abs_peak": 10.5393004
+              }
+            }
+          ],
+          "comparison_evidence": {
+            "temporal_expectation": {
+              "target": "Rlamp13_1",
+              "available": true,
+              "met": false,
+              "reason": "Almeno un criterio temporale non e soddisfatto.",
+              "base_profile": {
+                "status": "measured",
+                "source_component_id": "lamp13.1",
+                "state": "blinking",
+                "profile_method": "differential_voltage_relative_threshold",
+                "positive_node": "N003",
+                "negative_node": "0",
+                "threshold_v": 5.7699593873,
+                "on_fraction": 0.10587539432176656,
+                "duty_cycle": 0.11259206265928588,
+                "regular_period": true,
+                "period_s": 0.3552648299999994,
+                "frequency_hz": 2.8148015664821133,
+                "pulse_count": 50,
+                "timeline_key_times": {
+                  "sequence_omitted": true,
+                  "item_count": 102
+                },
+                "timeline_states": {
+                  "sequence_omitted": true,
+                  "item_count": 102
+                },
+                "voltage_min": 0.0401859746,
+                "voltage_max": 11.4997328,
+                "voltage_magnitude_min": 0.0401859746,
+                "voltage_magnitude_max": 11.4997328,
+                "time_window_s": 20.0
+              },
+              "scenario_profile": {
+                "status": "measured",
+                "source_component_id": "lamp13.1",
+                "state": "blinking",
+                "profile_method": "differential_voltage_relative_threshold",
+                "positive_node": "N003",
+                "negative_node": "0",
+                "threshold_v": 5.7689755563,
+                "on_fraction": 0.10764676862358165,
+                "duty_cycle": 0.11487788791642337,
+                "regular_period": true,
+                "period_s": 0.4178349799999994,
+                "frequency_hz": 2.393289331592107,
+                "pulse_count": 43,
+                "timeline_key_times": {
+                  "sequence_omitted": true,
+                  "item_count": 87
+                },
+                "timeline_states": {
+                  "sequence_omitted": true,
+                  "item_count": 87
+                },
+                "voltage_min": 0.0384013126,
+                "voltage_max": 11.4995498,
+                "voltage_magnitude_min": 0.0384013126,
+                "voltage_magnitude_max": 11.4995498,
+                "time_window_s": 20.0
+              },
+              "conditions": [
+                {
+                  "criterion": "required_state",
+                  "expected": "blinking",
+                  "actual": "blinking",
+                  "met": true
+                },
+                {
+                  "criterion": "require_regular_period",
+                  "expected": true,
+                  "actual": true,
+                  "met": true
+                },
+                {
+                  "criterion": "min_relative_period_increase",
+                  "expected": 0.25,
+                  "actual": 0.17612255623502077,
+                  "met": false
+                }
+              ]
+            }
+          },
+          "led_profiles": {}
+        }
+      },
+      {
+        "scenario_id": "scenario_3",
+        "title": "Aumentare il condensatore tra uscita e ADJ del timer",
+        "hypothesis": "Se il lampeggio troppo rapido e dominato dalla costante di tempo del ramo LM317 ADJ/OUT, aumentare Cpolarized_capacitor20_3 deve allungare il periodo della lampada di almeno il 25% mantenendo il lampeggio regolare; questo confermerebbe che conviene controllare soprattutto il ramo Rresistor22_3-Cpolarized_capacitor20_3.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Cpolarized_capacitor20_3",
+            "value": "15u"
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "v(N003)",
+          "v(N001)",
+          "v(N004)"
+        ],
+        "expect": {
+          "v(N003)": "changed",
+          "v(N001)": "changed",
+          "v(N004)": "changed"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N003)",
+              "metric": "v(n003).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 11.4595468254,
+              "scenario_value": 11.455765422999999,
+              "delta": -0.0037814024000013546,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": 0.0401859746,
+                "max": 11.4997328,
+                "mean": 1.4967378960588031,
+                "vpp": 11.4595468254,
+                "final": 0.0493115416,
+                "abs_peak": 11.4997328
+              },
+              "scenario_details": {
+                "min": 0.044159877,
+                "max": 11.4999253,
+                "mean": 1.458761704156519,
+                "vpp": 11.455765422999999,
+                "final": 0.0575980102,
+                "abs_peak": 11.4999253
+              }
+            },
+            {
+              "quantity": "v(N001)",
+              "metric": "v(n001).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 11.83920076,
+              "scenario_value": 11.774947390000001,
+              "delta": -0.06425336999999942,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": -1.56278436,
+                "max": 10.2764164,
+                "mean": 0.08648327066114969,
+                "vpp": 11.83920076,
+                "final": -1.4960299,
+                "abs_peak": 10.2764164
+              },
+              "scenario_details": {
+                "min": -1.50341599,
+                "max": 10.2715314,
+                "mean": 0.07517488233535363,
+                "vpp": 11.774947390000001,
+                "final": -1.43860692,
+                "abs_peak": 10.2715314
+              }
+            },
+            {
+              "quantity": "v(N004)",
+              "metric": "v(n004).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 12.27032565,
+              "scenario_value": 12.32609701,
+              "delta": 0.055771359999999603,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": -1.81453185,
+                "max": 10.4557938,
+                "mean": 0.08590050285344784,
+                "vpp": 12.27032565,
+                "final": -1.34353832,
+                "abs_peak": 10.4557938
+              },
+              "scenario_details": {
+                "min": -1.84005441,
+                "max": 10.4860426,
+                "mean": 0.0738935139793604,
+                "vpp": 12.32609701,
+                "final": -1.24341904,
+                "abs_peak": 10.4860426
+              }
+            }
+          ],
+          "comparison_evidence": {
+            "temporal_expectation": {
+              "target": "Rlamp13_1",
+              "available": true,
+              "met": false,
+              "reason": "Almeno un criterio temporale non e soddisfatto.",
+              "base_profile": {
+                "status": "measured",
+                "source_component_id": "lamp13.1",
+                "state": "blinking",
+                "profile_method": "differential_voltage_relative_threshold",
+                "positive_node": "N003",
+                "negative_node": "0",
+                "threshold_v": 5.7699593873,
+                "on_fraction": 0.10587539432176656,
+                "duty_cycle": 0.11259206265928588,
+                "regular_period": true,
+                "period_s": 0.3552648299999994,
+                "frequency_hz": 2.8148015664821133,
+                "pulse_count": 50,
+                "timeline_key_times": {
+                  "sequence_omitted": true,
+                  "item_count": 102
+                },
+                "timeline_states": {
+                  "sequence_omitted": true,
+                  "item_count": 102
+                },
+                "voltage_min": 0.0401859746,
+                "voltage_max": 11.4997328,
+                "voltage_magnitude_min": 0.0401859746,
+                "voltage_magnitude_max": 11.4997328,
+                "time_window_s": 20.0
+              },
+              "scenario_profile": {
+                "status": "measured",
+                "source_component_id": "lamp13.1",
+                "state": "blinking",
+                "profile_method": "differential_voltage_relative_threshold",
+                "positive_node": "N003",
+                "negative_node": "0",
+                "threshold_v": 5.7720425885,
+                "on_fraction": 0.09946661398656657,
+                "duty_cycle": 0.11037128305867995,
+                "regular_period": true,
+                "period_s": 0.3939684200000002,
+                "frequency_hz": 2.5382745144902716,
+                "pulse_count": 44,
+                "timeline_key_times": {
+                  "sequence_omitted": true,
+                  "item_count": 90
+                },
+                "timeline_states": {
+                  "sequence_omitted": true,
+                  "item_count": 90
+                },
+                "voltage_min": 0.044159877,
+                "voltage_max": 11.4999253,
+                "voltage_magnitude_min": 0.044159877,
+                "voltage_magnitude_max": 11.4999253,
+                "time_window_s": 20.0
+              },
+              "conditions": [
+                {
+                  "criterion": "required_state",
+                  "expected": "blinking",
+                  "actual": "blinking",
+                  "met": true
+                },
+                {
+                  "criterion": "require_regular_period",
+                  "expected": true,
+                  "actual": true,
+                  "met": true
+                },
+                {
+                  "criterion": "min_relative_period_increase",
+                  "expected": 0.25,
+                  "actual": 0.10894292576048367,
+                  "met": false
+                }
+              ]
+            }
+          },
+          "led_profiles": {}
+        }
+      },
+      {
+        "scenario_id": "scenario_4",
+        "title": "Correzione: aumentare Rresistor22_3 per rallentare il timer LM317",
+        "hypothesis": "Il lampeggio troppo rapido e dovuto principalmente a una costante di tempo troppo piccola nel ramo tra ADJ del LM317 e N004; portando Rresistor22_3 da 10k a 22k il periodo della lampada dovrebbe aumentare in modo significativo, rendendo i lampi piu distinguibili senza perdere regolarita.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Rresistor22_3",
+            "value": "22k"
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "v(N003)",
+          "v(N001)",
+          "v(N004)"
+        ],
+        "expect": {
+          "v(N003)": "changed",
+          "v(N001)": "changed",
+          "v(N004)": "changed"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N003)",
+              "metric": "v(n003).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 11.4595468254,
+              "scenario_value": 11.4607835905,
+              "delta": 0.0012367650999998148,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": 0.0401859746,
+                "max": 11.4997328,
+                "mean": 1.4967378960588031,
+                "vpp": 11.4595468254,
+                "final": 0.0493115416,
+                "abs_peak": 11.4997328
+              },
+              "scenario_details": {
+                "min": 0.0386900095,
+                "max": 11.4994736,
+                "mean": 1.4637314481571655,
+                "vpp": 11.4607835905,
+                "final": 0.43655173,
+                "abs_peak": 11.4994736
+              }
+            },
+            {
+              "quantity": "v(N001)",
+              "metric": "v(n001).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 11.83920076,
+              "scenario_value": 11.87623682,
+              "delta": 0.03703606000000015,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": -1.56278436,
+                "max": 10.2764164,
+                "mean": 0.08648327066114969,
+                "vpp": 11.83920076,
+                "final": -1.4960299,
+                "abs_peak": 10.2764164
+              },
+              "scenario_details": {
+                "min": -1.59540782,
+                "max": 10.280829,
+                "mean": 0.04517445497783586,
+                "vpp": 11.87623682,
+                "final": -0.840324794,
+                "abs_peak": 10.280829
+              }
+            },
+            {
+              "quantity": "v(N004)",
+              "metric": "v(n004).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 12.27032565,
+              "scenario_value": 12.803650509999999,
+              "delta": 0.5333248599999987,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": -1.81453185,
+                "max": 10.4557938,
+                "mean": 0.08590050285344784,
+                "vpp": 12.27032565,
+                "final": -1.34353832,
+                "abs_peak": 10.4557938
+              },
+              "scenario_details": {
+                "min": -2.17297571,
+                "max": 10.6306748,
+                "mean": 0.04511666251853314,
+                "vpp": 12.803650509999999,
+                "final": -0.444658428,
+                "abs_peak": 10.6306748
+              }
+            }
+          ],
+          "comparison_evidence": {
+            "temporal_expectation": {
+              "target": "Rlamp13_1",
+              "available": true,
+              "met": true,
+              "reason": "Criteri temporali verificati.",
+              "base_profile": {
+                "status": "measured",
+                "source_component_id": "lamp13.1",
+                "state": "blinking",
+                "profile_method": "differential_voltage_relative_threshold",
+                "positive_node": "N003",
+                "negative_node": "0",
+                "threshold_v": 5.7699593873,
+                "on_fraction": 0.10587539432176656,
+                "duty_cycle": 0.11259206265928588,
+                "regular_period": true,
+                "period_s": 0.3552648299999994,
+                "frequency_hz": 2.8148015664821133,
+                "pulse_count": 50,
+                "timeline_key_times": {
+                  "sequence_omitted": true,
+                  "item_count": 102
+                },
+                "timeline_states": {
+                  "sequence_omitted": true,
+                  "item_count": 102
+                },
+                "voltage_min": 0.0401859746,
+                "voltage_max": 11.4997328,
+                "voltage_magnitude_min": 0.0401859746,
+                "voltage_magnitude_max": 11.4997328,
+                "time_window_s": 20.0
+              },
+              "scenario_profile": {
+                "status": "measured",
+                "source_component_id": "lamp13.1",
+                "state": "blinking",
+                "profile_method": "differential_voltage_relative_threshold",
+                "positive_node": "N003",
+                "negative_node": "0",
+                "threshold_v": 5.76908180475,
+                "on_fraction": 0.10092106566306824,
+                "duty_cycle": 0.11571730029874687,
+                "regular_period": true,
+                "period_s": 0.4815494299999994,
+                "frequency_hz": 2.076630014908337,
+                "pulse_count": 36,
+                "timeline_key_times": {
+                  "sequence_omitted": true,
+                  "item_count": 74
+                },
+                "timeline_states": {
+                  "sequence_omitted": true,
+                  "item_count": 74
+                },
+                "voltage_min": 0.0386900095,
+                "voltage_max": 11.4994736,
+                "voltage_magnitude_min": 0.0386900095,
+                "voltage_magnitude_max": 11.4994736,
+                "time_window_s": 20.0
+              },
+              "conditions": [
+                {
+                  "criterion": "required_state",
+                  "expected": "blinking",
+                  "actual": "blinking",
+                  "met": true
+                },
+                {
+                  "criterion": "require_regular_period",
+                  "expected": true,
+                  "actual": true,
+                  "met": true
+                },
+                {
+                  "criterion": "min_relative_period_increase",
+                  "expected": 0.25,
+                  "actual": 0.355466089902567,
+                  "met": true
+                }
+              ]
+            }
+          },
+          "led_profiles": {}
+        }
+      }
+    ],
+    "final": {
+      "answer": "Conviene controllare soprattutto la rete di temporizzazione attorno all'LM317, in particolare il ramo tra ADJ e N004 formato da Rresistor22_3 con i condensatori associati. La verifica controllata piu forte ha mostrato che aumentando Rresistor22_3 da 10k a 22k il lampeggio della lampada resta regolare e il periodo passa da circa 0.355 s a circa 0.482 s, quindi oltre la soglia richiesta di aumento del 25%; i lampi diventano piu distinguibili\n\nCorrezione verificata: Aumentare Rresistor22_3 da 10k a 22k. Scenario verificato: la lampada Rlamp13_1 continua a lampeggiare con periodo regolare e il periodo cresce da circa 0.355 s a circa 0.482 s (+35.5% circa).",
+      "cause": "La causa piu sostenuta dagli artefatti e una costante di tempo troppo piccola nel ramo ADJ-N004 del timer basato su LM317. I test su Rresistor22_2 e su Cpolarized_capacitor20_3 hanno rallentato poco il lampeggio, mentre il ramo con Rresistor22_3 ha prodotto l'effetto dominante e verificato.",
+      "verified_correction": "Aumentare Rresistor22_3 da 10k a 22k. Scenario verificato: la lampada Rlamp13_1 continua a lampeggiare con periodo regolare e il periodo cresce da circa 0.355 s a circa 0.482 s (+35.5% circa)."
+    }
+  }
+}

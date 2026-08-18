@@ -1,0 +1,112 @@
+{
+  "source_format": "pipeline2.0_experiment_scenario_registry",
+  "batch_name": "batchChatAgentEvaluation",
+  "experiment_name": "chat_agent_evaluation",
+  "circuit_id": "a10",
+  "created_at": "2026-07-24T10:56:42",
+  "updated_at": "2026-07-24T10:57:31",
+  "max_executable_scenarios": 5,
+  "next_scenario_number": 2,
+  "last_added_scenario_id": "scenario_1",
+  "proposals": [
+    {
+      "proposal_id": "proposal_1",
+      "created_at": "2026-07-24T10:56:42",
+      "source_agent_response": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\a10\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_1"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_number": 1,
+      "scenario_id": "scenario_1",
+      "title": "Chiudere lo switch e propagare l'alimentazione ai rami LED e lampada",
+      "hypothesis": "The battery is present but the positive supply does not reach the LED and lamp branches because switch25.1 is open and the branch input nodes N003 and N004 are not fed from the switched supply path.",
+      "actions": [
+        {
+          "type": "close_switch",
+          "target": "switch25.1"
+        },
+        {
+          "type": "feed_nodes_from_source_node",
+          "source_node": "N002",
+          "target_nodes": [
+            "N003",
+            "N004"
+          ],
+          "resistance": "1m"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N002)",
+        "v(N003)",
+        "v(N004)",
+        "v(N005)",
+        "i(Rlamp13_1)",
+        "i(vbattery2_1#branch)"
+      ],
+      "measure": {},
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N003)": "increased",
+        "v(N004)": "increased",
+        "i(Rlamp13_1)": "nonzero",
+        "i(vbattery2_1#branch)": "nonzero"
+      },
+      "rerun_from": "06",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_1",
+      "execution_path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\a10\\scenarios\\scenario_1",
+      "created_at": "2026-07-24T10:56:42",
+      "updated_at": "2026-07-24T10:57:31",
+      "signature": "{\"actions\":[{\"target\":\"switch25.1\",\"type\":\"close_switch\"},{\"resistance\":\"1m\",\"source_node\":\"N002\",\"target_nodes\":[\"N003\",\"N004\"],\"type\":\"feed_nodes_from_source_node\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_1",
+        "title": "Chiudere lo switch e propagare l'alimentazione ai rami LED e lampada",
+        "hypothesis": "The battery is present but the positive supply does not reach the LED and lamp branches because switch25.1 is open and the branch input nodes N003 and N004 are not fed from the switched supply path.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "close_switch",
+            "target": "switch25.1"
+          },
+          {
+            "type": "feed_nodes_from_source_node",
+            "source_node": "N002",
+            "target_nodes": [
+              "N003",
+              "N004"
+            ],
+            "resistance": "1m"
+          }
+        ],
+        "rerun_from": "06",
+        "analysis": "op",
+        "compare": [
+          "v(N002)",
+          "v(N003)",
+          "v(N004)",
+          "v(N005)",
+          "i(Rlamp13_1)",
+          "i(vbattery2_1#branch)"
+        ],
+        "expect": {
+          "v(N003)": "increased",
+          "v(N004)": "increased",
+          "i(Rlamp13_1)": "nonzero",
+          "i(vbattery2_1#branch)": "nonzero"
+        }
+      }
+    }
+  ]
+}

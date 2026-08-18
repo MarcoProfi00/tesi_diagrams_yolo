@@ -1,0 +1,23 @@
+* pipeline2.0 netlist
+* circuit: a07
+
+Rmeter_analog_meter0_1 N001 0 10000000
+Dled12_1 N004 0 LED_RED
+Rresistor22_1 N002 N004 680
+* switch25.1 open: not emitted
+
+.model LED_RED D
+
+VSCENARIO_SUPPLY_N001_0 N001 0 SIN(0 5 50)
+.op
+.save all
+.tran 0.1ms 40ms
+
+.control
+set wr_singlescale
+set wr_vecnames
+save all @dled12_1[id]
+run
+wrdata 08_tran.csv time v(N001) v(N002) v(N004) @dled12_1[id]
+.endc
+.end

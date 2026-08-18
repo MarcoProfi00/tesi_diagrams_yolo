@@ -1,0 +1,26 @@
+{
+  "scenario_id": "scenario_2",
+  "title": "Ridurre R4 da 50 ohm a 33 ohm",
+  "hypothesis": "Una riduzione moderata del potenziometro equivalente R4 dovrebbe aumentare la corrente nel ramo di carica se R4 e un controllo efficace della corrente verso la batteria.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Rresistor22_5",
+      "value": "33"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "@ddiode7_4[id]",
+    "v(N004)",
+    "v(N005)"
+  ],
+  "measure": {
+    "@ddiode7_4[id]": "tran_abs_peak"
+  },
+  "expect": {
+    "@ddiode7_4[id]": "magnitude_increased"
+  }
+}

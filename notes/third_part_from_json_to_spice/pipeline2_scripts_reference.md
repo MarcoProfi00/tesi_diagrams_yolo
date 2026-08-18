@@ -36,7 +36,16 @@ scripts/pipeline_2.0/
     |-- 09_web_chat.py
     |-- 10_build_diagnostic_context.py
     |-- 11_agent_readonly.py
-    `-- 12_controlled_scenarios.py
+    |-- 12_controlled_scenarios.py
+    |-- 13_build_viewer_model.py
+    |-- 14_build_viewer_layout.py
+    |-- 15_render_viewer_svg.py
+    |-- 16_autonomous_diagnosis.py
+    |-- agent_readonly/
+    |-- autonomous_agent/
+    |-- controlled_scenarios/
+    |-- viewer_core/
+    `-- web_chat_core/
 ```
 
 Output possibili:
@@ -88,6 +97,10 @@ Sono gli script che lavorano sopra una base gia generata:
 10_build_diagnostic_context
 11_agent_readonly
 12_controlled_scenarios
+13_build_viewer_model
+14_build_viewer_layout
+15_render_viewer_svg
+16_autonomous_diagnosis
 ```
 
 Questa parte non sostituisce la pipeline tecnica. La usa come evidenza.
@@ -109,6 +122,12 @@ Ruolo:
 - esegue gli step tecnici nell'ordine corretto;
 - opzionalmente esegue ngspice;
 - alla fine costruisce anche `10_diagnostic_context.json`.
+
+Il file espone anche `run_technical_pipeline(...)`: riceve percorsi espliciti
+per Graph JSON, YAML e output ed esegue soltanto gli step 01-08. E il punto di
+riuso del launcher unificato nei workspace `outputs/demo_workspaces/`; non
+introduce una seconda implementazione della conversione elettrica. La CLI
+storica continua a risolvere le root Batch A/B e a costruire lo step 10.
 
 Step oggi caricati davvero dal codice:
 
@@ -220,6 +239,15 @@ Comando tipico:
 python scripts\pipeline_2.0\prepare_experiment_outputs.py --batch batchA --experiment experiment2 --circuits a01 a02 a03 --mode base-only
 ```
 
+Variante di destinazione:
+
+```powershell
+python scripts\pipeline_2.0\prepare_experiment_outputs.py --batch batchA --experiment experiment4 --destination-variant chat --source-experiment experiment3_1 --circuits a01 a02 a04 a05 a06 a07 a08 a09 a10 --mode base-only
+```
+
+`--destination-variant` aggiunge una sottocartella tra esperimento e circuito.
+La copia resta non distruttiva e il manifest registra anche la variante scelta.
+
 ## Pipeline tecnica 01-08
 
 ## 01_io.py
@@ -330,6 +358,8 @@ Ruolo:
 - legge i valori manuali dal file YAML;
 - associa valori, modelli e stati ai componenti;
 - gestisce anche supply manuali e stato degli switch;
+- risolve `spice_override.node_refs` esclusivamente verso terminali gia
+  presenti nel Graph JSON;
 - distingue componenti `bound`, mancanti o non supportati.
 
 Input:
@@ -349,6 +379,30 @@ Output:
 Perche serve:
 
 la topologia da sola non basta a generare una netlist utilizzabile.
+
+### Overlay SPICE dichiarativo nello YAML
+
+Il Graph JSON non viene corretto o riscritto dalla Pipeline 2.0. Quando la
+semantica elettrica richiede un arricchimento manuale, il singolo componente
+puo dichiarare `spice_override` nel file valori:
+
+- `node_order`: sceglie l'ordine di terminali gia disponibili, per esempio il
+  secondario effettivo di un trasformatore equivalente;
+- `terminal_map`: associa un pin elettrico atteso al terminale OCR validato,
+  per esempio `C, B, E` di un BJT;
+- `emit_as: subcircuit`, `pin_order` e `node_refs`: dichiarano in modo
+  generale un dispositivo SPICE multipin.
+
+Ogni `node_refs` deve citare un terminale del Graph. Se un pin indispensabile
+non e ancora validato, l'override deve restare `pending`: lo step 06 produce
+uno stato mancante e lo step 07 non emette un componente elettricamente
+inventato.
+
+Se la validazione immagine-graph dimostra un net merge errato, il YAML puo
+aggiungere `spice_topology_overlay.terminal_node_overrides`. Ogni voce cita un
+terminale esistente e un nodo SPICE nominato: modifica soltanto la vista
+elettrica usata da 04-07, registra il passaggio in `04_values_bound.json` e
+non riscrive mai il Graph JSON della Pipeline 1.0.
 
 ## 05_device_profiles.py
 
@@ -395,6 +449,12 @@ Ruolo:
 - distingue componenti emettibili, strutturali, mancanti, semplificati o non
   supportati;
 - prepara prefissi, nodi e parametri da usare nello step 07.
+- gestisce i BJT `NPN_Transistor` e `PNP_Transistor` con ordine terminali
+  SPICE `C, B, E`; il tipo effettivo e determinato dalla classe validata e dal
+  modello dichiarato nel file valori.
+- applica gli override YAML dichiarativi senza mutare il Graph sorgente;
+- puo preparare una subcircuit a piu terminali quando tutti i `node_refs` sono
+  risolti e il modello e disponibile.
 
 Input:
 
@@ -428,6 +488,7 @@ Ruolo:
   elementi supportati;
 - commenta o salta componenti strutturali e non emettibili;
 - aggiunge modelli `.model` quando servono;
+- emette una subcircuit dichiarativa come elemento `X...`;
 - aggiunge `.op` e, se richiesto, anche `.tran`;
 - salva anche un report di emissione.
 
@@ -491,7 +552,7 @@ Nota importante:
 
 `08_spice_run.py` non interpreta la diagnosi. Esegue e salva.
 
-## Layer diagnostico e interattivo 09-12
+## Layer diagnostico, interattivo, viewer e autonomo 09-16
 
 ## 09_web_chat.py
 
@@ -511,6 +572,8 @@ Ruolo:
 - riconosce richieste come `esegui scenario 1`, `esegui l'ultimo`,
   `mostra scenari`;
 - chiama lo step 12 per eseguire scenari su copie separate.
+- genera o aggiorna gli step viewer `13`, `14` e `15` per la run visualizzata e
+  per ogni nuova run scenario.
 
 Caratteristiche architetturali:
 
@@ -518,6 +581,10 @@ Caratteristiche architetturali:
 - niente backend persistente complesso;
 - niente API pubbliche;
 - server solo locale e temporaneo.
+
+Le utility pure di lettura e serializzazione sono isolate in
+`web_chat_core/io_utils.py`; `09_web_chat.py` resta la facciata pubblica e
+mantiene gli stessi nomi importabili.
 
 Artefatti chat principali:
 
@@ -527,7 +594,8 @@ Artefatti chat principali:
 11_agent_response_chat.md
 ```
 
-Per root `experiment2*` salva anche memoria ufficiale locale:
+Per ogni sessione interattiva nominata salva anche memoria ufficiale locale.
+Le root `experiment2*` mantengono per compatibilita questi path:
 
 ```text
 experiment2_chat/chat_history.json
@@ -544,12 +612,26 @@ In questa modalita:
 - il bottone `Clear` resetta chat, registry, cartelle `scenarios/` e artefatti
   chat 10/11 della sessione, ma non tocca i file base `01-08`.
 
+Sessione Experiment 3.1:
+
+- `experiment3_1` usa lo stesso meccanismo di history e registry della chat;
+- salva i file in `experiment_chat/` per non attribuirli artificialmente
+  all'Esperimento 2;
+- le root `experiment2*` conservano `experiment2_chat/` per compatibilita.
+- le altre sessioni nominate, inclusi i workspace dell'orchestratore
+  unificato, usano `experiment_chat/`.
+
 Input:
 
 ```text
 outputs/pipeline2.0/<batch>/<circuit>/
 outputs/pipeline2.0/<batch>/<experiment>/<circuit>/
+outputs/pipeline2.0/<batch>/<experiment>/<variant>/<circuit>/
 ```
+
+L'opzione `--variant` e disponibile da CLI e richiede `--experiment`.
+Con Experiment 4, se `--variant` non viene specificato, la stessa pagina
+espone lo switch dinamico tra i workspace separati `chat` e `agent`.
 
 Output:
 
@@ -576,16 +658,19 @@ Nota:
 - la web chat mostra gia base run, immagine, artefatti e scenari disponibili;
 - il viewer/simulatore visuale viene mostrato come blocco aggiuntivo della pagina centrale;
 - `13_viewer_model.json` descrive cosa esiste nella run;
-- `14_viewer_layout.json` descrive un primo layout automatico grezzo, non ancora usato come unico renderer.
+- `14_viewer_layout.json` descrive layout, terminali e route automatiche;
+- `15_viewer.svg` e il viewer SVG generale mostrato nel pannello centrale.
 
 Nota architetturale:
 
-- il viewer attuale della web chat contiene ancora un prototipo visivo cucito su `a01`;
-- questo prototipo serve solo come prova iniziale, non come riferimento di layout;
-- non va esteso creando renderer hardcoded per `a02`, `a04`, `a09` ecc.;
-- il viewer deve essere `netlist-grounded + image-guided`;
-- le bbox e i terminali di Pipeline 1.0 vanno usati come geometry seed;
-- a regime `09_web_chat.py` deve solo mostrare il viewer della run selezionata, mentre modello, layout e rendering devono derivare da `13_viewer_model.json`, `14_viewer_layout.json` e dal nuovo renderer `15`.
+- il viewer e `netlist-grounded + image-guided`;
+- bbox e terminali della Pipeline 1.0 sono geometry seed, non verita elettrica;
+- `pipeline2_sources.json`, quando presente nella base o in una directory
+  antenata, collega esplicitamente immagine, `03_estimate_terminals` e
+  `05_build_terminal_graph` della stessa run persistente;
+- `09_web_chat.py` non contiene coordinate o renderer di singoli circuiti;
+- modello, layout e rendering derivano da `13_viewer_model.json`,
+  `14_viewer_layout.json` e `15_viewer.svg`.
 
 ## 13_build_viewer_model.py
 
@@ -600,8 +685,12 @@ Ruolo:
 - costruisce il contratto dati del viewer per una base run o una scenario run;
 - parte dalla netlist realmente simulata in `07_netlist.cir`;
 - aggiunge contesto strutturale da `03_node_map.json` e `06_component_rules.json`;
-- aggiunge misure operative da `08_ngspice_stdout.txt`;
-- deve essere esteso con geometry seed da Pipeline 1.0 (`03_estimate_terminals`).
+- aggiunge misure operative e transienti da `08_*`;
+- acquisisce geometry seed da Pipeline 1.0 (`03_estimate_terminals` e
+  `05_build_terminal_graph`), privilegiando i path espliciti della stessa run;
+- riconosce le istanze di subcircuito `X...` e ignora gli elementi interni
+  compresi tra `.subckt` e `.ends`, che non appartengono allo schema utente;
+- integra i `viewer_override` dello YAML senza modificare il Graph JSON.
 
 Output:
 
@@ -618,7 +707,7 @@ python scripts\pipeline_2.0\json_to_spice\13_build_viewer_model.py --run-dir out
 Nota:
 
 - lo step 13 dice cosa deve essere rappresentato;
-- non deve diventare il motore di layout definitivo.
+- non contiene coordinate SVG o regole grafiche.
 
 ## 14_build_viewer_layout.py
 
@@ -634,6 +723,13 @@ Ruolo:
 - normalizza bbox e terminali sul canvas viewer;
 - assegna posizioni a componenti, nodi, pin e connessioni;
 - calcola routes e fallback per componenti scenario senza bbox;
+- associa prima i terminali mediante i nomi logici dei pin, cosi dispositivi
+  multipin come gli SCR mantengono anodo, catodo e gate distinti;
+- sintetizza un pin dichiarato ma assente dalla geometria OCR prima di usare
+  terminali geometrici residui;
+- puo collocare una sorgente esterna tra due terminali del Graph dichiarati
+  nello YAML, senza coordinate o identificativi di circuito nel codice;
+- riserva una fascia destra stabile per la legenda del viewer;
 - prepara la separazione tra modello elettrico e coordinate SVG.
 
 Output:
@@ -650,26 +746,34 @@ python scripts\pipeline_2.0\json_to_spice\14_build_viewer_layout.py --run-dir ou
 
 Nota:
 
-- lo stato attuale e `rough_auto`;
 - il layout non ricostruisce l'immagine originale pixel-perfect;
-- il renderer della web chat usa ancora il prototipo visivo di `a01`, ma genera gia anche questo layout;
-- il layout deve diventare la base del renderer generico per tutti i circuiti e scenari.
+- e la base del renderer generale per tutti i circuiti e scenari;
+- include route ortogonali, fallback scenario e ponti per attraversamenti senza
+  giunzione elettrica.
 
 ## 15_render_viewer_svg.py
 
-Stato:
+Path:
 
 ```text
-da creare nella prossima fase di Experiment 3
+scripts/pipeline_2.0/json_to_spice/15_render_viewer_svg.py
 ```
 
-Ruolo previsto:
+Ruolo:
 
 - leggere `13_viewer_model.json`;
 - leggere `14_viewer_layout.json`;
 - applicare il vocabolario dei componenti grafici;
-- produrre SVG/HTML embeddabile nella web chat;
-- sostituire progressivamente il renderer hardcoded di `a01` dentro `09_web_chat.py`.
+- produrre `15_viewer.svg` embeddabile nella web chat;
+- usare il vocabolario componenti comune, animazioni elettriche, legenda,
+  tooltip scenario, zoom/pan e scope transienti forniti dalla pagina web;
+- disegnare SCR a tre terminali, trasformatori a due avvolgimenti e batterie
+  esterne mediante primitive generali condivise da base, CHAT e AGENT.
+- alleggerire le label tramite `viewer_override.label_mode` (`hidden`,
+  `reference_only`, `value_only`) e spostare le informazioni descrittive nel
+  `viewer_override.tooltip` SVG.
+- posizionare i badge nodo su piu punti candidati e considerarli in collisione
+  anche con le label dei bipoli, non soltanto con i simboli.
 
 Principio:
 
@@ -678,19 +782,23 @@ Principio:
 - `15` descrive come disegnarlo;
 - `09` deve solo mostrare il viewer della run selezionata.
 
-Prima milestone:
+Struttura interna condivisa:
 
 ```text
-a01 renderizzato da 13 + 14 + 15, senza coordinate specifiche dentro 09_web_chat.py
+viewer_core/contracts.py          contratti e versioni degli artefatti
+viewer_core/json_io.py            I/O JSON comune
+viewer_core/component_library.py  catalogo dei componenti
+viewer_core/model_builder.py      logica del modello
+viewer_core/layout_builder.py     geometria e routing
+viewer_core/svg_renderer.py       simboli e composizione SVG
+viewer_core/svg_styles.py         CSS e animazioni SVG
 ```
 
-Seconda milestone:
+I file `13_build_viewer_model.py`, `14_build_viewer_layout.py` e
+`15_render_viewer_svg.py` sono gli entry point pubblici. Questa separazione
+alleggerisce i comandi senza cambiare artefatti, CLI o integrazione web.
 
-```text
-scenario_1 di a01 renderizzato dalla run scenario
-```
-
-Poi estensione Batch A:
+Copertura Experiment 3:
 
 ```text
 a01 -> a10/a09 -> a02/a05/a07 -> a08 -> a04/a06
@@ -840,6 +948,7 @@ Primitive oggi supportate:
 ```text
 Scenari elettrici / di pilotaggio:
 - drive_node_voltage
+- set_initial_node_voltage
 - add_voltage_source_between_nodes
 - change_source_value
 - change_component_value
@@ -855,6 +964,10 @@ Responsabilita aggiuntive:
 
 - valida i nodi richiesti dallo scenario;
 - normalizza valori SPICE;
+- per `set_initial_node_voltage` richiede `analysis: "tran"` ed emette una
+  direttiva `.ic` senza sorgenti permanenti; il flag booleano opzionale
+  `skip_operating_point: true` aggiunge `UIC` alla `.tran` per una prova reale
+  di avvio che deve evitare un punto operativo artificialmente simmetrico;
 - limita il budget a massimo `5` scenari eseguibili per circuito;
 - crea `scenario_comparison.json`;
 - classifica automaticamente l'esito con categorie come:
@@ -862,6 +975,17 @@ Responsabilita aggiuntive:
   - `partially_resolved`
   - `not_resolved`
   - `unknown`
+
+Struttura interna:
+
+```text
+controlled_scenarios/measurements.py  parsing e metriche OP/TRAN
+controlled_scenarios/outcome.py       classificazione prudente dell'esito
+```
+
+`12_controlled_scenarios.py` resta l'entry point pubblico e riesporta le
+funzioni spostate, mentre applicazione delle azioni e invocazione di ngspice
+rimangono nella facciata numerata.
 
 Output principali:
 
@@ -914,8 +1038,200 @@ utente sceglie uno scenario
 -> chiama 12_controlled_scenarios.py
 -> opzionalmente esegue ngspice sulla run scenario
 -> costruisce scenario_comparison.json
+-> genera 13_viewer_model.json
+-> genera 14_viewer_layout.json
+-> genera 15_viewer.svg
 -> agente puo leggere il nuovo esito
 ```
+
+## Experiment 4 - automazione implementata
+
+Questa sezione descrive la prima versione implementata e validata in una prima
+passata OpenAI su `a01`, `a02` e `a04`-`a10`; `a03` resta escluso per il noto
+limite topologico/SPICE.
+
+La stessa web app seleziona due workspace indipendenti:
+
+```text
+experiment4/chat/<circuit>
+experiment4/agent/<circuit>
+```
+
+`09_web_chat.py` risolve il percorso `<experiment>/<variant>/<circuito>`. Per
+Experiment 4, quando viene avviato senza `--variant`, espone nella stessa
+sessione server lo switch tra `chat` e `agent`, mantenendo separati
+conversazione, registry, scenari e run selezionata. Non usa un database.
+
+Moduli implementati:
+
+```text
+scenario_runtime.py          # runtime condiviso per creare ed eseguire scenari
+scenario_expectations.py     # criteri attesi condivisi tra contratto e confronto
+16_autonomous_diagnosis.py   # una decisione/iterazione autonoma per chiamata
+autonomous_agent/            # contratto, prompt, stato e controller separati
+```
+
+Dentro `autonomous_agent/`, `presentation.py` mantiene separata la UI dalla
+logica decisionale. Produce il contratto generale `agent_view` leggendo stato,
+`scenario.json`, `scenario_comparison.json`, output SPICE, viewer e presenza
+del CSV transitorio. Non contiene condizioni per batch o circuiti specifici.
+
+In `AGENT` la colonna destra mostra una dashboard persistente con avanzamento,
+timeline dei test, azioni, evidenze e conclusione. I pulsanti delle schede
+selezionano la run nel pannello centrale, dove rimangono viewer e grafici
+`.tran`. In `CHAT` restano invariati renderer delle risposte, cronologia ed
+esecuzione manuale degli scenari. Stili e renderer della dashboard vivono in
+`web_chat/agent_view.css` e `web_chat/agent_view.js`, separati dal template
+HTML generale.
+
+Il runtime condiviso riusa gli step esistenti `10`-`15` ed e l'unica
+implementazione del percorso:
+
+```text
+scenario validato
+-> copia run separata
+-> 12_controlled_scenarios.py
+-> ngspice
+-> scenario_comparison.json
+-> 13/14/15
+-> aggiornamento context, registry e history
+```
+
+Il controller autonomo accetta soltanto decisioni strutturate
+`run_scenarios` o `stop`, esegue una iterazione alla volta e salva lo stato
+in `experiment_chat/autonomous_diagnosis.json`.
+
+Guardrail implementati:
+
+- il budget conta soltanto scenari con SPICE realmente eseguito;
+- scenari non validi o duplicati non consumano budget;
+- `resolved_candidate` dello step 12 non equivale automaticamente a sintomo
+  risolto;
+- se l'utente chiede esplicitamente una correzione, l'agente non puo chiudere
+  con la sola causa localizzata finche resta budget e non esiste una correzione
+  verificata;
+- il ciclo termina per stop motivato, limite di 5 run, assenza di azioni valide,
+  errore non recuperabile o arresto utente;
+- la base run e il workspace dell'altra modalita non vengono modificati.
+- sono ammesse le nove primitive controllate `drive_node_voltage`,
+  `set_initial_node_voltage`,
+  `change_source_value`, `change_component_value`, `close_switch`,
+  `connect_nodes`, `feed_nodes_from_source_node`,
+  `add_voltage_source_between_nodes` e `add_resistor_between_nodes`;
+- nuove sorgenti e nuovi rami vengono richiesti al modello soltanto in
+  presenza di evidenze tecniche che li rendono diagnosticamente motivati;
+- `feed_nodes_from_source_node` e riservata alla propagazione da un nodo gia
+  alimentato; `connect_nodes` testa continuita generica e non puo sovrapporsi
+  allo stesso feed nella medesima decisione;
+- `add_resistor_between_nodes` non viene assimilata a questi collegamenti,
+  perche modella un accoppiamento resistivo distinto;
+- `set_initial_node_voltage` verifica un possibile equilibrio iniziale
+  simmetrico soltanto in `tran`: non e una sorgente di alimentazione e non
+  cambia il circuito della base run;
+- quando l'obiettivo attiva, spegne o mantiene attivo un componente, `compare`
+  deve includere una misura diretta `i(NOME_SPICE)` o `p(NOME_SPICE)` per il
+  target e per gli eventuali componenti da preservare;
+- i nomi delle misure dirette vengono ricavati da `07_netlist.cir`; le sole
+  tensioni di nodo non bastano a dichiarare una correzione verificata;
+- le nuove proposte autonome associano a `compare` un oggetto `expect`, per
+  esempio `{"i(Rload)":"activated","i(Dled)":"unchanged"}`;
+- ogni scenario autonomo dichiara obbligatoriamente `analysis: "op"` oppure
+  `analysis: "tran"`; nel secondo caso le tensioni vengono confrontate sul
+  Vpp ricavato da `08_tran.csv`;
+- la mappa opzionale `measure` puo scegliere per ogni voce di `compare` la
+  metrica `op`, `tran_vpp` oppure `tran_abs_peak`, quindi un singolo scenario
+  puo verificare insieme un segnale AC e correnti o tensioni DC su altri rami;
+- `tran_abs_peak` e riservata alle correnti interne `@dNOME[id]` dei diodi e
+  LED esportate nel CSV: confronta il massimo valore assoluto della run e non
+  il solo campione finale;
+- nel registro CHAT una proposta `tran` che confronta `@dNOME[id]` viene
+  accettata solo se dichiara esplicitamente quella misura, impedendo un fallback
+  involontario al punto operativo;
+- `tran_vpp` accetta `v(NODO)` e `v(NODO1,NODO2)`; la seconda forma calcola la
+  tensione differenziale campione per campione prima di ricavare il Vpp ed e
+  adatta a cuffie, altoparlanti e altri carichi non riferiti a massa;
+- ogni scenario autonomo dichiara `intent: "correction"` oppure
+  `intent: "diagnostic"`; un test diagnostico puo confermare un'ipotesi ma non
+  produrre lo stop risolutivo senza criteri espliciti di correzione;
+- anche il registro CHAT normalizza come `diagnostic` uno scenario legacy o
+  una risposta priva di `intent`; soltanto `intent: "correction"` dichiarato
+  esplicitamente puo produrre `stop_automation: true`;
+- chiudere uno switch, alimentare un ramo o ottenere una corrente di sorgente
+  non nulla resta diagnostico quando verifica solo una precondizione; per un
+  sintomo audio o variabile la correzione deve osservare direttamente l'uscita
+  in `tran`, con `tran_vpp` anche differenziale quando il carico ha due nodi;
+- in analisi `tran`, correnti e potenze prive di una traccia CSV possono
+  entrare in `expect` soltanto se dichiarate come `op` nella mappa `measure`;
+- i sintomi che nominano esplicitamente AC o VAC impongono a una correzione
+  almeno una misura `tran_vpp`; il solo punto di lavoro DC non e sufficiente;
+- quando il sintomo riguarda l'accensione di un LED o di una lampada, almeno
+  una loro corrente o potenza diretta deve comparire anche in `expect`;
+- se il sintomo combina AC/VAC e LED/lampada, il contratto richiede nello stesso
+  scenario sia `tran_vpp` sia una misura diretta `op` del componente;
+- `expect: unchanged` e accettato solo se il sintomo chiede esplicitamente di
+  preservare un altro componente o comportamento;
+- `final_status: resolved` richiede una `verified_correction` non vuota;
+- `final_status: localized` puo terminare dopo una conferma diagnostica forte,
+  anche quando non esiste una riparazione fisica verificata;
+- lo stop correttivo richiede almeno un effetto relativo del 10%, una vera
+  attivazione/disattivazione oppure il completo soddisfacimento di un criterio
+  temporale dichiarato; variazioni scalari minori restano parziali;
+- per sintomi di amplificazione, una correzione dichiara
+  `gain: {"input":"v(NODO_IN)","output":"v(NODO_OUT)"}` e lo step 12 salva
+  il guadagno base e scenario calcolato sui rispettivi Vpp;
+- per test di propagazione o attenuazione, `gain` puo aggiungere
+  `min_ratio`; se il rapporto Vpp uscita/ingresso resta sotto questa soglia
+  dichiarata, lo scenario non conferma un trasferimento utile anche quando
+  l'uscita passa da zero a un valore numericamente `changed`;
+- `min_ratio` deve essere positivo e motivato dal singolo scenario: la pipeline
+  non applica una soglia assoluta universale a circuiti e carichi diversi;
+- nelle risposte CHAT sugli scenari eseguiti, `stop_automation=false` con
+  budget residuo richiede una nuova proposta self-contained, salvo conclusione
+  finale esplicitamente richiesta o dato esterno indispensabile mancante;
+- una proposta non puo ripetere le stesse azioni con la stessa analisi soltanto
+  per aggiungere `gain`, `measure`, `expect` o `min_ratio`; una stessa modifica
+  e invece distinta e ammessa in `op` e in `tran` quando la seconda run verifica
+  un comportamento temporale; dopo un trasferimento insufficiente deve cambiare
+  il confine di isolamento o una causa elettrica verificata;
+- i test di trasferimento riconosciuti nei flussi CHAT e AGENT richiedono
+  `gain.min_ratio` positivo per essere accettati come scenari eseguibili;
+- per distorsione o clipping con sorgente SIN, lo scenario dichiara
+  quality=thd; transient_signal_quality.py analizza le ultime tre oscillazioni
+  complete e calcola fondamentale, guadagno e THD sulle armoniche 2-5;
+- lo stop richiede riduzione THD di almeno il 20%, THD finale al massimo del
+  10% e conservazione del guadagno fondamentale;
+- `i(Q...)` non viene accettata come misura diretta di un BJT: per osservare
+  il ramo si usa una corrente disponibile, tipicamente quella della resistenza
+  di collettore o di emettitore;
+- `scenario_comparison.json` verifica ogni aspettativa e classifica lo scenario
+  sui criteri soddisfatti; gli scenari storici senza `expect` mantengono la
+  valutazione precedente;
+- pin diversi dello stesso connector sono trattati come reti funzionali
+  distinte finche gli artefatti non forniscono una ragione elettrica per unirli;
+- nel viewer una sorgente scenario `SIN(...)`, `PULSE(...)` o equivalente usa
+  il simbolo `signal_source`; soltanto una sorgente DC usa il simbolo batteria;
+- i meter AC leggono il Vpp differenziale da `08_tran.csv`, mostrando stato
+  attivo e valore `Vpp` anche quando il punto di lavoro medio vale zero;
+- per sintomi di lampeggio, regolarita, duty cycle o durata di accensione, lo
+  scenario dichiara `temporal_expect`; `scenario_runtime.py` confronta i
+  profili transitori del viewer e richiede che stato, periodicita e soglie di
+  duty siano soddisfatti prima di confermare una correzione. Quando tutte le
+  aspettative elettriche e temporali sono verificate, il cambio qualitativo di
+  stato e gia risolutivo e non richiede anche un incremento scalare del 10%;
+- CHAT non registra come eseguibile una correzione di lampeggio priva di
+  `analysis: "tran"`, `intent: "correction"` e `temporal_expect` valido; le
+  condizioni iniziali sui nodi interni devono inoltre restare compatibili con
+  il bias del dispositivo e non essere portate automaticamente al rail;
+- AGENT, davanti a un impulso transitorio non ancora regolare prodotto da una
+  prima coppia `.ic`, mantiene prioritaria l'ipotesi di startup e prova una
+  seconda coppia fisicamente ammissibile prima di cambiare componenti;
+- il budget degli scenari e un limite massimo: AGENT puo fermarsi prima quando
+  le ulteriori correzioni sarebbero duplicate o non sostenute dalle evidenze;
+- una sequenza temporale tra componenti richiede ancora un'estensione futura:
+  oggi non viene verificata se la base contiene solo `.op` e manca `08_tran.csv`;
+- ogni decisione contiene al massimo 2 scenari e il ciclo al massimo 8
+  decisioni del modello;
+- le run vengono eseguite in sequenza e sempre dalla base.
 
 ## Stato attuale degli script
 
@@ -935,6 +1251,13 @@ prepare_experiment_outputs.py
 10_build_diagnostic_context.py
 11_agent_readonly.py
 12_controlled_scenarios.py
+13_build_viewer_model.py
+14_build_viewer_layout.py
+15_render_viewer_svg.py
+16_autonomous_diagnosis.py
+scenario_runtime.py
+scenario_expectations.py
+transient_signal_quality.py
 ```
 
 Presenti ma non ancora integrati nel flusso reale:
@@ -948,7 +1271,7 @@ Non fanno parte dello stato attuale di riferimento:
 - `09_summarize_spice.py` non va piu considerato uno step reale della pipeline
   corrente;
 - il riferimento ufficiale oggi e la catena `01-08` + `10` per la parte base e
-  `09-12` per il layer diagnostico/interattivo.
+  `09-16` per il layer diagnostico, interattivo, viewer e autonomo.
 
 ## Quando aggiornare questo file
 
@@ -959,6 +1282,7 @@ Questo riferimento va aggiornato quando:
 - `05_device_profiles.py` entra davvero nel flusso;
 - vengono aggiunte o rimosse primitive scenario in `12_controlled_scenarios.py`;
 - cambia la struttura output per batch/esperimento/circuito;
+- cambia il contratto `13/14/15` o il vocabolario grafico del viewer;
 - la web chat introduce nuove responsabilita strutturali.
 
 ## Sintesi finale
@@ -972,10 +1296,11 @@ prepare_experiment_outputs.py separa gli esperimenti;
 10_build_diagnostic_context.py costruisce il manifest;
 11_agent_readonly.py interpreta senza modificare;
 12_controlled_scenarios.py applica scenari su copie separate.
+13/14/15 costruiscono modello, layout e SVG della run selezionata.
 ```
 
 Questa distinzione e importante per tutta la tesi:
 
 - `01-08` costruiscono i fatti elettrici;
-- `09-12` permettono di interrogarli, testarli e confrontarli senza perdere la
-  base run originale.
+- `09-16` permettono di interrogarli, testarli, visualizzarli e confrontarli
+  senza perdere la base run originale.

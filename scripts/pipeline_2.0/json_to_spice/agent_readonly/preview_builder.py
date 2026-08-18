@@ -122,10 +122,10 @@ def build_agent_input_preview(
     user_problem: str,
 ) -> str:
     """
-    Crea il Markdown che useremo per controllare cosa ricevera l'agente.
+    Crea una vista Markdown leggibile delle evidenze ricevute dall'agente.
 
-    Questo non e ancora il prompt finale per OpenAI: e un preview leggibile,
-    utile per validare ordine, contenuto e limiti prima di introdurre l'API.
+    Il preview affianca il prompt effettivo e rende verificabili ordine,
+    contenuto e limiti senza modificare la richiesta inviata al modello.
     """
     lines: list[str] = []
     summary = manifest.get("summary") or {}
@@ -201,6 +201,8 @@ def build_agent_input_preview(
                     f"- Outcome: `{outcome.get('status')}`",
                     f"- Stop automation: `{outcome.get('stop_automation')}`",
                     f"- Comparison: `{summary_data.get('changed_count')}/{summary_data.get('requested_count')}` changed",
+                    f"- LED profiles: `{json.dumps(scenario.get('led_profiles') or {}, ensure_ascii=False)}`",
+                    f"- Temporal profiles: `{json.dumps(scenario.get('temporal_profiles') or {}, ensure_ascii=False)}`",
                     "",
                 ]
             )

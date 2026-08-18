@@ -1,0 +1,185 @@
+schema_version: 1
+circuit_id: "c03"
+review_status: frozen
+circuit_description: |
+  Amplificatore audio a singola alimentazione da 18 V basato su TDA2003, con
+  ingresso accoppiato da C7, rete di controreazione e compensazione attorno al
+  pin invertente, condensatore di uscita C5 e altoparlante da 4 ohm. Le reti
+  RC sull'alimentazione e sull'uscita stabilizzano il circuito alle alte
+  frequenze.
+task_type: "diagnosi di volume audio molto basso"
+user_symptom: |
+  L'amplificatore si accende e dall'altoparlante si sente il segnale, ma il volume e' molto basso. Quale potrebbe essere il problema?
+
+circuit_inventory:
+  component_count: 21
+  node_count: 10
+  component_types:
+    - "GND"
+    - "Operational_Amplifier"
+    - "Polarized_Capacitor"
+    - "Resistor"
+    - "Speaker"
+    - "Terminal"
+  analysis_types:
+    - "op"
+    - "tran"
+
+required_evidence:
+  - id: explicit_testbench_assumptions
+    description: |
+      Alimentazione, passivi e carico da 4 ohm sono leggibili nell'immagine.
+      La sorgente AUDIO_IN da 20 mV di picco a 1 kHz e' invece un'assunzione
+      del banco; non misura il segnale reale dell'utente. Il TDA2003 usa
+      TDA2003_SIMPLE, modello funzionale con saturazione ideale e senza una
+      caratterizzazione realistica di banda, corrente, protezioni e termica.
+  - id: topology_matches_image
+    description: |
+      Graph e node map conservano ingresso C7-N002, alimentazione N001,
+      ingresso invertente N003, uscita integrato N004, rete 220/2.2 ohm con
+      C4, condensatore di uscita C5 e speaker su N008. I cinque simboli di
+      massa separati dell'immagine sono correttamente uniti al nodo SPICE 0;
+      non risultano singleton o componenti saltati.
+  - id: base_bias_and_transfer
+    description: |
+      Il punto di lavoro e' coerente con alimentazione singola: VCC=18 V,
+      ingressi interni circa 9 V e uscita IC N004 circa 8.992 V, rimossa dal
+      condensatore C5 sullo speaker. Negli ultimi 10 ms, 20 mVpk in ingresso
+      producono circa 3.995 Vpp su N008, guadagno circa 99.9 V/V.
+  - id: base_output_power
+    description: |
+      Sul carico resistivo da 4 ohm la base misura circa 1.412 Vrms, pari a
+      circa 0.50 W. La componente fondamentale e' circa 1.995 Vpk e la THD
+      armonica 2-10 calcolata dal CSV e' circa 0.007% nel modello. Il circuito
+      simulato quindi amplifica correttamente; "volume basso" non equivale a
+      stadio guasto.
+  - id: expected_closed_loop_gain
+    description: |
+      A 1 kHz C4 da 470 uF ha impedenza piccola e la rete 220 ohm / 2.2 ohm
+      imposta un guadagno non invertente vicino a 1+220/2.2=101. Il guadagno
+      misurato di circa 100 e' coerente con la topologia, non un'attenuazione
+      anomala da diagnosticare.
+  - id: chat_level_test_valid_but_not_causal
+    description: |
+      CHAT aumenta AUDIO_IN a 50 mVpk. Negli ultimi 10 ms ottiene circa
+      9.987 Vpp e 3.529 Vrms sullo speaker, cioe' circa 3.11 W, mantenendo
+      guadagno circa 99.9 e THD circa 0.007% nel modello. E' un valido test di
+      proporzionalita' e margine, ma non prova che l'ingresso fisico dell'utente
+      sia davvero troppo debole.
+  - id: agent_test_is_overdriven
+    description: |
+      AGENT porta AUDIO_IN a 200 mVpk, valore che richiederebbe circa 40 Vpp
+      con guadagno lineare 100 e non e' compatibile con 18 V di alimentazione.
+      La run si comprime a circa 16.39 Vpp sul carico: guadagno circa 41.0,
+      7.137 Vrms e 12.73 W calcolati, con forma d'onda schiacciata e THD circa
+      28%. Il risultato non verifica un'amplificazione sana; dimostra clipping
+      e i limiti del modello semplificato.
+  - id: speaker_measurement_semantics
+    description: |
+      Lo speaker e' Rspeaker24_1 tra N008 e massa, quindi la sua tensione e'
+      v(N008). v(N004,N008) e' la tensione ai capi del condensatore di uscita
+      C5 e non e' direttamente il segnale sul carico. Il gain comparator AGENT
+      usa correttamente N005->N008, ma interpreta come sufficiente un guadagno
+      gia' compresso dal clipping.
+
+success_conditions:
+  - id: assumed_input_not_ground_truth_cause
+    description: |
+      La diagnosi distingue il valore AUDIO_IN assunto dal livello misurato
+      nell'hardware e non dichiara "ingresso troppo basso" come causa certa
+      soltanto perche' aumentando una sorgente aumenta l'uscita.
+  - id: gain_and_power_quantified
+    description: |
+      La risposta verifica almeno ampiezza ingresso, ampiezza o RMS sullo
+      speaker e guadagno; se discute il volume, collega la misura alla potenza
+      sul carico da 4 ohm.
+  - id: healthy_base_recognized
+    description: |
+      Il guadagno base vicino a 100 viene riconosciuto come coerente con la
+      rete di controreazione. Non emerge un guasto strutturale del modello.
+  - id: clipping_rejected
+    description: |
+      Lo scenario AGENT da 200 mVpk non viene presentato come uscita sana o
+      correzione: compressione del guadagno e distorsione indicano saturazione.
+  - id: physical_checks_calibrated
+    description: |
+      Per il circuito reale si propongono misure di livello in ingresso,
+      alimentazione sotto carico, segnale su N004/N008, valori della rete di
+      feedback, C5, impedenza/cablaggio dello speaker e possibili problemi
+      termici, senza dichiararli gia' verificati.
+  - id: model_limitations_stated
+    description: |
+      Potenza e distorsione del TDA2003_SIMPLE non vengono generalizzate al
+      componente fisico, soprattutto vicino ai rail o oltre la potenza nominale.
+
+acceptable_solutions:
+  - id: measure_real_input_and_output
+    description: |
+      Misurare l'ampiezza reale della sorgente e confrontarla con N008 permette
+      di distinguere sorgente debole, guadagno anomalo e carico errato. Nel
+      modello base 20 mVpk diventano circa 2.0 Vpk sullo speaker.
+  - id: moderate_input_sweep
+    acceptance: diagnostic_only
+    description: |
+      Aumentare moderatamente l'ingresso restando nel regime lineare, come i
+      50 mVpk di CHAT, verifica proporzionalita' e margine. Non e' una
+      riparazione finche' il livello reale richiesto non e' noto.
+  - id: feedback_and_load_checks
+    acceptance: physical_or_followup
+    description: |
+      Se il guadagno misurato sull'hardware e' basso, verificare R2=220 ohm,
+      R3=2.2 ohm, C4=470 uF, C5=1000 uF e il carico effettivo da 4 ohm. Queste
+      sono ipotesi pratiche, non guasti dimostrati dalla base SPICE.
+  - id: power_target_comparison
+    acceptance: optional
+    description: |
+      Definire una potenza obiettivo e aumentare l'ingresso solo fino al limite
+      di uscita non distorta. Il modello indica circa 0.50 W in base e 3.11 W
+      nello scenario CHAT; non garantisce i 10 W reali del TDA2003.
+
+unsupported_conclusions:
+  - |
+    Concludere che 20 mVpk siano certamente insufficienti nel circuito reale:
+    sono un valore inventato per il testbench e producono gia' guadagno circa
+    100 e mezzo watt nel modello.
+  - |
+    Usare il semplice aumento dell'uscita quando cresce l'ingresso come prova
+    che la sorgente debole sia l'unica o principale causa del sintomo.
+  - |
+    Presentare lo scenario AGENT da 200 mVpk come funzionamento corretto:
+    guadagno compresso, crest factor e THD indicano forte clipping.
+  - |
+    Considerare "gain_sufficient=41.8" una metrica di qualita': il guadagno
+    lineare era circa 101 e la sua riduzione e' proprio evidenza di saturazione.
+  - |
+    Interpretare 12.7 W calcolati sul carico come prestazione verificata del
+    TDA2003 reale da circa 10 W; il modello non limita realisticamente corrente,
+    dissipazione o protezioni.
+  - |
+    Chiamare v(N004,N008) tensione sullo speaker: e' la tensione su C5, mentre
+    lo speaker e' misurato da v(N008) rispetto a massa.
+  - |
+    Dichiarare risolto il problema aumentando arbitrariamente la sorgente:
+    nessuna delle due traiettorie misura il livello reale dell'utente o applica
+    una correzione verificata all'hardware.
+
+review_notes: |
+  Immagine e values canonici provengono da
+  data/batchPipeline2.0/batchChatAgentEvaluation. Graph, node map e netlist
+  descrivono coerentemente lo schema TDA2003; la fusione dei cinque simboli di
+  massa e' intenzionale. Potenza RMS e armoniche sono state calcolate sui CSV
+  congelati negli ultimi 10 ms, escludendo l'avviamento.
+
+  CHAT esegue il test migliore: 50 mVpk rimangono nel regime lineare e mostrano
+  guadagno costante e uscita pulita. Distingue correttamente scenario
+  diagnostico e correzione, ma conclude troppo facilmente che i 20 mV assunti
+  siano la causa principale del volume basso. Il test dimostra il
+  trasferimento, non il livello della sorgente reale.
+
+  AGENT e' efficiente e localizza il sospetto sull'ingresso, ma sceglie 200
+  mVpk, porta l'amplificatore in clipping e interpreta il guadagno compresso
+  come sufficiente. La conclusione "ingresso troppo debole" resta plausibile
+  come ipotesi pratica, non verificata come causa. Non viene applicata una
+  correzione, ma la qualita' tecnica della prova e' inferiore a CHAT.
+
+  La scheda e' stata approvata manualmente e congelata.

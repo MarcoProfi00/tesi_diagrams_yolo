@@ -1,0 +1,28 @@
+{
+  "title": "Batteria molto carica - verifica stato statico a tensione alta",
+  "hypothesis": "Aumentando la batteria sopra i 12 V nominali il ramo con zener da 12 V e transistor PNP Q3 dovrebbe iniziare a condurre di più, modificando il nodo N003/N012 e aumentando la corrente del LED verde rispetto alla base run, mentre il LED giallo dovrebbe cambiare stato per il superamento della soglia alta.",
+  "intent": "diagnostic",
+  "analysis": "op",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "15V"
+    }
+  ],
+  "compare": [
+    "@dled12_1[id]",
+    "@dled12_2[id]",
+    "@dled12_3[id]",
+    "v(N003)",
+    "v(N008)",
+    "v(N012)",
+    "v(N017)"
+  ],
+  "expect": {
+    "@dled12_3[id]": "magnitude_increased",
+    "v(N012)": "changed",
+    "@dled12_2[id]": "changed"
+  },
+  "scenario_id": "agent_scenario_2"
+}

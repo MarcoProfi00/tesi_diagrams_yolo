@@ -1,0 +1,234 @@
+# Valori manuali per b04, caricabatteria con SCR.
+#
+# Il Graph JSON della Pipeline 1.0 resta invariato. Questo file aggiunge solo
+# semantica elettrica, valori leggibili e il banco di prova SPICE necessario.
+# Gli ID sono quelli originali del Graph JSON validato.
+
+circuit_id: b04
+
+spice_topology_overlay:
+  terminal_node_overrides:
+    diode7.3_cathode:
+      # Nell'immagine D3 termina sul gate di H1. Il Graph OCR ha fuso questo
+      # terminale con il rail di uscita: l'overlay separa soltanto la netlist
+      # SPICE, lasciando invariato il Graph sorgente e rendendo la correzione
+      # esplicita, verificabile e riutilizzabile per errori di net merge.
+      node: H1_GATE
+      source: manual_image_validation_H1_gate_via_D3
+
+supplies:
+  VREF_BATTERY_NEGATIVE:
+    # Il circuito non mostra un simbolo GND: il negativo batteria e il ritorno
+    # del secondario sono lo stesso nodo elettrico. La sorgente a 0 V crea
+    # esclusivamente il riferimento SPICE, senza aggiungere alimentazione.
+    terminal: terminal26.4_t1
+    type: dc
+    value: 0
+    unit: V
+    reference: 0
+    source: manual_reference_for_floating_charger_circuit
+    label_text: "Negativo batteria e ritorno secondario: riferimento SPICE"
+
+  VBAT_TEST:
+    # La batteria esterna non riporta una tensione nell'immagine. 12 V e'
+    # l'assunzione nominale minima per una prima base run di caricabatteria.
+    terminal: terminal26.3_t1
+    return_terminal: terminal26.4_t1
+    type: dc
+    value: 12
+    unit: V
+    reference: 0
+    source: manual_assumption_nominal_12v_battery_testbench
+    label_text: "Batteria esterna di prova: 12 V nominali"
+    viewer_override:
+      visual_class: battery
+      label: ""
+      display_value: "12 V"
+      label_mode: value_only
+      tooltip: "Batteria esterna in carica; tensione di prova 12 V"
+
+components:
+  transformer28.1:
+    # T1 e' marcato 230 V AC / 15-0 V AC. Per la simulazione non si emette il
+    # primario: si usa una sorgente sinusoidale equivalente sul secondario.
+    model: T1_230VAC_TO_15VAC_EQ
+    secondary_voltage_rms: 15
+    frequency: 50
+    source: manual_from_image_label
+    label_text: "T1: primario 230 V AC, secondario 15-0 V AC"
+    viewer_override:
+      visual_class: transformer
+      label: T1
+      display_value: "230 V AC / 15-0 V AC"
+      label_mode: reference_only
+      tooltip: "T1; trasformatore 230 V AC / 15-0 V AC"
+      include_graph_terminals: true
+    spice_override:
+      # Il pinout OCR assegna t1/t3 al primario e t2/t4 al secondario. Questo
+      # override e' dichiarativo e deve essere interpretato in modo generale
+      # dalle regole SPICE, senza modificare il Graph JSON.
+      emit_as: equivalent_ac_source
+      node_order: [t2, t4]
+      waveform: sin
+      source: manual_transformer_secondary_pinout_from_image
+
+  # R1-R6: valori direttamente leggibili nell'immagine.
+  resistor22.1:
+    # Il bbox superiore orizzontale corrisponde a R2, in serie con D4.
+    value: 22
+    unit: ohm
+    power: 5
+    power_unit: W
+    source: manual_from_image_label
+    label_text: "R2 22 ohm 5 W"
+
+  resistor22.2:
+    # Il bbox orizzontale inferiore corrisponde a R1, in serie con D3.
+    value: 330
+    unit: ohm
+    source: manual_from_image_label
+    label_text: "R1 330 ohm"
+
+  resistor22.3:
+    value: 820
+    unit: ohm
+    source: manual_from_image_label
+    label_text: "R3 820 ohm"
+
+  resistor22.4:
+    # Il bbox verticale inferiore corrisponde a R5.
+    value: 100
+    unit: ohm
+    source: manual_from_image_label
+    label_text: "R5 100 ohm"
+
+  resistor22.5:
+    # Il bbox verticale centrale corrisponde a R4. Il Graph contiene due soli
+    # terminali, quindi la base run usa il cursore a meta' corsa.
+    value: 50
+    unit: ohm
+    nominal_total_value: 100
+    nominal_total_unit: ohm
+    source: manual_from_image_label_midpoint_assumption
+    label_text: "R4 variabile 100 ohm; equivalente base run 50 ohm"
+    viewer_override:
+      visual_class: resistor
+      label: R4
+      display_value: "100 ohm"
+      tooltip: "R4; potenziometro 100 ohm, equivalente SPICE base run 50 ohm"
+    spice_override:
+      emit_as: resistive_load
+      equivalent_resistance: 50
+      resistance_unit: ohm
+      node_order: [t1, t2]
+
+  resistor22.6:
+    value: 1
+    unit: ohm
+    source: manual_from_image_label
+    label_text: "R6 1 ohm"
+
+  fuse8.1:
+    # F1 e' integro nella base run: il suo intervento e' un possibile scenario
+    # futuro, non la condizione iniziale del circuito fotografato.
+    state: closed
+    current_rating: 2
+    current_rating_unit: A
+    source: manual_from_image_label
+    label_text: "F1 2 A, chiuso"
+
+  # D1, D3 e D4 sono marcati 1N4001 nell'immagine.
+  diode7.1:
+    model: D_1N4001_TYP
+    source: manual_from_image_label
+    label_text: "D1 1N4001"
+
+  diode7.3:
+    model: D_1N4001_TYP
+    source: manual_from_image_label
+    label_text: "D3 1N4001"
+
+  diode7.4:
+    model: D_1N4001_TYP
+    source: manual_from_image_label
+    label_text: "D4 1N4001"
+
+  diode7.5:
+    # D2 riporta SD50. Senza un datasheet/polarita certa nel materiale locale,
+    # la base run usa un diodo generico esplicitamente tracciato come tale.
+    model: D_GENERIC
+    source: manual_generic_model_for_image_label_SD50
+    label_text: "D2 SD50; modello diodo generico per la prima base run"
+    viewer_override:
+      visual_class: diode
+      label: D2
+      display_value: SD50
+
+  diode7.2:
+    # H1 e' visibilmente un 2N3668 SCR, pur essendo classificato Diode dal
+    # Graph OCR. L'override mantiene l'ID e i nodi base del Graph immutati.
+    model: SCR_2N3668_TYP
+    source: manual_semantic_correction_from_image_label
+    label_text: "H1 2N3668 SCR"
+    viewer_override:
+      visual_class: scr
+      label: H1
+      display_value: "2N3668 SCR"
+    spice_override:
+      # `subcircuit` e' la primitiva generale per dispositivi a tre o piu'
+      # terminali; non e' una logica speciale per il solo circuito b04.
+      emit_as: subcircuit
+      pin_order: [anode, gate, cathode]
+      node_refs:
+        anode: diode7.2_anode
+        gate: diode7.3_cathode
+        cathode: diode7.2_cathode
+
+  npn_transistor18.1:
+    # Q1 e' un BC148 NPN. La prima prova con inversione B/C ha tenuto H1
+    # permanentemente interdetto. La descrizione funzionale dello schema
+    # conferma invece D2 sul comando di base e D1 sul ramo di shunt: il pinout
+    # elettrico originale del Graph e' quindi quello da mantenere.
+    model: BC148_TYP
+    source: manual_from_image_label_and_functional_spice_validation
+    label_text: "Q1 BC148 NPN"
+
+nodes:
+  terminal26.1_t1:
+    label: AC_L
+    source: manual_from_image_label
+    label_text: "Ingresso T1: 230 V AC, conduttore superiore"
+
+  terminal26.2_t1:
+    label: AC_N
+    source: manual_from_image_label
+    label_text: "Ingresso T1: 230 V AC, conduttore inferiore"
+
+  transformer28.1_t2:
+    label: SEC_15VAC
+    source: manual_from_image_label
+    label_text: "Secondario T1: 15 V AC"
+
+  transformer28.1_t4:
+    label: SEC_0V_BAT_NEG
+    source: manual_from_image_label
+    label_text: "Secondario T1: 0 V e negativo batteria"
+
+  terminal26.3_t1:
+    label: BAT_POSITIVE
+    source: manual_from_image_context
+    label_text: "Morsetto positivo batteria esterna"
+
+  terminal26.4_t1:
+    label: BAT_NEGATIVE
+    source: manual_from_image_context
+    label_text: "Morsetto negativo batteria esterna e riferimento SPICE"
+
+simulation:
+  # La base run sara' abilitata solo dopo il supporto generale dell'overlay
+  # SCR/gate e del node_order del trasformatore dichiarati sopra.
+  analyses: [op, tran]
+  tran:
+    step: 100us
+    stop: 100ms
+  readiness: ready

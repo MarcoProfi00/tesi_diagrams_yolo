@@ -1,0 +1,28 @@
+{
+  "title": "Chiudere l'interruttore di alimentazione del ramo audio",
+  "hypothesis": "Con S1 aperto il nodo N004 resta scollegato dalla batteria, quindi i due stadi PNP e la cuffia non ricevono polarizzazione/corrente; chiudendo S1 il ramo dovrebbe attivarsi almeno in DC.",
+  "intent": "diagnostic",
+  "analysis": "op",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    }
+  ],
+  "compare": [
+    "v(N004)",
+    "v(N003)",
+    "i(Rbreaker3_1)",
+    "i(Rresistor22_1)",
+    "i(Rresistor22_2)",
+    "i(Rresistor22_3)"
+  ],
+  "expect": {
+    "v(N004)": "changed",
+    "i(Rbreaker3_1)": "nonzero",
+    "i(Rresistor22_1)": "nonzero",
+    "i(Rresistor22_2)": "nonzero",
+    "i(Rresistor22_3)": "nonzero"
+  },
+  "scenario_id": "agent_scenario_1"
+}

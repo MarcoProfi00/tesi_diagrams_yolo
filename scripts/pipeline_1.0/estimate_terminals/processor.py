@@ -7,7 +7,7 @@ Questo modulo e' il cuore dello step 03:
   - calcola le coordinate reali dei terminali sull'immagine;
   - aggiunge metadati geometrici e semantici usati dagli step successivi.
 """
-from .config import *
+from .config import LED_SIDE_PEAK_AXIS_SCAN_RATIO, OPAMP_POINT_MODE
 from .dispatcher import get_terminals_definition, resolve_terminal_point_mode
 from .geometry import (
     geom_terminal_point_from_bbox,
@@ -161,7 +161,7 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
 
     bbox = component["bbox"]
     instance_id = component["instance_id"]
-    
+
     # Il dispatcher restituisce una definizione astratta dei terminali:
     # nomi, lati relativi, orientazione stimata ed eventuali score di debug.
     terminals_def, estimated_orientation, connected_side, side_scores = get_terminals_definition(
@@ -248,10 +248,7 @@ def estimate_terminals_for_component(component: dict, class_meta: dict, image_bi
                 # il simbolo interno puo' creare falsi massimi.
                 x, y = geom_terminal_point_from_bbox(bbox, rel_pos)
                 point_debug["point_mode"] = "two_terminal_axis_center"
-                if rel_pos in {"top", "bottom"}:
-                    point_debug["anchor_offset_ratio"] = 0.5
-                else:
-                    point_debug["anchor_offset_ratio"] = 0.5
+                point_debug["anchor_offset_ratio"] = 0.5
             elif component.get("class_name") == "GND":
                 # GND usa il centro del lato superiore per non farsi influenzare
                 # da testo o linee vicine.

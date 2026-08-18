@@ -1,0 +1,412 @@
+{
+  "packet_schema_version": 1,
+  "packet_id": "a07_run_2",
+  "reference": {
+    "schema_version": 1,
+    "circuit_id": "a07",
+    "circuit_description": "Circuito con connettore a quattro pin e due rami funzionalmente distinti.\nIl pin 1, nodo N001, è osservato dal voltmetro AC VAC rispetto a massa.\nIl pin 2, nodo N002, alimenta un LED rosso attraverso 680 ohm. Il pin 3,\nnodo N003, è collegato a massa dallo switch RESET. Nella netlist base non\nè presente alcuna sorgente né su N001 né su N002.\n",
+    "task_type": "diagnosi di due ingressi esterni non alimentati",
+    "user_symptom": "Il LED di alimentazione non si accende e il voltmetro VAC non mostra nulla. Quale potrebbe essere il problema?\n",
+    "circuit_inventory": {
+      "component_count": 9,
+      "node_count": 5,
+      "component_types": [
+        "Analog_Meter",
+        "Connector",
+        "GND",
+        "LED",
+        "Resistor",
+        "Switch"
+      ],
+      "analysis_types": [
+        "op",
+        "tran"
+      ]
+    },
+    "required_evidence": [
+      {
+        "id": "base_both_inactive",
+        "description": "Nella base N001 è a 0 V, N002 e N004 sono sostanzialmente a 0 V e la\ncorrente del LED è trascurabile: circa 10^-28 A o inferiore.\n"
+      },
+      {
+        "id": "independent_nodes",
+        "description": "VAC misura N001, mentre il LED dipende da N002. I due sintomi non\ncondividono lo stesso nodo di alimentazione nel grafo disponibile.\n"
+      },
+      {
+        "id": "led_supply_test",
+        "description": "Applicando una tensione DC a N002 devono comparire tensione sul ramo\nLED e corrente diretta non nulla nel diodo.\n"
+      },
+      {
+        "id": "vac_signal_test",
+        "description": "Applicando una sorgente sinusoidale a N001, il transitorio deve mostrare\nuna tensione alternata non nulla sul nodo osservato da VAC.\n"
+      }
+    ],
+    "success_conditions": [
+      {
+        "id": "both_causes_identified",
+        "description": "La conclusione identifica l'assenza di alimentazione DC su N002 e\nl'assenza di segnale AC su N001 come spiegazioni dei due sintomi.\n"
+      },
+      {
+        "id": "led_activated",
+        "description": "Una prova DC porta N002 a un livello non nullo e attiva la corrente del\nLED; con 5 V la corrente verificata è circa 6.32 mA.\n"
+      },
+      {
+        "id": "vac_activated",
+        "description": "Una prova transitoria porta v(N001) da ampiezza nulla a una sinusoide\nmisurabile rispetto a massa.\n"
+      },
+      {
+        "id": "both_branches_covered",
+        "description": "Entrambi i rami vengono verificati, nello stesso scenario oppure con\ndue scenari separati seguiti da una conclusione che integri le prove.\n"
+      },
+      {
+        "id": "conclusion_calibrated",
+        "description": "La conclusione distingue i valori scelti per le sorgenti di prova da\nvalori nominali certi, che non sono riportati nell'immagine.\n"
+      }
+    ],
+    "acceptable_solutions": [
+      {
+        "id": "simultaneous_dc_and_ac_test",
+        "description": "Applicare nello stesso transitorio una sorgente DC a N002 e una\nsorgente sinusoidale a N001, verificando corrente LED e ampiezza VAC.\n",
+        "verified_reference_values": "Con 5 V DC su N002: N004 circa 0.703 V e corrente LED circa 6.319 mA.\nCon SIN(0 5 50) su N001: v(N001) circa 10.000 Vpp. Con SIN(0 1 50):\nv(N001) circa 2.000 Vpp.\n"
+      },
+      {
+        "id": "separate_branch_tests",
+        "description": "Eseguire separatamente la prova DC del LED e la prova AC del voltmetro,\npurché entrambe siano completate e integrate nella diagnosi finale.\n"
+      },
+      {
+        "id": "single_branch_test",
+        "acceptance": "partial_only",
+        "description": "Verificare soltanto il LED oppure soltanto VAC conferma una parte\ndella diagnosi ma lascia irrisolto l'altro sintomo.\n"
+      }
+    ],
+    "unsupported_conclusions": [
+      "Attribuire entrambi i sintomi a un unico nodo: N001 e N002 sono reti\ndistinte nel Graph JSON ricevuto dall'agente.\n",
+      "Indicare lo switch RESET come causa principale: lo switch agisce sul\ndiverso nodo N003 e non alimenta né VAC né il ramo LED.\n",
+      "Dichiarare acceso il LED usando soltanto v(N002).vpp: una sorgente DC\ncostante a 5 V ha ampiezza picco-picco nulla ma livello medio/finale\npari a 5 V; serve controllare il livello DC o la corrente del LED.\n",
+      "Dichiarare risolto l'intero sintomo dopo aver verificato un solo ramo.\n",
+      "Presentare 5 V DC, 1 V di picco o 5 V di picco a 50 Hz come valori\nnecessariamente nominali: sono valori usati dalle sorgenti di prova.\n"
+    ]
+  },
+  "rubric": {
+    "score_scale": {
+      "0": "errato o assente",
+      "1": "utile ma incompleto o con limiti rilevanti",
+      "2": "corretto e adeguatamente verificato"
+    },
+    "criteria": [
+      "diagnostic_correctness",
+      "test_quality",
+      "evidence_interpretation",
+      "goal_achievement",
+      "conclusion_quality"
+    ]
+  },
+  "run": {
+    "initial_request": "Il LED di alimentazione non si accende e il voltmetro VAC non mostra nulla. Quale potrebbe essere il problema?",
+    "technical_status": "completed",
+    "base_spice": {
+      "status": "success",
+      "exit_code": 0,
+      "message": "ngspice completed successfully.",
+      "analyses": [
+        "op",
+        "tran"
+      ]
+    },
+    "execution_counts": {
+      "scenarios_proposed": 2,
+      "scenarios_executed": 2,
+      "successful_spice_runs": 2,
+      "failed_spice_runs": 0
+    },
+    "scenarios": [
+      {
+        "scenario_id": "scenario_1",
+        "title": "Verifica alimentazione esterna sul connettore con controllo simultaneo LED+VAC",
+        "hypothesis": "Il circuito base non contiene alcuna sorgente di alimentazione; se il pin N002 del connettore viene alimentato rispetto a massa, la corrente nel ramo R-LED deve diventare non nulla e il voltmetro VAC su N001 dovrebbe restare nullo, confermando che il LED dipende da alimentazione assente e che il voltmetro e su un nodo separato non alimentato.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "add_voltage_source_between_nodes",
+            "positive": "N002",
+            "negative": "0",
+            "value": "5"
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "v(N001)",
+          "v(N002)",
+          "v(N004)",
+          "@dled12_1[id]"
+        ],
+        "expect": {
+          "v(N002)": "nonzero",
+          "@dled12_1[id]": "activated"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N001)",
+              "metric": "v(n001).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.0,
+              "scenario_value": 0.0,
+              "delta": 0.0,
+              "change": "unchanged",
+              "expectation": null,
+              "base_details": {
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "vpp": 0.0,
+                "final": 0.0,
+                "abs_peak": 0.0
+              },
+              "scenario_details": {
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "vpp": 0.0,
+                "final": 0.0,
+                "abs_peak": 0.0
+              }
+            },
+            {
+              "quantity": "v(N002)",
+              "metric": "v(n002).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 1.2303479e-16,
+              "scenario_value": 0.0,
+              "delta": -1.2303479e-16,
+              "change": "unchanged",
+              "expectation": "nonzero",
+              "base_details": {
+                "min": 4.31204191e-244,
+                "max": 1.2303479e-16,
+                "mean": 3.0385695300914917e-19,
+                "vpp": 1.2303479e-16,
+                "final": 4.31204191e-244,
+                "abs_peak": 1.2303479e-16
+              },
+              "scenario_details": {
+                "min": 5.0,
+                "max": 5.0,
+                "mean": 5.0,
+                "vpp": 0.0,
+                "final": 5.0,
+                "abs_peak": 5.0
+              }
+            },
+            {
+              "quantity": "v(N004)",
+              "metric": "v(n004).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 1.2303479e-16,
+              "scenario_value": 8.300000009509034e-08,
+              "delta": 8.299999997205555e-08,
+              "change": "activated",
+              "expectation": null,
+              "base_details": {
+                "min": 4.31204191e-244,
+                "max": 1.2303479e-16,
+                "mean": 3.0385695300914917e-19,
+                "vpp": 1.2303479e-16,
+                "final": 4.31204191e-244,
+                "abs_peak": 1.2303479e-16
+              },
+              "scenario_details": {
+                "min": 0.702803114,
+                "max": 0.702803197,
+                "mean": 0.7028031142034313,
+                "vpp": 8.300000009509034e-08,
+                "final": 0.702803114,
+                "abs_peak": 0.702803197
+              }
+            },
+            {
+              "quantity": "@dled12_1[id]",
+              "metric": "@dled12_1[id].abs_peak",
+              "measurement": "tran_abs_peak",
+              "base_value": 1.69664157e-28,
+              "scenario_value": 0.00631942759,
+              "delta": 0.00631942759,
+              "change": "activated",
+              "expectation": "activated",
+              "base_details": {
+                "min": 4.31204191e-256,
+                "max": 1.69664157e-28,
+                "mean": 4.181446172248355e-31,
+                "vpp": 1.69664157e-28,
+                "final": 4.31204191e-256,
+                "abs_peak": 1.69664157e-28
+              },
+              "scenario_details": {
+                "min": 0.00631940719,
+                "max": 0.00631942759,
+                "mean": 0.006319407240000001,
+                "vpp": 2.0400000000017626e-08,
+                "final": 0.00631940719,
+                "abs_peak": 0.00631942759
+              }
+            }
+          ],
+          "comparison_evidence": {},
+          "led_profiles": {}
+        }
+      },
+      {
+        "scenario_id": "scenario_2",
+        "title": "Verifica simultanea dei due ingressi separati: DC per LED su N002 e AC per VAC su N001",
+        "hypothesis": "I due sintomi dipendono da due reti indipendenti del connettore: il LED PWR richiede alimentazione sul pin N002, mentre il voltmetro VAC misura solo il nodo N001 rispetto a massa. Se si forniscono separatamente 5 V DC a N002 e una SIN a N001, il LED deve condurre e il VAC deve mostrare una tensione alternata non nulla nello stesso scenario.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "add_voltage_source_between_nodes",
+            "positive": "N002",
+            "negative": "0",
+            "value": "5"
+          },
+          {
+            "type": "add_voltage_source_between_nodes",
+            "positive": "N001",
+            "negative": "0",
+            "value": "SIN(0 1 50)"
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "v(N001)",
+          "v(N002)",
+          "v(N004)",
+          "@dled12_1[id]"
+        ],
+        "expect": {
+          "v(N001)": "nonzero",
+          "@dled12_1[id]": "activated"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N001)",
+              "metric": "v(n001).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.0,
+              "scenario_value": 1.999922622,
+              "delta": 1.999922622,
+              "change": "activated",
+              "expectation": "nonzero",
+              "base_details": {
+                "min": 0.0,
+                "max": 0.0,
+                "mean": 0.0,
+                "vpp": 0.0,
+                "final": 0.0,
+                "abs_peak": 0.0
+              },
+              "scenario_details": {
+                "min": -0.999961311,
+                "max": 0.999961311,
+                "mean": 6.544965894362626e-05,
+                "vpp": 1.999922622,
+                "final": -4.8985872e-16,
+                "abs_peak": 0.999961311
+              }
+            },
+            {
+              "quantity": "v(N002)",
+              "metric": "v(n002).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 1.2303479e-16,
+              "scenario_value": 0.0,
+              "delta": -1.2303479e-16,
+              "change": "unchanged",
+              "expectation": null,
+              "base_details": {
+                "min": 4.31204191e-244,
+                "max": 1.2303479e-16,
+                "mean": 3.0385695300914917e-19,
+                "vpp": 1.2303479e-16,
+                "final": 4.31204191e-244,
+                "abs_peak": 1.2303479e-16
+              },
+              "scenario_details": {
+                "min": 5.0,
+                "max": 5.0,
+                "mean": 5.0,
+                "vpp": 0.0,
+                "final": 5.0,
+                "abs_peak": 5.0
+              }
+            },
+            {
+              "quantity": "v(N004)",
+              "metric": "v(n004).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 1.2303479e-16,
+              "scenario_value": 8.300000009509034e-08,
+              "delta": 8.299999997205555e-08,
+              "change": "activated",
+              "expectation": null,
+              "base_details": {
+                "min": 4.31204191e-244,
+                "max": 1.2303479e-16,
+                "mean": 3.0385695300914917e-19,
+                "vpp": 1.2303479e-16,
+                "final": 4.31204191e-244,
+                "abs_peak": 1.2303479e-16
+              },
+              "scenario_details": {
+                "min": 0.702803114,
+                "max": 0.702803197,
+                "mean": 0.7028031142034313,
+                "vpp": 8.300000009509034e-08,
+                "final": 0.702803114,
+                "abs_peak": 0.702803197
+              }
+            },
+            {
+              "quantity": "@dled12_1[id]",
+              "metric": "@dled12_1[id].abs_peak",
+              "measurement": "tran_abs_peak",
+              "base_value": 1.69664157e-28,
+              "scenario_value": 0.00631942759,
+              "delta": 0.00631942759,
+              "change": "activated",
+              "expectation": "activated",
+              "base_details": {
+                "min": 4.31204191e-256,
+                "max": 1.69664157e-28,
+                "mean": 4.181446172248355e-31,
+                "vpp": 1.69664157e-28,
+                "final": 4.31204191e-256,
+                "abs_peak": 1.69664157e-28
+              },
+              "scenario_details": {
+                "min": 0.00631940719,
+                "max": 0.00631942759,
+                "mean": 0.006319407240000001,
+                "vpp": 2.0400000000017626e-08,
+                "final": 0.00631940719,
+                "abs_peak": 0.00631942759
+              }
+            }
+          ],
+          "comparison_evidence": {},
+          "led_profiles": {}
+        }
+      }
+    ],
+    "final": {
+      "answer": "Il problema piu probabile e che al circuito non arriva alcuna alimentazione/stimolo esterno corretto sui pin del connettore. Il LED PWR dipende dal pin N002 rispetto a massa, mentre il voltmetro VAC misura un altro pin separato, N001, rispetto a massa. Se N002 non viene alimentato il LED resta spento; se su N001 non viene applicata una tensione alternata il VAC resta a zero.",
+      "cause": "Assenza di sorgenti nel circuito base e uso di due ingressi separati del connettore: N002 alimenta il ramo Rresistor22_1-Dled12_1, N001 e solo il nodo misurato dal voltmetro VAC. In base run entrambi sono a 0 V, quindi nessun LED acceso e nessuna lettura AC.",
+      "verified_correction": ""
+    }
+  }
+}

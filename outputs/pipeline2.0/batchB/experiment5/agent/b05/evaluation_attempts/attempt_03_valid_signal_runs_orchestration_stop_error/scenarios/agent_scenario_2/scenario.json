@@ -1,0 +1,44 @@
+{
+  "title": "Chiudere S1 e aumentare nettamente l'ampiezza del segnale sul nodo antenna",
+  "hypothesis": "Se il silenzio dipende solo da uno stimolo troppo debole, mantenendo chiuso S1 ma aumentando molto l'ampiezza della sorgente su N001 dovrebbe crescere in modo utile il segnale ai capi della cuffia; se anche così il guadagno resta insufficiente, il problema e nel percorso di rivelazione/amplificazione e non nel solo livello di ingresso.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    },
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N001",
+      "negative": "0",
+      "value": "SIN(0 1 1000)"
+    }
+  ],
+  "compare": [
+    "v(N001)",
+    "v(N003,N004)",
+    "v(N004)",
+    "i(Vbattery2_1)",
+    "i(Rbreaker3_1)"
+  ],
+  "measure": {
+    "v(N001)": "tran_vpp",
+    "v(N003,N004)": "tran_vpp",
+    "v(N004)": "tran_vpp",
+    "i(Vbattery2_1)": "op",
+    "i(Rbreaker3_1)": "op"
+  },
+  "gain": {
+    "input": "v(N001)",
+    "output": "v(N003,N004)",
+    "min_ratio": 0.01
+  },
+  "expect": {
+    "v(N001)": "nonzero",
+    "v(N003,N004)": "magnitude_increased",
+    "i(Vbattery2_1)": "nonzero",
+    "i(Rbreaker3_1)": "nonzero"
+  },
+  "scenario_id": "agent_scenario_2"
+}

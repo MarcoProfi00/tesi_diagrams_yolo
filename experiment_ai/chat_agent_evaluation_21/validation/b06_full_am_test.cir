@@ -1,0 +1,53 @@
+* b06 - independent end-to-end AM validation
+* The RF amplitude, 1 kohm coupling and modulation index are bench assumptions.
+* L1=220 uH and C1=365 pF give an ideal resonance near 561.646 kHz.
+
+Vbattery N002 0 DC 9
+Rswitch N007 N002 1m
+Rspeaker N003 0 8
+
+* 1 V peak carrier, 10% AM at 1 kHz, coupled rather than clamping N001.
+* The modest modulation keeps the output below the supply despite the simple
+* LM386 model having no explicit rail clipping.
+BAM NSRC 0 V=(1+0.1*sin(2*pi*1k*time))*sin(2*pi*561645.6*time)
+RSOURCE NSRC N001 1k
+
+Ddetector N001 N004 D_GENERIC
+Ltank N001 0 220u
+Ctank N001 0 365p
+Cdetector N004 0 100n
+Cinput N004 N005 100n
+Qpre N006 N005 0 2N3904
+Rfeedback N005 N006 100k
+Rcollector N007 N006 10k
+Ccoupling N006 N010 100n
+Rvolume N010 0 10k
+Xaudio N010 0 N007 0 N009 LM386_SIMPLE
+Cout N009 N003 220u
+Csupply N007 0 100u
+
+.model D_GENERIC D
+.model 2N3904 NPN(IS=6.734f BF=416.4 VAF=74.03 IKF=66.78m ISE=6.734f NE=1.259 BR=0.7371 VAR=12.11 IKR=0.0 ISC=0.0 NC=2 RB=10 RC=1 RE=0.1 CJE=4.493p VJE=0.75 MJE=0.2593 CJC=3.638p VJC=0.75 MJC=0.3085 TF=301.2p TR=239.5n)
+.subckt LM386_SIMPLE INP INM VCC VEE OUT
+RIN INP INM 50k
+EAMP NAMP VEE INP INM 20
+ROUT NAMP OUT 5
+RBLEED VCC VEE 100k
+.ends LM386_SIMPLE
+
+.save all
+.tran 20n 10m
+.meas tran source_vpp PP v(NSRC) FROM=5m TO=10m
+.meas tran tank_vpp PP v(N001) FROM=5m TO=10m
+.meas tran detected_vpp PP v(N004) FROM=5m TO=10m
+.meas tran preamp_out_vpp PP v(N006) FROM=5m TO=10m
+.meas tran lm386_in_vpp PP v(N010) FROM=5m TO=10m
+.meas tran speaker_vpp PP v(N003) FROM=5m TO=10m
+.meas tran speaker_rms RMS v(N003) FROM=5m TO=10m
+.four 1k v(N003)
+
+.control
+run
+quit
+.endc
+.end

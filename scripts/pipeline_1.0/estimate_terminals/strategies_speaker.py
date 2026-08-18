@@ -65,9 +65,6 @@ def _select_speaker_rows(rows):
             if best_pair is None or candidate > best_pair:
                 best_pair = candidate
 
-    if best_pair is None:
-        return rows[:2]
-
     _, _, i, j = best_pair
     return [rows[i], rows[j]]
 
@@ -77,6 +74,7 @@ def detect_speaker_terminals(meta: dict, binary, bbox):
     connected_side, side_scores = strategy_detect_connected_side(binary, bbox)
     if connected_side is None:
         connected_side = "left"
+    estimated_orientation = _speaker_orientation_from_connected_side(connected_side)
 
     cfg = _speaker_pin_cfg(meta)
     raw_candidates = _candidate_coords_for_side(binary, bbox, connected_side, cfg)
@@ -119,7 +117,7 @@ def detect_speaker_terminals(meta: dict, binary, bbox):
     debug = {
         "strategy": meta.get("terminal_strategy", "speaker_by_connected_side"),
         "decision_mode": "speaker_connected_side_contact_pair",
-        "estimated_orientation": _speaker_orientation_from_connected_side(connected_side),
+        "estimated_orientation": estimated_orientation,
         "connected_side": connected_side,
         "bbox": [int(round(v)) for v in bbox],
         "connected_side_scores": side_scores,
@@ -130,4 +128,4 @@ def detect_speaker_terminals(meta: dict, binary, bbox):
         "rows": debug_rows,
     }
 
-    return terminals_def, _speaker_orientation_from_connected_side(connected_side), connected_side, debug
+    return terminals_def, estimated_orientation, connected_side, debug

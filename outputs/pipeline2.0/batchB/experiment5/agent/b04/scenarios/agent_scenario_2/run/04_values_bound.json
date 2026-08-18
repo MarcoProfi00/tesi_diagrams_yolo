@@ -1,0 +1,397 @@
+{
+  "circuit_id": "b04",
+  "source_format": "pipeline2.0_values_bound",
+  "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\pipeline2_manual_values\\batchB\\b04_values.yaml",
+  "supplies": {
+    "VBAT_TEST": {
+      "terminal": "terminal26.3_t1",
+      "return_terminal": "terminal26.4_t1",
+      "type": "dc",
+      "value": 12,
+      "unit": "V",
+      "reference": 0,
+      "source": "manual_assumption_nominal_12v_battery_testbench",
+      "label_text": "Batteria esterna di prova: 12 V nominali",
+      "viewer_override": {
+        "visual_class": "battery",
+        "label": "",
+        "display_value": "12 V",
+        "label_mode": "value_only",
+        "tooltip": "Batteria esterna in carica; tensione di prova 12 V"
+      },
+      "node": "N009",
+      "return_node": "N010"
+    },
+    "VREF_BATTERY_NEGATIVE": {
+      "terminal": "terminal26.4_t1",
+      "type": "dc",
+      "value": 0,
+      "unit": "V",
+      "reference": 0,
+      "source": "manual_reference_for_floating_charger_circuit",
+      "label_text": "Negativo batteria e ritorno secondario: riferimento SPICE",
+      "node": "N010"
+    }
+  },
+  "components": {
+    "diode7.1": {
+      "class_name": "Diode",
+      "terminal_nodes": {
+        "anode": "N001",
+        "cathode": "N002"
+      },
+      "value_data": {
+        "model": "D_1N4001_TYP",
+        "source": "manual_from_image_label",
+        "label_text": "D1 1N4001"
+      },
+      "status": "bound"
+    },
+    "diode7.2": {
+      "class_name": "Diode",
+      "terminal_nodes": {
+        "anode": "N003",
+        "cathode": "N004"
+      },
+      "value_data": {
+        "model": "SCR_2N3668_TYP",
+        "source": "manual_semantic_correction_from_image_label",
+        "label_text": "H1 2N3668 SCR",
+        "viewer_override": {
+          "visual_class": "scr",
+          "label": "H1",
+          "display_value": "2N3668 SCR"
+        },
+        "spice_override": {
+          "emit_as": "subcircuit",
+          "pin_order": [
+            "anode",
+            "gate",
+            "cathode"
+          ],
+          "node_refs": {
+            "anode": "diode7.2_anode",
+            "gate": "diode7.3_cathode",
+            "cathode": "diode7.2_cathode"
+          },
+          "resolved_node_refs": {
+            "anode": "N003",
+            "gate": "H1_GATE",
+            "cathode": "N004"
+          }
+        }
+      },
+      "status": "bound"
+    },
+    "diode7.3": {
+      "class_name": "Diode",
+      "terminal_nodes": {
+        "anode": "N001",
+        "cathode": "H1_GATE"
+      },
+      "value_data": {
+        "model": "D_1N4001_TYP",
+        "source": "manual_from_image_label",
+        "label_text": "D3 1N4001"
+      },
+      "status": "bound"
+    },
+    "diode7.4": {
+      "class_name": "Diode",
+      "terminal_nodes": {
+        "anode": "N005",
+        "cathode": "N004"
+      },
+      "value_data": {
+        "model": "D_1N4001_TYP",
+        "source": "manual_from_image_label",
+        "label_text": "D4 1N4001"
+      },
+      "status": "bound"
+    },
+    "diode7.5": {
+      "class_name": "Diode",
+      "terminal_nodes": {
+        "cathode": "N007",
+        "anode": "N006"
+      },
+      "value_data": {
+        "model": "D_GENERIC",
+        "source": "manual_generic_model_for_image_label_SD50",
+        "label_text": "D2 SD50; modello diodo generico per la prima base run",
+        "viewer_override": {
+          "visual_class": "diode",
+          "label": "D2",
+          "display_value": "SD50"
+        }
+      },
+      "status": "bound"
+    },
+    "fuse8.1": {
+      "class_name": "Fuse",
+      "terminal_nodes": {
+        "t1": "N008",
+        "t2": "N009"
+      },
+      "value_data": {
+        "state": "closed",
+        "current_rating": 2,
+        "current_rating_unit": "A",
+        "source": "manual_from_image_label",
+        "label_text": "F1 2 A, chiuso"
+      },
+      "status": "bound"
+    },
+    "npn_transistor18.1": {
+      "class_name": "NPN_Transistor",
+      "terminal_nodes": {
+        "B": "N007",
+        "C": "N002",
+        "E": "N010"
+      },
+      "value_data": {
+        "model": "BC148_TYP",
+        "source": "manual_from_image_label_and_functional_spice_validation",
+        "label_text": "Q1 BC148 NPN"
+      },
+      "status": "bound"
+    },
+    "resistor22.1": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N003",
+        "t2": "N005"
+      },
+      "value_data": {
+        "value": 22,
+        "unit": "ohm",
+        "power": 5,
+        "power_unit": "W",
+        "source": "manual_from_image_label",
+        "label_text": "R2 22 ohm 5 W"
+      },
+      "status": "bound"
+    },
+    "resistor22.2": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N003",
+        "t2": "N001"
+      },
+      "value_data": {
+        "value": 330,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "R1 330 ohm"
+      },
+      "status": "bound"
+    },
+    "resistor22.3": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N004",
+        "t2": "N011"
+      },
+      "value_data": {
+        "value": 820,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "R3 820 ohm"
+      },
+      "status": "bound"
+    },
+    "resistor22.4": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N006",
+        "t2": "N010"
+      },
+      "value_data": {
+        "value": 100,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "R5 100 ohm"
+      },
+      "status": "bound"
+    },
+    "resistor22.5": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N011",
+        "t2": "N006"
+      },
+      "value_data": {
+        "value": 50,
+        "unit": "ohm",
+        "nominal_total_value": 100,
+        "nominal_total_unit": "ohm",
+        "source": "manual_from_image_label_midpoint_assumption",
+        "label_text": "R4 variabile 100 ohm; equivalente base run 50 ohm",
+        "viewer_override": {
+          "visual_class": "resistor",
+          "label": "R4",
+          "display_value": "100 ohm",
+          "tooltip": "R4; potenziometro 100 ohm, equivalente SPICE base run 50 ohm"
+        },
+        "spice_override": {
+          "emit_as": "resistive_load",
+          "equivalent_resistance": 50,
+          "resistance_unit": "ohm",
+          "node_order": [
+            "t1",
+            "t2"
+          ]
+        }
+      },
+      "status": "bound"
+    },
+    "resistor22.6": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N004",
+        "t2": "N008"
+      },
+      "value_data": {
+        "value": 1,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "R6 1 ohm"
+      },
+      "status": "bound"
+    },
+    "terminal26.1": {
+      "class_name": "Terminal",
+      "terminal_nodes": {
+        "t1": "N012"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "terminal26.2": {
+      "class_name": "Terminal",
+      "terminal_nodes": {
+        "t1": "N013"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "terminal26.3": {
+      "class_name": "Terminal",
+      "terminal_nodes": {
+        "t1": "N009"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "terminal26.4": {
+      "class_name": "Terminal",
+      "terminal_nodes": {
+        "t1": "N010"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "transformer28.1": {
+      "class_name": "Transformer",
+      "terminal_nodes": {
+        "t1": "N012",
+        "t2": "N003",
+        "t3": "N013",
+        "t4": "N010"
+      },
+      "value_data": {
+        "model": "T1_230VAC_TO_15VAC_EQ",
+        "secondary_voltage_rms": 15,
+        "frequency": 50,
+        "source": "manual_from_image_label",
+        "label_text": "T1: primario 230 V AC, secondario 15-0 V AC",
+        "viewer_override": {
+          "visual_class": "transformer",
+          "label": "T1",
+          "display_value": "230 V AC / 15-0 V AC",
+          "label_mode": "reference_only",
+          "tooltip": "T1; trasformatore 230 V AC / 15-0 V AC",
+          "include_graph_terminals": true
+        },
+        "spice_override": {
+          "emit_as": "equivalent_ac_source",
+          "node_order": [
+            "t2",
+            "t4"
+          ],
+          "waveform": "sin",
+          "source": "manual_transformer_secondary_pinout_from_image"
+        }
+      },
+      "status": "bound"
+    }
+  },
+  "nodes": {
+    "terminal26.1_t1": {
+      "label": "AC_L",
+      "source": "manual_from_image_label",
+      "label_text": "Ingresso T1: 230 V AC, conduttore superiore",
+      "node": "N012"
+    },
+    "terminal26.2_t1": {
+      "label": "AC_N",
+      "source": "manual_from_image_label",
+      "label_text": "Ingresso T1: 230 V AC, conduttore inferiore",
+      "node": "N013"
+    },
+    "terminal26.3_t1": {
+      "label": "BAT_POSITIVE",
+      "source": "manual_from_image_context",
+      "label_text": "Morsetto positivo batteria esterna",
+      "node": "N009"
+    },
+    "terminal26.4_t1": {
+      "label": "BAT_NEGATIVE",
+      "source": "manual_from_image_context",
+      "label_text": "Morsetto negativo batteria esterna e riferimento SPICE",
+      "node": "N010"
+    },
+    "transformer28.1_t2": {
+      "label": "SEC_15VAC",
+      "source": "manual_from_image_label",
+      "label_text": "Secondario T1: 15 V AC",
+      "node": "N003"
+    },
+    "transformer28.1_t4": {
+      "label": "SEC_0V_BAT_NEG",
+      "source": "manual_from_image_label",
+      "label_text": "Secondario T1: 0 V e negativo batteria",
+      "node": "N010"
+    }
+  },
+  "spice_topology_overlay": [
+    {
+      "terminal_id": "diode7.3_cathode",
+      "from_node": "N004",
+      "to_node": "H1_GATE",
+      "status": "applied",
+      "source": "manual_image_validation_H1_gate_via_D3"
+    }
+  ],
+  "simulation": {
+    "analyses": [
+      "op",
+      "tran"
+    ],
+    "tran": {
+      "step": "100us",
+      "stop": "100ms"
+    },
+    "readiness": "ready"
+  },
+  "missing": [],
+  "stats": {
+    "components_total": 18,
+    "bound_components": 14,
+    "missing_components": 0,
+    "not_required_components": 4,
+    "unsupported_components": 0,
+    "supplies_count": 2,
+    "manual_nodes_count": 6
+  }
+}

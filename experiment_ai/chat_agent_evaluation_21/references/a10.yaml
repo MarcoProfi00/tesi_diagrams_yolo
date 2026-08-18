@@ -1,0 +1,127 @@
+schema_version: 1
+circuit_id: "a10"
+review_status: frozen
+circuit_description: |
+  Circuito alimentato da una batteria da 5 V attraverso uno switch e un
+  connettore J1 a quattro pin. Il pin 1 (N002) riceve il positivo commutato;
+  il pin 2 (N003) alimenta un LED rosso tramite 330 ohm; il pin 3 (N004)
+  alimenta una lampada equivalente a 250 ohm; il pin 4 è a massa. I pin del
+  connettore sono reti elettricamente distinte e richiedono un collegamento
+  esterno per distribuire l'alimentazione ai due carichi.
+task_type: "attivazione e verifica simultanea di due rami di carico"
+user_symptom: |
+  Voglio accendere contemporaneamente la lampada e il LED mantenendo il circuito stabile. Individua la causa ed esegui gli scenari necessari per verificare, nella stessa simulazione, che entrambi siano attivi.
+
+circuit_inventory:
+  component_count: 10
+  node_count: 6
+  component_types:
+    - "Battery"
+    - "Connector"
+    - "GND"
+    - "Lamp"
+    - "LED"
+    - "Resistor"
+    - "Switch"
+  analysis_types:
+    - "op"
+
+required_evidence:
+  - id: connector_pins_independent
+    description: |
+      Il Graph JSON deve essere interpretato senza continuità interna tra i
+      pin di J1: N002, N003 e N004 sono tre reti separate, in accordo con
+      l'immagine.
+  - id: base_branches_unpowered
+    description: |
+      Nel caso base la batteria porta N001 a 5 V, ma lo switch aperto non è
+      emesso nella netlist. N003, N004 e N005 restano sostanzialmente a 0 V;
+      le correnti della lampada, del ramo LED e della batteria sono nulle.
+  - id: same_run_branch_currents
+    description: |
+      Nella stessa simulazione corretta devono risultare non nulle sia la
+      corrente di Rlamp13_1 sia quella di Rresistor22_1, oltre alle tensioni
+      sui due ingressi di ramo.
+  - id: corrected_operating_point
+    description: |
+      Nello scenario verificato N003 e N004 raggiungono circa 5 V, N005 circa
+      0.721 V, la lampada assorbe circa 20.000 mA e il ramo LED circa
+      12.965 mA. La batteria eroga complessivamente circa 32.965 mA.
+  - id: static_scope
+    description: |
+      Gli artefatti disponibili contengono soltanto un punto operativo .op.
+      Dimostrano l'attivazione DC simultanea, non stabilità temporale,
+      termica o hardware.
+
+success_conditions:
+  - id: cause_identified
+    description: |
+      La conclusione identifica lo switch aperto e la mancata distribuzione
+      del positivo commutato N002 ai rami N003 e N004, senza attribuire un
+      guasto intrinseco a batteria, lampada o LED.
+  - id: combined_correction_executed
+    description: |
+      In un solo scenario lo switch viene chiuso e N002 viene collegato sia
+      a N003 sia a N004; ngspice completa correttamente la .op.
+  - id: both_loads_active
+    description: |
+      La medesima run verifica circa 20 mA nella lampada e circa 12.97 mA nel
+      ramo LED, con un assorbimento totale coerente di circa 32.97 mA.
+  - id: conclusion_calibrated
+    description: |
+      La conclusione descrive uno stato DC verificato e non estende il
+      risultato a proprietà dinamiche non misurate.
+
+acceptable_solutions:
+  - id: close_switch_and_feed_both_branches
+    description: |
+      Chiudere switch25.1 e collegare il nodo commutato N002 sia a N003 sia
+      a N004 nella stessa simulazione, mediante connect_nodes o
+      feed_nodes_from_source_node con resistenza di collegamento trascurabile.
+    verified_reference_values: |
+      ngspice success senza messaggi su stderr; N002=4.999967 V,
+      N003=4.999954 V, N004=4.999947 V e N005=0.721391 V. Corrente lampada
+      19.9998 mA, corrente R3-LED 12.9653 mA e corrente della batteria
+      -32.9651 mA secondo la convenzione di segno SPICE.
+  - id: feed_only_one_branch
+    acceptance: partial_only
+    description: |
+      Collegare N002 soltanto a N003 o soltanto a N004 attiva un solo carico
+      e non soddisfa la richiesta di simultaneità.
+  - id: close_switch_only
+    acceptance: partial_only
+    description: |
+      Chiudere soltanto lo switch alimenta N002 ma lascia separati i pin 2 e
+      3 del connettore, quindi non completa i percorsi dei carichi.
+
+unsupported_conclusions:
+  - |
+    Trattare J1 come un collegamento interno tra i suoi pin oppure dichiarare
+    errato il Graph JSON perché N002, N003 e N004 sono separati.
+  - |
+    Attribuire il mancato funzionamento a batteria, lampada o LED senza una
+    prova: la base non alimenta i rami e lo scenario combinato li attiva.
+  - |
+    Dichiarare entrambi i carichi attivi misurando soltanto la corrente totale
+    della batteria o la tensione di uno dei due rami.
+  - |
+    Considerare CHAT non risolutiva soltanto perché lo scenario è marcato
+    diagnostic e l'outcome automatico è partially_resolved: azioni, netlist e
+    risultati elettrici coincidono con la correzione risolutiva di AGENT.
+  - |
+    Considerare v(N002) mancante nella base come prova di fallimento: il nodo
+    è eliminato dalla netlist operativa quando lo switch aperto non è emesso.
+  - |
+    Affermare che la stabilità transitoria o il comportamento fisico nel tempo
+    siano stati verificati: è disponibile solamente l'analisi .op.
+
+review_notes: |
+  Immagine e values canonici provengono da
+  data/batchPipeline2.0/batchChatAgentEvaluation. Il Graph JSON coincide con
+  l'immagine e non presenta terminali sconnessi o corrispondenze sospette.
+  CHAT e AGENT producono circuiti di scenario elettricamente equivalenti e
+  gli stessi valori SPICE. La differenza partially_resolved/resolved_candidate
+  nasce dall'intento dichiarato (diagnostic contro correction) e non dalla
+  verifica dei carichi: per la ground truth entrambe le esecuzioni soddisfano
+  tecnicamente la richiesta, purché la conclusione resti limitata alla DC.
+  La scheda deve essere approvata manualmente prima dello stato frozen.

@@ -1,0 +1,34 @@
+{
+  "title": "Batteria meno scarica a 13.5 V: verifica diminuzione corrente di carica",
+  "hypothesis": "La base run mostra gia una corrente di carica DC non nulla nel percorso N004 -> R6 -> fusibile -> batteria, circa 12.4 mA in modulo. Se la batteria viene portata a 13.5 V, quindi piu vicina o superiore alla tensione disponibile dal caricatore in quel punto di lavoro, la corrente nel ramo di carica e la conduzione del diodo D4 devono diminuire in modulo. Insieme allo scenario gia eseguito con batteria a 10 V, questo conferma che il caricatore eroga piu corrente quando la batteria e piu scarica e meno corrente quando e gia piu carica.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "VVBAT_TEST",
+      "value": "DC 13.5V"
+    }
+  ],
+  "compare": [
+    "i(Rresistor22_6)",
+    "i(Rfuse8_1)",
+    "@ddiode7_4[id]",
+    "v(N009)",
+    "v(N004)"
+  ],
+  "measure": {
+    "i(Rresistor22_6)": "op",
+    "i(Rfuse8_1)": "op",
+    "@ddiode7_4[id]": "tran_abs_peak",
+    "v(N009)": "op",
+    "v(N004)": "op"
+  },
+  "expect": {
+    "i(Rresistor22_6)": "magnitude_decreased",
+    "i(Rfuse8_1)": "magnitude_decreased",
+    "@ddiode7_4[id]": "magnitude_decreased",
+    "v(N009)": "increased"
+  },
+  "scenario_id": "agent_scenario_2"
+}

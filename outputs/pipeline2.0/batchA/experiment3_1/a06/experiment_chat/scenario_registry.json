@@ -1,0 +1,177 @@
+{
+  "source_format": "pipeline2.0_experiment_scenario_registry",
+  "batch_name": "batchA",
+  "experiment_name": "experiment3_1",
+  "circuit_id": "a06",
+  "created_at": "2026-07-14T12:41:37",
+  "updated_at": "2026-07-14T12:41:45",
+  "max_executable_scenarios": 5,
+  "next_scenario_number": 4,
+  "last_added_scenario_id": "scenario_3",
+  "proposals": [
+    {
+      "proposal_id": "proposal_1",
+      "created_at": "2026-07-14T12:41:37",
+      "source_agent_response": "outputs\\pipeline2.0\\batchA\\experiment3_1\\a06\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_1",
+        "scenario_2",
+        "scenario_3"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_number": 1,
+      "scenario_id": "scenario_1",
+      "title": "Ridurre l’ampiezza del segnale di ingresso",
+      "hypothesis": "The output distortion is mainly caused by an input amplitude that is too large for the present transistor bias point.",
+      "actions": [
+        {
+          "type": "change_source_value",
+          "target": "Vsignal_source23_1",
+          "value": "SIN(0 0.2 100)"
+        }
+      ],
+      "analysis": "tran",
+      "compare": [
+        "v(N006)",
+        "v(N004)",
+        "v(N005)"
+      ],
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_1",
+      "execution_path": "outputs\\pipeline2.0\\batchA\\experiment3_1\\a06\\scenarios\\scenario_1",
+      "created_at": "2026-07-14T12:41:37",
+      "updated_at": "2026-07-14T12:41:45",
+      "signature": "{\"actions\": [{\"target\": \"Vsignal_source23_1\", \"type\": \"change_source_value\", \"value\": \"SIN(0 0.2 100)\"}], \"analysis\": \"tran\", \"compare\": [\"v(N006)\", \"v(N004)\", \"v(N005)\"], \"hypothesis\": \"The output distortion is mainly caused by an input amplitude that is too large for the present transistor bias point.\", \"title\": \"Ridurre l’ampiezza del segnale di ingresso\"}",
+      "scenario": {
+        "scenario_id": "scenario_1",
+        "title": "Ridurre l’ampiezza del segnale di ingresso",
+        "hypothesis": "The output distortion is mainly caused by an input amplitude that is too large for the present transistor bias point.",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vsignal_source23_1",
+            "value": "SIN(0 0.2 100)"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N006)",
+          "v(N004)",
+          "v(N005)"
+        ]
+      }
+    },
+    {
+      "scenario_number": 2,
+      "scenario_id": "scenario_2",
+      "title": "Ridurre il bypass dell’emettitore",
+      "hypothesis": "Strong emitter bypassing may be increasing gain but worsening linearity.",
+      "actions": [
+        {
+          "type": "change_component_value",
+          "target": "Ccapacitor4_2",
+          "value": "10u"
+        }
+      ],
+      "analysis": "tran",
+      "compare": [
+        "v(N003)",
+        "v(N004)",
+        "v(N005)"
+      ],
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 2,
+      "original_scenario_id": "scenario_2",
+      "execution_path": null,
+      "created_at": "2026-07-14T12:41:37",
+      "updated_at": "2026-07-14T12:41:37",
+      "signature": "{\"actions\": [{\"target\": \"Ccapacitor4_2\", \"type\": \"change_component_value\", \"value\": \"10u\"}], \"analysis\": \"tran\", \"compare\": [\"v(N003)\", \"v(N004)\", \"v(N005)\"], \"hypothesis\": \"Strong emitter bypassing may be increasing gain but worsening linearity.\", \"title\": \"Ridurre il bypass dell’emettitore\"}",
+      "scenario": {
+        "scenario_id": "scenario_2",
+        "title": "Ridurre il bypass dell’emettitore",
+        "hypothesis": "Strong emitter bypassing may be increasing gain but worsening linearity.",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Ccapacitor4_2",
+            "value": "10u"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N003)",
+          "v(N004)",
+          "v(N005)"
+        ]
+      }
+    },
+    {
+      "scenario_number": 3,
+      "scenario_id": "scenario_3",
+      "title": "Ridurre la resistenza di bias superiore della base",
+      "hypothesis": "The transistor bias point may be poorly centered because the present base bias network is not placing the device in a sufficiently linear region.",
+      "actions": [
+        {
+          "type": "change_component_value",
+          "target": "Rresistor22_2",
+          "value": "68k"
+        }
+      ],
+      "analysis": "tran",
+      "compare": [
+        "v(N002)",
+        "v(N004)",
+        "v(N005)",
+        "i(vvcc#branch)"
+      ],
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 3,
+      "original_scenario_id": "scenario_3",
+      "execution_path": null,
+      "created_at": "2026-07-14T12:41:37",
+      "updated_at": "2026-07-14T12:41:37",
+      "signature": "{\"actions\": [{\"target\": \"Rresistor22_2\", \"type\": \"change_component_value\", \"value\": \"68k\"}], \"analysis\": \"tran\", \"compare\": [\"v(N002)\", \"v(N004)\", \"v(N005)\", \"i(vvcc#branch)\"], \"hypothesis\": \"The transistor bias point may be poorly centered because the present base bias network is not placing the device in a sufficiently linear region.\", \"title\": \"Ridurre la resistenza di bias superiore della base\"}",
+      "scenario": {
+        "scenario_id": "scenario_3",
+        "title": "Ridurre la resistenza di bias superiore della base",
+        "hypothesis": "The transistor bias point may be poorly centered because the present base bias network is not placing the device in a sufficiently linear region.",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Rresistor22_2",
+            "value": "68k"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N002)",
+          "v(N004)",
+          "v(N005)",
+          "i(vvcc#branch)"
+        ]
+      }
+    }
+  ]
+}

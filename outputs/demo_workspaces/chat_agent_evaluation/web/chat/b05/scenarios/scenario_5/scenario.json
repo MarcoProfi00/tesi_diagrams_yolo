@@ -1,0 +1,37 @@
+{
+  "scenario_id": "scenario_5",
+  "title": "Pilotare direttamente N008 per isolare lo stadio finale",
+  "hypothesis": "If a small AC signal injected directly at N008 still does not produce useful output across N003-N004, the final stage around Qnpn_transistor18_2 and the headset-equivalent load is the likely signal-loss boundary.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    },
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N008",
+      "negative": "0",
+      "value": "SIN(0 5m 1000)"
+    }
+  ],
+  "rerun_from": "06",
+  "analysis": "tran",
+  "compare": [
+    "v(N008)",
+    "v(N003,N004)"
+  ],
+  "expect": {
+    "v(N008)": "changed",
+    "v(N003,N004)": "changed"
+  },
+  "measure": {
+    "v(N008)": "tran_vpp",
+    "v(N003,N004)": "tran_vpp"
+  },
+  "gain": {
+    "input": "v(N008)",
+    "output": "v(N003,N004)",
+    "min_ratio": 0.01
+  }
+}

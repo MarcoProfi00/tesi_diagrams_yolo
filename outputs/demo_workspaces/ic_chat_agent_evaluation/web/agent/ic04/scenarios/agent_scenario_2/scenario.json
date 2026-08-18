@@ -1,0 +1,35 @@
+{
+  "title": "Rallentare il modulatore aumentando C1 del primo 555",
+  "hypothesis": "Se il primo 555 modula troppo velocemente o con escursione poco percepibile, aumentare Cpolarized_capacitor20_1 puo rendere il cambiamento di controllo piu lento e piu udibile, aumentando la percezione del cambio di tono sul secondo oscillatore.",
+  "intent": "correction",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Cpolarized_capacitor20_1",
+      "value": "47u"
+    }
+  ],
+  "compare": [
+    "v(N003)",
+    "v(N004)",
+    "v(N006)",
+    "v(N009,N010)"
+  ],
+  "measure": {
+    "v(N003)": "tran_vpp",
+    "v(N004)": "tran_vpp",
+    "v(N006)": "tran_vpp",
+    "v(N009,N010)": "tran_vpp"
+  },
+  "gain": {
+    "input": "v(N004)",
+    "output": "v(N006)",
+    "min_ratio": 0.1
+  },
+  "expect": {
+    "v(N006)": "changed",
+    "v(N009,N010)": "nonzero"
+  },
+  "scenario_id": "agent_scenario_2"
+}

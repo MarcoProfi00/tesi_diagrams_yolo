@@ -1,7 +1,8 @@
-"""Heuristiche per collegare i terminali ausiliari degli op-amp."""
+"""Euristiche per collegare i terminali ausiliari degli op-amp."""
 
 from .config import OPAMP_AUX_EXTERNAL_MAX_DX, OPAMP_AUX_EXTERNAL_MAX_DY
 from .ids import get_preferred_terminal_public_name, normalize_class_name
+from .label_union import LabelUnionFind, merge_label_groups
 
 
 # =========================================================
@@ -26,7 +27,7 @@ def is_external_terminal_component(term: dict) -> bool:
     class_name = normalize_class_name(term.get("component_class_name"))
     return class_name == "terminal"
 
-# Verifica se un terminale estenro dta nella direzione giusta rispetto a un aux
+# Verifica se un terminale esterno sta nella direzione giusta rispetto a un aux.
 # Es. Se aux è top il terminale deve stare sopra
 def is_terminal_in_aux_direction(aux_term: dict, candidate_term: dict):
     """
@@ -107,21 +108,7 @@ def merge_opamp_aux_external_terminal_labels(
     if not pairs:
         return label_to_terminal_ids
 
-    parent = {int(label): int(label) for label in label_to_terminal_ids.keys()}
-
-    def find(label):
-        label = int(label)
-        parent.setdefault(label, label)
-        while parent[label] != label:
-            parent[label] = parent[parent[label]]
-            label = parent[label]
-        return label
-
-    def union(label_a, label_b):
-        root_a = find(label_a)
-        root_b = find(label_b)
-        if root_a != root_b:
-            parent[max(root_a, root_b)] = min(root_a, root_b)
+    union_find = LabelUnionFind(label_to_terminal_ids)
 
     for pair in pairs:
         aux_id = pair["aux_term"]["terminal_id"]
@@ -132,14 +119,6 @@ def merge_opamp_aux_external_terminal_labels(
         if aux_label is None or external_label is None:
             continue
 
-        union(int(aux_label), int(external_label))
+        union_find.union(int(aux_label), int(external_label))
 
-    merged = {}
-    for label, terminal_ids in label_to_terminal_ids.items():
-        root = find(int(label))
-        merged.setdefault(root, []).extend(terminal_ids)
-
-    return {
-        int(label): sorted(set(terminal_ids))
-        for label, terminal_ids in merged.items()
-    }
+    return merge_label_groups(label_to_terminal_ids, union_find)

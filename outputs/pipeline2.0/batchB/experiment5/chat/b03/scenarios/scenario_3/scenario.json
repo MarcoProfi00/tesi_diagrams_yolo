@@ -1,0 +1,32 @@
+{
+  "scenario_id": "scenario_3",
+  "title": "Alleggerire la polarizzazione della base di Q2 in alta tensione",
+  "hypothesis": "A 14 V il LED giallo Dled12_2 resta acceso perché Qnpn_transistor18_2 continua a ricevere sufficiente polarizzazione di base tramite Rresistor22_4 e il nodo N005.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "DC 14V"
+    },
+    {
+      "type": "change_component_value",
+      "target": "Rresistor22_4",
+      "value": "10k"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N015)",
+    "v(N016)",
+    "v(N004)",
+    "i(vbattery2_1#branch)"
+  ],
+  "expect": {
+    "v(N015)": "changed",
+    "v(N016)": "changed",
+    "v(N004)": "changed",
+    "i(vbattery2_1#branch)": "changed"
+  }
+}

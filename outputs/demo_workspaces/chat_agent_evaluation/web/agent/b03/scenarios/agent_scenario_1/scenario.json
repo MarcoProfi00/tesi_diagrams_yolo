@@ -1,0 +1,41 @@
+{
+  "title": "Ramp batteria da scarica a carica per osservare la sequenza dei tre LED",
+  "hypothesis": "Variando la tensione della batteria con una rampa temporale si puo verificare direttamente come cambiano le correnti dei tre LED e quindi se il monitor passa tra le indicazioni attese durante la carica.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "PWL(0s 9V 1s 11V 2s 12V 3s 14V)"
+    }
+  ],
+  "compare": [
+    "@dled12_1[id]",
+    "@dled12_2[id]",
+    "@dled12_3[id]",
+    "v(N002)",
+    "v(N004)",
+    "v(N011)",
+    "v(N012)"
+  ],
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak",
+    "@dled12_2[id]": "tran_abs_peak",
+    "@dled12_3[id]": "tran_abs_peak"
+  },
+  "expect": {
+    "@dled12_1[id]": "changed",
+    "@dled12_2[id]": "changed",
+    "@dled12_3[id]": "changed",
+    "v(N002)": "changed",
+    "v(N004)": "changed",
+    "v(N011)": "changed",
+    "v(N012)": "changed"
+  },
+  "temporal_expect": {
+    "target": "Dled12_2",
+    "required_state": "on"
+  },
+  "scenario_id": "agent_scenario_1"
+}

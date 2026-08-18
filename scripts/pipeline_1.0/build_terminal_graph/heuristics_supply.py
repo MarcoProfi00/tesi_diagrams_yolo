@@ -1,8 +1,9 @@
-"""Heuristiche per alimentazioni, ground e rail impliciti."""
+"""Euristiche per alimentazioni, ground e rail impliciti."""
 
 from .config import MOSFET_GATE_SUPPLY_ALIGN_Y_TOL
 from .heuristics_mosfet import is_mosfet_gate_terminal
 from .ids import normalize_class_name
+from .label_union import LabelUnionFind, merge_label_groups
 
 def is_battery_terminal(term: dict) -> bool:
     """Riconosce un terminale appartenente a una Battery."""
@@ -21,21 +22,7 @@ def merge_battery_gate_rail_groups(
     """
     terminal_by_id = {term["terminal_id"]: term for term in terminals}
 
-    parent = {int(label): int(label) for label in label_to_terminal_ids.keys()}
-
-    def find(label):
-        label = int(label)
-        parent.setdefault(label, label)
-        while parent[label] != label:
-            parent[label] = parent[parent[label]]
-            label = parent[label]
-        return label
-
-    def union(label_a, label_b):
-        root_a = find(label_a)
-        root_b = find(label_b)
-        if root_a != root_b:
-            parent[max(root_a, root_b)] = min(root_a, root_b)
+    union_find = LabelUnionFind(label_to_terminal_ids)
 
     def known_terms_for_label(label):
         return [
@@ -76,14 +63,6 @@ def merge_battery_gate_rail_groups(
                 if nearest_gate_dy > MOSFET_GATE_SUPPLY_ALIGN_Y_TOL:
                     continue
 
-                union(int(battery_label), int(gate_label))
+                union_find.union(int(battery_label), int(gate_label))
 
-    merged = {}
-    for label, terminal_ids in label_to_terminal_ids.items():
-        root = find(int(label))
-        merged.setdefault(root, []).extend(terminal_ids)
-
-    return {
-        int(label): sorted(set(terminal_ids))
-        for label, terminal_ids in merged.items()
-    }
+    return merge_label_groups(label_to_terminal_ids, union_find)

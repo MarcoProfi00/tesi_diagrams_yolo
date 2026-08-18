@@ -27,7 +27,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+from run_sources import get_run_source_path
+
 MAX_EXECUTABLE_SCENARIOS = 5
+VIEWER_MODEL_FILENAME = "13_viewer_model.json"
 
 
 ARTIFACTS = {
@@ -162,8 +165,14 @@ def find_image_path(
     project_root: Path | None,
     batch_name: str,
     circuit_id: str,
+    output_dir: Path | None = None,
 ) -> Path | None:
     """Trova l'immagine originale senza includerla nel manifest."""
+    if output_dir is not None:
+        declared_image = get_run_source_path(output_dir, "input_image")
+        if declared_image is not None and declared_image.is_file():
+            return declared_image
+
     if project_root is None:
         return None
 
@@ -179,9 +188,10 @@ def build_image_access(
     project_root: Path | None,
     batch_name: str,
     circuit_id: str,
+    output_dir: Path | None = None,
 ) -> dict[str, Any]:
     """Definisce quando l'agente puo richiedere l'immagine originale."""
-    image_path = find_image_path(project_root, batch_name, circuit_id)
+    image_path = find_image_path(project_root, batch_name, circuit_id, output_dir)
     return {
         "included_by_default": False,
         "can_be_requested": image_path is not None,
@@ -201,7 +211,7 @@ def build_summary(output_dir: Path) -> dict[str, Any]:
     emit_report = read_json_safe(output_dir / "07_spice_emit_report.json")
     spice_run = read_json_safe(output_dir / "08_spice_run.json")
 
-    return {
+    summary = {
         "spice_status": spice_run.get("status"),
         "spice_exit_code": spice_run.get("exit_code"),
         "spice_message": spice_run.get("message"),
@@ -219,6 +229,68 @@ def build_summary(output_dir: Path) -> dict[str, Any]:
         "rules_missing_components": (component_rules.get("stats") or {}).get("missing_components"),
         "has_tran_csv": (output_dir / "08_tran.csv").exists(),
         "has_tran_plot": (output_dir / "08_tran_plot.png").exists() or (output_dir / "08_tran_plot.svg").exists(),
+        "led_profiles": build_led_profile_summary(output_dir),
+    }
+    load_profiles = build_load_profile_summary(output_dir)
+    if load_profiles:
+        summary["load_profiles"] = load_profiles
+        summary["temporal_profiles"] = build_temporal_profile_summary(output_dir)
+    return summary
+
+
+def build_led_profile_summary(run_dir: Path) -> dict[str, dict[str, Any]]:
+    """Estrae dal viewer solo le metriche LED utili alla diagnosi temporale."""
+    model = read_json_safe(run_dir / VIEWER_MODEL_FILENAME)
+    profiles = ((model.get("transient") or {}).get("led_profiles") or {})
+    compact: dict[str, dict[str, Any]] = {}
+    for component_id, profile in profiles.items():
+        if not isinstance(profile, dict):
+            continue
+        compact[str(component_id)] = {
+            "state": profile.get("state"),
+            "regular_period": profile.get("regular_period"),
+            "frequency_hz": profile.get("frequency_hz"),
+            "duty_cycle": profile.get("duty_cycle"),
+            "on_fraction": profile.get("on_fraction"),
+            "pulse_count": profile.get("pulse_count"),
+            "voltage_min": profile.get("voltage_min"),
+            "voltage_max": profile.get("voltage_max"),
+            "anode_node": profile.get("anode_node"),
+            "cathode_node": profile.get("cathode_node"),
+        }
+    return compact
+
+
+def build_load_profile_summary(run_dir: Path) -> dict[str, dict[str, Any]]:
+    """Estrae le metriche temporali dei carichi visivi a due terminali."""
+    model = read_json_safe(run_dir / VIEWER_MODEL_FILENAME)
+    profiles = ((model.get("transient") or {}).get("load_profiles") or {})
+    compact: dict[str, dict[str, Any]] = {}
+    for component_id, profile in profiles.items():
+        if not isinstance(profile, dict):
+            continue
+        compact[str(component_id)] = {
+            "source_component_id": profile.get("source_component_id"),
+            "state": profile.get("state"),
+            "regular_period": profile.get("regular_period"),
+            "period_s": profile.get("period_s"),
+            "frequency_hz": profile.get("frequency_hz"),
+            "duty_cycle": profile.get("duty_cycle"),
+            "on_fraction": profile.get("on_fraction"),
+            "pulse_count": profile.get("pulse_count"),
+            "voltage_min": profile.get("voltage_min"),
+            "voltage_max": profile.get("voltage_max"),
+            "positive_node": profile.get("positive_node"),
+            "negative_node": profile.get("negative_node"),
+        }
+    return compact
+
+
+def build_temporal_profile_summary(run_dir: Path) -> dict[str, dict[str, Any]]:
+    """Unifica i profili temporali disponibili senza rimuovere le chiavi legacy."""
+    return {
+        **build_led_profile_summary(run_dir),
+        **build_load_profile_summary(run_dir),
     }
 
 
@@ -254,6 +326,8 @@ def build_executed_scenarios(
         status = read_json_safe(scenario_dir / "scenario_status.json")
         comparison = read_json_safe(scenario_dir / "scenario_comparison.json")
         report = read_json_safe(scenario_dir / "12_controlled_scenarios.json")
+        if not (status.get("spice_executed") or report.get("spice_executed")):
+            continue
         outcome = status.get("diagnostic_outcome") or comparison.get("diagnostic_outcome") or {}
         summary = status.get("comparison_summary") or comparison.get("summary") or {}
 
@@ -266,8 +340,7 @@ def build_executed_scenarios(
                 "role": metadata["role"],
             }
 
-        scenarios.append(
-            {
+        scenario_summary = {
                 "scenario_dir": relative_or_absolute(scenario_dir, project_root),
                 "scenario_id": status.get("scenario_id") or scenario.get("scenario_id") or scenario_dir.name,
                 "title": scenario.get("title") or status.get("scenario_id") or scenario_dir.name,
@@ -275,9 +348,16 @@ def build_executed_scenarios(
                 "spice_status": status.get("spice_status") or report.get("spice_status"),
                 "diagnostic_outcome": outcome,
                 "comparison_summary": summary,
+                "led_profiles": build_led_profile_summary(scenario_dir / "run"),
                 "artifacts": artifacts,
             }
-        )
+        load_profiles = build_load_profile_summary(scenario_dir / "run")
+        if load_profiles:
+            scenario_summary["load_profiles"] = load_profiles
+            scenario_summary["temporal_profiles"] = build_temporal_profile_summary(
+                scenario_dir / "run"
+            )
+        scenarios.append(scenario_summary)
 
     return scenarios
 
@@ -340,6 +420,9 @@ def build_scenario_outcome_summary(
         stop_automation = bool(outcome.get("stop_automation"))
         outcome_status = outcome.get("status")
 
+        meaningful_improvements = int(comparison_summary.get("meaningful_improvement_count") or 0)
+        expectations_met = int(comparison_summary.get("expectations_met_count") or 0)
+        quality_improved = bool(comparison_summary.get("quality_improved"))
         score = 0
         if stop_automation:
             score += 100
@@ -347,7 +430,19 @@ def build_scenario_outcome_summary(
             score += 80
         elif outcome_status == "partially_resolved":
             score += 20
-        score += int(comparison_summary.get("changed_count") or 0)
+        score += meaningful_improvements * 10
+        score += expectations_met * 5
+        if quality_improved:
+            score += 10
+
+        # `changed_count` dimostra una differenza numerica, non un miglioramento.
+        ranking_verified = bool(
+            stop_automation
+            or outcome_status == "resolved_candidate"
+            or meaningful_improvements
+            or expectations_met
+            or quality_improved
+        )
 
         compact = {
             "scenario_id": scenario.get("scenario_id"),
@@ -361,11 +456,16 @@ def build_scenario_outcome_summary(
             "stop_automation": stop_automation,
             "comparison_summary": comparison_summary,
             "quantity_summary": summarize_changed_quantities(comparison),
+            "led_profiles": scenario.get("led_profiles") or {},
+            "ranking_verified": ranking_verified,
             "score": score,
         }
+        if scenario.get("load_profiles"):
+            compact["load_profiles"] = scenario.get("load_profiles")
+            compact["temporal_profiles"] = scenario.get("temporal_profiles") or {}
         scenarios.append(compact)
 
-        if best is None or score > int(best.get("score") or 0):
+        if ranking_verified and (best is None or score > int(best.get("score") or 0)):
             best = compact
 
     return {
@@ -373,10 +473,12 @@ def build_scenario_outcome_summary(
         "best_scenario_id": best.get("scenario_id") if best else None,
         "best_outcome_status": best.get("outcome_status") if best else None,
         "best_stop_automation": best.get("stop_automation") if best else None,
+        "ranking_status": "verified_best" if best else "no_verified_best",
         "interpretation_rule": (
             "If a user asks which scenario resolves the problem, prefer the scenario "
             "with outcome_status='resolved_candidate' and stop_automation=true. "
-            "Partially resolved scenarios are supporting diagnostics, not the main solution."
+            "Partially resolved scenarios without verified expectations are supporting "
+            "diagnostics and must not be ranked only by changed_count."
         ),
         "scenarios": scenarios,
     }
@@ -431,7 +533,7 @@ def build_diagnostic_context(
         "executed_scenarios": executed_scenarios,
         "scenario_outcome_summary": build_scenario_outcome_summary(executed_scenarios, root),
         "scenario_budget": build_scenario_budget(executed_scenarios),
-        "image_access": build_image_access(root, batch_name, circuit_id),
+        "image_access": build_image_access(root, batch_name, circuit_id, circuit_dir),
         "agent_mode": "graph_grounded_readonly",
         "agent_rules": build_agent_rules(),
     }

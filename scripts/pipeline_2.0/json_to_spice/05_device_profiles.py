@@ -1,10 +1,11 @@
 """
 Gestione dei device profile per componenti complessi e circuiti integrati.
 
-Questo modulo gestisce profili dichiarativi per IC e blocchi funzionali che non
-possono sempre essere simulati internamente in SPICE.
+Questo modulo riserva il contratto futuro per profili dichiarativi di IC e
+blocchi funzionali che non possono sempre essere simulati internamente in
+SPICE. Non e ancora importato da `run_pipeline2.py` e non produce artefatti.
 
-I device profile dovranno descrivere informazioni come:
+I device profile potranno descrivere informazioni come:
 
 - pin di alimentazione;
 - pin di massa;

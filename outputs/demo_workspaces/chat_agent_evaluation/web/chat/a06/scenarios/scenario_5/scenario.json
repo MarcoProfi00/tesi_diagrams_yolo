@@ -1,0 +1,28 @@
+{
+  "scenario_id": "scenario_5",
+  "title": "Ridurre l’ingresso a 20 mV mantenendo il controllo di guadagno",
+  "hypothesis": "Since scenario_4 kept useful gain from N006 to N005 at 50 mV but the user reports THD on N005 is still 22.4%, reducing Vsignal_source23_1 to 20 mV may further lower distortion at N005 while preserving useful transfer.",
+  "intent": "correction",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vsignal_source23_1",
+      "value": "SIN(0 20m 100)"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N006)",
+    "v(N005)"
+  ],
+  "expect": {
+    "v(N006)": "changed",
+    "v(N005)": "changed"
+  },
+  "gain": {
+    "input": "v(N006)",
+    "output": "v(N005)",
+    "min_ratio": 5
+  }
+}

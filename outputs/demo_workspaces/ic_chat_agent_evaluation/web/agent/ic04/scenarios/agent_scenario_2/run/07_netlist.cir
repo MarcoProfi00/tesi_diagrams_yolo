@@ -1,0 +1,32 @@
+* pipeline2.0 netlist
+* circuit: ic04
+
+VVCC_12 N005 0 DC 12
+Xintegrated_circuit11_1 N003 N001 N003 N005 N004 N002 N005 0 TLC555_6
+Xintegrated_circuit11_2 N008 N006 N008 N005 N009 N007 N005 0 TLC555_6
+Dled12_1 N002 N003 D_1N4001_TYP
+Cpolarized_capacitor20_1 N003 0 47u
+Cpolarized_capacitor20_2 N001 0 10n
+Cpolarized_capacitor20_3 N008 0 100n
+Cpolarized_capacitor20_4 N009 N010 100u
+Rresistor22_1 N002 N003 68k
+Rresistor22_2 N005 N002 68k
+Rresistor22_3 N004 N006 10k
+Rresistor22_4 N007 N008 8.2k
+Rresistor22_5 N005 N007 8.2k
+Rspeaker24_1 N010 0 64
+
+.model D_1N4001_TYP D(IS=14n N=1.9 RS=0.08 BV=50 IBV=5u TT=2u CJO=25p)
+.include "07_external_models.lib"
+
+.save all
+.tran 50us 2s
+
+.control
+set wr_singlescale
+set wr_vecnames
+save all @dled12_1[id]
+run
+wrdata 08_tran.csv time v(N001) v(N002) v(N003) v(N004) v(N005) v(N006) v(N007) v(N008) v(N009) v(N010) @dled12_1[id]
+.endc
+.end

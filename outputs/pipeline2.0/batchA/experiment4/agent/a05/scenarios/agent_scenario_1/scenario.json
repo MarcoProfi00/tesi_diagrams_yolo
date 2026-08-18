@@ -1,0 +1,24 @@
+{
+  "title": "Alimenta il nodo esterno N003 per verificare il ramo verso VMON",
+  "hypothesis": "Il problema principale e l'assenza di alimentazione sul connettore: fornendo una sorgente DC tra N003 e massa, la tensione deve propagarsi attraverso Rresistor22_1 fino a N001 e il voltmetro VMON deve diventare non nullo.",
+  "intent": "correction",
+  "analysis": "op",
+  "actions": [
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N003",
+      "negative": "0",
+      "value": "5V"
+    }
+  ],
+  "compare": [
+    "v(N003)",
+    "v(N001)",
+    "i(Rresistor22_1)"
+  ],
+  "expect": {
+    "v(N003)": "nonzero",
+    "v(N001)": "nonzero"
+  },
+  "scenario_id": "agent_scenario_1"
+}

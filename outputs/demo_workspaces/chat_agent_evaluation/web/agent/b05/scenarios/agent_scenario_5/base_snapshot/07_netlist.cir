@@ -1,0 +1,33 @@
+* pipeline2.0 netlist
+* circuit: b05
+
+Vbattery2_1 0 N002 DC 9
+Rbreaker3_1 N003 N004 2k
+Ddiode7_1 N001 N005 D_GENERIC
+Linductor10_1 N001 0 0.00025
+Qnpn_transistor18_1 N007 N006 0 PNP_GENERIC
+Qnpn_transistor18_2 N003 N008 0 PNP_GENERIC
+Cpolarized_capacitor20_1 N001 0 375p
+Cpolarized_capacitor20_2 N005 N006 0.022u
+Cpolarized_capacitor20_3 N007 N008 0.022u
+Cpolarized_capacitor20_4 N003 N004 0.001u
+Rresistor22_1 N006 N004 220k
+Rresistor22_2 N007 N004 4.7k
+Rresistor22_3 N008 N004 220k
+* switch25.1 open: not emitted
+
+.model D_GENERIC D
+.model PNP_GENERIC PNP
+
+.op
+.save all
+.tran 1us 5ms
+
+.control
+set wr_singlescale
+set wr_vecnames
+save all @ddiode7_1[id]
+run
+wrdata 08_tran.csv time v(N001) v(N002) v(N003) v(N004) v(N005) v(N006) v(N007) v(N008) @ddiode7_1[id]
+.endc
+.end

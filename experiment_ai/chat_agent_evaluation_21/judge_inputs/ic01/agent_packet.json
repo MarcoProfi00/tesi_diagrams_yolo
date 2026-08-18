@@ -1,0 +1,1035 @@
+{
+  "packet_schema_version": 1,
+  "packet_id": "ic01_run_2",
+  "reference": {
+    "schema_version": 1,
+    "circuit_id": "ic01",
+    "circuit_description": "Multivibratore astabile con timer 555 alimentato a 9 V. R1 e R2 caricano e\nscaricano C1 attraverso il pin DISCHARGE; TRIGGER e THRESHOLD condividono il\nnodo di timing. RESET e VCC sono a +9 V, C2 filtra il pin CONTROL, C3\ndisaccoppia l'alimentazione e l'uscita pilota un LED tramite R3.\n",
+    "task_type": "diagnosi di avvio irregolare di un oscillatore 555",
+    "user_symptom": "Nella simulazione il LED commuta, ma il lampeggio non risulta regolare durante l'avvio. Quale potrebbe essere il problema e come posso risolverlo?\n",
+    "circuit_inventory": {
+      "component_count": 10,
+      "node_count": 7,
+      "component_types": [
+        "Capacitor",
+        "GND",
+        "Integrated_Circuit",
+        "LED",
+        "Resistor",
+        "Terminal"
+      ],
+      "analysis_types": [
+        "tran"
+      ]
+    },
+    "required_evidence": [
+      {
+        "id": "official_model_provenance",
+        "description": "IC1 usa il modello PSpice ufficiale Texas Instruments TLC555_6, pacchetto\nSLFJ002E, versione Final 1.1 del 2023-02-06. Il file non modificato e'\nregistrato in metadata/spice_models, SHA-256\n7C091782CC4931DDA4FEBF25605083F47161C5E1592C076689B04B70DD749034,\ned e' eseguito da ngspice in compatibilita' PSpice. Non esiste logica\nspecifica del 555 implementata nel codice Python.\n"
+      },
+      {
+        "id": "topology_and_pinout_valid",
+        "description": "Graph, node map e netlist coincidono con l'immagine: THRES/TRIG=N001,\nCONT=N002, VCC/RESET=N003, DISC=N004, OUT=N005 e GND=0. R1/R2/C1 formano\nla rete astabile; R3 e LED sono sul pin OUT. Non risultano terminali\nscollegati, singleton o warning di emissione.\n"
+      },
+      {
+        "id": "expected_steady_state",
+        "description": "Con R1=R2=1 kohm e C1=1 uF, la stima ideale e'\nT=ln(2)*(R1+2*R2)*C1 circa 2.079 ms, frequenza circa 481 Hz e duty alto\ncirca (R1+R2)/(R1+2*R2)=2/3. Gli scenari stabilizzati misurano periodo\ncirca 2.09 ms, frequenza 477-478 Hz e duty circa 66%, coerenti col progetto.\n"
+      },
+      {
+        "id": "base_startup_drift_quantified",
+        "description": "Con C2=1 uF sul pin CONTROL il periodo dei primi cicli cresce da circa\n0.615, 0.678, 0.732 e 0.783 ms verso circa 2.056 ms alla fine dei 100 ms.\nIl coefficiente di variazione passa da circa 16.5% nei primi 10 ms a\n1.5% tra 60 e 100 ms. Rispetto al periodo stabile di 2.094 ms, la run non\nentra e rimane entro +/-1% neppure entro 100 ms: il sintomo di startup e'\nrealmente presente, ma il circuito sta convergendo verso il regime.\n"
+      },
+      {
+        "id": "initial_conditions_do_not_fix_cause",
+        "description": "I primi due scenari RUN impongono coppie diverse di tensioni iniziali\nsu timing e control. Cambiano i primi cicli ma mantengono la deriva lenta\ne non soddisfano la periodicita'. Questo esclude ragionevolmente la sola\nsimmetria o il solo punto operativo iniziale come causa sufficiente.\n"
+      },
+      {
+        "id": "run_100n_validation",
+        "description": "RUN riduce C2 da 1 uF a 100 nF. Dopo i primi cicli il periodo si assesta\na circa 2.092 ms (478.1 Hz); da circa 9.9 ms in poi rimane entro +/-1%\ndel valore stabile. Lo scenario migliora direttamente l'avvio ed e' una\ncorrezione valida, anche se 100 nF non e' l'unico valore possibile.\n"
+      },
+      {
+        "id": "run_10n_validation",
+        "description": "RUN riduce C2 da 1 uF a 10 nF, valore convenzionale per il bypass del\npin CONTROL. Il primo periodo misurabile e' circa 2.097 ms e tutti i\nsuccessivi restano entro +/-1%; il regime e' circa 2.095 ms (477.1 Hz).\nQuesta e' la correzione meglio supportata per ottenere startup immediato.\n"
+      },
+      {
+        "id": "electrical_switching_not_visible_blink",
+        "description": "A circa 478 Hz il LED commuta elettricamente, ma un osservatore lo vede\nquasi continuamente acceso per persistenza visiva. Le etichette blinking\ndescrivono la forma d'onda simulata, non un lampeggio percepibile. Per un\nlampeggio visibile servirebbe aumentare separatamente la costante di\ntempo R1/R2/C1; cio' e' distinto dalla correzione dello startup su C2.\n"
+      }
+    ],
+    "success_conditions": [
+      {
+        "id": "control_capacitor_identified",
+        "description": "La diagnosi individua C2=1 uF sul pin CONTROL come causa supportata della\nlenta variazione delle soglie durante l'avvio.\n"
+      },
+      {
+        "id": "startup_and_steady_state_separated",
+        "description": "La risposta non afferma che la base non oscilli mai regolarmente: spiega\nche il periodo converge lentamente e confronta avvio e parte finale.\n"
+      },
+      {
+        "id": "correction_verified_temporally",
+        "description": "La soluzione usa periodi o tempo di assestamento, non soltanto tensioni\ncambiate e corrente LED non nulla. Sono accettabili 100 nF e soprattutto\n10 nF, con la diversa rapidita' documentata.\n"
+      },
+      {
+        "id": "initial_condition_hypothesis_rejected",
+        "description": "Le condizioni iniziali sono riconosciute come test diagnostici falliti,\nnon come correzione dell'hardware.\n"
+      },
+      {
+        "id": "visible_behavior_calibrated",
+        "description": "Viene distinta la regolarita' elettrica a circa 478 Hz dalla visibilita'\ndel lampeggio. C2 stabilizza le soglie; C1/R1/R2 determinano il ritmo.\n"
+      },
+      {
+        "id": "model_scope_stated",
+        "description": "Il risultato e' riferito al TLC555 ufficiale e al banco a 9 V; non prova\nautomaticamente ogni variante bipolare NE555 o il montaggio fisico.\n"
+      }
+    ],
+    "acceptable_solutions": [
+      {
+        "id": "reduce_control_cap_to_10n",
+        "description": "Cambiare C2 da 1 uF a 10 nF. E' la soluzione convenzionale e la prova\nRUN verifica periodicita' stabile fin dal primo ciclo misurabile.\n"
+      },
+      {
+        "id": "reduce_control_cap_to_100n",
+        "description": "Cambiare C2 a 100 nF, come in RUN. Riduce l'assestamento a circa 10 ms e\nproduce poi 478.1 Hz regolari; e' valido se non si richiede la massima\nrapidita' di startup.\n"
+      },
+      {
+        "id": "ignore_initial_settling",
+        "acceptance": "conditional",
+        "description": "Se l'irregolarita' interessa solo i primi millisecondi della simulazione,\nsi puo' analizzare il regime dopo una finestra di warm-up. Non corregge\nil progetto, ma evita che il profiler globale confonda startup e regime.\n"
+      },
+      {
+        "id": "change_main_timing_for_visible_blink",
+        "acceptance": "separate_goal",
+        "description": "Per vedere il LED lampeggiare a occhio occorre aumentare la costante di\ntempo principale R1/R2/C1 fino a pochi hertz. Questa modifica non e' la\nsoluzione specifica alla deriva iniziale del pin CONTROL.\n"
+      }
+    ],
+    "unsupported_conclusions": [
+      "Affermare che la base non raggiunga alcun regime regolare: i periodi\nconvergono progressivamente, anche se entro 100 ms restano ancora circa\n1.8% sotto il valore stabilizzato.\n",
+      "Attribuire il problema soltanto al punto operativo o alla simmetria\niniziale: due condizioni iniziali diverse non eliminano la deriva.\n",
+      "Considerare ogni valore diverso da 1 uF una soluzione unica o universale:\n100 nF e 10 nF producono entrambi miglioramenti, con tempi diversi.\n",
+      "Usare solo l'etichetta resolved_candidate come prova: la validazione deriva\ndalla sequenza dei periodi e dal tempo di assestamento misurato nei CSV.\n",
+      "Dire che il LED lampeggi visibilmente a 478 Hz. Esso commuta elettricamente\nma appare sostanzialmente continuo all'occhio umano.\n",
+      "Aumentare C1 a 10 uF come prima correzione della deriva del CONTROL: cambia\nprincipalmente la frequenza dell'astabile e non rimuove la causa specifica.\n",
+      "Interpretare le note di convergenza iniziale o la nota GND interna del\nmacromodello come errori topologici: la transiente completa con successo e\nil pin GND del subcircuito e' esplicitamente collegato al nodo 0.\n"
+    ]
+  },
+  "rubric": {
+    "score_scale": {
+      "0": "errato o assente",
+      "1": "utile ma incompleto o con limiti rilevanti",
+      "2": "corretto e adeguatamente verificato"
+    },
+    "criteria": [
+      "diagnostic_correctness",
+      "test_quality",
+      "evidence_interpretation",
+      "goal_achievement",
+      "conclusion_quality"
+    ]
+  },
+  "run": {
+    "initial_request": "Nella simulazione il LED commuta, ma il lampeggio non risulta regolare durante l’avvio. Quale potrebbe essere il problema e come posso risolverlo?",
+    "technical_status": "completed",
+    "base_spice": {
+      "status": "success",
+      "exit_code": 0,
+      "message": "ngspice completed successfully.",
+      "analyses": [
+        "tran"
+      ]
+    },
+    "execution_counts": {
+      "scenarios_proposed": 3,
+      "scenarios_executed": 3,
+      "successful_spice_runs": 3,
+      "failed_spice_runs": 0
+    },
+    "scenarios": [
+      {
+        "scenario_id": "scenario_1",
+        "title": "Avvio asimmetrico del nodo timing e del control per rompere la simmetria iniziale",
+        "hypothesis": "L’irregolarita iniziale dipende dal fatto che ngspice calcola un punto operativo iniziale con condensatori scarichi e stati interni quasi simmetrici; imponendo una reale asimmetria iniziale fisicamente ammissibile il 555 dovrebbe entrare subito in oscillazione regolare.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "set_initial_node_voltage",
+            "target": "N001",
+            "value": "0V",
+            "skip_operating_point": true
+          },
+          {
+            "type": "set_initial_node_voltage",
+            "target": "N002",
+            "value": "1V",
+            "skip_operating_point": true
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "v(N001)",
+          "v(N002)",
+          "v(N005)",
+          "v(N006)",
+          "@dled12_1[id]"
+        ],
+        "expect": {
+          "v(N005)": "changed",
+          "v(N006)": "changed",
+          "@dled12_1[id]": "nonzero"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N001)",
+              "metric": "v(n001).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 5.648494877999999,
+              "scenario_value": 5.948571297110999,
+              "delta": 0.3000764191109999,
+              "change": "changed",
+              "expectation": null,
+              "base_details": {
+                "min": 0.293118672,
+                "max": 5.94161355,
+                "mean": 3.7028888692588633,
+                "vpp": 5.648494877999999,
+                "final": 3.11643784,
+                "abs_peak": 5.94161355
+              },
+              "scenario_details": {
+                "min": 0.000225452889,
+                "max": 5.94879675,
+                "mean": 3.8421053331308546,
+                "vpp": 5.948571297110999,
+                "final": 3.25686654,
+                "abs_peak": 5.94879675
+              }
+            },
+            {
+              "quantity": "v(N002)",
+              "metric": "v(n002).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 5.8789549012,
+              "scenario_value": 4.944086,
+              "delta": -0.9348689011999998,
+              "change": "changed",
+              "expectation": null,
+              "base_details": {
+                "min": 0.0581162788,
+                "max": 5.93707118,
+                "mean": 4.721224077740826,
+                "vpp": 5.8789549012,
+                "final": 5.93707118,
+                "abs_peak": 5.93707118
+              },
+              "scenario_details": {
+                "min": 1.0000192,
+                "max": 5.9441052,
+                "mean": 4.917162313702836,
+                "vpp": 4.944086,
+                "final": 5.9441052,
+                "abs_peak": 5.9441052
+              }
+            },
+            {
+              "quantity": "v(N005)",
+              "metric": "v(n005).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 8.6686471958,
+              "scenario_value": 8.7071691413,
+              "delta": 0.03852194549999943,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": -0.0342456758,
+                "max": 8.63440152,
+                "mean": 4.386056878329287,
+                "vpp": 8.6686471958,
+                "final": -4.72069682e-05,
+                "abs_peak": 8.63440152
+              },
+              "scenario_details": {
+                "min": -0.0325760813,
+                "max": 8.67459306,
+                "mean": 4.50887857224194,
+                "vpp": 8.7071691413,
+                "final": 8.52974973,
+                "abs_peak": 8.67459306
+              }
+            },
+            {
+              "quantity": "v(N006)",
+              "metric": "v(n006).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.7431639747000001,
+              "scenario_value": 0.7415223342,
+              "delta": -0.0016416405000000411,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": -0.0342456757,
+                "max": 0.708918299,
+                "mean": 0.36462646308218305,
+                "vpp": 0.7431639747000001,
+                "final": -4.72069681e-05,
+                "abs_peak": 0.708918299
+              },
+              "scenario_details": {
+                "min": -0.0325760812,
+                "max": 0.708946253,
+                "mean": 0.3748340289482647,
+                "vpp": 0.7415223342,
+                "final": 0.708318679,
+                "abs_peak": 0.708946253
+              }
+            },
+            {
+              "quantity": "@dled12_1[id]",
+              "metric": "@dled12_1[id].abs_peak",
+              "measurement": "tran_abs_peak",
+              "base_value": 0.00800489478,
+              "scenario_value": 0.00801355087,
+              "delta": 8.656089999999755e-06,
+              "change": "changed",
+              "expectation": "nonzero",
+              "base_details": {
+                "min": -4.15850409e-14,
+                "max": 0.00800489478,
+                "mean": 0.004021560821778468,
+                "vpp": 0.008004894780041585,
+                "final": -6.54416737e-17,
+                "abs_peak": 0.00800489478
+              },
+              "scenario_details": {
+                "min": -3.97380366e-14,
+                "max": 0.00801355087,
+                "mean": 0.004134169518883044,
+                "vpp": 0.008013550870039738,
+                "final": 0.00782145382,
+                "abs_peak": 0.00801355087
+              }
+            }
+          ],
+          "comparison_evidence": {
+            "temporal_expectation": {
+              "target": "Dled12_1",
+              "available": true,
+              "met": false,
+              "reason": "Almeno un criterio temporale non e soddisfatto.",
+              "base_profile": {
+                "status": "measured",
+                "state": "transient_pulse",
+                "threshold_v": null,
+                "profile_method": "device_current_hysteresis",
+                "anode_node": "N006",
+                "cathode_node": "0",
+                "on_fraction": 0.5147793334970933,
+                "duty_cycle": 0.5147793334970933,
+                "display_duty_cycle": 0.6539849940879463,
+                "regular_period": false,
+                "period_s": null,
+                "frequency_hz": null,
+                "playback_duration_s": 1.0,
+                "playback_slowdown": 10.0,
+                "pulse_count": 63,
+                "timeline_key_times": {
+                  "sequence_omitted": true,
+                  "item_count": 127
+                },
+                "timeline_states": {
+                  "sequence_omitted": true,
+                  "item_count": 127
+                },
+                "voltage_min": -0.0342456757,
+                "voltage_max": 0.708918299,
+                "threshold_current_a": 0.0001,
+                "current_min_a": -4.15850409e-14,
+                "current_max_a": 0.00800489478,
+                "turn_on_current_a": 0.003201957911975049,
+                "turn_off_current_a": 0.0012007342169646528
+              },
+              "scenario_profile": {
+                "status": "measured",
+                "state": "transient_pulse",
+                "threshold_v": null,
+                "profile_method": "device_current_hysteresis",
+                "anode_node": "N006",
+                "cathode_node": "0",
+                "on_fraction": 0.5291957548121545,
+                "duty_cycle": 0.5291957548121545,
+                "display_duty_cycle": 0.6619667370905135,
+                "regular_period": false,
+                "period_s": null,
+                "frequency_hz": null,
+                "playback_duration_s": 0.9999995,
+                "playback_slowdown": 10.0,
+                "pulse_count": 61,
+                "timeline_key_times": {
+                  "sequence_omitted": true,
+                  "item_count": 122
+                },
+                "timeline_states": {
+                  "sequence_omitted": true,
+                  "item_count": 122
+                },
+                "voltage_min": -0.0325760812,
+                "voltage_max": 0.708946253,
+                "threshold_current_a": 0.0001,
+                "current_min_a": -3.97380366e-14,
+                "current_max_a": 0.00801355087,
+                "turn_on_current_a": 0.003205420347976157,
+                "turn_off_current_a": 0.0012020326304662226
+              },
+              "conditions": [
+                {
+                  "criterion": "required_state",
+                  "expected": "blinking",
+                  "actual": "transient_pulse",
+                  "met": false
+                },
+                {
+                  "criterion": "require_regular_period",
+                  "expected": true,
+                  "actual": false,
+                  "met": false
+                },
+                {
+                  "criterion": "min_duty_cycle",
+                  "expected": 0.1,
+                  "actual": 0.5291957548121545,
+                  "met": true
+                }
+              ]
+            }
+          },
+          "led_profiles": {
+            "Dled12_1": {
+              "status": "measured",
+              "state": "transient_pulse",
+              "threshold_v": null,
+              "profile_method": "device_current_hysteresis",
+              "anode_node": "N006",
+              "cathode_node": "0",
+              "on_fraction": 0.5291957548121545,
+              "duty_cycle": 0.5291957548121545,
+              "display_duty_cycle": 0.6619667370905135,
+              "regular_period": false,
+              "period_s": null,
+              "frequency_hz": null,
+              "playback_duration_s": 0.9999995,
+              "playback_slowdown": 10.0,
+              "pulse_count": 61,
+              "timeline_key_times": {
+                "sequence_omitted": true,
+                "item_count": 122
+              },
+              "timeline_states": {
+                "sequence_omitted": true,
+                "item_count": 122
+              },
+              "voltage_min": -0.0325760812,
+              "voltage_max": 0.708946253,
+              "threshold_current_a": 0.0001,
+              "current_min_a": -3.97380366e-14,
+              "current_max_a": 0.00801355087,
+              "turn_on_current_a": 0.003205420347976157,
+              "turn_off_current_a": 0.0012020326304662226
+            }
+          }
+        }
+      },
+      {
+        "scenario_id": "scenario_2",
+        "title": "Seconda prova di startup con asimmetria iniziale piu marcata sul nodo timing e control a massa",
+        "hypothesis": "L’irregolarita all’avvio e dovuta alla soluzione iniziale del transiente piu che ai valori R-C; una condizione iniziale piu chiaramente sbilanciata, con il nodo timing gia carico moderatamente e il control a 0 V, puo forzare il TLC555 a entrare subito nel ciclo periodico corretto.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "set_initial_node_voltage",
+            "target": "N001",
+            "value": "1V",
+            "skip_operating_point": true
+          },
+          {
+            "type": "set_initial_node_voltage",
+            "target": "N002",
+            "value": "0V",
+            "skip_operating_point": true
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "v(N001)",
+          "v(N002)",
+          "v(N005)",
+          "v(N006)",
+          "@dled12_1[id]"
+        ],
+        "expect": {
+          "v(N005)": "changed",
+          "v(N006)": "changed",
+          "@dled12_1[id]": "nonzero"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N001)",
+              "metric": "v(n001).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 5.648494877999999,
+              "scenario_value": 5.5977592959999996,
+              "delta": -0.050735581999999724,
+              "change": "changed",
+              "expectation": null,
+              "base_details": {
+                "min": 0.293118672,
+                "max": 5.94161355,
+                "mean": 3.7028888692588633,
+                "vpp": 5.648494877999999,
+                "final": 3.11643784,
+                "abs_peak": 5.94161355
+              },
+              "scenario_details": {
+                "min": 0.340298534,
+                "max": 5.93805783,
+                "mean": 3.701935726734394,
+                "vpp": 5.5977592959999996,
+                "final": 5.50250402,
+                "abs_peak": 5.93805783
+              }
+            },
+            {
+              "quantity": "v(N002)",
+              "metric": "v(n002).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 5.8789549012,
+              "scenario_value": 5.9366359589696005,
+              "delta": 0.05768105776960031,
+              "change": "changed",
+              "expectation": null,
+              "base_details": {
+                "min": 0.0581162788,
+                "max": 5.93707118,
+                "mean": 4.721224077740826,
+                "vpp": 5.8789549012,
+                "final": 5.93707118,
+                "abs_peak": 5.93707118
+              },
+              "scenario_details": {
+                "min": 2.57310304e-05,
+                "max": 5.93666169,
+                "mean": 4.755653498115146,
+                "vpp": 5.9366359589696005,
+                "final": 5.93666169,
+                "abs_peak": 5.93666169
+              }
+            },
+            {
+              "quantity": "v(N005)",
+              "metric": "v(n005).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 8.6686471958,
+              "scenario_value": 8.6693680429,
+              "delta": 0.0007208471000001992,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": -0.0342456758,
+                "max": 8.63440152,
+                "mean": 4.386056878329287,
+                "vpp": 8.6686471958,
+                "final": -4.72069682e-05,
+                "abs_peak": 8.63440152
+              },
+              "scenario_details": {
+                "min": -0.0249174429,
+                "max": 8.6444506,
+                "mean": 4.460684791165745,
+                "vpp": 8.6693680429,
+                "final": 8.51189104,
+                "abs_peak": 8.6444506
+              }
+            },
+            {
+              "quantity": "v(N006)",
+              "metric": "v(n006).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.7431639747000001,
+              "scenario_value": 0.7339615227999999,
+              "delta": -0.00920245190000013,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": -0.0342456757,
+                "max": 0.708918299,
+                "mean": 0.36462646308218305,
+                "vpp": 0.7431639747000001,
+                "final": -4.72069681e-05,
+                "abs_peak": 0.708918299
+              },
+              "scenario_details": {
+                "min": -0.0249174428,
+                "max": 0.70904408,
+                "mean": 0.37082612939143855,
+                "vpp": 0.7339615227999999,
+                "final": 0.708259734,
+                "abs_peak": 0.70904408
+              }
+            },
+            {
+              "quantity": "@dled12_1[id]",
+              "metric": "@dled12_1[id].abs_peak",
+              "measurement": "tran_abs_peak",
+              "base_value": 0.00800489478,
+              "scenario_value": 0.00804391746,
+              "delta": 3.9022679999998686e-05,
+              "change": "changed",
+              "expectation": "nonzero",
+              "base_details": {
+                "min": -4.15850409e-14,
+                "max": 0.00800489478,
+                "mean": 0.004021560821778468,
+                "vpp": 0.008004894780041585,
+                "final": -6.54416737e-17,
+                "abs_peak": 0.00800489478
+              },
+              "scenario_details": {
+                "min": -3.11013895e-14,
+                "max": 0.00804391746,
+                "mean": 0.004089964077127128,
+                "vpp": 0.008043917460031101,
+                "final": 0.00780364921,
+                "abs_peak": 0.00804391746
+              }
+            }
+          ],
+          "comparison_evidence": {
+            "temporal_expectation": {
+              "target": "Dled12_1",
+              "available": true,
+              "met": false,
+              "reason": "Almeno un criterio temporale non e soddisfatto.",
+              "base_profile": {
+                "status": "measured",
+                "state": "transient_pulse",
+                "threshold_v": null,
+                "profile_method": "device_current_hysteresis",
+                "anode_node": "N006",
+                "cathode_node": "0",
+                "on_fraction": 0.5147793334970933,
+                "duty_cycle": 0.5147793334970933,
+                "display_duty_cycle": 0.6539849940879463,
+                "regular_period": false,
+                "period_s": null,
+                "frequency_hz": null,
+                "playback_duration_s": 1.0,
+                "playback_slowdown": 10.0,
+                "pulse_count": 63,
+                "timeline_key_times": {
+                  "sequence_omitted": true,
+                  "item_count": 127
+                },
+                "timeline_states": {
+                  "sequence_omitted": true,
+                  "item_count": 127
+                },
+                "voltage_min": -0.0342456757,
+                "voltage_max": 0.708918299,
+                "threshold_current_a": 0.0001,
+                "current_min_a": -4.15850409e-14,
+                "current_max_a": 0.00800489478,
+                "turn_on_current_a": 0.003201957911975049,
+                "turn_off_current_a": 0.0012007342169646528
+              },
+              "scenario_profile": {
+                "status": "measured",
+                "state": "transient_pulse",
+                "threshold_v": null,
+                "profile_method": "device_current_hysteresis",
+                "anode_node": "N006",
+                "cathode_node": "0",
+                "on_fraction": 0.5235403375595574,
+                "duty_cycle": 0.5235403375595574,
+                "display_duty_cycle": 0.6588486987444273,
+                "regular_period": false,
+                "period_s": null,
+                "frequency_hz": null,
+                "playback_duration_s": 0.9999995,
+                "playback_slowdown": 10.0,
+                "pulse_count": 62,
+                "timeline_key_times": {
+                  "sequence_omitted": true,
+                  "item_count": 125
+                },
+                "timeline_states": {
+                  "sequence_omitted": true,
+                  "item_count": 125
+                },
+                "voltage_min": -0.0249174428,
+                "voltage_max": 0.70904408,
+                "threshold_current_a": 0.0001,
+                "current_min_a": -3.11013895e-14,
+                "current_max_a": 0.00804391746,
+                "turn_on_current_a": 0.0032175669839813394,
+                "turn_off_current_a": 0.0012065876189735637
+              },
+              "conditions": [
+                {
+                  "criterion": "required_state",
+                  "expected": "blinking",
+                  "actual": "transient_pulse",
+                  "met": false
+                },
+                {
+                  "criterion": "require_regular_period",
+                  "expected": true,
+                  "actual": false,
+                  "met": false
+                },
+                {
+                  "criterion": "min_duty_cycle",
+                  "expected": 0.1,
+                  "actual": 0.5235403375595574,
+                  "met": true
+                }
+              ]
+            }
+          },
+          "led_profiles": {
+            "Dled12_1": {
+              "status": "measured",
+              "state": "transient_pulse",
+              "threshold_v": null,
+              "profile_method": "device_current_hysteresis",
+              "anode_node": "N006",
+              "cathode_node": "0",
+              "on_fraction": 0.5235403375595574,
+              "duty_cycle": 0.5235403375595574,
+              "display_duty_cycle": 0.6588486987444273,
+              "regular_period": false,
+              "period_s": null,
+              "frequency_hz": null,
+              "playback_duration_s": 0.9999995,
+              "playback_slowdown": 10.0,
+              "pulse_count": 62,
+              "timeline_key_times": {
+                "sequence_omitted": true,
+                "item_count": 125
+              },
+              "timeline_states": {
+                "sequence_omitted": true,
+                "item_count": 125
+              },
+              "voltage_min": -0.0249174428,
+              "voltage_max": 0.70904408,
+              "threshold_current_a": 0.0001,
+              "current_min_a": -3.11013895e-14,
+              "current_max_a": 0.00804391746,
+              "turn_on_current_a": 0.0032175669839813394,
+              "turn_off_current_a": 0.0012065876189735637
+            }
+          }
+        }
+      },
+      {
+        "scenario_id": "scenario_3",
+        "title": "Riduzione del condensatore sul pin control per stabilizzare l’avvio del TLC555",
+        "hypothesis": "L’irregolarita iniziale e causata principalmente dal condensatore da 1 uF sul nodo CONT (N002), troppo grande per il pin di controllo del 555; riducendolo drasticamente il comparatore interno dovrebbe assestarsi piu rapidamente e il LED dovrebbe lampeggiare con periodo regolare gia dall’avvio.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Ccapacitor4_2",
+            "value": "10n"
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "v(N001)",
+          "v(N002)",
+          "v(N005)",
+          "v(N006)",
+          "@dled12_1[id]"
+        ],
+        "expect": {
+          "v(N002)": "changed",
+          "v(N005)": "changed",
+          "@dled12_1[id]": "nonzero"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N001)",
+              "metric": "v(n001).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 5.648494877999999,
+              "scenario_value": 5.626168125,
+              "delta": -0.022326752999998867,
+              "change": "changed",
+              "expectation": null,
+              "base_details": {
+                "min": 0.293118672,
+                "max": 5.94161355,
+                "mean": 3.7028888692588633,
+                "vpp": 5.648494877999999,
+                "final": 3.11643784,
+                "abs_peak": 5.94161355
+              },
+              "scenario_details": {
+                "min": 0.378929995,
+                "max": 6.00509812,
+                "mean": 4.639341277754961,
+                "vpp": 5.626168125,
+                "final": 4.94822339,
+                "abs_peak": 6.00509812
+              }
+            },
+            {
+              "quantity": "v(N002)",
+              "metric": "v(n002).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 5.8789549012,
+              "scenario_value": 5.589853734,
+              "delta": -0.2891011672000001,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": 0.0581162788,
+                "max": 5.93707118,
+                "mean": 4.721224077740826,
+                "vpp": 5.8789549012,
+                "final": 5.93707118,
+                "abs_peak": 5.93707118
+              },
+              "scenario_details": {
+                "min": 0.410147296,
+                "max": 6.00000103,
+                "mean": 5.98163701438781,
+                "vpp": 5.589853734,
+                "final": 5.99999898,
+                "abs_peak": 6.00000103
+              }
+            },
+            {
+              "quantity": "v(N005)",
+              "metric": "v(n005).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 8.6686471958,
+              "scenario_value": 8.5569024077,
+              "delta": -0.11174478809999933,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": -0.0342456758,
+                "max": 8.63440152,
+                "mean": 4.386056878329287,
+                "vpp": 8.6686471958,
+                "final": -4.72069682e-05,
+                "abs_peak": 8.63440152
+              },
+              "scenario_details": {
+                "min": -0.0215478177,
+                "max": 8.53535459,
+                "mean": 5.21455849898819,
+                "vpp": 8.5569024077,
+                "final": 8.52906553,
+                "abs_peak": 8.53535459
+              }
+            },
+            {
+              "quantity": "v(N006)",
+              "metric": "v(n006).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.7431639747000001,
+              "scenario_value": 0.7301007256000001,
+              "delta": -0.013063249100000007,
+              "change": "changed",
+              "expectation": null,
+              "base_details": {
+                "min": -0.0342456757,
+                "max": 0.708918299,
+                "mean": 0.36462646308218305,
+                "vpp": 0.7431639747000001,
+                "final": -4.72069681e-05,
+                "abs_peak": 0.708918299
+              },
+              "scenario_details": {
+                "min": -0.0215478176,
+                "max": 0.708552908,
+                "mean": 0.433493129877191,
+                "vpp": 0.7301007256000001,
+                "final": 0.708316413,
+                "abs_peak": 0.708552908
+              }
+            },
+            {
+              "quantity": "@dled12_1[id]",
+              "metric": "@dled12_1[id].abs_peak",
+              "measurement": "tran_abs_peak",
+              "base_value": 0.00800489478,
+              "scenario_value": 0.00789260531,
+              "delta": -0.00011228947000000052,
+              "change": "changed",
+              "expectation": "nonzero",
+              "base_details": {
+                "min": -4.15850409e-14,
+                "max": 0.00800489478,
+                "mean": 0.004021560821778468,
+                "vpp": 0.008004894780041585,
+                "final": -6.54416737e-17,
+                "abs_peak": 0.00800489478
+              },
+              "scenario_details": {
+                "min": -2.72007802e-14,
+                "max": 0.00789260531,
+                "mean": 0.004781134622173371,
+                "vpp": 0.0078926053100272,
+                "final": 0.00782076874,
+                "abs_peak": 0.00789260531
+              }
+            }
+          ],
+          "comparison_evidence": {
+            "temporal_expectation": {
+              "target": "Dled12_1",
+              "available": true,
+              "met": true,
+              "reason": "Criteri temporali verificati.",
+              "base_profile": {
+                "status": "measured",
+                "state": "transient_pulse",
+                "threshold_v": null,
+                "profile_method": "device_current_hysteresis",
+                "anode_node": "N006",
+                "cathode_node": "0",
+                "on_fraction": 0.5147793334970933,
+                "duty_cycle": 0.5147793334970933,
+                "display_duty_cycle": 0.6539849940879463,
+                "regular_period": false,
+                "period_s": null,
+                "frequency_hz": null,
+                "playback_duration_s": 1.0,
+                "playback_slowdown": 10.0,
+                "pulse_count": 63,
+                "timeline_key_times": {
+                  "sequence_omitted": true,
+                  "item_count": 127
+                },
+                "timeline_states": {
+                  "sequence_omitted": true,
+                  "item_count": 127
+                },
+                "voltage_min": -0.0342456757,
+                "voltage_max": 0.708918299,
+                "threshold_current_a": 0.0001,
+                "current_min_a": -4.15850409e-14,
+                "current_max_a": 0.00800489478,
+                "turn_on_current_a": 0.003201957911975049,
+                "turn_off_current_a": 0.0012007342169646528
+              },
+              "scenario_profile": {
+                "status": "measured",
+                "state": "blinking",
+                "threshold_v": null,
+                "profile_method": "device_current_hysteresis",
+                "anode_node": "N006",
+                "cathode_node": "0",
+                "on_fraction": 0.6120178678807663,
+                "duty_cycle": 0.6612457139449585,
+                "display_duty_cycle": 0.7305361303761486,
+                "regular_period": true,
+                "period_s": 0.002096187499999999,
+                "frequency_hz": 477.05656101851594,
+                "playback_duration_s": 0.8,
+                "playback_slowdown": 10.0,
+                "pulse_count": 48,
+                "timeline_key_times": {
+                  "sequence_omitted": true,
+                  "item_count": 96
+                },
+                "timeline_states": {
+                  "sequence_omitted": true,
+                  "item_count": 96
+                },
+                "voltage_min": -0.0215478176,
+                "voltage_max": 0.708552908,
+                "threshold_current_a": 0.0001,
+                "current_min_a": -2.72007802e-14,
+                "current_max_a": 0.00789260531,
+                "turn_on_current_a": 0.0031570421239836793,
+                "turn_off_current_a": 0.0011838907964768794
+              },
+              "conditions": [
+                {
+                  "criterion": "required_state",
+                  "expected": "blinking",
+                  "actual": "blinking",
+                  "met": true
+                },
+                {
+                  "criterion": "require_regular_period",
+                  "expected": true,
+                  "actual": true,
+                  "met": true
+                },
+                {
+                  "criterion": "min_duty_cycle",
+                  "expected": 0.1,
+                  "actual": 0.6612457139449585,
+                  "met": true
+                }
+              ]
+            }
+          },
+          "led_profiles": {
+            "Dled12_1": {
+              "status": "measured",
+              "state": "blinking",
+              "threshold_v": null,
+              "profile_method": "device_current_hysteresis",
+              "anode_node": "N006",
+              "cathode_node": "0",
+              "on_fraction": 0.6120178678807663,
+              "duty_cycle": 0.6612457139449585,
+              "display_duty_cycle": 0.7305361303761486,
+              "regular_period": true,
+              "period_s": 0.002096187499999999,
+              "frequency_hz": 477.05656101851594,
+              "playback_duration_s": 0.8,
+              "playback_slowdown": 10.0,
+              "pulse_count": 48,
+              "timeline_key_times": {
+                "sequence_omitted": true,
+                "item_count": 96
+              },
+              "timeline_states": {
+                "sequence_omitted": true,
+                "item_count": 96
+              },
+              "voltage_min": -0.0215478176,
+              "voltage_max": 0.708552908,
+              "threshold_current_a": 0.0001,
+              "current_min_a": -2.72007802e-14,
+              "current_max_a": 0.00789260531,
+              "turn_on_current_a": 0.0031570421239836793,
+              "turn_off_current_a": 0.0011838907964768794
+            }
+          }
+        }
+      }
+    ],
+    "final": {
+      "answer": "Il problema piu probabile e il condensatore sul pin CONTROL del TLC555 troppo grande per questo uso di avvio. Nel circuito base C2 vale 1 uF tra N002 e massa: i test con sole condizioni iniziali asimmetriche hanno cambiato l’avvio ma non hanno reso regolare il lampeggio, mentre riducendo C2 da 1 uF a 10 nF il LED passa a lampeggio regolare gia nel transiente. Quindi la soluzione consigliata e ridurre il condensatore di controllo a un valore piccolo, tipicamente 10 nF.",
+      "cause": "Il nodo CONT del TLC555 e appesantito da Ccapacitor4_2=1 uF verso massa; questa costante di tempo altera l’assestamento iniziale delle soglie interne e causa un avvio irregolare. La causa di sola simmetria iniziale non e stata sufficiente, perche due test con condizioni iniziali diverse non hanno soddisfatto la periodicita regolare.",
+      "verified_correction": "Cambiare Ccapacitor4_2 da 1 uF a 10 nF. Questo scenario ha soddisfatto sia i criteri elettrici sia quelli temporali: il profilo del LED Dled12_1 e diventato blinking con periodo regolare."
+    }
+  }
+}

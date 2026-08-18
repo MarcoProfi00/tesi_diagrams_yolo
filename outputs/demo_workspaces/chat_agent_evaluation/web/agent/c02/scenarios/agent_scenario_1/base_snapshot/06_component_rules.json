@@ -1,0 +1,298 @@
+{
+  "circuit_id": "c02",
+  "source_format": "pipeline2.0_component_rules",
+  "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\data\\batchPipeline2.0\\batchChatAgentEvaluation\\values\\c02_values.yaml",
+  "spice_classes_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\pipeline2_spice_classes.yaml",
+  "supplies": {
+    "VREF_BATTERY_NEGATIVE": {
+      "status": "spice_ready",
+      "spice_prefix": "V",
+      "emit_as": "independent_voltage_source",
+      "nodes": [
+        "N001",
+        "0"
+      ],
+      "parameters": {
+        "terminal": "battery2.1_negative",
+        "type": "dc",
+        "value": 0,
+        "unit": "V",
+        "reference": 0,
+        "source": "manual_reference_for_floating_battery_circuit",
+        "label_text": "Negativo batteria: riferimento SPICE",
+        "node": "N001"
+      }
+    }
+  },
+  "components": {
+    "battery2.1": {
+      "class_name": "Battery",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "V",
+      "emit_as": "independent_voltage_source",
+      "node_order": [
+        "positive",
+        "negative"
+      ],
+      "nodes": [
+        "N002",
+        "N001"
+      ],
+      "parameters": {
+        "type": "dc",
+        "value": 9,
+        "unit": "V",
+        "source": "manual_from_image_label",
+        "label_text": "Batteria 9 V"
+      }
+    },
+    "led12.1": {
+      "class_name": "LED",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "D",
+      "emit_as": "diode",
+      "node_order": [
+        "anode",
+        "cathode"
+      ],
+      "nodes": [
+        "N002",
+        "N003"
+      ],
+      "parameters": {
+        "model": "LED_RED_TYP",
+        "source": "manual_testbench_assumption",
+        "label_text": "L1 LED, colore non specificato",
+        "viewer_override": {
+          "label": "L1",
+          "display_value": "LED"
+        }
+      }
+    },
+    "led12.2": {
+      "class_name": "LED",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "D",
+      "emit_as": "diode",
+      "node_order": [
+        "anode",
+        "cathode"
+      ],
+      "nodes": [
+        "N002",
+        "N004"
+      ],
+      "parameters": {
+        "model": "LED_RED_TYP",
+        "source": "manual_testbench_assumption",
+        "label_text": "L2 LED, colore non specificato",
+        "viewer_override": {
+          "label": "L2",
+          "display_value": "LED"
+        }
+      }
+    },
+    "npn_transistor18.1": {
+      "class_name": "NPN_Transistor",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "Q",
+      "emit_as": "bjt_npn",
+      "node_order": [
+        "C",
+        "B",
+        "E"
+      ],
+      "nodes": [
+        "N006",
+        "N005",
+        "N001"
+      ],
+      "parameters": {
+        "model": "BC548_TYP",
+        "source": "manual_from_image_label",
+        "label_text": "Q1 BC548",
+        "viewer_override": {
+          "label": "Q1",
+          "display_value": "BC548"
+        }
+      }
+    },
+    "npn_transistor18.2": {
+      "class_name": "NPN_Transistor",
+      "status": "spice_ready",
+      "spice_support": "model",
+      "spice_prefix": "Q",
+      "emit_as": "bjt_npn",
+      "node_order": [
+        "C",
+        "B",
+        "E"
+      ],
+      "nodes": [
+        "N008",
+        "N007",
+        "N001"
+      ],
+      "parameters": {
+        "model": "BC548_TYP",
+        "source": "manual_from_image_label",
+        "label_text": "Q2 BC548",
+        "viewer_override": {
+          "label": "Q2",
+          "display_value": "BC548"
+        }
+      }
+    },
+    "polarized_capacitor20.1": {
+      "class_name": "Polarized_Capacitor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "C",
+      "emit_as": "capacitor",
+      "node_order": [
+        "positive",
+        "negative"
+      ],
+      "nodes": [
+        "N006",
+        "N007"
+      ],
+      "parameters": {
+        "value": 10,
+        "unit": "uf",
+        "source": "manual_testbench_assumption",
+        "label_text": "C1 10 uF nominale (valore non visibile)"
+      }
+    },
+    "polarized_capacitor20.2": {
+      "class_name": "Polarized_Capacitor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "C",
+      "emit_as": "capacitor",
+      "node_order": [
+        "positive",
+        "negative"
+      ],
+      "nodes": [
+        "N008",
+        "N005"
+      ],
+      "parameters": {
+        "value": 10,
+        "unit": "uf",
+        "source": "manual_testbench_assumption",
+        "label_text": "C2 10 uF nominale (valore non visibile)"
+      }
+    },
+    "resistor22.1": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N003",
+        "N006"
+      ],
+      "parameters": {
+        "value": 470,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "R1 470 ohm"
+      }
+    },
+    "resistor22.2": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N002",
+        "N007"
+      ],
+      "parameters": {
+        "value": 47,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R2 47 kohm"
+      }
+    },
+    "resistor22.3": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N002",
+        "N005"
+      ],
+      "parameters": {
+        "value": 47,
+        "unit": "kohm",
+        "source": "manual_from_image_label",
+        "label_text": "R3 47 kohm"
+      }
+    },
+    "resistor22.4": {
+      "class_name": "Resistor",
+      "status": "spice_ready",
+      "spice_support": "direct",
+      "spice_prefix": "R",
+      "emit_as": "resistor",
+      "node_order": [
+        "t1",
+        "t2"
+      ],
+      "nodes": [
+        "N004",
+        "N008"
+      ],
+      "parameters": {
+        "value": 470,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "R4 470 ohm"
+      }
+    }
+  },
+  "simulation": {
+    "analyses": [
+      "op",
+      "tran"
+    ],
+    "tran": {
+      "step": "1ms",
+      "stop": "3s"
+    }
+  },
+  "stats": {
+    "components_total": 11,
+    "spice_ready_components": 11,
+    "not_emitted_components": 0,
+    "measurement_components": 0,
+    "missing_components": 0,
+    "unsupported_components": 0,
+    "pin_aware_components": 0,
+    "invalid_components": 0,
+    "supplies_ready_count": 1
+  }
+}

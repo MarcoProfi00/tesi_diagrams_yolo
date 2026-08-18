@@ -7,19 +7,21 @@ simulabile e il simulatore e disponibile nel sistema.
 La pipeline non deve fallire se ngspice manca o se la simulazione non converge.
 In questi casi deve produrre un risultato strutturato con lo stato dell'errore.
 
-Responsabilita previste:
+Responsabilita:
 
 - verificare disponibilita di ngspice;
 - eseguire netlist in batch mode;
 - raccogliere log, errori e codice di uscita;
-- estrarre risultati .op, .tran o .measure quando disponibili;
-- salvare spice_results.json.
+- pulire l'eventuale CSV transitorio e generare il grafico disponibile;
+- restituire il report poi salvato come `08_spice_run.json`.
 """
 
 from __future__ import annotations
 
 import csv
 import html
+import json
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -32,6 +34,47 @@ NGSPICE_CANDIDATES = (
     "ngspice",
     "ngspice.exe",
 )
+
+
+def load_ngspice_defines(output_dir: str | Path) -> dict[str, str]:
+    """Legge dal report di emissione le variabili richieste dai modelli usati."""
+    report_path = Path(output_dir) / "07_spice_emit_report.json"
+    if not report_path.is_file():
+        return {}
+    try:
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"Invalid SPICE emit report: {report_path}") from exc
+
+    raw_defines = report.get("ngspice_defines") if isinstance(report, dict) else None
+    if raw_defines in (None, ""):
+        return {}
+    if not isinstance(raw_defines, dict):
+        raise ValueError("07_spice_emit_report.json: ngspice_defines must be a mapping")
+
+    defines: dict[str, str] = {}
+    for raw_name, raw_value in raw_defines.items():
+        name = str(raw_name).strip()
+        value = str(raw_value).strip()
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+            raise ValueError(f"Invalid ngspice define name: {name!r}")
+        if not value or any(character in value for character in "\r\n\x00"):
+            raise ValueError(f"Invalid value for ngspice define {name}")
+        defines[name] = value
+    return dict(sorted(defines.items()))
+
+
+def build_ngspice_command(
+    ngspice_path: str,
+    netlist_name: str,
+    defines: dict[str, str] | None = None,
+) -> list[str]:
+    """Costruisce il comando batch aggiungendo solo define dichiarate e validate."""
+    command = [ngspice_path]
+    for name, value in sorted((defines or {}).items()):
+        command.extend(["-D", f"{name}={value}"])
+    command.extend(["-b", netlist_name])
+    return command
 
 
 def find_ngspice_executable(executable: str | None = None) -> str | None:
@@ -153,6 +196,13 @@ def write_clean_tran_csv(raw_csv_path: str | Path, clean_csv_path: str | Path) -
     return output_path
 
 
+def voltage_series_names(names: list[str]) -> list[str]:
+    """Seleziona le sole tensioni per il grafico, lasciando le correnti nel CSV."""
+    selected = [name for name in names if re.fullmatch(r"v\(.+\)", name, flags=re.IGNORECASE)]
+    # Compatibilita' con vecchi CSV che non riportano la forma `v(NODO)`.
+    return selected or names
+
+
 def write_tran_png(csv_path: str | Path, plot_path: str | Path) -> Path | None:
     """Crea un grafico PNG con matplotlib se disponibile."""
     names, times, series = parse_tran_csv(csv_path)
@@ -166,8 +216,9 @@ def write_tran_png(csv_path: str | Path, plot_path: str | Path) -> Path | None:
     except ImportError:
         return None
 
+    plotted_names = voltage_series_names(names)
     figure, axis = plt.subplots(figsize=(11, 6.2), dpi=140)
-    for name in names:
+    for name in plotted_names:
         axis.plot(times, series[name], linewidth=1.8, label=name)
 
     axis.set_title("Transient analysis")
@@ -213,7 +264,8 @@ def write_tran_plot(csv_path: str | Path, plot_path: str | Path) -> Path | None:
     if not times or not names:
         return None
 
-    all_values = [value for name in names for value in series.get(name, [])]
+    plotted_names = voltage_series_names(names)
+    all_values = [value for name in plotted_names for value in series.get(name, [])]
     if not all_values:
         return None
 
@@ -232,7 +284,7 @@ def write_tran_plot(csv_path: str | Path, plot_path: str | Path) -> Path | None:
     polylines: list[str] = []
     legend: list[str] = []
 
-    for index, name in enumerate(names):
+    for index, name in enumerate(plotted_names):
         color = colors[index % len(colors)]
         polyline = points_to_polyline(
             times,
@@ -307,7 +359,11 @@ def run_ngspice(
     # ngspice viene eseguito con cwd nella cartella del circuito, quindi gli
     # passiamo solo il nome della netlist. In questo modo funziona sia con
     # output_dir assoluti sia con output_dir relativi.
-    command = [ngspice_path, "-b", netlist_path.name]
+    command = build_ngspice_command(
+        ngspice_path,
+        netlist_path.name,
+        defines=load_ngspice_defines(circuit_dir),
+    )
 
     try:
         # Lo step 08 registra il risultato grezzo, senza correggere il circuito.

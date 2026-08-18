@@ -1,0 +1,30 @@
+{
+  "title": "Collegare N004 a N002 per chiudere il ramo di carico della batteria",
+  "hypothesis": "Il connettore rappresenta reti distinte e il carico resistivo su N004 non e attualmente collegato al positivo batteria su N002; creando la continuita mancante tra questi due nodi il circuito si chiude come anello Vbattery2_1 -> Rresistor22_1 -> Vbattery2_1 e la batteria deve finalmente erogare corrente.",
+  "intent": "correction",
+  "analysis": "op",
+  "actions": [
+    {
+      "type": "connect_nodes",
+      "from": "N004",
+      "to": "N002"
+    },
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    }
+  ],
+  "compare": [
+    "v(N001)",
+    "v(N002)",
+    "v(N004)",
+    "i(Vbattery2_1)",
+    "i(Rresistor22_1)"
+  ],
+  "expect": {
+    "v(N004)": "changed",
+    "i(Vbattery2_1)": "nonzero",
+    "i(Rresistor22_1)": "nonzero"
+  },
+  "scenario_id": "agent_scenario_2"
+}

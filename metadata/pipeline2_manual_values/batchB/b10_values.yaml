@@ -1,0 +1,119 @@
+# Parametri manuali assunti per il modello simbolico di switch b10.
+# L'immagine dichiara i nomi dei parametri ma non i valori numerici.
+# Gli ID sono quelli del Graph JSON Pipeline 1.0. La node map permette di
+# associare i tre generatori ai rami A-massa, A-B e B-massa del modello.
+
+circuit_id: b10
+
+supplies:
+  VTEST_A:
+    # Banco di prova: mantiene il terminale A a 1 V rispetto a massa.
+    terminal: terminal26.1_t1
+    type: dc
+    value: 1
+    unit: V
+    reference: 0
+    source: manual_assumption_symbolic_switch_test_bench
+    label_text: "A di test: 1 V"
+
+  VTEST_C:
+    # Il terminale C e' il riferimento di controllo del modello simbolico.
+    terminal: terminal26.3_t1
+    type: dc
+    value: 0
+    unit: V
+    reference: 0
+    source: manual_assumption_symbolic_switch_test_bench
+    label_text: "C di test: 0 V"
+
+components:
+  # Ramo principale attraverso lo switch aperto: resistenza ON assunta.
+  resistor22.1:
+    value: 10
+    unit: ohm
+    source: manual_assumption_symbolic_switch_model
+    label_text: "r_ON assunto: 10 ohm"
+
+  # Ramo di isolamento tra i terminali: resistenza OFF assunta.
+  resistor22.2:
+    # 1000 Mohm viene emesso come 1000meg, equivalente a 1 Gohm.
+    value: 1000
+    unit: Mohm
+    source: manual_assumption_symbolic_switch_model
+    label_text: "r_OFF assunto: 1 Gohm"
+
+  # Le capacita parassite non sono quotate nell'immagine: valore comune di test.
+  polarized_capacitor20.1:
+    value: 5
+    unit: pf
+    source: manual_assumption_symbolic_switch_model
+    label_text: "capacita parassita assunta: 5 pF"
+
+  polarized_capacitor20.2:
+    value: 5
+    unit: pf
+    source: manual_assumption_symbolic_switch_model
+    label_text: "capacita parassita assunta: 5 pF"
+
+  polarized_capacitor20.3:
+    value: 5
+    unit: pf
+    source: manual_assumption_symbolic_switch_model
+    label_text: "capacita parassita assunta: 5 pF"
+
+  polarized_capacitor20.4:
+    value: 5
+    unit: pf
+    source: manual_assumption_symbolic_switch_model
+    label_text: "capacita parassita assunta: 5 pF"
+
+  polarized_capacitor20.5:
+    value: 5
+    unit: pf
+    source: manual_assumption_symbolic_switch_model
+    label_text: "capacita parassita assunta: 5 pF"
+
+  # Offset del modello, non valore letto dall'immagine.
+  voltage_source31.1:
+    type: dc
+    # Lo step 07 riceve tensioni in volt base: 0.001 V equivale a 1 mV.
+    value: 0.001
+    unit: V
+    source: manual_assumption_symbolic_switch_model
+    label_text: "V_OS assunto: 1 mV"
+
+  # Ramo A-massa, corrispondente a I_A nel modello: nessun carico aggiuntivo.
+  current_source6.1:
+    type: dc
+    value: 0
+    unit: A
+    source: manual_assumption_symbolic_switch_test_bench
+    label_text: "I_A assunto: 0 A"
+
+  # Ramo A-B, corrispondente a I_OFF: perdita diretta molto piccola.
+  current_source6.2:
+    type: dc
+    value: 1e-12
+    unit: A
+    source: manual_assumption_symbolic_switch_model
+    label_text: "I_OFF assunto: 1 pA"
+
+  # Ramo B-massa, corrispondente a I_B: carico di misura da 1 nA.
+  current_source6.3:
+    type: dc
+    value: 1e-9
+    unit: A
+    source: manual_assumption_symbolic_switch_test_bench
+    label_text: "I_B assunto: 1 nA"
+
+  # Lo stato aperto e gia validato nel Graph JSON, qui e reso esplicito.
+  switch25.1:
+    state: open
+    source: graph_json_state_validated_from_image
+    label_text: "switch aperto"
+
+simulation:
+  analyses: [op, tran]
+  tran:
+    step: 1us
+    stop: 100us

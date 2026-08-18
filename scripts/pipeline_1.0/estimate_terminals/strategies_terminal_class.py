@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 
+from ._shared_utils import opposite_side, range_overlap_ratio
 from .config import *
 from .geometry import (
     geom_terminal_point_by_side_peak,
@@ -67,13 +68,6 @@ def _terminal_bbox_shape_info(bbox):
     }
 
 
-# Calcola il rapporto di overlap tra range.
-def _range_overlap_ratio(a1, a2, b1, b2):
-    inter = max(0, min(a2, b2) - max(a1, b1) + 1)
-    base = max(1, min(a2 - a1 + 1, b2 - b1 + 1))
-    return float(inter) / float(base)
-
-
 # Verifica se il componente esterno è allineato al lato.
 def _component_is_side_aligned_external(component_bbox, bbox):
     cx1, cy1, cx2, cy2 = component_bbox
@@ -104,7 +98,7 @@ def _component_is_side_aligned_external(component_bbox, bbox):
     if (
         cx1 >= x2 + 1
         and (cx1 - x2) <= gap_limit
-        and _range_overlap_ratio(cy1, cy2, central_y1, central_y2) >= overlap_limit
+        and range_overlap_ratio(cy1, cy2, central_y1, central_y2) >= overlap_limit
         and is_horizontal_stub()
     ):
         return True
@@ -112,7 +106,7 @@ def _component_is_side_aligned_external(component_bbox, bbox):
     if (
         cx2 <= x1 - 1
         and (x1 - cx2) <= gap_limit
-        and _range_overlap_ratio(cy1, cy2, central_y1, central_y2) >= overlap_limit
+        and range_overlap_ratio(cy1, cy2, central_y1, central_y2) >= overlap_limit
         and is_horizontal_stub()
     ):
         return True
@@ -120,7 +114,7 @@ def _component_is_side_aligned_external(component_bbox, bbox):
     if (
         cy1 >= y2 + 1
         and (cy1 - y2) <= gap_limit
-        and _range_overlap_ratio(cx1, cx2, central_x1, central_x2) >= overlap_limit
+        and range_overlap_ratio(cx1, cx2, central_x1, central_x2) >= overlap_limit
         and is_vertical_stub()
     ):
         return True
@@ -128,7 +122,7 @@ def _component_is_side_aligned_external(component_bbox, bbox):
     if (
         cy2 <= y1 - 1
         and (y1 - cy2) <= gap_limit
-        and _range_overlap_ratio(cx1, cx2, central_x1, central_x2) >= overlap_limit
+        and range_overlap_ratio(cx1, cx2, central_x1, central_x2) >= overlap_limit
         and is_vertical_stub()
     ):
         return True
@@ -330,7 +324,7 @@ def _apply_terminal_shape_prior(bbox, side_scores):
 
 
 # Seleziona il miglior lato singolo.
-def _best_single_side(binary, bbox, local_scores, far_scores):
+def _best_single_side(bbox, local_scores, far_scores):
     combined_raw = _combined_side_scores(local_scores, far_scores)
     combined = _apply_terminal_shape_prior(bbox, combined_raw)
     best_side = max(combined, key=combined.get)
@@ -552,13 +546,79 @@ def _border_inward_one_side(binary, bbox, combined_scores, far_scores):
     return max(valid, key=lambda side: combined_scores.get(side, 0))
 
 
+def _border_adjacent_two_side_evidence(
+    inward_side,
+    local_scores,
+    far_scores,
+    combined_scores,
+):
+    """Riconosce un jack sul bordo con segnale interno e massa adiacente."""
+    if inward_side is None:
+        return {
+            "valid": False,
+            "orientation": None,
+            "reason": "not_near_border",
+        }
+
+    adjacent_sides = [
+        side
+        for side in ("top", "bottom", "left", "right")
+        if _are_adjacent_sides(inward_side, side)
+    ]
+    second_side = max(
+        adjacent_sides,
+        key=lambda side: float(combined_scores.get(side, 0)),
+    )
+    remaining_sides = [
+        side
+        for side in ("top", "bottom", "left", "right")
+        if side not in {inward_side, second_side}
+    ]
+
+    inward_score = float(combined_scores.get(inward_side, 0))
+    second_score = float(combined_scores.get(second_side, 0))
+    third_score = max(
+        (float(combined_scores.get(side, 0)) for side in remaining_sides),
+        default=0.0,
+    )
+    strongest_score = max(
+        (float(score) for score in combined_scores.values()),
+        default=0.0,
+    )
+
+    valid = (
+        inward_score >= strongest_score
+        and inward_score >= TERMINAL_BORDER_ADJACENT_INWARD_MIN
+        and second_score >= TERMINAL_BORDER_ADJACENT_SECOND_MIN
+        and float(local_scores.get(inward_side, 0)) >= TERMINAL_BORDER_ADJACENT_LOCAL_MIN
+        and float(local_scores.get(second_side, 0)) >= TERMINAL_BORDER_ADJACENT_LOCAL_MIN
+        and float(far_scores.get(inward_side, 0)) >= TERMINAL_BORDER_ADJACENT_FAR_MIN
+        and float(far_scores.get(second_side, 0)) >= TERMINAL_BORDER_ADJACENT_FAR_MIN
+        and second_score >= max(
+            TERMINAL_BORDER_ADJACENT_SECOND_MIN,
+            third_score * TERMINAL_BORDER_ADJACENT_THIRD_MARGIN,
+        )
+    )
+
+    orientation = f"corner_{inward_side}_{second_side}" if valid else None
+    return {
+        "valid": valid,
+        "orientation": orientation,
+        "inward_side": inward_side,
+        "second_side": second_side,
+        "inward_score": inward_score,
+        "second_score": second_score,
+        "third_score": third_score,
+    }
+
+
 # Classify terminal cardinality.
-def classify_terminal_cardinality(binary, bbox, default_side="right", text_suppression_debug=None):
+def classify_terminal_cardinality(binary, bbox, text_suppression_debug=None):
     local_scores = get_terminal_class_probe_scores(binary, bbox)
     far_scores = get_terminal_class_far_probe_scores(binary, bbox)
     shape_info = _terminal_bbox_shape_info(bbox)
 
-    single_eval = _best_single_side(binary, bbox, local_scores, far_scores)
+    single_eval = _best_single_side(bbox, local_scores, far_scores)
     horiz_eval = _horizontal_two_side_evidence(local_scores, far_scores)
     vert_eval = _vertical_two_side_evidence(local_scores, far_scores)
     horiz_relaxed = _relaxed_two_side_evidence(local_scores, far_scores, "horizontal")
@@ -623,6 +683,17 @@ def classify_terminal_cardinality(binary, bbox, default_side="right", text_suppr
         far_scores,
     )
     local_scores["border_inward_one_side"] = border_inward_side
+    border_adjacent_eval = _border_adjacent_two_side_evidence(
+        border_inward_side,
+        local_scores,
+        far_scores,
+        single_eval["combined_scores"],
+    )
+    local_scores["border_adjacent_two_side_evaluation"] = border_adjacent_eval
+
+    if border_adjacent_eval["valid"]:
+        local_scores["decision_mode"] = "terminal_cardinality_two_border_adjacent"
+        return 2, border_adjacent_eval["orientation"], local_scores
 
     if border_inward_side is not None:
         local_scores["decision_mode"] = "terminal_cardinality_border_inward_one"
@@ -704,16 +775,6 @@ def classify_terminal_cardinality(binary, bbox, default_side="right", text_suppr
     local_scores["decision_mode"] = "terminal_cardinality_default_one"
     return 1, single_eval["best_side"], local_scores
 
-# Calcola il lato opposto.
-def _opposite_side(side):
-    return {
-        "top": "bottom",
-        "bottom": "top",
-        "left": "right",
-        "right": "left",
-    }[side]
-
-
 # Valuta un candidato Terminal a un lato tramite supporto passante.
 def _score_terminal_one_side_candidate_by_through_support(binary, bbox, side):
     point, peak_debug = geom_terminal_point_by_side_peak(binary, bbox, side)
@@ -733,7 +794,7 @@ def _score_terminal_one_side_candidate_by_through_support(binary, bbox, side):
         binary,
         px,
         py,
-        _opposite_side(side),
+        opposite_side(side),
         outward=6,
         inward=0,
         halfspan=1,
@@ -749,7 +810,7 @@ def _score_terminal_one_side_candidate_by_through_support(binary, bbox, side):
 
 
 # Detect terminal one side.
-def detect_terminal_one_side(binary, bbox, default_side="right", precomputed_scores=None):
+def detect_terminal_one_side(binary, bbox, precomputed_scores=None):
     scores = precomputed_scores if precomputed_scores is not None else get_terminal_class_probe_scores(binary, bbox)
     far_scores = scores.get("far_scores")
     if far_scores is None:
@@ -764,7 +825,7 @@ def detect_terminal_one_side(binary, bbox, default_side="right", precomputed_sco
     ordered = sorted(combined.items(), key=lambda kv: kv[1], reverse=True)
 
     best_side, best_score = ordered[0]
-    second_side, second_score = ordered[1]
+    _, second_score = ordered[1]
 
     CLEAR_MARGIN = 1.75
     CLEAR_SECOND_MAX = 12.0
@@ -898,7 +959,11 @@ def detect_terminal_two_sides(binary, bbox, precomputed_scores=None):
     if far_scores is None:
         far_scores = get_terminal_class_far_probe_scores(binary, bbox)
 
-    adjacent_eval = scores.get("adjacent_two_side_evaluation") or {}
+    adjacent_eval = (
+        scores.get("adjacent_two_side_evaluation")
+        or scores.get("border_adjacent_two_side_evaluation")
+        or {}
+    )
     orientation = adjacent_eval.get("orientation")
     if isinstance(orientation, str) and orientation.startswith("corner_"):
         _, side_a, side_b = orientation.split("_", 2)
@@ -923,7 +988,7 @@ def detect_terminal_two_sides(binary, bbox, precomputed_scores=None):
 
 
 # Detect terminal auto one or two.
-def detect_terminal_auto_one_or_two(binary, bbox, default_side="right"):
+def detect_terminal_auto_one_or_two(binary, bbox):
     shape_info = _terminal_bbox_shape_info(bbox)
 
     # Per la classe Terminal applichiamo SEMPRE la pulizia locale:
@@ -939,7 +1004,6 @@ def detect_terminal_auto_one_or_two(binary, bbox, default_side="right"):
     cardinality, mode, scores = classify_terminal_cardinality(
         working_binary,
         bbox,
-        default_side=default_side,
         text_suppression_debug=text_suppression_debug,
     )
 
@@ -954,7 +1018,6 @@ def detect_terminal_auto_one_or_two(binary, bbox, default_side="right"):
         terminals_def, orientation = detect_terminal_one_side(
             working_binary,
             bbox,
-            default_side=default_side,
             precomputed_scores=scores,
         )
         scores["final_mode"] = "one_terminal"

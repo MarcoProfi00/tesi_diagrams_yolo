@@ -1,0 +1,127 @@
+schema_version: 1
+circuit_id: "a06"
+review_status: frozen
+circuit_description: |
+  Amplificatore a emettitore comune con transistor 2N2222, alimentazione
+  da 12 V, partitore di bias da 100 kohm e 47 kohm, resistenza di collettore
+  da 6.8 kohm e resistenza di emettitore da 3.9 kohm bypassata da 100 uF.
+  L'ingresso passa attraverso 1 kohm e Cc1 da 1 uF; l'uscita N005 è
+  accoppiata tramite Cc2 da 10 uF al carico da 10 kohm. Per il transitorio
+  è stata assunta una sinusoide da 1 V di picco a 100 Hz.
+task_type: "diagnosi e riduzione della distorsione di un amplificatore"
+user_symptom: |
+  Il circuito amplifica, ma l’uscita mi sembra troppo distorta o poco pulita. Quale potrebbe essere il problema?
+
+circuit_inventory:
+  component_count: 18
+  node_count: 9
+  component_types:
+    - "Capacitor"
+    - "GND"
+    - "NPN_Transistor"
+    - "Resistor"
+    - "Signal_Source"
+    - "Terminal"
+  analysis_types:
+    - "op"
+    - "tran"
+
+required_evidence:
+  - id: base_bias
+    description: |
+      Il punto di lavoro iniziale è plausibile: base N002 circa 3.664 V,
+      emettitore N003 circa 3.024 V e collettore N004 circa 6.763 V.
+  - id: base_distortion
+    description: |
+      Con l'ingresso assunto di 1 V di picco a 100 Hz, l'uscita N005 è
+      fortemente asimmetrica e la THD calcolata sulle prime cinque armoniche
+      è circa 83.02 percento.
+  - id: overdrive_test
+    description: |
+      La diagnosi deve essere verificata riducendo l'ampiezza d'ingresso e
+      confrontando la THD di N005 a parità di frequenza e circuito.
+  - id: output_preservation
+    description: |
+      La riduzione della THD deve mantenere un'uscita fondamentale non nulla
+      e un guadagno utile; non è sufficiente ridurre semplicemente tutti i
+      segnali verso zero.
+
+success_conditions:
+  - id: thd_improved
+    description: |
+      La THD di N005 si riduce di almeno il 20 percento rispetto alla base.
+  - id: thd_acceptable
+    description: |
+      La THD finale di N005 è al massimo circa il 10 percento secondo la
+      metrica adottata dall'esperimento.
+  - id: useful_output_preserved
+    description: |
+      La componente fondamentale dell'uscita rimane chiaramente non nulla
+      e il relativo guadagno non scende sotto il 25 percento del guadagno
+      fondamentale della base.
+  - id: correction_verified
+    description: |
+      La modifica viene eseguita con analisi transitoria ngspice conclusa
+      con successo e la THD viene calcolata sul tratto stabile del segnale.
+  - id: conclusion_calibrated
+    description: |
+      La conclusione identifica il sovrapilotaggio nella simulazione adottata
+      e segnala che ampiezza e frequenza del transitorio derivano da
+      assunzioni del values.yaml.
+
+acceptable_solutions:
+  - id: reduce_input_to_20mv
+    description: |
+      Ridurre la sorgente sinusoidale da 1 V a 20 mV di picco, mantenendo
+      la frequenza a 100 Hz.
+    verified_reference_values: |
+      THD di N005 da 83.02 a 9.79 percento, guadagno fondamentale circa
+      76.98 e componente fondamentale d'uscita circa 3.081 Vpp.
+  - id: equivalent_input_attenuation
+    description: |
+      Applicare un'attenuazione equivalente all'ingresso che porti il
+      segnale effettivo vicino a 20 mV di picco e verificare THD non superiore
+      al 10 percento con uscita utile preservata.
+  - id: reduce_input_to_100mv
+    acceptance: partial_only
+    description: |
+      A 100 mV di picco la THD scende a circa 35.01 percento: conferma
+      l'ipotesi di sovrapilotaggio ma non produce ancora un segnale pulito.
+  - id: reduce_input_to_50mv
+    acceptance: partial_only
+    description: |
+      A 50 mV di picco la THD scende a circa 22.38 percento con uscita
+      preservata: è un miglioramento importante ma resta sopra la soglia
+      operativa del 10 percento.
+
+unsupported_conclusions:
+  - |
+    Dichiarare che il problema è risolto usando soltanto ampiezze picco-picco
+    senza misurare la distorsione o controllare la forma d'onda.
+  - |
+    Considerare 100 mV o 50 mV una correzione completa: entrambe le prove
+    lasciano la THD sopra il 10 percento.
+  - |
+    Attribuire la distorsione principalmente a un bias errato sulla sola
+    base della topologia: portare la resistenza inferiore del partitore da
+    47 kohm a 100 kohm lascia una THD di circa 75.27 percento.
+  - |
+    Affermare che il transistor o i condensatori siano guasti senza evidenze
+    specifiche della simulazione.
+  - |
+    Presentare 1 V di picco e 100 Hz come valori sicuramente ricavati
+    dall'immagine: sono assunzioni esplicite introdotte per il transitorio.
+  - |
+    Generalizzare la soglia THD del 10 percento come limite universale di
+    qualità audio: è la soglia operativa scelta per questo esperimento.
+
+review_notes: |
+  Il Graph JSON coincide con l'immagine e la netlist conserva correttamente
+  la topologia. N006 è il nodo della sorgente prima della resistenza e del
+  condensatore d'ingresso; N005 è l'uscita dopo il condensatore Cc2 e sul
+  carico RL. La THD è stata ricalcolata dai CSV sulle ultime tre oscillazioni
+  complete, usando fondamentale e prime quattro armoniche aggiuntive.
+  Il caso dimostra il comportamento del modello con SIN(0 1 100), non prova
+  che un circuito reale alimentato secondo la sola indicazione AC 1 abbia
+  necessariamente lo stesso overdrive. La scheda deve essere approvata
+  manualmente prima dello stato frozen.

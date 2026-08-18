@@ -1,0 +1,31 @@
+* pipeline2.0 netlist
+* circuit: b10
+
+VVTEST_A N001 0 DC 1
+VVTEST_C N003 0 DC 0
+Icurrent_source6_1 N001 0 DC 0
+Icurrent_source6_2 N001 N002 DC 1e-12
+Icurrent_source6_3 N002 0 DC 1e-09
+Cpolarized_capacitor20_1 N001 0 5p
+Cpolarized_capacitor20_2 N001 N003 5p
+Cpolarized_capacitor20_3 N001 N002 5p
+Cpolarized_capacitor20_4 N003 N002 5p
+Cpolarized_capacitor20_5 N002 0 5p
+Rresistor22_1 N001 N004 10
+Rresistor22_2 N001 N002 1000meg
+* switch25.1 open in base run; closed by scenario close_switch
+Vvoltage_source31_1 N005 N002 DC 0.001
+
+* scenario close_switch: switch25.1 modeled as RSCENARIO_switch25_1 N004 N005 1m
+RSCENARIO_switch25_1 N004 N005 1m
+.op
+.save all
+.tran 1us 100us
+
+.control
+set wr_singlescale
+set wr_vecnames
+run
+wrdata 08_tran.csv time v(N001) v(N002) v(N003) v(N004) v(N005)
+.endc
+.end

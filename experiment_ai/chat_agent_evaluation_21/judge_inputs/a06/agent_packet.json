@@ -1,0 +1,642 @@
+{
+  "packet_schema_version": 1,
+  "packet_id": "a06_run_2",
+  "reference": {
+    "schema_version": 1,
+    "circuit_id": "a06",
+    "circuit_description": "Amplificatore a emettitore comune con transistor 2N2222, alimentazione\nda 12 V, partitore di bias da 100 kohm e 47 kohm, resistenza di collettore\nda 6.8 kohm e resistenza di emettitore da 3.9 kohm bypassata da 100 uF.\nL'ingresso passa attraverso 1 kohm e Cc1 da 1 uF; l'uscita N005 è\naccoppiata tramite Cc2 da 10 uF al carico da 10 kohm. Per il transitorio\nè stata assunta una sinusoide da 1 V di picco a 100 Hz.\n",
+    "task_type": "diagnosi e riduzione della distorsione di un amplificatore",
+    "user_symptom": "Il circuito amplifica, ma l’uscita mi sembra troppo distorta o poco pulita. Quale potrebbe essere il problema?\n",
+    "circuit_inventory": {
+      "component_count": 18,
+      "node_count": 9,
+      "component_types": [
+        "Capacitor",
+        "GND",
+        "NPN_Transistor",
+        "Resistor",
+        "Signal_Source",
+        "Terminal"
+      ],
+      "analysis_types": [
+        "op",
+        "tran"
+      ]
+    },
+    "required_evidence": [
+      {
+        "id": "base_bias",
+        "description": "Il punto di lavoro iniziale è plausibile: base N002 circa 3.664 V,\nemettitore N003 circa 3.024 V e collettore N004 circa 6.763 V.\n"
+      },
+      {
+        "id": "base_distortion",
+        "description": "Con l'ingresso assunto di 1 V di picco a 100 Hz, l'uscita N005 è\nfortemente asimmetrica e la THD calcolata sulle prime cinque armoniche\nè circa 83.02 percento.\n"
+      },
+      {
+        "id": "overdrive_test",
+        "description": "La diagnosi deve essere verificata riducendo l'ampiezza d'ingresso e\nconfrontando la THD di N005 a parità di frequenza e circuito.\n"
+      },
+      {
+        "id": "output_preservation",
+        "description": "La riduzione della THD deve mantenere un'uscita fondamentale non nulla\ne un guadagno utile; non è sufficiente ridurre semplicemente tutti i\nsegnali verso zero.\n"
+      }
+    ],
+    "success_conditions": [
+      {
+        "id": "thd_improved",
+        "description": "La THD di N005 si riduce di almeno il 20 percento rispetto alla base.\n"
+      },
+      {
+        "id": "thd_acceptable",
+        "description": "La THD finale di N005 è al massimo circa il 10 percento secondo la\nmetrica adottata dall'esperimento.\n"
+      },
+      {
+        "id": "useful_output_preserved",
+        "description": "La componente fondamentale dell'uscita rimane chiaramente non nulla\ne il relativo guadagno non scende sotto il 25 percento del guadagno\nfondamentale della base.\n"
+      },
+      {
+        "id": "correction_verified",
+        "description": "La modifica viene eseguita con analisi transitoria ngspice conclusa\ncon successo e la THD viene calcolata sul tratto stabile del segnale.\n"
+      },
+      {
+        "id": "conclusion_calibrated",
+        "description": "La conclusione identifica il sovrapilotaggio nella simulazione adottata\ne segnala che ampiezza e frequenza del transitorio derivano da\nassunzioni del values.yaml.\n"
+      }
+    ],
+    "acceptable_solutions": [
+      {
+        "id": "reduce_input_to_20mv",
+        "description": "Ridurre la sorgente sinusoidale da 1 V a 20 mV di picco, mantenendo\nla frequenza a 100 Hz.\n",
+        "verified_reference_values": "THD di N005 da 83.02 a 9.79 percento, guadagno fondamentale circa\n76.98 e componente fondamentale d'uscita circa 3.081 Vpp.\n"
+      },
+      {
+        "id": "equivalent_input_attenuation",
+        "description": "Applicare un'attenuazione equivalente all'ingresso che porti il\nsegnale effettivo vicino a 20 mV di picco e verificare THD non superiore\nal 10 percento con uscita utile preservata.\n"
+      },
+      {
+        "id": "reduce_input_to_100mv",
+        "acceptance": "partial_only",
+        "description": "A 100 mV di picco la THD scende a circa 35.01 percento: conferma\nl'ipotesi di sovrapilotaggio ma non produce ancora un segnale pulito.\n"
+      },
+      {
+        "id": "reduce_input_to_50mv",
+        "acceptance": "partial_only",
+        "description": "A 50 mV di picco la THD scende a circa 22.38 percento con uscita\npreservata: è un miglioramento importante ma resta sopra la soglia\noperativa del 10 percento.\n"
+      }
+    ],
+    "unsupported_conclusions": [
+      "Dichiarare che il problema è risolto usando soltanto ampiezze picco-picco\nsenza misurare la distorsione o controllare la forma d'onda.\n",
+      "Considerare 100 mV o 50 mV una correzione completa: entrambe le prove\nlasciano la THD sopra il 10 percento.\n",
+      "Attribuire la distorsione principalmente a un bias errato sulla sola\nbase della topologia: portare la resistenza inferiore del partitore da\n47 kohm a 100 kohm lascia una THD di circa 75.27 percento.\n",
+      "Affermare che il transistor o i condensatori siano guasti senza evidenze\nspecifiche della simulazione.\n",
+      "Presentare 1 V di picco e 100 Hz come valori sicuramente ricavati\ndall'immagine: sono assunzioni esplicite introdotte per il transitorio.\n",
+      "Generalizzare la soglia THD del 10 percento come limite universale di\nqualità audio: è la soglia operativa scelta per questo esperimento.\n"
+    ]
+  },
+  "rubric": {
+    "score_scale": {
+      "0": "errato o assente",
+      "1": "utile ma incompleto o con limiti rilevanti",
+      "2": "corretto e adeguatamente verificato"
+    },
+    "criteria": [
+      "diagnostic_correctness",
+      "test_quality",
+      "evidence_interpretation",
+      "goal_achievement",
+      "conclusion_quality"
+    ]
+  },
+  "run": {
+    "initial_request": "Il circuito amplifica, ma l’uscita mi sembra troppo distorta o poco pulita. Quale potrebbe essere il problema?",
+    "technical_status": "completed",
+    "base_spice": {
+      "status": "success",
+      "exit_code": 0,
+      "message": "ngspice completed successfully.",
+      "analyses": [
+        "op",
+        "tran"
+      ]
+    },
+    "execution_counts": {
+      "scenarios_proposed": 2,
+      "scenarios_executed": 2,
+      "successful_spice_runs": 2,
+      "failed_spice_runs": 0
+    },
+    "scenarios": [
+      {
+        "scenario_id": "scenario_1",
+        "title": "Riduzione del livello di ingresso per verificare sovrapilotaggio e clipping asimmetrico",
+        "hypothesis": "Se l'uscita e distorta perche il transistor conduce solo durante una porzione del semiperiodo, ridurre l'ampiezza della sorgente sinusoidale dovrebbe abbassare la THD mantenendo un guadagno non nullo. Questo testa direttamente l'ipotesi di overdrive senza inventare topologie.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vsignal_source23_1",
+            "value": "SIN(0 0.05 100)"
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "v(N006)",
+          "v(N005)",
+          "v(N004)",
+          "v(N002)"
+        ],
+        "expect": {
+          "v(N006)": "magnitude_decreased",
+          "v(N005)": "changed",
+          "v(N004)": "changed",
+          "v(N002)": "changed"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N006)",
+              "metric": "v(n006).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 1.999999632,
+              "scenario_value": 0.0999845248,
+              "delta": -1.9000151072,
+              "change": "changed",
+              "expectation": "magnitude_decreased",
+              "base_details": {
+                "min": -0.999999816,
+                "max": 0.999999816,
+                "mean": 0.00203509394659454,
+                "vpp": 1.999999632,
+                "final": -1.2246468e-15,
+                "abs_peak": 0.999999816
+              },
+              "scenario_details": {
+                "min": -0.0499922624,
+                "max": 0.0499922624,
+                "mean": 5.256541397637675e-06,
+                "vpp": 0.0999845248,
+                "final": -6.123234e-17,
+                "abs_peak": 0.0499922624
+              }
+            },
+            {
+              "quantity": "v(N005)",
+              "metric": "v(n005).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 7.47417467,
+              "scenario_value": 6.27377027,
+              "delta": -1.2004044,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": -4.2926905,
+                "max": 3.18148417,
+                "mean": 1.09695133535731,
+                "vpp": 7.47417467,
+                "final": 2.76984986,
+                "abs_peak": 4.2926905
+              },
+              "scenario_details": {
+                "min": -3.62991237,
+                "max": 2.6438579,
+                "mean": 0.08632875838866141,
+                "vpp": 6.27377027,
+                "final": -1.62021803,
+                "abs_peak": 3.62991237
+              }
+            },
+            {
+              "quantity": "v(N004)",
+              "metric": "v(n004).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 7.170986879999999,
+              "scenario_value": 6.24859061,
+              "delta": -0.9223962699999992,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": 2.94564482,
+                "max": 10.1166317,
+                "mean": 8.084793870409356,
+                "vpp": 7.170986879999999,
+                "final": 10.1129477,
+                "abs_peak": 10.1166317
+              },
+              "scenario_details": {
+                "min": 3.13994706,
+                "max": 9.38853767,
+                "mean": 6.834962903602362,
+                "vpp": 6.24859061,
+                "final": 5.18846419,
+                "abs_peak": 9.38853767
+              }
+            },
+            {
+              "quantity": "v(N002)",
+              "metric": "v(n002).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 1.8158849900000003,
+              "scenario_value": 0.08137382999999998,
+              "delta": -1.7345111600000003,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": 1.918094,
+                "max": 3.73397899,
+                "mean": 2.927536640038986,
+                "vpp": 1.8158849900000003,
+                "final": 3.00611739,
+                "abs_peak": 3.73397899
+              },
+              "scenario_details": {
+                "min": 3.61538197,
+                "max": 3.6967558,
+                "mean": 3.6576855571850397,
+                "vpp": 0.08137382999999998,
+                "final": 3.66479431,
+                "abs_peak": 3.6967558
+              }
+            }
+          ],
+          "comparison_evidence": {
+            "gain_comparison": {
+              "input": "v(N006)",
+              "output": "v(N005)",
+              "base_gain": 3.7370880226241963,
+              "scenario_gain": 62.74741298765466,
+              "min_ratio": 0.05,
+              "available": true,
+              "sufficient": true,
+              "relative_change": 15.790456261073885
+            },
+            "quality_comparison": {
+              "available": true,
+              "metric": "thd",
+              "base": {
+                "available": true,
+                "metric": "thd",
+                "frequency_hz": 100.0,
+                "analyzed_cycles": 3,
+                "window_start": 0.0200181475,
+                "window_end": 0.05,
+                "input": {
+                  "dc_mean": 4.994390067293574e-06,
+                  "fundamental_peak": 1.0002774993603396,
+                  "fundamental_vpp": 2.000554998720679,
+                  "harmonic_peaks": [
+                    1.0002774993603396,
+                    8.237510140161679e-06,
+                    7.6034517305842056e-06,
+                    6.0887678683927895e-06,
+                    6.360233046561793e-06
+                  ],
+                  "thd": 1.425068364010653e-05
+                },
+                "output": {
+                  "dc_mean": 1.2026885702427657,
+                  "fundamental_peak": 3.05792424682283,
+                  "fundamental_vpp": 6.11584849364566,
+                  "harmonic_peaks": [
+                    3.05792424682283,
+                    2.213793843853459,
+                    1.1201275875336207,
+                    0.11791984534269317,
+                    0.5250248367940256
+                  ],
+                  "thd": 0.8302119023357514
+                },
+                "fundamental_gain": 3.057075910213236
+              },
+              "scenario": {
+                "available": true,
+                "metric": "thd",
+                "frequency_hz": 100.0,
+                "analyzed_cycles": 3,
+                "window_start": 0.020028,
+                "window_end": 0.05,
+                "input": {
+                  "dc_mean": 1.6101740326666836e-07,
+                  "fundamental_peak": 0.05003024876722763,
+                  "fundamental_vpp": 0.10006049753445526,
+                  "harmonic_peaks": [
+                    0.05003024876722763,
+                    3.2023274864628473e-07,
+                    3.2048019805400025e-07,
+                    3.2021401370297136e-07,
+                    3.1538427404044535e-07
+                  ],
+                  "thd": 1.2755681194254206e-05
+                },
+                "output": {
+                  "dc_mean": 0.03624960185287582,
+                  "fundamental_peak": 3.2605237604429695,
+                  "fundamental_vpp": 6.521047520885939,
+                  "harmonic_peaks": [
+                    3.2605237604429695,
+                    0.7102749716582357,
+                    0.09743474352048752,
+                    0.11020159475946834,
+                    0.07906657567183233
+                  ],
+                  "thd": 0.22378114322681902
+                },
+                "fundamental_gain": 65.17104833144023
+              },
+              "base_thd": 0.8302119023357514,
+              "scenario_thd": 0.22378114322681902,
+              "relative_improvement": 0.730452981224162,
+              "base_fundamental_gain": 3.057075910213236,
+              "scenario_fundamental_gain": 65.17104833144023,
+              "gain_retention": 21.31809946678571,
+              "improved": true,
+              "acceptable": false,
+              "output_preserved": true,
+              "resolved": false,
+              "thresholds": {
+                "minimum_relative_improvement": 0.2,
+                "maximum_acceptable_thd": 0.1,
+                "minimum_gain_retention": 0.25
+              }
+            }
+          },
+          "led_profiles": {}
+        }
+      },
+      {
+        "scenario_id": "scenario_2",
+        "title": "Verifica diagnostica del bias di base aumentando la resistenza inferiore del partitore",
+        "hypothesis": "Se la distorsione deriva soprattutto da polarizzazione troppo bassa della base, aumentare il rapporto del partitore alzando la resistenza verso massa dovrebbe spostare il punto di lavoro del transistor in conduzione piu lineare e ridurre la THD all'uscita, pur con lo stesso ingresso da 1 V di picco. Questo confermerebbe che la causa tecnica principale e il bias errato, non un problema di collegamento.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "resistor22.3",
+            "value": "100k"
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "v(N006)",
+          "v(N005)",
+          "v(N002)",
+          "v(N003)",
+          "v(N004)"
+        ],
+        "expect": {
+          "v(N006)": "changed",
+          "v(N005)": "changed",
+          "v(N002)": "changed",
+          "v(N003)": "changed",
+          "v(N004)": "changed"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N006)",
+              "metric": "v(n006).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 1.999999632,
+              "scenario_value": 1.999936293,
+              "delta": -6.33389999999956e-05,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": -0.999999816,
+                "max": 0.999999816,
+                "mean": 0.00203509394659454,
+                "vpp": 1.999999632,
+                "final": -1.2246468e-15,
+                "abs_peak": 0.999999816
+              },
+              "scenario_details": {
+                "min": -0.999955906,
+                "max": 0.999980387,
+                "mean": 0.003656728452600781,
+                "vpp": 1.999936293,
+                "final": -1.2246468e-15,
+                "abs_peak": 0.999980387
+              }
+            },
+            {
+              "quantity": "v(N005)",
+              "metric": "v(n005).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 7.47417467,
+              "scenario_value": 5.9385492,
+              "delta": -1.5356254700000003,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": -4.2926905,
+                "max": 3.18148417,
+                "mean": 1.09695133535731,
+                "vpp": 7.47417467,
+                "final": 2.76984986,
+                "abs_peak": 4.2926905
+              },
+              "scenario_details": {
+                "min": -1.46761883,
+                "max": 4.47093037,
+                "mean": 2.647768095301706,
+                "vpp": 5.9385492,
+                "final": 3.6823232,
+                "abs_peak": 4.47093037
+              }
+            },
+            {
+              "quantity": "v(N002)",
+              "metric": "v(n002).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 1.8158849900000003,
+              "scenario_value": 1.9553076699999998,
+              "delta": 0.13942267999999958,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": 1.918094,
+                "max": 3.73397899,
+                "mean": 2.927536640038986,
+                "vpp": 1.8158849900000003,
+                "final": 3.00611739,
+                "abs_peak": 3.73397899
+              },
+              "scenario_details": {
+                "min": 3.12810506,
+                "max": 5.08341273,
+                "mean": 4.211032127084149,
+                "vpp": 1.9553076699999998,
+                "final": 4.23234105,
+                "abs_peak": 5.08341273
+              }
+            },
+            {
+              "quantity": "v(N003)",
+              "metric": "v(n003).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.17341612999999967,
+              "scenario_value": 0.35207047000000014,
+              "delta": 0.17865434000000047,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": 2.88909114,
+                "max": 3.06250727,
+                "mean": 2.9782764049317736,
+                "vpp": 0.17341612999999967,
+                "final": 2.88909114,
+                "abs_peak": 3.06250727
+              },
+              "scenario_details": {
+                "min": 4.05047946,
+                "max": 4.40254993,
+                "mean": 4.235108606066537,
+                "vpp": 0.35207047000000014,
+                "final": 4.05047946,
+                "abs_peak": 4.40254993
+              }
+            },
+            {
+              "quantity": "v(N004)",
+              "metric": "v(n004).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 7.170986879999999,
+              "scenario_value": 5.366489380000001,
+              "delta": -1.8044974999999983,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": 2.94564482,
+                "max": 10.1166317,
+                "mean": 8.084793870409356,
+                "vpp": 7.170986879999999,
+                "final": 10.1129477,
+                "abs_peak": 10.1166317
+              },
+              "scenario_details": {
+                "min": 4.12990473,
+                "max": 9.49639411,
+                "mean": 7.769251559217221,
+                "vpp": 5.366489380000001,
+                "final": 9.49639411,
+                "abs_peak": 9.49639411
+              }
+            }
+          ],
+          "comparison_evidence": {
+            "gain_comparison": {
+              "input": "v(N006)",
+              "output": "v(N005)",
+              "base_gain": 3.7370880226241963,
+              "scenario_gain": 2.969369184801328,
+              "min_ratio": 0.05,
+              "available": true,
+              "sufficient": true,
+              "relative_change": 0.20543236690576355
+            },
+            "quality_comparison": {
+              "available": true,
+              "metric": "thd",
+              "base": {
+                "available": true,
+                "metric": "thd",
+                "frequency_hz": 100.0,
+                "analyzed_cycles": 3,
+                "window_start": 0.0200181475,
+                "window_end": 0.05,
+                "input": {
+                  "dc_mean": 4.994390067293574e-06,
+                  "fundamental_peak": 1.0002774993603396,
+                  "fundamental_vpp": 2.000554998720679,
+                  "harmonic_peaks": [
+                    1.0002774993603396,
+                    8.237510140161679e-06,
+                    7.6034517305842056e-06,
+                    6.0887678683927895e-06,
+                    6.360233046561793e-06
+                  ],
+                  "thd": 1.425068364010653e-05
+                },
+                "output": {
+                  "dc_mean": 1.2026885702427657,
+                  "fundamental_peak": 3.05792424682283,
+                  "fundamental_vpp": 6.11584849364566,
+                  "harmonic_peaks": [
+                    3.05792424682283,
+                    2.213793843853459,
+                    1.1201275875336207,
+                    0.11791984534269317,
+                    0.5250248367940256
+                  ],
+                  "thd": 0.8302119023357514
+                },
+                "fundamental_gain": 3.057075910213236
+              },
+              "scenario": {
+                "available": true,
+                "metric": "thd",
+                "frequency_hz": 100.0,
+                "analyzed_cycles": 3,
+                "window_start": 0.0200847405,
+                "window_end": 0.05,
+                "input": {
+                  "dc_mean": -3.841601299092199e-05,
+                  "fundamental_peak": 1.0025039620689173,
+                  "fundamental_vpp": 2.0050079241378347,
+                  "harmonic_peaks": [
+                    1.0025039620689173,
+                    8.206393544864009e-05,
+                    7.90982984802157e-05,
+                    8.501120665672018e-05,
+                    8.375248699388861e-05
+                  ],
+                  "thd": 0.00016461028921270292
+                },
+                "output": {
+                  "dc_mean": 2.5487546549549087,
+                  "fundamental_peak": 2.387129757552238,
+                  "fundamental_vpp": 4.774259515104476,
+                  "harmonic_peaks": [
+                    2.387129757552238,
+                    1.5871795627658711,
+                    0.6153546047164261,
+                    0.1736129767449636,
+                    0.5485674486171561
+                  ],
+                  "thd": 0.7527471440636416
+                },
+                "fundamental_gain": 2.381167404691149
+              },
+              "base_thd": 0.8302119023357514,
+              "scenario_thd": 0.7527471440636416,
+              "relative_improvement": 0.09330721235646863,
+              "base_fundamental_gain": 3.057075910213236,
+              "scenario_fundamental_gain": 2.381167404691149,
+              "gain_retention": 0.7789035910871637,
+              "improved": false,
+              "acceptable": false,
+              "output_preserved": true,
+              "resolved": false,
+              "thresholds": {
+                "minimum_relative_improvement": 0.2,
+                "maximum_acceptable_thd": 0.1,
+                "minimum_gain_retention": 0.25
+              }
+            }
+          },
+          "led_profiles": {}
+        }
+      }
+    ],
+    "final": {
+      "answer": "La causa piu probabile della tua uscita sporca e che lo stadio a transistor sta lavorando fuori zona lineare: il segnale di ingresso e troppo grande per il bias disponibile, quindi il transistor conduce in modo molto asimmetrico e genera forte distorsione.",
+      "cause": "Dagli artefatti il transistor NPN risulta quasi interdetto nel punto di lavoro (VBE circa 0.117 V, gm quasi nullo), mentre con ingresso sinusoidale da 1 V di picco il circuito amplifica ma con THD molto alta. Quando l'ingresso viene ridotto a 50 mV di picco, la THD cala nettamente pur mantenendo guadagno, confermando che il problema principale e overdrive su uno stadio mal polarizzato o con headroom lineare insufficiente.",
+      "verified_correction": ""
+    }
+  }
+}

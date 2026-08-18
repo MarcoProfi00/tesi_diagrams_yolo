@@ -1,0 +1,38 @@
+{
+  "title": "Riduzione del livello di ingresso per verificare sovrapilotaggio e clipping asimmetrico",
+  "hypothesis": "Se l'uscita e distorta perche il transistor conduce solo durante una porzione del semiperiodo, ridurre l'ampiezza della sorgente sinusoidale dovrebbe abbassare la THD mantenendo un guadagno non nullo. Questo testa direttamente l'ipotesi di overdrive senza inventare topologie.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "quality": "thd",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vsignal_source23_1",
+      "value": "SIN(0 0.05 100)"
+    }
+  ],
+  "compare": [
+    "v(N006)",
+    "v(N005)",
+    "v(N004)",
+    "v(N002)"
+  ],
+  "measure": {
+    "v(N006)": "tran_vpp",
+    "v(N005)": "tran_vpp",
+    "v(N004)": "tran_vpp",
+    "v(N002)": "tran_vpp"
+  },
+  "gain": {
+    "input": "v(N006)",
+    "output": "v(N005)",
+    "min_ratio": 0.05
+  },
+  "expect": {
+    "v(N006)": "magnitude_decreased",
+    "v(N005)": "changed",
+    "v(N004)": "changed",
+    "v(N002)": "changed"
+  },
+  "scenario_id": "agent_scenario_1"
+}

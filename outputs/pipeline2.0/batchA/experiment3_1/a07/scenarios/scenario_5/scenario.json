@@ -1,0 +1,26 @@
+{
+  "scenario_id": "scenario_5",
+  "title": "Alimentare insieme PWR e ingresso VAC",
+  "hypothesis": "Nel netlist base i rami VAC e PWR sono separati; per ottenere simultaneamente misura su VAC e attivazione del LED occorre alimentare sia N001 sia N002 nella stessa run.",
+  "actions": [
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N001",
+      "negative": "0",
+      "value": "5V"
+    },
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N002",
+      "negative": "0",
+      "value": "5V"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N001)",
+    "v(N002)",
+    "v(N004)"
+  ]
+}

@@ -1,0 +1,47 @@
+* pipeline2.0 netlist
+* circuit: b03
+
+VVREF_B N001 0 DC 0
+Vbattery2_1 N002 N001 DC 12
+Ddiode7_1 N003 N004 D_1N4148_TYP
+Ddiode7_2 N005 N006 BZX79C10_TYP
+Ddiode7_3 N002 N007 D_1N4148_TYP
+Ddiode7_4 N007 N006 D_1N4148_TYP
+Ddiode7_5 N001 N008 BZX79C12_TYP
+Ddiode7_6 N009 N010 D_1N4148_TYP
+Ddiode7_7 N010 N008 D_1N4148_TYP
+Dled12_1 N002 N011 LED_RED_TYP
+Dled12_2 N002 N004 LED_YELLOW_TYP
+Dled12_3 N012 N001 LED_GREEN_TYP
+Qnpn_transistor18_1 N014 N013 N001 BC547_TYP
+Qnpn_transistor18_2 N016 N015 N001 BC547_TYP
+Qnpn_transistor18_3 N003 N017 N002 BC557_TYP
+Rresistor22_1 N011 N014 1k
+Rresistor22_2 N013 N016 100k
+Rresistor22_3 N004 N016 1k
+Rresistor22_4 N015 N005 3.3k
+Rresistor22_5 N005 N001 3.3k
+Rresistor22_6 N003 N012 1k
+Rresistor22_7 N017 N009 3.3k
+Rresistor22_8 N002 N009 3.3k
+
+.model BC547_TYP NPN(BF=250 VAF=50 IKF=100m)
+.model BC557_TYP PNP(BF=250 VAF=50 IKF=100m)
+.model BZX79C10_TYP D(BV=10 IBV=5m NBV=1.7)
+.model BZX79C12_TYP D(BV=12 IBV=5m NBV=1.9)
+.model D_1N4148_TYP D(IS=6n N=1.9 RS=0.65 BV=100 IBV=100u TT=4n CJO=4p)
+.model LED_GREEN_TYP D(IS=1e-18 N=2 RS=10)
+.model LED_RED_TYP D(IS=1e-15 N=2 RS=10)
+.model LED_YELLOW_TYP D(IS=1e-17 N=2 RS=10)
+
+.op
+.save all
+.tran 1ms 3s
+
+.control
+set wr_singlescale
+set wr_vecnames
+run
+wrdata 08_tran.csv time v(N001) v(N002) v(N003) v(N004) v(N005) v(N006) v(N007) v(N008) v(N009) v(N010) v(N011) v(N012) v(N013) v(N014) v(N015) v(N016) v(N017) @ddiode7_1[id] @ddiode7_2[id] @ddiode7_3[id] @ddiode7_4[id] @ddiode7_5[id] @ddiode7_6[id] @ddiode7_7[id] @dled12_1[id] @dled12_2[id] @dled12_3[id]
+.endc
+.end

@@ -1,0 +1,37 @@
+{
+  "title": "Verifica simultanea dei due ingressi separati: DC per LED su N002 e AC per VAC su N001",
+  "hypothesis": "I due sintomi dipendono da due reti indipendenti del connettore: il LED PWR richiede alimentazione sul pin N002, mentre il voltmetro VAC misura solo il nodo N001 rispetto a massa. Se si forniscono separatamente 5 V DC a N002 e una SIN a N001, il LED deve condurre e il VAC deve mostrare una tensione alternata non nulla nello stesso scenario.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N002",
+      "negative": "0",
+      "value": "5"
+    },
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N001",
+      "negative": "0",
+      "value": "SIN(0 1 50)"
+    }
+  ],
+  "compare": [
+    "v(N001)",
+    "v(N002)",
+    "v(N004)",
+    "@dled12_1[id]"
+  ],
+  "measure": {
+    "v(N001)": "tran_vpp",
+    "v(N002)": "tran_vpp",
+    "v(N004)": "tran_vpp",
+    "@dled12_1[id]": "tran_abs_peak"
+  },
+  "expect": {
+    "v(N001)": "nonzero",
+    "@dled12_1[id]": "activated"
+  },
+  "scenario_id": "agent_scenario_2"
+}

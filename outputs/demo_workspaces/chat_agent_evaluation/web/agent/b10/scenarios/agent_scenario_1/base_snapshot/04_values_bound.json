@@ -1,0 +1,264 @@
+{
+  "circuit_id": "b10",
+  "source_format": "pipeline2.0_values_bound",
+  "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\data\\batchPipeline2.0\\batchChatAgentEvaluation\\values\\b10_values.yaml",
+  "supplies": {
+    "VTEST_A": {
+      "terminal": "terminal26.1_t1",
+      "type": "dc",
+      "value": 1,
+      "unit": "V",
+      "reference": 0,
+      "source": "manual_assumption_symbolic_switch_test_bench",
+      "label_text": "A di test: 1 V",
+      "node": "N001"
+    },
+    "VTEST_C": {
+      "terminal": "terminal26.3_t1",
+      "type": "dc",
+      "value": 0,
+      "unit": "V",
+      "reference": 0,
+      "source": "manual_assumption_symbolic_switch_test_bench",
+      "label_text": "C di test: 0 V",
+      "node": "N003"
+    }
+  },
+  "components": {
+    "current_source6.1": {
+      "class_name": "Current_Source",
+      "terminal_nodes": {
+        "current_from": "N001",
+        "current_to": "0"
+      },
+      "value_data": {
+        "type": "dc",
+        "value": 0,
+        "unit": "A",
+        "source": "manual_assumption_symbolic_switch_test_bench",
+        "label_text": "I_A assunto: 0 A"
+      },
+      "status": "bound"
+    },
+    "current_source6.2": {
+      "class_name": "Current_Source",
+      "terminal_nodes": {
+        "current_from": "N001",
+        "current_to": "N002"
+      },
+      "value_data": {
+        "type": "dc",
+        "value": 1e-12,
+        "unit": "A",
+        "source": "manual_assumption_symbolic_switch_model",
+        "label_text": "I_OFF assunto: 1 pA"
+      },
+      "status": "bound"
+    },
+    "current_source6.3": {
+      "class_name": "Current_Source",
+      "terminal_nodes": {
+        "current_from": "N002",
+        "current_to": "0"
+      },
+      "value_data": {
+        "type": "dc",
+        "value": 1e-09,
+        "unit": "A",
+        "source": "manual_assumption_symbolic_switch_test_bench",
+        "label_text": "I_B assunto: 1 nA"
+      },
+      "status": "bound"
+    },
+    "gnd9.1": {
+      "class_name": "GND",
+      "terminal_nodes": {
+        "t1": "0"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "polarized_capacitor20.1": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "positive": "N001",
+        "negative": "0"
+      },
+      "value_data": {
+        "value": 5,
+        "unit": "pf",
+        "source": "manual_assumption_symbolic_switch_model",
+        "label_text": "capacita parassita assunta: 5 pF"
+      },
+      "status": "bound"
+    },
+    "polarized_capacitor20.2": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "positive": "N001",
+        "negative": "N003"
+      },
+      "value_data": {
+        "value": 5,
+        "unit": "pf",
+        "source": "manual_assumption_symbolic_switch_model",
+        "label_text": "capacita parassita assunta: 5 pF"
+      },
+      "status": "bound"
+    },
+    "polarized_capacitor20.3": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "positive": "N001",
+        "negative": "N002"
+      },
+      "value_data": {
+        "value": 5,
+        "unit": "pf",
+        "source": "manual_assumption_symbolic_switch_model",
+        "label_text": "capacita parassita assunta: 5 pF"
+      },
+      "status": "bound"
+    },
+    "polarized_capacitor20.4": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "positive": "N003",
+        "negative": "N002"
+      },
+      "value_data": {
+        "value": 5,
+        "unit": "pf",
+        "source": "manual_assumption_symbolic_switch_model",
+        "label_text": "capacita parassita assunta: 5 pF"
+      },
+      "status": "bound"
+    },
+    "polarized_capacitor20.5": {
+      "class_name": "Polarized_Capacitor",
+      "terminal_nodes": {
+        "positive": "N002",
+        "negative": "0"
+      },
+      "value_data": {
+        "value": 5,
+        "unit": "pf",
+        "source": "manual_assumption_symbolic_switch_model",
+        "label_text": "capacita parassita assunta: 5 pF"
+      },
+      "status": "bound"
+    },
+    "resistor22.1": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N001",
+        "t2": "N004"
+      },
+      "value_data": {
+        "value": 10,
+        "unit": "ohm",
+        "source": "manual_assumption_symbolic_switch_model",
+        "label_text": "r_ON assunto: 10 ohm"
+      },
+      "status": "bound"
+    },
+    "resistor22.2": {
+      "class_name": "Resistor",
+      "terminal_nodes": {
+        "t1": "N001",
+        "t2": "N002"
+      },
+      "value_data": {
+        "value": 1000,
+        "unit": "Mohm",
+        "source": "manual_assumption_symbolic_switch_model",
+        "label_text": "r_OFF assunto: 1 Gohm"
+      },
+      "status": "bound"
+    },
+    "switch25.1": {
+      "class_name": "Switch",
+      "terminal_nodes": {
+        "t1": "N004",
+        "t2": "N005"
+      },
+      "value_data": {
+        "state": "open",
+        "state_source": "graph_json_state",
+        "state_confidence": 0.95,
+        "source": "graph_json_state_validated_from_image",
+        "label_text": "switch aperto"
+      },
+      "status": "bound"
+    },
+    "terminal26.1": {
+      "class_name": "Terminal",
+      "terminal_nodes": {
+        "t1": "N001"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "terminal26.2": {
+      "class_name": "Terminal",
+      "terminal_nodes": {
+        "t1": "0"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "terminal26.3": {
+      "class_name": "Terminal",
+      "terminal_nodes": {
+        "t1": "N003"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "terminal26.4": {
+      "class_name": "Terminal",
+      "terminal_nodes": {
+        "t1": "N002"
+      },
+      "value_data": null,
+      "status": "not_required"
+    },
+    "voltage_source31.1": {
+      "class_name": "Voltage_Source",
+      "terminal_nodes": {
+        "positive": "N005",
+        "negative": "N002"
+      },
+      "value_data": {
+        "type": "dc",
+        "value": 0.001,
+        "unit": "V",
+        "source": "manual_assumption_symbolic_switch_model",
+        "label_text": "V_OS assunto: 1 mV"
+      },
+      "status": "bound"
+    }
+  },
+  "nodes": {},
+  "spice_topology_overlay": [],
+  "simulation": {
+    "analyses": [
+      "op",
+      "tran"
+    ],
+    "tran": {
+      "step": "1us",
+      "stop": "100us"
+    }
+  },
+  "missing": [],
+  "stats": {
+    "components_total": 17,
+    "bound_components": 12,
+    "missing_components": 0,
+    "not_required_components": 5,
+    "unsupported_components": 0,
+    "supplies_count": 2,
+    "manual_nodes_count": 0
+  }
+}

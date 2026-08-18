@@ -1,0 +1,321 @@
+{
+  "packet_schema_version": 1,
+  "packet_id": "a02_run_2",
+  "reference": {
+    "schema_version": 1,
+    "circuit_id": "a02",
+    "circuit_description": "Circuito in continua con una batteria da 5 V, un connettore a quattro\npin, una resistenza da 10 kohm, un condensatore da 100 nF e uno switch\nSENSE. Il negativo della batteria è sul nodo N001 insieme alla resistenza\ne allo switch; il positivo è sul nodo N002. L'altra estremità della\nresistenza termina su N004, separato da N002. Con lo switch aperto e\nN004 non collegato al positivo manca un percorso DC chiuso.\n",
+    "task_type": "diagnosi e correzione di un percorso DC aperto",
+    "user_symptom": "La batteria è presente ma non eroga corrente e il circuito non reagisce. Individua la causa ed esegui gli scenari necessari per verificare una correzione funzionante.\n",
+    "circuit_inventory": {
+      "component_count": 8,
+      "node_count": 5,
+      "component_types": [
+        "Battery",
+        "Capacitor",
+        "Connector",
+        "GND",
+        "Resistor",
+        "Switch"
+      ],
+      "analysis_types": [
+        "op"
+      ]
+    },
+    "required_evidence": [
+      {
+        "id": "base_source_present",
+        "description": "Nella simulazione base la batteria mantiene 5 V tra N002 e N001:\nN002 è circa 5 V e N001 circa 0 V nel punto operativo prodotto da\nngspice.\n"
+      },
+      {
+        "id": "base_current_absent",
+        "description": "N004 è a 0 V e sia i(Vbattery2_1) sia i(Rresistor22_1) sono 0 A;\nquindi la sorgente è presente ma non esiste un percorso di carico\nchiuso.\n"
+      },
+      {
+        "id": "topology_cause",
+        "description": "La resistenza collega N001 a N004, mentre il positivo della batteria\nè N002. N004 non è collegato a N002. Inoltre lo switch aperto separa\nN001 dalla massa.\n"
+      },
+      {
+        "id": "composed_correction_effect",
+        "description": "La correzione completa deve verificare nello stesso scenario sia il\nriferimento a massa di N001 sia la continuità tra N002 e N004, quindi\nmisurare una corrente non nulla nella batteria e nella resistenza.\n"
+      }
+    ],
+    "success_conditions": [
+      {
+        "id": "grounded_return",
+        "description": "N001 viene riferito a massa, per esempio chiudendo switch25.1, e\nrimane circa a 0 V.\n"
+      },
+      {
+        "id": "positive_reaches_load",
+        "description": "N004 viene collegato al positivo N002 e raggiunge circa 5 V.\n"
+      },
+      {
+        "id": "dc_current_activated",
+        "description": "i(Vbattery2_1) e i(Rresistor22_1) passano da 0 A a un modulo di circa\n0.5 mA, coerente con 5 V applicati alla resistenza da 10 kohm.\n"
+      },
+      {
+        "id": "correction_verified",
+        "description": "Le due azioni sono applicate nella stessa run e ngspice termina con\nsuccesso; una sola delle due azioni non costituisce la correzione\ncompleta di riferimento.\n"
+      },
+      {
+        "id": "conclusion_calibrated",
+        "description": "La conclusione identifica l'assenza del percorso DC completo e non\nattribuisce al condensatore un comportamento temporale non verificato.\n"
+      }
+    ],
+    "acceptable_solutions": [
+      {
+        "id": "close_switch_and_bridge_load",
+        "description": "Chiudere switch25.1 tra N001 e massa e collegare N004 al positivo\nN002 nello stesso scenario.\n",
+        "verified_reference_values": "N001 è circa 0 V, N002 = 5 V, N004 = 4.999999 V,\ni(Vbattery2_1) = -0.5 mA e i(Rresistor22_1) = -0.5 mA.\n"
+      },
+      {
+        "id": "equivalent_grounded_supply_path",
+        "description": "Applicare una modifica elettricamente equivalente che riferisca N001\na massa e porti i 5 V di N002 a N004, verificando le medesime tensioni\ne correnti nella stessa simulazione.\n"
+      },
+      {
+        "id": "bridge_only_as_partial_diagnosis",
+        "acceptance": "partial_only",
+        "description": "Collegare soltanto N002 a N004 dimostra che il ramo può assorbire\ncirca 0.5 mA, ma lascia la rete flottante rispetto alla massa. È una\nconferma diagnostica utile, non la correzione completa di riferimento.\n"
+      }
+    ],
+    "unsupported_conclusions": [
+      "Dichiarare che la sola chiusura dello switch risolve il problema:\nN004 resta scollegato dal positivo e le correnti rimangono nulle.\n",
+      "Considerare il solo collegamento N002-N004 una correzione completa senza\nsegnalare che il circuito rimane flottante rispetto alla massa.\n",
+      "Attribuire il problema a batteria, resistenza o condensatore guasti senza\nevidenze specifiche prodotte dalla simulazione.\n",
+      "Affermare un comportamento di carica, scarica o risposta temporale del\ncondensatore: il caso usa soltanto un'analisi del punto operativo .op.\n",
+      "Dichiarare successo sulla base delle sole tensioni; devono essere\nverificate anche le correnti della batteria e della resistenza.\n"
+    ]
+  },
+  "rubric": {
+    "score_scale": {
+      "0": "errato o assente",
+      "1": "utile ma incompleto o con limiti rilevanti",
+      "2": "corretto e adeguatamente verificato"
+    },
+    "criteria": [
+      "diagnostic_correctness",
+      "test_quality",
+      "evidence_interpretation",
+      "goal_achievement",
+      "conclusion_quality"
+    ]
+  },
+  "run": {
+    "initial_request": "La batteria è presente ma non eroga corrente e il circuito non reagisce. Individua la causa ed esegui gli scenari necessari per verificare una correzione funzionante.",
+    "technical_status": "completed",
+    "base_spice": {
+      "status": "success",
+      "exit_code": 0,
+      "message": "ngspice completed successfully.",
+      "analyses": [
+        "op"
+      ]
+    },
+    "execution_counts": {
+      "scenarios_proposed": 2,
+      "scenarios_executed": 2,
+      "successful_spice_runs": 2,
+      "failed_spice_runs": 0
+    },
+    "scenarios": [
+      {
+        "scenario_id": "scenario_1",
+        "title": "Chiudere lo switch SENSE per ripristinare il ritorno del negativo batteria",
+        "hypothesis": "La causa del mancato funzionamento è il polo negativo della batteria isolato da massa a causa di switch25.1 aperto; chiudendo lo switch N001 viene riferito a 0 V, la batteria alimenta N002 e compare corrente nel ramo resistivo.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "close_switch",
+            "target": "switch25.1"
+          }
+        ],
+        "analysis": "op",
+        "compare": [
+          "v(N001)",
+          "v(N002)",
+          "v(N004)",
+          "i(Vbattery2_1)",
+          "i(Rresistor22_1)"
+        ],
+        "expect": {
+          "v(N004)": "nonzero",
+          "i(Vbattery2_1)": "nonzero",
+          "i(Rresistor22_1)": "nonzero"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N001)",
+              "metric": "v(n001)",
+              "measurement": "op",
+              "base_value": 0.0,
+              "scenario_value": 0.0,
+              "delta": 0.0,
+              "change": "unchanged",
+              "expectation": null,
+              "base_details": {},
+              "scenario_details": {}
+            },
+            {
+              "quantity": "v(N002)",
+              "metric": "v(n002)",
+              "measurement": "op",
+              "base_value": 5.0,
+              "scenario_value": 5.0,
+              "delta": 0.0,
+              "change": "unchanged",
+              "expectation": null,
+              "base_details": {},
+              "scenario_details": {}
+            },
+            {
+              "quantity": "v(N004)",
+              "metric": "v(n004)",
+              "measurement": "op",
+              "base_value": 0.0,
+              "scenario_value": 0.0,
+              "delta": 0.0,
+              "change": "unchanged",
+              "expectation": "nonzero",
+              "base_details": {},
+              "scenario_details": {}
+            },
+            {
+              "quantity": "i(Vbattery2_1)",
+              "metric": "i(vbattery2_1)",
+              "measurement": "op",
+              "base_value": 0.0,
+              "scenario_value": 0.0,
+              "delta": 0.0,
+              "change": "unchanged",
+              "expectation": "nonzero",
+              "base_details": {},
+              "scenario_details": {}
+            },
+            {
+              "quantity": "i(Rresistor22_1)",
+              "metric": "i(rresistor22_1)",
+              "measurement": "op",
+              "base_value": 0.0,
+              "scenario_value": 0.0,
+              "delta": 0.0,
+              "change": "unchanged",
+              "expectation": "nonzero",
+              "base_details": {},
+              "scenario_details": {}
+            }
+          ],
+          "comparison_evidence": {},
+          "led_profiles": {}
+        }
+      },
+      {
+        "scenario_id": "scenario_2",
+        "title": "Collegare N004 a N002 per chiudere il ramo di carico della batteria",
+        "hypothesis": "Il connettore rappresenta reti distinte e il carico resistivo su N004 non e attualmente collegato al positivo batteria su N002; creando la continuita mancante tra questi due nodi il circuito si chiude come anello Vbattery2_1 -> Rresistor22_1 -> Vbattery2_1 e la batteria deve finalmente erogare corrente.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "connect_nodes",
+            "from": "N004",
+            "to": "N002"
+          },
+          {
+            "type": "close_switch",
+            "target": "switch25.1"
+          }
+        ],
+        "analysis": "op",
+        "compare": [
+          "v(N001)",
+          "v(N002)",
+          "v(N004)",
+          "i(Vbattery2_1)",
+          "i(Rresistor22_1)"
+        ],
+        "expect": {
+          "v(N004)": "changed",
+          "i(Vbattery2_1)": "nonzero",
+          "i(Rresistor22_1)": "nonzero"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N001)",
+              "metric": "v(n001)",
+              "measurement": "op",
+              "base_value": 0.0,
+              "scenario_value": -5.11591e-15,
+              "delta": -5.11591e-15,
+              "change": "unchanged",
+              "expectation": null,
+              "base_details": {},
+              "scenario_details": {}
+            },
+            {
+              "quantity": "v(N002)",
+              "metric": "v(n002)",
+              "measurement": "op",
+              "base_value": 5.0,
+              "scenario_value": 5.0,
+              "delta": 0.0,
+              "change": "unchanged",
+              "expectation": null,
+              "base_details": {},
+              "scenario_details": {}
+            },
+            {
+              "quantity": "v(N004)",
+              "metric": "v(n004)",
+              "measurement": "op",
+              "base_value": 0.0,
+              "scenario_value": 4.999999,
+              "delta": 4.999999,
+              "change": "activated",
+              "expectation": "changed",
+              "base_details": {},
+              "scenario_details": {}
+            },
+            {
+              "quantity": "i(Vbattery2_1)",
+              "metric": "i(vbattery2_1)",
+              "measurement": "op",
+              "base_value": 0.0,
+              "scenario_value": -0.0005,
+              "delta": -0.0005,
+              "change": "activated",
+              "expectation": "nonzero",
+              "base_details": {},
+              "scenario_details": {}
+            },
+            {
+              "quantity": "i(Rresistor22_1)",
+              "metric": "i(rresistor22_1)",
+              "measurement": "op",
+              "base_value": 0.0,
+              "scenario_value": -0.0005,
+              "delta": -0.0005,
+              "change": "activated",
+              "expectation": "nonzero",
+              "base_details": {},
+              "scenario_details": {}
+            }
+          ],
+          "comparison_evidence": {},
+          "led_profiles": {}
+        }
+      }
+    ],
+    "final": {
+      "answer": "La batteria non erogava corrente perche il circuito era topologicamente aperto: il ramo resistivo terminava su N004, separato dal positivo batteria N002, quindi non esisteva un anello chiuso di corrente. La correzione verificata consiste nel collegare N004 a N002; con questa continuita ripristinata il ramo assorbe corrente e il circuito reagisce.",
+      "cause": "Assenza di continuita elettrica tra il nodo del carico N004 e il positivo della batteria N002; il connettore aveva pin su reti distinte e il circuito risultava aperto in DC. La chiusura del solo switch SENSE non risolveva, quindi il guasto non era sul ritorno a massa ma sul lato positivo/carico.",
+      "verified_correction": "Collegare N004 a N002 per chiudere il ramo di carico della batteria; nello scenario verificato e stata anche chiusa switch25.1, ma la causa determinante era la mancanza di continuita tra N004 e N002, e dopo questa modifica SPICE ha confermato corrente non nulla in Vbattery2_1 e Rresistor22_1."
+    }
+  }
+}

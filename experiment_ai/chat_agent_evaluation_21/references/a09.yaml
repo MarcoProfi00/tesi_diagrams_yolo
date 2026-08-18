@@ -1,0 +1,137 @@
+schema_version: 1
+circuit_id: "a09"
+review_status: frozen
+circuit_description: |
+  Circuito alimentato da una batteria da 9 V attraverso un fusibile da
+  500 mA e un connettore J1 a cinque pin. Il pin 1 (N003) riceve il +9 V
+  protetto; il pin 3 (N004) comanda, tramite SW2, una lampada equivalente a
+  90 ohm; il pin 4 (N005) alimenta un LED rosso attraverso 330 ohm. Il pin 2
+  (N002) è collegato soltanto a C1=100 nF verso massa e il pin 5 è a massa.
+  I pin del connettore sono reti distinte e gli archi sui fili indicano
+  attraversamenti senza giunzione.
+task_type: "attivazione e verifica simultanea di due rami di carico"
+user_symptom: |
+  Voglio accendere contemporaneamente la lampada e il LED mantenendo il circuito stabile. Individua la causa ed esegui gli scenari necessari per verificare, nella stessa simulazione, che entrambi siano attivi.
+
+circuit_inventory:
+  component_count: 13
+  node_count: 8
+  component_types:
+    - "Battery"
+    - "Capacitor"
+    - "Connector"
+    - "Fuse"
+    - "GND"
+    - "Lamp"
+    - "LED"
+    - "Resistor"
+    - "Switch"
+  analysis_types:
+    - "op"
+
+required_evidence:
+  - id: connector_pins_independent
+    description: |
+      Il Graph JSON deve essere interpretato senza inventare continuità
+      interna a J1: N003, N002, N004 e N005 sono nodi distinti. In particolare
+      gli archi disegnati sui conduttori non rappresentano nodi elettrici.
+  - id: base_supply_reaches_only_pin1
+    description: |
+      Nel caso base batteria e fusibile portano N003 a 9 V, ma N004 e N005
+      non ricevono alimentazione; SW2 è inoltre aperto. La corrente della
+      lampada è 0 A e quella del ramo LED è trascurabile.
+  - id: both_loads_measured_same_run
+    description: |
+      La stessa simulazione corretta deve mostrare corrente non nulla sia
+      nella lampada sia nel ramo R3-LED, non soltanto tensione su un nodo.
+  - id: current_budget_checked
+    description: |
+      Nello scenario verificato la lampada assorbe circa 99.996 mA e il LED
+      circa 25.035 mA; la corrente totale fornita dalla batteria è circa
+      125.031 mA, inferiore alla targa di 500 mA del fusibile.
+  - id: simulation_limits_acknowledged
+    description: |
+      L'analisi disponibile è soltanto .op. Il fusibile è rappresentato come
+      una resistenza chiusa da 1 milliohm (1 mΩ) e non possiede un modello di apertura.
+      Inoltre ngspice segnala una matrice singolare sul nodo flottante N002 e
+      converge tramite procedure alternative. Questi limiti non annullano le
+      correnti dei due carichi, ma impediscono di dimostrare stabilità
+      transitoria, termica o reale protezione del fusibile.
+
+success_conditions:
+  - id: cause_identified
+    description: |
+      La conclusione identifica la mancata distribuzione del +9 V da N003 ai
+      pin 3 e 4, insieme allo switch aperto sul ramo lampada, senza attribuire
+      il problema a batteria, fusibile o carichi.
+  - id: combined_correction_executed
+    description: |
+      In un solo scenario N003 viene collegato a N004 e N005 e SW2 viene
+      chiuso; ngspice completa l'analisi.
+  - id: lamp_and_led_active
+    description: |
+      Nella stessa run la corrente della lampada è prossima a 100 mA e quella
+      del LED è prossima a 25 mA, con N005 vicino a 9 V e N007 vicino a 0.738 V.
+  - id: current_within_nominal_rating
+    description: |
+      La somma delle correnti è inferiore a 500 mA, senza trasformare questo
+      confronto nominale nella prova di un modello dinamico del fusibile.
+  - id: conclusion_calibrated
+    description: |
+      La conclusione limita il risultato all'attivazione DC simulata dei due
+      rami e non dichiara provata la stabilità transitoria o hardware.
+
+acceptable_solutions:
+  - id: feed_both_branches_and_close_switch
+    description: |
+      Collegare il nodo protetto N003 sia a N004 sia a N005 mediante
+      feed_nodes_from_source_node e chiudere switch25.1 nello stesso scenario.
+    verified_reference_values: |
+      ngspice completa la .op; N003=8.999875 V, N004=8.999775 V,
+      N005=8.999850 V, N006=8.999675 V e N007=0.738410 V. Corrente lampada
+      99.9964 mA, corrente in R3 e LED 25.0347 mA, corrente totale della
+      batteria 125.031 mA.
+  - id: feed_only_one_branch
+    acceptance: partial_only
+    description: |
+      Alimentare soltanto N004 o soltanto N005 attiva al massimo uno dei due
+      carichi e non soddisfa la richiesta di simultaneità.
+  - id: omit_switch_closure
+    acceptance: partial_only
+    description: |
+      Alimentare entrambi i pin senza chiudere SW2 lascia aperto il ramo della
+      lampada; chiudere soltanto SW2 non serve perché N004 resta non alimentato.
+
+unsupported_conclusions:
+  - |
+    Considerare i pin di J1 già connessi internamente oppure collegare N002
+    ai rami di carico: immagine e Graph JSON mostrano reti separate.
+  - |
+    Attribuire la mancata accensione a batteria o fusibile: N003 è già a 9 V
+    nel caso base e la corrente base è praticamente nulla.
+  - |
+    Dichiarare attivi entrambi i carichi dopo aver misurato soltanto la
+    tensione di alimentazione o la corrente di un solo ramo.
+  - |
+    Interpretare lo stato automatico partially_resolved come fallimento
+    elettrico dello scenario combinato: deriva dalla misura base mancante di
+    N004, eliminato dalla netlist quando lo switch è aperto.
+  - |
+    Affermare che il fusibile è stato verificato nell'apertura o nella sua
+    dinamica: il modello SPICE usato è soltanto una resistenza chiusa da
+    1 milliohm (1 mΩ).
+  - |
+    Dichiarare il circuito completamente stabile o privo di warning: è stata
+    eseguita solo la .op e ngspice segnala il nodo flottante N002.
+
+review_notes: |
+  Immagine e values canonici provengono da
+  data/batchPipeline2.0/batchChatAgentEvaluation. Il Graph JSON coincide con
+  l'immagine, inclusi i crossover senza giunzione. CHAT e AGENT eseguono la
+  stessa correzione combinata e attivano entrambi i carichi. AGENT misura
+  esplicitamente anche la corrente del LED; CHAT misura direttamente la
+  lampada e le tensioni del ramo LED e riporta con cautela il valore LED
+  comunicato dall'utente. La classificazione automatica partially_resolved
+  non è ground truth: la sua misura mancante è v(N004) nella base, nodo non
+  emesso a switch aperto. La scheda deve essere approvata manualmente prima
+  dello stato frozen.

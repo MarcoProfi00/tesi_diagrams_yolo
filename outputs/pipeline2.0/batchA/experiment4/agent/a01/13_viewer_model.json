@@ -1,0 +1,804 @@
+{
+  "source_format": "pipeline2.0_viewer_model",
+  "schema_version": 10,
+  "metadata": {
+    "circuit_id": "a01",
+    "run_type": "base",
+    "scenario_id": null,
+    "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a01",
+    "source_netlist_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline2.0\\batchA\\experiment4\\agent\\a01\\07_netlist.cir",
+    "generated_at": "2026-07-15T11:12:37"
+  },
+  "nodes": [
+    {
+      "id": "0",
+      "label": "GND",
+      "is_ground": true,
+      "voltage_op": 0.0,
+      "terminals": [
+        "connector5.1_pin4",
+        "gnd9.1_t1",
+        "gnd9.2_t1",
+        "gnd9.3_t1",
+        "lamp13.1_t2",
+        "led12.1_cathode",
+        "switch25.1_t1"
+      ],
+      "terminal_count": 7,
+      "source_groups": [
+        [
+          "connector5.1_pin4",
+          "gnd9.2_t1"
+        ],
+        [
+          "gnd9.1_t1",
+          "switch25.1_t1"
+        ],
+        [
+          "gnd9.3_t1",
+          "lamp13.1_t2",
+          "led12.1_cathode"
+        ]
+      ]
+    },
+    {
+      "id": "N001",
+      "label": "N001",
+      "is_ground": false,
+      "voltage_op": 5.0,
+      "terminals": [
+        "connector5.1_pin1",
+        "resistor22.2_t1"
+      ],
+      "terminal_count": 2,
+      "source_groups": []
+    },
+    {
+      "id": "N002",
+      "label": "N002",
+      "is_ground": false,
+      "voltage_op": 0.0,
+      "terminals": [
+        "connector5.1_pin2",
+        "resistor22.1_t1"
+      ],
+      "terminal_count": 2,
+      "source_groups": []
+    },
+    {
+      "id": "N003",
+      "label": "N003",
+      "is_ground": false,
+      "voltage_op": null,
+      "terminals": [
+        "connector5.1_pin3",
+        "switch25.1_t2"
+      ],
+      "terminal_count": 2,
+      "source_groups": []
+    },
+    {
+      "id": "N004",
+      "label": "N004",
+      "is_ground": false,
+      "voltage_op": 0.0,
+      "terminals": [
+        "lamp13.1_t1",
+        "resistor22.1_t2"
+      ],
+      "terminal_count": 2,
+      "source_groups": []
+    },
+    {
+      "id": "N005",
+      "label": "N005",
+      "is_ground": false,
+      "voltage_op": 0.7318156,
+      "terminals": [
+        "led12.1_anode",
+        "resistor22.2_t2"
+      ],
+      "terminal_count": 2,
+      "source_groups": []
+    }
+  ],
+  "netlist_components": [
+    {
+      "id": "VVCC",
+      "spice_name": "VVCC",
+      "kind": "voltage_source",
+      "nodes": [
+        "N001",
+        "0"
+      ],
+      "value": "DC 5",
+      "model": null,
+      "source_component_id": null,
+      "is_scenario_added": false,
+      "source_line": "VVCC N001 0 DC 5",
+      "line_number": 4
+    },
+    {
+      "id": "Rlamp13_1",
+      "spice_name": "Rlamp13_1",
+      "kind": "resistor",
+      "nodes": [
+        "N004",
+        "0"
+      ],
+      "value": "50",
+      "model": null,
+      "source_component_id": "lamp13.1",
+      "is_scenario_added": false,
+      "source_line": "Rlamp13_1 N004 0 50",
+      "line_number": 5,
+      "class_name": "Lamp",
+      "parameters": {
+        "nominal_voltage": 5,
+        "equivalent_resistance": 50,
+        "unit": "V",
+        "resistance_unit": "ohm",
+        "source": "manual_spice_annotation",
+        "label_text": "Lamp 5V; Req = 50 ohm",
+        "spice": "resistive_load"
+      },
+      "display_label": "Lamp 5V; Req = 50 ohm"
+    },
+    {
+      "id": "Dled12_1",
+      "spice_name": "Dled12_1",
+      "kind": "diode",
+      "nodes": [
+        "N005",
+        "0"
+      ],
+      "value": "LED_RED",
+      "model": "LED_RED",
+      "source_component_id": "led12.1",
+      "is_scenario_added": false,
+      "source_line": "Dled12_1 N005 0 LED_RED",
+      "line_number": 6,
+      "class_name": "LED",
+      "parameters": {
+        "model": "LED_RED",
+        "source": "manual_assumption"
+      },
+      "display_label": null
+    },
+    {
+      "id": "Rresistor22_1",
+      "spice_name": "Rresistor22_1",
+      "kind": "resistor",
+      "nodes": [
+        "N002",
+        "N004"
+      ],
+      "value": "1000",
+      "model": null,
+      "source_component_id": "resistor22.1",
+      "is_scenario_added": false,
+      "source_line": "Rresistor22_1 N002 N004 1000",
+      "line_number": 7,
+      "class_name": "Resistor",
+      "parameters": {
+        "value": 1000,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "1k"
+      },
+      "display_label": "1k"
+    },
+    {
+      "id": "Rresistor22_2",
+      "spice_name": "Rresistor22_2",
+      "kind": "resistor",
+      "nodes": [
+        "N001",
+        "N005"
+      ],
+      "value": "220",
+      "model": null,
+      "source_component_id": "resistor22.2",
+      "is_scenario_added": false,
+      "source_line": "Rresistor22_2 N001 N005 220",
+      "line_number": 8,
+      "class_name": "Resistor",
+      "parameters": {
+        "value": 220,
+        "unit": "ohm",
+        "source": "manual_from_image_label",
+        "label_text": "220R"
+      },
+      "display_label": "220R"
+    }
+  ],
+  "structural_components": [
+    {
+      "id": "connector5.1",
+      "class_name": "Connector",
+      "nodes": {
+        "pin1": "N001",
+        "pin2": "N002",
+        "pin3": "N003",
+        "pin4": "0"
+      },
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "parameters": {},
+      "display_label": null,
+      "measurement_kind": null,
+      "measurement_value": null,
+      "measurement_unit": null,
+      "strategy": null,
+      "reason": "Connector used for nodes, labels, and external interfaces."
+    },
+    {
+      "id": "gnd9.1",
+      "class_name": "GND",
+      "nodes": {
+        "t1": "0"
+      },
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "parameters": {},
+      "display_label": null,
+      "measurement_kind": null,
+      "measurement_value": null,
+      "measurement_unit": null,
+      "strategy": null,
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    {
+      "id": "gnd9.2",
+      "class_name": "GND",
+      "nodes": {
+        "t1": "0"
+      },
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "parameters": {},
+      "display_label": null,
+      "measurement_kind": null,
+      "measurement_value": null,
+      "measurement_unit": null,
+      "strategy": null,
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    {
+      "id": "gnd9.3",
+      "class_name": "GND",
+      "nodes": {
+        "t1": "0"
+      },
+      "status": "not_emitted",
+      "spice_support": "structural",
+      "parameters": {},
+      "display_label": null,
+      "measurement_kind": null,
+      "measurement_value": null,
+      "measurement_unit": null,
+      "strategy": null,
+      "reason": "GND terminals are already mapped to SPICE node 0."
+    },
+    {
+      "id": "switch25.1",
+      "class_name": "Switch",
+      "nodes": {
+        "t1": "0",
+        "t2": "N003"
+      },
+      "status": "spice_ready",
+      "spice_support": "simplified",
+      "parameters": {
+        "state": "open",
+        "state_source": "graph_json_state",
+        "state_confidence": 0.95,
+        "source": "graph_json_state"
+      },
+      "display_label": null,
+      "measurement_kind": null,
+      "measurement_value": null,
+      "measurement_unit": null,
+      "strategy": "open_circuit",
+      "reason": null
+    }
+  ],
+  "directives": [
+    {
+      "line_number": 11,
+      "directive": ".model LED_RED D"
+    },
+    {
+      "line_number": 13,
+      "directive": ".op"
+    },
+    {
+      "line_number": 14,
+      "directive": ".end"
+    }
+  ],
+  "measurements": {
+    "node_voltages": {
+      "N002": 0.0,
+      "N005": 0.7318156,
+      "N004": 0.0,
+      "N001": 5.0,
+      "0": 0.0
+    },
+    "branch_currents": {
+      "VVCC#BRANCH": -0.0194008,
+      "LEVEL": 1.0,
+      "IS": 1e-14,
+      "JSW": 0.0,
+      "RS": 0.0,
+      "RSW": 0.0,
+      "TRS": 0.0,
+      "TRS2": 0.0,
+      "N": 1.0,
+      "NS": 1.0,
+      "TT": 0.0,
+      "TTT1": 0.0,
+      "TTT2": 0.0,
+      "CJO": 0.0,
+      "VJ": 1.0,
+      "M": 0.5,
+      "TM1": 0.0,
+      "TM2": 0.0,
+      "CJP": 0.0,
+      "PHP": 1.0,
+      "MJSW": 0.33,
+      "IKF": 0.0,
+      "IKR": 0.0,
+      "IKP": 0.0,
+      "NBV": 1.0,
+      "AREA": 1.0,
+      "PJ": 0.0,
+      "TLEV": 0.0,
+      "TLEVC": 0.0,
+      "EG": 1.11,
+      "GAP1": 0.000702,
+      "GAP2": 1108.0,
+      "XTI": 3.0,
+      "CTA": 0.0,
+      "CTP": 0.0,
+      "TPB": 0.0,
+      "TPHP": 0.0,
+      "JTUN": 0.0,
+      "JTUNSW": 0.0,
+      "NTUN": 30.0,
+      "XTITUN": 3.0,
+      "KEG": 1.0,
+      "KF": 0.0,
+      "AF": 0.0,
+      "FC": 0.5,
+      "FCS": 0.5,
+      "BV": 0.0,
+      "IBV": 0.001,
+      "TCV": 0.0,
+      "ISR": 1e-14,
+      "NR": 2.0,
+      "VP": 0.0,
+      "FV_MAX": 1e+99,
+      "BV_MAX": 1e+99,
+      "ID_MAX": 1e+99,
+      "TE_MAX": 1e+99,
+      "PD_MAX": 1e+99,
+      "RTH0": 0.0,
+      "CTH0": 1e-05,
+      "LM": 0.0,
+      "LP": 0.0,
+      "WM": 0.0,
+      "WP": 0.0,
+      "XOM": 10000.0,
+      "XOI": 10000.0,
+      "XM": 0.0,
+      "XP": 0.0,
+      "XW": 0.0,
+      "RSH": 0.0,
+      "NARROW": 0.0,
+      "SHORT": 0.0,
+      "TC1": 0.0,
+      "TC2": 0.0,
+      "TCE": 0.0,
+      "DEFW": 1e-05,
+      "L": 1e-05,
+      "R": 0.0,
+      "LF": 1.0,
+      "WF": 1.0,
+      "EF": 1.0
+    },
+    "device_currents": {
+      "RRESISTOR22_2": 0.0194008,
+      "RRESISTOR22_1": 0.0,
+      "RLAMP13_1": 0.0,
+      "VVCC": -0.0194008
+    },
+    "status": "loaded"
+  },
+  "transient": {
+    "status": "missing",
+    "component_activity": {},
+    "selected_traces": [],
+    "steady_start": 0.0
+  },
+  "geometry_seed": {
+    "status": "loaded",
+    "source_files": {
+      "terminal_estimates": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline1.0\\batchA\\03_estimate_terminals\\a01.json",
+      "terminal_graph": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\pipeline1.0\\batchA\\05_build_terminal_graph\\a01.json"
+    },
+    "image": {
+      "id": "a01",
+      "path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\data\\batchA\\a01.png",
+      "width": 1268,
+      "height": 691
+    },
+    "components": {
+      "gnd9.1": {
+        "component_id": "gnd9.1",
+        "instance_id": "9.1",
+        "class_name": "GND",
+        "bbox": [
+          10.34,
+          600.83,
+          91.0,
+          659.87
+        ],
+        "center": {
+          "x": 50.67,
+          "y": 630.35
+        },
+        "estimated_orientation": "up",
+        "terminals": {
+          "t1": {
+            "id": "gnd9.1_t1",
+            "name": "t1",
+            "relative_position": "top",
+            "x": 50.67,
+            "y": 596.83,
+            "node_id": "0"
+          }
+        },
+        "state": null
+      },
+      "switch25.1": {
+        "component_id": "switch25.1",
+        "instance_id": "25.1",
+        "class_name": "Switch",
+        "bbox": [
+          67.19,
+          435.2,
+          226.38,
+          533.67
+        ],
+        "center": {
+          "x": 146.785,
+          "y": 484.43499999999995
+        },
+        "estimated_orientation": "horizontal",
+        "terminals": {
+          "t1": {
+            "id": "switch25.1_t1",
+            "name": "t1",
+            "relative_position": "left",
+            "x": 63.0,
+            "y": 461.0,
+            "node_id": "0"
+          },
+          "t2": {
+            "id": "switch25.1_t2",
+            "name": "t2",
+            "relative_position": "right",
+            "x": 230.0,
+            "y": 461.0,
+            "node_id": "N003"
+          }
+        },
+        "state": "open"
+      },
+      "gnd9.2": {
+        "component_id": "gnd9.2",
+        "instance_id": "9.2",
+        "class_name": "GND",
+        "bbox": [
+          228.99,
+          627.56,
+          312.49,
+          684.12
+        ],
+        "center": {
+          "x": 270.74,
+          "y": 655.8399999999999
+        },
+        "estimated_orientation": "up",
+        "terminals": {
+          "t1": {
+            "id": "gnd9.2_t1",
+            "name": "t1",
+            "relative_position": "top",
+            "x": 270.74,
+            "y": 623.56,
+            "node_id": "0"
+          }
+        },
+        "state": null
+      },
+      "connector5.1": {
+        "component_id": "connector5.1",
+        "instance_id": "5.1",
+        "class_name": "Connector",
+        "bbox": [
+          341.17,
+          145.83,
+          447.58,
+          650.06
+        ],
+        "center": {
+          "x": 394.375,
+          "y": 397.945
+        },
+        "estimated_orientation": "vertical",
+        "terminals": {
+          "pin1": {
+            "id": "connector5.1_pin1",
+            "name": "pin1",
+            "relative_position": "right",
+            "x": 451.58,
+            "y": 200.84,
+            "node_id": "N001"
+          },
+          "pin2": {
+            "id": "connector5.1_pin2",
+            "name": "pin2",
+            "relative_position": "right",
+            "x": 451.58,
+            "y": 330.93,
+            "node_id": "N002"
+          },
+          "pin3": {
+            "id": "connector5.1_pin3",
+            "name": "pin3",
+            "relative_position": "left",
+            "x": 337.17,
+            "y": 460.97,
+            "node_id": "N003"
+          },
+          "pin4": {
+            "id": "connector5.1_pin4",
+            "name": "pin4",
+            "relative_position": "left",
+            "x": 337.17,
+            "y": 591.01,
+            "node_id": "0"
+          }
+        },
+        "state": null
+      },
+      "resistor22.1": {
+        "component_id": "resistor22.1",
+        "instance_id": "22.1",
+        "class_name": "Resistor",
+        "bbox": [
+          617.68,
+          288.36,
+          782.48,
+          378.57
+        ],
+        "center": {
+          "x": 700.0799999999999,
+          "y": 333.46500000000003
+        },
+        "estimated_orientation": "horizontal",
+        "terminals": {
+          "t1": {
+            "id": "resistor22.1_t1",
+            "name": "t1",
+            "relative_position": "left",
+            "x": 613.68,
+            "y": 333.47,
+            "node_id": "N002"
+          },
+          "t2": {
+            "id": "resistor22.1_t2",
+            "name": "t2",
+            "relative_position": "right",
+            "x": 786.48,
+            "y": 333.47,
+            "node_id": "N004"
+          }
+        },
+        "state": null
+      },
+      "resistor22.2": {
+        "component_id": "resistor22.2",
+        "instance_id": "22.2",
+        "class_name": "Resistor",
+        "bbox": [
+          616.11,
+          160.12,
+          786.03,
+          243.98
+        ],
+        "center": {
+          "x": 701.0699999999999,
+          "y": 202.05
+        },
+        "estimated_orientation": "horizontal",
+        "terminals": {
+          "t1": {
+            "id": "resistor22.2_t1",
+            "name": "t1",
+            "relative_position": "left",
+            "x": 612.11,
+            "y": 202.05,
+            "node_id": "N001"
+          },
+          "t2": {
+            "id": "resistor22.2_t2",
+            "name": "t2",
+            "relative_position": "right",
+            "x": 790.03,
+            "y": 202.05,
+            "node_id": "N005"
+          }
+        },
+        "state": null
+      },
+      "lamp13.1": {
+        "component_id": "lamp13.1",
+        "instance_id": "13.1",
+        "class_name": "Lamp",
+        "bbox": [
+          949.77,
+          258.79,
+          1100.9,
+          402.83
+        ],
+        "center": {
+          "x": 1025.335,
+          "y": 330.81
+        },
+        "estimated_orientation": "horizontal",
+        "terminals": {
+          "t1": {
+            "id": "lamp13.1_t1",
+            "name": "t1",
+            "relative_position": "left",
+            "x": 945.77,
+            "y": 330.81,
+            "node_id": "N004"
+          },
+          "t2": {
+            "id": "lamp13.1_t2",
+            "name": "t2",
+            "relative_position": "right",
+            "x": 1104.9,
+            "y": 330.81,
+            "node_id": "0"
+          }
+        },
+        "state": null
+      },
+      "led12.1": {
+        "component_id": "led12.1",
+        "instance_id": "12.1",
+        "class_name": "LED",
+        "bbox": [
+          982.0,
+          69.0,
+          1104.0,
+          251.0
+        ],
+        "center": {
+          "x": 1043.0,
+          "y": 160.0
+        },
+        "estimated_orientation": "horizontal",
+        "terminals": {
+          "anode": {
+            "id": "led12.1_anode",
+            "name": "anode",
+            "relative_position": "left",
+            "x": 978.0,
+            "y": 200.0,
+            "node_id": "N005"
+          },
+          "cathode": {
+            "id": "led12.1_cathode",
+            "name": "cathode",
+            "relative_position": "right",
+            "x": 1108.0,
+            "y": 200.0,
+            "node_id": "0"
+          }
+        },
+        "state": null
+      },
+      "gnd9.3": {
+        "component_id": "gnd9.3",
+        "instance_id": "9.3",
+        "class_name": "GND",
+        "bbox": [
+          1179.03,
+          525.0,
+          1261.27,
+          581.28
+        ],
+        "center": {
+          "x": 1220.15,
+          "y": 553.14
+        },
+        "estimated_orientation": "up",
+        "terminals": {
+          "t1": {
+            "id": "gnd9.3_t1",
+            "name": "t1",
+            "relative_position": "top",
+            "x": 1220.15,
+            "y": 521.0,
+            "node_id": "0"
+          }
+        },
+        "state": null
+      }
+    },
+    "terminal_graph": {
+      "connector5.1_pin1": [
+        "resistor22.2_t1"
+      ],
+      "connector5.1_pin2": [
+        "resistor22.1_t1"
+      ],
+      "connector5.1_pin3": [
+        "switch25.1_t2"
+      ],
+      "connector5.1_pin4": [
+        "gnd9.2_t1"
+      ],
+      "gnd9.1_t1": [
+        "switch25.1_t1"
+      ],
+      "gnd9.2_t1": [
+        "connector5.1_pin4"
+      ],
+      "gnd9.3_t1": [
+        "lamp13.1_t2",
+        "led12.1_cathode"
+      ],
+      "lamp13.1_t1": [
+        "resistor22.1_t2"
+      ],
+      "lamp13.1_t2": [
+        "gnd9.3_t1",
+        "led12.1_cathode"
+      ],
+      "led12.1_anode": [
+        "resistor22.2_t2"
+      ],
+      "led12.1_cathode": [
+        "gnd9.3_t1",
+        "lamp13.1_t2"
+      ],
+      "resistor22.1_t1": [
+        "connector5.1_pin2"
+      ],
+      "resistor22.1_t2": [
+        "lamp13.1_t1"
+      ],
+      "resistor22.2_t1": [
+        "connector5.1_pin1"
+      ],
+      "resistor22.2_t2": [
+        "led12.1_anode"
+      ],
+      "switch25.1_t1": [
+        "gnd9.1_t1"
+      ],
+      "switch25.1_t2": [
+        "connector5.1_pin3"
+      ]
+    }
+  },
+  "scenario": null,
+  "warnings": []
+}

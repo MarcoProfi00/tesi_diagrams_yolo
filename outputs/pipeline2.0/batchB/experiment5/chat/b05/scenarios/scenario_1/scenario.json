@@ -1,0 +1,24 @@
+{
+  "scenario_id": "scenario_1",
+  "title": "Chiudere lo switch di alimentazione riconosciuto",
+  "hypothesis": "The open switch switch25.1 may be isolating battery2.1 from the rest of the circuit, leaving the headset branch unpowered.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    }
+  ],
+  "rerun_from": "06",
+  "analysis": "op",
+  "compare": [
+    "v(N002)",
+    "v(N004)",
+    "v(N003)",
+    "i(vbattery2_1#branch)"
+  ],
+  "expect": {
+    "v(N004)": "changed",
+    "i(vbattery2_1#branch)": "nonzero"
+  }
+}

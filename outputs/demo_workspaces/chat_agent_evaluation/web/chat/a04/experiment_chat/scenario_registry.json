@@ -1,0 +1,308 @@
+{
+  "source_format": "pipeline2.0_experiment_scenario_registry",
+  "batch_name": "batchChatAgentEvaluation",
+  "experiment_name": "chat_agent_evaluation",
+  "circuit_id": "a04",
+  "created_at": "2026-07-23T11:36:15",
+  "updated_at": "2026-07-23T11:51:20",
+  "max_executable_scenarios": 5,
+  "next_scenario_number": 5,
+  "last_added_scenario_id": "scenario_4",
+  "proposals": [
+    {
+      "proposal_id": "proposal_1",
+      "created_at": "2026-07-23T11:36:15",
+      "source_agent_response": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\a04\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_1",
+        "scenario_2"
+      ]
+    },
+    {
+      "proposal_id": "proposal_2",
+      "created_at": "2026-07-23T11:44:03",
+      "source_agent_response": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\a04\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_3"
+      ]
+    },
+    {
+      "proposal_id": "proposal_3",
+      "created_at": "2026-07-23T11:49:01",
+      "source_agent_response": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\a04\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_4"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_number": 1,
+      "scenario_id": "scenario_1",
+      "title": "Alleggerire il carico di uscita",
+      "hypothesis": "The output node N006 may be too weak because Rresistor22_5 loads the AC-coupled output too heavily.",
+      "actions": [
+        {
+          "type": "change_component_value",
+          "target": "Rresistor22_5",
+          "value": "100k"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "tran",
+      "compare": [
+        "v(N005)",
+        "v(N006)"
+      ],
+      "measure": {},
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N006)": "magnitude_increased"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 2,
+      "original_scenario_id": "scenario_2",
+      "execution_path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\a04\\scenarios\\scenario_1",
+      "created_at": "2026-07-23T11:36:15",
+      "updated_at": "2026-07-23T11:40:00",
+      "signature": "{\"actions\":[{\"target\":\"Rresistor22_5\",\"type\":\"change_component_value\",\"value\":\"100k\"}],\"analysis\":\"tran\"}",
+      "scenario": {
+        "scenario_id": "scenario_1",
+        "title": "Alleggerire il carico di uscita",
+        "hypothesis": "The output node N006 may be too weak because Rresistor22_5 loads the AC-coupled output too heavily.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Rresistor22_5",
+            "value": "100k"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N005)",
+          "v(N006)"
+        ],
+        "expect": {
+          "v(N006)": "magnitude_increased"
+        }
+      }
+    },
+    {
+      "scenario_number": 2,
+      "scenario_id": "scenario_2",
+      "title": "Modificare il bias della base",
+      "hypothesis": "The current base bias set by Rresistor22_1 and Rresistor22_2 may limit useful output swing.",
+      "actions": [
+        {
+          "type": "change_component_value",
+          "target": "Rresistor22_2",
+          "value": "10k"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "tran",
+      "compare": [
+        "v(N003)",
+        "v(N004)",
+        "v(N005)",
+        "v(N006)"
+      ],
+      "measure": {},
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N003)": "changed",
+        "v(N006)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 3,
+      "original_scenario_id": "scenario_3",
+      "execution_path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\a04\\scenarios\\scenario_2",
+      "created_at": "2026-07-23T11:36:15",
+      "updated_at": "2026-07-23T11:41:31",
+      "signature": "{\"actions\":[{\"target\":\"Rresistor22_2\",\"type\":\"change_component_value\",\"value\":\"10k\"}],\"analysis\":\"tran\"}",
+      "scenario": {
+        "scenario_id": "scenario_2",
+        "title": "Modificare il bias della base",
+        "hypothesis": "The current base bias set by Rresistor22_1 and Rresistor22_2 may limit useful output swing.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Rresistor22_2",
+            "value": "10k"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N003)",
+          "v(N004)",
+          "v(N005)",
+          "v(N006)"
+        ],
+        "expect": {
+          "v(N003)": "changed",
+          "v(N006)": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 3,
+      "scenario_id": "scenario_3",
+      "title": "Alleggerire il bias della base",
+      "hypothesis": "Since lowering Rresistor22_2 to 10k almost suppresses the output, increasing Rresistor22_2 above the 22k base value may move the transistor to a more favorable operating point and materially increase Vpp at N006.",
+      "actions": [
+        {
+          "type": "change_component_value",
+          "target": "Rresistor22_2",
+          "value": "33k"
+        }
+      ],
+      "intent": "correction",
+      "analysis": "tran",
+      "compare": [
+        "v(N002)",
+        "v(N005)",
+        "v(N006)"
+      ],
+      "measure": {},
+      "gain": {
+        "input": "v(N002)",
+        "output": "v(N006)",
+        "min_ratio": 5
+      },
+      "temporal_expect": null,
+      "expect": {
+        "v(N006)": "increased",
+        "v(N005)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_2",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_3",
+      "execution_path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\a04\\scenarios\\scenario_3",
+      "created_at": "2026-07-23T11:44:03",
+      "updated_at": "2026-07-23T11:46:38",
+      "signature": "{\"actions\":[{\"target\":\"Rresistor22_2\",\"type\":\"change_component_value\",\"value\":\"33k\"}],\"analysis\":\"tran\"}",
+      "scenario": {
+        "scenario_id": "scenario_3",
+        "title": "Alleggerire il bias della base",
+        "hypothesis": "Since lowering Rresistor22_2 to 10k almost suppresses the output, increasing Rresistor22_2 above the 22k base value may move the transistor to a more favorable operating point and materially increase Vpp at N006.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Rresistor22_2",
+            "value": "33k"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N002)",
+          "v(N005)",
+          "v(N006)"
+        ],
+        "expect": {
+          "v(N006)": "increased",
+          "v(N005)": "changed"
+        },
+        "gain": {
+          "input": "v(N002)",
+          "output": "v(N006)",
+          "min_ratio": 5
+        }
+      }
+    },
+    {
+      "scenario_number": 4,
+      "scenario_id": "scenario_4",
+      "title": "Aumentare il condensatore di accoppiamento C1",
+      "hypothesis": "If Ccapacitor4_1 is causing excessive attenuation at 100 Hz, increasing its value should improve signal transfer from N002 to N003 and produce a larger output swing at N006.",
+      "actions": [
+        {
+          "type": "change_component_value",
+          "target": "Ccapacitor4_1",
+          "value": "1u"
+        }
+      ],
+      "intent": "correction",
+      "analysis": "tran",
+      "compare": [
+        "v(N002)",
+        "v(N003)",
+        "v(N006)"
+      ],
+      "measure": {},
+      "gain": {
+        "input": "v(N002)",
+        "output": "v(N003)",
+        "min_ratio": 0.5
+      },
+      "temporal_expect": null,
+      "expect": {
+        "v(N003)": "increased",
+        "v(N006)": "increased"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "resolved_candidate",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_3",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_4",
+      "execution_path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\a04\\scenarios\\scenario_4",
+      "created_at": "2026-07-23T11:49:01",
+      "updated_at": "2026-07-23T11:51:20",
+      "signature": "{\"actions\":[{\"target\":\"Ccapacitor4_1\",\"type\":\"change_component_value\",\"value\":\"1u\"}],\"analysis\":\"tran\"}",
+      "scenario": {
+        "scenario_id": "scenario_4",
+        "title": "Aumentare il condensatore di accoppiamento C1",
+        "hypothesis": "If Ccapacitor4_1 is causing excessive attenuation at 100 Hz, increasing its value should improve signal transfer from N002 to N003 and produce a larger output swing at N006.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Ccapacitor4_1",
+            "value": "1u"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N002)",
+          "v(N003)",
+          "v(N006)"
+        ],
+        "expect": {
+          "v(N003)": "increased",
+          "v(N006)": "increased"
+        },
+        "gain": {
+          "input": "v(N002)",
+          "output": "v(N003)",
+          "min_ratio": 0.5
+        }
+      }
+    }
+  ]
+}

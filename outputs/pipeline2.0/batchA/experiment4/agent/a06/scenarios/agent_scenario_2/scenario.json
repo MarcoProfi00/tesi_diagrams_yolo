@@ -1,0 +1,31 @@
+{
+  "title": "Ridurre l'ampiezza della sorgente sinusoidale per verificare overdrive in ingresso",
+  "hypothesis": "La distorsione elevata e causata principalmente da un ingresso troppo ampio per la linearita dello stadio; riducendo l'ampiezza della sorgente SIN il transistor resta piu vicino alla regione lineare e la THD dell'uscita dovrebbe diminuire sensibilmente senza annullare il guadagno.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "quality": "thd",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "signal_source23.1",
+      "value": "SIN(0 0.2 100)"
+    }
+  ],
+  "compare": [
+    "v(N006)",
+    "v(N005)",
+    "v(N002)",
+    "v(N003)"
+  ],
+  "gain": {
+    "input": "v(N006)",
+    "output": "v(N005)"
+  },
+  "expect": {
+    "v(N006)": "magnitude_decreased",
+    "v(N005)": "nonzero",
+    "v(N002)": "changed",
+    "v(N003)": "changed"
+  },
+  "scenario_id": "agent_scenario_2"
+}

@@ -1,0 +1,34 @@
+* c02 - independent stable transient check with C1=C2=1 uF
+* Gear integration and a small initial perturbation avoid numerical chatter
+* and represent the unavoidable startup imbalance of physical hardware.
+
+VREF N001 0 0
+VBAT N002 N001 9
+DLED1 N002 N003 LED_RED_TYP
+DLED2 N002 N004 LED_RED_TYP
+Q1 N006 N005 N001 BC548_TYP
+Q2 N008 N007 N001 BC548_TYP
+C1 N006 N007 1u
+C2 N008 N005 1u
+R1 N003 N006 470
+R2 N002 N007 47k
+R3 N002 N005 47k
+R4 N004 N008 470
+
+.model BC548_TYP NPN(IS=1e-14 BF=250 VAF=30 IKF=100m RB=100 RC=1 RE=0.2 CJE=12p VJE=0.7 MJE=0.33 CJC=4p VJC=0.5 MJC=0.33 TF=0.5n TR=50n)
+.model LED_RED_TYP D(IS=1e-15 N=2 RS=10)
+
+.options method=gear reltol=1e-4
+.ic v(N005)=0.65 v(N007)=0
+.save all @dled1[id] @dled2[id]
+.tran 100u 1s uic
+.meas tran led1_rise_5 WHEN @dled1[id]=5m RISE=5
+.meas tran led1_rise_6 WHEN @dled1[id]=5m RISE=6
+.meas tran led1_period PARAM='led1_rise_6-led1_rise_5'
+.meas tran led1_frequency PARAM='1/led1_period'
+
+.control
+run
+quit
+.endc
+.end

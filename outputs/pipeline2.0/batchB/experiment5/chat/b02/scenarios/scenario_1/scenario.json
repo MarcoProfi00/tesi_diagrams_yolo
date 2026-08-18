@@ -1,0 +1,20 @@
+{
+  "scenario_id": "scenario_1",
+  "title": "Rompere la simmetria iniziale su una base",
+  "hypothesis": "The symmetric operating point may prevent startup; a small initial imbalance on N004 may trigger oscillation.",
+  "actions": [
+    {
+      "type": "set_initial_node_voltage",
+      "target": "N004",
+      "value": "0.5V"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N004)",
+    "v(N006)",
+    "v(N002)",
+    "v(N003)"
+  ]
+}

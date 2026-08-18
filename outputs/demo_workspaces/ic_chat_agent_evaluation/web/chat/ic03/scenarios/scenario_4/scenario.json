@@ -1,0 +1,31 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Aumentare ancora R1",
+  "hypothesis": "Poiche l'aumento di Rresistor22_3 da 10k a 22k ha gia rallentato il lampeggio senza raggiungere il target, un ulteriore aumento della stessa resistenza puo ridurre ancora la frequenza di Rlamp13_1.",
+  "intent": "correction",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Rresistor22_3",
+      "value": "33k"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N001)",
+    "v(N004)",
+    "v(N003)"
+  ],
+  "expect": {
+    "v(N001)": "changed",
+    "v(N004)": "changed",
+    "v(N003)": "changed"
+  },
+  "temporal_expect": {
+    "target": "Rlamp13_1",
+    "required_state": "blinking",
+    "require_regular_period": true,
+    "max_frequency_hz": 2.0
+  }
+}

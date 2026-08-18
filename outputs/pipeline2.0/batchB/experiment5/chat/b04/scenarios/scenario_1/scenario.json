@@ -1,0 +1,26 @@
+{
+  "scenario_id": "scenario_1",
+  "title": "Batteria un po' più scarica e confronto della corrente in D4",
+  "hypothesis": "Riducendo la tensione della batteria di prova, D4 dovrebbe condurre di più durante parte del ciclo se il ramo di carica è effettivamente attivo verso la batteria.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "VVBAT_TEST",
+      "value": "10V"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "@ddiode7_4[id]",
+    "v(N004)",
+    "v(N005)"
+  ],
+  "measure": {
+    "@ddiode7_4[id]": "tran_abs_peak"
+  },
+  "expect": {
+    "@ddiode7_4[id]": "magnitude_increased"
+  }
+}

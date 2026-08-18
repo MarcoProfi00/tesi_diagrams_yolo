@@ -1,0 +1,27 @@
+{
+  "title": "Batteria scarica - verifica stato statico a tensione bassa",
+  "hypothesis": "Riducendo la batteria rispetto ai 12 V nominali il ramo con zener da 10 V e Q2 dovrebbe perdere polarizzazione utile, quindi la corrente del LED giallo dovrebbe diminuire sensibilmente o spegnersi; questo conferma la soglia di sottotensione del comparatore senza cambiare topologia.",
+  "intent": "diagnostic",
+  "analysis": "op",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "9V"
+    }
+  ],
+  "compare": [
+    "@dled12_1[id]",
+    "@dled12_2[id]",
+    "@dled12_3[id]",
+    "v(N004)",
+    "v(N005)",
+    "v(N015)",
+    "v(N016)"
+  ],
+  "expect": {
+    "@dled12_2[id]": "magnitude_decreased",
+    "v(N016)": "decreased"
+  },
+  "scenario_id": "agent_scenario_1"
+}

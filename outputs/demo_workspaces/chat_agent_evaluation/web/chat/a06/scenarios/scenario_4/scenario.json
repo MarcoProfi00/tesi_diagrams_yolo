@@ -1,0 +1,28 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Ridurre ancora l’ampiezza d’ingresso per cercare una THD più bassa",
+  "hypothesis": "Since scenario_1 reduced distortion without suppressing output transfer, a further reduction of Vsignal_source23_1 to 50 mV may lower THD at N005 while preserving useful gain from N006 to N005.",
+  "intent": "correction",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vsignal_source23_1",
+      "value": "SIN(0 50m 100)"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N006)",
+    "v(N005)"
+  ],
+  "expect": {
+    "v(N006)": "changed",
+    "v(N005)": "changed"
+  },
+  "gain": {
+    "input": "v(N006)",
+    "output": "v(N005)",
+    "min_ratio": 5
+  }
+}

@@ -1,0 +1,127 @@
+# Valori manuali per b05, ricevitore a due transistor con cuffia esterna.
+# I valori leggibili dall'immagine sono marcati come tali; i restanti sono
+# assunzioni di modello necessarie per produrre una prima base run SPICE.
+
+circuit_id: b05
+
+components:
+  # B1 non riporta tensione nell'immagine; 9 V e' una prima assunzione di banco.
+  # E' valorizzata come componente del Graph, non come supply aggiunta, per
+  # evitare di duplicare la sorgente fisica nella netlist.
+  battery2.1:
+    type: dc
+    value: 9
+    unit: V
+    source: manual_assumption_battery_voltage
+    label_text: "B1 assunta: 9 V"
+
+  # L1 non e' quotata. 250 uH con C1 al valore centrale porta il circuito
+  # nell'ordine delle frequenze AM; e' un valore di banco, non OCR.
+  inductor10.1:
+    value: 0.00025
+    unit: H
+    source: manual_assumption_am_tuning_model
+    label_text: "L1 assunta: 250 uH"
+
+  # C1 e' variabile 250-500 pF nell'immagine. Il Graph lo chiama condensatore
+  # polarizzato, ma SPICE lo emette correttamente come capacita ideale fissa.
+  polarized_capacitor20.1:
+    value: 375
+    unit: pf
+    source: manual_from_image_range_midpoint
+    label_text: "C1 variabile 250-500 pF; base run a 375 pF"
+    viewer_override:
+      visual_class: variable_polarized_capacitor
+      label: C1
+      display_value: 375 pF
+
+  polarized_capacitor20.2:
+    value: 0.022
+    unit: uf
+    source: manual_from_image_label
+    label_text: "C2 0.022 uF"
+
+  polarized_capacitor20.3:
+    value: 0.022
+    unit: uf
+    source: manual_from_image_label
+    label_text: "C3 0.022 uF"
+
+  polarized_capacitor20.4:
+    value: 0.001
+    unit: uf
+    source: manual_from_image_label
+    label_text: "C4 0.001 uF"
+
+  resistor22.1:
+    value: 220
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R1 220 kohm"
+
+  resistor22.2:
+    value: 4.7
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R2 4.7 kohm"
+
+  resistor22.3:
+    value: 220
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R3 220 kohm"
+
+  # CR1 non riporta un part number: il modello e' una scelta generica di prima run.
+  diode7.1:
+    model: D_GENERIC
+    source: manual_spice_generic_detector_diode
+    label_text: "CR1; modello diodo SPICE generico"
+
+  # Le frecce verso la base e l'alimentazione a positivo comune identificano
+  # Q1 e Q2 come PNP. L'immagine non riporta un part number specifico.
+  npn_transistor18.1:
+    model: PNP_GENERIC
+    source: manual_validation_pnp_from_image
+    label_text: "Q1 PNP"
+
+  npn_transistor18.2:
+    model: PNP_GENERIC
+    source: manual_validation_pnp_from_image
+    label_text: "Q2 PNP"
+
+  # S1 e' visibilmente aperto: la base run conserva lo stato dell'immagine.
+  switch25.1:
+    state: open
+    source: graph_json_state_validated_from_image
+    label_text: "S1 aperto"
+
+  # Solo b05 interpreta questo componente OCR ambiguo come la cuffia J1/J2.
+  # L'override e' esplicito: altri Breaker non cambiano significato.
+  breaker3.1:
+    spice_override:
+      emit_as: resistive_load
+      equivalent_resistance: 2
+      resistance_unit: kohm
+      node_order: [t1, t2]
+      semantic_role: headset_equivalent
+    source: manual_interpretation_headset_from_image
+    label_text: "Cuffia J1/J2 equivalente: 2 kohm"
+    viewer_override:
+      visual_class: headset
+      label: Headset J1/J2
+      display_value: 2 kohm eq.
+
+  # L'antenna e' un'interfaccia esterna e non viene emessa come componente.
+  # Un segnale AC verra' aggiunto solo in un banco di prova/scenario dedicato.
+  antenna1.1:
+    source: graph_json_external_input
+    label_text: "Antenna esterna; nessuna sorgente AC nella base run"
+    viewer_override:
+      visual_class: antenna
+      label: Antenna
+
+simulation:
+  analyses: [op, tran]
+  tran:
+    step: 1us
+    stop: 5ms

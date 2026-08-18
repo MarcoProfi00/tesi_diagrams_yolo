@@ -1,0 +1,37 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Iniettare un piccolo segnale sull’ingresso antenna con interruttore chiuso",
+  "hypothesis": "After closing switch25.1, the circuit may still need an explicit AC excitation at N001 to verify whether useful signal reaches the headset load between N003 and N004.",
+  "intent": "correction",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    },
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N001",
+      "negative": "0",
+      "value": "SIN(0 5m 1000)"
+    }
+  ],
+  "rerun_from": "06",
+  "analysis": "tran",
+  "compare": [
+    "v(N001)",
+    "v(N003,N004)"
+  ],
+  "expect": {
+    "v(N001)": "changed",
+    "v(N003,N004)": "changed"
+  },
+  "measure": {
+    "v(N001)": "tran_vpp",
+    "v(N003,N004)": "tran_vpp"
+  },
+  "gain": {
+    "input": "v(N001)",
+    "output": "v(N003,N004)",
+    "min_ratio": 0.01
+  }
+}

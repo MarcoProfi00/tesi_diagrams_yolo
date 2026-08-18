@@ -5,14 +5,245 @@
 # i modelli effettivamente richiesti dai componenti del circuito.
 
 models:
+  LM317_TRANS:
+    # Modello transitorio PSpice ufficiale TI non cifrato per LM317,
+    # pacchetto SLVMC40 Final 1.00. Il file resta esterno al registro per
+    # conservarlo identico al rilascio del produttore; lo step 07 ne verifica
+    # l'hash e lo inserisce nel bundle solo quando viene richiesto.
+    file: "spice_models/ti/lm317/slvmc40/LM317_TRANS.LIB"
+    sha256: "9B56D7C68B75D3C0FD1E0B55F5DDC448F89F82984F026FF31ACDF89BDE4BD7E1"
+    vendor: "Texas Instruments"
+    package: "SLVMC40"
+    revision: "Final 1.00"
+    source_url: "https://www.ti.com/lit/zip/slvmc40"
+    ngspice_defines:
+      ngbehavior: ps
+
+  LM1875_0:
+    # Macromodello PSpice ufficiale TI per l'amplificatore audio LM1875,
+    # pacchetto SNAM066A Rev. A. Il file resta esterno al registro per
+    # conservarlo identico al rilascio del produttore; lo step 07 ne verifica
+    # l'hash e lo inserisce nel bundle soltanto quando viene richiesto.
+    file: "spice_models/ti/lm1875/snam066a/LM1875.lib"
+    sha256: "28BF3FC1D14AD5929C3151A7BCB6F97922BD59B38539FE334B7018522551B1F2"
+    vendor: "Texas Instruments"
+    package: "SNAM066A"
+    revision: "A"
+    source_url: "https://www.ti.com/lit/zip/snam066"
+    ngspice_defines:
+      ngbehavior: ps
+
+  TLC555_6:
+    # Macromodello PSpice ufficiale TI per TLC555/TLC556, package SLFJ002E
+    # Rev. E. Il file resta esterno al registro per conservarlo identico al
+    # rilascio del produttore; lo step 07 ne verifica l'hash e lo inserisce nel
+    # bundle 07_external_models.lib solo quando viene effettivamente richiesto.
+    file: "spice_models/ti/tlc555/slfj002e/TLC555_6.LIB"
+    sha256: "7C091782CC4931DDA4FEBF25605083F47161C5E1592C076689B04B70DD749034"
+    vendor: "Texas Instruments"
+    package: "SLFJ002E"
+    revision: "E"
+    source_url: "https://www.ti.com/lit/zip/slfj002"
+    ngspice_defines:
+      ngbehavior: ps
+
+  D_GENERIC:
+    # Modello minimale per diodi rettificatori o di rivelazione senza part number.
+    line: ".model D_GENERIC D"
+
   LED_RED:
     line: ".model LED_RED D"
 
+  LED_YELLOW:
+    # Modello LED minimale distinto per conservare il colore dichiarato.
+    line: ".model LED_YELLOW D"
+
+  LED_GREEN:
+    # Modello LED minimale distinto per conservare il colore dichiarato.
+    line: ".model LED_GREEN D"
+
+  1N4148:
+    # Modello semplificato del diodo switching: tensione inversa e tempi
+    # principali sono coerenti con la famiglia 1N4148, senza legarsi a un
+    # singolo produttore.
+    line: ".model 1N4148 D(BV=100 IBV=100u TT=4n CJO=4p)"
+
+  BZX79C10:
+    # Zener BZX79 serie C: valore nominale 10 V alla corrente di prova 5 mA.
+    line: ".model BZX79C10 D(BV=10 IBV=5m)"
+
+  BZX79C12:
+    # Zener BZX79 serie C: valore nominale 12 V alla corrente di prova 5 mA.
+    line: ".model BZX79C12 D(BV=12 IBV=5m)"
+
   2N3904:
     line: ".model 2N3904 NPN(IS=6.734f BF=416.4 VAF=74.03 IKF=66.78m ISE=6.734f NE=1.259 BR=0.7371 VAR=12.11 IKR=0.0 ISC=0.0 NC=2 RB=10 RC=1 RE=0.1 CJE=4.493p VJE=0.75 MJE=0.2593 CJC=3.638p VJC=0.75 MJC=0.3085 TF=301.2p TR=239.5n)"
+
+  PNP_GENERIC:
+    # Modello PNP minimale per schemi che non riportano un part number.
+    line: ".model PNP_GENERIC PNP"
+
+  BC108_TYP:
+    # Q1 e' indicato come AC108 nell'immagine c01, ma simbolo e Darlington
+    # inferiore sono NPN. Il modello segue la topologia elettrica rappresentata.
+    line: ".model BC108_TYP NPN(BF=120 VAF=50 IKF=100m)"
+
+  BC178_TYP:
+    # Driver PNP di piccolo segnale del Darlington superiore di c01.
+    line: ".model BC178_TYP PNP(BF=120 VAF=50 IKF=100m)"
+
+  2N5294_TYP:
+    # Transistor finale NPN: modello tipico semplificato per analisi funzionali.
+    line: ".model 2N5294_TYP NPN(BF=40 VAF=50 IKF=3)"
+
+  2N6107_TYP:
+    # Transistor finale PNP: modello tipico semplificato per analisi funzionali.
+    line: ".model 2N6107_TYP PNP(BF=40 VAF=50 IKF=3)"
 
   2N2222:
     line: ".model 2N2222 NPN(IS=14.34f BF=255.9 VAF=74.03 IKF=0.2847 ISE=14.34f NE=1.307 BR=6.092 NR=1.005 VAR=11.96 IKR=0.0 ISC=0.0 NC=2 RB=10 RC=1 RE=0.1 CJE=22.01p VJE=0.75 MJE=0.377 CJC=7.306p VJC=0.75 MJC=0.3416 TF=411.1p TR=46.91n)"
 
   BC547:
     line: ".model BC547 NPN"
+
+  BC557:
+    # Modello PNP minimale, coerente con il livello di dettaglio del BC547
+    # gia presente nel registro. Il suffisso di guadagno A/B/C non e visibile.
+    line: ".model BC557 PNP"
+
+  BC547_TYP:
+    # Modello tipico isolato per circuiti di soglia. BF=250 assume il gruppo
+    # intermedio B quando il suffisso A/B/C non e leggibile nello schema.
+    line: ".model BC547_TYP NPN(BF=250 VAF=50 IKF=100m)"
+
+  BC548_TYP:
+    # Modello funzionale tipico del BC548 per circuiti a bassa tensione.
+    # Il gruppo di guadagno A/B/C non e indicato nell'immagine c02. Le
+    # resistenze e capacita parassite evitano la commutazione ideale che rende
+    # numericamente singolare il multivibratore, senza alterarne la topologia.
+    line: ".model BC548_TYP NPN(IS=1e-14 BF=250 VAF=30 IKF=100m RB=100 RC=1 RE=0.2 CJE=12p VJE=0.7 MJE=0.33 CJC=4p VJC=0.5 MJC=0.33 TF=0.5n TR=50n)"
+
+  BC557_TYP:
+    # Complementare PNP del modello tipico BC547 usato nello stesso banco.
+    line: ".model BC557_TYP PNP(BF=250 VAF=50 IKF=100m)"
+
+  D_1N4148_TYP:
+    # Modello tipico del diodo switching. La curva diretta e calibrata nella
+    # fascia del datasheet; BV, capacita e recovery restano valori di targa.
+    line: ".model D_1N4148_TYP D(IS=6n N=1.9 RS=0.65 BV=100 IBV=100u TT=4n CJO=4p)"
+
+  D_1N4001_TYP:
+    # Modello rettificatore semplificato per la famiglia 1N4001, sufficiente
+    # alla base run a 50 Hz senza dichiarare un produttore specifico.
+    line: ".model D_1N4001_TYP D(IS=14n N=1.9 RS=0.08 BV=50 IBV=5u TT=2u CJO=25p)"
+
+  BC148_TYP:
+    # BC148 NPN di piccolo segnale: parametri tipici cauti per una prima
+    # simulazione di soglia, non sostitutivi di un datasheet selezionato.
+    line: ".model BC148_TYP NPN(BF=110 VAF=50 IKF=100m IS=1e-14)"
+
+  SCR_2N3668_TYP:
+    # Equivalente SCR generale a tre terminali A-G-K. Una conduttanza
+    # comportamentale continua evita la discontinuita' numerica del commutatore
+    # ideale durante l'innesco; nel caricabatteria a semionda il gate comanda
+    # comunque la conduzione solo nel semiperiodo positivo.
+    lines:
+      header: ".subckt SCR_2N3668_TYP A G K"
+      main: "BMAIN A K I={V(A,K)*(1/10Meg+(1/0.05-1/10Meg)*(0.5+0.5*tanh((V(G,K)-0.75)/0.08)))}"
+      gate_resistor: "RGK G K 100"
+      footer: ".ends SCR_2N3668_TYP"
+
+  BZX79C10_TYP:
+    # NBV approssima la resistenza differenziale tipica dichiarata a 1 mA e
+    # 5 mA senza spostare la tensione nominale di breakdown a 10 V.
+    line: ".model BZX79C10_TYP D(BV=10 IBV=5m NBV=1.7)"
+
+  BZX79C12_TYP:
+    # NBV approssima la resistenza differenziale tipica dichiarata a 1 mA e
+    # 5 mA senza spostare la tensione nominale di breakdown a 12 V.
+    line: ".model BZX79C12_TYP D(BV=12 IBV=5m NBV=1.9)"
+
+  LED_RED_TYP:
+    # LED generico rosso: il part number non e indicato, quindi il modello
+    # rappresenta soltanto una caduta diretta tipica del colore.
+    line: ".model LED_RED_TYP D(IS=1e-15 N=2 RS=10)"
+
+  LED_YELLOW_TYP:
+    # LED generico giallo distinto dal rosso per la caduta diretta tipica.
+    line: ".model LED_YELLOW_TYP D(IS=1e-17 N=2 RS=10)"
+
+  LED_GREEN_TYP:
+    # LED generico verde distinto dagli altri colori; non sostituisce un
+    # modello di part number specifico non disponibile nell'immagine.
+    line: ".model LED_GREEN_TYP D(IS=1e-18 N=2 RS=10)"
+
+  LM386_SIMPLE:
+    # Equivalente lineare generale a cinque terminali per una prima base run.
+    # Rappresenta soltanto ingresso differenziale, guadagno in tensione circa
+    # 20 e resistenza d'uscita; non sostituisce il macromodello del produttore.
+    lines:
+      header: ".subckt LM386_SIMPLE INP INM VCC VEE OUT"
+      input_resistance: "RIN INP INM 50k"
+      amplifier: "EAMP NAMP VEE INP INM 20"
+      output_resistance: "ROUT NAMP OUT 5"
+      supply_bleed: "RBLEED VCC VEE 100k"
+      footer: ".ends LM386_SIMPLE"
+
+  TDA2003_SIMPLE:
+    # Equivalente funzionale generale a cinque terminali per amplificatori
+    # audio di potenza TDA2003 in configurazione ad alimentazione singola.
+    # Conserva ingresso differenziale, polarizzazione interna a meta'
+    # alimentazione, saturazione entro i rail e bassa resistenza d'uscita.
+    # Non modella protezioni, limite di corrente, dinamica termica o THD del
+    # componente reale e va quindi usato solo per verifiche funzionali della
+    # rete esterna e del percorso audio.
+    lines:
+      header: ".subckt TDA2003_SIMPLE INP INM VCC VEE OUT"
+      mid_supply: "EREF VREF VEE VCC VEE 0.5"
+      input_bias_non_inverting: "RINP INP VREF 1Meg"
+      input_bias_inverting: "RINM INM VREF 1Meg"
+      limited_amplifier: "BAMP NAMP VEE V={0.75+(V(VCC,VEE)-1.5)*(0.5+0.5*tanh((100000*V(INP,INM))/(0.5*(V(VCC,VEE)-1.5))))}"
+      output_resistance: "ROUT NAMP OUT 0.2"
+      supply_bleed: "RBLEED VCC VEE 100k"
+      footer: ".ends TDA2003_SIMPLE"
+
+  UA741_TI:
+    # Macromodello PSpice ufficiale TI SLOJ138. A differenza di un VCVS
+    # ideale conserva l'interazione con le alimentazioni, necessaria in c01
+    # perche i pin 7 e 4 pilotano i due Darlington attraverso R3 e R2.
+    # Ordine pin: IN+, IN-, VCC+, VCC-, OUT.
+    lines:
+      header: ".SUBCKT UA741_TI 1 2 3 4 5"
+      c1: "C1 11 12 4.664E-12"
+      c2: "C2 6 7 20.00E-12"
+      dc: "DC 5 53 DX"
+      de: "DE 54 5 DX"
+      dlp: "DLP 90 91 DX"
+      dln: "DLN 92 90 DX"
+      dp: "DP 4 3 DX"
+      egnd: "EGND 99 0 POLY(2) (3,0) (4,0) 0 .5 .5"
+      fb: "FB 7 99 POLY(5) VB VC VE VLP VLN 0 10.61E6 -10E6 10E6 10E6 -10E6"
+      ga: "GA 6 0 11 12 137.7E-6"
+      gcm: "GCM 0 6 10 99 2.574E-9"
+      iee: "IEE 10 4 DC 10.16E-6"
+      hlim: "HLIM 90 0 VLIM 1K"
+      q1: "Q1 11 2 13 QX"
+      q2: "Q2 12 1 14 QX"
+      r2: "R2 6 9 100.0E3"
+      rc1: "RC1 3 11 7.957E3"
+      rc2: "RC2 3 12 7.957E3"
+      re1: "RE1 13 10 2.740E3"
+      re2: "RE2 14 10 2.740E3"
+      ree: "REE 10 99 19.69E6"
+      ro1: "RO1 8 5 150"
+      ro2: "RO2 7 99 150"
+      rp: "RP 3 4 18.11E3"
+      vb: "VB 9 0 DC 0"
+      vc: "VC 3 53 DC 2.600"
+      ve: "VE 54 4 DC 2.600"
+      vlim: "VLIM 7 8 DC 0"
+      vlp: "VLP 91 0 DC 25"
+      vln: "VLN 0 92 DC 25"
+      model_dx: ".MODEL DX D(IS=800.0E-18)"
+      model_qx: ".MODEL QX NPN(IS=800.0E-18 BF=62.50)"
+      footer: ".ENDS UA741_TI"

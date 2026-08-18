@@ -1,0 +1,27 @@
+{
+  "scenario_id": "scenario_2",
+  "title": "Iniettare un piccolo segnale sulla base del transistor Qnpn_transistor18_1",
+  "hypothesis": "The signal may be getting lost in or before the transistor stage, while the transistor still has a valid DC bias point.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N005",
+      "negative": "0",
+      "value": "SIN(0.660106 5m 1000)"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N005)",
+    "v(N006)",
+    "v(N010)",
+    "v(N009)",
+    "v(N003)"
+  ],
+  "expect": {
+    "v(N006)": "changed",
+    "v(N009)": "changed"
+  }
+}

@@ -24,6 +24,11 @@ PIPELINE_DATASET = os.environ.get(
     "PIPELINE_DATASET",
     "pipeline1.0/batchA_07_09"
 )
+PIPELINE_IMAGE_IDS = {
+    image_id.strip()
+    for image_id in os.environ.get("PIPELINE_IMAGE_IDS", "").split(",")
+    if image_id.strip()
+}
 
 INPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "01_detect_components"
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / PIPELINE_DATASET / "02_assign_instances"
@@ -160,12 +165,27 @@ def main() -> None:
 
     json_files = sorted(INPUT_DIR.glob("*.json"))
 
+    # Il filtro e' opzionale: senza PIPELINE_IMAGE_IDS lo step continua a
+    # processare l'intero batch come nella versione originale.
+    if PIPELINE_IMAGE_IDS:
+        json_files = [
+            json_path
+            for json_path in json_files
+            if json_path.stem in PIPELINE_IMAGE_IDS
+        ]
+
     if not json_files:
-        raise FileNotFoundError(f"Nessun file JSON trovato in: {INPUT_DIR}")
+        requested = ", ".join(sorted(PIPELINE_IMAGE_IDS))
+        filter_detail = f" per PIPELINE_IMAGE_IDS={requested}" if requested else ""
+        raise FileNotFoundError(
+            f"Nessun file JSON trovato in: {INPUT_DIR}{filter_detail}"
+        )
 
     print(f"Input directory : {INPUT_DIR}")
     print(f"Output directory: {OUTPUT_DIR}")
     print(f"File trovati    : {len(json_files)}")
+    if PIPELINE_IMAGE_IDS:
+        print(f"Filtro immagini : {sorted(PIPELINE_IMAGE_IDS)}")
     print(f"SORT_ORDER      : {SORT_ORDER}\n")
 
     for i, json_path in enumerate(json_files, start=1):

@@ -1,0 +1,34 @@
+{
+  "scenario_id": "scenario_2",
+  "title": "Ridurre l'influenza del ramo di controllo sul pin CONT",
+  "hypothesis": "Il condensatore Ccapacitor4_2 sul nodo N002 (CONT) contribuisce all'irregolarita di startup del 555.",
+  "intent": "correction",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Ccapacitor4_2",
+      "value": "100n"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N002)",
+    "v(N005)",
+    "v(N006)",
+    "@dled12_1[id]"
+  ],
+  "expect": {
+    "v(N002)": "changed",
+    "v(N006)": "changed",
+    "@dled12_1[id]": "changed"
+  },
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak"
+  },
+  "temporal_expect": {
+    "target": "Dled12_1",
+    "required_state": "blinking",
+    "require_regular_period": true
+  }
+}

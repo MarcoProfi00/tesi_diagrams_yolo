@@ -1,0 +1,243 @@
+{
+  "source_format": "pipeline2.0_experiment_scenario_registry",
+  "batch_name": "batchA",
+  "experiment_name": "experiment3_1",
+  "circuit_id": "a08",
+  "created_at": "2026-07-14T12:50:03",
+  "updated_at": "2026-07-14T12:53:37",
+  "max_executable_scenarios": 5,
+  "next_scenario_number": 5,
+  "last_added_scenario_id": "scenario_4",
+  "proposals": [
+    {
+      "proposal_id": "proposal_1",
+      "created_at": "2026-07-14T12:50:03",
+      "source_agent_response": "outputs\\pipeline2.0\\batchA\\experiment3_1\\a08\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_1",
+        "scenario_2",
+        "scenario_3"
+      ]
+    },
+    {
+      "proposal_id": "proposal_2",
+      "created_at": "2026-07-14T12:53:29",
+      "source_agent_response": "outputs\\pipeline2.0\\batchA\\experiment3_1\\a08\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_4"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_number": 1,
+      "scenario_id": "scenario_1",
+      "title": "Ridurre la resistenza di pilotaggio della base",
+      "hypothesis": "Rresistor22_4 may be too large, so N004 does not drive Qnpn_transistor18_1 strongly enough to create a clear LED switching behavior.",
+      "actions": [
+        {
+          "type": "change_component_value",
+          "target": "Rresistor22_4",
+          "value": "33k"
+        }
+      ],
+      "analysis": "tran",
+      "compare": [
+        "v(N001)",
+        "v(N003)",
+        "v(N004)",
+        "v(N005)"
+      ],
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_1",
+      "execution_path": "outputs\\pipeline2.0\\batchA\\experiment3_1\\a08\\scenarios\\scenario_1",
+      "created_at": "2026-07-14T12:50:03",
+      "updated_at": "2026-07-14T12:50:12",
+      "signature": "{\"actions\": [{\"target\": \"Rresistor22_4\", \"type\": \"change_component_value\", \"value\": \"33k\"}], \"analysis\": \"tran\", \"compare\": [\"v(N001)\", \"v(N003)\", \"v(N004)\", \"v(N005)\"], \"hypothesis\": \"Rresistor22_4 may be too large, so N004 does not drive Qnpn_transistor18_1 strongly enough to create a clear LED switching behavior.\", \"title\": \"Ridurre la resistenza di pilotaggio della base\"}",
+      "scenario": {
+        "scenario_id": "scenario_1",
+        "title": "Ridurre la resistenza di pilotaggio della base",
+        "hypothesis": "Rresistor22_4 may be too large, so N004 does not drive Qnpn_transistor18_1 strongly enough to create a clear LED switching behavior.",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Rresistor22_4",
+            "value": "33k"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N001)",
+          "v(N003)",
+          "v(N004)",
+          "v(N005)"
+        ]
+      }
+    },
+    {
+      "scenario_number": 2,
+      "scenario_id": "scenario_2",
+      "title": "Aumentare l'ampiezza della sorgente di ingresso",
+      "hypothesis": "The assumed 0-5 V pulse on Vsignal_source23_1 may be insufficient for the extracted circuit to produce the expected LED blinking behavior.",
+      "actions": [
+        {
+          "type": "change_source_value",
+          "target": "Vsignal_source23_1",
+          "value": "PULSE(0 10 0 1ms 1ms 50ms 100ms)"
+        }
+      ],
+      "analysis": "tran",
+      "compare": [
+        "v(N002)",
+        "v(N003)",
+        "v(N004)",
+        "v(N005)"
+      ],
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 2,
+      "original_scenario_id": "scenario_2",
+      "execution_path": null,
+      "created_at": "2026-07-14T12:50:03",
+      "updated_at": "2026-07-14T12:50:03",
+      "signature": "{\"actions\": [{\"target\": \"Vsignal_source23_1\", \"type\": \"change_source_value\", \"value\": \"PULSE(0 10 0 1ms 1ms 50ms 100ms)\"}], \"analysis\": \"tran\", \"compare\": [\"v(N002)\", \"v(N003)\", \"v(N004)\", \"v(N005)\"], \"hypothesis\": \"The assumed 0-5 V pulse on Vsignal_source23_1 may be insufficient for the extracted circuit to produce the expected LED blinking behavior.\", \"title\": \"Aumentare l'ampiezza della sorgente di ingresso\"}",
+      "scenario": {
+        "scenario_id": "scenario_2",
+        "title": "Aumentare l'ampiezza della sorgente di ingresso",
+        "hypothesis": "The assumed 0-5 V pulse on Vsignal_source23_1 may be insufficient for the extracted circuit to produce the expected LED blinking behavior.",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vsignal_source23_1",
+            "value": "PULSE(0 10 0 1ms 1ms 50ms 100ms)"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N002)",
+          "v(N003)",
+          "v(N004)",
+          "v(N005)"
+        ]
+      }
+    },
+    {
+      "scenario_number": 3,
+      "scenario_id": "scenario_3",
+      "title": "Forzare il nodo del collettore del LED per test di isolamento",
+      "hypothesis": "The LED may fail to blink because N003 is not being driven to a useful level by the transistor branch.",
+      "actions": [
+        {
+          "type": "drive_node_voltage",
+          "target": "N003",
+          "value": "0V"
+        }
+      ],
+      "analysis": "op",
+      "compare": [
+        "v(N002)",
+        "v(N003)",
+        "v(N004)",
+        "v(N005)"
+      ],
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 3,
+      "original_scenario_id": "scenario_3",
+      "execution_path": null,
+      "created_at": "2026-07-14T12:50:03",
+      "updated_at": "2026-07-14T12:50:03",
+      "signature": "{\"actions\": [{\"target\": \"N003\", \"type\": \"drive_node_voltage\", \"value\": \"0V\"}], \"analysis\": \"op\", \"compare\": [\"v(N002)\", \"v(N003)\", \"v(N004)\", \"v(N005)\"], \"hypothesis\": \"The LED may fail to blink because N003 is not being driven to a useful level by the transistor branch.\", \"title\": \"Forzare il nodo del collettore del LED per test di isolamento\"}",
+      "scenario": {
+        "scenario_id": "scenario_3",
+        "title": "Forzare il nodo del collettore del LED per test di isolamento",
+        "hypothesis": "The LED may fail to blink because N003 is not being driven to a useful level by the transistor branch.",
+        "actions": [
+          {
+            "type": "drive_node_voltage",
+            "target": "N003",
+            "value": "0V"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N002)",
+          "v(N003)",
+          "v(N004)",
+          "v(N005)"
+        ]
+      }
+    },
+    {
+      "scenario_number": 4,
+      "scenario_id": "scenario_4",
+      "title": "Rafforzare l'accoppiamento resistivo tra TRIGGER e base",
+      "hypothesis": "The existing resistive coupling from N001 to N004 may be too weak; adding a parallel resistive branch between the trigger node and the transistor base should increase the base drive if weak coupling is the limiting factor.",
+      "actions": [
+        {
+          "type": "add_resistor_between_nodes",
+          "from": "N001",
+          "to": "N004",
+          "value": "33k"
+        }
+      ],
+      "analysis": "tran",
+      "compare": [
+        "v(N001)",
+        "v(N003)",
+        "v(N004)",
+        "v(N005)"
+      ],
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_2",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_2",
+      "execution_path": "outputs\\pipeline2.0\\batchA\\experiment3_1\\a08\\scenarios\\scenario_4",
+      "created_at": "2026-07-14T12:53:29",
+      "updated_at": "2026-07-14T12:53:37",
+      "signature": "{\"actions\": [{\"from\": \"N001\", \"to\": \"N004\", \"type\": \"add_resistor_between_nodes\", \"value\": \"33k\"}], \"analysis\": \"tran\", \"compare\": [\"v(N001)\", \"v(N003)\", \"v(N004)\", \"v(N005)\"], \"hypothesis\": \"The existing resistive coupling from N001 to N004 may be too weak; adding a parallel resistive branch between the trigger node and the transistor base should increase the base drive if weak coupling is the limiting factor.\", \"title\": \"Rafforzare l'accoppiamento resistivo tra TRIGGER e base\"}",
+      "scenario": {
+        "scenario_id": "scenario_4",
+        "title": "Rafforzare l'accoppiamento resistivo tra TRIGGER e base",
+        "hypothesis": "The existing resistive coupling from N001 to N004 may be too weak; adding a parallel resistive branch between the trigger node and the transistor base should increase the base drive if weak coupling is the limiting factor.",
+        "actions": [
+          {
+            "type": "add_resistor_between_nodes",
+            "from": "N001",
+            "to": "N004",
+            "value": "33k"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N001)",
+          "v(N003)",
+          "v(N004)",
+          "v(N005)"
+        ]
+      }
+    }
+  ]
+}

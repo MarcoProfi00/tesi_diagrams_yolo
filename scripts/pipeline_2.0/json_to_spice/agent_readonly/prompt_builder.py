@@ -1,16 +1,17 @@
 """
 Costruzione del prompt per l'agente diagnostico read-only.
 
-Questo modulo prepara il file 11_agent_prompt.md, cioe il testo che potra essere
-mandato al modello AI nella prima versione dell'agente.
+Questo modulo prepara `11_agent_prompt.md`, cioe il testo inviabile al modello
+AI dall'agente read-only.
 
 Il prompt resta separato dal preview:
 
 - il preview serve a noi per vedere tutti gli artefatti caricati;
-- il prompt serve al futuro modello AI per rispondere in modo controllato.
+- il prompt serve al modello AI per rispondere in modo controllato.
 
-La versione corrente non chiama ancora OpenAI. Genera solo un prompt locale e
-verificabile, con istruzioni stabili ed evidenze caricate dagli output 01-08.
+La chiamata OpenAI resta separata in `openai_runner.py`; questo modulo genera
+soltanto un prompt locale e verificabile, con istruzioni stabili ed evidenze
+caricate dagli output 01-08.
 """
 
 from __future__ import annotations
@@ -233,7 +234,9 @@ def build_executed_scenario_answer_format() -> list[str]:
     """Formato speciale quando l'utente chiede degli scenari gia eseguiti."""
     return [
         "La domanda riguarda scenari gia eseguiti.",
-        "Non proporre nuovi scenari in questa risposta, a meno che l'utente lo chieda esplicitamente.",
+        "Rispondi alla domanda, ma continua la diagnosi quando nessuno scenario ha stop_automation=true e resta budget eseguibile.",
+        "Non confondere una variazione numerica non nulla con un segnale utile: per un percorso di segnale calcola e cita Vpp uscita / Vpp ingresso.",
+        "Se il rapporto e trascurabile rispetto al criterio dichiarato o manca un criterio significativo, non dire che il segnale arriva utilmente e non considerare risolto il sintomo.",
         "Rispondi in Markdown usando esattamente queste sezioni:",
         "",
         "1. **Risposta diretta**",
@@ -251,6 +254,13 @@ def build_executed_scenario_answer_format() -> list[str]:
         "",
         "5. **Conclusione operativa**",
         "   Spiega se l'automazione dovrebbe fermarsi o continuare, usando `stop_automation`.",
+        "   Se `stop_automation=false` e resta budget, proponi esattamente un nuovo scenario eseguibile e self-contained, salvo che manchi un dato esterno indispensabile.",
+        "   Il nuovo scenario deve ripetere tutte le condizioni abilitanti necessarie perche ogni run riparte dalla base.",
+        "   Non ripetere azioni e analisi gia eseguite soltanto per aggiungere `gain`, `measure`, `compare` o una soglia. La stessa azione e invece ammessa una volta in `op` e una volta in `tran` se il transitorio risponde a una domanda temporale diversa.",
+        "   Dopo un trasferimento insufficiente, cambia il confine di isolamento in modo elettricamente informativo, per esempio spostando lo stimolo a un nodo intermedio o testando una diversa causa supportata dalle evidenze.",
+        "   Includi un blocco JSON con `scenario_id`, `title`, `hypothesis`, `intent`, `actions`, `rerun_from`, `analysis`, `compare`, `expect`.",
+        "   Per test di propagazione, attenuazione o amplificazione includi anche `gain` con `input`, `output` e `min_ratio` positivo, motivando la soglia nel testo.",
+        "   Se `stop_automation=true`, non proporre un altro scenario salvo richiesta esplicita di ulteriore esplorazione.",
         "",
         "`Richiede immagine: si/no`",
     ]
@@ -285,8 +295,11 @@ def build_next_scenario_answer_format() -> list[str]:
         "   Indica quali grandezze o warning devono cambiare per considerarlo utile.",
         "",
         "5. **Blocco tecnico per pipeline**",
-        "   Includi un blocco JSON breve con `scenario_id`, `title`, `hypothesis`, `actions`, `rerun_from`, `analysis`, `compare`.",
-        "   Usa solo primitive supportate: scenari elettrici / di pilotaggio (`drive_node_voltage`, `add_voltage_source_between_nodes`, `change_source_value`, `change_component_value`, `close_switch`) e scenari topologici controllati (`connect_nodes`, `add_resistor_between_nodes`, `feed_nodes_from_source_node`).",
+        "   Includi un blocco JSON breve con `scenario_id`, `title`, `hypothesis`, `intent`, `actions`, `rerun_from`, `analysis`, `compare`, `expect`.",
+        "   Usa `intent: diagnostic` per una precondizione o un test di isolamento; usa `intent: correction` solo se le misure verificano direttamente il miglioramento del sintomo.",
+        "   Per propagazione, attenuazione o amplificazione aggiungi `gain: {\"input\":\"v(...)\",\"output\":\"v(...)\",\"min_ratio\":...}` e motiva il valore positivo scelto.",
+        "   Se lo scenario coinvolge piu rami, carichi o uscite, inserisci in `compare` almeno una grandezza osservabile per ciascuno di essi.",
+        "   Usa solo primitive supportate: scenari elettrici / di pilotaggio (`drive_node_voltage`, `set_initial_node_voltage`, `add_voltage_source_between_nodes`, `change_source_value`, `change_component_value`, `close_switch`) e scenari topologici controllati (`connect_nodes`, `add_resistor_between_nodes`, `feed_nodes_from_source_node`).",
         "   Non usare `unknown` nei valori.",
         "",
         "6. **Conclusione provvisoria**",
@@ -328,6 +341,7 @@ def build_final_conclusion_on_request_answer_format() -> list[str]:
         "Usa come evidenza principale gli scenari gia eseguiti e la base run.",
         "Non proporre automaticamente un nuovo scenario in questa risposta.",
         "Proponi un ulteriore scenario solo se e davvero l'unico test decisivo rimasto e dichiaralo esplicitamente come ultimo possibile passo utile.",
+        "Se decidi di fermarti, non includere alcun blocco JSON scenario e non usare `actions: []` come segnaposto.",
         "Rispondi in Markdown usando esattamente queste sezioni:",
         "",
         "1. **Stato degli scenari eseguiti**",
@@ -456,17 +470,27 @@ def build_prompt_operating_rules() -> list[str]:
         "Treat `resolved_candidate` with `stop_automation=true` as the strongest executed-scenario outcome.",
         "Treat `partially_resolved` as supporting diagnostic evidence, not as the main resolving scenario when a resolved_candidate exists.",
         "Treat `not_resolved` as not sufficient by itself, not automatically useless.",
+        "For signal-transfer questions, never claim that a useful signal reaches the output merely because its Vpp is nonzero or classified as changed.",
+        "Compute Vpp(output) / Vpp(input), report the ratio, and compare it with an explicit scenario gain.min_ratio when available.",
+        "If the output-to-input ratio is negligible or below gain.min_ratio, state that the useful signal path is not confirmed even if a directional expect criterion was met.",
+        "When no executed scenario has stop_automation=true and scenario budget remains, an executed-scenario answer must propose one new self-contained scenario unless indispensable external evidence is missing or the user explicitly requested a final conclusion.",
         "A `not_resolved` scenario may still be an enabling condition for a combined scenario when it closes a switch, creates a reference path, completes a current path, or supplies a precondition missing in another scenario.",
+        "Never propose a new run with the same actions AND the same analysis merely to add measurements, gain metadata, expectations or thresholds; reinterpret that existing run instead.",
+        "The same actions are allowed once in op and once in tran when the transient run answers a distinct time-domain question.",
+        "After a measured signal transfer is insufficient, the next scenario must change the electrical isolation boundary or test a different evidence-backed cause, not repeat the same stimulus and switch actions.",
         "In the initial answer for a circuit, propose only first-pass scenarios and do not propose combined scenarios.",
         "Combined scenarios are allowed only after scenario evidence exists and the user explicitly asks what to try next.",
         "Every next scenario must be executable from the base run on its own, because scenario runs do not inherit modifications from earlier scenario folders.",
         "If a next scenario needs an enabling condition demonstrated by an earlier scenario, include that enabling action again in the new scenario JSON.",
         "If the user asks what to try next after executed scenarios, propose the next most informative scenario based on scenario_comparison.json.",
         "If the user explicitly asks for a final conclusion, a final diagnosis, a summary of executed scenarios, or whether it makes sense to stop, switch to final-conclusion mode instead of default next-scenario mode.",
+        "For blinking symptoms, use `temporal_profiles` as primary temporal evidence for LEDs and profiled loads: compare state, regular_period, period_s, frequency_hz, duty_cycle, on_fraction and pulse_count.",
+        "Do not infer the whole transient from the visible beginning of a truncated CSV when a complete `temporal_profiles` summary is available.",
         "In final-conclusion mode, use the executed scenarios and their comparisons as the primary evidence, together with the base run.",
         "In final-conclusion mode, do not automatically generate another scenario just because the budget is not exhausted.",
         "In final-conclusion mode, suggest one more scenario only if it is clearly the single remaining decisive test and explain why the already executed scenarios are not enough without it.",
         "In final-conclusion mode, if the executed evidence already points to a structural limit, a topological ambiguity, or an inconclusive but bounded diagnosis, say that clearly instead of forcing another electrical scenario.",
+        "When final-conclusion mode does not identify a decisive executable test, do not output a scenario JSON block and do not create a placeholder scenario with an empty actions array.",
         "If one executed scenario already changed the nodes, branches or currents most closely tied to the user symptom, prefer extending that proven direction before proposing a weaker exploratory source-value change.",
         "Prefer a minimal combined scenario built around the strongest symptom-linked evidence before proposing a generic source-value variation, unless the source itself is the strongest evidence-backed hypothesis.",
         "Prefer `change_component_value` when the hypothesis can be tested by varying the value of an already emitted resistor, capacitor, inductor or equivalent simple component.",
@@ -474,6 +498,7 @@ def build_prompt_operating_rules() -> list[str]:
         "Use `add_voltage_source_between_nodes` when the base netlist lacks a realistic external excitation and the natural diagnostic move is to power the circuit from existing interface nodes such as connector pins, supply labels or input/return nodes.",
         "Prefer `add_voltage_source_between_nodes` over `drive_node_voltage` when the goal is to energize the whole circuit or a whole input path, not only to isolate a single internal branch node.",
         "Use `drive_node_voltage` mainly for controlled isolation tests or when no more natural value/source/state action is available.",
+        "Use `set_initial_node_voltage` only with `analysis: tran` to break an artificial symmetric initial state; it emits a temporary `.ic` constraint, adds no source and must not be used to power the circuit. Its optional boolean `skip_operating_point: true` enables a genuine startup run with `.tran ... UIC`; use it only when the DC operating point would preserve artificial symmetry and choose genuinely asymmetric initial values. When two symmetric control nodes exist, initialize both in the same scenario to distinct physically admissible levels.",
         "Use `add_resistor_between_nodes` when the hypothesis is not a missing ideal continuity, but a missing or too-weak resistive branch such as a pull-up, pull-down, shunt or additional bias path between two existing nodes.",
         "For `add_resistor_between_nodes`, provide a concrete resistor value and prefer simple plausible values already present in the circuit scale, for example `1k`, `10k`, `33k`, `47k`, `100k`, rather than arbitrary uncommon numbers.",
         "Do not use `add_resistor_between_nodes` when the real hypothesis is only to vary the value of an already emitted resistor; in that case prefer `change_component_value`.",
@@ -576,6 +601,14 @@ def build_executed_scenario_index(executed_scenarios: list[dict[str, Any]]) -> l
             f"stop_automation=`{outcome.get('stop_automation')}`, "
             f"changed=`{summary.get('changed_count')}/{summary.get('requested_count')}`"
         )
+        led_profiles = scenario.get("led_profiles") or {}
+        if led_profiles:
+            lines.append(f"  LED profiles: `{json.dumps(led_profiles, ensure_ascii=False)}`")
+        temporal_profiles = scenario.get("temporal_profiles") or {}
+        if temporal_profiles:
+            lines.append(
+                f"  Temporal profiles: `{json.dumps(temporal_profiles, ensure_ascii=False)}`"
+            )
     return lines
 
 
@@ -590,7 +623,9 @@ def build_scenario_outcome_summary_section(summary: dict[str, Any]) -> list[str]
         "```",
         "",
         "Interpretation rule for scenario questions:",
-        "- The best scenario is the one indicated by `best_scenario_id`, unless direct evidence contradicts it.",
+        "- Use `best_scenario_id` only when `ranking_status` is `verified_best`.",
+        "- If `ranking_status` is `no_verified_best`, compare direct symptom-linked evidence instead of inventing a winner.",
+        "- `changed_count` alone proves only a numerical difference, not an improvement.",
         "- A `resolved_candidate` with `stop_automation=true` is the main resolving candidate.",
         "- `partially_resolved` scenarios can confirm supporting hypotheses but should not be presented as the scenario that solved the problem when a resolved candidate exists.",
     ]

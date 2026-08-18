@@ -1,0 +1,32 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Test statico a 16 V per verificare il solo LED verde",
+  "hypothesis": "Raising Vbattery2_1 from the already tested 14 V to a static 16 V may switch the indication from yellow-plus-green to green-only.",
+  "intent": "correction",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "DC 16V"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N002)",
+    "@dled12_1[id]",
+    "@dled12_2[id]",
+    "@dled12_3[id]"
+  ],
+  "measure": {
+    "@dled12_1[id]": "tran_abs_peak",
+    "@dled12_2[id]": "tran_abs_peak",
+    "@dled12_3[id]": "tran_abs_peak"
+  },
+  "expect": {
+    "v(N002)": "changed",
+    "@dled12_1[id]": "changed",
+    "@dled12_2[id]": "changed",
+    "@dled12_3[id]": "changed"
+  }
+}

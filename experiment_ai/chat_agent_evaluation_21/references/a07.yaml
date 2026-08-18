@@ -1,0 +1,111 @@
+schema_version: 1
+circuit_id: "a07"
+review_status: frozen
+circuit_description: |
+  Circuito con connettore a quattro pin e due rami funzionalmente distinti.
+  Il pin 1, nodo N001, è osservato dal voltmetro AC VAC rispetto a massa.
+  Il pin 2, nodo N002, alimenta un LED rosso attraverso 680 ohm. Il pin 3,
+  nodo N003, è collegato a massa dallo switch RESET. Nella netlist base non
+  è presente alcuna sorgente né su N001 né su N002.
+task_type: "diagnosi di due ingressi esterni non alimentati"
+user_symptom: |
+  Il LED di alimentazione non si accende e il voltmetro VAC non mostra nulla. Quale potrebbe essere il problema?
+
+circuit_inventory:
+  component_count: 9
+  node_count: 5
+  component_types:
+    - "Analog_Meter"
+    - "Connector"
+    - "GND"
+    - "LED"
+    - "Resistor"
+    - "Switch"
+  analysis_types:
+    - "op"
+    - "tran"
+
+required_evidence:
+  - id: base_both_inactive
+    description: |
+      Nella base N001 è a 0 V, N002 e N004 sono sostanzialmente a 0 V e la
+      corrente del LED è trascurabile: circa 10^-28 A o inferiore.
+  - id: independent_nodes
+    description: |
+      VAC misura N001, mentre il LED dipende da N002. I due sintomi non
+      condividono lo stesso nodo di alimentazione nel grafo disponibile.
+  - id: led_supply_test
+    description: |
+      Applicando una tensione DC a N002 devono comparire tensione sul ramo
+      LED e corrente diretta non nulla nel diodo.
+  - id: vac_signal_test
+    description: |
+      Applicando una sorgente sinusoidale a N001, il transitorio deve mostrare
+      una tensione alternata non nulla sul nodo osservato da VAC.
+
+success_conditions:
+  - id: both_causes_identified
+    description: |
+      La conclusione identifica l'assenza di alimentazione DC su N002 e
+      l'assenza di segnale AC su N001 come spiegazioni dei due sintomi.
+  - id: led_activated
+    description: |
+      Una prova DC porta N002 a un livello non nullo e attiva la corrente del
+      LED; con 5 V la corrente verificata è circa 6.32 mA.
+  - id: vac_activated
+    description: |
+      Una prova transitoria porta v(N001) da ampiezza nulla a una sinusoide
+      misurabile rispetto a massa.
+  - id: both_branches_covered
+    description: |
+      Entrambi i rami vengono verificati, nello stesso scenario oppure con
+      due scenari separati seguiti da una conclusione che integri le prove.
+  - id: conclusion_calibrated
+    description: |
+      La conclusione distingue i valori scelti per le sorgenti di prova da
+      valori nominali certi, che non sono riportati nell'immagine.
+
+acceptable_solutions:
+  - id: simultaneous_dc_and_ac_test
+    description: |
+      Applicare nello stesso transitorio una sorgente DC a N002 e una
+      sorgente sinusoidale a N001, verificando corrente LED e ampiezza VAC.
+    verified_reference_values: |
+      Con 5 V DC su N002: N004 circa 0.703 V e corrente LED circa 6.319 mA.
+      Con SIN(0 5 50) su N001: v(N001) circa 10.000 Vpp. Con SIN(0 1 50):
+      v(N001) circa 2.000 Vpp.
+  - id: separate_branch_tests
+    description: |
+      Eseguire separatamente la prova DC del LED e la prova AC del voltmetro,
+      purché entrambe siano completate e integrate nella diagnosi finale.
+  - id: single_branch_test
+    acceptance: partial_only
+    description: |
+      Verificare soltanto il LED oppure soltanto VAC conferma una parte
+      della diagnosi ma lascia irrisolto l'altro sintomo.
+
+unsupported_conclusions:
+  - |
+    Attribuire entrambi i sintomi a un unico nodo: N001 e N002 sono reti
+    distinte nel Graph JSON ricevuto dall'agente.
+  - |
+    Indicare lo switch RESET come causa principale: lo switch agisce sul
+    diverso nodo N003 e non alimenta né VAC né il ramo LED.
+  - |
+    Dichiarare acceso il LED usando soltanto v(N002).vpp: una sorgente DC
+    costante a 5 V ha ampiezza picco-picco nulla ma livello medio/finale
+    pari a 5 V; serve controllare il livello DC o la corrente del LED.
+  - |
+    Dichiarare risolto l'intero sintomo dopo aver verificato un solo ramo.
+  - |
+    Presentare 5 V DC, 1 V di picco o 5 V di picco a 50 Hz come valori
+    necessariamente nominali: sono valori usati dalle sorgenti di prova.
+
+review_notes: |
+  Il Graph JSON coincide con l'immagine corretta presente in
+  data/batchPipeline2.0/batchChatAgentEvaluation. Il voltmetro è modellato
+  come resistenza da 10 Mohm tra N001 e massa. Il caso evidenzia inoltre che
+  una misura tran_vpp non rappresenta il livello di una tensione DC costante:
+  per N002 vpp = 0 anche quando il nodo è stabilmente a 5 V. Le etichette
+  automatiche che ignorano questa distinzione non costituiscono ground truth.
+  La scheda deve essere approvata manualmente prima dello stato frozen.

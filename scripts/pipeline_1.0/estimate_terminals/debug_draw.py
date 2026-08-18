@@ -1,6 +1,6 @@
 import cv2
 
-from .config import *
+from .config import TERMINAL_RADIUS
 # =========================================================
 # DEBUG VISIVO
 # =========================================================
@@ -102,7 +102,9 @@ def draw_ic_ocr_summary(image_bgr, components):
       - tutte le ROI OCR;
       - tutti i candidati;
       - parole scartate;
-      - pin number / pin label.
+      - i candidati pin number / pin label scartati.
+
+    Disegna invece i pin number / pin label finali selezionati.
 
     Obiettivo pratico:
       aprire *_ic_ocr.jpg e capire in pochi secondi:

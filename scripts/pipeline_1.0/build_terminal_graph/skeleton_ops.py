@@ -1,17 +1,23 @@
-# =========================================================
-# PULIZIA SKELETON DENTRO I COMPONENTI A DUE TERMINALI
-# =========================================================
-# Il passo 04 puo' lasciare nello skeleton tratti del corpo del componente
-# (ad esempio la zig-zag del resistore). Se quei pixel restano collegati ai
-# fili esterni, i due capi del componente finiscono nella stessa connected
-# component e il grafo crea un "mega nodo" non reale.
-#
-# Per il passo 05 il corpo di un componente a due terminali non e' un filo:
-# deve separare i due morsetti. Per questo cancelliamo solo l'interno del
-# bbox dei componenti a due terminali, lasciando vivi i piccoli stub esterni
-# vicino ai terminali.
+"""
+Pulizia dello skeleton dentro i corpi dei componenti.
+
+Il passo 04 puo' lasciare nello skeleton tratti del corpo grafico (per esempio
+la zig-zag di un resistore). Qui l'interno dei componenti interessati viene
+cancellato lasciando vivi i piccoli stub esterni vicini ai terminali, cosi' i
+due morsetti non finiscono per errore nella stessa connected component.
+"""
 
 from __future__ import annotations
+
+from pathlib import Path
+
+import cv2
+import numpy as np
+
+from .config import COMPONENT_BODY_ERASE_EXCLUDED_CLASSES, COMPONENT_BODY_ERASE_PADDING
+from .geometry import clamp_window
+from .ids import normalize_class_name
+from .io_utils import load_binary_image
 
 FACING_RESTORE_MAX_AXIS_GAP = 52
 FACING_RESTORE_MAX_LATERAL_DELTA = 14
@@ -20,6 +26,8 @@ FACING_RESTORE_MAX_BBOX_OVERLAP = 36
 FACING_RESTORE_MIN_PROJECTION_OVERLAP_RATIO = 0.45
 FACING_RESTORE_THICKNESS = 4
 FACING_RESTORE_LABEL_RADIUS = 5
+EVIDENCE_RESTORE_MAX_AXIS_GAP = 180
+EVIDENCE_RESTORE_MAX_LATERAL_DELTA = 8
 
 def should_erase_component_body_from_skeleton(component: dict):
     """
@@ -147,6 +155,44 @@ def _find_facing_restore_pairs(components: list[dict]):
     return pairs
 
 
+def _find_long_aligned_restore_pairs(components: list[dict]):
+    """Trova coppie lunghe da ripristinare solo con evidenza nello skeleton."""
+    terminals = _flatten_component_terminals(components)
+    pairs = []
+
+    for index, item_a in enumerate(terminals):
+        term_a = item_a["term"]
+        side_a = str(term_a.get("relative_position") or "").lower()
+        for item_b in terminals[index + 1:]:
+            if item_a["instance_id"] == item_b["instance_id"]:
+                continue
+
+            term_b = item_b["term"]
+            side_b = str(term_b.get("relative_position") or "").lower()
+            x_a = float(term_a["x"])
+            y_a = float(term_a["y"])
+            x_b = float(term_b["x"])
+            y_b = float(term_b["y"])
+            if {side_a, side_b} == {"top", "bottom"}:
+                lateral_delta = abs(x_a - x_b)
+                axis_gap = abs(y_a - y_b)
+            elif {side_a, side_b} == {"left", "right"}:
+                lateral_delta = abs(y_a - y_b)
+                axis_gap = abs(x_a - x_b)
+            else:
+                continue
+
+            if axis_gap <= FACING_RESTORE_MAX_AXIS_GAP:
+                continue
+            if axis_gap > EVIDENCE_RESTORE_MAX_AXIS_GAP:
+                continue
+            if lateral_delta > EVIDENCE_RESTORE_MAX_LATERAL_DELTA:
+                continue
+            pairs.append((term_a, term_b))
+
+    return pairs
+
+
 def _nearest_label_in_radius(labels: np.ndarray, x: float, y: float, radius: int):
     """Cerca la label positiva piu' vicina a un punto entro un raggio locale."""
     h, w = labels.shape[:2]
@@ -192,7 +238,7 @@ def erase_component_bodies_from_skeleton(
         if not should_erase_component_body_from_skeleton(component):
             continue
 
-        bbox = component.get("body_bbox") or component.get("bbox")
+        bbox = _component_bbox(component)
         if not bbox or len(bbox) != 4:
             continue
 
@@ -222,7 +268,14 @@ def erase_component_bodies_from_skeleton(
         if class_name == "connector":
             cut_connector_pin_separators(cleaned, component)
 
-    for term_a, term_b in _find_facing_restore_pairs(components):
+    restore_pairs = list(_find_facing_restore_pairs(components))
+    restore_pairs.extend(_find_long_aligned_restore_pairs(components))
+    seen_pairs = set()
+    for term_a, term_b in restore_pairs:
+        pair_key = tuple(sorted((str(term_a.get("terminal_id")), str(term_b.get("terminal_id")))))
+        if pair_key in seen_pairs:
+            continue
+        seen_pairs.add(pair_key)
         label_a = _nearest_label_in_radius(
             original_labels,
             term_a.get("x", 0.0),
@@ -323,15 +376,3 @@ def load_junction_support_binary(wire_extraction: dict):
             continue
 
     return None
-# Import storicamente posizionati in fondo al file: funzionano perche' le
-# funzioni vengono eseguite solo dopo il caricamento completo del modulo.
-
-from pathlib import Path
-
-import cv2
-import numpy as np
-
-from .config import COMPONENT_BODY_ERASE_EXCLUDED_CLASSES, COMPONENT_BODY_ERASE_PADDING
-from .geometry import clamp_window
-from .ids import normalize_class_name
-from .io_utils import load_binary_image

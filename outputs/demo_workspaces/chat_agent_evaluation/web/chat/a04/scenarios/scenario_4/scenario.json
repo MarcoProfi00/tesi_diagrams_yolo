@@ -1,0 +1,29 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Aumentare il condensatore di accoppiamento C1",
+  "hypothesis": "If Ccapacitor4_1 is causing excessive attenuation at 100 Hz, increasing its value should improve signal transfer from N002 to N003 and produce a larger output swing at N006.",
+  "intent": "correction",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Ccapacitor4_1",
+      "value": "1u"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N002)",
+    "v(N003)",
+    "v(N006)"
+  ],
+  "expect": {
+    "v(N003)": "increased",
+    "v(N006)": "increased"
+  },
+  "gain": {
+    "input": "v(N002)",
+    "output": "v(N003)",
+    "min_ratio": 0.5
+  }
+}

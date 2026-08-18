@@ -1,0 +1,30 @@
+{
+  "title": "Verifica statica dello stato scarica a 9 V",
+  "hypothesis": "Riducendo la batteria da 12 V a 9 V il ramo con Q2 e la rete zener da 10 V non devono più sostenere il LED giallo; il circuito deve passare allo stato di batteria scarica con prevalenza del ramo verde tramite Q3 e R6, mentre il LED rosso resta spento.",
+  "intent": "diagnostic",
+  "analysis": "op",
+  "actions": [
+    {
+      "type": "change_source_value",
+      "target": "Vbattery2_1",
+      "value": "9V"
+    }
+  ],
+  "compare": [
+    "v(N011)",
+    "v(N004)",
+    "v(N012)",
+    "v(N013)",
+    "v(N015)",
+    "v(N017)"
+  ],
+  "expect": {
+    "v(N011)": "changed",
+    "v(N004)": "changed",
+    "v(N012)": "changed",
+    "v(N013)": "changed",
+    "v(N015)": "changed",
+    "v(N017)": "changed"
+  },
+  "scenario_id": "agent_scenario_3"
+}

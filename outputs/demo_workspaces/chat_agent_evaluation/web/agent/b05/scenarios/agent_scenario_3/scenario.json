@@ -1,0 +1,38 @@
+{
+  "title": "Chiudere S1 e iniettare un segnale piu grande sul nodo base del secondo stadio per verificare direttamente la propagazione verso la cuffia",
+  "hypothesis": "Se il silenzio non dipende solo dall'antenna non modellata ma da assenza di trasferimento nello stadio audio finale, allora anche forzando un segnale AC direttamente sul nodo N008 il carico cuffia Rbreaker3_1 restera senza tensione utile. Se invece compare segnale ai capi della cuffia, il problema e localizzato a monte del secondo stadio, cioe nel rivelatore/accoppiamento precedente.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    },
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N008",
+      "negative": "0",
+      "value": "SIN(0 100m 1000)"
+    }
+  ],
+  "compare": [
+    "v(N008)",
+    "v(N003,N004)",
+    "i(Rbreaker3_1)"
+  ],
+  "measure": {
+    "v(N008)": "tran_vpp",
+    "v(N003,N004)": "tran_vpp",
+    "i(Rbreaker3_1)": "op"
+  },
+  "gain": {
+    "input": "v(N008)",
+    "output": "v(N003,N004)",
+    "min_ratio": 0.01
+  },
+  "expect": {
+    "v(N008)": "nonzero",
+    "v(N003,N004)": "nonzero"
+  },
+  "scenario_id": "agent_scenario_3"
+}

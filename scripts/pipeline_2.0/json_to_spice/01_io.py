@@ -1,21 +1,16 @@
 """
 Funzioni di input/output della pipeline 2.0.
 
-Questo modulo gestisce lettura e scrittura dei file usati dalla nuova pipeline:
+Questo modulo gestisce lettura, scrittura e risoluzione dei percorsi usati dalla
+pipeline tecnica:
 
-- Graph JSON in input dalla pipeline_1.0;
-- values.yaml;
-- device_profiles.yaml;
-- node_map.json;
-- conversion_report.json;
-- missing_parameters.json;
-- spice_netlist.cir;
-- spice_results.json;
-- electrical_check_report.json;
-- diagnostic_context.json.
+- Graph JSON in input da `outputs/pipeline1.0`;
+- root circuiti in `outputs/pipeline2.0`;
+- copia `01_graph.json`;
+- lettura e scrittura degli artefatti JSON prodotti dagli step successivi.
 
-L'obiettivo e centralizzare i percorsi, il caricamento e il salvataggio degli
-artefatti, evitando che ogni modulo gestisca i file in modo diverso.
+I valori YAML e gli altri metadati vengono risolti dagli step che ne conoscono
+il contratto specifico.
 """
 
 from __future__ import annotations

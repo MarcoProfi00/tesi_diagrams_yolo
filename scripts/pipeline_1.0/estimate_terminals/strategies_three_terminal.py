@@ -35,7 +35,7 @@ def _build_three_terminal_support_binary(binary, bbox):
     roi = binary[ry1:ry2 + 1, rx1:rx2 + 1]
     roi_fg = (roi > 0).astype(np.uint8)
 
-    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(roi_fg, connectivity=8)
+    num_labels, labels, _, _ = cv2.connectedComponentsWithStats(roi_fg, connectivity=8)
 
     seed_pad = THREE_TERMINAL_TEXT_SUPPRESS_SEED_PAD
     seed_w = max(
@@ -168,11 +168,6 @@ def snap_bjt_pair_terminal_to_lateral_wire(binary, bbox, orientation, relative_p
         "original_point": [round(float(point[0]), 2), round(float(point[1]), 2)],
         "snapped_point": snapped,
     }
-
-
-# Calcola gli orientamenti candidati MOSFET dalla bbox.
-def candidate_mosfet_orientations_from_bbox(bbox):
-    return ("left", "right", "top", "bottom")
 
 
 # Valuta l'orientamento a tre terminali tramite punti terminali.
@@ -894,7 +889,7 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
     # 2) Validazione finale specifica per Mosfet
     # -------------------------------------------------
     if class_name == "Mosfet":
-        candidate_orientations = candidate_mosfet_orientations_from_bbox(bbox)
+        candidate_orientations = ("left", "right", "top", "bottom")
 
         mosfet_orientation_scores = {}
         mosfet_orientation_point_debug = {}
@@ -907,10 +902,6 @@ def strategy_detect_three_terminal_orientation(binary, bbox, class_name="", defa
             )
 
             gate_bonus = 0.0
-            # Se vuoi riattivarlo in futuro:
-            # if lateral_scores is not None and cand in ("left", "right"):
-            #     gate_bonus = 0.8 * lateral_scores[cand]
-            #     cand_score += gate_bonus
 
             cand_debug["gate_bonus"] = gate_bonus
             mosfet_orientation_scores[cand] = cand_score

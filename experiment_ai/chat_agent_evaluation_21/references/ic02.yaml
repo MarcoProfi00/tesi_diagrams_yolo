@@ -1,0 +1,202 @@
+schema_version: 1
+circuit_id: "ic02"
+review_status: frozen
+circuit_description: |
+  Amplificatore audio non invertente con LM1875 e alimentazione duale di
+  +/-25 V. Il segnale entra attraverso R5 e C4; R1, R2 e C1 definiscono la
+  controreazione AC. L'uscita pilota direttamente un carico equivalente da
+  4 ohm ed e' stabilizzata dalla rete di Zobel R6-C7. Le due rail hanno
+  fusibili da 2 A e condensatori di disaccoppiamento da 100 nF e 220 uF.
+task_type: "diagnosi e correzione di volume audio troppo basso a ingresso invariato"
+user_symptom: |
+  L'audio si sente ma il volume e' troppo basso. Quali controlli e prove posso fare, senza modificare il segnale di ingresso, per capire la causa e aumentare il volume?
+
+circuit_inventory:
+  component_count: 29
+  node_count: 12
+  component_types:
+    - "Fuse"
+    - "GND"
+    - "Integrated_Circuit"
+    - "Polarized_Capacitor"
+    - "Resistor"
+    - "Speaker"
+    - "Terminal"
+  analysis_types:
+    - "op"
+    - "tran"
+
+required_evidence:
+  - id: explicit_testbench_assumptions
+    description: |
+      Le rail di +/-25 V, i passivi e il carico da 4 ohm provengono dallo
+      schema. AUDIO_IN=20 mV di picco a 1 kHz e' invece un'assunzione del
+      testbench, scelta per lavorare in regime lineare: non misura il livello
+      della sorgente fisica dell'utente e non dimostra da sola un guasto.
+  - id: official_model_provenance
+    description: |
+      IC1 usa il modello PSpice ufficiale Texas Instruments LM1875_0,
+      pacchetto SNAM066A Rev. A, versione 1.0 del 2012-03-29. Il file non
+      modificato ha SHA-256
+      28BF3FC1D14AD5929C3151A7BCB6F97922BD59B38539FE334B7018522551B1F2
+      ed e' eseguito da ngspice in compatibilita' PSpice. Non esiste
+      comportamento specifico del LM1875 implementato nel codice Python.
+  - id: topology_and_pinout_valid
+    description: |
+      Graph, node map e netlist coincidono con l'immagine. Il port order TI
+      Vin,Vip,VSS,VDD,Vout e' mappato su N006,N005,N001,N003,N007; N001 e
+      N003 sono circa -25 V e +25 V dopo i fusibili. N007 alimenta speaker e
+      Zobel, mentre R1 collega N007 a N006 e R2-C1 collegano N006 a massa in
+      AC. I nove simboli GND sono intenzionalmente uniti al nodo 0; non ci
+      sono singleton, terminali scollegati o componenti omessi.
+  - id: expected_closed_loop_gain
+    description: |
+      A 1 kHz C1=22 uF ha reattanza trascurabile rispetto a R2=10 kohm; il
+      guadagno non invertente atteso e' circa 1+R1/R2=19. La base misura negli
+      ultimi 10 ms circa 18.14 V/V RMS (18.18 usando i Vpp globali), quindi il
+      circuito estratto segue la rete di progetto e non mostra perdita di
+      guadagno anomala.
+  - id: base_output_level_and_quality
+    description: |
+      Con 20 mVpk in ingresso, la base produce circa 0.726 Vpp e 0.2565 Vrms
+      AC su N007. Sul carico resistivo da 4 ohm corrispondono a circa 16.45 mW.
+      La THD armonica 2-10 calcolata sul CSV negli ultimi 10 ms e' circa
+      0.004%. Il livello e' basso in potenza ma il modello funziona in modo
+      lineare; il volume acustico reale dipenderebbe anche dal diffusore.
+  - id: load_test_rejects_load_limitation
+    description: |
+      CHAT cambia lo speaker equivalente da 4 a 8 ohm. L'uscita resta circa
+      0.726 Vpp e il guadagno 18.14: la variazione e' trascurabile. A parita'
+      di tensione la potenza elettrica calcolata sul nuovo carico sarebbe
+      circa 8.22 mW, meta' della base, non un aumento. Lo scenario esclude una
+      limitazione di ampiezza dovuta al carico nel modello; l'etichetta
+      automatica "ipotesi diagnostica confermata" non va letta letteralmente.
+  - id: feedback_correction_verified
+    description: |
+      Ridurre R2 da 10 kohm a 4.7 kohm, senza cambiare AUDIO_IN, porta il
+      guadagno RMS da circa 18.14 a 37.50, N007 da circa 0.726 a 1.501 Vpp e
+      la potenza sul carico da circa 16.45 a 70.27 mW. La THD 2-10 resta circa
+      0.0047% nel modello. L'incremento e' coerente con il nuovo valore ideale
+      1+180k/4.7k circa 39.3; e' una correzione di progetto verificata, non la
+      prova che R2 fosse fisicamente guasta.
+  - id: reducing_upper_feedback_resistor_is_wrong_direction
+    description: |
+      R1 e' la resistenza superiore tra uscita e ingresso invertente. Ridurla
+      da 180 a 100 kohm deve ridurre, non aumentare, il guadagno. Lo scenario
+      AGENT 1 passa infatti da circa 18.14 a 10.51 V/V, da 0.726 a 0.421 Vpp
+      e da 16.45 a 5.52 mW sul carico. SPICE smentisce correttamente la sua
+      ipotesi iniziale e l'AGENT non usa questo test nella conclusione.
+
+success_conditions:
+  - id: assumed_input_is_not_physical_measurement
+    description: |
+      La risposta distingue il segnale da 20 mVpk assunto nel testbench dal
+      livello reale e non dichiara un guasto fisico basandosi soltanto su tale
+      valore.
+  - id: baseline_operation_recognized
+    description: |
+      Il circuito base e' riconosciuto come funzionante e lineare, con guadagno
+      circa 19 coerente col rapporto di feedback, anche se la potenza del banco
+      di prova e' bassa.
+  - id: load_hypothesis_rejected
+    description: |
+      Il passaggio da 4 a 8 ohm e' interpretato come prova negativa della
+      limitazione di tensione dovuta al carico, non come aumento significativo
+      del volume o come correzione verificata.
+  - id: feedback_direction_correct
+    description: |
+      Per aumentare il guadagno non invertente si riduce R2 oppure si aumenta
+      R1. Ridurre R1 viene riconosciuto come tentativo fallito nella direzione
+      opposta.
+  - id: correction_quantified
+    description: |
+      La correzione R2=4.7 kohm e' supportata da ingresso invariato, aumento di
+      guadagno, ampiezza e potenza, insieme a un controllo della distorsione o
+      almeno all'assenza di clipping evidente.
+  - id: design_change_not_proven_fault
+    description: |
+      La risposta presenta R2=4.7 kohm come aumento del guadagno verificato in
+      simulazione. Non afferma che R2=10 kohm sia necessariamente un valore
+      errato o un componente guasto nel circuito reale.
+  - id: model_scope_stated
+    description: |
+      Le conclusioni quantitative sono limitate al macromodello TI, al carico
+      resistivo e al test a 1 kHz; non sostituiscono misure su alimentazione,
+      speaker e montaggio fisico.
+
+acceptable_solutions:
+  - id: reduce_r2_to_4_7k
+    description: |
+      Ridurre R2 da 10 kohm a 4.7 kohm. E' la correzione direttamente provata
+      da entrambe le traiettorie e quasi raddoppia il guadagno senza modificare
+      la sorgente ne' produrre clipping nel test eseguito.
+  - id: increase_r1_with_validation
+    acceptance: not_executed
+    description: |
+      Aumentare R1 sopra 180 kohm e' elettricamente una direzione alternativa
+      corretta per aumentare il guadagno, ma non e' stata eseguita. Andrebbero
+      verificati margine, rumore, banda e stabilita' prima di consigliarla come
+      soluzione definitiva.
+  - id: verify_feedback_components_in_hardware
+    acceptance: physical_followup
+    description: |
+      Misurare R1=180 kohm, R2=10 kohm, continuita' del ramo N006-N009 e C1,
+      poi confrontare il guadagno reale ingresso-uscita. Questo distingue un
+      progetto a guadagno 19 da un errore di valore o montaggio.
+  - id: verify_supply_and_speaker
+    acceptance: physical_followup
+    description: |
+      Controllare le rail sotto carico, l'impedenza nominale e il cablaggio del
+      diffusore resta utile sul circuito fisico, ma tali guasti non sono
+      dimostrati dalle run SPICE congelate.
+
+unsupported_conclusions:
+  - |
+    Dire che il circuito base sia guasto o che abbia un guadagno anormalmente
+    basso: il valore misurato circa 18.14 e' coerente con 1+180k/10k.
+  - |
+    Attribuire con certezza il volume basso a R2 guasta. La simulazione mostra
+    che cambiarne il valore aumenta il guadagno, non che il componente reale
+    differisca dallo schema o sia difettoso.
+  - |
+    Considerare 8 ohm una correzione del volume: la tensione resta invariata e
+    la potenza resistiva scende da circa 16.45 a 8.22 mW.
+  - |
+    Affermare che ridurre R1 da 180 a 100 kohm aumenti il guadagno. Il valore
+    simulato scende a circa 10.51 e la potenza a circa 5.52 mW.
+  - |
+    Usare da sola l'etichetta partially_resolved o resolved_candidate come
+    prova: la validita' deriva dai CSV, dal rapporto di feedback e dalle
+    misure di ampiezza, RMS, potenza e distorsione.
+  - |
+    Dichiarare verificata la qualita' o la potenza dell'amplificatore reale su
+    tutta la banda audio: le prove sono a 1 kHz, con speaker resistivo e modello
+    TI, senza trasduttore, termica o montaggio fisico.
+  - |
+    Presentare l'aumento di volume acustico come direttamente misurato. SPICE
+    verifica tensione e potenza elettrica equivalente, non la pressione sonora.
+
+review_notes: |
+  Immagine e values canonici provengono da
+  data/batchPipeline2.0/batchICChatAgentEvaluation. Graph, pinout, node map e
+  netlist sono stati confrontati con lo schema. Provenienza e hash del modello
+  sono documentati in metadata/spice_models/ti/lm1875/snam066a. Le misure RMS,
+  potenza e THD sono state calcolate sui CSV congelati negli ultimi 10 ms.
+
+  CHAT propone inizialmente anche ipotesi deboli o errate: cambiare lo stesso
+  valore della sorgente per "misurare", ridurre R1 aspettandosi piu' uscita e
+  aumentare C4 a 1 kHz. L'utente esegue prima il test del carico, che esclude
+  correttamente tale causa, e poi R2=4.7 kohm, che aumenta davvero il guadagno.
+  La conclusione finale e' tecnicamente buona e prudentemente segnala che la
+  pipeline non aveva una metrica THD; l'analisi indipendente conferma assenza
+  di distorsione apprezzabile nel test. Il percorso dipende pero' dalla scelta
+  guidata dell'utente e include scenari proposti non tutti corretti.
+
+  AGENT prova autonomamente due correzioni. Il primo scenario nasce da una
+  relazione causale invertita su R1 ed e' un errore di ragionamento, ma SPICE
+  lo smentisce e l'AGENT prosegue senza incorporarlo nella diagnosi finale. Il
+  secondo scenario su R2 e' corretto, soddisfa le misure e porta a una
+  conclusione coerente. AGENT mostra quindi buon recupero sperimentale e una
+  soluzione finale valida, ma non un percorso privo di errori.
+
+  La scheda e' stata approvata manualmente e congelata.

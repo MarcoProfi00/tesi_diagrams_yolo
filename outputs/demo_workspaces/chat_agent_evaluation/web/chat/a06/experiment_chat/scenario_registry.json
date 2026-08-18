@@ -1,0 +1,370 @@
+{
+  "source_format": "pipeline2.0_experiment_scenario_registry",
+  "batch_name": "batchChatAgentEvaluation",
+  "experiment_name": "chat_agent_evaluation",
+  "circuit_id": "a06",
+  "created_at": "2026-07-23T13:03:11",
+  "updated_at": "2026-07-23T13:09:24",
+  "max_executable_scenarios": 5,
+  "next_scenario_number": 6,
+  "last_added_scenario_id": "scenario_5",
+  "proposals": [
+    {
+      "proposal_id": "proposal_1",
+      "created_at": "2026-07-23T13:03:11",
+      "source_agent_response": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\a06\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_1",
+        "scenario_2",
+        "scenario_3"
+      ]
+    },
+    {
+      "proposal_id": "proposal_2",
+      "created_at": "2026-07-23T13:05:00",
+      "source_agent_response": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\a06\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_4"
+      ]
+    },
+    {
+      "proposal_id": "proposal_3",
+      "created_at": "2026-07-23T13:08:36",
+      "source_agent_response": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\a06\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_5"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_number": 1,
+      "scenario_id": "scenario_1",
+      "title": "Ridurre l’ampiezza della sorgente di ingresso",
+      "hypothesis": "The output distortion may be caused by overdriving the transistor stage with the present input amplitude.",
+      "actions": [
+        {
+          "type": "change_source_value",
+          "target": "Vsignal_source23_1",
+          "value": "SIN(0 100m 100)"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "tran",
+      "compare": [
+        "v(N006)",
+        "v(N004)",
+        "v(N005)"
+      ],
+      "measure": {},
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N004)": "changed",
+        "v(N005)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_1",
+      "execution_path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\a06\\scenarios\\scenario_1",
+      "created_at": "2026-07-23T13:03:11",
+      "updated_at": "2026-07-23T13:03:39",
+      "signature": "{\"actions\":[{\"target\":\"Vsignal_source23_1\",\"type\":\"change_source_value\",\"value\":\"SIN(0 100m 100)\"}],\"analysis\":\"tran\"}",
+      "scenario": {
+        "scenario_id": "scenario_1",
+        "title": "Ridurre l’ampiezza della sorgente di ingresso",
+        "hypothesis": "The output distortion may be caused by overdriving the transistor stage with the present input amplitude.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vsignal_source23_1",
+            "value": "SIN(0 100m 100)"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N006)",
+          "v(N004)",
+          "v(N005)"
+        ],
+        "expect": {
+          "v(N004)": "changed",
+          "v(N005)": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 2,
+      "scenario_id": "scenario_2",
+      "title": "Rafforzare il bias di base riducendo Rresistor22_2",
+      "hypothesis": "The transistor may be biased too close to cutoff because the base bias from VCC is too weak.",
+      "actions": [
+        {
+          "type": "change_component_value",
+          "target": "Rresistor22_2",
+          "value": "47k"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N002)",
+        "v(N003)",
+        "v(N004)"
+      ],
+      "measure": {},
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N002)": "changed",
+        "v(N004)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 2,
+      "original_scenario_id": "scenario_2",
+      "execution_path": null,
+      "created_at": "2026-07-23T13:03:11",
+      "updated_at": "2026-07-23T13:03:11",
+      "signature": "{\"actions\":[{\"target\":\"Rresistor22_2\",\"type\":\"change_component_value\",\"value\":\"47k\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_2",
+        "title": "Rafforzare il bias di base riducendo Rresistor22_2",
+        "hypothesis": "The transistor may be biased too close to cutoff because the base bias from VCC is too weak.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Rresistor22_2",
+            "value": "47k"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N002)",
+          "v(N003)",
+          "v(N004)"
+        ],
+        "expect": {
+          "v(N002)": "changed",
+          "v(N004)": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 3,
+      "scenario_id": "scenario_3",
+      "title": "Ridurre la degenerazione di emettitore variando Rresistor22_5",
+      "hypothesis": "The emitter network may be setting an unfavorable operating point that contributes to output distortion.",
+      "actions": [
+        {
+          "type": "change_component_value",
+          "target": "Rresistor22_5",
+          "value": "1k"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N003)",
+        "v(N004)",
+        "v(N005)"
+      ],
+      "measure": {},
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N003)": "changed",
+        "v(N004)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 3,
+      "original_scenario_id": "scenario_3",
+      "execution_path": null,
+      "created_at": "2026-07-23T13:03:11",
+      "updated_at": "2026-07-23T13:03:11",
+      "signature": "{\"actions\":[{\"target\":\"Rresistor22_5\",\"type\":\"change_component_value\",\"value\":\"1k\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_3",
+        "title": "Ridurre la degenerazione di emettitore variando Rresistor22_5",
+        "hypothesis": "The emitter network may be setting an unfavorable operating point that contributes to output distortion.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Rresistor22_5",
+            "value": "1k"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N003)",
+          "v(N004)",
+          "v(N005)"
+        ],
+        "expect": {
+          "v(N003)": "changed",
+          "v(N004)": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 4,
+      "scenario_id": "scenario_4",
+      "title": "Ridurre ancora l’ampiezza d’ingresso per cercare una THD più bassa",
+      "hypothesis": "Since scenario_1 reduced distortion without suppressing output transfer, a further reduction of Vsignal_source23_1 to 50 mV may lower THD at N005 while preserving useful gain from N006 to N005.",
+      "actions": [
+        {
+          "type": "change_source_value",
+          "target": "Vsignal_source23_1",
+          "value": "SIN(0 50m 100)"
+        }
+      ],
+      "intent": "correction",
+      "analysis": "tran",
+      "compare": [
+        "v(N006)",
+        "v(N005)"
+      ],
+      "measure": {},
+      "gain": {
+        "input": "v(N006)",
+        "output": "v(N005)",
+        "min_ratio": 5
+      },
+      "temporal_expect": null,
+      "expect": {
+        "v(N006)": "changed",
+        "v(N005)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_2",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_2",
+      "execution_path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\a06\\scenarios\\scenario_4",
+      "created_at": "2026-07-23T13:05:00",
+      "updated_at": "2026-07-23T13:06:05",
+      "signature": "{\"actions\":[{\"target\":\"Vsignal_source23_1\",\"type\":\"change_source_value\",\"value\":\"SIN(0 50m 100)\"}],\"analysis\":\"tran\"}",
+      "scenario": {
+        "scenario_id": "scenario_4",
+        "title": "Ridurre ancora l’ampiezza d’ingresso per cercare una THD più bassa",
+        "hypothesis": "Since scenario_1 reduced distortion without suppressing output transfer, a further reduction of Vsignal_source23_1 to 50 mV may lower THD at N005 while preserving useful gain from N006 to N005.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vsignal_source23_1",
+            "value": "SIN(0 50m 100)"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N006)",
+          "v(N005)"
+        ],
+        "expect": {
+          "v(N006)": "changed",
+          "v(N005)": "changed"
+        },
+        "gain": {
+          "input": "v(N006)",
+          "output": "v(N005)",
+          "min_ratio": 5
+        }
+      }
+    },
+    {
+      "scenario_number": 5,
+      "scenario_id": "scenario_5",
+      "title": "Ridurre l’ingresso a 20 mV mantenendo il controllo di guadagno",
+      "hypothesis": "Since scenario_4 kept useful gain from N006 to N005 at 50 mV but the user reports THD on N005 is still 22.4%, reducing Vsignal_source23_1 to 20 mV may further lower distortion at N005 while preserving useful transfer.",
+      "actions": [
+        {
+          "type": "change_source_value",
+          "target": "Vsignal_source23_1",
+          "value": "SIN(0 20m 100)"
+        }
+      ],
+      "intent": "correction",
+      "analysis": "tran",
+      "compare": [
+        "v(N006)",
+        "v(N005)"
+      ],
+      "measure": {},
+      "gain": {
+        "input": "v(N006)",
+        "output": "v(N005)",
+        "min_ratio": 5
+      },
+      "temporal_expect": null,
+      "expect": {
+        "v(N006)": "changed",
+        "v(N005)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_3",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_5",
+      "execution_path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\a06\\scenarios\\scenario_5",
+      "created_at": "2026-07-23T13:08:36",
+      "updated_at": "2026-07-23T13:09:24",
+      "signature": "{\"actions\":[{\"target\":\"Vsignal_source23_1\",\"type\":\"change_source_value\",\"value\":\"SIN(0 20m 100)\"}],\"analysis\":\"tran\"}",
+      "scenario": {
+        "scenario_id": "scenario_5",
+        "title": "Ridurre l’ingresso a 20 mV mantenendo il controllo di guadagno",
+        "hypothesis": "Since scenario_4 kept useful gain from N006 to N005 at 50 mV but the user reports THD on N005 is still 22.4%, reducing Vsignal_source23_1 to 20 mV may further lower distortion at N005 while preserving useful transfer.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vsignal_source23_1",
+            "value": "SIN(0 20m 100)"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "tran",
+        "compare": [
+          "v(N006)",
+          "v(N005)"
+        ],
+        "expect": {
+          "v(N006)": "changed",
+          "v(N005)": "changed"
+        },
+        "gain": {
+          "input": "v(N006)",
+          "output": "v(N005)",
+          "min_ratio": 5
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "title": "Verificare il passaggio di segnale alle cuffie con S1 chiuso e stimolo AC d'ingresso",
+  "hypothesis": "Se il silenzio dipende principalmente da S1 aperto, allora chiudendo S1 e applicando un piccolo segnale sinusoidale al nodo d'ingresso RF/rivelatore N001 deve comparire un segnale non nullo ai capi della cuffia equivalente Rbreaker3_1, con trasferimento misurabile attraverso gli stadi N005-N006-N007-N008-N003.",
+  "intent": "diagnostic",
+  "analysis": "tran",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    },
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N001",
+      "negative": "0",
+      "value": "SIN(0 10m 1k)"
+    }
+  ],
+  "compare": [
+    "v(N001)",
+    "v(N005)",
+    "v(N007)",
+    "v(N003,N004)"
+  ],
+  "measure": {
+    "v(N001)": "tran_vpp",
+    "v(N005)": "tran_vpp",
+    "v(N007)": "tran_vpp",
+    "v(N003,N004)": "tran_vpp"
+  },
+  "gain": {
+    "input": "v(N001)",
+    "output": "v(N003,N004)",
+    "min_ratio": 0.01
+  },
+  "expect": {
+    "v(N001)": "nonzero",
+    "v(N005)": "nonzero",
+    "v(N003,N004)": "nonzero"
+  },
+  "scenario_id": "agent_scenario_2"
+}

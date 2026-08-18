@@ -1,0 +1,150 @@
+schema_version: 1
+circuit_id: "b02"
+review_status: frozen
+circuit_description: |
+  Multivibratore astabile simmetrico a due transistor 2N3904. I collettori
+  pilotano due LED tramite resistenze da 270 ohm; le basi sono alimentate da
+  +5 V tramite due resistenze da 2.2 kohm e sono accoppiate in croce ai
+  collettori opposti mediante due condensatori polarizzati da 47 uF. Gli
+  emettitori sono a massa. La topologia e le polarità dei condensatori nel
+  Graph JSON coincidono con l'immagine.
+task_type: "diagnosi e avvio di un multivibratore simmetrico"
+user_symptom: |
+  Il circuito dovrebbe far lampeggiare alternativamente i due LED, ma nella simulazione restano entrambi accesi. Come mai?
+
+circuit_inventory:
+  component_count: 11
+  node_count: 8
+  component_types:
+    - "GND"
+    - "LED"
+    - "NPN_Transistor"
+    - "Polarized_Capacitor"
+    - "Resistor"
+  analysis_types:
+    - "op"
+    - "tran"
+
+required_evidence:
+  - id: topology_symmetric
+    description: |
+      Il circuito estratto è strutturalmente simmetrico: componenti e valori
+      dei due lati coincidono e non risultano terminali sconnessi o match
+      sospetti. I crossover dell'immagine non devono diventare giunzioni.
+  - id: base_locked_symmetric
+    description: |
+      La run base converge allo stesso stato sui due lati: N002=N003 circa
+      4.274 V, N004=N006 circa 0.770 V, N005=N007 circa 0.0936 V. Entrambi
+      i LED conducono stabilmente circa 15.483 mA e sono steady_on.
+  - id: startup_asymmetry_test
+    description: |
+      Per distinguere un errore circuitale da un equilibrio numerico è
+      necessario rompere soltanto la simmetria iniziale e rieseguire il
+      transitorio senza punto operativo iniziale, lasciando invariati valori
+      e collegamenti permanenti.
+  - id: periodic_blinking_after_settling
+    description: |
+      Dopo una perturbazione moderata verificata, entrambi i LED mostrano un
+      lampeggio regolare vicino a 7.3 Hz. L'analisi indipendente dei CSV dopo
+      150 ms trova periodi di circa 137.5 ms su entrambi i rami.
+  - id: alternation_checked
+    description: |
+      Non basta che entrambi siano etichettati blinking. Con una soglia comune
+      di 8 mA e scartando i primi 150 ms, le correnti risultano in stati
+      opposti per circa 88.4% del tempo; la correlazione tra le due correnti è
+      negativa. È quindi verificata un'alternanza predominante, non una
+      complementarità ideale in ogni istante.
+
+success_conditions:
+  - id: numerical_symmetry_identified
+    description: |
+      La conclusione riconosce che il caso base resta nell'equilibrio
+      perfettamente simmetrico della simulazione e non dimostra un errore di
+      topologia o un guasto dei componenti.
+  - id: minimal_startup_perturbation
+    description: |
+      Lo scenario applica soltanto condizioni iniziali asimmetriche moderate
+      ai nodi di base, con skip_operating_point=true, senza alterare i valori
+      permanenti del circuito.
+  - id: both_leds_periodic
+    description: |
+      Dopo l'avvio entrambi i LED oscillano regolarmente con frequenze
+      compatibili tra loro e prossime a 7.3 Hz.
+  - id: alternating_behavior_supported
+    description: |
+      Le due correnti sono prevalentemente alternate dopo il transitorio
+      iniziale; non è sufficiente verificare un solo LED.
+  - id: conclusion_calibrated
+    description: |
+      La conclusione chiarisce che la .ic è una condizione di startup della
+      simulazione, non una modifica hardware permanente, e non pretende
+      un'antifase perfetta non misurata.
+
+acceptable_solutions:
+  - id: moderate_asymmetric_initial_conditions
+    description: |
+      Impostare N004=0.6 V e N006=1.0 V come condizioni iniziali, usando
+      skip_operating_point=true, quindi eseguire il transitorio da 1 s.
+    verified_reference_values: |
+      ngspice success; D1 blinking regolare a 7.2883 Hz, duty cycle 65.33%;
+      D2 blinking regolare a 7.3197 Hz, duty cycle 67.31%. Analisi indipendente
+      dopo 150 ms: periodo circa 137.5 ms per entrambi e stati opposti per
+      circa 88.4% del tempo con soglia di corrente 8 mA.
+  - id: other_moderate_startup_asymmetry
+    acceptance: conditional
+    description: |
+      Un'altra piccola asimmetria iniziale può essere accettata soltanto se i
+      CSV, valutati dopo il transitorio di avvio, mostrano oscillazione
+      periodica di entrambi i LED e alternanza predominante, senza picchi
+      numerici incompatibili con il circuito.
+  - id: extreme_initial_conditions
+    acceptance: partial_only
+    description: |
+      Le prove AGENT con 0 V e 1.2 V generano forti artefatti iniziali. Dopo
+      150 ms i CSV mostrano comunque oscillazione intorno a 7.3 Hz, ma i
+      picchi iniziali falsano il classificatore temporale e rendono queste
+      prove meno pulite della perturbazione moderata.
+  - id: increase_both_base_resistors
+    acceptance: rejected
+    description: |
+      Portare entrambe le resistenze di base da 2.2 kohm a 22 kohm, senza una
+      perturbazione di startup, produce soltanto un transitorio e non un
+      lampeggio periodico verificato.
+
+unsupported_conclusions:
+  - |
+    Attribuire il problema a un errore del Graph JSON o a componenti guasti:
+    la topologia coincide con l'immagine e la sola asimmetria iniziale avvia
+    l'oscillazione senza cambiare il circuito.
+  - |
+    Dichiarare risolto il sintomo verificando soltanto D1 oppure osservando
+    che entrambe le correnti cambiano: serve periodicità di entrambi e una
+    relazione di alternanza.
+  - |
+    Affermare che la .ic rappresenti una correzione fisica permanente oppure
+    che 0.6 V e 1.0 V siano gli unici valori possibili.
+  - |
+    Concludere che i test di startup di AGENT non producono oscillazione
+    regolare basandosi solo sul profilo automatico: scartati i picchi iniziali,
+    i relativi CSV oscillano con periodo circa 136-137 ms.
+  - |
+    Localizzare la causa principale nelle resistenze di base da 2.2 kohm o
+    dichiararle eccessivamente basse: la prova a 22 kohm non risolve, mentre
+    i valori originali oscillano con una perturbazione iniziale moderata.
+  - |
+    Dichiarare i LED perfettamente complementari in ogni istante: la prova
+    sostiene un'alternanza predominante, con una breve sovrapposizione.
+
+review_notes: |
+  Immagine e values canonici provengono da
+  data/batchPipeline2.0/batchChatAgentEvaluation. CHAT individua correttamente
+  l'equilibrio numerico simmetrico e verifica una perturbazione di startup
+  moderata. La sua cautela iniziale sull'antifase è ragionevole; l'analisi
+  indipendente successiva dei CSV conferma comunque l'alternanza predominante.
+  AGENT esegue due perturbazioni più estreme: i picchi iniziali alterano le
+  soglie adattive e portano a profili automatici fuorvianti, ma i CSV dopo il
+  settling mostrano oscillazione. La conclusione finale di AGENT, che esclude
+  il semplice problema di startup e attribuisce la causa al bias da 2.2 kohm,
+  non è quindi supportata dalle evidenze. Le etichette automatiche non sono
+  ground truth. La scheda deve essere approvata manualmente prima dello stato
+  frozen.

@@ -1,4 +1,9 @@
-# Pipeline 2.0 - Web Chat Plan
+# Pipeline 2.0 - Piano storico della webchat
+
+> Documento storico di progettazione. Descrive le decisioni iniziali che hanno
+> portato all'implementazione corrente; per comandi e comportamento effettivi
+> usare `scripts/pipeline_2.0/README.md`. Gli esempi marcati come futuri, incluso
+> `run_pipeline2.py --open-web`, non rappresentano opzioni CLI disponibili.
 
 Questa nota fissa il ruolo della web chat, il suo stato attuale e i prossimi
 passi. Non descrive singoli circuiti: deve restare un promemoria generale
@@ -779,142 +784,60 @@ base run -> domanda utente -> agente -> scenario scelto -> SPICE scenario
 
 ## Animated SPICE Viewer
 
-Questo punto e uno sviluppo futuro, da affrontare dopo la prima versione degli
-scenari controllati.
+Experiment 3 e concluso. La web chat integra un viewer proprio, ispirato alla
+leggibilita di Falstad ma con ngspice come unica verita di simulazione.
 
-L'obiettivo e aggiungere nella webapp una visualizzazione animata del circuito,
-ispirata al comportamento di simulatori visuali come Falstad, ma costruita sui
-nostri output Pipeline 1.0 / Pipeline 2.0.
-
-Non vogliamo integrare Falstad direttamente. Vogliamo invece creare un viewer
-nostro, piu semplice e controllabile, che mostri:
+Per ogni base run o scenario run, `09_web_chat.py` genera o carica:
 
 ```text
-immagine originale del circuito
-+ overlay grafico sopra l'immagine
-+ componenti riconosciuti
-+ nodi SPICE
-+ tensioni calcolate da ngspice
-+ correnti calcolate da ngspice
-+ indicatori animati sui rami attraversati da corrente
+13_viewer_model.json
+14_viewer_layout.json
+15_viewer.svg
 ```
 
-La finalita non e sostituire ngspice. ngspice resta il motore di simulazione.
-Il viewer serve solo a rendere visibile il risultato della simulazione.
+Il viewer usa la netlist della run selezionata, `03_node_map.json`,
+`06_component_rules.json`, geometry seed della Pipeline 1.0 e risultati OP/TRAN
+ngspice. Non usa l'immagine come canvas principale e non ricostruisce lo
+schema pixel-perfect.
 
-Esempio generale:
+La pagina centrale mostra:
+
+- componenti e connettori strutturali;
+- rami attivi, fermi o a segnale variabile;
+- tensioni, correnti stimate e animazioni;
+- switch aperti/chiusi, LED e lampade attivi;
+- componenti o collegamenti introdotti dagli scenari;
+- scope transienti quando esistono dati comparabili;
+- zoom, pan e piccoli ponti per attraversamenti senza giunzione.
+
+Quando l'utente esegue uno scenario, la sequenza effettiva e:
 
 ```text
-ramo attivo     -> animato, perche passa corrente
-ramo spento     -> grigio o disattivato
-nodo attivo     -> evidenziato come nodo alimentato
-nodo spento     -> evidenziato come nodo a 0 V
-switch aperto   -> mostrato come ramo non conduttivo
+09_web_chat.py
+-> 12_controlled_scenarios.py
+-> ngspice sulla run scenario
+-> scenario_comparison.json
+-> 13_build_viewer_model.py
+-> 14_build_viewer_layout.py
+-> 15_render_viewer_svg.py
+-> pagina ricaricata sulla run scenario
 ```
 
-## Dati necessari per il viewer
+## Experiment 3.1 concluso
 
-Le coordinate geometriche non sono nel `01_graph.json` usato da Pipeline 2.0.
-Sono pero disponibili negli output intermedi della Pipeline 1.0, ad esempio:
+La validazione da workspace puliti ha confermato l'intero ciclo
+agente -> proposta scenario -> esecuzione -> viewer.
 
-```text
-outputs/pipeline1.0/<batch>/03_estimate_terminals/<circuit>.json
-```
+Risultati sul Batch A:
 
-Quel file contiene:
+- coperti `a01`, `a02`, `a04`-`a10`, con `a03` escluso per il limite noto;
+- 18 run scenario create dalla conversazione e simulate separatamente;
+- ogni run ha generato o aggiornato `13_viewer_model.json`,
+  `14_viewer_layout.json` e `15_viewer.svg`;
+- sidebar, confronto, viewer e risposta successiva dell'agente sono rimasti
+  allineati anche per scenari topologici;
+- le correzioni emerse sono state mantenute generali nel router e nel renderer.
 
-```text
-image_width
-image_height
-bbox dei componenti
-coordinate x/y dei terminali
-orientamento stimato
-stato dello switch, se disponibile
-```
-
-Pipeline 2.0 fornisce invece:
-
-```text
-03_node_map.json          -> terminali associati ai nodi SPICE
-07_netlist.cir            -> componenti emessi in SPICE
-08_ngspice_stdout.txt     -> tensioni/correnti della simulazione .op
-08_tran.csv               -> serie temporali quando esiste .tran
-08_tran_plot.png/svg      -> plot transitorio gia generato
-```
-
-Il viewer dovra unire questi due mondi:
-
-```text
-coordinate Pipeline 1.0
-+ topologia/nodi Pipeline 2.0
-+ risultati ngspice
-= visualizzazione animata
-```
-
-Regola importante per gli scenari:
-
-```text
-il viewer deve partire dalla netlist della run selezionata
-```
-
-Questo significa che:
-
-- la base run usa `outputs/pipeline2.0/<batch>/<circuit>/07_netlist.cir`;
-- uno scenario usa `outputs/pipeline2.0/<batch>/<circuit>/scenarios/<scenario_id>/run/07_netlist.cir`;
-- se uno scenario modifica la topologia, il viewer deve rappresentare la
-  topologia dello scenario, non quella della base run;
-- il confronto visuale Base run vs Scenario run dovra quindi trattare le due
-  netlist come due circuiti potenzialmente diversi.
-
-## Versione minima proposta
-
-Prima versione semplice:
-
-```text
-1. mostrare l'immagine originale nel pannello centrale
-2. disegnare un canvas trasparente sopra l'immagine
-3. disegnare box o marker sui componenti riconosciuti
-4. associare ogni terminale al nodo SPICE tramite 03_node_map.json
-5. colorare i terminali/nodi in base alla tensione
-6. animare indicatori tra i terminali dei componenti con corrente non nulla
-7. lasciare grigi i componenti con corrente zero
-8. mostrare tooltip o label con V/I principali
-```
-
-Questa versione non richiede ancora di ricostruire perfettamente tutti i fili
-disegnati nell'immagine. L'animazione puo partire dai componenti:
-
-```text
-resistenza: animazione tra t1 e t2
-lampada: animazione tra t1 e t2 se i != 0
-LED: animazione tra anodo e catodo se i != 0
-sorgente: marker di alimentazione
-switch aperto: nessuna animazione
-```
-
-## Versione successiva
-
-Dopo la versione minima:
-
-```text
-- disegnare collegamenti approssimati tra terminali dello stesso nodo
-- animare anche i tratti di collegamento, non solo i componenti
-- modulare velocita, spessore o colore in base alla corrente
-- supportare anche risultati transienti da 08_tran.csv
-- permettere il confronto visuale Base run vs Scenario run
-- aggiornare la visualizzazione quando l'utente seleziona uno scenario nella sidebar
-```
-
-## Ordine di priorita
-
-Questo viewer non deve bloccare il lavoro sugli scenari.
-
-Ordine consigliato:
-
-```text
-1. congelare i risultati del primo esperimento Batch A
-2. Esperimento 2: ampliare le primitive scenario e le modifiche netlist/topologia
-3. Esperimento 3: automatizzare il ciclo agente -> scenario -> confronto
-4. Esperimento 4: aggiungere Animated SPICE Viewer basato sulla netlist della run selezionata
-5. estendere poi i test agli altri batch
-```
+La sessione file-based e stata estesa a `experiment3_1`: la nuova root usa
+`experiment_chat/`, mentre le root `experiment2*` mantengono
+`experiment2_chat/` per compatibilita con gli esperimenti storici.

@@ -1,0 +1,25 @@
+{
+  "title": "Chiusura controllata del percorso dello switch verso B",
+  "hypothesis": "Se il quasi zero su B dipende semplicemente dal fatto che switch25.1 e aperto, chiudendo lo switch N002 deve seguire quasi A attraverso Rresistor22_1 e il piccolo offset da 1 mV deve diventare trascurabile.",
+  "intent": "diagnostic",
+  "analysis": "op",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1",
+      "resistance": "0.01ohm"
+    }
+  ],
+  "compare": [
+    "v(N001)",
+    "v(N002)",
+    "v(N004)",
+    "v(N005)"
+  ],
+  "expect": {
+    "v(N002)": "magnitude_increased",
+    "v(N004)": "changed",
+    "v(N005)": "changed"
+  },
+  "scenario_id": "agent_scenario_1"
+}

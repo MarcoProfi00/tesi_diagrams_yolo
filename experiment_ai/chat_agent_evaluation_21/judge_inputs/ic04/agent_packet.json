@@ -1,0 +1,437 @@
+{
+  "packet_schema_version": 1,
+  "packet_id": "ic04_run_2",
+  "reference": {
+    "schema_version": 1,
+    "circuit_id": "ic04",
+    "circuit_description": "Sirena bitonale alimentata a 12 V con due timer 555. Il primo 555 e' un\noscillatore lento formato da R1, R2, D1 e C1; la sua uscita raggiunge il pin\nCONTROL del secondo 555 attraverso R5. Il secondo stadio, temporizzato da\nR3, R4 e C3, genera il tono audio. C4 accoppia in AC l'uscita a uno speaker\nda 64 ohm; C2 filtra il CONTROL del primo timer.\n",
+    "task_type": "diagnosi e correzione di variazione del tono poco evidente",
+    "user_symptom": "La sirena suona, ma sembra emettere quasi sempre lo stesso tono. Cosa posso controllare per rendere piu' evidente il cambio di suono?\n",
+    "circuit_inventory": {
+      "component_count": 15,
+      "node_count": 11,
+      "component_types": [
+        "GND",
+        "Integrated_Circuit",
+        "LED",
+        "Polarized_Capacitor",
+        "Resistor",
+        "Speaker",
+        "Terminal"
+      ],
+      "analysis_types": [
+        "tran"
+      ]
+    },
+    "required_evidence": [
+      {
+        "id": "component_interpretation_and_assumptions",
+        "description": "D1, rilevato con classe LED, e' in realta' il diodo 1N4001 indicato\nnell'immagine ed e' emesso con un modello tipico semplificato registrato.\nLo speaker e' rappresentato dal carico resistivo nominale da 64 ohm;\npotenza acustica, risposta in frequenza e percezione del tono non sono\nmodellate. I valori degli altri componenti e i 12 V provengono dallo\nschema.\n"
+      },
+      {
+        "id": "official_model_provenance_and_scope",
+        "description": "Entrambi i timer usano il modello PSpice ufficiale Texas Instruments\nTLC555_6, pacchetto SLFJ002E Rev. E, Final 1.1 del 2023-02-06. Il file\nnon modificato ha SHA-256\n7C091782CC4931DDA4FEBF25605083F47161C5E1592C076689B04B70DD749034\ned e' eseguito da ngspice in compatibilita' PSpice. Il TLC555 CMOS e'\ncompatibile per funzione e pinout con il NE555 dello schema, ma non e'\nun modello esatto del dispositivo bipolare; nessun comportamento del\n555 e' implementato nel codice Python.\n"
+      },
+      {
+        "id": "topology_and_pinout_valid",
+        "description": "Graph, node map e netlist coincidono con l'immagine. Il primo timing e'\nN002-N003, il suo OUT e' N004; R5 collega N004 al CONTROL N006 del secondo\ntimer. Il secondo timing e' N007-N008, OUT=N009, C4 collega N009 a N010 e\nlo speaker e' N010-massa. RESET e VCC di entrambi sono a N005=12 V. C'e'\nun solo gruppo GND e non risultano singleton, terminali scollegati o\nwarning di emissione.\n"
+      },
+      {
+        "id": "ngspice_completion_with_model_warnings",
+        "description": "Tutte le run terminano con successo. ngspice ignora il parametro lambda\nsu alcuni MOS level 3 del modello TI e trova il punto iniziale tramite\ntransient operating point dopo il fallimento dei metodi gmin/source\nstepping. Sono limiti di compatibilita' da documentare, non un fallimento\ndella transiente, ma richiedono cautela nel generalizzare i numeri.\n"
+      },
+      {
+        "id": "base_already_has_strong_electrical_modulation",
+        "description": "N004 commuta lentamente con intervallo fra fronti omologhi vicino a\n0.981 s. Nell'intervallo 0.3-1.98 s, i fronti di N009 mostrano frequenze\nmediane circa 1177 Hz e 320 Hz nei due stati del modulatore: rapporto\ncirca 3.68. N006 varia da circa 3.315 a 10.730 V. Il modello base quindi\nnon produce elettricamente un tono quasi fisso; il sintomo percettivo non\ne' dimostrato dalla run, anche se il contrasto puo' essere aumentato.\n"
+      },
+      {
+        "id": "run_r5_4_7k_frequency_validation",
+        "description": "RUN riduce R5 da 10 a 4.7 kohm. N006 aumenta la propria escursione da\ncirca 7.414 a 9.263 Vpp e le frequenze mediane dei due stati diventano\ncirca 1352 Hz e 254 Hz, rapporto circa 5.32. La tensione RMS sul carico\nda 64 ohm scende da circa 3.402 a 3.088 V, cioe' da circa 181 a 149 mW.\nLa separazione elettrica dei toni aumenta davvero, ma non a potenza\ninvariata.\n"
+      },
+      {
+        "id": "run_r5_2_2k_frequency_validation",
+        "description": "RUN riduce R5 a 2.2 kohm. N006 arriva a circa 10.481 Vpp e le frequenze\nmediane diventano circa 1487 Hz e 210 Hz, rapporto circa 7.09: e' il\ncontrasto maggiore fra le prove eseguite. Sul carico si misurano circa\n2.791 Vrms e 122 mW. La correzione e' quindi efficace sulla modulazione,\npur riducendo il livello RMS rispetto alla base.\n"
+      },
+      {
+        "id": "speaker_measurement_semantics",
+        "description": "La tensione dello speaker e' v(N010), perche' il carico collega N010 a\nmassa. v(N009,N010) e' invece la tensione ai capi del condensatore di\naccoppiamento C4. RUN usa quest'ultima come prova di uscita audio\npreservata: e' una misura semanticamente errata e il semplice valore\nnonzero non dimostra ne' livello sul carico ne' variazione di tono.\n"
+      },
+      {
+        "id": "c1_47u_frozen_run_is_inadequate",
+        "description": "Con C1 portato da 10 a 47 uF, nei 2 s congelati N004 resta quasi costante\na circa 11.993 V, N006 varia solo 0.0002 Vpp e l'audio resta vicino a\n319 Hz con intervallo 5-95% di circa 316-325 Hz. L'aumento di C1 puo'\nrallentare fisicamente il modulatore, ma la finestra non contiene alcuna\nsua commutazione e non verifica il cambio di tono; non e' una correzione\ndimostrata da questa run.\n"
+      },
+      {
+        "id": "audio_frequency_is_required_metric",
+        "description": "Vpp changed o nonzero non bastano per il sintomo. La prova causale deriva\ndai periodi tra i fronti di N009, separati secondo lo stato lento di N004,\ne dal controllo del segnale reale sul carico N010. Le frequenze riportate\nsono state ricavate direttamente dai CSV congelati.\n"
+      }
+    ],
+    "success_conditions": [
+      {
+        "id": "modulation_path_identified",
+        "description": "La diagnosi individua correttamente R5 tra N004 e CONTROL=N006 come leva\nche determina quanto il primo oscillatore modula la frequenza del secondo.\n"
+      },
+      {
+        "id": "baseline_not_called_fixed_tone",
+        "description": "La risposta riconosce che la base alterna gia' due regioni molto diverse,\ncirca 320 e 1177 Hz; il sintomo non prova un guasto o assenza di\nmodulazione nel modello.\n"
+      },
+      {
+        "id": "pitch_contrast_measured",
+        "description": "Il miglioramento viene verificato tramite frequenze o periodi dell'uscita\naudio, non soltanto tramite aumento del Vpp sul pin CONTROL.\n"
+      },
+      {
+        "id": "r5_correction_supported",
+        "description": "R5=4.7 kohm e R5=2.2 kohm sono accettati come modifiche che aumentano\nrealmente la separazione fra le due frequenze, con 2.2 kohm piu' marcata.\n"
+      },
+      {
+        "id": "output_level_tradeoff_recognized",
+        "description": "La risposta verifica v(N010) e riconosce che il livello RMS/potenza del\ncarico diminuisce mentre cresce il contrasto del tono.\n"
+      },
+      {
+        "id": "c1_scenario_not_overclaimed",
+        "description": "La run C1=47 uF viene considerata inconcludente per il cambio di tono,\nperche' 2 s non contengono una commutazione del modulatore.\n"
+      },
+      {
+        "id": "model_scope_stated",
+        "description": "La conclusione resta limitata al TLC555 e allo speaker resistivo. Non\ntrasforma la separazione elettrica delle frequenze in una misura diretta\ndella percezione sonora sul circuito reale.\n"
+      }
+    ],
+    "acceptable_solutions": [
+      {
+        "id": "reduce_r5_to_4_7k",
+        "description": "Ridurre R5 da 10 a 4.7 kohm. La prova RUN aumenta il rapporto fra le\nfrequenze mediane da circa 3.68 a 5.32, mantenendo circa 149 mW sul\ncarico resistivo.\n"
+      },
+      {
+        "id": "reduce_r5_to_2_2k",
+        "description": "Ridurre R5 a 2.2 kohm. La prova RUN aumenta il rapporto a circa 7.09,\nma la potenza media equivalente scende a circa 122 mW: il compromesso\nfra contrasto e livello va considerato.\n"
+      },
+      {
+        "id": "measure_control_and_speaker_frequency",
+        "acceptance": "physical_followup",
+        "description": "Sul circuito reale misurare N004, CONTROL del secondo 555 e frequenza sul\nlato speaker di C4 permette di distinguere modulazione insufficiente,\nvalore errato di R5 e problema del trasduttore.\n"
+      },
+      {
+        "id": "slow_modulator_with_longer_validation",
+        "acceptance": "not_verified",
+        "description": "Aumentare C1 puo' rendere piu' lento il passaggio fra i toni, ma richiede\nuna simulazione estesa a diversi periodi del nuovo modulatore. La run da\n2 s con 47 uF non e' sufficiente.\n"
+      }
+    ],
+    "unsupported_conclusions": [
+      "Affermare che la base generi elettricamente quasi sempre lo stesso tono:\nN009 alterna gia' regioni vicine a 320 e 1177 Hz.\n",
+      "Dichiarare R5=10 kohm guasta o necessariamente errata. Le prove mostrano\nche ridurla aumenta il contrasto, non che il valore reale differisca dallo\nschema o impedisca la modulazione.\n",
+      "Usare il solo aumento di Vpp(N006) come prova del doppio tono senza\nmisurare la frequenza istantanea di N009 o N010.\n",
+      "Chiamare v(N009,N010) tensione sullo speaker: e' la tensione su C4; il\ncarico si misura con v(N010) rispetto a massa.\n",
+      "Affermare che R5=2.2 kohm preservi integralmente il livello audio solo\nperche' v(N009,N010) e' nonzero. La potenza resistiva scende da circa 181\na 122 mW.\n",
+      "Presentare C1=47 uF come miglioramento verificato nella run congelata: il\nmodulatore non commuta e l'uscita resta quasi monofrequenza a 319 Hz.\n",
+      "Usare il profilo Dled12_1 come indicatore audio o luminoso. Il componente\ne' D1 1N4001, non un LED, e la sua corrente non misura il tono sul carico.\n",
+      "Generalizzare i risultati al NE555 bipolare o allo speaker reale senza\nconsiderare differenze del modello TLC555, risposta acustica e montaggio.\n"
+    ]
+  },
+  "rubric": {
+    "score_scale": {
+      "0": "errato o assente",
+      "1": "utile ma incompleto o con limiti rilevanti",
+      "2": "corretto e adeguatamente verificato"
+    },
+    "criteria": [
+      "diagnostic_correctness",
+      "test_quality",
+      "evidence_interpretation",
+      "goal_achievement",
+      "conclusion_quality"
+    ]
+  },
+  "run": {
+    "initial_request": "La sirena suona, ma sembra emettere quasi sempre lo stesso tono. Cosa posso controllare per rendere più evidente il cambio di suono?",
+    "technical_status": "completed",
+    "base_spice": {
+      "status": "success",
+      "exit_code": 0,
+      "message": "ngspice completed successfully.",
+      "analyses": [
+        "tran"
+      ]
+    },
+    "execution_counts": {
+      "scenarios_proposed": 2,
+      "scenarios_executed": 2,
+      "successful_spice_runs": 2,
+      "failed_spice_runs": 0
+    },
+    "scenarios": [
+      {
+        "scenario_id": "scenario_1",
+        "title": "Aumentare l'escursione della modulazione riducendo R5 tra il primo 555 e il pin CONT del secondo",
+        "hypothesis": "Rresistor22_3=10k puo attenuare troppo la variazione proveniente da N004 verso N006, lasciando il secondo 555 con frequenza quasi fissa. Riducendo R5 dovrebbe aumentare il Vpp su N006 e rendere piu evidente la variazione del tono senza spegnere l'uscita audio.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Rresistor22_3",
+            "value": "2.2k"
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "v(N004)",
+          "v(N006)",
+          "v(N009,N010)"
+        ],
+        "expect": {
+          "v(N006)": "magnitude_increased",
+          "v(N009,N010)": "nonzero"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N004)",
+              "metric": "v(n004).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 11.99156404371,
+              "scenario_value": 11.99291418218,
+              "delta": 0.0013501384700003172,
+              "change": "changed",
+              "expectation": null,
+              "base_details": {
+                "min": 0.00289055629,
+                "max": 11.9944546,
+                "mean": 4.287043773989828,
+                "vpp": 11.99156404371,
+                "final": 0.00423541708,
+                "abs_peak": 11.9944546
+              },
+              "scenario_details": {
+                "min": 0.00574221782,
+                "max": 11.9986564,
+                "mean": 2.981702430905169,
+                "vpp": 11.99291418218,
+                "final": 0.00682416657,
+                "abs_peak": 11.9986564
+              }
+            },
+            {
+              "quantity": "v(N006)",
+              "metric": "v(n006).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 7.41443745,
+              "scenario_value": 10.48106658,
+              "delta": 3.06662913,
+              "change": "changed",
+              "expectation": "magnitude_increased",
+              "base_details": {
+                "min": 3.31501805,
+                "max": 10.7294555,
+                "mean": 5.986207756919463,
+                "vpp": 7.41443745,
+                "final": 3.3519385,
+                "abs_peak": 10.7294555
+              },
+              "scenario_details": {
+                "min": 1.17913362,
+                "max": 11.6602002,
+                "mean": 3.787780988731713,
+                "vpp": 10.48106658,
+                "final": 1.19333823,
+                "abs_peak": 11.6602002
+              }
+            },
+            {
+              "quantity": "v(N009,N010)",
+              "metric": "v(n009,n010).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 6.464060289999999,
+              "scenario_value": 9.093983944,
+              "delta": 2.6299236540000006,
+              "change": "changed",
+              "expectation": "nonzero",
+              "base_details": {
+                "min": 2.83573071,
+                "max": 9.299790999999999,
+                "mean": 5.190115030756209,
+                "vpp": 6.464060289999999,
+                "final": 2.947056629,
+                "abs_peak": 9.299790999999999
+              },
+              "scenario_details": {
+                "min": 1.2238114370000002,
+                "max": 10.317795381,
+                "mean": 3.546939319760641,
+                "vpp": 9.093983944,
+                "final": 1.27929433,
+                "abs_peak": 10.317795381
+              }
+            }
+          ],
+          "comparison_evidence": {
+            "gain_comparison": {
+              "input": "v(N004)",
+              "output": "v(N006)",
+              "base_gain": 0.6183044532784808,
+              "scenario_gain": 0.8739382622760347,
+              "min_ratio": 0.2,
+              "available": true,
+              "sufficient": true,
+              "relative_change": 0.41344326026132927
+            }
+          },
+          "led_profiles": {}
+        }
+      },
+      {
+        "scenario_id": "scenario_2",
+        "title": "Rallentare il modulatore aumentando C1 del primo 555",
+        "hypothesis": "Se il primo 555 modula troppo velocemente o con escursione poco percepibile, aumentare Cpolarized_capacitor20_1 puo rendere il cambiamento di controllo piu lento e piu udibile, aumentando la percezione del cambio di tono sul secondo oscillatore.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Cpolarized_capacitor20_1",
+            "value": "47u"
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "v(N003)",
+          "v(N004)",
+          "v(N006)",
+          "v(N009,N010)"
+        ],
+        "expect": {
+          "v(N006)": "changed",
+          "v(N009,N010)": "nonzero"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N003)",
+              "metric": "v(n003).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 7.958513493800001,
+              "scenario_value": 5.3567967943,
+              "delta": -2.6017166995000007,
+              "change": "changed",
+              "expectation": null,
+              "base_details": {
+                "min": 0.0417536562,
+                "max": 8.00026715,
+                "mean": 5.831667681312042,
+                "vpp": 7.958513493800001,
+                "final": 5.7686634,
+                "abs_peak": 8.00026715
+              },
+              "scenario_details": {
+                "min": 0.0416213957,
+                "max": 5.39841819,
+                "mean": 3.002078566776873,
+                "vpp": 5.3567967943,
+                "final": 5.39841819,
+                "abs_peak": 5.39841819
+              }
+            },
+            {
+              "quantity": "v(N004)",
+              "metric": "v(n004).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 11.99156404371,
+              "scenario_value": 3.189999999975157e-05,
+              "delta": -11.99153214371,
+              "change": "changed",
+              "expectation": null,
+              "base_details": {
+                "min": 0.00289055629,
+                "max": 11.9944546,
+                "mean": 4.287043773989828,
+                "vpp": 11.99156404371,
+                "final": 0.00423541708,
+                "abs_peak": 11.9944546
+              },
+              "scenario_details": {
+                "min": 11.9931725,
+                "max": 11.9932044,
+                "mean": 11.993172895297944,
+                "vpp": 3.189999999975157e-05,
+                "final": 11.9931729,
+                "abs_peak": 11.9932044
+              }
+            },
+            {
+              "quantity": "v(N006)",
+              "metric": "v(n006).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 7.41443745,
+              "scenario_value": 0.00019649999999948875,
+              "delta": -7.414240950000001,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": 3.31501805,
+                "max": 10.7294555,
+                "mean": 5.986207756919463,
+                "vpp": 7.41443745,
+                "final": 3.3519385,
+                "abs_peak": 10.7294555
+              },
+              "scenario_details": {
+                "min": 10.7260209,
+                "max": 10.7262174,
+                "mean": 10.726096084235522,
+                "vpp": 0.00019649999999948875,
+                "final": 10.7260963,
+                "abs_peak": 10.7262174
+              }
+            },
+            {
+              "quantity": "v(N009,N010)",
+              "metric": "v(n009,n010).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 6.464060289999999,
+              "scenario_value": 3.03800091,
+              "delta": -3.426059379999999,
+              "change": "changed",
+              "expectation": "nonzero",
+              "base_details": {
+                "min": 2.83573071,
+                "max": 9.299790999999999,
+                "mean": 5.190115030756209,
+                "vpp": 6.464060289999999,
+                "final": 2.947056629,
+                "abs_peak": 9.299790999999999
+              },
+              "scenario_details": {
+                "min": 6.26655979,
+                "max": 9.3045607,
+                "mean": 8.860306328951221,
+                "vpp": 3.03800091,
+                "final": 9.09193318,
+                "abs_peak": 9.3045607
+              }
+            }
+          ],
+          "comparison_evidence": {
+            "gain_comparison": {
+              "input": "v(N004)",
+              "output": "v(N006)",
+              "base_gain": 0.6183044532784808,
+              "scenario_gain": 6.159874608182415,
+              "min_ratio": 0.1,
+              "available": true,
+              "sufficient": true,
+              "relative_change": 8.96252667358364
+            }
+          },
+          "led_profiles": {}
+        }
+      }
+    ],
+    "final": {
+      "answer": "Il controllo piu efficace emerso dai test e R5, la resistenza tra l'uscita del primo 555 (N004) e il pin CONT del secondo 555 (N006). Nel test verificato, ridurre R5 da 10 kohm a 2.2 kohm ha aumentato in modo significativo l'escursione di modulazione su N006 mantenendo presente l'uscita audio sullo speaker: il trasferimento N004->N006 e risultato sufficiente con gain scenario circa 0.874 e lo scenario ha registrato 1 miglioramento significativo soddisfacendo tutte le aspettative dichiarate. In pratica, il tono quasi costante dipende soprattutto da una modulazione troppo attenuata verso il pin di controllo del secondo 555\n\nCorrezione verificata: Ridurre Rresistor22_3 (R5) da 10 kohm a 2.2 kohm per aumentare il Vpp di controllo su N006 senza annullare l'uscita audio differenziale v(N009,N010).",
+      "cause": "La causa piu probabile e verificata e l'accoppiamento troppo debole tra il modulatore e il pin CONT del secondo 555 tramite R5=10 kohm, che lascia il secondo oscillatore con variazione di frequenza poco marcata.",
+      "verified_correction": "Ridurre Rresistor22_3 (R5) da 10 kohm a 2.2 kohm per aumentare il Vpp di controllo su N006 senza annullare l'uscita audio differenziale v(N009,N010)."
+    }
+  }
+}

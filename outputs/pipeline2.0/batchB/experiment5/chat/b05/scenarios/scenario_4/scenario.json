@@ -1,0 +1,33 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Iniettare un segnale sul nodo antenna con alimentazione inserita",
+  "hypothesis": "With switch25.1 closed, the circuit may still be silent only because the base netlist has no AC excitation at N001; adding a sinusoidal input there should reveal whether useful signal reaches the headset output between N003 and N004.",
+  "intent": "diagnostic",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    },
+    {
+      "type": "add_voltage_source_between_nodes",
+      "positive": "N001",
+      "negative": "0",
+      "value": "SIN(0 100m 1000)"
+    }
+  ],
+  "rerun_from": "06",
+  "analysis": "tran",
+  "compare": [
+    "v(N001)",
+    "v(N003,N004)"
+  ],
+  "expect": {
+    "v(N001)": "activated",
+    "v(N003,N004)": "changed"
+  },
+  "gain": {
+    "input": "v(N001)",
+    "output": "v(N003,N004)",
+    "min_ratio": 0.05
+  }
+}

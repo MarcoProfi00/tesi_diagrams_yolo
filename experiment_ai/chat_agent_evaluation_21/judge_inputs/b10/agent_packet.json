@@ -1,0 +1,231 @@
+{
+  "packet_schema_version": 1,
+  "packet_id": "b10_run_2",
+  "reference": {
+    "schema_version": 1,
+    "circuit_id": "b10",
+    "circuit_description": "Modello equivalente non ideale di uno switch analogico tra i terminali A e\nB, comandato simbolicamente dal terminale C. Il ramo ON contiene rON,\nswitch ideale e offset VOS; nello stato OFF restano rOFF, la corrente IOFF\ne le capacita' parassite CA, CB, CAB, CAC e CBC. IA e IB rappresentano le\ncorrenti esterne ai terminali.\n",
+    "task_type": "interpretazione del livello di uscita di uno switch analogico aperto",
+    "user_symptom": "Su A leggo 1 V, ma su B leggo quasi zero. E' normale o c'e' qualcosa che non va?\n",
+    "circuit_inventory": {
+      "component_count": 17,
+      "node_count": 6,
+      "component_types": [
+        "Current_Source",
+        "GND",
+        "Polarized_Capacitor",
+        "Resistor",
+        "Switch",
+        "Terminal",
+        "Voltage_Source"
+      ],
+      "analysis_types": [
+        "op",
+        "tran"
+      ]
+    },
+    "required_evidence": [
+      {
+        "id": "symbolic_testbench_assumptions",
+        "description": "L'immagine nomina i parametri ma non assegna valori numerici. Il banco\nassume A=1 V, C=0 V, rON=10 ohm, rOFF=1 Gohm, VOS=1 mV, IOFF=1 pA,\nIA=0 A, IB=1 nA e tutte le capacita' pari a 5 pF. Sono scelte di test,\nnon caratteristiche lette da un componente reale.\n"
+      },
+      {
+        "id": "topology_matches_equivalent_model",
+        "description": "La node map coincide con l'immagine: A=N001, B=N002, C=N003; il ramo\nrON-switch-VOS passa per N004 e N005; rOFF, IOFF e CAB sono tra A e B;\nCA e CB sono verso massa; CAC e CBC collegano A/B al controllo C. Lo\nswitch e' esplicitamente aperto nella base.\n"
+      },
+      {
+        "id": "open_state_dc_result",
+        "description": "Il punto di lavoro misura A=N001=1 V, B=N002=1 mV, C=N003=0 V,\nN004=1 V e N005=2 mV. Con lo switch aperto il ramo a bassa resistenza\nnon conduce; B e' determinato dal solo modello OFF e dal carico IB.\n"
+      },
+      {
+        "id": "exact_b_node_balance",
+        "description": "In continua le capacita' non conducono e, con il ramo ON aperto,\nIB = IOFF + (A-B)/rOFF. Quindi\nB = 1 V - 1 Gohm*(1 nA-1 pA) = 1 mV. Il quasi-zero e' pertanto il\nrisultato atteso delle assunzioni, non un guasto dimostrato.\n"
+      },
+      {
+        "id": "vos_is_not_open_state_cause",
+        "description": "Con lo switch aperto N005 e' flottante salvo la sorgente VOS: questa\nimpone soltanto N005=B+VOS e non fissa B. La prova indipendente porta\nVOS da 1 mV a 100 mV: B resta 1 mV mentre N005 passa da 2 mV a 101 mV.\nEliminando invece IOFF, B passa esattamente a 0 V.\n"
+      },
+      {
+        "id": "closed_state_validation",
+        "description": "Chiudendo lo switch, RUN misura B circa 0.999 V, N005=1 V e N004=1 V;\nRUN ottiene lo stesso risultato. Una prova ngspice indipendente\nconferma B=0.999 V. La differenza A-B e' dominata dal VOS in serie;\nla caduta su rON e' trascurabile con il carico da 1 nA.\n"
+      },
+      {
+        "id": "transient_is_not_exercised",
+        "description": "La transitoria base e' piatta perche' sorgenti e stato dello switch sono\ncostanti e il calcolo parte dal punto di lavoro. Essa non valida la\nrisposta delle capacita' parassite; per farlo servirebbe un gradino o\nuna commutazione temporale esplicita.\n"
+      }
+    ],
+    "success_conditions": [
+      {
+        "id": "answer_normal_in_open_state",
+        "description": "La risposta dice chiaramente che A=1 V e B circa zero sono normali nello\nstato aperto e con i parametri assunti.\n"
+      },
+      {
+        "id": "correct_dc_causality",
+        "description": "Il valore di B viene spiegato tramite rOFF, IOFF e IB, oppure almeno come\neffetto del percorso di perdita e del carico. VOS non viene indicato\ncome sorgente che porta autonomamente B a 1 mV nello stato aperto.\n"
+      },
+      {
+        "id": "switch_test_interpreted_as_state_change",
+        "description": "La chiusura dello switch e' interpretata come confronto ON/OFF che\nconferma il modello, non necessariamente come riparazione di un guasto.\n"
+      },
+      {
+        "id": "no_false_transient_claim",
+        "description": "La transitoria piatta non viene usata per dichiarare validate le cinque\ncapacita' o le prestazioni dinamiche dello switch.\n"
+      },
+      {
+        "id": "assumptions_calibrated",
+        "description": "La conclusione resta riferita al banco simbolico con valori assunti e\nnon viene generalizzata a uno specifico switch fisico.\n"
+      }
+    ],
+    "acceptable_solutions": [
+      {
+        "id": "direct_open_state_explanation",
+        "description": "Rispondere senza altri scenari che il comportamento e' normale: il ramo\nON e' aperto e il nodo B e' governato dal bilancio tra perdita OFF e IB.\nL'equazione nodale costituisce gia' una verifica sufficiente del sintomo.\n"
+      },
+      {
+        "id": "close_switch_comparison",
+        "acceptance": "diagnostic_only",
+        "description": "Chiudere lo switch e verificare che B salga da 1 mV a circa 0.999 V e'\nun confronto ON/OFF valido, ma cambia la condizione operativa e non prova\nche lo switch aperto fosse un guasto.\n"
+      },
+      {
+        "id": "parameter_causality_checks",
+        "acceptance": "diagnostic_only",
+        "description": "Variare separatamente IOFF, IB, rOFF e VOS permette di attribuire il\nvalore di B alla causa corretta. La prova indipendente e' disponibile in\nvalidation/b10_dc_causality_test.cir.\n"
+      },
+      {
+        "id": "dynamic_parasitic_test",
+        "acceptance": "optional",
+        "description": "Se si vogliono valutare le capacita' parassite, applicare un gradino ad\nA o una commutazione controllata e usare un passo temporale adeguato.\nNon e' necessario per rispondere al sintomo DC posto dall'utente.\n"
+      }
+    ],
+    "unsupported_conclusions": [
+      "Affermare che VOS da 1 mV porti B a 1 mV quando lo switch e' aperto: VOS\nagisce tra N005 e B, ma N005 e' altrimenti flottante.\n",
+      "Dichiarare lo switch guasto o proporne obbligatoriamente la chiusura come\nriparazione: lo schema rappresenta intenzionalmente lo stato OFF.\n",
+      "Considerare B quasi zero inspiegabile perche' esiste rOFF: con 1 Gohm il\ntrasferimento e' nell'ordine dei nanoampere e viene bilanciato da IB.\n",
+      "Dire che la mancata variazione di N004 nello scenario RUN contraddica la\nchiusura: N004 e' gia' circa 1 V perche' collegato ad A attraverso rON e\nA e' imposto da una sorgente ideale.\n",
+      "Trattare l'assenza di resolved_candidate come incapacita' di rispondere\nalla domanda. Il sintomo non richiede una correzione: chiede se il livello\nsia normale, e il punto di lavoro permette di rispondere direttamente.\n",
+      "Presentare la transitoria piatta come verifica delle capacita' o dei tempi\ndi commutazione: il banco non contiene alcuna eccitazione temporale.\n"
+    ]
+  },
+  "rubric": {
+    "score_scale": {
+      "0": "errato o assente",
+      "1": "utile ma incompleto o con limiti rilevanti",
+      "2": "corretto e adeguatamente verificato"
+    },
+    "criteria": [
+      "diagnostic_correctness",
+      "test_quality",
+      "evidence_interpretation",
+      "goal_achievement",
+      "conclusion_quality"
+    ]
+  },
+  "run": {
+    "initial_request": "Su A leggo 1 V, ma su B leggo quasi zero. È normale o c’è qualcosa che non va?",
+    "technical_status": "completed",
+    "base_spice": {
+      "status": "success",
+      "exit_code": 0,
+      "message": "ngspice completed successfully.",
+      "analyses": [
+        "op",
+        "tran"
+      ]
+    },
+    "execution_counts": {
+      "scenarios_proposed": 1,
+      "scenarios_executed": 1,
+      "successful_spice_runs": 1,
+      "failed_spice_runs": 0
+    },
+    "scenarios": [
+      {
+        "scenario_id": "scenario_1",
+        "title": "Chiusura controllata del percorso dello switch verso B",
+        "hypothesis": "Se il quasi zero su B dipende semplicemente dal fatto che switch25.1 e aperto, chiudendo lo switch N002 deve seguire quasi A attraverso Rresistor22_1 e il piccolo offset da 1 mV deve diventare trascurabile.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "close_switch",
+            "target": "switch25.1",
+            "resistance": "0.01ohm"
+          }
+        ],
+        "analysis": "op",
+        "compare": [
+          "v(N001)",
+          "v(N002)",
+          "v(N004)",
+          "v(N005)"
+        ],
+        "expect": {
+          "v(N002)": "magnitude_increased",
+          "v(N004)": "changed",
+          "v(N005)": "changed"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N001)",
+              "metric": "v(n001)",
+              "measurement": "op",
+              "base_value": 1.0,
+              "scenario_value": 1.0,
+              "delta": 0.0,
+              "change": "unchanged",
+              "expectation": null,
+              "base_details": {},
+              "scenario_details": {}
+            },
+            {
+              "quantity": "v(N002)",
+              "metric": "v(n002)",
+              "measurement": "op",
+              "base_value": 0.001,
+              "scenario_value": 0.999,
+              "delta": 0.998,
+              "change": "changed",
+              "expectation": "magnitude_increased",
+              "base_details": {},
+              "scenario_details": {}
+            },
+            {
+              "quantity": "v(N004)",
+              "metric": "v(n004)",
+              "measurement": "op",
+              "base_value": 1.0,
+              "scenario_value": 1.0,
+              "delta": 0.0,
+              "change": "unchanged",
+              "expectation": "changed",
+              "base_details": {},
+              "scenario_details": {}
+            },
+            {
+              "quantity": "v(N005)",
+              "metric": "v(n005)",
+              "measurement": "op",
+              "base_value": 0.002,
+              "scenario_value": 1.0,
+              "delta": 0.998,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {},
+              "scenario_details": {}
+            }
+          ],
+          "comparison_evidence": {},
+          "led_profiles": {}
+        }
+      }
+    ],
+    "final": {
+      "answer": "Sì, nelle condizioni attuali è normale: A sta a 1 V, mentre B resta quasi a zero perché il percorso principale verso B è interrotto dallo switch aperto. B viene solo portato a circa 1 mV dall’offset della sorgente tra N005 e N002 e dal debolissimo collegamento di perdita da 1 Gohm.",
+      "cause": "Lo switch switch25.1 è aperto, quindi il ramo a bassa resistenza Rresistor22_1=10 ohm non trasferisce A verso B. Tra A e B rimane solo Rresistor22_2=1 Gohm, mentre su B è presente anche la sorgente Vvoltage_source31_1 da 1 mV riferita a N002; per questo N002 si assesta a circa 0.001 V invece che a 1 V.",
+      "verified_correction": ""
+    }
+  }
+}

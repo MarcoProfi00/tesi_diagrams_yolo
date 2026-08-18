@@ -33,6 +33,11 @@ DEFAULT_PIPELINE_DATASET = os.environ.get(
 DEFAULT_INPUT_DIR = PROJECT_ROOT / "outputs" / DEFAULT_PIPELINE_DATASET / "05_build_terminal_graph"
 DEFAULT_DETECT_DIR = PROJECT_ROOT / "outputs" / DEFAULT_PIPELINE_DATASET / "01_detect_components"
 DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "outputs" / DEFAULT_PIPELINE_DATASET / "06_graph_report"
+DEFAULT_PIPELINE_IMAGE_IDS = {
+    image_id.strip()
+    for image_id in os.environ.get("PIPELINE_IMAGE_IDS", "").split(",")
+    if image_id.strip()
+}
 
 LAYER_X = {
     "root": 90,
@@ -70,6 +75,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--input-dir", type=Path, default=DEFAULT_INPUT_DIR)
     parser.add_argument("--detect-dir", type=Path, default=DEFAULT_DETECT_DIR)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
+    parser.add_argument(
+        "--image-ids",
+        nargs="+",
+        default=None,
+        help=(
+            "Identificativi immagine opzionali. Se omessi, viene usato "
+            "PIPELINE_IMAGE_IDS oppure viene renderizzato l'intero batch."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -290,6 +304,23 @@ def build_net_groups(adjacency: dict[str, set[str]], terminal_order: dict[str, i
     return net_groups
 
 
+def _build_model_summary(
+    components: list[dict],
+    terminal_ids: list[str],
+    net_groups: list[dict],
+    warnings: dict,
+) -> dict:
+    """Costruisce il riepilogo condiviso dalle due viste del grafo."""
+    return {
+        "component_count": len(components),
+        "terminal_count": len(terminal_ids),
+        "net_count": len(net_groups),
+        "unconnected_terminals": len(warnings.get("unconnected_terminals", [])),
+        "unmatched_terminals": len(warnings.get("unmatched_terminals", [])),
+        "suspicious_matches": len(warnings.get("suspicious_matches", [])),
+    }
+
+
 def build_visual_model(data: dict) -> dict:
     terminal_metadata = data.get("terminal_metadata", {}) or {}
     warnings = data.get("warnings", {}) or {}
@@ -427,14 +458,7 @@ def build_visual_model(data: dict) -> dict:
         "height": height,
         "nodes": nodes,
         "edges": edges,
-        "summary": {
-            "component_count": len(components),
-            "terminal_count": len(ordered_terminal_ids),
-            "net_count": len(net_groups),
-            "unconnected_terminals": len(warnings.get("unconnected_terminals", [])),
-            "unmatched_terminals": len(warnings.get("unmatched_terminals", [])),
-            "suspicious_matches": len(warnings.get("suspicious_matches", [])),
-        },
+        "summary": _build_model_summary(components, ordered_terminal_ids, net_groups, warnings),
         "warnings": warnings,
     }
 
@@ -563,14 +587,7 @@ def build_compact_visual_model(data: dict) -> dict:
         "height": height,
         "nodes": nodes,
         "edges": edges,
-        "summary": {
-            "component_count": len(components),
-            "terminal_count": len(ordered_terminal_ids),
-            "net_count": len(net_groups),
-            "unconnected_terminals": len(warnings.get("unconnected_terminals", [])),
-            "unmatched_terminals": len(warnings.get("unmatched_terminals", [])),
-            "suspicious_matches": len(warnings.get("suspicious_matches", [])),
-        },
+        "summary": _build_model_summary(components, ordered_terminal_ids, net_groups, warnings),
         "warnings": warnings,
     }
 
@@ -1784,19 +1801,30 @@ def main() -> None:
     input_dir = args.input_dir
     detect_dir = args.detect_dir
     output_dir = args.output_dir
+    image_ids = {
+        str(image_id).strip()
+        for image_id in (args.image_ids or DEFAULT_PIPELINE_IMAGE_IDS)
+        if str(image_id).strip()
+    }
 
     if not input_dir.exists():
         raise FileNotFoundError(f"Cartella input non trovata: {input_dir}")
 
     output_dir.mkdir(parents=True, exist_ok=True)
     json_files = sorted(input_dir.glob("*.json"), key=path_sort_key)
+    if image_ids:
+        json_files = [json_path for json_path in json_files if json_path.stem in image_ids]
     if not json_files:
-        raise FileNotFoundError(f"Nessun JSON trovato in: {input_dir}")
+        requested = ", ".join(sorted(image_ids))
+        filter_detail = f" per image_ids={requested}" if requested else ""
+        raise FileNotFoundError(f"Nessun JSON trovato in: {input_dir}{filter_detail}")
 
     print(f"Input directory : {input_dir}")
     print(f"Detect directory: {detect_dir}")
     print(f"Output directory: {output_dir}")
     print(f"File trovati    : {len(json_files)}\n")
+    if image_ids:
+        print(f"Filtro immagini : {sorted(image_ids)}\n")
 
     index_items: list[dict] = []
     for index, json_path in enumerate(json_files, start=1):

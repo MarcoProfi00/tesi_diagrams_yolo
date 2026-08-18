@@ -1,16 +1,11 @@
 """
-Per ogni IC:
-    1. prendi bbox IC
-    2. considera quel bbox come body_bbox provvisorio
-    3. scansiona quattro lati: left, right, top, bottom
-    4. cerca fili che attraversano il bordo del rettangolo
-    5. ogni attraversamento diventa un terminale
-    6. fondi candidati troppo vicini
-    7. ordina i terminali per lato
-"""
-
-"""
 Strategia per Integrated_Circuit.
+
+Per ogni IC:
+1. usa il bbox come body_bbox provvisorio;
+2. scansiona i quattro lati;
+3. trasforma ogni filo che attraversa il bordo in un terminale;
+4. fonde i candidati vicini e li ordina per lato.
 
 Prima versione:
 - niente OCR;
@@ -360,7 +355,7 @@ def refine_ic_body_bbox(binary, bbox, meta):
 # PIN CONTACT SCORING
 # =========================================================
 def _score_horizontal_contact(binary, body_bbox, y, side, cfg, halfspan):
-    x1, y1, x2, y2 = body_bbox
+    x1, _, x2, _ = body_bbox
     edge_x = x1 if side == "left" else x2
     outward = cfg["outward_probe_px"]
     inward = cfg["inward_probe_px"]
@@ -405,7 +400,7 @@ def _score_horizontal_contact(binary, body_bbox, y, side, cfg, halfspan):
     return best_score, best_run
 
 def _score_vertical_contact(binary, body_bbox, x, side, cfg, halfspan):
-    x1, y1, x2, y2 = body_bbox
+    _, y1, _, y2 = body_bbox
     edge_y = y1 if side == "top" else y2
     outward = cfg["outward_probe_px"]
     inward = cfg["inward_probe_px"]
@@ -806,7 +801,6 @@ def detect_integrated_circuit_terminals(meta: dict, binary, bbox):
     )
     local_scale = float(upscale_debug.get("scale") or 1.0)
 
-    side_rows = {}
     raw_counts = {}
     terminals_by_side = {}
 
@@ -833,7 +827,6 @@ def detect_integrated_circuit_terminals(meta: dict, binary, bbox):
         )
 
         raw_counts[side] = len(raw_candidates)
-        side_rows[side] = merged
         terminals_by_side[side] = merged
 
     terminals_def = []

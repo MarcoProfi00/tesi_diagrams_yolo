@@ -521,44 +521,6 @@ def get_terminal_class_far_probe_scores(binary, bbox):
         ),
     }
 
-# Calcola la preferenza del bordo per il terminale.
-def get_terminal_border_preference(binary_shape, bbox, margin=TERMINAL_CLASS_BORDER_MARGIN):
-    h, w = binary_shape[:2]
-    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, (h, w))
-
-    distances = {
-        "left": x1,
-        "right": (w - 1 - x2),
-        "top": y1,
-        "bottom": (h - 1 - y2),
-    }
-
-    nearest_side = min(distances, key=distances.get)
-    if distances[nearest_side] > margin:
-        return None
-
-    opposite = {
-        "left": "right",
-        "right": "left",
-        "top": "bottom",
-        "bottom": "top",
-    }
-    return opposite[nearest_side]
-
-
-# Verifica se il terminale è vicino al bordo immagine.
-def is_terminal_near_border(binary_shape, bbox):
-    h, w = binary_shape[:2]
-    x1, y1, x2, y2 = geom_clamp_bbox_to_image(bbox, (h, w))
-    margin = max(TERMINAL_BORDER_MARGIN_MIN, int(TERMINAL_BORDER_MARGIN_RATIO * min(h, w)))
-
-    return (
-        x1 <= margin or
-        y1 <= margin or
-        (w - 1 - x2) <= margin or
-        (h - 1 - y2) <= margin
-    )
-
 # Valuta il supporto locale di un punto.
 def score_point_local_support(binary, x, y, radius=MOSFET_POINT_SUPPORT_RADIUS):
     xi = int(round(x))

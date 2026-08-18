@@ -1,0 +1,29 @@
+{
+  "scenario_id": "scenario_4",
+  "title": "Propagare l’alimentazione commutata ai rami lampada e LED",
+  "hypothesis": "After closing switch25.1, the battery voltage reaches N002 but does not propagate to the branch input nodes N003 and N004; feeding both from N002 should energize the LED and lamp branches together.",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    },
+    {
+      "type": "feed_nodes_from_source_node",
+      "source_node": "N002",
+      "target_nodes": [
+        "N003",
+        "N004"
+      ],
+      "resistance": "1m"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "op",
+  "compare": [
+    "v(N002)",
+    "v(N003)",
+    "v(N004)",
+    "v(N005)",
+    "i(vbattery2_1#branch)"
+  ]
+}

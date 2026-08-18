@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import cv2
 import numpy as np
 
+from ._shared_utils import group_consecutive_indices
 from .geometry import geom_clamp_bbox_to_image
 
 
@@ -13,19 +13,6 @@ DEFAULT_FALLBACK_SIDE = {
 
 LED_VERTICAL_TOP_CATHODE_LOW_CONFIDENCE_MAX = 0.45
 POLARIZED_CAPACITOR_PLATE_SHAPE_MIN_CONFIDENCE = 0.08
-
-
-# Raggruppa indici consecutivi.
-def _group_consecutive_indices(indices: list[int]) -> list[list[int]]:
-    if not indices:
-        return []
-    groups = [[indices[0]]]
-    for idx in indices[1:]:
-        if idx == groups[-1][-1] + 1:
-            groups[-1].append(idx)
-        else:
-            groups.append([idx])
-    return groups
 
 
 # Calcola dimensioni e coordinate clampate della bbox.
@@ -49,7 +36,6 @@ def _projection_side_scores(
     if orientation == "horizontal":
         inset_x = max(1, int(round(width * edge_inset_ratio)))
         band_half = max(2, int(round(height * center_band_ratio / 2.0)))
-        xc = int(round((x1 + x2) / 2.0))
         yc = int(round((y1 + y2) / 2.0))
 
         rx1 = min(max(x1, x1 + inset_x), x2)
@@ -72,7 +58,6 @@ def _projection_side_scores(
     inset_y = max(1, int(round(height * edge_inset_ratio)))
     band_half = max(2, int(round(width * center_band_ratio / 2.0)))
     xc = int(round((x1 + x2) / 2.0))
-    yc = int(round((y1 + y2) / 2.0))
 
     rx1 = max(x1, xc - band_half)
     rx2 = min(x2 + 1, xc + band_half + 1)
@@ -141,7 +126,7 @@ def _projection_edge_group_scores(
     max_score = int(projection.max()) if axis_size > 0 else 0
     keep_threshold = max(2, int(round(max_score * 0.82)))
     kept = [idx for idx, value in enumerate(projection.tolist()) if value >= keep_threshold]
-    groups = _group_consecutive_indices(kept)
+    groups = group_consecutive_indices(kept)
 
     # Valuta lo score del gruppo sul bordo.
     def edge_group_score(group: list[int], side: str) -> float:
@@ -262,6 +247,33 @@ def _diode_bar_scores(score_map: dict, orientation: str) -> dict:
     return adjusted
 
 
+def _plus_like_patch_score(binary, cx: int, cy: int, half_w: int, half_h: int) -> float:
+    xa = max(0, cx - half_w)
+    xb = min(binary.shape[1], cx + half_w + 1)
+    ya = max(0, cy - half_h)
+    yb = min(binary.shape[0], cy + half_h + 1)
+    roi = binary[ya:yb, xa:xb]
+    if roi.size == 0:
+        return 0.0
+
+    row_proj = np.count_nonzero(roi > 0, axis=1)
+    col_proj = np.count_nonzero(roi > 0, axis=0)
+    row_max = float(row_proj.max()) if row_proj.size else 0.0
+    col_max = float(col_proj.max()) if col_proj.size else 0.0
+    balance = min(row_max, col_max) / max(max(row_max, col_max), 1.0)
+    cx_local = roi.shape[1] // 2
+    band_x1 = max(0, cx_local - 1)
+    band_x2 = min(roi.shape[1], cx_local + 2)
+    center_col_support = float(np.count_nonzero(roi[:, band_x1:band_x2] > 0))
+
+    return (
+        0.90 * row_max
+        + 1.55 * col_max
+        + 1.80 * balance * min(row_max, col_max)
+        + 0.06 * center_col_support
+    )
+
+
 # Calcola gli score del marker più per lato.
 def _plus_marker_scores_by_side(
     binary,
@@ -269,39 +281,8 @@ def _plus_marker_scores_by_side(
     orientation: str,
     prefer_top_on_vertical_near_tie: bool = True,
 ):
-    def plus_like_patch_score(cx: int, cy: int, half_w: int, half_h: int) -> float:
-        xa = max(0, cx - half_w)
-        xb = min(binary.shape[1], cx + half_w + 1)
-        ya = max(0, cy - half_h)
-        yb = min(binary.shape[0], cy + half_h + 1)
-        roi = binary[ya:yb, xa:xb]
-        if roi.size == 0:
-            return 0.0
 
-        row_proj = np.count_nonzero(roi > 0, axis=1)
-        col_proj = np.count_nonzero(roi > 0, axis=0)
-
-        row_max = float(row_proj.max()) if row_proj.size else 0.0
-        col_max = float(col_proj.max()) if col_proj.size else 0.0
-
-        # Il '+' ha sia barra orizzontale sia barra verticale.
-        # Il '-' tende ad avere quasi solo la barra orizzontale.
-        balance = min(row_max, col_max) / max(max(row_max, col_max), 1.0)
-
-        # Supporto sulla colonna centrale: aiuta a riconoscere la barretta verticale del '+'
-        cx_local = roi.shape[1] // 2
-        band_x1 = max(0, cx_local - 1)
-        band_x2 = min(roi.shape[1], cx_local + 2)
-        center_col_support = float(np.count_nonzero(roi[:, band_x1:band_x2] > 0))
-
-        return (
-            0.90 * row_max
-            + 1.55 * col_max
-            + 1.80 * balance * min(row_max, col_max)
-            + 0.06 * center_col_support
-        )
-
-    x1, y1, x2, y2, width, height = _bbox_dims(bbox, binary)
+    x1, y1, x2, _, width, height = _bbox_dims(bbox, binary)
 
     # Lascio invariato il caso orizzontale, che nei tuoi batch sta andando bene.
     if orientation == "horizontal":
@@ -312,8 +293,8 @@ def _plus_marker_scores_by_side(
         right_cx = int(round(x1 + width * 0.90))
         top_cy = int(round(y1 + height * 0.20))
 
-        left_score = plus_like_patch_score(left_cx, top_cy, patch_half_w, patch_half_h)
-        right_score = plus_like_patch_score(right_cx, top_cy, patch_half_w, patch_half_h)
+        left_score = _plus_like_patch_score(binary, left_cx, top_cy, patch_half_w, patch_half_h)
+        right_score = _plus_like_patch_score(binary, right_cx, top_cy, patch_half_w, patch_half_h)
 
         return {
             "left": round(float(left_score), 4),
@@ -332,8 +313,8 @@ def _plus_marker_scores_by_side(
     top_cy = int(round(y1 + height * 0.30))
     bottom_cy = int(round(y1 + height * 0.70))
 
-    top_score = plus_like_patch_score(cx, top_cy, patch_half_w, patch_half_h)
-    bottom_score = plus_like_patch_score(cx, bottom_cy, patch_half_w, patch_half_h)
+    top_score = _plus_like_patch_score(binary, cx, top_cy, patch_half_w, patch_half_h)
+    bottom_score = _plus_like_patch_score(binary, cx, bottom_cy, patch_half_w, patch_half_h)
 
     # Nei Voltage_Source verticali del tuo dataset il '+' è quasi sempre sopra.
     # Se i due score sono quasi pari, preferiamo top.
@@ -359,31 +340,6 @@ def _plus_marker_scores_by_side(
 def _polarized_capacitor_vertical_plus_scores(binary, bbox):
     x1, y1, x2, y2, width, height = _bbox_dims(bbox, binary)
 
-    def plus_like_patch_score(cx: int, cy: int, half_w: int, half_h: int) -> float:
-        xa = max(0, cx - half_w)
-        xb = min(binary.shape[1], cx + half_w + 1)
-        ya = max(0, cy - half_h)
-        yb = min(binary.shape[0], cy + half_h + 1)
-        roi = binary[ya:yb, xa:xb]
-        if roi.size == 0:
-            return 0.0
-
-        row_proj = np.count_nonzero(roi > 0, axis=1)
-        col_proj = np.count_nonzero(roi > 0, axis=0)
-        row_max = float(row_proj.max()) if row_proj.size else 0.0
-        col_max = float(col_proj.max()) if col_proj.size else 0.0
-        balance = min(row_max, col_max) / max(max(row_max, col_max), 1.0)
-        cx_local = roi.shape[1] // 2
-        band_x1 = max(0, cx_local - 1)
-        band_x2 = min(roi.shape[1], cx_local + 2)
-        center_col_support = float(np.count_nonzero(roi[:, band_x1:band_x2] > 0))
-        return (
-            0.90 * row_max
-            + 1.55 * col_max
-            + 1.80 * balance * min(row_max, col_max)
-            + 0.06 * center_col_support
-        )
-
     patch_half_w = max(3, int(round(width * 0.14)))
     patch_half_h = max(3, int(round(height * 0.10)))
     left_cx = int(round(x1 + width * 0.12))
@@ -391,13 +347,37 @@ def _polarized_capacitor_vertical_plus_scores(binary, bbox):
     top_cy = int(round(y1 + height * 0.22))
     bottom_cy = int(round(y1 + height * 0.78))
 
-    top_left = plus_like_patch_score(left_cx, top_cy, patch_half_w, patch_half_h)
-    top_right = plus_like_patch_score(right_cx, top_cy, patch_half_w, patch_half_h)
-    bottom_left = plus_like_patch_score(left_cx, bottom_cy, patch_half_w, patch_half_h)
-    bottom_right = plus_like_patch_score(right_cx, bottom_cy, patch_half_w, patch_half_h)
+    top_left = _plus_like_patch_score(binary, left_cx, top_cy, patch_half_w, patch_half_h)
+    top_right = _plus_like_patch_score(binary, right_cx, top_cy, patch_half_w, patch_half_h)
+    bottom_left = _plus_like_patch_score(binary, left_cx, bottom_cy, patch_half_w, patch_half_h)
+    bottom_right = _plus_like_patch_score(binary, right_cx, bottom_cy, patch_half_w, patch_half_h)
 
-    top_score = max(top_left, top_right)
-    bottom_score = max(bottom_left, bottom_right)
+    # Nei simboli reali il marker `+` e' spesso appena fuori dalla bbox YOLO,
+    # sopra o sotto la piastra. Campionare soltanto l'interno confonde quindi
+    # la piastra curva con il marker e puo' invertire la polarita. Le tre patch
+    # esterne restano laterali, dove compare il `+`, e non seguono il filo
+    # centrale del condensatore.
+    top_external_ys = [
+        int(round(y1 - height * ratio))
+        for ratio in (0.28, 0.18, 0.08)
+    ]
+    bottom_external_ys = [
+        int(round(y2 + height * ratio))
+        for ratio in (0.08, 0.18, 0.28)
+    ]
+    top_external = max(
+        _plus_like_patch_score(binary, cx, cy, patch_half_w, patch_half_h)
+        for cx in (left_cx, right_cx)
+        for cy in top_external_ys
+    )
+    bottom_external = max(
+        _plus_like_patch_score(binary, cx, cy, patch_half_w, patch_half_h)
+        for cx in (left_cx, right_cx)
+        for cy in bottom_external_ys
+    )
+
+    top_score = max(top_left, top_right, top_external)
+    bottom_score = max(bottom_left, bottom_right, bottom_external)
 
     return {
         "top": round(float(top_score), 4),
@@ -412,6 +392,10 @@ def _polarized_capacitor_vertical_plus_scores(binary, bbox):
         "top_right_score": round(float(top_right), 4),
         "bottom_left_score": round(float(bottom_left), 4),
         "bottom_right_score": round(float(bottom_right), 4),
+        "top_external_score": round(float(top_external), 4),
+        "bottom_external_score": round(float(bottom_external), 4),
+        "top_external_ys": top_external_ys,
+        "bottom_external_ys": bottom_external_ys,
         "score_mode": "polarized_capacitor_plus_marker_vertical_lateral",
     }
 

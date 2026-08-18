@@ -1,0 +1,38 @@
+{
+  "title": "Alimenta insieme il ramo lampada e il ramo LED dal positivo dopo il fusibile",
+  "hypothesis": "Il guasto e una mancata continuita tra il nodo alimentato N003 e i due rami di uscita del connettore: portando N003 a N004 e N005, con lo switch chiuso per la lampada, entrambi i carichi dovrebbero ricevere alimentazione contemporaneamente.",
+  "intent": "correction",
+  "analysis": "op",
+  "actions": [
+    {
+      "type": "connect_nodes",
+      "from": "N003",
+      "to": "N004"
+    },
+    {
+      "type": "connect_nodes",
+      "from": "N003",
+      "to": "N005"
+    },
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    }
+  ],
+  "compare": [
+    "v(N004)",
+    "v(N005)",
+    "v(N006)",
+    "v(N007)",
+    "i(Rlamp13_1)",
+    "i(Rresistor22_1)",
+    "i(Dled12_1)"
+  ],
+  "expect": {
+    "v(N006)": "magnitude_increased",
+    "v(N007)": "magnitude_increased",
+    "i(Rlamp13_1)": "activated",
+    "i(Dled12_1)": "activated"
+  },
+  "scenario_id": "agent_scenario_1"
+}

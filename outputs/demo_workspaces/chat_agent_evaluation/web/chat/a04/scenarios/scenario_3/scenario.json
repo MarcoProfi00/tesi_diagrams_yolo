@@ -1,0 +1,29 @@
+{
+  "scenario_id": "scenario_3",
+  "title": "Alleggerire il bias della base",
+  "hypothesis": "Since lowering Rresistor22_2 to 10k almost suppresses the output, increasing Rresistor22_2 above the 22k base value may move the transistor to a more favorable operating point and materially increase Vpp at N006.",
+  "intent": "correction",
+  "actions": [
+    {
+      "type": "change_component_value",
+      "target": "Rresistor22_2",
+      "value": "33k"
+    }
+  ],
+  "rerun_from": "07",
+  "analysis": "tran",
+  "compare": [
+    "v(N002)",
+    "v(N005)",
+    "v(N006)"
+  ],
+  "expect": {
+    "v(N006)": "increased",
+    "v(N005)": "changed"
+  },
+  "gain": {
+    "input": "v(N002)",
+    "output": "v(N006)",
+    "min_ratio": 5
+  }
+}

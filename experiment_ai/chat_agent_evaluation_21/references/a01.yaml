@@ -1,0 +1,105 @@
+schema_version: 1
+circuit_id: "a01"
+review_status: frozen
+circuit_description: |
+  Circuito in continua a 5 V con due rami indipendenti collegati a un
+  connettore a quattro pin. Il ramo del LED comprende una resistenza da
+  220 ohm ed è alimentato dal nodo N001. Il ramo della lampada comprende
+  una resistenza da 1 kohm e una lampada modellata come carico resistivo
+  da 50 ohm, ma parte dal nodo N002, che nella configurazione base non è
+  alimentato. Lo switch collega N003 a massa e non appartiene al percorso
+  di alimentazione della lampada.
+task_type: "diagnosi e correzione di un ramo non alimentato"
+user_symptom: |
+  Il LED è già acceso, ma la lampada è spenta. Individua la causa ed esegui gli scenari necessari per accendere la lampada mantenendo acceso anche il LED.
+
+circuit_inventory:
+  component_count: 9
+  node_count: 6
+  component_types:
+    - "Connector"
+    - "GND"
+    - "Lamp"
+    - "LED"
+    - "Resistor"
+    - "Switch"
+  analysis_types:
+    - "op"
+
+required_evidence:
+  - id: base_led_active
+    description: |
+      Nella simulazione base il LED è attivo: i(Dled12_1) è circa
+      19.4 mA e v(N005) è circa 0.732 V.
+  - id: base_lamp_inactive
+    description: |
+      Nella simulazione base il ramo lampada è inattivo: N002 e N004
+      sono a 0 V e i(Rlamp13_1) è 0 A.
+  - id: topology_cause
+    description: |
+      Il nodo N001 riceve i 5 V della sorgente, mentre N002 non ha un
+      percorso verso una sorgente. Lo switch agisce sul diverso nodo N003;
+      la sua chiusura non alimenta il ramo lampada.
+  - id: correction_effect
+    description: |
+      Una correzione valida deve mostrare con una nuova run SPICE che il
+      ramo lampada riceve alimentazione e corrente, verificando nello stesso
+      scenario che il ramo LED rimanga attivo.
+
+success_conditions:
+  - id: lamp_branch_activated
+    description: |
+      La corrente i(Rlamp13_1) passa da 0 A a un valore positivo e le
+      tensioni N002 e N004 passano da 0 V a valori coerenti con il circuito.
+  - id: led_preserved
+    description: |
+      i(Dled12_1) rimane positiva e non subisce una riduzione significativa
+      rispetto ai circa 19.4 mA della base.
+  - id: correction_verified
+    description: |
+      La correzione proposta viene realmente eseguita e la run ngspice si
+      conclude con successo; non è sufficiente suggerire soltanto una prova.
+  - id: conclusion_calibrated
+    description: |
+      La conclusione identifica N002 non alimentato come causa e distingue
+      l'attivazione simulata del ramo dalla luminosità fisica della lampada.
+
+acceptable_solutions:
+  - id: bridge_existing_supply
+    description: |
+      Collegare il nodo sorgente N001 al nodo N002, per esempio tramite
+      feed_nodes_from_source_node, lasciando invariato il ramo LED.
+    verified_reference_values: |
+      Con il collegamento N001-N002 tramite 1 milliohm: N002 = 4.999995 V,
+      N004 = 0.238095 V, i(Rlamp13_1) = 4.7619 mA e
+      i(Dled12_1) = 19.4009 mA.
+  - id: equivalent_supply_to_lamp_branch
+    description: |
+      Applicare a N002 un'alimentazione equivalente da 5 V riferita alla
+      stessa massa, mantenendo attiva anche la sorgente del ramo LED, e
+      verificarne gli effetti con le stesse grandezze.
+
+unsupported_conclusions:
+  - |
+    Attribuire lo spegnimento della lampada allo switch aperto: lo switch
+    collega N003 a massa e la sua chiusura non modifica N002, N004 o la
+    corrente della lampada.
+  - |
+    Dichiarare risolto il problema senza misurare sia la corrente della
+    lampada sia la permanenza della corrente nel LED dopo la correzione.
+  - |
+    Affermare che la lampada riceve la tensione nominale di 5 V o che ha
+    raggiunto la luminosità nominale: nello scenario di riferimento ai suoi
+    capi risultano circa 0.238 V a causa della resistenza serie da 1 kohm.
+  - |
+    Indicare come causa un guasto del LED, della lampada o delle resistenze
+    senza evidenze prodotte dalla simulazione.
+
+review_notes: |
+  Il Graph JSON coincide con l'immagine: i due rami partono da pin distinti
+  del connettore e lo switch EN è separato dal ramo lampada. La simulazione
+  usa un punto di lavoro .op e rappresenta la lampada come resistenza da
+  50 ohm. Per questa valutazione, "accendere la lampada" è definito in modo
+  operativo come attivazione della corrente nel relativo carico; non implica
+  una validazione della luminosità reale. La scheda deve essere approvata
+  manualmente prima di passare allo stato frozen.

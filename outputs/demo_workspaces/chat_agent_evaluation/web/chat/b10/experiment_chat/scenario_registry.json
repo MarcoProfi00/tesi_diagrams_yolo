@@ -1,0 +1,202 @@
+{
+  "source_format": "pipeline2.0_experiment_scenario_registry",
+  "batch_name": "batchChatAgentEvaluation",
+  "experiment_name": "chat_agent_evaluation",
+  "circuit_id": "b10",
+  "created_at": "2026-07-24T17:14:30",
+  "updated_at": "2026-07-24T17:16:54",
+  "max_executable_scenarios": 5,
+  "next_scenario_number": 4,
+  "last_added_scenario_id": "scenario_3",
+  "proposals": [
+    {
+      "proposal_id": "proposal_1",
+      "created_at": "2026-07-24T17:14:30",
+      "source_agent_response": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\b10\\11_agent_response_chat.md",
+      "added_scenario_ids": [
+        "scenario_1",
+        "scenario_2",
+        "scenario_3"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_number": 1,
+      "scenario_id": "scenario_1",
+      "title": "Chiudere lo switch riconosciuto",
+      "hypothesis": "switch25.1 aperto isola il ramo che potrebbe trasferire il livello di A verso B.",
+      "actions": [
+        {
+          "type": "close_switch",
+          "target": "switch25.1"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N002)",
+        "v(N004)",
+        "v(N005)"
+      ],
+      "measure": {},
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N002)": "changed"
+      },
+      "rerun_from": "06",
+      "status": "executed",
+      "outcome": "partially_resolved",
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 1,
+      "original_scenario_id": "scenario_1",
+      "execution_path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\chat\\b10\\scenarios\\scenario_1",
+      "created_at": "2026-07-24T17:14:30",
+      "updated_at": "2026-07-24T17:16:54",
+      "signature": "{\"actions\":[{\"target\":\"switch25.1\",\"type\":\"close_switch\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_1",
+        "title": "Chiudere lo switch riconosciuto",
+        "hypothesis": "switch25.1 aperto isola il ramo che potrebbe trasferire il livello di A verso B.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "close_switch",
+            "target": "switch25.1"
+          }
+        ],
+        "rerun_from": "06",
+        "analysis": "op",
+        "compare": [
+          "v(N002)",
+          "v(N004)",
+          "v(N005)"
+        ],
+        "expect": {
+          "v(N002)": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 2,
+      "scenario_id": "scenario_2",
+      "title": "Azzerare il piccolo offset tra N005 e N002",
+      "hypothesis": "Il quasi-zero su B è principalmente determinato da voltage_source31.1 e non da un trasferimento utile dal nodo A.",
+      "actions": [
+        {
+          "type": "change_source_value",
+          "target": "Vvoltage_source31_1",
+          "value": "0V"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N002)",
+        "v(N005)"
+      ],
+      "measure": {},
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N002)": "changed"
+      },
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 2,
+      "original_scenario_id": "scenario_2",
+      "execution_path": null,
+      "created_at": "2026-07-24T17:14:30",
+      "updated_at": "2026-07-24T17:14:30",
+      "signature": "{\"actions\":[{\"target\":\"Vvoltage_source31_1\",\"type\":\"change_source_value\",\"value\":\"0V\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_2",
+        "title": "Azzerare il piccolo offset tra N005 e N002",
+        "hypothesis": "Il quasi-zero su B è principalmente determinato da voltage_source31.1 e non da un trasferimento utile dal nodo A.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vvoltage_source31_1",
+            "value": "0V"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N002)",
+          "v(N005)"
+        ],
+        "expect": {
+          "v(N002)": "changed"
+        }
+      }
+    },
+    {
+      "scenario_number": 3,
+      "scenario_id": "scenario_3",
+      "title": "Ridurre l'isolamento resistivo tra A e B",
+      "hypothesis": "Rresistor22_2 troppo alta impedisce a N002 di seguire N001.",
+      "actions": [
+        {
+          "type": "change_component_value",
+          "target": "Rresistor22_2",
+          "value": "10k"
+        }
+      ],
+      "intent": "diagnostic",
+      "analysis": "op",
+      "compare": [
+        "v(N001)",
+        "v(N002)"
+      ],
+      "measure": {},
+      "gain": null,
+      "temporal_expect": null,
+      "expect": {
+        "v(N002)": "increased"
+      },
+      "rerun_from": "07",
+      "status": "proposed",
+      "outcome": null,
+      "executable": true,
+      "kind": "spice_scenario",
+      "source_proposal_id": "proposal_1",
+      "source_local_index": 3,
+      "original_scenario_id": "scenario_3",
+      "execution_path": null,
+      "created_at": "2026-07-24T17:14:30",
+      "updated_at": "2026-07-24T17:14:30",
+      "signature": "{\"actions\":[{\"target\":\"Rresistor22_2\",\"type\":\"change_component_value\",\"value\":\"10k\"}],\"analysis\":\"op\"}",
+      "scenario": {
+        "scenario_id": "scenario_3",
+        "title": "Ridurre l'isolamento resistivo tra A e B",
+        "hypothesis": "Rresistor22_2 troppo alta impedisce a N002 di seguire N001.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Rresistor22_2",
+            "value": "10k"
+          }
+        ],
+        "rerun_from": "07",
+        "analysis": "op",
+        "compare": [
+          "v(N001)",
+          "v(N002)"
+        ],
+        "expect": {
+          "v(N002)": "increased"
+        }
+      }
+    }
+  ]
+}

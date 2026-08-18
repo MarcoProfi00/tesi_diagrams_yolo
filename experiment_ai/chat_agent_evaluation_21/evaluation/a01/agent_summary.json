@@ -1,0 +1,1290 @@
+{
+  "source_format": "chat_agent_evaluation_summary",
+  "schema_version": 1,
+  "generated_at": "2026-07-28T13:26:50+02:00",
+  "case": {
+    "workspace": "chat_agent_evaluation",
+    "circuit_id": "a01",
+    "batch": "batchChatAgentEvaluation",
+    "experiment": "chat_agent_evaluation",
+    "mode": "agent",
+    "symptom": "Il LED è già acceso, ma la lampada è spenta. Individua la causa ed esegui gli scenari necessari per accendere la lampada mantenendo acceso anche il LED."
+  },
+  "execution": {
+    "model": "gpt-5.4",
+    "status": "completed",
+    "agent_decisions_count": 2,
+    "max_agent_decisions": 8,
+    "max_executable_scenarios": 5,
+    "scenarios_proposed": 1,
+    "scenarios_executed": 1,
+    "successful_spice_runs": 1,
+    "failed_spice_runs": 0,
+    "resolved_candidate_scenarios": 1,
+    "stop_reason": "agent_stop"
+  },
+  "base_evidence": {
+    "graph": {
+      "image_id": "a01",
+      "image_name": "a01.png",
+      "components": [
+        {
+          "component_id": "gnd9.1",
+          "instance_id": "9.1",
+          "class_name": "GND",
+          "terminals": [
+            {
+              "terminal_id": "gnd9.1_t1",
+              "name": "t1",
+              "relative_position": "top"
+            }
+          ]
+        },
+        {
+          "component_id": "switch25.1",
+          "instance_id": "25.1",
+          "class_name": "Switch",
+          "terminals": [
+            {
+              "terminal_id": "switch25.1_t1",
+              "name": "t1",
+              "relative_position": "left"
+            },
+            {
+              "terminal_id": "switch25.1_t2",
+              "name": "t2",
+              "relative_position": "right"
+            }
+          ],
+          "state": "open",
+          "state_confidence": 0.95
+        },
+        {
+          "component_id": "gnd9.2",
+          "instance_id": "9.2",
+          "class_name": "GND",
+          "terminals": [
+            {
+              "terminal_id": "gnd9.2_t1",
+              "name": "t1",
+              "relative_position": "top"
+            }
+          ]
+        },
+        {
+          "component_id": "connector5.1",
+          "instance_id": "5.1",
+          "class_name": "Connector",
+          "terminals": [
+            {
+              "terminal_id": "connector5.1_pin1",
+              "name": "pin1",
+              "relative_position": "right"
+            },
+            {
+              "terminal_id": "connector5.1_pin2",
+              "name": "pin2",
+              "relative_position": "right"
+            },
+            {
+              "terminal_id": "connector5.1_pin3",
+              "name": "pin3",
+              "relative_position": "left"
+            },
+            {
+              "terminal_id": "connector5.1_pin4",
+              "name": "pin4",
+              "relative_position": "left"
+            }
+          ]
+        },
+        {
+          "component_id": "resistor22.1",
+          "instance_id": "22.1",
+          "class_name": "Resistor",
+          "terminals": [
+            {
+              "terminal_id": "resistor22.1_t1",
+              "name": "t1",
+              "relative_position": "left"
+            },
+            {
+              "terminal_id": "resistor22.1_t2",
+              "name": "t2",
+              "relative_position": "right"
+            }
+          ]
+        },
+        {
+          "component_id": "resistor22.2",
+          "instance_id": "22.2",
+          "class_name": "Resistor",
+          "terminals": [
+            {
+              "terminal_id": "resistor22.2_t1",
+              "name": "t1",
+              "relative_position": "left"
+            },
+            {
+              "terminal_id": "resistor22.2_t2",
+              "name": "t2",
+              "relative_position": "right"
+            }
+          ]
+        },
+        {
+          "component_id": "lamp13.1",
+          "instance_id": "13.1",
+          "class_name": "Lamp",
+          "terminals": [
+            {
+              "terminal_id": "lamp13.1_t1",
+              "name": "t1",
+              "relative_position": "left"
+            },
+            {
+              "terminal_id": "lamp13.1_t2",
+              "name": "t2",
+              "relative_position": "right"
+            }
+          ]
+        },
+        {
+          "component_id": "led12.1",
+          "instance_id": "12.1",
+          "class_name": "LED",
+          "terminals": [
+            {
+              "terminal_id": "led12.1_anode",
+              "name": "anode",
+              "relative_position": "left"
+            },
+            {
+              "terminal_id": "led12.1_cathode",
+              "name": "cathode",
+              "relative_position": "right"
+            }
+          ]
+        },
+        {
+          "component_id": "gnd9.3",
+          "instance_id": "9.3",
+          "class_name": "GND",
+          "terminals": [
+            {
+              "terminal_id": "gnd9.3_t1",
+              "name": "t1",
+              "relative_position": "top"
+            }
+          ]
+        }
+      ],
+      "terminal_metadata": {},
+      "graph": {
+        "connector5.1_pin1": [
+          "resistor22.2_t1"
+        ],
+        "connector5.1_pin2": [
+          "resistor22.1_t1"
+        ],
+        "connector5.1_pin3": [
+          "switch25.1_t2"
+        ],
+        "connector5.1_pin4": [
+          "gnd9.2_t1"
+        ],
+        "gnd9.1_t1": [
+          "switch25.1_t1"
+        ],
+        "gnd9.2_t1": [
+          "connector5.1_pin4"
+        ],
+        "gnd9.3_t1": [
+          "lamp13.1_t2",
+          "led12.1_cathode"
+        ],
+        "lamp13.1_t1": [
+          "resistor22.1_t2"
+        ],
+        "lamp13.1_t2": [
+          "gnd9.3_t1",
+          "led12.1_cathode"
+        ],
+        "led12.1_anode": [
+          "resistor22.2_t2"
+        ],
+        "led12.1_cathode": [
+          "gnd9.3_t1",
+          "lamp13.1_t2"
+        ],
+        "resistor22.1_t1": [
+          "connector5.1_pin2"
+        ],
+        "resistor22.1_t2": [
+          "lamp13.1_t1"
+        ],
+        "resistor22.2_t1": [
+          "connector5.1_pin1"
+        ],
+        "resistor22.2_t2": [
+          "led12.1_anode"
+        ],
+        "switch25.1_t1": [
+          "gnd9.1_t1"
+        ],
+        "switch25.1_t2": [
+          "connector5.1_pin3"
+        ]
+      },
+      "warnings": {
+        "unconnected_terminals": [],
+        "unmatched_terminals": [],
+        "suspicious_matches": []
+      }
+    },
+    "node_map": {
+      "circuit_id": "a01",
+      "source_format": "pipeline2.0_node_map",
+      "nodes": [
+        {
+          "node_id": "0",
+          "kind": "ground",
+          "terminals": [
+            "connector5.1_pin4",
+            "gnd9.1_t1",
+            "gnd9.2_t1",
+            "gnd9.3_t1",
+            "lamp13.1_t2",
+            "led12.1_cathode",
+            "switch25.1_t1"
+          ],
+          "terminal_count": 7,
+          "source_groups": [
+            [
+              "connector5.1_pin4",
+              "gnd9.2_t1"
+            ],
+            [
+              "gnd9.1_t1",
+              "switch25.1_t1"
+            ],
+            [
+              "gnd9.3_t1",
+              "lamp13.1_t2",
+              "led12.1_cathode"
+            ]
+          ]
+        },
+        {
+          "node_id": "N001",
+          "kind": "normal",
+          "terminals": [
+            "connector5.1_pin1",
+            "resistor22.2_t1"
+          ],
+          "terminal_count": 2
+        },
+        {
+          "node_id": "N002",
+          "kind": "normal",
+          "terminals": [
+            "connector5.1_pin2",
+            "resistor22.1_t1"
+          ],
+          "terminal_count": 2
+        },
+        {
+          "node_id": "N003",
+          "kind": "normal",
+          "terminals": [
+            "connector5.1_pin3",
+            "switch25.1_t2"
+          ],
+          "terminal_count": 2
+        },
+        {
+          "node_id": "N004",
+          "kind": "normal",
+          "terminals": [
+            "lamp13.1_t1",
+            "resistor22.1_t2"
+          ],
+          "terminal_count": 2
+        },
+        {
+          "node_id": "N005",
+          "kind": "normal",
+          "terminals": [
+            "led12.1_anode",
+            "resistor22.2_t2"
+          ],
+          "terminal_count": 2
+        }
+      ],
+      "terminal_to_node": {
+        "connector5.1_pin1": "N001",
+        "connector5.1_pin2": "N002",
+        "connector5.1_pin3": "N003",
+        "connector5.1_pin4": "0",
+        "gnd9.1_t1": "0",
+        "gnd9.2_t1": "0",
+        "gnd9.3_t1": "0",
+        "lamp13.1_t1": "N004",
+        "lamp13.1_t2": "0",
+        "led12.1_anode": "N005",
+        "led12.1_cathode": "0",
+        "resistor22.1_t1": "N002",
+        "resistor22.1_t2": "N004",
+        "resistor22.2_t1": "N001",
+        "resistor22.2_t2": "N005",
+        "switch25.1_t1": "0",
+        "switch25.1_t2": "N003"
+      },
+      "component_terminal_nodes": {
+        "connector5.1": {
+          "pin1": "N001",
+          "pin2": "N002",
+          "pin3": "N003",
+          "pin4": "0"
+        },
+        "gnd9.1": {
+          "t1": "0"
+        },
+        "gnd9.2": {
+          "t1": "0"
+        },
+        "gnd9.3": {
+          "t1": "0"
+        },
+        "lamp13.1": {
+          "t1": "N004",
+          "t2": "0"
+        },
+        "led12.1": {
+          "anode": "N005",
+          "cathode": "0"
+        },
+        "resistor22.1": {
+          "t1": "N002",
+          "t2": "N004"
+        },
+        "resistor22.2": {
+          "t1": "N001",
+          "t2": "N005"
+        },
+        "switch25.1": {
+          "t1": "0",
+          "t2": "N003"
+        }
+      },
+      "warnings": {
+        "ground_groups_count": 3,
+        "multiple_ground_groups_merged_as_node_0": true,
+        "singleton_nodes": [],
+        "original_warnings": {
+          "unconnected_terminals": [],
+          "unmatched_terminals": [],
+          "suspicious_matches": []
+        },
+        "normalization_warnings": []
+      },
+      "stats": {
+        "nodes_count": 6,
+        "normal_nodes_count": 5,
+        "ground_nodes_count": 1,
+        "ground_groups_count": 3,
+        "terminal_to_node_count": 17,
+        "singleton_nodes_count": 0
+      }
+    },
+    "values_bound": {
+      "circuit_id": "a01",
+      "source_format": "pipeline2.0_values_bound",
+      "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\data\\batchPipeline2.0\\batchChatAgentEvaluation\\values\\a01_values.yaml",
+      "supplies": {
+        "VCC": {
+          "terminal": "connector5.1_pin1",
+          "type": "dc",
+          "value": 5,
+          "unit": "V",
+          "reference": 0,
+          "source": "manual_from_image_label",
+          "label_text": "+5 V DC",
+          "node": "N001"
+        }
+      },
+      "components": {
+        "connector5.1": {
+          "class_name": "Connector",
+          "terminal_nodes": {
+            "pin1": "N001",
+            "pin2": "N002",
+            "pin3": "N003",
+            "pin4": "0"
+          },
+          "value_data": null,
+          "status": "not_required"
+        },
+        "gnd9.1": {
+          "class_name": "GND",
+          "terminal_nodes": {
+            "t1": "0"
+          },
+          "value_data": null,
+          "status": "not_required"
+        },
+        "gnd9.2": {
+          "class_name": "GND",
+          "terminal_nodes": {
+            "t1": "0"
+          },
+          "value_data": null,
+          "status": "not_required"
+        },
+        "gnd9.3": {
+          "class_name": "GND",
+          "terminal_nodes": {
+            "t1": "0"
+          },
+          "value_data": null,
+          "status": "not_required"
+        },
+        "lamp13.1": {
+          "class_name": "Lamp",
+          "terminal_nodes": {
+            "t1": "N004",
+            "t2": "0"
+          },
+          "value_data": {
+            "nominal_voltage": 5,
+            "equivalent_resistance": 50,
+            "unit": "V",
+            "resistance_unit": "ohm",
+            "source": "manual_spice_annotation",
+            "label_text": "Lamp 5V; Req = 50 ohm",
+            "spice": "resistive_load"
+          },
+          "status": "bound"
+        },
+        "led12.1": {
+          "class_name": "LED",
+          "terminal_nodes": {
+            "anode": "N005",
+            "cathode": "0"
+          },
+          "value_data": {
+            "model": "LED_RED",
+            "source": "manual_assumption"
+          },
+          "status": "bound"
+        },
+        "resistor22.1": {
+          "class_name": "Resistor",
+          "terminal_nodes": {
+            "t1": "N002",
+            "t2": "N004"
+          },
+          "value_data": {
+            "value": 1000,
+            "unit": "ohm",
+            "source": "manual_from_image_label",
+            "label_text": "1k"
+          },
+          "status": "bound"
+        },
+        "resistor22.2": {
+          "class_name": "Resistor",
+          "terminal_nodes": {
+            "t1": "N001",
+            "t2": "N005"
+          },
+          "value_data": {
+            "value": 220,
+            "unit": "ohm",
+            "source": "manual_from_image_label",
+            "label_text": "220R"
+          },
+          "status": "bound"
+        },
+        "switch25.1": {
+          "class_name": "Switch",
+          "terminal_nodes": {
+            "t1": "0",
+            "t2": "N003"
+          },
+          "value_data": {
+            "state": "open",
+            "state_source": "graph_json_state",
+            "state_confidence": 0.95,
+            "source": "graph_json_state"
+          },
+          "status": "bound"
+        }
+      },
+      "nodes": {
+        "connector5.1_pin4": {
+          "label": "GND",
+          "spice_node": 0,
+          "source": "graph_json_gnd",
+          "node": "0"
+        }
+      },
+      "spice_topology_overlay": [],
+      "simulation": {},
+      "missing": [],
+      "stats": {
+        "components_total": 9,
+        "bound_components": 5,
+        "missing_components": 0,
+        "not_required_components": 4,
+        "unsupported_components": 0,
+        "supplies_count": 1,
+        "manual_nodes_count": 1
+      }
+    },
+    "component_rules": {
+      "circuit_id": "a01",
+      "source_format": "pipeline2.0_component_rules",
+      "values_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\data\\batchPipeline2.0\\batchChatAgentEvaluation\\values\\a01_values.yaml",
+      "spice_classes_source": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\metadata\\pipeline2_spice_classes.yaml",
+      "supplies": {
+        "VCC": {
+          "status": "spice_ready",
+          "spice_prefix": "V",
+          "emit_as": "independent_voltage_source",
+          "nodes": [
+            "N001",
+            "0"
+          ],
+          "parameters": {
+            "terminal": "connector5.1_pin1",
+            "type": "dc",
+            "value": 5,
+            "unit": "V",
+            "reference": 0,
+            "source": "manual_from_image_label",
+            "label_text": "+5 V DC",
+            "node": "N001"
+          }
+        }
+      },
+      "components": {
+        "connector5.1": {
+          "class_name": "Connector",
+          "status": "not_emitted",
+          "spice_support": "structural",
+          "reason": "Connector used for nodes, labels, and external interfaces."
+        },
+        "gnd9.1": {
+          "class_name": "GND",
+          "status": "not_emitted",
+          "spice_support": "structural",
+          "reason": "GND terminals are already mapped to SPICE node 0."
+        },
+        "gnd9.2": {
+          "class_name": "GND",
+          "status": "not_emitted",
+          "spice_support": "structural",
+          "reason": "GND terminals are already mapped to SPICE node 0."
+        },
+        "gnd9.3": {
+          "class_name": "GND",
+          "status": "not_emitted",
+          "spice_support": "structural",
+          "reason": "GND terminals are already mapped to SPICE node 0."
+        },
+        "lamp13.1": {
+          "class_name": "Lamp",
+          "status": "spice_ready",
+          "spice_support": "equivalent",
+          "spice_prefix": "R",
+          "emit_as": "resistive_load",
+          "node_order": [
+            "t1",
+            "t2"
+          ],
+          "nodes": [
+            "N004",
+            "0"
+          ],
+          "parameters": {
+            "nominal_voltage": 5,
+            "equivalent_resistance": 50,
+            "unit": "V",
+            "resistance_unit": "ohm",
+            "source": "manual_spice_annotation",
+            "label_text": "Lamp 5V; Req = 50 ohm",
+            "spice": "resistive_load"
+          }
+        },
+        "led12.1": {
+          "class_name": "LED",
+          "status": "spice_ready",
+          "spice_support": "model",
+          "spice_prefix": "D",
+          "emit_as": "diode",
+          "node_order": [
+            "anode",
+            "cathode"
+          ],
+          "nodes": [
+            "N005",
+            "0"
+          ],
+          "parameters": {
+            "model": "LED_RED",
+            "source": "manual_assumption"
+          }
+        },
+        "resistor22.1": {
+          "class_name": "Resistor",
+          "status": "spice_ready",
+          "spice_support": "direct",
+          "spice_prefix": "R",
+          "emit_as": "resistor",
+          "node_order": [
+            "t1",
+            "t2"
+          ],
+          "nodes": [
+            "N002",
+            "N004"
+          ],
+          "parameters": {
+            "value": 1000,
+            "unit": "ohm",
+            "source": "manual_from_image_label",
+            "label_text": "1k"
+          }
+        },
+        "resistor22.2": {
+          "class_name": "Resistor",
+          "status": "spice_ready",
+          "spice_support": "direct",
+          "spice_prefix": "R",
+          "emit_as": "resistor",
+          "node_order": [
+            "t1",
+            "t2"
+          ],
+          "nodes": [
+            "N001",
+            "N005"
+          ],
+          "parameters": {
+            "value": 220,
+            "unit": "ohm",
+            "source": "manual_from_image_label",
+            "label_text": "220R"
+          }
+        },
+        "switch25.1": {
+          "class_name": "Switch",
+          "status": "spice_ready",
+          "spice_support": "simplified",
+          "spice_prefix": null,
+          "emit_as": null,
+          "node_order": [
+            "t1",
+            "t2"
+          ],
+          "nodes": [
+            "0",
+            "N003"
+          ],
+          "parameters": {
+            "state": "open",
+            "state_source": "graph_json_state",
+            "state_confidence": 0.95,
+            "source": "graph_json_state"
+          },
+          "strategy": "open_circuit"
+        }
+      },
+      "simulation": {},
+      "stats": {
+        "components_total": 9,
+        "spice_ready_components": 5,
+        "not_emitted_components": 4,
+        "measurement_components": 0,
+        "missing_components": 0,
+        "unsupported_components": 0,
+        "pin_aware_components": 0,
+        "invalid_components": 0,
+        "supplies_ready_count": 1
+      }
+    },
+    "spice_emit_report": {
+      "circuit_id": "a01",
+      "source_format": "pipeline2.0_spice_emit_report",
+      "emitted_elements": 5,
+      "skipped_elements": 4,
+      "skipped_components": [
+        "connector5.1",
+        "gnd9.1",
+        "gnd9.2",
+        "gnd9.3"
+      ],
+      "informational_skips": [
+        "connector5.1: structural component not emitted",
+        "gnd9.1: structural component not emitted",
+        "gnd9.2: structural component not emitted",
+        "gnd9.3: structural component not emitted"
+      ],
+      "measurement_points": [],
+      "analyses": [
+        "op"
+      ],
+      "transient_export": {
+        "path": null,
+        "nodes": [],
+        "device_currents": []
+      },
+      "models": [
+        "LED_RED"
+      ],
+      "warnings": [
+        "switch25.1: open switch not emitted"
+      ]
+    },
+    "spice_run": {
+      "source_format": "pipeline2.0_spice_run",
+      "status": "success",
+      "netlist_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\pipeline2.0\\a01\\07_netlist.cir",
+      "command": [
+        "C:\\Users\\m.profilo\\Spice64\\bin\\ngspice_con.exe",
+        "-b",
+        "07_netlist.cir"
+      ],
+      "exit_code": 0,
+      "stdout_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\pipeline2.0\\a01\\08_ngspice_stdout.txt",
+      "stderr_path": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\pipeline2.0\\a01\\08_ngspice_stderr.txt",
+      "tran_raw_csv_path": null,
+      "tran_csv_path": null,
+      "tran_plot_path": null,
+      "tran_plot_png_path": null,
+      "tran_plot_svg_path": null,
+      "message": "ngspice completed successfully."
+    },
+    "diagnostic_context": {
+      "source_format": "pipeline2.0_diagnostic_context_manifest",
+      "batch_name": "batchChatAgentEvaluation",
+      "experiment_name": "chat_agent_evaluation",
+      "circuit_id": "a01",
+      "user_problem": "Il LED è già acceso, ma la lampada è spenta. Individua la causa ed esegui gli scenari necessari per accendere la lampada mantenendo acceso anche il LED.",
+      "pipeline2_output_dir": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01",
+      "summary": {
+        "spice_status": "success",
+        "spice_exit_code": 0,
+        "spice_message": "ngspice completed successfully.",
+        "emitted_elements": 5,
+        "skipped_elements": 4,
+        "emit_warnings_count": 1,
+        "skipped_components_count": 4,
+        "node_count": 6,
+        "ground_groups_count": 3,
+        "singleton_nodes_count": 0,
+        "bound_components": 5,
+        "missing_components": 0,
+        "unsupported_components": 0,
+        "spice_ready_components": 5,
+        "rules_missing_components": 0,
+        "has_tran_csv": false,
+        "has_tran_plot": false,
+        "led_profiles": {}
+      },
+      "artifacts": {
+        "graph": {
+          "step": "01",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\01_graph.json",
+          "role": "Graph JSON copied from Pipeline 1.0."
+        },
+        "normalized_circuit": {
+          "step": "02",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\02_normalized_circuit.json",
+          "role": "Normalized circuit representation used by Pipeline 2.0."
+        },
+        "node_map": {
+          "step": "03",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\03_node_map.json",
+          "role": "Maps component terminals to SPICE node names."
+        },
+        "values_bound": {
+          "step": "04",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\04_values_bound.json",
+          "role": "Values and labels bound to graph components."
+        },
+        "component_rules": {
+          "step": "06",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\06_component_rules.json",
+          "role": "SPICE conversion rules for each component."
+        },
+        "netlist": {
+          "step": "07",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\07_netlist.cir",
+          "role": "Generated SPICE netlist."
+        },
+        "spice_emit_report": {
+          "step": "07",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\07_spice_emit_report.json",
+          "role": "Report of emitted, skipped and warning components."
+        },
+        "spice_run": {
+          "step": "08",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\08_spice_run.json",
+          "role": "Structured ngspice execution report."
+        },
+        "ngspice_stdout": {
+          "step": "08",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\08_ngspice_stdout.txt",
+          "role": "Raw ngspice stdout log."
+        },
+        "ngspice_stderr": {
+          "step": "08",
+          "available": true,
+          "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\08_ngspice_stderr.txt",
+          "role": "Raw ngspice stderr log."
+        },
+        "tran_csv": {
+          "step": "08",
+          "available": false,
+          "path": null,
+          "role": "Clean transient CSV, when .tran data is available."
+        },
+        "tran_plot_png": {
+          "step": "08",
+          "available": false,
+          "path": null,
+          "role": "Transient plot PNG, when generated."
+        },
+        "tran_plot_svg": {
+          "step": "08",
+          "available": false,
+          "path": null,
+          "role": "Transient plot SVG fallback, when generated."
+        }
+      },
+      "executed_scenarios": [
+        {
+          "scenario_dir": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\scenarios\\agent_scenario_1",
+          "scenario_id": "agent_scenario_1",
+          "title": "Alimenta il ramo lampada dal nodo +5 V già presente",
+          "status": "spice_success",
+          "spice_status": "success",
+          "diagnostic_outcome": {
+            "status": "resolved_candidate",
+            "technical_label": "Candidate resolved",
+            "label": "Criteri di successo soddisfatti",
+            "reason": "Tutti i comportamenti attesi dichiarati dallo scenario sono verificati dagli output SPICE.",
+            "user_message": "Lo scenario fornisce una conferma forte dell'ipotesi testata.",
+            "stop_automation": true,
+            "confidence": "medium",
+            "next_step": "Ci sono gia evidenze forti per fermarsi qui e passare alla conclusione diagnostica."
+          },
+          "comparison_summary": {
+            "requested_count": 4,
+            "changed_count": 3,
+            "activated_count": 3,
+            "missing_count": 0,
+            "expected_count": 4,
+            "expectations_met_count": 4,
+            "expectations_failed_count": 0,
+            "expectations_missing_count": 0,
+            "meaningful_improvement_count": 3,
+            "quality_required": false,
+            "quality_available": false,
+            "quality_improved": false,
+            "quality_acceptable": false,
+            "quality_output_preserved": false,
+            "base_thd": null,
+            "scenario_thd": null,
+            "gain_required": false,
+            "gain_available": false,
+            "gain_sufficient": false,
+            "scenario_gain": null,
+            "min_gain_ratio": null
+          },
+          "led_profiles": {},
+          "artifacts": {
+            "scenario_definition": {
+              "available": true,
+              "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\scenarios\\agent_scenario_1\\scenario.json",
+              "role": "Scenario selected by the user and saved before execution."
+            },
+            "scenario_status": {
+              "available": true,
+              "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\scenarios\\agent_scenario_1\\scenario_status.json",
+              "role": "Current scenario status, SPICE status and diagnostic outcome."
+            },
+            "controlled_scenario_report": {
+              "available": true,
+              "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\scenarios\\agent_scenario_1\\12_controlled_scenarios.json",
+              "role": "Report produced by the controlled scenario runner."
+            },
+            "scenario_comparison": {
+              "available": true,
+              "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\scenarios\\agent_scenario_1\\scenario_comparison.json",
+              "role": "Base-vs-scenario comparison used to evaluate the scenario."
+            }
+          }
+        }
+      ],
+      "scenario_outcome_summary": {
+        "available": true,
+        "best_scenario_id": "agent_scenario_1",
+        "best_outcome_status": "resolved_candidate",
+        "best_stop_automation": true,
+        "ranking_status": "verified_best",
+        "interpretation_rule": "If a user asks which scenario resolves the problem, prefer the scenario with outcome_status='resolved_candidate' and stop_automation=true. Partially resolved scenarios without verified expectations are supporting diagnostics and must not be ranked only by changed_count.",
+        "scenarios": [
+          {
+            "scenario_id": "agent_scenario_1",
+            "title": "Alimenta il ramo lampada dal nodo +5 V già presente",
+            "status": "spice_success",
+            "spice_status": "success",
+            "outcome_status": "resolved_candidate",
+            "outcome_label": "Criteri di successo soddisfatti",
+            "outcome_technical_label": "Candidate resolved",
+            "outcome_reason": "Tutti i comportamenti attesi dichiarati dallo scenario sono verificati dagli output SPICE.",
+            "stop_automation": true,
+            "comparison_summary": {
+              "requested_count": 4,
+              "changed_count": 3,
+              "activated_count": 3,
+              "missing_count": 0,
+              "expected_count": 4,
+              "expectations_met_count": 4,
+              "expectations_failed_count": 0,
+              "expectations_missing_count": 0,
+              "meaningful_improvement_count": 3,
+              "quality_required": false,
+              "quality_available": false,
+              "quality_improved": false,
+              "quality_acceptable": false,
+              "quality_output_preserved": false,
+              "base_thd": null,
+              "scenario_thd": null,
+              "gain_required": false,
+              "gain_available": false,
+              "gain_sufficient": false,
+              "scenario_gain": null,
+              "min_gain_ratio": null
+            },
+            "quantity_summary": {
+              "changed": [
+                "i(Rlamp13_1)",
+                "v(N004)",
+                "v(N002)"
+              ],
+              "unchanged": [
+                "i(Dled12_1)"
+              ],
+              "missing": []
+            },
+            "led_profiles": {},
+            "ranking_verified": true,
+            "score": 230
+          }
+        ]
+      },
+      "scenario_budget": {
+        "max_executable_scenarios": 5,
+        "executed_scenarios_count": 1,
+        "remaining_executable_scenarios": 4,
+        "budget_exhausted": false,
+        "last_scenario_available": false,
+        "policy": "At most 5 scenarios can be executed for the same circuit. When only one scenario remains, the agent should propose a single final scenario. When no scenario remains, the agent must stop proposing new scenarios and provide a final diagnostic conclusion."
+      },
+      "image_access": {
+        "included_by_default": false,
+        "can_be_requested": true,
+        "path": "outputs\\demo_workspaces\\chat_agent_evaluation\\input\\images\\a01.png",
+        "policy": "Only request the image if structured outputs suggest that the Graph JSON may be incomplete or wrong."
+      },
+      "agent_mode": "graph_grounded_readonly",
+      "agent_rules": [
+        "Treat this file as a manifest, not as the full diagnostic evidence.",
+        "Load the referenced artifacts needed for the answer.",
+        "Use graph, node map, component rules, netlist, stdout and stderr as evidence.",
+        "If executed_scenarios are available, use them as evidence for questions about scenario outcomes.",
+        "Do not invent values, connections, models or simulation results.",
+        "Do not use the image unless image_access is explicitly requested.",
+        "If Graph JSON inconsistency is suspected, explain which structured outputs suggest it.",
+        "In read-only mode, do not modify netlists and do not execute scenarios.",
+        "Never exceed 5 executed scenarios for the same circuit.",
+        "When the scenario budget is exhausted, stop proposing new scenarios and provide a final diagnostic conclusion."
+      ]
+    },
+    "netlist": "* pipeline2.0 netlist\n* circuit: a01\n\nVVCC N001 0 DC 5\nRlamp13_1 N004 0 50\nDled12_1 N005 0 LED_RED\nRresistor22_1 N002 N004 1000\nRresistor22_2 N001 N005 220\n* switch25.1 open: not emitted\n\n.model LED_RED D\n\n.op\n.end\n",
+    "ngspice_stdout": "\nNote: No compatibility mode selected!\n\n\nCircuit: * pipeline2.0 netlist\n\nDoing analysis at TEMP = 27.000000 and TNOM = 27.000000\n\nUsing SPARSE 1.3 as Direct Linear Solver\n\nNo. of Data Rows : 1\n\tNode                                  Voltage\n\t----                                  -------\n\t----\t-------\n\tn002                             0.000000e+00\n\tn005                             7.318156e-01\n\tn004                             0.000000e+00\n\tn001                             5.000000e+00\n\n\tSource\tCurrent\n\t------\t-------\n\n\tvvcc#branch                      -1.94008e-02\n\n Diode models (Junction Diode model)\n      model               led_red\n\n      level                     1\n         is                 1e-14\n        jsw                     0\n         rs                     0\n        rsw                     0\n        trs                     0\n       trs2                     0\n          n                     1\n         ns                     1\n         tt                     0\n       ttt1                     0\n       ttt2                     0\n        cjo                     0\n         vj                     1\n          m                   0.5\n        tm1                     0\n        tm2                     0\n        cjp                     0\n        php                     1\n       mjsw                  0.33\n        ikf                     0\n        ikr                     0\n        ikp                     0\n        nbv                     1\n       area                     1\n         pj                     0\n       tlev                     0\n      tlevc                     0\n         eg                  1.11\n       gap1              0.000702\n       gap2                  1108\n        xti                     3\n        cta                     0\n        ctp                     0\n        tpb                     0\n       tphp                     0\n       jtun                     0\n     jtunsw                     0\n       ntun                    30\n     xtitun                     3\n        keg                     1\n         kf                     0\n         af                     1\n         fc                   0.5\n        fcs                   0.5\n         bv                     0\n        ibv                 0.001\n        tcv                     0\n        isr                 1e-14\n         nr                     2\n         vp                     0\n     fv_max                 1e+99\n     bv_max                 1e+99\n     id_max                 1e+99\n     te_max                 1e+99\n     pd_max                 1e+99\n       rth0                     0\n       cth0                 1e-05\n         lm                     0\n         lp                     0\n         wm                     0\n         wp                     0\n        xom                 10000\n        xoi                 10000\n         xm                     0\n         xp                     0\n         xw                     0\n\n Resistor models (Simple linear resistor)\n      model                     R\n\n        rsh                     0\n     narrow                     0\n      short                     0\n        tc1                     0\n        tc2                     0\n        tce                     0\n       defw                 1e-05\n          l                 1e-05\n         kf                     0\n         af                     0\n          r                     0\n     bv_max                 1e+99\n         lf                     1\n         wf                     1\n         ef                     1\n\n Diode: Junction Diode model\n     device              dled12_1\n      model               led_red\n    thermal                     0\n         vd              0.731816\n         id             0.0194009\n         gd              0.750084\n         cd                     0\n\n Resistor: Simple linear resistor\n     device         rresistor22_2         rresistor22_1             rlamp13_1\n      model                     R                     R                     R\n resistance                   220                  1000                    50\n         ac                   220                  1000                    50\n      dtemp                     0                     0                     0\n     bv_max                 1e+99                 1e+99                 1e+99\n      noisy                     1                     1                     1\n          i             0.0194008                     0                     0\n          p             0.0828064                     0                     0\n\n Vsource: Independent voltage source\n     device                  vvcc\n         dc                     5\n      acmag                     0\n      pulse         -\n        sin         -\n        exp         -\n        pwl         -\n       sffm         -\n         am         -\n    trnoise         -\n   trrandom         -\n    portnum                     0\n         z0                     0\n        pwr                     0\n       freq                     0\n      phase                     0\n          i            -0.0194008\n          p            -0.0970042\n\n\nTotal analysis time (seconds) = 0.0077001\n\nTotal elapsed time (seconds) = 0.055 \n\nTotal DRAM available = 32239.535 MB.\nDRAM currently available = 15949.266 MB.\nMaximum ngspice program size =   14.863 MB.\nCurrent ngspice program size =   14.863 MB.\n\n",
+    "ngspice_stderr": ""
+  },
+  "decisions": [
+    {
+      "decision_number": 1,
+      "decision": "run_scenarios",
+      "reason": "La base run mostra che il LED è alimentato correttamente da VVCC tramite Rresistor22_2 (N005≈0.732 V, i(Dled12_1)≈19.4 mA implicita dal ramo), mentre la lampada è spenta perché il suo ramo non riceve alcuna alimentazione: N002=0 V, N004=0 V e i(Rlamp13_1)=0. Il sospetto principale è che il pin2 del connettore, che alimenta la lampada attraverso Rresistor22_1, non sia collegato al +5 V presente su N001. Serve almeno uno scenario controllato che verifichi questa continuità come possibile correzione mantenendo acceso anche il LED.",
+      "scenarios": [
+        {
+          "title": "Alimenta il ramo lampada dal nodo +5 V già presente",
+          "hypothesis": "Il LED è già acceso perché N001 è alimentato da VVCC, ma il ramo lampada resta isolato perché N002 non è collegato alla stessa alimentazione. Se N002 viene alimentato dal nodo sorgente N001, la lampada dovrebbe accendersi attraverso Rresistor22_1 e il LED dovrebbe restare acceso.",
+          "intent": "correction",
+          "analysis": "op",
+          "actions": [
+            {
+              "type": "feed_nodes_from_source_node",
+              "source_node": "N001",
+              "target_nodes": [
+                "N002"
+              ]
+            }
+          ],
+          "compare": [
+            "i(Rlamp13_1)",
+            "i(Dled12_1)",
+            "v(N004)",
+            "v(N002)"
+          ],
+          "expect": {
+            "i(Rlamp13_1)": "activated",
+            "i(Dled12_1)": "unchanged",
+            "v(N004)": "magnitude_increased",
+            "v(N002)": "magnitude_increased"
+          }
+        }
+      ],
+      "final_status": null,
+      "final_answer": null,
+      "final_cause": null,
+      "verified_correction": null,
+      "scenario_results": [
+        {
+          "scenario_id": "agent_scenario_1",
+          "scenario_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\scenarios\\agent_scenario_1",
+          "run_dir": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\scenarios\\agent_scenario_1\\run",
+          "status": "spice_success",
+          "spice_executed": true,
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "comparison_summary": {
+            "requested_count": 4,
+            "changed_count": 3,
+            "activated_count": 3,
+            "missing_count": 0,
+            "expected_count": 4,
+            "expectations_met_count": 4,
+            "expectations_failed_count": 0,
+            "expectations_missing_count": 0,
+            "meaningful_improvement_count": 3,
+            "quality_required": false,
+            "quality_available": false,
+            "quality_improved": false,
+            "quality_acceptable": false,
+            "quality_output_preserved": false,
+            "base_thd": null,
+            "scenario_thd": null,
+            "gain_required": false,
+            "gain_available": false,
+            "gain_sufficient": false,
+            "scenario_gain": null,
+            "min_gain_ratio": null
+          },
+          "diagnostic_outcome": {
+            "status": "resolved_candidate",
+            "technical_label": "Candidate resolved",
+            "label": "Criteri di successo soddisfatti",
+            "reason": "Tutti i comportamenti attesi dichiarati dallo scenario sono verificati dagli output SPICE.",
+            "user_message": "Lo scenario fornisce una conferma forte dell'ipotesi testata.",
+            "stop_automation": true,
+            "confidence": "medium",
+            "next_step": "Ci sono gia evidenze forti per fermarsi qui e passare alla conclusione diagnostica."
+          },
+          "viewer": {
+            "model": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\scenarios\\agent_scenario_1\\run\\13_viewer_model.json",
+            "layout": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\scenarios\\agent_scenario_1\\run\\14_viewer_layout.json",
+            "svg": "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\scenarios\\agent_scenario_1\\run\\15_viewer.svg"
+          },
+          "viewer_error": null,
+          "executed_scenarios_count": 1
+        }
+      ]
+    },
+    {
+      "decision_number": 2,
+      "decision": "stop",
+      "reason": "È già stato eseguito uno scenario controllato self-contained con esito resolved_candidate e stop_automation=true; il budget è disponibile ma non serve un altro test perché la correzione richiesta dall'utente è stata già verificata mantenendo acceso anche il LED.",
+      "scenarios": [],
+      "final_status": "resolved",
+      "final_answer": "La causa è che il ramo della lampada è isolato dall'alimentazione: il +5 V arriva a N001 e accende il LED tramite Rresistor22_2 e Dled12_1, mentre N002 resta a 0 V e quindi la lampada non riceve corrente. Lo scenario verificato che alimenta N002 dal nodo sorgente N001 accende la lampada e lascia acceso il LED.",
+      "final_cause": "Mancanza di continuità/alimentazione tra il nodo di sorgente +5 V N001 e il nodo N002 del ramo lampada; per questo Rresistor22_1 e Rlamp13_1 restano senza corrente nella base run.",
+      "verified_correction": "Alimentare il nodo N002 del ramo lampada dal nodo +5 V già attivo N001 (scenario verificato con feed_nodes_from_source_node da N001 a N002), così la corrente in i(Rlamp13_1) si attiva mentre i(Dled12_1) resta invariata.",
+      "scenario_results": []
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_id": "agent_scenario_1",
+      "title": "Alimenta il ramo lampada dal nodo +5 V già presente",
+      "hypothesis": "Il LED è già acceso perché N001 è alimentato da VVCC, ma il ramo lampada resta isolato perché N002 non è collegato alla stessa alimentazione. Se N002 viene alimentato dal nodo sorgente N001, la lampada dovrebbe accendersi attraverso Rresistor22_1 e il LED dovrebbe restare acceso.",
+      "intent": "correction",
+      "actions": [
+        {
+          "type": "feed_nodes_from_source_node",
+          "source_node": "N001",
+          "target_nodes": [
+            "N002"
+          ]
+        }
+      ],
+      "analysis": "op",
+      "compare": [
+        "i(Rlamp13_1)",
+        "i(Dled12_1)",
+        "v(N004)",
+        "v(N002)"
+      ],
+      "expect": {
+        "i(Rlamp13_1)": "activated",
+        "i(Dled12_1)": "unchanged",
+        "v(N004)": "magnitude_increased",
+        "v(N002)": "magnitude_increased"
+      },
+      "registry_status": "executed",
+      "execution": {
+        "status": "spice_success",
+        "spice_executed": true,
+        "spice_status": "success",
+        "spice_exit_code": 0,
+        "diagnostic_outcome": {
+          "status": "resolved_candidate",
+          "technical_label": "Candidate resolved",
+          "label": "Criteri di successo soddisfatti",
+          "reason": "Tutti i comportamenti attesi dichiarati dallo scenario sono verificati dagli output SPICE.",
+          "user_message": "Lo scenario fornisce una conferma forte dell'ipotesi testata.",
+          "stop_automation": true,
+          "confidence": "medium",
+          "next_step": "Ci sono gia evidenze forti per fermarsi qui e passare alla conclusione diagnostica."
+        },
+        "comparison_summary": {
+          "requested_count": 4,
+          "changed_count": 3,
+          "activated_count": 3,
+          "missing_count": 0,
+          "expected_count": 4,
+          "expectations_met_count": 4,
+          "expectations_failed_count": 0,
+          "expectations_missing_count": 0,
+          "meaningful_improvement_count": 3,
+          "quality_required": false,
+          "quality_available": false,
+          "quality_improved": false,
+          "quality_acceptable": false,
+          "quality_output_preserved": false,
+          "base_thd": null,
+          "scenario_thd": null,
+          "gain_required": false,
+          "gain_available": false,
+          "gain_sufficient": false,
+          "scenario_gain": null,
+          "min_gain_ratio": null
+        },
+        "quantities": [
+          {
+            "quantity": "i(Rlamp13_1)",
+            "base_value": 0.0,
+            "scenario_value": 0.0047619,
+            "delta": 0.0047619,
+            "change": "activated",
+            "expectation": "activated",
+            "expectation_met": true,
+            "relative_change": 4761900000.0,
+            "meaningful_improvement": true,
+            "metric": "i(rlamp13_1)",
+            "measurement": "op",
+            "base_details": {},
+            "scenario_details": {}
+          },
+          {
+            "quantity": "i(Dled12_1)",
+            "base_value": 0.0194009,
+            "scenario_value": 0.0194009,
+            "delta": 0.0,
+            "change": "unchanged",
+            "expectation": "unchanged",
+            "expectation_met": true,
+            "relative_change": 0.0,
+            "meaningful_improvement": false,
+            "metric": "i(dled12_1)",
+            "measurement": "op",
+            "base_details": {},
+            "scenario_details": {}
+          },
+          {
+            "quantity": "v(N004)",
+            "base_value": 0.0,
+            "scenario_value": 0.238095,
+            "delta": 0.238095,
+            "change": "activated",
+            "expectation": "magnitude_increased",
+            "expectation_met": true,
+            "relative_change": 238095000000.0,
+            "meaningful_improvement": true,
+            "metric": "v(n004)",
+            "measurement": "op",
+            "base_details": {},
+            "scenario_details": {}
+          },
+          {
+            "quantity": "v(N002)",
+            "base_value": 0.0,
+            "scenario_value": 4.999995,
+            "delta": 4.999995,
+            "change": "activated",
+            "expectation": "magnitude_increased",
+            "expectation_met": true,
+            "relative_change": 4999995000000.0,
+            "meaningful_improvement": true,
+            "metric": "v(n002)",
+            "measurement": "op",
+            "base_details": {},
+            "scenario_details": {}
+          }
+        ],
+        "comparison_evidence": {}
+      }
+    }
+  ],
+  "final": {
+    "status": "resolved",
+    "reason": "È già stato eseguito uno scenario controllato self-contained con esito resolved_candidate e stop_automation=true; il budget è disponibile ma non serve un altro test perché la correzione richiesta dall'utente è stata già verificata mantenendo acceso anche il LED.",
+    "answer": "La causa è che il ramo della lampada è isolato dall'alimentazione: il +5 V arriva a N001 e accende il LED tramite Rresistor22_2 e Dled12_1, mentre N002 resta a 0 V e quindi la lampada non riceve corrente. Lo scenario verificato che alimenta N002 dal nodo sorgente N001 accende la lampada e lascia acceso il LED.",
+    "cause": "Mancanza di continuità/alimentazione tra il nodo di sorgente +5 V N001 e il nodo N002 del ramo lampada; per questo Rresistor22_1 e Rlamp13_1 restano senza corrente nella base run.",
+    "verified_correction": "Alimentare il nodo N002 del ramo lampada dal nodo +5 V già attivo N001 (scenario verificato con feed_nodes_from_source_node da N001 a N002), così la corrente in i(Rlamp13_1) si attiva mentre i(Dled12_1) resta invariata."
+  },
+  "source_files": [
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\01_graph.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\03_node_map.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\04_values_bound.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\06_component_rules.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\07_netlist.cir",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\07_spice_emit_report.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\08_ngspice_stderr.txt",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\08_ngspice_stdout.txt",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\08_spice_run.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\10_diagnostic_context.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\experiment_chat\\autonomous_diagnosis.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\experiment_chat\\chat_history.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\scenarios\\agent_scenario_1\\scenario.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\scenarios\\agent_scenario_1\\scenario_comparison.json",
+    "outputs\\demo_workspaces\\chat_agent_evaluation\\web\\agent\\a01\\scenarios\\agent_scenario_1\\scenario_status.json"
+  ]
+}

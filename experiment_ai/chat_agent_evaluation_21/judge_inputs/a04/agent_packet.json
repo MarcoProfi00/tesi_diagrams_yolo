@@ -1,0 +1,381 @@
+{
+  "packet_schema_version": 1,
+  "packet_id": "a04_run_2",
+  "reference": {
+    "schema_version": 1,
+    "circuit_id": "a04",
+    "circuit_description": "Amplificatore a emettitore comune con transistor 2N2222, alimentazione\nda 5 V e ingresso sinusoidale da 10 mV di picco a 100 Hz. La base è\npolarizzata dal partitore da 22 kohm e 10 kohm; il collettore usa una\nresistenza da 2.2 kohm, l'emettitore una resistenza da 1 kohm con bypass\nda 10 uF. Il segnale entra attraverso C1 da 100 nF ed esce dal collettore\nattraverso C2 da 1 uF sul carico da 33 kohm.\n",
+    "task_type": "diagnosi e miglioramento del guadagno di un amplificatore",
+    "user_symptom": "Il circuito dovrebbe amplificare il segnale, ma in uscita vedo un segnale troppo debole o quasi nullo. Individua la causa ed esegui gli scenari necessari per verificare una correzione funzionante.\n",
+    "circuit_inventory": {
+      "component_count": 12,
+      "node_count": 7,
+      "component_types": [
+        "Battery",
+        "Capacitor",
+        "GND",
+        "NPN_Transistor",
+        "Resistor",
+        "Signal_Source"
+      ],
+      "analysis_types": [
+        "op",
+        "tran"
+      ]
+    },
+    "required_evidence": [
+      {
+        "id": "base_bias_valid",
+        "description": "Il punto di lavoro base è plausibile: Vbase N003 è circa 1.520 V,\nVemettitore N004 circa 0.877 V e Vcollettore N005 circa 3.084 V.\nIl transistor non risulta spento né in saturazione nella base.\n"
+      },
+      {
+        "id": "base_signal_transfer",
+        "description": "Nel transitorio base Vin su N002 è circa 19.997 mVpp e Vout su N006\ncirca 92.391 mVpp, per un guadagno Vpp di circa 4.62. Il circuito\namplifica già, ma l'uscita può essere migliorata.\n"
+      },
+      {
+        "id": "limiting_ac_network",
+        "description": "Una diagnosi valida deve verificare un elemento che limita il\ntrasferimento AC a 100 Hz, come C1 da 100 nF all'ingresso oppure C3\nda 10 uF nel bypass d'emettitore, senza confondere il problema con\nuna semplice mancanza di segnale in ingresso.\n"
+      },
+      {
+        "id": "correction_comparison",
+        "description": "La stessa run deve confrontare Vin e Vout in transitorio prima e\ndopo la modifica, mostrando sia l'aumento di Vout sia l'aumento del\nrapporto Vout_pp/Vin_pp.\n"
+      }
+    ],
+    "success_conditions": [
+      {
+        "id": "input_preserved",
+        "description": "L'ingresso resta circa 19.997 mVpp; la correzione non consiste\nsemplicemente nell'aumentare l'ampiezza della sorgente.\n"
+      },
+      {
+        "id": "output_materially_improved",
+        "description": "Vout su N006 supera circa 0.20 Vpp ed è almeno doppia rispetto ai\ncirca 92.4 mVpp della base.\n"
+      },
+      {
+        "id": "gain_materially_improved",
+        "description": "Il guadagno Vout_pp/Vin_pp passa da circa 4.62 ad almeno 10.\n"
+      },
+      {
+        "id": "bias_preserved",
+        "description": "Il punto di lavoro DC resta compatibile con la regione attiva del\ntransistor; non è accettabile ottenere più ampiezza portando il\ntransistor stabilmente in interdizione o saturazione.\n"
+      },
+      {
+        "id": "correction_verified",
+        "description": "La modifica viene realmente eseguita con analisi transitoria ngspice\nconclusa con successo e con misure disponibili su N002 e N006.\n"
+      }
+    ],
+    "acceptable_solutions": [
+      {
+        "id": "increase_input_coupling_capacitor",
+        "description": "Aumentare Ccapacitor4_1, cioè C1, da 100 nF a 1 uF per ridurre\nl'attenuazione d'ingresso a 100 Hz.\n",
+        "verified_reference_values": "Vin = 19.997 mVpp, segnale di base N003 = 19.094 mVpp,\nVout = 228.683 mVpp e guadagno Vout/Vin circa 11.44.\n"
+      },
+      {
+        "id": "increase_emitter_bypass_capacitor",
+        "description": "Aumentare Ccapacitor4_2, cioè C3, da 10 uF a 100 uF per ridurre la\ndegenerazione AC dell'emettitore a 100 Hz.\n",
+        "verified_reference_values": "Vin = 19.997 mVpp, Vout = 215.916 mVpp, guadagno Vout/Vin circa\n10.80 e oscillazione sull'emettitore ridotta da circa 6.40 mVpp a\n1.74 mVpp.\n"
+      },
+      {
+        "id": "modest_output_load_change",
+        "acceptance": "diagnostic_only",
+        "description": "Aumentare il carico R5 da 33 kohm a 100 kohm porta Vout soltanto da\n92.391 a 96.667 mVpp, circa +4.6 percento: è un test utile ma non una\ncorrezione sufficiente del sintomo.\n"
+      },
+      {
+        "id": "increase_input_amplitude",
+        "acceptance": "partial_only",
+        "description": "Aumentare l'ingresso da 10 mV a 100 mV di picco porta Vout a circa\n0.943 Vpp, ma il guadagno resta sostanzialmente invariato, da 4.62 a\ncirca 4.72. Aumenta il livello assoluto, non corregge il limite di\nguadagno del circuito.\n"
+      }
+    ],
+    "unsupported_conclusions": [
+      "Affermare che il circuito non amplifica affatto: nella base il rapporto\nVout_pp/Vin_pp è già circa 4.62.\n",
+      "Dichiarare risolto il problema soltanto perché Vout cresce dopo aver\naumentato Vin, senza verificare un miglioramento del guadagno.\n",
+      "Considerare sufficiente la variazione del carico a 100 kohm: il\nmiglioramento dell'uscita è inferiore al 5 percento.\n",
+      "Considerare utile la riduzione della resistenza di bias da 22 kohm a\n10 kohm: la prova riduce Vout da circa 92.4 mVpp a 0.649 mVpp.\n",
+      "Considerare risolutivo l'aumento della stessa resistenza a 33 kohm:\nil guadagno scende da circa 4.62 a 4.29.\n",
+      "Valutare il guadagno usando la tensione DC o il solo punto operativo;\nper questo sintomo servono le ampiezze picco-picco del transitorio.\n"
+    ]
+  },
+  "rubric": {
+    "score_scale": {
+      "0": "errato o assente",
+      "1": "utile ma incompleto o con limiti rilevanti",
+      "2": "corretto e adeguatamente verificato"
+    },
+    "criteria": [
+      "diagnostic_correctness",
+      "test_quality",
+      "evidence_interpretation",
+      "goal_achievement",
+      "conclusion_quality"
+    ]
+  },
+  "run": {
+    "initial_request": "Il circuito dovrebbe amplificare il segnale, ma in uscita vedo un segnale troppo debole o quasi nullo. Individua la causa ed esegui gli scenari necessari per verificare una correzione funzionante.",
+    "technical_status": "completed",
+    "base_spice": {
+      "status": "success",
+      "exit_code": 0,
+      "message": "ngspice completed successfully.",
+      "analyses": [
+        "op",
+        "tran"
+      ]
+    },
+    "execution_counts": {
+      "scenarios_proposed": 2,
+      "scenarios_executed": 2,
+      "successful_spice_runs": 2,
+      "failed_spice_runs": 0
+    },
+    "scenarios": [
+      {
+        "scenario_id": "scenario_1",
+        "title": "Aumentare l'ampiezza della sorgente di ingresso per verificare se il circuito sta gia amplificando un segnale troppo piccolo",
+        "hypothesis": "Il circuito e probabilmente funzionante ma l'ingresso di 10 mV produce un'uscita assoluta percepita come troppo debole. Portando la sorgente a 100 mV di picco, con offset DC invariato a 0 V, l'uscita su N006 dovrebbe aumentare in modo netto e il rapporto di guadagno restare non nullo.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "signal_source23.1",
+            "value": "SIN(0 0.1 100)"
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "v(N002)",
+          "v(N006)",
+          "v(N005)"
+        ],
+        "expect": {
+          "v(N002)": "magnitude_increased",
+          "v(N006)": "magnitude_increased",
+          "v(N005)": "nonzero"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N002)",
+              "metric": "v(n002).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.01999690498,
+              "scenario_value": 0.1999690498,
+              "delta": 0.17997214481999999,
+              "change": "changed",
+              "expectation": "magnitude_increased",
+              "base_details": {
+                "min": -0.00999845249,
+                "max": 0.00999845249,
+                "mean": 1.0513082810826531e-06,
+                "vpp": 0.01999690498,
+                "final": -1.2246468e-17,
+                "abs_peak": 0.00999845249
+              },
+              "scenario_details": {
+                "min": -0.0999845249,
+                "max": 0.0999845249,
+                "mean": 1.051308281082653e-05,
+                "vpp": 0.1999690498,
+                "final": -1.2246468e-16,
+                "abs_peak": 0.0999845249
+              }
+            },
+            {
+              "quantity": "v(N006)",
+              "metric": "v(n006).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.09239124779999999,
+              "scenario_value": 0.942983474,
+              "delta": 0.8505922262000001,
+              "change": "changed",
+              "expectation": "magnitude_increased",
+              "base_details": {
+                "min": -0.0508468723,
+                "max": 0.0415443755,
+                "mean": -0.0009779270377125982,
+                "vpp": 0.09239124779999999,
+                "final": -0.0314730077,
+                "abs_peak": 0.0508468723
+              },
+              "scenario_details": {
+                "min": -0.531866788,
+                "max": 0.411116686,
+                "mean": -0.010196308329389763,
+                "vpp": 0.942983474,
+                "final": -0.311366094,
+                "abs_peak": 0.531866788
+              }
+            },
+            {
+              "quantity": "v(N005)",
+              "metric": "v(n005).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.09280576000000007,
+              "scenario_value": 0.9469942999999996,
+              "delta": 0.8541885399999996,
+              "change": "changed",
+              "expectation": "nonzero",
+              "base_details": {
+                "min": 3.03317683,
+                "max": 3.12598259,
+                "mean": 3.0834367002559055,
+                "vpp": 0.09280576000000007,
+                "final": 3.05158943,
+                "abs_peak": 3.12598259
+              },
+              "scenario_details": {
+                "min": 2.54878104,
+                "max": 3.49577534,
+                "mean": 3.0741608953543307,
+                "vpp": 0.9469942999999996,
+                "final": 2.75926577,
+                "abs_peak": 3.49577534
+              }
+            }
+          ],
+          "comparison_evidence": {
+            "gain_comparison": {
+              "input": "v(N002)",
+              "output": "v(N006)",
+              "base_gain": 4.6202773825452255,
+              "scenario_gain": 4.715647121107639,
+              "min_ratio": 0.5,
+              "available": true,
+              "sufficient": true,
+              "relative_change": 0.02064156124537187
+            }
+          },
+          "led_profiles": {}
+        }
+      },
+      {
+        "scenario_id": "scenario_2",
+        "title": "Aumentare moderatamente il bypass di emettitore per verificare una correzione circuitale del guadagno AC",
+        "hypothesis": "Se l'uscita resta debole anche con ingresso maggiore, il limite puo essere la degenerazione di emettitore con C3=10 uF a 100 Hz, che lascia una reattanza ancora non trascurabile. Aumentando il condensatore di bypass sull'emettitore da 10 uF a 100 uF, il guadagno AC dovrebbe crescere all'uscita mantenendo lo stesso bias DC di base come prima approssimazione.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "capacitor4.2",
+            "value": "100uF"
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "v(N002)",
+          "v(N006)",
+          "v(N004)"
+        ],
+        "expect": {
+          "v(N006)": "magnitude_increased",
+          "v(N004)": "magnitude_decreased",
+          "v(N002)": "nonzero"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N002)",
+              "metric": "v(n002).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.01999690498,
+              "scenario_value": 0.01999690498,
+              "delta": 0.0,
+              "change": "unchanged",
+              "expectation": "nonzero",
+              "base_details": {
+                "min": -0.00999845249,
+                "max": 0.00999845249,
+                "mean": 1.0513082810826531e-06,
+                "vpp": 0.01999690498,
+                "final": -1.2246468e-17,
+                "abs_peak": 0.00999845249
+              },
+              "scenario_details": {
+                "min": -0.00999845249,
+                "max": 0.00999845249,
+                "mean": 1.0513082810826531e-06,
+                "vpp": 0.01999690498,
+                "final": -1.2246468e-17,
+                "abs_peak": 0.00999845249
+              }
+            },
+            {
+              "quantity": "v(N006)",
+              "metric": "v(n006).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.09239124779999999,
+              "scenario_value": 0.21591613199999998,
+              "delta": 0.12352488419999999,
+              "change": "changed",
+              "expectation": "magnitude_increased",
+              "base_details": {
+                "min": -0.0508468723,
+                "max": 0.0415443755,
+                "mean": -0.0009779270377125982,
+                "vpp": 0.09239124779999999,
+                "final": -0.0314730077,
+                "abs_peak": 0.0508468723
+              },
+              "scenario_details": {
+                "min": -0.1094989,
+                "max": 0.106417232,
+                "mean": -0.0005629183105196851,
+                "vpp": 0.21591613199999998,
+                "final": -0.107432147,
+                "abs_peak": 0.1094989
+              }
+            },
+            {
+              "quantity": "v(N004)",
+              "metric": "v(n004).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.006401203999999994,
+              "scenario_value": 0.0017411419999999733,
+              "delta": -0.00466006200000002,
+              "change": "changed",
+              "expectation": "magnitude_decreased",
+              "base_details": {
+                "min": 0.873684568,
+                "max": 0.880085772,
+                "mean": 0.8768306699685039,
+                "vpp": 0.006401203999999994,
+                "final": 0.879239881,
+                "abs_peak": 0.880085772
+              },
+              "scenario_details": {
+                "min": 0.87600353,
+                "max": 0.877744672,
+                "mean": 0.8768842336437008,
+                "vpp": 0.0017411419999999733,
+                "final": 0.876954144,
+                "abs_peak": 0.877744672
+              }
+            }
+          ],
+          "comparison_evidence": {
+            "gain_comparison": {
+              "input": "v(N002)",
+              "output": "v(N006)",
+              "base_gain": 4.6202773825452255,
+              "scenario_gain": 10.797477520443765,
+              "min_ratio": 0.5,
+              "available": true,
+              "sufficient": true,
+              "relative_change": 1.3369760355157798
+            }
+          },
+          "led_profiles": {}
+        }
+      }
+    ],
+    "final": {
+      "answer": "Il circuito base non e guasto: sta gia amplificando, ma il segnale di ingresso originale e troppo piccolo e l'uscita appare quindi debole in valore assoluto. Inoltre il guadagno AC puo essere aumentato migliorando il bypass di emettitore.",
+      "cause": "Dalle evidenze OP il BJT e polarizzato correttamente in regione attiva (N003 circa 1.52 V, N004 circa 0.877 V, N005 circa 3.08 V), quindi non emerge un problema di bias o di topologia. Lo scenario con sorgente aumentata da SIN(0 0.01 100) a SIN(0 0.1 100) ha soddisfatto tutti i criteri con guadagno scenario circa 4.72, confermando che la causa principale del sintomo percepito e l'ingresso di soli 10 mV di picco. Un secondo scenario ha anche mostrato che C3=10 uF limita il bypass dell'emettitore a 100 Hz: portando capacitor4.2 a 100uF il guadagno e salito a circa 10.80.",
+      "verified_correction": "Correzione verificata: aumentare il condensatore di bypass dell'emettitore capacitor4.2 da 10uF a 100uF. Questo scenario di correzione ha aumentato l'uscita su N006, ridotto il segnale residuo su N004 e ha verificato un guadagno Vpp uscita/ingresso circa 10.80 con diagnostic_outcome resolved_candidate."
+    }
+  }
+}

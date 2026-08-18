@@ -11,6 +11,7 @@ Questo file contiene strategie base per:
 """
 import numpy as np
 import cv2
+from ._shared_utils import range_overlap_ratio
 from .config import *
 from .geometry import (
     geom_clamp_bbox_to_image,
@@ -65,7 +66,7 @@ def _build_one_terminal_support_binary(binary, bbox):
 
     roi = binary[ry1:ry2 + 1, rx1:rx2 + 1]
     roi_fg = (roi > 0).astype(np.uint8)
-    num_labels, labels, _, _ = cv2.connectedComponentsWithStats(roi_fg, connectivity=8)
+    _, labels, _, _ = cv2.connectedComponentsWithStats(roi_fg, connectivity=8)
 
     seed_pad = ONE_TERMINAL_TEXT_SUPPRESS_SEED_PAD
     seed_w = max(
@@ -97,12 +98,6 @@ def _build_one_terminal_support_binary(binary, bbox):
     return cleaned
 
 
-def _range_overlap_ratio(a1, a2, b1, b2):
-    inter = max(0, min(a2, b2) - max(a1, b1) + 1)
-    base = max(1, min(a2 - a1 + 1, b2 - b1 + 1))
-    return float(inter) / float(base)
-
-
 def _component_is_axis_aligned_external(component_bbox, bbox, orientation):
     cx1, cy1, cx2, cy2 = component_bbox
     x1, y1, x2, y2 = bbox
@@ -131,14 +126,14 @@ def _component_is_axis_aligned_external(component_bbox, bbox, orientation):
         if (
             cy2 <= y1 - 1
             and (y1 - cy2) <= gap_limit
-            and _range_overlap_ratio(cx1, cx2, central_x1, central_x2) >= overlap_limit
+            and range_overlap_ratio(cx1, cx2, central_x1, central_x2) >= overlap_limit
             and is_vertical_stub()
         ):
             return True
         if (
             cy1 >= y2 + 1
             and (cy1 - y2) <= gap_limit
-            and _range_overlap_ratio(cx1, cx2, central_x1, central_x2) >= overlap_limit
+            and range_overlap_ratio(cx1, cx2, central_x1, central_x2) >= overlap_limit
             and is_vertical_stub()
         ):
             return True
@@ -147,14 +142,14 @@ def _component_is_axis_aligned_external(component_bbox, bbox, orientation):
     if (
         cx2 <= x1 - 1
         and (x1 - cx2) <= gap_limit
-        and _range_overlap_ratio(cy1, cy2, central_y1, central_y2) >= overlap_limit
+        and range_overlap_ratio(cy1, cy2, central_y1, central_y2) >= overlap_limit
         and is_horizontal_stub()
     ):
         return True
     if (
         cx1 >= x2 + 1
         and (cx1 - x2) <= gap_limit
-        and _range_overlap_ratio(cy1, cy2, central_y1, central_y2) >= overlap_limit
+        and range_overlap_ratio(cy1, cy2, central_y1, central_y2) >= overlap_limit
         and is_horizontal_stub()
     ):
         return True
@@ -370,7 +365,7 @@ def strategy_detect_connected_side(binary, bbox):
 
     return coarse_best_side, side_scores
 
-# Dato il lato connesso, trova l'oreintazione del simbolo che corrisponde al lato
+# Dato il lato connesso, trova l'orientazione del simbolo che corrisponde al lato
 # Scorre meta["orientations"] e cerca la definizione in cui il terminale ha relative_position == connected_side.
 # Se non la trova usa  default_orientation
 def resolve_one_terminal_orientation(meta: dict, connected_side: str):
@@ -653,6 +648,23 @@ def detect_two_terminal_orientation_capacitor(binary, bbox, default_orientation=
             "row_max": int(row_max),
             "col_max": int(col_max),
         }
+
+        # Se solo una delle due proiezioni contiene chiaramente le due piastre,
+        # quella evidenza e' piu' affidabile del rapporto tra i massimi. Nei
+        # simboli piccoli una label o un tratto vicino puo' infatti alzare di
+        # poco il massimo dell'altra proiezione e ribaltare l'asse, anche se le
+        # due piastre restano visibili senza ambiguita'.
+        if row_peaks >= 2 and col_peaks < 2:
+            return "vertical", {
+                "decision_mode": "capacitor_unique_internal_plate_axis_vertical",
+                **projection_debug,
+            }
+
+        if col_peaks >= 2 and row_peaks < 2:
+            return "horizontal", {
+                "decision_mode": "capacitor_unique_internal_plate_axis_horizontal",
+                **projection_debug,
+            }
 
         # Due piastre orizzontali -> terminali top/bottom -> orientazione vertical.
         if row_peaks >= 2 and row_max >= col_max * 1.10:

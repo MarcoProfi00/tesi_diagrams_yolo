@@ -1,0 +1,25 @@
+{
+  "title": "Chiudere lo switch SENSE per ripristinare il ritorno del negativo batteria",
+  "hypothesis": "La causa del mancato funzionamento è il polo negativo della batteria isolato da massa a causa di switch25.1 aperto; chiudendo lo switch N001 viene riferito a 0 V, la batteria alimenta N002 e compare corrente nel ramo resistivo.",
+  "intent": "correction",
+  "analysis": "op",
+  "actions": [
+    {
+      "type": "close_switch",
+      "target": "switch25.1"
+    }
+  ],
+  "compare": [
+    "v(N001)",
+    "v(N002)",
+    "v(N004)",
+    "i(Vbattery2_1)",
+    "i(Rresistor22_1)"
+  ],
+  "expect": {
+    "v(N004)": "nonzero",
+    "i(Vbattery2_1)": "nonzero",
+    "i(Rresistor22_1)": "nonzero"
+  },
+  "scenario_id": "agent_scenario_1"
+}

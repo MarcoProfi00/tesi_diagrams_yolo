@@ -1,5 +1,6 @@
 import cv2
 
+from ._shared_utils import group_close_indices as _group_close_indices
 from .geometry import geom_clamp_bbox_to_image, geom_infer_orientation_from_bbox
 from .image_ops import img_count_foreground_pixels
 from .strategies_integrated_circuit import (
@@ -21,20 +22,6 @@ CONNECTOR_EDGE_CONTACT_MIN_PINS = 2
 CONNECTOR_EDGE_MIN_PROJECTION_SCORE = 3
 CONNECTOR_EDGE_KEEP_RATIO = 0.45
 CONNECTOR_EDGE_MAX_GAP = 3
-
-
-# Raggruppa indici vicini.
-def _group_close_indices(indices, max_gap=1):
-    if not indices:
-        return []
-
-    groups = [[indices[0]]]
-    for idx in indices[1:]:
-        if idx <= groups[-1][-1] + max_gap:
-            groups[-1].append(idx)
-        else:
-            groups.append([idx])
-    return groups
 
 
 # Calcola i gruppi della proiezione.
@@ -135,7 +122,7 @@ def _side_probe_halfspan(width, height):
 
 # Calcola lo score laterale verticale.
 def _side_score_vertical(binary, bbox, center_y, side, halfspan):
-    x1, y1, x2, y2 = bbox
+    x1, _, x2, _ = bbox
     if side == "left":
         return img_count_foreground_pixels(
             binary,
@@ -156,7 +143,7 @@ def _side_score_vertical(binary, bbox, center_y, side, halfspan):
 
 # Calcola lo score laterale orizzontale.
 def _side_score_horizontal(binary, bbox, center_x, side, halfspan):
-    x1, y1, x2, y2 = bbox
+    _, y1, _, y2 = bbox
     if side == "top":
         return img_count_foreground_pixels(
             binary,
@@ -197,7 +184,6 @@ def _connector_edge_contact_cfg(body_bbox):
     x1, y1, x2, y2 = body_bbox
     width = max(int(round(x2 - x1 + 1)), 1)
     height = max(int(round(y2 - y1 + 1)), 1)
-    min_dim = max(1, min(width, height))
     max_dim = max(width, height)
 
     return {
@@ -409,7 +395,6 @@ def _build_vertical_connector(binary, bbox):
 
     centers = _detect_connector_hole_centers(binary, bbox, orientation="vertical")
     threshold = None
-    projection = []
     used_hole_detection = bool(centers)
 
     if not centers:
@@ -430,6 +415,8 @@ def _build_vertical_connector(binary, bbox):
             centers,
             min_separation=max(18, int(round(height * 0.10))),
         )
+    else:
+        projection = []
 
     halfspan = _side_probe_halfspan(width, height)
     terminals_def = []

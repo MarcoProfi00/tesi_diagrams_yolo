@@ -1,0 +1,406 @@
+{
+  "packet_schema_version": 1,
+  "packet_id": "ic02_run_2",
+  "reference": {
+    "schema_version": 1,
+    "circuit_id": "ic02",
+    "circuit_description": "Amplificatore audio non invertente con LM1875 e alimentazione duale di\n+/-25 V. Il segnale entra attraverso R5 e C4; R1, R2 e C1 definiscono la\ncontroreazione AC. L'uscita pilota direttamente un carico equivalente da\n4 ohm ed e' stabilizzata dalla rete di Zobel R6-C7. Le due rail hanno\nfusibili da 2 A e condensatori di disaccoppiamento da 100 nF e 220 uF.\n",
+    "task_type": "diagnosi e correzione di volume audio troppo basso a ingresso invariato",
+    "user_symptom": "L'audio si sente ma il volume e' troppo basso. Quali controlli e prove posso fare, senza modificare il segnale di ingresso, per capire la causa e aumentare il volume?\n",
+    "circuit_inventory": {
+      "component_count": 29,
+      "node_count": 12,
+      "component_types": [
+        "Fuse",
+        "GND",
+        "Integrated_Circuit",
+        "Polarized_Capacitor",
+        "Resistor",
+        "Speaker",
+        "Terminal"
+      ],
+      "analysis_types": [
+        "op",
+        "tran"
+      ]
+    },
+    "required_evidence": [
+      {
+        "id": "explicit_testbench_assumptions",
+        "description": "Le rail di +/-25 V, i passivi e il carico da 4 ohm provengono dallo\nschema. AUDIO_IN=20 mV di picco a 1 kHz e' invece un'assunzione del\ntestbench, scelta per lavorare in regime lineare: non misura il livello\ndella sorgente fisica dell'utente e non dimostra da sola un guasto.\n"
+      },
+      {
+        "id": "official_model_provenance",
+        "description": "IC1 usa il modello PSpice ufficiale Texas Instruments LM1875_0,\npacchetto SNAM066A Rev. A, versione 1.0 del 2012-03-29. Il file non\nmodificato ha SHA-256\n28BF3FC1D14AD5929C3151A7BCB6F97922BD59B38539FE334B7018522551B1F2\ned e' eseguito da ngspice in compatibilita' PSpice. Non esiste\ncomportamento specifico del LM1875 implementato nel codice Python.\n"
+      },
+      {
+        "id": "topology_and_pinout_valid",
+        "description": "Graph, node map e netlist coincidono con l'immagine. Il port order TI\nVin,Vip,VSS,VDD,Vout e' mappato su N006,N005,N001,N003,N007; N001 e\nN003 sono circa -25 V e +25 V dopo i fusibili. N007 alimenta speaker e\nZobel, mentre R1 collega N007 a N006 e R2-C1 collegano N006 a massa in\nAC. I nove simboli GND sono intenzionalmente uniti al nodo 0; non ci\nsono singleton, terminali scollegati o componenti omessi.\n"
+      },
+      {
+        "id": "expected_closed_loop_gain",
+        "description": "A 1 kHz C1=22 uF ha reattanza trascurabile rispetto a R2=10 kohm; il\nguadagno non invertente atteso e' circa 1+R1/R2=19. La base misura negli\nultimi 10 ms circa 18.14 V/V RMS (18.18 usando i Vpp globali), quindi il\ncircuito estratto segue la rete di progetto e non mostra perdita di\nguadagno anomala.\n"
+      },
+      {
+        "id": "base_output_level_and_quality",
+        "description": "Con 20 mVpk in ingresso, la base produce circa 0.726 Vpp e 0.2565 Vrms\nAC su N007. Sul carico resistivo da 4 ohm corrispondono a circa 16.45 mW.\nLa THD armonica 2-10 calcolata sul CSV negli ultimi 10 ms e' circa\n0.004%. Il livello e' basso in potenza ma il modello funziona in modo\nlineare; il volume acustico reale dipenderebbe anche dal diffusore.\n"
+      },
+      {
+        "id": "load_test_rejects_load_limitation",
+        "description": "RUN cambia lo speaker equivalente da 4 a 8 ohm. L'uscita resta circa\n0.726 Vpp e il guadagno 18.14: la variazione e' trascurabile. A parita'\ndi tensione la potenza elettrica calcolata sul nuovo carico sarebbe\ncirca 8.22 mW, meta' della base, non un aumento. Lo scenario esclude una\nlimitazione di ampiezza dovuta al carico nel modello; l'etichetta\nautomatica \"ipotesi diagnostica confermata\" non va letta letteralmente.\n"
+      },
+      {
+        "id": "feedback_correction_verified",
+        "description": "Ridurre R2 da 10 kohm a 4.7 kohm, senza cambiare AUDIO_IN, porta il\nguadagno RMS da circa 18.14 a 37.50, N007 da circa 0.726 a 1.501 Vpp e\nla potenza sul carico da circa 16.45 a 70.27 mW. La THD 2-10 resta circa\n0.0047% nel modello. L'incremento e' coerente con il nuovo valore ideale\n1+180k/4.7k circa 39.3; e' una correzione di progetto verificata, non la\nprova che R2 fosse fisicamente guasta.\n"
+      },
+      {
+        "id": "reducing_upper_feedback_resistor_is_wrong_direction",
+        "description": "R1 e' la resistenza superiore tra uscita e ingresso invertente. Ridurla\nda 180 a 100 kohm deve ridurre, non aumentare, il guadagno. Lo scenario\nRUN 1 passa infatti da circa 18.14 a 10.51 V/V, da 0.726 a 0.421 Vpp\ne da 16.45 a 5.52 mW sul carico. SPICE smentisce correttamente la sua\nipotesi iniziale e l'RUN non usa questo test nella conclusione.\n"
+      }
+    ],
+    "success_conditions": [
+      {
+        "id": "assumed_input_is_not_physical_measurement",
+        "description": "La risposta distingue il segnale da 20 mVpk assunto nel testbench dal\nlivello reale e non dichiara un guasto fisico basandosi soltanto su tale\nvalore.\n"
+      },
+      {
+        "id": "baseline_operation_recognized",
+        "description": "Il circuito base e' riconosciuto come funzionante e lineare, con guadagno\ncirca 19 coerente col rapporto di feedback, anche se la potenza del banco\ndi prova e' bassa.\n"
+      },
+      {
+        "id": "load_hypothesis_rejected",
+        "description": "Il passaggio da 4 a 8 ohm e' interpretato come prova negativa della\nlimitazione di tensione dovuta al carico, non come aumento significativo\ndel volume o come correzione verificata.\n"
+      },
+      {
+        "id": "feedback_direction_correct",
+        "description": "Per aumentare il guadagno non invertente si riduce R2 oppure si aumenta\nR1. Ridurre R1 viene riconosciuto come tentativo fallito nella direzione\nopposta.\n"
+      },
+      {
+        "id": "correction_quantified",
+        "description": "La correzione R2=4.7 kohm e' supportata da ingresso invariato, aumento di\nguadagno, ampiezza e potenza, insieme a un controllo della distorsione o\nalmeno all'assenza di clipping evidente.\n"
+      },
+      {
+        "id": "design_change_not_proven_fault",
+        "description": "La risposta presenta R2=4.7 kohm come aumento del guadagno verificato in\nsimulazione. Non afferma che R2=10 kohm sia necessariamente un valore\nerrato o un componente guasto nel circuito reale.\n"
+      },
+      {
+        "id": "model_scope_stated",
+        "description": "Le conclusioni quantitative sono limitate al macromodello TI, al carico\nresistivo e al test a 1 kHz; non sostituiscono misure su alimentazione,\nspeaker e montaggio fisico.\n"
+      }
+    ],
+    "acceptable_solutions": [
+      {
+        "id": "reduce_r2_to_4_7k",
+        "description": "Ridurre R2 da 10 kohm a 4.7 kohm. E' la correzione direttamente provata\nda entrambe le traiettorie e quasi raddoppia il guadagno senza modificare\nla sorgente ne' produrre clipping nel test eseguito.\n"
+      },
+      {
+        "id": "increase_r1_with_validation",
+        "acceptance": "not_executed",
+        "description": "Aumentare R1 sopra 180 kohm e' elettricamente una direzione alternativa\ncorretta per aumentare il guadagno, ma non e' stata eseguita. Andrebbero\nverificati margine, rumore, banda e stabilita' prima di consigliarla come\nsoluzione definitiva.\n"
+      },
+      {
+        "id": "verify_feedback_components_in_hardware",
+        "acceptance": "physical_followup",
+        "description": "Misurare R1=180 kohm, R2=10 kohm, continuita' del ramo N006-N009 e C1,\npoi confrontare il guadagno reale ingresso-uscita. Questo distingue un\nprogetto a guadagno 19 da un errore di valore o montaggio.\n"
+      },
+      {
+        "id": "verify_supply_and_speaker",
+        "acceptance": "physical_followup",
+        "description": "Controllare le rail sotto carico, l'impedenza nominale e il cablaggio del\ndiffusore resta utile sul circuito fisico, ma tali guasti non sono\ndimostrati dalle run SPICE congelate.\n"
+      }
+    ],
+    "unsupported_conclusions": [
+      "Dire che il circuito base sia guasto o che abbia un guadagno anormalmente\nbasso: il valore misurato circa 18.14 e' coerente con 1+180k/10k.\n",
+      "Attribuire con certezza il volume basso a R2 guasta. La simulazione mostra\nche cambiarne il valore aumenta il guadagno, non che il componente reale\ndifferisca dallo schema o sia difettoso.\n",
+      "Considerare 8 ohm una correzione del volume: la tensione resta invariata e\nla potenza resistiva scende da circa 16.45 a 8.22 mW.\n",
+      "Affermare che ridurre R1 da 180 a 100 kohm aumenti il guadagno. Il valore\nsimulato scende a circa 10.51 e la potenza a circa 5.52 mW.\n",
+      "Usare da sola l'etichetta partially_resolved o resolved_candidate come\nprova: la validita' deriva dai CSV, dal rapporto di feedback e dalle\nmisure di ampiezza, RMS, potenza e distorsione.\n",
+      "Dichiarare verificata la qualita' o la potenza dell'amplificatore reale su\ntutta la banda audio: le prove sono a 1 kHz, con speaker resistivo e modello\nTI, senza trasduttore, termica o montaggio fisico.\n",
+      "Presentare l'aumento di volume acustico come direttamente misurato. SPICE\nverifica tensione e potenza elettrica equivalente, non la pressione sonora.\n"
+    ]
+  },
+  "rubric": {
+    "score_scale": {
+      "0": "errato o assente",
+      "1": "utile ma incompleto o con limiti rilevanti",
+      "2": "corretto e adeguatamente verificato"
+    },
+    "criteria": [
+      "diagnostic_correctness",
+      "test_quality",
+      "evidence_interpretation",
+      "goal_achievement",
+      "conclusion_quality"
+    ]
+  },
+  "run": {
+    "initial_request": "L’audio si sente ma il volume è troppo basso. Quali controlli e prove posso fare, senza modificare il segnale di ingresso, per capire la causa e aumentare il volume?",
+    "technical_status": "completed",
+    "base_spice": {
+      "status": "success",
+      "exit_code": 0,
+      "message": "ngspice completed successfully.",
+      "analyses": [
+        "op",
+        "tran"
+      ]
+    },
+    "execution_counts": {
+      "scenarios_proposed": 2,
+      "scenarios_executed": 2,
+      "successful_spice_runs": 2,
+      "failed_spice_runs": 0
+    },
+    "scenarios": [
+      {
+        "scenario_id": "scenario_1",
+        "title": "Aumentare il guadagno riducendo R1",
+        "hypothesis": "Rresistor22_5 (180 kohm) e Rresistor22_4 (10 kohm) formano la rete di feedback dell'ingresso invertente; ridurre R1 dovrebbe aumentare il rapporto di guadagno chiuso e quindi il Vpp in uscita sullo speaker senza modificare il segnale di ingresso.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Rresistor22_5",
+            "value": "100k"
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "v(N011)",
+          "v(N007)",
+          "v(N006)"
+        ],
+        "expect": {
+          "v(N011)": "nonzero",
+          "v(N007)": "magnitude_increased",
+          "v(N006)": "changed"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N011)",
+              "metric": "v(n011).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.0399998808,
+              "scenario_value": 0.0399989242,
+              "delta": -9.565999999974761e-07,
+              "change": "changed",
+              "expectation": "nonzero",
+              "base_details": {
+                "min": -0.0199999404,
+                "max": 0.0199999404,
+                "mean": 7.99995621115489e-07,
+                "vpp": 0.0399998808,
+                "final": -9.79717439e-17,
+                "abs_peak": 0.0199999404
+              },
+              "scenario_details": {
+                "min": -0.0199994621,
+                "max": 0.0199994621,
+                "mean": 6.511143027389951e-07,
+                "vpp": 0.0399989242,
+                "final": -9.79717439e-17,
+                "abs_peak": 0.0199994621
+              }
+            },
+            {
+              "quantity": "v(N007)",
+              "metric": "v(n007).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.727265443,
+              "scenario_value": 0.42112982,
+              "delta": -0.30613562299999997,
+              "change": "changed",
+              "expectation": "magnitude_increased",
+              "base_details": {
+                "min": -0.39739188,
+                "max": 0.329873563,
+                "mean": -0.03364928631426295,
+                "vpp": 0.727265443,
+                "final": -0.0314250314,
+                "abs_peak": 0.39739188
+              },
+              "scenario_details": {
+                "min": -0.227510402,
+                "max": 0.193619418,
+                "mean": -0.01688303933658217,
+                "vpp": 0.42112982,
+                "final": -0.0152887973,
+                "abs_peak": 0.227510402
+              }
+            },
+            {
+              "quantity": "v(N006)",
+              "metric": "v(n006).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.0382696227,
+              "scenario_value": 0.0382774999,
+              "delta": 7.877199999999085e-06,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": -0.015061434,
+                "max": 0.0232081887,
+                "mean": 0.004078649215624004,
+                "vpp": 0.0382696227,
+                "final": 0.00417795883,
+                "abs_peak": 0.0232081887
+              },
+              "scenario_details": {
+                "min": -0.0150659195,
+                "max": 0.0232115804,
+                "mean": 0.0040780174515283865,
+                "vpp": 0.0382774999,
+                "final": 0.00420590574,
+                "abs_peak": 0.0232115804
+              }
+            }
+          ],
+          "comparison_evidence": {
+            "gain_comparison": {
+              "input": "v(N011)",
+              "output": "v(N007)",
+              "base_gain": 18.181690256436966,
+              "scenario_gain": 10.528528664778438,
+              "min_ratio": 5.0,
+              "available": true,
+              "sufficient": true,
+              "relative_change": 0.42092684913873923
+            }
+          },
+          "led_profiles": {}
+        }
+      },
+      {
+        "scenario_id": "scenario_2",
+        "title": "Aumentare il guadagno riducendo R2",
+        "hypothesis": "Se il volume basso dipende da un guadagno chiuso troppo contenuto, ridurre Rresistor22_4 (10 kohm) aumenta il rapporto R1/R2 della controreazione e dovrebbe far crescere il Vpp d'uscita; questo testa una causa distinta dalla sola riduzione del ramo di feedback superiore.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Rresistor22_4",
+            "value": "4.7k"
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "v(N011)",
+          "v(N007)",
+          "v(N006)"
+        ],
+        "expect": {
+          "v(N011)": "nonzero",
+          "v(N007)": "magnitude_increased",
+          "v(N006)": "changed"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N011)",
+              "metric": "v(n011).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.0399998808,
+              "scenario_value": 0.0399942,
+              "delta": -5.680799999997765e-06,
+              "change": "changed",
+              "expectation": "nonzero",
+              "base_details": {
+                "min": -0.0199999404,
+                "max": 0.0199999404,
+                "mean": 7.99995621115489e-07,
+                "vpp": 0.0399998808,
+                "final": -9.79717439e-17,
+                "abs_peak": 0.0199999404
+              },
+              "scenario_details": {
+                "min": -0.0199971,
+                "max": 0.0199971,
+                "mean": 1.1357584464409667e-06,
+                "vpp": 0.0399942,
+                "final": -9.79717439e-17,
+                "abs_peak": 0.0199971
+              }
+            },
+            {
+              "quantity": "v(N007)",
+              "metric": "v(n007).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.727265443,
+              "scenario_value": 1.503394864,
+              "delta": 0.7761294210000002,
+              "change": "changed",
+              "expectation": "magnitude_increased",
+              "base_details": {
+                "min": -0.39739188,
+                "max": 0.329873563,
+                "mean": -0.03364928631426295,
+                "vpp": 0.727265443,
+                "final": -0.0314250314,
+                "abs_peak": 0.39739188
+              },
+              "scenario_details": {
+                "min": -0.78788494,
+                "max": 0.715509924,
+                "mean": -0.03592351118720259,
+                "vpp": 1.503394864,
+                "final": -0.0333901025,
+                "abs_peak": 0.78788494
+              }
+            },
+            {
+              "quantity": "v(N006)",
+              "metric": "v(n006).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.0382696227,
+              "scenario_value": 0.038239105600000003,
+              "delta": -3.0517099999995134e-05,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": -0.015061434,
+                "max": 0.0232081887,
+                "mean": 0.004078649215624004,
+                "vpp": 0.0382696227,
+                "final": 0.00417795883,
+                "abs_peak": 0.0232081887
+              },
+              "scenario_details": {
+                "min": -0.015046089,
+                "max": 0.0231930166,
+                "mean": 0.004078921725812842,
+                "vpp": 0.038239105600000003,
+                "final": 0.00410583998,
+                "abs_peak": 0.0231930166
+              }
+            }
+          ],
+          "comparison_evidence": {
+            "gain_comparison": {
+              "input": "v(N011)",
+              "output": "v(N007)",
+              "base_gain": 18.181690256436966,
+              "scenario_gain": 37.590322196718525,
+              "min_ratio": 10.0,
+              "available": true,
+              "sufficient": true,
+              "relative_change": 1.0674822674096658
+            }
+          },
+          "led_profiles": {}
+        }
+      }
+    ],
+    "final": {
+      "answer": "La causa piu probabile del volume basso e un guadagno in anello chiuso troppo basso fissato dalla rete di controreazione del LM1875. La prova controllata che ha funzionato e ridurre R2 da 10 kohm a 4.7 kohm: in simulazione il trasferimento ingresso→uscita resta valido e il guadagno Vpp dallo stesso ingresso N011 all'uscita N007 sale fino a circa 37.59, con miglioramento significativo dell'ampiezza in uscita senza modificare il segnale di ingresso. Come controlli pratici, quindi, conviene verificare prima i valori reali di R1=180 kohm e soprattutto R2=10 kohm, eventuali errori di montaggio attorno a N006/N009, e poi correggere il rapporto di feedback aumentando il guadagno.",
+      "cause": "La rete di feedback dell'ingresso invertente, in particolare Rresistor22_4 (R2, 10 kohm) insieme a Rresistor22_5 (R1, 180 kohm), imposta un guadagno troppo contenuto per il livello di ingresso usato; la riduzione di R2 e stata l'ipotesi di correzione verificata con successo.",
+      "verified_correction": "Ridurre Rresistor22_4 da 10 kohm a 4.7 kohm. Questo scenario di correzione e stato verificato: tutte le aspettative sono state soddisfatte, il guadagno transitorio Vpp tra v(N011) e v(N007) e risultato sufficiente (circa 37.59) e l'uscita e aumentata senza modificare la sorgente AUDIO_IN."
+    }
+  }
+}

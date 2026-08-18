@@ -1,0 +1,116 @@
+schema_version: 1
+circuit_id: "a02"
+review_status: frozen
+circuit_description: |
+  Circuito in continua con una batteria da 5 V, un connettore a quattro
+  pin, una resistenza da 10 kohm, un condensatore da 100 nF e uno switch
+  SENSE. Il negativo della batteria è sul nodo N001 insieme alla resistenza
+  e allo switch; il positivo è sul nodo N002. L'altra estremità della
+  resistenza termina su N004, separato da N002. Con lo switch aperto e
+  N004 non collegato al positivo manca un percorso DC chiuso.
+task_type: "diagnosi e correzione di un percorso DC aperto"
+user_symptom: |
+  La batteria è presente ma non eroga corrente e il circuito non reagisce. Individua la causa ed esegui gli scenari necessari per verificare una correzione funzionante.
+
+circuit_inventory:
+  component_count: 8
+  node_count: 5
+  component_types:
+    - "Battery"
+    - "Capacitor"
+    - "Connector"
+    - "GND"
+    - "Resistor"
+    - "Switch"
+  analysis_types:
+    - "op"
+
+required_evidence:
+  - id: base_source_present
+    description: |
+      Nella simulazione base la batteria mantiene 5 V tra N002 e N001:
+      N002 è circa 5 V e N001 circa 0 V nel punto operativo prodotto da
+      ngspice.
+  - id: base_current_absent
+    description: |
+      N004 è a 0 V e sia i(Vbattery2_1) sia i(Rresistor22_1) sono 0 A;
+      quindi la sorgente è presente ma non esiste un percorso di carico
+      chiuso.
+  - id: topology_cause
+    description: |
+      La resistenza collega N001 a N004, mentre il positivo della batteria
+      è N002. N004 non è collegato a N002. Inoltre lo switch aperto separa
+      N001 dalla massa.
+  - id: composed_correction_effect
+    description: |
+      La correzione completa deve verificare nello stesso scenario sia il
+      riferimento a massa di N001 sia la continuità tra N002 e N004, quindi
+      misurare una corrente non nulla nella batteria e nella resistenza.
+
+success_conditions:
+  - id: grounded_return
+    description: |
+      N001 viene riferito a massa, per esempio chiudendo switch25.1, e
+      rimane circa a 0 V.
+  - id: positive_reaches_load
+    description: |
+      N004 viene collegato al positivo N002 e raggiunge circa 5 V.
+  - id: dc_current_activated
+    description: |
+      i(Vbattery2_1) e i(Rresistor22_1) passano da 0 A a un modulo di circa
+      0.5 mA, coerente con 5 V applicati alla resistenza da 10 kohm.
+  - id: correction_verified
+    description: |
+      Le due azioni sono applicate nella stessa run e ngspice termina con
+      successo; una sola delle due azioni non costituisce la correzione
+      completa di riferimento.
+  - id: conclusion_calibrated
+    description: |
+      La conclusione identifica l'assenza del percorso DC completo e non
+      attribuisce al condensatore un comportamento temporale non verificato.
+
+acceptable_solutions:
+  - id: close_switch_and_bridge_load
+    description: |
+      Chiudere switch25.1 tra N001 e massa e collegare N004 al positivo
+      N002 nello stesso scenario.
+    verified_reference_values: |
+      N001 è circa 0 V, N002 = 5 V, N004 = 4.999999 V,
+      i(Vbattery2_1) = -0.5 mA e i(Rresistor22_1) = -0.5 mA.
+  - id: equivalent_grounded_supply_path
+    description: |
+      Applicare una modifica elettricamente equivalente che riferisca N001
+      a massa e porti i 5 V di N002 a N004, verificando le medesime tensioni
+      e correnti nella stessa simulazione.
+  - id: bridge_only_as_partial_diagnosis
+    acceptance: partial_only
+    description: |
+      Collegare soltanto N002 a N004 dimostra che il ramo può assorbire
+      circa 0.5 mA, ma lascia la rete flottante rispetto alla massa. È una
+      conferma diagnostica utile, non la correzione completa di riferimento.
+
+unsupported_conclusions:
+  - |
+    Dichiarare che la sola chiusura dello switch risolve il problema:
+    N004 resta scollegato dal positivo e le correnti rimangono nulle.
+  - |
+    Considerare il solo collegamento N002-N004 una correzione completa senza
+    segnalare che il circuito rimane flottante rispetto alla massa.
+  - |
+    Attribuire il problema a batteria, resistenza o condensatore guasti senza
+    evidenze specifiche prodotte dalla simulazione.
+  - |
+    Affermare un comportamento di carica, scarica o risposta temporale del
+    condensatore: il caso usa soltanto un'analisi del punto operativo .op.
+  - |
+    Dichiarare successo sulla base delle sole tensioni; devono essere
+    verificate anche le correnti della batteria e della resistenza.
+
+review_notes: |
+  Il Graph JSON coincide con l'immagine e separa correttamente i quattro pin
+  del connettore. Nella base ngspice segnala una matrice singolare sul nodo
+  N001 e recupera il punto operativo tramite stepping: il risultato è
+  utilizzabile per mostrare l'assenza di corrente, ma conferma che la rete è
+  scarsamente riferita in continua. La correzione composta elimina questa
+  ambiguità e produce il valore teorico di circa 5 V / 10 kohm = 0.5 mA.
+  La scheda deve essere approvata manualmente prima dello stato frozen.
