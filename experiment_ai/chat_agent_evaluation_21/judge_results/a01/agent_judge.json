@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "metadata": {
+    "circuit_id": "a01",
+    "mode": "agent",
+    "judge_model": "gpt-5.5",
+    "reasoning_effort": "medium",
+    "latency_seconds": 23.19,
+    "packet_sha256": "b233fe80580cfe357a08a072fe16ea364920f7f6c11beb08cb76c2fc0275b021",
+    "prompt_sha256": "05304a5537b64fedb8f52486119342f1842b27168a44aed2a27dd134c9ef17b5",
+    "response_schema_sha256": "2a6c8bb65919a658fad6d5dc801e49d469a4061c61b4a8b8c2cc9228a50fb1fe",
+    "usage": "ResponseUsage(input_tokens=4018, input_tokens_details=InputTokensDetails(cached_tokens=1792, cache_write_tokens=0), output_tokens=1302, output_tokens_details=OutputTokensDetails(reasoning_tokens=516), total_tokens=5320)"
+  },
+  "packet_id": "a01_run_2",
+  "outcome": "success",
+  "outcome_reason": "La run identifica correttamente la causa primaria, cioè N002 del ramo lampada non alimentato mentre N001 alimenta il LED, ed esegue una correzione accettabile collegando N001 a N002. Lo scenario_1 è realmente eseguito con ngspice riuscito e verifica sia l'attivazione del ramo lampada sia la preservazione del LED: i(Rlamp13_1) passa da 0 A a 0.0047619 A, v(N002) da 0 V a 4.999995 V, v(N004) da 0 V a 0.238095 V, mentre i(Dled12_1) resta 0.0194009 A. La conclusione è sostanzialmente corretta; l'unico limite minore è che non esplicita la distinzione tra attivazione simulata del carico e luminosità fisica della lampada, ma non afferma una tensione o luminosità nominale.",
+  "criteria": {
+    "diagnostic_correctness": {
+      "score": 2,
+      "reason": "Diagnosi coerente con le evidenze di riferimento base_led_active, base_lamp_inactive e topology_cause: N001 è alimentato, N002 resta a 0 V e il ramo lampada non ha corrente. La causa indicata è il ramo lampada isolato dall'alimentazione, non lo switch o componenti guasti."
+    },
+    "test_quality": {
+      "score": 2,
+      "reason": "È stata eseguita una prova correttiva necessaria e sufficiente: scenario_1 usa feed_nodes_from_source_node da N001 a N002, con run SPICE riuscita, e misura le grandezze decisive i(Rlamp13_1), i(Dled12_1), v(N002) e v(N004), distinguendo l'ipotesi di ramo non alimentato e verificando la permanenza del LED."
+    },
+    "evidence_interpretation": {
+      "score": 2,
+      "reason": "Le misure sono interpretate correttamente: i(Rlamp13_1)=0 A in base diventa 0.0047619 A, v(N002)=4.999995 V e v(N004)=0.238095 V nello scenario corretto; i(Dled12_1) resta invariata a 0.0194009 A. Non ci sono interpretazioni contrarie ai dati."
+    },
+    "goal_achievement": {
+      "score": 2,
+      "reason": "L'obiettivo esplicito è raggiunto: la causa viene individuata e viene eseguito uno scenario correttivo che alimenta il ramo lampada mantenendo acceso il LED, soddisfacendo lamp_branch_activated, led_preserved e correction_verified."
+    },
+    "conclusion_quality": {
+      "score": 2,
+      "reason": "La conclusione finale è chiara e supportata dalle misure: identifica N002 non alimentato come causa e indica la correzione verificata N001→N002. Pur non riportando tutti i valori numerici né il caveat sulla luminosità fisica, non dichiara tensione o luminosità nominale e resta tecnicamente affidabile."
+    }
+  },
+  "critical_errors": [],
+  "decisive_evidence": [
+    "base_spice success",
+    "scenario_1 executed=true spice_status=success",
+    "scenario_1 i(Rlamp13_1): 0 A -> 0.0047619 A",
+    "scenario_1 i(Dled12_1): 0.0194009 A -> 0.0194009 A",
+    "scenario_1 v(N002): 0 V -> 4.999995 V; v(N004): 0 V -> 0.238095 V"
+  ],
+  "confidence": "high",
+  "total_score": 10,
+  "maximum_score": 10
+}

@@ -1,0 +1,176 @@
+schema_version: 1
+circuit_id: "ic01"
+review_status: frozen
+circuit_description: |
+  Multivibratore astabile con timer 555 alimentato a 9 V. R1 e R2 caricano e
+  scaricano C1 attraverso il pin DISCHARGE; TRIGGER e THRESHOLD condividono il
+  nodo di timing. RESET e VCC sono a +9 V, C2 filtra il pin CONTROL, C3
+  disaccoppia l'alimentazione e l'uscita pilota un LED tramite R3.
+task_type: "diagnosi di avvio irregolare di un oscillatore 555"
+user_symptom: |
+  Nella simulazione il LED commuta, ma il lampeggio non risulta regolare durante l'avvio. Quale potrebbe essere il problema e come posso risolverlo?
+
+circuit_inventory:
+  component_count: 10
+  node_count: 7
+  component_types:
+    - "Capacitor"
+    - "GND"
+    - "Integrated_Circuit"
+    - "LED"
+    - "Resistor"
+    - "Terminal"
+  analysis_types:
+    - "tran"
+
+required_evidence:
+  - id: official_model_provenance
+    description: |
+      IC1 usa il modello PSpice ufficiale Texas Instruments TLC555_6, pacchetto
+      SLFJ002E, versione Final 1.1 del 2023-02-06. Il file non modificato e'
+      registrato in metadata/spice_models, SHA-256
+      7C091782CC4931DDA4FEBF25605083F47161C5E1592C076689B04B70DD749034,
+      ed e' eseguito da ngspice in compatibilita' PSpice. Non esiste logica
+      specifica del 555 implementata nel codice Python.
+  - id: topology_and_pinout_valid
+    description: |
+      Graph, node map e netlist coincidono con l'immagine: THRES/TRIG=N001,
+      CONT=N002, VCC/RESET=N003, DISC=N004, OUT=N005 e GND=0. R1/R2/C1 formano
+      la rete astabile; R3 e LED sono sul pin OUT. Non risultano terminali
+      scollegati, singleton o warning di emissione.
+  - id: expected_steady_state
+    description: |
+      Con R1=R2=1 kohm e C1=1 uF, la stima ideale e'
+      T=ln(2)*(R1+2*R2)*C1 circa 2.079 ms, frequenza circa 481 Hz e duty alto
+      circa (R1+R2)/(R1+2*R2)=2/3. Gli scenari stabilizzati misurano periodo
+      circa 2.09 ms, frequenza 477-478 Hz e duty circa 66%, coerenti col progetto.
+  - id: base_startup_drift_quantified
+    description: |
+      Con C2=1 uF sul pin CONTROL il periodo dei primi cicli cresce da circa
+      0.615, 0.678, 0.732 e 0.783 ms verso circa 2.056 ms alla fine dei 100 ms.
+      Il coefficiente di variazione passa da circa 16.5% nei primi 10 ms a
+      1.5% tra 60 e 100 ms. Rispetto al periodo stabile di 2.094 ms, la run non
+      entra e rimane entro +/-1% neppure entro 100 ms: il sintomo di startup e'
+      realmente presente, ma il circuito sta convergendo verso il regime.
+  - id: initial_conditions_do_not_fix_cause
+    description: |
+      I primi due scenari AGENT impongono coppie diverse di tensioni iniziali
+      su timing e control. Cambiano i primi cicli ma mantengono la deriva lenta
+      e non soddisfano la periodicita'. Questo esclude ragionevolmente la sola
+      simmetria o il solo punto operativo iniziale come causa sufficiente.
+  - id: chat_100n_validation
+    description: |
+      CHAT riduce C2 da 1 uF a 100 nF. Dopo i primi cicli il periodo si assesta
+      a circa 2.092 ms (478.1 Hz); da circa 9.9 ms in poi rimane entro +/-1%
+      del valore stabile. Lo scenario migliora direttamente l'avvio ed e' una
+      correzione valida, anche se 100 nF non e' l'unico valore possibile.
+  - id: agent_10n_validation
+    description: |
+      AGENT riduce C2 da 1 uF a 10 nF, valore convenzionale per il bypass del
+      pin CONTROL. Il primo periodo misurabile e' circa 2.097 ms e tutti i
+      successivi restano entro +/-1%; il regime e' circa 2.095 ms (477.1 Hz).
+      Questa e' la correzione meglio supportata per ottenere startup immediato.
+  - id: electrical_switching_not_visible_blink
+    description: |
+      A circa 478 Hz il LED commuta elettricamente, ma un osservatore lo vede
+      quasi continuamente acceso per persistenza visiva. Le etichette blinking
+      descrivono la forma d'onda simulata, non un lampeggio percepibile. Per un
+      lampeggio visibile servirebbe aumentare separatamente la costante di
+      tempo R1/R2/C1; cio' e' distinto dalla correzione dello startup su C2.
+
+success_conditions:
+  - id: control_capacitor_identified
+    description: |
+      La diagnosi individua C2=1 uF sul pin CONTROL come causa supportata della
+      lenta variazione delle soglie durante l'avvio.
+  - id: startup_and_steady_state_separated
+    description: |
+      La risposta non afferma che la base non oscilli mai regolarmente: spiega
+      che il periodo converge lentamente e confronta avvio e parte finale.
+  - id: correction_verified_temporally
+    description: |
+      La soluzione usa periodi o tempo di assestamento, non soltanto tensioni
+      cambiate e corrente LED non nulla. Sono accettabili 100 nF e soprattutto
+      10 nF, con la diversa rapidita' documentata.
+  - id: initial_condition_hypothesis_rejected
+    description: |
+      Le condizioni iniziali sono riconosciute come test diagnostici falliti,
+      non come correzione dell'hardware.
+  - id: visible_behavior_calibrated
+    description: |
+      Viene distinta la regolarita' elettrica a circa 478 Hz dalla visibilita'
+      del lampeggio. C2 stabilizza le soglie; C1/R1/R2 determinano il ritmo.
+  - id: model_scope_stated
+    description: |
+      Il risultato e' riferito al TLC555 ufficiale e al banco a 9 V; non prova
+      automaticamente ogni variante bipolare NE555 o il montaggio fisico.
+
+acceptable_solutions:
+  - id: reduce_control_cap_to_10n
+    description: |
+      Cambiare C2 da 1 uF a 10 nF. E' la soluzione convenzionale e la prova
+      AGENT verifica periodicita' stabile fin dal primo ciclo misurabile.
+  - id: reduce_control_cap_to_100n
+    description: |
+      Cambiare C2 a 100 nF, come in CHAT. Riduce l'assestamento a circa 10 ms e
+      produce poi 478.1 Hz regolari; e' valido se non si richiede la massima
+      rapidita' di startup.
+  - id: ignore_initial_settling
+    acceptance: conditional
+    description: |
+      Se l'irregolarita' interessa solo i primi millisecondi della simulazione,
+      si puo' analizzare il regime dopo una finestra di warm-up. Non corregge
+      il progetto, ma evita che il profiler globale confonda startup e regime.
+  - id: change_main_timing_for_visible_blink
+    acceptance: separate_goal
+    description: |
+      Per vedere il LED lampeggiare a occhio occorre aumentare la costante di
+      tempo principale R1/R2/C1 fino a pochi hertz. Questa modifica non e' la
+      soluzione specifica alla deriva iniziale del pin CONTROL.
+
+unsupported_conclusions:
+  - |
+    Affermare che la base non raggiunga alcun regime regolare: i periodi
+    convergono progressivamente, anche se entro 100 ms restano ancora circa
+    1.8% sotto il valore stabilizzato.
+  - |
+    Attribuire il problema soltanto al punto operativo o alla simmetria
+    iniziale: due condizioni iniziali diverse non eliminano la deriva.
+  - |
+    Considerare ogni valore diverso da 1 uF una soluzione unica o universale:
+    100 nF e 10 nF producono entrambi miglioramenti, con tempi diversi.
+  - |
+    Usare solo l'etichetta resolved_candidate come prova: la validazione deriva
+    dalla sequenza dei periodi e dal tempo di assestamento misurato nei CSV.
+  - |
+    Dire che il LED lampeggi visibilmente a 478 Hz. Esso commuta elettricamente
+    ma appare sostanzialmente continuo all'occhio umano.
+  - |
+    Aumentare C1 a 10 uF come prima correzione della deriva del CONTROL: cambia
+    principalmente la frequenza dell'astabile e non rimuove la causa specifica.
+  - |
+    Interpretare le note di convergenza iniziale o la nota GND interna del
+    macromodello come errori topologici: la transiente completa con successo e
+    il pin GND del subcircuito e' esplicitamente collegato al nodo 0.
+
+review_notes: |
+  L'immagine e i values canonici provengono da
+  data/batchPipeline2.0/batchICChatAgentEvaluation. Il pinout e la topologia
+  sono stati validati sull'immagine. Il modello ufficiale TI, la sua revisione
+  e l'hash sono documentati in metadata/spice_models/ti/tlc555/slfj002e.
+  L'analisi indipendente delle soglie di corrente LED quantifica ogni periodo
+  delle cinque run base/scenario.
+
+  CHAT propone tre ipotesi e l'utente esegue direttamente quella corretta:
+  C2=100 nF. La conclusione e' sostanzialmente corretta e il resolved_candidate
+  e' supportato dalle misure. CHAT dovrebbe pero' precisare che la base sta
+  convergendo e che il LED a 478 Hz non lampeggia visibilmente; 100 nF riduce,
+  ma non annulla, il transitorio iniziale.
+
+  AGENT segue un percorso causale piu' completo: prova due condizioni iniziali,
+  osserva che non bastano, poi testa C2=10 nF e ottiene periodicita' immediata.
+  La conclusione e la correzione sono tecnicamente corrette. Usa tre scenari
+  invece di uno, ma le prime due prove servono a escludere un'ipotesi distinta;
+  in questo caso AGENT fornisce la diagnosi complessivamente piu' robusta.
+
+  La scheda e' stata approvata manualmente e congelata.

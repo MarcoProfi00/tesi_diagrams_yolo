@@ -1,0 +1,132 @@
+schema_version: 1
+circuit_id: "a04"
+review_status: frozen
+circuit_description: |
+  Amplificatore a emettitore comune con transistor 2N2222, alimentazione
+  da 5 V e ingresso sinusoidale da 10 mV di picco a 100 Hz. La base è
+  polarizzata dal partitore da 22 kohm e 10 kohm; il collettore usa una
+  resistenza da 2.2 kohm, l'emettitore una resistenza da 1 kohm con bypass
+  da 10 uF. Il segnale entra attraverso C1 da 100 nF ed esce dal collettore
+  attraverso C2 da 1 uF sul carico da 33 kohm.
+task_type: "diagnosi e miglioramento del guadagno di un amplificatore"
+user_symptom: |
+  Il circuito dovrebbe amplificare il segnale, ma in uscita vedo un segnale troppo debole o quasi nullo. Individua la causa ed esegui gli scenari necessari per verificare una correzione funzionante.
+
+circuit_inventory:
+  component_count: 12
+  node_count: 7
+  component_types:
+    - "Battery"
+    - "Capacitor"
+    - "GND"
+    - "NPN_Transistor"
+    - "Resistor"
+    - "Signal_Source"
+  analysis_types:
+    - "op"
+    - "tran"
+
+required_evidence:
+  - id: base_bias_valid
+    description: |
+      Il punto di lavoro base è plausibile: Vbase N003 è circa 1.520 V,
+      Vemettitore N004 circa 0.877 V e Vcollettore N005 circa 3.084 V.
+      Il transistor non risulta spento né in saturazione nella base.
+  - id: base_signal_transfer
+    description: |
+      Nel transitorio base Vin su N002 è circa 19.997 mVpp e Vout su N006
+      circa 92.391 mVpp, per un guadagno Vpp di circa 4.62. Il circuito
+      amplifica già, ma l'uscita può essere migliorata.
+  - id: limiting_ac_network
+    description: |
+      Una diagnosi valida deve verificare un elemento che limita il
+      trasferimento AC a 100 Hz, come C1 da 100 nF all'ingresso oppure C3
+      da 10 uF nel bypass d'emettitore, senza confondere il problema con
+      una semplice mancanza di segnale in ingresso.
+  - id: correction_comparison
+    description: |
+      La stessa run deve confrontare Vin e Vout in transitorio prima e
+      dopo la modifica, mostrando sia l'aumento di Vout sia l'aumento del
+      rapporto Vout_pp/Vin_pp.
+
+success_conditions:
+  - id: input_preserved
+    description: |
+      L'ingresso resta circa 19.997 mVpp; la correzione non consiste
+      semplicemente nell'aumentare l'ampiezza della sorgente.
+  - id: output_materially_improved
+    description: |
+      Vout su N006 supera circa 0.20 Vpp ed è almeno doppia rispetto ai
+      circa 92.4 mVpp della base.
+  - id: gain_materially_improved
+    description: |
+      Il guadagno Vout_pp/Vin_pp passa da circa 4.62 ad almeno 10.
+  - id: bias_preserved
+    description: |
+      Il punto di lavoro DC resta compatibile con la regione attiva del
+      transistor; non è accettabile ottenere più ampiezza portando il
+      transistor stabilmente in interdizione o saturazione.
+  - id: correction_verified
+    description: |
+      La modifica viene realmente eseguita con analisi transitoria ngspice
+      conclusa con successo e con misure disponibili su N002 e N006.
+
+acceptable_solutions:
+  - id: increase_input_coupling_capacitor
+    description: |
+      Aumentare Ccapacitor4_1, cioè C1, da 100 nF a 1 uF per ridurre
+      l'attenuazione d'ingresso a 100 Hz.
+    verified_reference_values: |
+      Vin = 19.997 mVpp, segnale di base N003 = 19.094 mVpp,
+      Vout = 228.683 mVpp e guadagno Vout/Vin circa 11.44.
+  - id: increase_emitter_bypass_capacitor
+    description: |
+      Aumentare Ccapacitor4_2, cioè C3, da 10 uF a 100 uF per ridurre la
+      degenerazione AC dell'emettitore a 100 Hz.
+    verified_reference_values: |
+      Vin = 19.997 mVpp, Vout = 215.916 mVpp, guadagno Vout/Vin circa
+      10.80 e oscillazione sull'emettitore ridotta da circa 6.40 mVpp a
+      1.74 mVpp.
+  - id: modest_output_load_change
+    acceptance: diagnostic_only
+    description: |
+      Aumentare il carico R5 da 33 kohm a 100 kohm porta Vout soltanto da
+      92.391 a 96.667 mVpp, circa +4.6 percento: è un test utile ma non una
+      correzione sufficiente del sintomo.
+  - id: increase_input_amplitude
+    acceptance: partial_only
+    description: |
+      Aumentare l'ingresso da 10 mV a 100 mV di picco porta Vout a circa
+      0.943 Vpp, ma il guadagno resta sostanzialmente invariato, da 4.62 a
+      circa 4.72. Aumenta il livello assoluto, non corregge il limite di
+      guadagno del circuito.
+
+unsupported_conclusions:
+  - |
+    Affermare che il circuito non amplifica affatto: nella base il rapporto
+    Vout_pp/Vin_pp è già circa 4.62.
+  - |
+    Dichiarare risolto il problema soltanto perché Vout cresce dopo aver
+    aumentato Vin, senza verificare un miglioramento del guadagno.
+  - |
+    Considerare sufficiente la variazione del carico a 100 kohm: il
+    miglioramento dell'uscita è inferiore al 5 percento.
+  - |
+    Considerare utile la riduzione della resistenza di bias da 22 kohm a
+    10 kohm: la prova riduce Vout da circa 92.4 mVpp a 0.649 mVpp.
+  - |
+    Considerare risolutivo l'aumento della stessa resistenza a 33 kohm:
+    il guadagno scende da circa 4.62 a 4.29.
+  - |
+    Valutare il guadagno usando la tensione DC o il solo punto operativo;
+    per questo sintomo servono le ampiezze picco-picco del transitorio.
+
+review_notes: |
+  Il Graph JSON coincide con l'immagine e la netlist conserva correttamente
+  topologia e valori. L'uscita valutata è N006, dopo il condensatore C2 e
+  sul carico R5; N005 è il collettore prima dell'accoppiamento. Le soglie
+  operative di successo, Vout almeno 0.20 Vpp e guadagno almeno 10, sono
+  soddisfatte da entrambe le correzioni circuitali verificate e separano
+  chiaramente queste prove dai cambiamenti marginali o dal semplice aumento
+  dell'ingresso. La scheda deve essere approvata manualmente prima dello
+  stato frozen.

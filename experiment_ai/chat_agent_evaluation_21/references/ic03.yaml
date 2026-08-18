@@ -1,0 +1,204 @@
+schema_version: 1
+circuit_id: "ic03"
+review_status: frozen
+circuit_description: |
+  Lampeggiatore per lampada a 12 V basato su LM317T. Il regolatore riceve
+  l'alimentazione attraverso S1; tre resistenze da 10 kohm formano una scala
+  collegata al pin ADJ e tre condensatori da 10 uF riportano l'uscita sui nodi
+  della scala. Questa rete genera l'oscillazione dell'uscita che alimenta la
+  lampada. C1=2.2 uF disaccoppia l'ingresso.
+task_type: "diagnosi e correzione di lampeggio troppo rapido"
+user_symptom: |
+  La lampada lampeggia troppo velocemente e i singoli lampi sono difficili da distinguere. Quale parte del circuito conviene controllare?
+
+circuit_inventory:
+  component_count: 13
+  node_count: 7
+  component_types:
+    - "GND"
+    - "Integrated_Circuit"
+    - "Lamp"
+    - "Polarized_Capacitor"
+    - "Resistor"
+    - "Switch"
+    - "Terminal"
+  analysis_types:
+    - "tran"
+
+required_evidence:
+  - id: explicit_testbench_assumptions
+    description: |
+      Alimentazione da 12 V, valori della rete RC e stato chiuso di S1 sono
+      ricavati dallo schema. La lampada e' indicata soltanto come 12 V: il
+      testbench assume 12 W nominali e la rappresenta con una resistenza da
+      12 ohm. Non sono modellati resistenza a freddo, riscaldamento, inerzia
+      del filamento o luminosita'.
+  - id: official_model_provenance
+    description: |
+      IC1 usa il modello transitorio PSpice ufficiale Texas Instruments
+      LM317_TRANS, pacchetto SLVMC40 Final 1.00 del 2014-12-11. Il file non
+      modificato ha SHA-256
+      9B56D7C68B75D3C0FD1E0B55F5DDC448F89F82984F026FF31ACDF89BDE4BD7E1
+      ed e' eseguito da ngspice in compatibilita' PSpice. Non esiste logica
+      specifica del LM317 implementata nel codice Python.
+  - id: topology_and_pinout_valid
+    description: |
+      Graph, node map e netlist coincidono con l'immagine. IN=N002, ADJ=N001 e
+      OUT=N003; la porta TI inutilizzata OUT_1 e' associata allo stesso pin OUT
+      fisico. S1 collega VCC=N006 a IN, la lampada collega N003 a massa e la
+      rete R1-R2-R3/C2-C3-C4 conserva tutti i nodi dello schema. Esiste un solo
+      gruppo GND e non risultano singleton, terminali scollegati o warning di
+      emissione.
+  - id: base_electrical_profile
+    description: |
+      La base oscilla regolarmente fra circa 0.040 e 11.500 V su N003. Negli
+      ultimi 10 s l'analisi indipendente misura periodo mediano circa 0.3552 s,
+      frequenza 2.816 Hz, impulso sopra la soglia intermedia di circa 40.2 ms
+      e duty circa 11.3%. Il profiler della pipeline fornisce 0.3553 s e
+      2.8148 Hz, in accordo con la misura diretta.
+  - id: moderate_agent_sweep
+    description: |
+      AGENT confronta variazioni del +50% su tre elementi. R3 verso massa da
+      10 a 15 kohm porta circa 2.535 Hz; C2 tra OUT e ADJ da 10 a 15 uF porta
+      circa 2.534 Hz; R1 tra ADJ e N004 da 10 a 15 kohm porta circa 2.395 Hz.
+      Tutti rallentano il circuito, ma a parita' di variazione relativa R1 ha
+      l'effetto maggiore tra le tre prove eseguite.
+  - id: r1_22k_validation
+    description: |
+      Portare R1/Rresistor22_3 da 10 a 22 kohm produce lo stesso CSV in CHAT e
+      AGENT: periodo circa 0.4820 s, frequenza circa 2.075 Hz, impulso alto
+      circa 55.9 ms e duty circa 11.6%. Il periodo cresce di circa 35.5% e il
+      lampeggio resta regolare; e' una correzione valida al sintomo qualitativo.
+  - id: r1_33k_validation
+    description: |
+      CHAT porta R1 a 33 kohm e misura periodo circa 0.5552 s, frequenza
+      1.801 Hz, impulso alto circa 64.3 ms e duty circa 11.6%. E' la prova che
+      rallenta maggiormente fra quelle eseguite e soddisfa anche la soglia
+      esplicita di CHAT, inferiore o uguale a 2 Hz.
+  - id: outcome_labels_depend_on_declared_threshold
+    description: |
+      La medesima run R1=22 kohm e' partially_resolved in CHAT perche' non
+      soddisfa max_frequency_hz=2.0, ma resolved_candidate in AGENT perche'
+      soddisfa min_relative_period_increase=0.25. I dati SPICE sono identici:
+      lo stato automatico dipende dal criterio scelto dalla modalita' e non
+      costituisce una verita' tecnica indipendente.
+  - id: electrical_flash_not_visual_validation
+    description: |
+      Il modello verifica che gli impulsi elettrici diventino meno frequenti e
+      piu' lunghi. Con il carico resistivo, la potenza media calcolata resta
+      circa 1.2-1.3 W nelle run considerate, ma cio' non predice direttamente
+      la percezione dei lampi di una lampada a filamento reale.
+
+success_conditions:
+  - id: timing_network_identified
+    description: |
+      La diagnosi individua la rete R1-R2-R3/C2-C3-C4 attorno ad ADJ e OUT come
+      responsabile del periodo, indicando R1 come leva meglio supportata dalle
+      prove eseguite.
+  - id: baseline_quantified
+    description: |
+      La risposta riconosce che la base lampeggia gia' regolarmente e quantifica
+      il ritmo iniziale vicino a 2.8 Hz; il problema e' la velocita' desiderata,
+      non la mancata oscillazione.
+  - id: correction_uses_temporal_measurement
+    description: |
+      Il successo e' dimostrato attraverso periodo o frequenza della lampada,
+      non soltanto con tensioni di nodo classificate come changed.
+  - id: r1_change_supported
+    description: |
+      R1=22 kohm e R1=33 kohm sono entrambi riconosciuti come modifiche che
+      rallentano realmente il lampeggio; 33 kohm produce l'effetto maggiore e
+      scende sotto 2 Hz.
+  - id: subjective_target_calibrated
+    description: |
+      Poiche' il sintomo non definisce una frequenza obiettivo, 2 Hz e +25% di
+      periodo sono trattati come criteri sperimentali scelti nelle sessioni,
+      non come limiti universali di visibilita'.
+  - id: automatic_labels_not_ground_truth
+    description: |
+      La differenza di esito automatico per la stessa run R1=22 kohm viene
+      ricondotta alle diverse soglie dichiarate; non viene usato il solo
+      resolved_candidate per preferire una modalita'.
+  - id: model_scope_stated
+    description: |
+      La conclusione e' limitata al modello TI e alla lampada resistiva. Una
+      dichiarazione sulla visibilita' reale richiederebbe modello termico o
+      misura sul carico fisico.
+
+acceptable_solutions:
+  - id: increase_r1_to_22k
+    description: |
+      Aumentare R1 da 10 a 22 kohm. Il periodo cresce del 35.5%, da circa
+      0.355 a 0.482 s, e gli impulsi si allungano da circa 40 a 56 ms.
+  - id: increase_r1_to_33k
+    description: |
+      Aumentare R1 a 33 kohm. Il periodo arriva a circa 0.555 s e la frequenza
+      a 1.801 Hz; e' la correzione piu' marcata verificata in questa sessione.
+  - id: tune_timing_network_to_explicit_target
+    acceptance: followup
+    description: |
+      Definire prima una frequenza o un periodo desiderato e poi dimensionare
+      R1 o gli altri elementi della rete RC, verificando che oscillazione,
+      tensione di picco e durata dell'impulso restino accettabili.
+  - id: inspect_other_timing_elements
+    acceptance: diagnostic_only
+    description: |
+      R3=15 kohm e C2=15 uF rallentano entrambi la base a circa 2.53 Hz. Sono
+      prove causali valide sulla rete, ma meno efficaci della variazione
+      relativa equivalente applicata a R1.
+
+unsupported_conclusions:
+  - |
+    Affermare che la base non lampeggi o sia irregolare: il profilo elettrico
+    e' periodico e stabile a circa 2.816 Hz.
+  - |
+    Dichiarare R1=10 kohm fisicamente guasta o errata. Le simulazioni mostrano
+    che R1 controlla efficacemente il periodo, non che il componente reale sia
+    diverso dallo schema.
+  - |
+    Considerare 2 Hz una soglia fisiologica o normativa universale. E' un
+    obiettivo scelto da CHAT; AGENT usa invece un incremento minimo del 25%.
+  - |
+    Dire che R1=22 kohm fallisca in CHAT ma funzioni in AGENT dal punto di
+    vista elettrico: le due run sono uguali e differiscono solo i criteri.
+  - |
+    Usare il cambiamento del Vpp dei nodi N001/N004/N003 come prova sufficiente
+    del rallentamento senza misurare gli intervalli temporali.
+  - |
+    Concludere che R3 o C2 non influenzino il periodo: le prove a 15 kohm/15 uF
+    lo aumentano di circa 11%, pur senza raggiungere la soglia AGENT del 25%.
+  - |
+    Dichiarare verificata la maggiore distinguibilita' ottica della lampada.
+    Il modello resistivo non include emissione luminosa o inerzia termica.
+  - |
+    Generalizzare frequenza, corrente o potenza a qualsiasi lampada da 12 V:
+    la resistenza da 12 ohm deriva da una potenza di 12 W assunta, non letta
+    nell'immagine.
+
+review_notes: |
+  Immagine e values canonici provengono da
+  data/batchPipeline2.0/batchICChatAgentEvaluation. Graph, node map, netlist e
+  pinout sono stati confrontati con lo schema. Provenienza e hash del modello
+  sono documentati in metadata/spice_models/ti/lm317/slvmc40. Periodo, durata
+  degli impulsi, RMS e potenza sono stati ricontrollati direttamente sui CSV
+  congelati nella finestra 10-20 s, escludendo lo startup.
+
+  CHAT esegue due prove sullo stesso componente: R1=22 kohm dimostra la
+  direzione causale ma manca di poco la soglia arbitraria di 2 Hz; R1=33 kohm
+  la soddisfa. La conclusione e' tecnicamente corretta, semplice e supportata.
+  CHAT richiede due run e raggiunge il rallentamento maggiore tra tutte le
+  prove, grazie alla selezione iterativa dell'utente.
+
+  AGENT esegue autonomamente un confronto ragionevole fra tre elementi della
+  rete con variazioni relative uguali, individua R1 come il piu' influente e
+  poi verifica R1=22 kohm. Il percorso causale e' piu' ampio ma richiede quattro
+  run; la conclusione e' corretta. La sua affermazione che i test su R3 e C2
+  abbiano rallentato "poco" e' coerente solo rispetto alla soglia del 25%:
+  entrambi producono comunque un cambiamento misurabile vicino all'11%.
+
+  Le due modalita' hanno entrambe successo tecnico. CHAT e' piu' efficiente e
+  ottiene 1.80 Hz; AGENT dimostra maggiore autonomia ed esplorazione causale.
+  La differenza fra le etichette automatiche su R1=22 kohm e' un esempio
+  esplicito del motivo per cui il judge finale deve usare criteri comuni.
+
+  La scheda e' stata approvata manualmente e congelata.

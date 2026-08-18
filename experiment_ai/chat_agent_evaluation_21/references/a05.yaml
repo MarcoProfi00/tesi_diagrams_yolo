@@ -1,0 +1,111 @@
+schema_version: 1
+circuit_id: "a05"
+review_status: frozen
+circuit_description: |
+  Circuito di monitoraggio in continua con voltmetro VMON riferito a massa.
+  Il terminale misurato N001 è collegato tramite una resistenza da 1 kohm
+  al pin 1 del connettore, nodo N003. Nella configurazione base N003 non è
+  pilotato da alcuna sorgente. Il condensatore da 47 nF è sul diverso pin 2
+  e lo switch TEST collega il pin 3 a massa.
+task_type: "diagnosi di una lettura voltmetrica nulla"
+user_symptom: |
+  Il voltmetro VMON legge sempre 0 V. Quale potrebbe essere il problema?
+
+circuit_inventory:
+  component_count: 9
+  node_count: 5
+  component_types:
+    - "Analog_Meter"
+    - "Capacitor"
+    - "Connector"
+    - "GND"
+    - "Resistor"
+    - "Switch"
+  analysis_types:
+    - "op"
+
+required_evidence:
+  - id: base_meter_zero
+    description: |
+      Nel punto operativo base N001, cioè il nodo letto da VMON rispetto a
+      massa, è a 0 V.
+  - id: input_undriven
+    description: |
+      N003, collegato a N001 attraverso la resistenza da 1 kohm, è anch'esso
+      a 0 V e nella netlist non è presente alcuna sorgente che lo piloti.
+  - id: unrelated_branches
+    description: |
+      Il condensatore appartiene a N002 e lo switch TEST a N004; né la
+      capacità né la chiusura dello switch creano una tensione su N003.
+  - id: diagnostic_test
+    description: |
+      Applicando una tensione DC nota a N003 rispetto a massa, la stessa
+      tensione deve comparire su N001, confermando il percorso verso VMON.
+
+success_conditions:
+  - id: cause_identified
+    description: |
+      La causa viene identificata come assenza di un segnale o di una
+      sorgente sul pin 1, nodo N003, non come guasto certo del voltmetro.
+  - id: meter_node_activated
+    description: |
+      Una sorgente di prova applicata a N003 porta N003 e N001 da 0 V a un
+      valore non nullo e coerente con la sorgente.
+  - id: simulation_verified
+    description: |
+      La prova viene realmente eseguita con analisi .op e ngspice termina
+      con successo.
+  - id: conclusion_matches_question
+    description: |
+      Poiché il sintomo chiede quale possa essere il problema, una diagnosi
+      confermata è sufficiente; non è obbligatorio proporre una modifica
+      permanente del circuito.
+
+acceptable_solutions:
+  - id: drive_connector_pin1
+    description: |
+      Applicare una sorgente DC nota tra N003 e massa e verificare la
+      propagazione della tensione fino a N001.
+    verified_reference_values: |
+      Con una sorgente di prova da 5 V, N003 passa da 0 V a 5 V e N001
+      passa da 0 V a 5 V.
+  - id: equivalent_known_voltage_test
+    description: |
+      Collegare al pin 1 una diversa tensione DC nota e sicura, verificando
+      che VMON legga lo stesso valore entro la caduta trascurabile prevista
+      sulla resistenza con voltmetro ad alta impedenza.
+  - id: drive_meter_node_directly
+    acceptance: partial_only
+    description: |
+      Pilotare direttamente N001 può verificare la lettura del voltmetro,
+      ma non controlla la continuità completa del percorso attraverso la
+      resistenza e il pin 1.
+
+unsupported_conclusions:
+  - |
+    Attribuire la lettura nulla a un guasto certo del voltmetro: la prova
+    dimostra invece che il nodo d'ingresso non è pilotato nella base.
+  - |
+    Indicare lo switch TEST aperto come causa: lo switch agisce su N004,
+    che è elettricamente distinto dal percorso N003-resistenza-N001.
+  - |
+    Indicare il condensatore da 47 nF come causa della lettura DC nulla:
+    il condensatore è collegato al diverso nodo N002.
+  - |
+    Richiedere una corrente significativa nella resistenza come condizione
+    di successo: il voltmetro è trattato come osservatore ad alta impedenza
+    e la corrente del ramo è idealmente quasi nulla.
+  - |
+    Affermare che il valore reale previsto su VMON debba necessariamente
+    essere 5 V: i 5 V sono il valore della sorgente di prova, non un valore
+    nominale riportato per il pin 1 nell'immagine.
+
+review_notes: |
+  Il Graph JSON coincide con l'immagine. L'Analog_Meter non viene emesso
+  come carico SPICE: la sua lettura è rappresentata da v(N001) rispetto a
+  massa, coerentemente con un voltmetro ideale ad alta impedenza. La base
+  produce warning di matrice singolare su N003 perché il ramo è flottante;
+  ngspice recupera comunque un punto operativo a 0 V. La sorgente di prova
+  elimina l'ambiguità e conferma la diagnosi. Le etichette interne come
+  partially_resolved non determinano l'esito rispetto al sintomo utente.
+  La scheda deve essere approvata manualmente prima dello stato frozen.

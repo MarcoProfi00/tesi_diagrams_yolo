@@ -915,7 +915,22 @@ def render_two_terminal_symbol(
     label_lines = component_label_lines(component, position)
     flow_path = ""
 
-    if "switch" in visual_class:
+    if visual_class == "push_button":
+        state = str(position.get("state") or (component.get("parameters") or {}).get("state") or "open").lower()
+        closed = state == "closed"
+        contact_y = 0 if closed else -13
+        blade = (
+            f'M{-half + 8} {contact_y} H{half - 8}'
+        )
+        plunger_top = contact_y - 18
+        body = (
+            f'<circle cx="{-half}" cy="0" r="4"/><circle cx="{half}" cy="0" r="4"/>'
+            f'<path class="push-button-contact" d="{blade}"/>'
+            f'<path class="push-button-plunger" d="M0 {contact_y} V{plunger_top} '
+            f'M-13 {plunger_top} H13"/>'
+        )
+        flow_path = f'M{-half + 8} 0 H{half - 8}' if closed else ""
+    elif "switch" in visual_class:
         state = str(position.get("state") or (component.get("parameters") or {}).get("state") or "open").lower()
         blade = f'M{-half + 8} 0 H{half - 8}' if state == "closed" else f'M{-half + 8} 0 L{half - 8} -20'
         body = f'<circle cx="{-half}" cy="0" r="4"/><circle cx="{half}" cy="0" r="4"/><path d="{blade}"/>'

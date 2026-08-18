@@ -44,11 +44,13 @@ import controlled_scenarios.measurements as scenario_measurements  # noqa: E402
 import scenario_runtime  # noqa: E402
 import web_chat_core  # noqa: E402
 from viewer_core.model_builder import (  # noqa: E402
+    apply_supply_visibility_overrides,
     enrich_structural_terminals,
     led_current_states_with_hysteresis,
     led_transient_profiles,
     pulsating_load_transient_profiles,
 )
+from viewer_core.component_library import normalize_component_type  # noqa: E402
 from viewer_core.layout_builder import (  # noqa: E402
     align_near_perpendicular_leads,
     build_image_guided_components,
@@ -56,7 +58,11 @@ from viewer_core.layout_builder import (  # noqa: E402
     rectangle_overlap_area,
     separate_ground_symbol_collisions,
 )
-from viewer_core.svg_renderer import render_integrated_circuit, render_terminal_port  # noqa: E402
+from viewer_core.svg_renderer import (  # noqa: E402
+    render_integrated_circuit,
+    render_terminal_port,
+    render_two_terminal_symbol,
+)
 
 
 class SharedContractTests(unittest.TestCase):
@@ -253,6 +259,66 @@ class SharedContractTests(unittest.TestCase):
         self.assertEqual(terminal["display_value"], "20 mVpk @ 1 kHz")
         self.assertEqual(terminal["viewer_tooltip"], "Testbench SPICE: SIN(0 20m 1k)")
         self.assertEqual(netlist[0]["viewer_hidden_by_terminal"], "terminal1")
+
+    def test_hidden_testbench_supply_stays_out_of_viewer(self) -> None:
+        """Uno stimolo numerico opt-in resta in netlist ma non nello schema."""
+        components = [
+            {
+                "id": "VTRIGGER",
+                "spice_name": "VTRIGGER",
+                "kind": "voltage_source",
+                "nodes": ["NTRIG", "0"],
+                "value": "PULSE(9 0 1s 1ms 1ms 100ms 10s)",
+            }
+        ]
+        rules = {
+            "supplies": {
+                "TRIGGER": {
+                    "nodes": ["NTRIG", "0"],
+                    "parameters": {
+                        "type": "pulse",
+                        "viewer_override": {"hidden": True},
+                    },
+                }
+            }
+        }
+
+        enriched = apply_supply_visibility_overrides(components, rules)
+
+        self.assertTrue(enriched[0]["viewer_hidden"])
+        self.assertEqual(enriched[0]["viewer_role"], "hidden_testbench_stimulus")
+
+    def test_push_button_has_a_dedicated_momentary_symbol(self) -> None:
+        """Push_Button non ricade nel rettangolo strutturale generico."""
+        self.assertEqual(normalize_component_type("Push_Button"), "push_button")
+        component = {
+            "id": "push_button1",
+            "parameters": {"state": "open"},
+        }
+        position = {
+            "x": 50.0,
+            "y": 50.0,
+            "component_type": "push_button",
+            "state": "open",
+            "terminals": [
+                {"name": "t1", "x": 10.0, "y": 50.0},
+                {"name": "t2", "x": 90.0, "y": 50.0},
+            ],
+        }
+
+        svg = render_two_terminal_symbol(
+            "push_button1",
+            component,
+            position,
+            set(),
+            set(),
+            set(),
+            {},
+            {},
+        )
+
+        self.assertIn("push-button-contact", svg)
+        self.assertIn("push-button-plunger", svg)
 
     def test_ground_layout_ignores_unrelated_zero_node_and_removes_symbol_overlap(self) -> None:
         """Masse graficamente separate non si allineano tra loro e non coprono componenti."""

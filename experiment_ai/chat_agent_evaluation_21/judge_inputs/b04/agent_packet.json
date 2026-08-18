@@ -1,0 +1,395 @@
+{
+  "packet_schema_version": 1,
+  "packet_id": "b04_run_2",
+  "reference": {
+    "schema_version": 1,
+    "circuit_id": "b04",
+    "circuit_description": "Caricabatteria a semionda con secondario equivalente da 15 V RMS, SCR\n2N3668, transistor BC148, rete di regolazione e fusibile da 2 A. La batteria\nesterna è rappresentata da una sorgente ideale. Il Graph JSON originale\naveva classificato lo SCR come diodo e fuso il gate con il nodo di uscita:\nil values.yaml applica un overlay SPICE esplicito che separa H1_GATE e usa\nun sottocircuito SCR a tre terminali.\n",
+    "task_type": "diagnosi della corrente di carica al variare della batteria",
+    "user_symptom": "Ho l’impressione che la batteria si carichi poco. Se fosse più scarica, il caricabatteria dovrebbe darle più corrente?\n",
+    "circuit_inventory": {
+      "component_count": 18,
+      "node_count": 13,
+      "component_types": [
+        "Diode",
+        "Fuse",
+        "NPN_Transistor",
+        "Resistor",
+        "Terminal",
+        "Transformer"
+      ],
+      "analysis_types": [
+        "op",
+        "tran"
+      ]
+    },
+    "required_evidence": [
+      {
+        "id": "testbench_and_model_limits",
+        "description": "L'immagine non indica la tensione della batteria: 12 V è un'assunzione\ndel testbench. Il trasformatore è sostituito da una sinusoide ideale da\n15 V RMS, lo SCR è un modello comportamentale non latchante, D2 è\ngenerico, R4 è fissato a metà corsa e la batteria non ha dinamica di\nstato di carica né resistenza interna.\n"
+      },
+      {
+        "id": "battery_current_quantity",
+        "description": "La risposta deve usare la corrente del ramo batteria nel transitorio,\nnon la sola corrente di D4. Poiché N008 collega soltanto R6 e il fusibile,\nla corrente verso il positivo batteria è ricavabile esattamente come\n(v(N004)-v(N009))/(1 ohm+1 milliohm). Segno positivo indica carica.\n"
+      },
+      {
+        "id": "steady_cycle_comparison",
+        "description": "Sugli ultimi 40 ms del transitorio a 50 Hz, la corrente media netta\ncresce al diminuire della batteria: circa 0.164 A a 12 V, 0.678 A a\n10 V e 1.281 A a 8 V. A 13.5 V scende a circa 0.0385 A.\n"
+      },
+      {
+        "id": "pulse_current_comparison",
+        "description": "I picchi corrispondenti sono circa 0.985 A a 12 V, 2.955 A a 10 V,\n4.941 A a 8 V e 0.285 A a 13.5 V. Anche la frazione del ciclo con\ncorrente positiva aumenta scendendo da 12 V a 10 V e 8 V.\n"
+      },
+      {
+        "id": "op_not_charge_measure",
+        "description": "Il punto operativo valuta la sorgente sinusoidale a fase zero e mostra\ncorrente dalla batteria verso il caricatore: circa 12.42 mA a 12 V,\n10.27 mA a 10 V e 14.02 mA a 13.5 V in modulo. Non rappresenta la\ncorrente media trasferita durante i cicli AC e non deve guidare la\nconclusione sulla carica.\n"
+      },
+      {
+        "id": "fuse_limit",
+        "description": "I picchi simulati a 10 V e 8 V superano la targa di 2 A. Il fusibile è\nmodellato come resistenza chiusa da 1 milliohm e non può aprirsi; la\nsimulazione non dimostra quindi sicurezza o compatibilità col fusibile.\n"
+      }
+    ],
+    "success_conditions": [
+      {
+        "id": "trend_answered",
+        "description": "La conclusione risponde che, nel modello verificato, una batteria a\ntensione più bassa riceve una corrente media e impulsiva maggiore.\n"
+      },
+      {
+        "id": "direct_current_supported",
+        "description": "Il trend è sostenuto dalla corrente transitoria del ramo batteria con\nalmeno un confronto quantitativo 12 V contro 10 V, non dal solo D4.\n"
+      },
+      {
+        "id": "ac_and_op_distinguished",
+        "description": "La risposta distingue il punto operativo a fase zero dalla media su\ncicli completi della sorgente a 50 Hz.\n"
+      },
+      {
+        "id": "protection_caveat",
+        "description": "La conclusione segnala che i picchi possono superare 2 A e che il\nmodello del fusibile non simula l'intervento.\n"
+      },
+      {
+        "id": "conclusion_calibrated",
+        "description": "I risultati sono presentati come comportamento del testbench SPICE\nsemplificato, non come curva di carica o garanzia per una batteria reale.\n"
+      }
+    ],
+    "acceptable_solutions": [
+      {
+        "id": "compare_transient_battery_current",
+        "description": "Variare soltanto VBAT_TEST e confrontare media, picco e segno della\ncorrente nel ramo R6-fusibile-batteria dopo il transitorio iniziale.\n",
+        "verified_reference_values": "Ultimi 40 ms: 12 V media 0.16427 A e picco 0.98515 A; 10 V media\n0.67807 A e picco 2.95477 A; 8 V media 1.28054 A e picco 4.94069 A;\n13.5 V media 0.03846 A e picco 0.28453 A.\n"
+      },
+      {
+        "id": "compare_12v_and_10v_only",
+        "description": "Il confronto transitorio 12 V contro 10 V è già sufficiente per\nrispondere alla domanda: la media aumenta di oltre quattro volte. Le\nprove a 8 V e 13.5 V rafforzano la tendenza e mostrano i limiti.\n"
+      },
+      {
+        "id": "d4_and_control_node_only",
+        "acceptance": "partial_only",
+        "description": "Misurare D4 e N004 dimostra che il controllo reagisce alla batteria, ma\nnon quantifica direttamente la corrente utile di carica.\n"
+      },
+      {
+        "id": "operating_point_branch_current",
+        "acceptance": "rejected",
+        "description": "Usare i(R6) o i(fusibile) soltanto nella .op porta a una lettura della\nfase zero con verso di scarica e non descrive il trasferimento medio AC.\n"
+      }
+    ],
+    "unsupported_conclusions": [
+      "Affermare che la lieve variazione del picco di D4, circa 0.335-0.337 A,\ndimostri da sola un aumento della corrente di carica della batteria.\n",
+      "Usare le correnti .op da 10-14 mA come prova che una batteria più scarica\nassorba più corrente: a 10 V il loro modulo diminuisce e il verso è dalla\nbatteria verso il circuito.\n",
+      "Concludere che la corrente di carica resti necessariamente bassa: nel\ntransitorio la media raggiunge circa 0.678 A a 10 V e 1.281 A a 8 V.\n",
+      "Dichiarare il funzionamento sicuro perché la corrente media è sotto 2 A:\ni picchi a 10 e 8 V superano la targa del fusibile.\n",
+      "Affermare che il fusibile sia stato verificato o che intervenga: il modello\nSPICE usato resta sempre una resistenza chiusa.\n",
+      "Presentare le correnti come previsione affidabile dell'hardware: SCR,\nbatteria, trasformatore, potenziometro e D2 sono tutti semplificati.\n",
+      "Confrontare livelli DC tramite tran_vpp: una sorgente costante da 8, 10 o\n12 V ha sempre Vpp nullo; servono min, max, media o valore finale.\n"
+    ]
+  },
+  "rubric": {
+    "score_scale": {
+      "0": "errato o assente",
+      "1": "utile ma incompleto o con limiti rilevanti",
+      "2": "corretto e adeguatamente verificato"
+    },
+    "criteria": [
+      "diagnostic_correctness",
+      "test_quality",
+      "evidence_interpretation",
+      "goal_achievement",
+      "conclusion_quality"
+    ]
+  },
+  "run": {
+    "initial_request": "Ho l’impressione che la batteria si carichi poco. Se fosse più scarica, il caricabatteria dovrebbe darle più corrente?",
+    "technical_status": "completed",
+    "base_spice": {
+      "status": "success",
+      "exit_code": 0,
+      "message": "ngspice completed successfully.",
+      "analyses": [
+        "op",
+        "tran"
+      ]
+    },
+    "execution_counts": {
+      "scenarios_proposed": 2,
+      "scenarios_executed": 2,
+      "successful_spice_runs": 2,
+      "failed_spice_runs": 0
+    },
+    "scenarios": [
+      {
+        "scenario_id": "scenario_1",
+        "title": "Batteria più scarica a 10 V",
+        "hypothesis": "Se il caricabatteria funziona, una batteria più scarica dovrebbe aumentare la conduzione nel percorso di carica; misuro sia la corrente della batteria sia un componente reale del percorso di carica.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "VVBAT_TEST",
+            "value": "DC 10"
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "i(VVBAT_TEST)",
+          "@ddiode7_4[id]",
+          "v(N004)",
+          "v(N009,N010)"
+        ],
+        "expect": {
+          "i(VVBAT_TEST)": "magnitude_increased",
+          "@ddiode7_4[id]": "magnitude_increased",
+          "v(N004)": "nonzero",
+          "v(N009,N010)": "changed"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "i(VVBAT_TEST)",
+              "metric": "i(vvbat_test)",
+              "measurement": "op",
+              "base_value": -0.0124225,
+              "scenario_value": -0.0102715,
+              "delta": 0.002151,
+              "change": "changed",
+              "expectation": "magnitude_increased",
+              "base_details": {},
+              "scenario_details": {}
+            },
+            {
+              "quantity": "@ddiode7_4[id]",
+              "metric": "@ddiode7_4[id].abs_peak",
+              "measurement": "tran_abs_peak",
+              "base_value": 0.334752846,
+              "scenario_value": 0.336066179,
+              "delta": 0.0013133330000000276,
+              "change": "changed",
+              "expectation": "magnitude_increased",
+              "base_details": {
+                "min": -8.0140838e-05,
+                "max": 0.334752846,
+                "mean": 0.06261003837421458,
+                "vpp": 0.334832986838,
+                "final": -4.25542834e-05,
+                "abs_peak": 0.334752846
+              },
+              "scenario_details": {
+                "min": -0.000174611517,
+                "max": 0.336066179,
+                "mean": 0.06783677617216666,
+                "vpp": 0.336240790517,
+                "final": 2.35739693e-05,
+                "abs_peak": 0.336066179
+              }
+            },
+            {
+              "quantity": "v(N004)",
+              "metric": "v(n004).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.9987514999999991,
+              "scenario_value": 2.9682211600000006,
+              "delta": 1.9694696600000015,
+              "change": "changed",
+              "expectation": "nonzero",
+              "base_details": {
+                "min": 11.9875351,
+                "max": 12.9862866,
+                "mean": 12.155920647809523,
+                "vpp": 0.9987514999999991,
+                "final": 11.9875651,
+                "abs_peak": 12.9862866
+              },
+              "scenario_details": {
+                "min": 9.98950764,
+                "max": 12.9577288,
+                "mean": 10.650173785944391,
+                "vpp": 2.9682211600000006,
+                "final": 9.98971821,
+                "abs_peak": 12.9577288
+              }
+            },
+            {
+              "quantity": "v(N009,N010)",
+              "metric": "v(n009,n010).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.0,
+              "scenario_value": 0.0,
+              "delta": 0.0,
+              "change": "unchanged",
+              "expectation": "changed",
+              "base_details": {
+                "min": 12.0,
+                "max": 12.0,
+                "mean": 12.0,
+                "vpp": 0.0,
+                "final": 12.0,
+                "abs_peak": 12.0
+              },
+              "scenario_details": {
+                "min": 10.0,
+                "max": 10.0,
+                "mean": 10.0,
+                "vpp": 0.0,
+                "final": 10.0,
+                "abs_peak": 10.0
+              }
+            }
+          ],
+          "comparison_evidence": {},
+          "led_profiles": {}
+        }
+      },
+      {
+        "scenario_id": "scenario_2",
+        "title": "Batteria molto più scarica a 8 V",
+        "hypothesis": "Se a 10 V l'aumento è debole o ambiguo, a 8 V dovrebbe evidenziarsi chiaramente un aumento della corrente di carica e della conduzione del diodo di uscita se il circuito regola davvero in funzione della tensione batteria.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "VVBAT_TEST",
+            "value": "DC 8"
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "i(VVBAT_TEST)",
+          "@ddiode7_4[id]",
+          "v(N004)",
+          "v(N009,N010)"
+        ],
+        "expect": {
+          "i(VVBAT_TEST)": "magnitude_increased",
+          "@ddiode7_4[id]": "magnitude_increased",
+          "v(N004)": "nonzero",
+          "v(N009,N010)": "changed"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "i(VVBAT_TEST)",
+              "metric": "i(vvbat_test)",
+              "measurement": "op",
+              "base_value": -0.0124225,
+              "scenario_value": -0.00843212,
+              "delta": 0.00399038,
+              "change": "changed",
+              "expectation": "magnitude_increased",
+              "base_details": {},
+              "scenario_details": {}
+            },
+            {
+              "quantity": "@ddiode7_4[id]",
+              "metric": "@ddiode7_4[id].abs_peak",
+              "measurement": "tran_abs_peak",
+              "base_value": 0.334752846,
+              "scenario_value": 0.33659804,
+              "delta": 0.0018451939999999944,
+              "change": "changed",
+              "expectation": "magnitude_increased",
+              "base_details": {
+                "min": -8.0140838e-05,
+                "max": 0.334752846,
+                "mean": 0.06261003837421458,
+                "vpp": 0.334832986838,
+                "final": -4.25542834e-05,
+                "abs_peak": 0.334752846
+              },
+              "scenario_details": {
+                "min": -0.000198073885,
+                "max": 0.33659804,
+                "mean": 0.07180282364196779,
+                "vpp": 0.33679611388499997,
+                "final": -0.000191011172,
+                "abs_peak": 0.33659804
+              }
+            },
+            {
+              "quantity": "v(N004)",
+              "metric": "v(n004).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.9987514999999991,
+              "scenario_value": 4.95415869,
+              "delta": 3.9554071900000007,
+              "change": "changed",
+              "expectation": "nonzero",
+              "base_details": {
+                "min": 11.9875351,
+                "max": 12.9862866,
+                "mean": 12.155920647809523,
+                "vpp": 0.9987514999999991,
+                "final": 11.9875651,
+                "abs_peak": 12.9862866
+              },
+              "scenario_details": {
+                "min": 7.99154431,
+                "max": 12.945703,
+                "mean": 9.223737259005736,
+                "vpp": 4.95415869,
+                "final": 7.99155945,
+                "abs_peak": 12.945703
+              }
+            },
+            {
+              "quantity": "v(N009,N010)",
+              "metric": "v(n009,n010).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.0,
+              "scenario_value": 0.0,
+              "delta": 0.0,
+              "change": "unchanged",
+              "expectation": "changed",
+              "base_details": {
+                "min": 12.0,
+                "max": 12.0,
+                "mean": 12.0,
+                "vpp": 0.0,
+                "final": 12.0,
+                "abs_peak": 12.0
+              },
+              "scenario_details": {
+                "min": 8.0,
+                "max": 8.0,
+                "mean": 8.0,
+                "vpp": 0.0,
+                "final": 8.0,
+                "abs_peak": 8.0
+              }
+            }
+          ],
+          "comparison_evidence": {},
+          "led_profiles": {}
+        }
+      }
+    ],
+    "final": {
+      "answer": "Si: dagli scenari gia eseguiti risulta che abbassare la tensione della batteria modifica davvero il ramo di carica, quindi una batteria piu scarica tende ad assorbire piu corrente. Pero nel modello attuale la corrente di carica resta bassa rispetto a quanto ci si aspetterebbe da un caricabatteria energico, mentre dal trasformatore nel punto di lavoro DC arriva quasi nulla e il nodo di uscita sta gia vicino ai 12 V della batteria.",
+      "cause": "La carica debole non sembra dovuta al fatto che il caricabatteria ignori lo stato di scarica della batteria: i test a batteria piu bassa hanno gia mostrato variazioni sia di i(VVBAT_TEST) sia della conduzione di Ddiode7_4. Il sospetto localizzato e quindi un percorso di carica poco efficace nel modello corrente, con il ramo rettifica/controllo SCR-transistor che modifica la conduzione ma non produce un aumento forte della corrente verso la batteria.",
+      "verified_correction": ""
+    }
+  }
+}

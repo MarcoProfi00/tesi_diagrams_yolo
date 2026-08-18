@@ -1,0 +1,22 @@
+* Probe generale ngspice per un doppio gate driver invertente TC4423-like.
+* Il modello usa due trasferimenti logici continui riferiti ai rail e una
+* resistenza di uscita esplicita; non contiene riferimenti al circuito c14.
+.subckt DUAL_INVERTING_DRIVER INA INB VDD OUTA OUTB VSS
+BDA NA VSS V={V(VDD,VSS)/(1+exp((V(INA,VSS)-2.5)/0.05))}
+BDB NB VSS V={V(VDD,VSS)/(1+exp((V(INB,VSS)-2.5)/0.05))}
+ROA NA OUTA 0.5
+ROB NB OUTB 0.5
+.ends DUAL_INVERTING_DRIVER
+
+VSUP VDD 0 12
+VA INA 0 PULSE(0 5 0 1u 1u 2m 4m)
+VB INB 0 PULSE(5 0 0 1u 1u 2m 4m)
+XDRV INA INB VDD OUTA OUTB 0 DUAL_INVERTING_DRIVER
+RMOTOR OUTA NM 10
+LMOTOR NM OUTB 1m
+BDIFF VDIFF 0 V=V(OUTA)-V(OUTB)
+
+.tran 10u 8m
+.meas tran VDIFF_POS MAX v(VDIFF) FROM=0.2m TO=1.8m
+.meas tran VDIFF_NEG MIN v(VDIFF) FROM=2.2m TO=3.8m
+.end

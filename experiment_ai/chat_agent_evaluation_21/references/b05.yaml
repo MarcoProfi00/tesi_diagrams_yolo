@@ -1,0 +1,162 @@
+schema_version: 1
+circuit_id: "b05"
+review_status: frozen
+circuit_description: |
+  Ricevitore accordato con rivelatore a diodo, due stadi PNP accoppiati e
+  cuffia esterna. L1 e C1 formano il circuito d'antenna; CR1 e C2 alimentano
+  la base di Q1; C3 accoppia Q1 a Q2; la cuffia equivalente è tra il
+  collettore di Q2 e il rail negativo commutato. La batteria ha il positivo
+  a massa e genera un rail negativo, configurazione coerente con emettitori
+  PNP a massa.
+task_type: "diagnosi di assenza del segnale audio in cuffia"
+user_symptom: |
+  Ho montato il circuito, ma nelle cuffie non si sente nulla. Da cosa potrebbe dipendere?
+
+circuit_inventory:
+  component_count: 16
+  node_count: 9
+  component_types:
+    - "Antenna"
+    - "Battery"
+    - "Breaker"
+    - "Diode"
+    - "GND"
+    - "Inductor"
+    - "PNP_Transistor"
+    - "Polarized_Capacitor"
+    - "Resistor"
+    - "Switch"
+  analysis_types:
+    - "op"
+    - "tran"
+
+required_evidence:
+  - id: explicit_model_assumptions
+    description: |
+      L'immagine non specifica batteria, L1, transistor, CR1 o impedenza della
+      cuffia. Il testbench assume rispettivamente 9 V, 250 uH, PNP generici,
+      diodo generico e carico da 2 kohm. C1 è fissato al punto medio 375 pF.
+      Queste scelte non sono dati certi del circuito fisico.
+  - id: base_has_two_missing_conditions
+    description: |
+      Nella base S1 è aperto e quindi il rail N004 non è alimentato. Inoltre
+      l'antenna è un'interfaccia esterna non emessa come sorgente SPICE: non
+      esiste alcun segnale RF da rivelare. Entrambe le condizioni spiegano il
+      silenzio senza postulare componenti guasti.
+  - id: powered_bias_valid
+    description: |
+      Chiudendo S1, N004 va a circa -9 V, le basi Q1/Q2 a circa -0.791 V e
+      -0.808 V e la batteria eroga circa 5.69 mA. Q1 e Q2 conducono circa
+      1.89 mA e 3.72 mA di collettore: la polarità PNP non è errata e i due
+      transistor non sono interdetti.
+  - id: original_signal_tests_invalid
+    description: |
+      Le sorgenti degli scenari CHAT/AGENT imposte su N006 o N008 sono
+      sinusoidi centrate a 0 V: sostituiscono la polarizzazione negativa e
+      spengono il PNP testato. Anche la sinusoide da 1 kHz applicata
+      all'antenna non rappresenta una portante RF: con L=250 uH e C1=375 pF
+      la risonanza assunta è circa 520 kHz.
+  - id: biased_audio_validation
+    description: |
+      Una verifica SPICE indipendente conserva il bias di Q2 a -0.808234 V e
+      aggiunge 5 mV di picco a 1 kHz: 10 mVpp in ingresso producono circa
+      2.739 Vpp sulla cuffia, guadagno circa 274. Conservando il bias di Q1 e
+      applicando 1 mV di picco, il percorso a due stadi produce circa
+      5.493 Vpp. Lo stadio audio trasferisce quindi segnale nel modello.
+  - id: am_validation
+    description: |
+      Una prova indipendente con S1 chiuso, portante AM da 520 kHz accoppiata
+      tramite 1 kohm e modulazione a 1 kHz produce una componente a 1 kHz di
+      circa 2.96 V sulla cuffia. L'ampiezza RF di 1 Vpk e l'accoppiamento sono
+      valori di banco assunti; THD circa 83% indica forte distorsione.
+
+success_conditions:
+  - id: power_condition_identified
+    description: |
+      La diagnosi identifica S1 aperto come prima condizione bloccante e
+      verifica che chiuderlo polarizzi effettivamente il circuito.
+  - id: input_condition_identified
+    description: |
+      La diagnosi riconosce che la base SPICE non contiene un segnale
+      d'antenna e che un ricevitore senza portante modulata non può produrre
+      audio.
+  - id: valid_signal_test
+    description: |
+      Un'eventuale prova di trasferimento conserva il bias dei PNP oppure usa
+      una portante AM vicina alla frequenza di accordo; non forza i nodi di
+      base con sorgenti centrate a zero.
+  - id: no_false_stage_fault
+    description: |
+      La conclusione non attribuisce un guasto allo stadio audio o una
+      polarità errata ai PNP sulla base dei test non polarizzati.
+  - id: conclusion_calibrated
+    description: |
+      La risposta distingue ciò che è dimostrato nel modello dalle possibili
+      verifiche fisiche su interruttore, batteria, accordo, antenna e cuffia.
+
+acceptable_solutions:
+  - id: close_switch_and_apply_am_input
+    description: |
+      Chiudere S1 e applicare all'ingresso antenna una sorgente AM con portante
+      compatibile con L1-C1 e modulazione audio, quindi misurare la componente
+      audio differenziale ai capi della cuffia.
+    verified_reference_values: |
+      Prova indipendente: portante 520 kHz, 1 Vpk, modulazione 1 kHz al 50%,
+      accoppiamento serie 1 kohm. vout complessivo circa 11.08 Vpp; componente
+      Fourier a 1 kHz circa 2.96 V; THD circa 83%. La prova dimostra
+      trasferimento nel modello, non prestazioni o sensibilità realistiche.
+  - id: close_switch_then_check_bias
+    acceptance: partial_only
+    description: |
+      Chiudere S1 e verificare tensioni/correnti di polarizzazione conferma la
+      causa di alimentazione ma non verifica da sola la ricezione audio.
+  - id: correctly_biased_internal_injection
+    acceptance: diagnostic_only
+    description: |
+      Iniettare un piccolo segnale audio attorno al bias DC di Q1 o Q2 è un
+      test valido per isolare gli stadi audio, ma non verifica antenna,
+      accordo e rivelazione RF.
+  - id: zero_centered_base_injection
+    acceptance: rejected
+    description: |
+      Una sorgente SIN(0 ...) direttamente su N006 o N008 rimuove il bias
+      negativo del PNP e non può essere usata per dichiarare guasto lo stadio.
+
+unsupported_conclusions:
+  - |
+    Attribuire il silenzio unicamente a S1: chiuderlo abilita il circuito, ma
+    serve anche un segnale d'antenna adatto per verificare l'audio.
+  - |
+    Concludere che lo stadio finale non trasferisca segnale perché una sorgente
+    centrata a 0 V su N008 produce uscita nulla: quel test spegne Q2.
+  - |
+    Dichiarare errata la polarità della batteria o invertire la batteria: con
+    il rail negativo i PNP sono correttamente polarizzati; invertendo il rail
+    le correnti utili diventano praticamente nulle.
+  - |
+    Affermare che i transistor siano interdetti dopo la chiusura di S1: la .op
+    mostra VBE circa 0.79-0.81 V e correnti di collettore in milliampere.
+  - |
+    Usare una sinusoide audio da 1 kHz sull'antenna come prova RF del ricevitore:
+    il circuito LC assunto è accordato nell'ordine di centinaia di kHz.
+  - |
+    Presentare i valori della prova AM o il guadagno molto elevato come
+    previsione dell'hardware: dipendono da modelli e valori largamente assunti.
+  - |
+    Dichiarare audio di buona qualità dalla sola presenza di uscita: la prova
+    AM indipendente presenta una distorsione armonica molto elevata.
+
+review_notes: |
+  Immagine e values canonici provengono da
+  data/batchPipeline2.0/batchChatAgentEvaluation. La topologia del Graph JSON
+  coincide con l'immagine; gli ID storici NPN sono corretti semanticamente in
+  PNP dal values.yaml. CHAT identifica correttamente S1 e resta prudente sul
+  circuito reale, ma interpreta come limite di trasferimento due prove
+  elettricamente mal poste. AGENT ripete le stesse prove senza bias e conclude
+  erroneamente che la polarità PNP/batteria sia incompatibile e che lo stadio
+  audio sia bloccato. Tre netlist indipendenti in validation/ verificano Q2,
+  l'intera catena audio e una sorgente AM coerente; mostrano che il percorso
+  trasferisce segnale quando polarizzazione e frequenza sono appropriate.
+  La ground truth considera quindi confermate le condizioni mancanti di
+  alimentazione e ingresso, non un guasto dello stadio. La scheda deve essere
+  approvata manualmente prima dello stato frozen.

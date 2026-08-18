@@ -1,0 +1,171 @@
+schema_version: 1
+circuit_id: "b06"
+review_status: frozen
+circuit_description: |
+  Radio AM economica con circuito accordato L1-C1, rivelatore a diodo AA119,
+  preamplificatore a transistor 2N3904 e amplificatore audio LM386. C3 porta
+  il segnale rivelato alla base di Q1, C4 accoppia il collettore al
+  potenziometro R3 e C5 collega l'uscita del LM386 all'altoparlante.
+task_type: "diagnosi di assenza dell'audio in una radio AM"
+user_symptom: |
+  La radio si accende, ma dall'altoparlante non si sente nulla. Quale potrebbe essere il problema?
+
+circuit_inventory:
+  component_count: 18
+  node_count: 11
+  component_types:
+    - "Antenna"
+    - "Battery"
+    - "Breaker"
+    - "Diode"
+    - "GND"
+    - "Inductor"
+    - "NPN_Transistor"
+    - "Operational_Amplifier"
+    - "Polarized_Capacitor"
+    - "Resistor"
+    - "Switch"
+  analysis_types:
+    - "op"
+    - "tran"
+
+required_evidence:
+  - id: explicit_model_assumptions
+    description: |
+      L1 e' assunta pari a 220 uH perche' la label dell'immagine e' ambigua;
+      C1 e' fissato a 365 pF nonostante sia variabile; R3 e' posto al massimo
+      volume; AA119 usa D_GENERIC; l'altoparlante e' un carico da 8 ohm e il
+      LM386 usa l'equivalente lineare LM386_SIMPLE. Queste sono condizioni del
+      testbench, non valori o prestazioni interamente verificati sull'hardware.
+  - id: topology_and_power_valid
+    description: |
+      La netlist conserva la catena visibile nell'immagine: LC su N001,
+      rivelatore N001-N004, Q1 tra N005/N006, ingresso audio N010, uscita N009
+      e altoparlante su N003 tramite C5. Con S1 chiuso N007 e' a 9 V. Il punto
+      di lavoro di Q1 e' coerente: base circa 0.660 V, collettore circa 1.282 V
+      e corrente di collettore circa 0.766 mA.
+  - id: base_has_no_rf_excitation
+    description: |
+      Nella base l'antenna e' un'interfaccia esterna non emessa come sorgente
+      SPICE. N001 e N004 restano praticamente a zero, la corrente del diodo e'
+      circa 1.69e-28 A e N010/N009/N003 non contengono segnale. La base prova
+      quindi una radio alimentata ma non eccitata, non un componente guasto.
+  - id: tuned_frequency
+    description: |
+      Con i valori assunti L1=220 uH e C1=365 pF la risonanza ideale vale circa
+      561.6 kHz. Un test del front-end deve usare una portante RF modulata
+      vicina a tale ordine di frequenza, non una semplice sinusoide audio
+      applicata all'antenna.
+  - id: internal_stage_tests
+    description: |
+      In CHAT, 5 mVpk a 1 kHz su N010 producono circa 124.7 mVpp sul nodo
+      altoparlante N003. Un'iniezione su N005 conservando il bias di 0.660106 V
+      porta N006 a circa 1.251 Vpp e N010 a circa 1.222 Vpp. Un'iniezione da
+      5 mVpk su N004 produce circa 4.14 mVpp su N005 e 497.8 mVpp su N010.
+      Nel modello, i blocchi da N004 fino all'altoparlante trasferiscono quindi
+      segnale; gli scenari sono diagnostici e non riparazioni.
+  - id: independent_am_validation
+    description: |
+      Una prova ngspice indipendente applica tramite 1 kohm una portante da
+      1 Vpk a 561.646 kHz, modulata al 10% da 1 kHz. Misura circa 2.180 Vpp sul
+      circuito accordato, 42.68 mVpp sul nodo rivelato N004, 389.0 mVpp su
+      N010 e 4.844 Vpp sull'altoparlante equivalente. Dimostra trasferimento
+      end-to-end nel modello sotto condizioni di banco assunte, non sensibilita'
+      o qualita' reali del ricevitore.
+  - id: output_measurement_semantics
+    description: |
+      L'altoparlante equivalente e' Rbreaker3_1 tra N003 e massa: la sua
+      tensione e' v(N003). v(N009,N003) e' invece la tensione ai capi del
+      condensatore di accoppiamento C5 e non deve essere chiamata tensione
+      sull'altoparlante. Nell'AGENT v(N003) cresce comunque da circa zero a
+      249.5 mVpp, percio' la risposta dello stadio finale resta verificata.
+
+success_conditions:
+  - id: missing_input_identified
+    description: |
+      La diagnosi riconosce che il silenzio della base dipende anzitutto
+      dall'assenza di una sorgente RF/AM, senza trasformarla automaticamente
+      in un guasto fisico dell'antenna.
+  - id: powered_stages_not_falsely_blmed
+    description: |
+      Alimentazione e polarizzazione di Q1 vengono considerate; non si
+      dichiara guasto il transistor o il LM386 soltanto perche' la base senza
+      ingresso ha uscita nulla.
+  - id: localization_supported_by_tests
+    description: |
+      Una localizzazione a monte dell'ingresso LM386 e' sostenuta da una
+      corretta iniezione su N010. Una localizzazione piu' precisa del front-end
+      richiede prove su N004/N005 oppure una portante AM sul circuito accordato.
+  - id: correct_output_quantity
+    description: |
+      L'uscita sull'altoparlante viene letta come v(N003) o corrente nel carico,
+      non come v(N009,N003), che appartiene a C5.
+  - id: conclusion_calibrated
+    description: |
+      La risposta distingue diagnosi del modello, verifica a blocchi e
+      correzione fisica; non presenta i risultati dell'equivalente lineare
+      LM386_SIMPLE come prestazioni reali del componente.
+
+acceptable_solutions:
+  - id: staged_audio_localization
+    acceptance: diagnostic_only
+    description: |
+      Iniettare un piccolo segnale audio prima sull'ingresso LM386 e poi,
+      risalendo, sui nodi N005 e N004. Se ogni tratto risponde, il silenzio e'
+      localizzato prima del nodo rivelato o nell'assenza di eccitazione RF.
+  - id: apply_am_input
+    description: |
+      Applicare all'antenna, tramite un'impedenza di sorgente, una portante AM
+      vicina alla risonanza L1-C1 e misurare il segnale rivelato e quello sul
+      carico. La prova indipendente in validation/b06_full_am_test.cir verifica
+      continuita' end-to-end con parametri esplicitamente assunti.
+  - id: physical_checks
+    acceptance: plausible_not_simulated
+    description: |
+      Nell'hardware controllare antenna e collegamenti, accordo di C1,
+      orientamento/efficienza di AA119, posizione di R3, alimentazione e
+      altoparlante. Sono controlli ragionevoli ma non guasti dimostrati dalle
+      simulazioni congelate.
+
+unsupported_conclusions:
+  - |
+    Affermare che l'antenna fisica sia certamente guasta: negli artefatti e'
+    semplicemente assente una sorgente RF equivalente.
+  - |
+    Usare l'uscita nulla della base senza segnale per dichiarare guasto Q1,
+    LM386 o altoparlante.
+  - |
+    Chiamare v(N009,N003) tensione sull'altoparlante o usare il rapporto circa
+    1.48 dell'AGENT come guadagno LM386: quella tensione e' ai capi di C5. Il
+    rapporto v(N003)/v(N010) nello scenario e' invece circa 12.47.
+  - |
+    Considerare una sinusoide da 1 kHz sull'antenna una verifica valida della
+    ricezione AM: l'ingresso richiede una portante nell'ordine di 562 kHz con
+    modulazione audio.
+  - |
+    Dichiarare che uno degli scenari CHAT o AGENT ha riparato il circuito:
+    sono iniezioni diagnostiche e nessuno e' un resolved_candidate.
+  - |
+    Generalizzare ampiezze, guadagno o qualita' all'hardware reale: AA119 e
+    LM386 non hanno modelli fedeli e LM386_SIMPLE non include clipping ai rail,
+    banda, distorsione o limiti di corrente.
+
+review_notes: |
+  Immagine e values canonici provengono da
+  data/batchPipeline2.0/batchChatAgentEvaluation. Graph e netlist coincidono
+  con la struttura dell'immagine; N008 e' un singleton storico, mentre
+  l'overlay validato collega l'ingresso effettivo del LM386 a N010. CHAT svolge
+  una diagnosi a blocchi tecnicamente coerente: verifica uscita, transistor e
+  tratto dopo il rivelatore, quindi conclude correttamente che la base manca
+  di eccitazione a monte. Non applica una correzione, come dichiara.
+
+  AGENT e' piu' efficiente: con una sola iniezione su N010 dimostra che il
+  ramo finale reagisce e localizza il problema a monte. La conclusione generale
+  e' corretta e prudente, ma la motivazione chiama erroneamente
+  v(N009,N003) tensione sul carico e ne usa il rapporto circa 1.48 come
+  guadagno; v(N003), presente nello stesso scenario, e' la prova corretta.
+  Inoltre una sola prova su N010 non distingue antenna, accordo, diodo e Q1.
+
+  La netlist indipendente validation/b06_full_am_test.cir verifica l'intera
+  catena con una sorgente AM coerente con la frequenza di accordo assunta.
+  La scheda e' stata approvata manualmente e congelata.

@@ -1,0 +1,267 @@
+{
+  "packet_schema_version": 1,
+  "packet_id": "a09_run_2",
+  "reference": {
+    "schema_version": 1,
+    "circuit_id": "a09",
+    "circuit_description": "Circuito alimentato da una batteria da 9 V attraverso un fusibile da\n500 mA e un connettore J1 a cinque pin. Il pin 1 (N003) riceve il +9 V\nprotetto; il pin 3 (N004) comanda, tramite SW2, una lampada equivalente a\n90 ohm; il pin 4 (N005) alimenta un LED rosso attraverso 330 ohm. Il pin 2\n(N002) è collegato soltanto a C1=100 nF verso massa e il pin 5 è a massa.\nI pin del connettore sono reti distinte e gli archi sui fili indicano\nattraversamenti senza giunzione.\n",
+    "task_type": "attivazione e verifica simultanea di due rami di carico",
+    "user_symptom": "Voglio accendere contemporaneamente la lampada e il LED mantenendo il circuito stabile. Individua la causa ed esegui gli scenari necessari per verificare, nella stessa simulazione, che entrambi siano attivi.\n",
+    "circuit_inventory": {
+      "component_count": 13,
+      "node_count": 8,
+      "component_types": [
+        "Battery",
+        "Capacitor",
+        "Connector",
+        "Fuse",
+        "GND",
+        "Lamp",
+        "LED",
+        "Resistor",
+        "Switch"
+      ],
+      "analysis_types": [
+        "op"
+      ]
+    },
+    "required_evidence": [
+      {
+        "id": "connector_pins_independent",
+        "description": "Il Graph JSON deve essere interpretato senza inventare continuità\ninterna a J1: N003, N002, N004 e N005 sono nodi distinti. In particolare\ngli archi disegnati sui conduttori non rappresentano nodi elettrici.\n"
+      },
+      {
+        "id": "base_supply_reaches_only_pin1",
+        "description": "Nel caso base batteria e fusibile portano N003 a 9 V, ma N004 e N005\nnon ricevono alimentazione; SW2 è inoltre aperto. La corrente della\nlampada è 0 A e quella del ramo LED è trascurabile.\n"
+      },
+      {
+        "id": "both_loads_measured_same_run",
+        "description": "La stessa simulazione corretta deve mostrare corrente non nulla sia\nnella lampada sia nel ramo R3-LED, non soltanto tensione su un nodo.\n"
+      },
+      {
+        "id": "current_budget_checked",
+        "description": "Nello scenario verificato la lampada assorbe circa 99.996 mA e il LED\ncirca 25.035 mA; la corrente totale fornita dalla batteria è circa\n125.031 mA, inferiore alla targa di 500 mA del fusibile.\n"
+      },
+      {
+        "id": "simulation_limits_acknowledged",
+        "description": "L'analisi disponibile è soltanto .op. Il fusibile è rappresentato come\nuna resistenza chiusa da 1 milliohm (1 mΩ) e non possiede un modello di apertura.\nInoltre ngspice segnala una matrice singolare sul nodo flottante N002 e\nconverge tramite procedure alternative. Questi limiti non annullano le\ncorrenti dei due carichi, ma impediscono di dimostrare stabilità\ntransitoria, termica o reale protezione del fusibile.\n"
+      }
+    ],
+    "success_conditions": [
+      {
+        "id": "cause_identified",
+        "description": "La conclusione identifica la mancata distribuzione del +9 V da N003 ai\npin 3 e 4, insieme allo switch aperto sul ramo lampada, senza attribuire\nil problema a batteria, fusibile o carichi.\n"
+      },
+      {
+        "id": "combined_correction_executed",
+        "description": "In un solo scenario N003 viene collegato a N004 e N005 e SW2 viene\nchiuso; ngspice completa l'analisi.\n"
+      },
+      {
+        "id": "lamp_and_led_active",
+        "description": "Nella stessa run la corrente della lampada è prossima a 100 mA e quella\ndel LED è prossima a 25 mA, con N005 vicino a 9 V e N007 vicino a 0.738 V.\n"
+      },
+      {
+        "id": "current_within_nominal_rating",
+        "description": "La somma delle correnti è inferiore a 500 mA, senza trasformare questo\nconfronto nominale nella prova di un modello dinamico del fusibile.\n"
+      },
+      {
+        "id": "conclusion_calibrated",
+        "description": "La conclusione limita il risultato all'attivazione DC simulata dei due\nrami e non dichiara provata la stabilità transitoria o hardware.\n"
+      }
+    ],
+    "acceptable_solutions": [
+      {
+        "id": "feed_both_branches_and_close_switch",
+        "description": "Collegare il nodo protetto N003 sia a N004 sia a N005 mediante\nfeed_nodes_from_source_node e chiudere switch25.1 nello stesso scenario.\n",
+        "verified_reference_values": "ngspice completa la .op; N003=8.999875 V, N004=8.999775 V,\nN005=8.999850 V, N006=8.999675 V e N007=0.738410 V. Corrente lampada\n99.9964 mA, corrente in R3 e LED 25.0347 mA, corrente totale della\nbatteria 125.031 mA.\n"
+      },
+      {
+        "id": "feed_only_one_branch",
+        "acceptance": "partial_only",
+        "description": "Alimentare soltanto N004 o soltanto N005 attiva al massimo uno dei due\ncarichi e non soddisfa la richiesta di simultaneità.\n"
+      },
+      {
+        "id": "omit_switch_closure",
+        "acceptance": "partial_only",
+        "description": "Alimentare entrambi i pin senza chiudere SW2 lascia aperto il ramo della\nlampada; chiudere soltanto SW2 non serve perché N004 resta non alimentato.\n"
+      }
+    ],
+    "unsupported_conclusions": [
+      "Considerare i pin di J1 già connessi internamente oppure collegare N002\nai rami di carico: immagine e Graph JSON mostrano reti separate.\n",
+      "Attribuire la mancata accensione a batteria o fusibile: N003 è già a 9 V\nnel caso base e la corrente base è praticamente nulla.\n",
+      "Dichiarare attivi entrambi i carichi dopo aver misurato soltanto la\ntensione di alimentazione o la corrente di un solo ramo.\n",
+      "Interpretare lo stato automatico partially_resolved come fallimento\nelettrico dello scenario combinato: deriva dalla misura base mancante di\nN004, eliminato dalla netlist quando lo switch è aperto.\n",
+      "Affermare che il fusibile è stato verificato nell'apertura o nella sua\ndinamica: il modello SPICE usato è soltanto una resistenza chiusa da\n1 milliohm (1 mΩ).\n",
+      "Dichiarare il circuito completamente stabile o privo di warning: è stata\neseguita solo la .op e ngspice segnala il nodo flottante N002.\n"
+    ]
+  },
+  "rubric": {
+    "score_scale": {
+      "0": "errato o assente",
+      "1": "utile ma incompleto o con limiti rilevanti",
+      "2": "corretto e adeguatamente verificato"
+    },
+    "criteria": [
+      "diagnostic_correctness",
+      "test_quality",
+      "evidence_interpretation",
+      "goal_achievement",
+      "conclusion_quality"
+    ]
+  },
+  "run": {
+    "initial_request": "Voglio accendere contemporaneamente la lampada e il LED mantenendo il circuito stabile. Individua la causa ed esegui gli scenari necessari per verificare, nella stessa simulazione, che entrambi siano attivi.",
+    "technical_status": "completed",
+    "base_spice": {
+      "status": "success",
+      "exit_code": 0,
+      "message": "ngspice completed successfully.",
+      "analyses": [
+        "op"
+      ]
+    },
+    "execution_counts": {
+      "scenarios_proposed": 1,
+      "scenarios_executed": 1,
+      "successful_spice_runs": 1,
+      "failed_spice_runs": 0
+    },
+    "scenarios": [
+      {
+        "scenario_id": "scenario_1",
+        "title": "Alimenta simultaneamente i due rami dal nodo batteria e chiude l'interruttore lampada",
+        "hypothesis": "Il problema non e nei carichi ma nella mancata distribuzione del +9 V ai pin del connettore che portano ai due rami: N004 per la lampada e N005 per il LED. Se N004 e N005 vengono alimentati dal nodo gia attivo N003 e lo switch viene chiuso, lampada e LED devono risultare entrambi attivi nella stessa run.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "feed_nodes_from_source_node",
+            "source_node": "N003",
+            "target_nodes": [
+              "N004",
+              "N005"
+            ]
+          },
+          {
+            "type": "close_switch",
+            "target": "switch25.1"
+          }
+        ],
+        "analysis": "op",
+        "compare": [
+          "i(Rlamp13_1)",
+          "i(Rresistor22_1)",
+          "i(Dled12_1)",
+          "v(N004)",
+          "v(N005)",
+          "v(N006)",
+          "v(N007)"
+        ],
+        "expect": {
+          "i(Rlamp13_1)": "activated",
+          "i(Dled12_1)": "activated",
+          "i(Rresistor22_1)": "activated",
+          "v(N004)": "changed",
+          "v(N005)": "changed"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "i(Rlamp13_1)",
+              "metric": "i(rlamp13_1)",
+              "measurement": "op",
+              "base_value": 0.0,
+              "scenario_value": 0.0999964,
+              "delta": 0.0999964,
+              "change": "activated",
+              "expectation": "activated",
+              "base_details": {},
+              "scenario_details": {}
+            },
+            {
+              "quantity": "i(Rresistor22_1)",
+              "metric": "i(rresistor22_1)",
+              "measurement": "op",
+              "base_value": -1.55275e-188,
+              "scenario_value": 0.0250347,
+              "delta": 0.0250347,
+              "change": "activated",
+              "expectation": "activated",
+              "base_details": {},
+              "scenario_details": {}
+            },
+            {
+              "quantity": "i(Dled12_1)",
+              "metric": "i(dled12_1)",
+              "measurement": "op",
+              "base_value": 1.55275e-188,
+              "scenario_value": 0.0250347,
+              "delta": 0.0250347,
+              "change": "activated",
+              "expectation": "activated",
+              "base_details": {},
+              "scenario_details": {}
+            },
+            {
+              "quantity": "v(N004)",
+              "metric": "v(n004)",
+              "measurement": "op",
+              "base_value": null,
+              "scenario_value": 8.999775,
+              "delta": null,
+              "change": "missing",
+              "expectation": "changed",
+              "base_details": {},
+              "scenario_details": {}
+            },
+            {
+              "quantity": "v(N005)",
+              "metric": "v(n005)",
+              "measurement": "op",
+              "base_value": 1.552748e-176,
+              "scenario_value": 8.99985,
+              "delta": 8.99985,
+              "change": "activated",
+              "expectation": "changed",
+              "base_details": {},
+              "scenario_details": {}
+            },
+            {
+              "quantity": "v(N006)",
+              "metric": "v(n006)",
+              "measurement": "op",
+              "base_value": 0.0,
+              "scenario_value": 8.999675,
+              "delta": 8.999675,
+              "change": "activated",
+              "expectation": null,
+              "base_details": {},
+              "scenario_details": {}
+            },
+            {
+              "quantity": "v(N007)",
+              "metric": "v(n007)",
+              "measurement": "op",
+              "base_value": 1.552748e-176,
+              "scenario_value": 0.7384097,
+              "delta": 0.7384097,
+              "change": "activated",
+              "expectation": null,
+              "base_details": {},
+              "scenario_details": {}
+            }
+          ],
+          "comparison_evidence": {},
+          "led_profiles": {}
+        }
+      }
+    ],
+    "final": {
+      "answer": "La causa e localizzata: il nodo batteria N003 e alimentato a 9 V, ma i due rami da attivare restano scollegati da esso nella base run. Il test controllato ha mostrato che, quando N004 e N005 vengono alimentati da N003 e l'interruttore della lampada viene chiuso, lampada e LED risultano entrambi attivi nella stessa simulazione.",
+      "cause": "Mancanza di continuita/distribuzione del +9 V dal connettore pin1/N003 verso i pin3/N004 e pin4/N005, con in piu switch25.1 aperto sul ramo lampada. Per questo nella netlist base il ramo lampada e aperto e il ramo LED e flottante, mentre i componenti stessi non risultano il problema.",
+      "verified_correction": ""
+    }
+  }
+}

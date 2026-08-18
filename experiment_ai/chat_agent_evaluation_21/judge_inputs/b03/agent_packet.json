@@ -1,0 +1,546 @@
+{
+  "packet_schema_version": 1,
+  "packet_id": "b03_run_2",
+  "reference": {
+    "schema_version": 1,
+    "circuit_id": "b03",
+    "circuit_description": "Monitor di tensione per batteria a tre LED: rosso D1, giallo D2 e verde D7.\nDue transistor BC547 NPN e un BC557 PNP, insieme alle reti di diodi 1N4148\ne agli zener da 10 V e 12 V, creano finestre di indicazione dipendenti dalla\ntensione. Il Graph JSON coincide con l'immagine. Q3 conserva un ID storico\ndi classe NPN, ma è correttamente modellato in SPICE come BC557 PNP.\n",
+    "task_type": "caratterizzazione statica e dinamica di un indicatore a soglie",
+    "user_symptom": "Voglio verificare tutti e tre i LED: prova batteria scarica, normale e carica, poi fai una rampa di tensione per vedere come si accendono e spengono nel tempo.\n",
+    "circuit_inventory": {
+      "component_count": 22,
+      "node_count": 17,
+      "component_types": [
+        "Battery",
+        "Diode",
+        "LED",
+        "NPN_Transistor",
+        "Resistor"
+      ],
+      "analysis_types": [
+        "op",
+        "tran"
+      ]
+    },
+    "required_evidence": [
+      {
+        "id": "model_assumptions",
+        "description": "L'immagine non riporta il valore della batteria e non contiene un\nsimbolo di massa. Il values.yaml assume una batteria automobilistica\nnominale da 12 V e aggiunge una sorgente ideale da 0 V sul terminale B\ncome riferimento SPICE. Queste scelte devono restare esplicite.\n"
+      },
+      {
+        "id": "base_12v_state",
+        "description": "A 12 V il LED rosso conduce circa 2.29e-11 A, il giallo circa 9.942 mA\ne il verde circa 6.02e-9 A: soltanto il giallo è operativamente acceso.\n"
+      },
+      {
+        "id": "static_low_high_states",
+        "description": "A 10 V il rosso conduce circa 8.238 mA e gli altri sono spenti secondo\nla soglia di 0.1 mA. A 14 V il giallo conduce circa 9.48 mA e il verde\ncirca 10.743 mA, mentre il rosso è spento. A 16 V resta acceso soltanto\nil verde, con circa 13.823 mA.\n"
+      },
+      {
+        "id": "monotonic_ramp",
+        "description": "Una rampa crescente della batteria deve verificare le correnti di tutti\ne tre i LED nel tempo. I profili transient_pulse rappresentano finestre\ndi conduzione attraversate una sola volta, non un lampeggio periodico.\n"
+      },
+      {
+        "id": "threshold_windows",
+        "description": "Analizzando direttamente i CSV con soglia LED di 0.1 mA, la rampa mostra:\nrosso solo fino a circa 11.53 V; rosso+giallo da circa 11.53 a 11.92 V;\ngiallo solo da circa 11.92 a 13.59 V; giallo+verde da circa 13.59 a\n14 V. Una prova statica a 16 V mostra poi il verde da solo.\n"
+      }
+    ],
+    "success_conditions": [
+      {
+        "id": "all_three_leds_checked",
+        "description": "La valutazione usa direttamente le correnti SPICE di rosso, giallo e\nverde e dimostra che ciascuno diventa attivo in una parte dell'intervallo.\n"
+      },
+      {
+        "id": "low_normal_high_explained",
+        "description": "La conclusione descrive correttamente almeno gli stati a 10 V, 12 V e\n14 V: rosso; giallo; giallo+verde.\n"
+      },
+      {
+        "id": "ramp_sequence_explained",
+        "description": "La rampa viene interpretata come sequenza di finestre di indicazione\nrosso, transizione rosso-giallo, giallo, transizione giallo-verde.\n"
+      },
+      {
+        "id": "overlap_acknowledged",
+        "description": "La conclusione non presenta il monitor come comparatore perfettamente\nesclusivo: sono presenti intervalli nei quali conducono due LED.\n"
+      },
+      {
+        "id": "conclusion_calibrated",
+        "description": "Soglie e correnti sono riferite ai modelli SPICE e alla soglia operativa\nscelta; non vengono presentate come misure garantite sull'hardware reale.\n"
+      }
+    ],
+    "acceptable_solutions": [
+      {
+        "id": "static_points_plus_ramp",
+        "description": "Eseguire prove statiche a 10 V, 12 V e 14 V e una rampa 10-14 V,\nconfrontando le tre correnti LED. La prova a 16 V è un'estensione utile\nper dimostrare lo stato verde-only.\n",
+        "verified_reference_values": "10 V: rosso 8.238 mA, giallo 0.0756 mA, verde trascurabile. 12 V:\ngiallo 9.942 mA, rosso e verde trascurabili. 14 V: giallo circa\n9.48 mA e verde 10.743 mA. 16 V: verde 13.823 mA, altri trascurabili.\n"
+      },
+      {
+        "id": "single_ramp_with_base",
+        "description": "Usare il caso base a 12 V insieme a una sola rampa monotona 9-14 V è\nsufficiente per verificare che tutti e tre i LED si attivino e per\nricostruire la sequenza, purché siano esaminate le tre correnti e non\nsoltanto le etichette automatiche.\n",
+        "verified_reference_values": "Nella rampa RUN 9-14 V i massimi sono circa 9.948 mA per il rosso,\n11.926 mA per il giallo e 10.743 mA per il verde. Con soglia 0.1 mA le\nfinestre risultano coerenti con la rampa RUN 10-14 V.\n"
+      },
+      {
+        "id": "static_tests_without_ramp",
+        "acceptance": "partial_only",
+        "description": "I soli punti statici verificano alcuni stati, ma non mostrano l'ordine\ntemporale delle transizioni richiesto dall'utente.\n"
+      },
+      {
+        "id": "ramp_without_individual_currents",
+        "acceptance": "partial_only",
+        "description": "Osservare soltanto la tensione della batteria o un unico LED non basta\nper dichiarare verificato il monitor a tre indicazioni.\n"
+      }
+    ],
+    "unsupported_conclusions": [
+      "Trattare Q3 come NPN a causa dell'ID del componente: l'immagine indica\nBC557 e la netlist usa correttamente un modello PNP.\n",
+      "Presentare i 12 V come valore letto nell'immagine: è un'assunzione basata\nsul contesto automobilistico del circuito originale.\n",
+      "Interpretare transient_pulse durante una rampa monotona come lampeggio o\ninstabilità: ogni soglia viene attraversata una sola volta.\n",
+      "Affermare che a 14 V sia acceso soltanto il verde: SPICE mostra giallo e\nverde contemporaneamente; il verde-only è verificato a 16 V.\n",
+      "Dichiarare perfettamente esclusive le indicazioni: i CSV mostrano sia una\nfascia rosso+giallo sia una fascia giallo+verde.\n",
+      "Considerare fallita la rampa RUN perché D2 non soddisfa required_state=on:\nil criterio è inadatto a una finestra transitoria, mentre le correnti\ndimostrano correttamente il passaggio di tutti e tre i LED.\n",
+      "Usare tran_vpp per confrontare due tensioni DC costanti: 10, 12, 14 e\n16 V hanno tutti Vpp nullo; occorrono valore medio, finale, minimo o massimo.\n"
+    ]
+  },
+  "rubric": {
+    "score_scale": {
+      "0": "errato o assente",
+      "1": "utile ma incompleto o con limiti rilevanti",
+      "2": "corretto e adeguatamente verificato"
+    },
+    "criteria": [
+      "diagnostic_correctness",
+      "test_quality",
+      "evidence_interpretation",
+      "goal_achievement",
+      "conclusion_quality"
+    ]
+  },
+  "run": {
+    "initial_request": "Voglio capire se il monitor della batteria funziona correttamente quando la batteria passa da scarica a carica. Verifica autonomamente tutti e tre i LED e mostrami anche come cambia l’indicazione nel tempo mentre la tensione aumenta.",
+    "technical_status": "completed",
+    "base_spice": {
+      "status": "success",
+      "exit_code": 0,
+      "message": "ngspice completed successfully.",
+      "analyses": [
+        "op",
+        "tran"
+      ]
+    },
+    "execution_counts": {
+      "scenarios_proposed": 1,
+      "scenarios_executed": 1,
+      "successful_spice_runs": 1,
+      "failed_spice_runs": 0
+    },
+    "scenarios": [
+      {
+        "scenario_id": "scenario_1",
+        "title": "Ramp batteria da scarica a carica per osservare la sequenza dei tre LED",
+        "hypothesis": "Variando la tensione della batteria con una rampa temporale si puo verificare direttamente come cambiano le correnti dei tre LED e quindi se il monitor passa tra le indicazioni attese durante la carica.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vbattery2_1",
+            "value": "PWL(0s 9V 1s 11V 2s 12V 3s 14V)"
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "@dled12_1[id]",
+          "@dled12_2[id]",
+          "@dled12_3[id]",
+          "v(N002)",
+          "v(N004)",
+          "v(N011)",
+          "v(N012)"
+        ],
+        "expect": {
+          "@dled12_1[id]": "changed",
+          "@dled12_2[id]": "changed",
+          "@dled12_3[id]": "changed",
+          "v(N002)": "changed",
+          "v(N004)": "changed",
+          "v(N011)": "changed",
+          "v(N012)": "changed"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "@dled12_1[id]",
+              "metric": "@dled12_1[id].abs_peak",
+              "measurement": "tran_abs_peak",
+              "base_value": 2.28883483e-11,
+              "scenario_value": 0.0099479244,
+              "delta": 0.009947924377111653,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": 2.28883433e-11,
+                "max": 2.28883483e-11,
+                "mean": 2.2888345816589097e-11,
+                "vpp": 4.999999999655152e-18,
+                "final": 2.28883478e-11,
+                "abs_peak": 2.28883483e-11
+              },
+              "scenario_details": {
+                "min": 2.28825138e-11,
+                "max": 0.0099479244,
+                "mean": 0.0055365448203976795,
+                "vpp": 0.009947924377117487,
+                "final": 2.68646428e-11,
+                "abs_peak": 0.0099479244
+              }
+            },
+            {
+              "quantity": "@dled12_2[id]",
+              "metric": "@dled12_2[id].abs_peak",
+              "measurement": "tran_abs_peak",
+              "base_value": 0.00994158165,
+              "scenario_value": 0.011926424,
+              "delta": 0.00198484235,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": 0.00994158165,
+                "max": 0.00994158165,
+                "mean": 0.00994158165,
+                "vpp": 0.0,
+                "final": 0.00994158165,
+                "abs_peak": 0.00994158165
+              },
+              "scenario_details": {
+                "min": 6.57942708e-05,
+                "max": 0.011926424,
+                "mean": 0.004336662514764067,
+                "vpp": 0.0118606297292,
+                "final": 0.00947930191,
+                "abs_peak": 0.011926424
+              }
+            },
+            {
+              "quantity": "@dled12_3[id]",
+              "metric": "@dled12_3[id].abs_peak",
+              "measurement": "tran_abs_peak",
+              "base_value": 6.01978515e-09,
+              "scenario_value": 0.0107430422,
+              "delta": 0.010743036180214851,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": 6.01978142e-09,
+                "max": 6.01978515e-09,
+                "mean": 6.019781610545213e-09,
+                "vpp": 3.729999999865528e-15,
+                "final": 6.01978179e-09,
+                "abs_peak": 6.01978515e-09
+              },
+              "scenario_details": {
+                "min": 6.01422802e-09,
+                "max": 0.0107430422,
+                "mean": 0.0003644971878154393,
+                "vpp": 0.01074303618577198,
+                "final": 0.0107430422,
+                "abs_peak": 0.0107430422
+              }
+            },
+            {
+              "quantity": "v(N002)",
+              "metric": "v(n002).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.0,
+              "scenario_value": 5.0,
+              "delta": 5.0,
+              "change": "activated",
+              "expectation": "changed",
+              "base_details": {
+                "min": 12.0,
+                "max": 12.0,
+                "mean": 12.0,
+                "vpp": 0.0,
+                "final": 12.0,
+                "abs_peak": 12.0
+              },
+              "scenario_details": {
+                "min": 9.0,
+                "max": 14.0,
+                "mean": 11.494878151957531,
+                "vpp": 5.0,
+                "final": 14.0,
+                "abs_peak": 14.0
+              }
+            },
+            {
+              "quantity": "v(N004)",
+              "metric": "v(n004).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.0,
+              "scenario_value": 4.648752280000001,
+              "delta": 4.648752280000001,
+              "change": "activated",
+              "expectation": "changed",
+              "base_details": {
+                "min": 10.1142021,
+                "max": 10.1142021,
+                "mean": 10.1142021,
+                "vpp": 0.0,
+                "final": 10.1142021,
+                "abs_peak": 10.1142021
+              },
+              "scenario_details": {
+                "min": 7.47253762,
+                "max": 12.1212899,
+                "mean": 9.804686205096218,
+                "vpp": 4.648752280000001,
+                "final": 12.1212899,
+                "abs_peak": 12.1212899
+              }
+            },
+            {
+              "quantity": "v(N011)",
+              "metric": "v(n011).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 0.0,
+              "scenario_value": 6.07785179,
+              "delta": 6.07785179,
+              "change": "activated",
+              "expectation": "changed",
+              "base_details": {
+                "min": 11.4818982,
+                "max": 11.4818982,
+                "mean": 11.4818982,
+                "vpp": 0.0,
+                "final": 11.4818982,
+                "abs_peak": 11.4818982
+              },
+              "scenario_details": {
+                "min": 7.39560011,
+                "max": 13.4734519,
+                "mean": 10.262776539233577,
+                "vpp": 6.07785179,
+                "final": 13.4734519,
+                "abs_peak": 13.4734519
+              }
+            },
+            {
+              "quantity": "v(N012)",
+              "metric": "v(n012).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 3.0000000039720476e-08,
+              "scenario_value": 0.8521244799999999,
+              "delta": 0.8521244499999998,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": 1.16485884,
+                "max": 1.16485887,
+                "mean": 1.1648588400199469,
+                "vpp": 3.0000000039720476e-08,
+                "final": 1.16485884,
+                "abs_peak": 1.16485887
+              },
+              "scenario_details": {
+                "min": 1.16481109,
+                "max": 2.01693557,
+                "mean": 1.2288693808095554,
+                "vpp": 0.8521244799999999,
+                "final": 2.01693557,
+                "abs_peak": 2.01693557
+              }
+            }
+          ],
+          "comparison_evidence": {
+            "temporal_expectation": {
+              "target": "Dled12_2",
+              "available": true,
+              "met": false,
+              "reason": "Almeno un criterio temporale non e soddisfatto.",
+              "base_profile": {
+                "status": "measured",
+                "state": "steady_on",
+                "threshold_v": null,
+                "profile_method": "device_current",
+                "anode_node": "N002",
+                "cathode_node": "N004",
+                "on_fraction": 1.0,
+                "duty_cycle": 1.0,
+                "display_duty_cycle": 0.8,
+                "regular_period": false,
+                "period_s": null,
+                "frequency_hz": null,
+                "playback_duration_s": 6.0,
+                "playback_slowdown": 10.0,
+                "pulse_count": 1,
+                "timeline_key_times": [
+                  0.0,
+                  1.0
+                ],
+                "timeline_states": [
+                  true,
+                  true
+                ],
+                "voltage_min": 1.8857979,
+                "voltage_max": 1.8857979,
+                "threshold_current_a": 0.0001,
+                "current_min_a": 0.00994158165,
+                "current_max_a": 0.00994158165
+              },
+              "scenario_profile": {
+                "status": "measured",
+                "state": "transient_pulse",
+                "threshold_v": null,
+                "profile_method": "device_current_hysteresis",
+                "anode_node": "N002",
+                "cathode_node": "N004",
+                "on_fraction": 0.39747843397478433,
+                "duty_cycle": 0.39747843397478433,
+                "display_duty_cycle": 0.5843671259547573,
+                "regular_period": false,
+                "period_s": null,
+                "frequency_hz": null,
+                "playback_duration_s": 6.0,
+                "playback_slowdown": 10.0,
+                "pulse_count": 1,
+                "timeline_key_times": [
+                  0.0,
+                  0.6021666666666666,
+                  1.0
+                ],
+                "timeline_states": [
+                  false,
+                  true,
+                  true
+                ],
+                "voltage_min": 1.5274623800000002,
+                "voltage_max": 1.9150627,
+                "threshold_current_a": 0.0001,
+                "current_min_a": 6.57942708e-05,
+                "current_max_a": 0.011926424,
+                "turn_on_current_a": 0.00481004616248,
+                "turn_off_current_a": 0.0018448887301799998
+              },
+              "conditions": [
+                {
+                  "criterion": "required_state",
+                  "expected": "on",
+                  "actual": "transient_pulse",
+                  "met": false
+                }
+              ]
+            }
+          },
+          "led_profiles": {
+            "Dled12_1": {
+              "status": "measured",
+              "state": "transient_pulse",
+              "threshold_v": null,
+              "profile_method": "device_current_hysteresis",
+              "anode_node": "N002",
+              "cathode_node": "N011",
+              "on_fraction": 0.6366954213669542,
+              "duty_cycle": 0.6366954213669542,
+              "display_duty_cycle": 0.7183455722998716,
+              "regular_period": false,
+              "period_s": null,
+              "frequency_hz": null,
+              "playback_duration_s": 6.0,
+              "playback_slowdown": 10.0,
+              "pulse_count": 1,
+              "timeline_key_times": [
+                0.0,
+                0.6365,
+                1.0
+              ],
+              "timeline_states": [
+                true,
+                false,
+                false
+              ],
+              "voltage_min": 0.5180883000000005,
+              "voltage_max": 1.6476695999999986,
+              "threshold_current_a": 0.0001,
+              "current_min_a": 2.28825138e-11,
+              "current_max_a": 0.0099479244,
+              "turn_on_current_a": 0.003979169773729509,
+              "turn_off_current_a": 0.0014921886794501368
+            },
+            "Dled12_2": {
+              "status": "measured",
+              "state": "transient_pulse",
+              "threshold_v": null,
+              "profile_method": "device_current_hysteresis",
+              "anode_node": "N002",
+              "cathode_node": "N004",
+              "on_fraction": 0.39747843397478433,
+              "duty_cycle": 0.39747843397478433,
+              "display_duty_cycle": 0.5843671259547573,
+              "regular_period": false,
+              "period_s": null,
+              "frequency_hz": null,
+              "playback_duration_s": 6.0,
+              "playback_slowdown": 10.0,
+              "pulse_count": 1,
+              "timeline_key_times": [
+                0.0,
+                0.6021666666666666,
+                1.0
+              ],
+              "timeline_states": [
+                false,
+                true,
+                true
+              ],
+              "voltage_min": 1.5274623800000002,
+              "voltage_max": 1.9150627,
+              "threshold_current_a": 0.0001,
+              "current_min_a": 6.57942708e-05,
+              "current_max_a": 0.011926424,
+              "turn_on_current_a": 0.00481004616248,
+              "turn_off_current_a": 0.0018448887301799998
+            },
+            "Dled12_3": {
+              "status": "measured",
+              "state": "transient_pulse",
+              "threshold_v": null,
+              "profile_method": "device_current_hysteresis",
+              "anode_node": "N012",
+              "cathode_node": "N001",
+              "on_fraction": 0.037491705374917056,
+              "duty_cycle": 0.037491705374917056,
+              "display_duty_cycle": 0.2349021995968647,
+              "regular_period": false,
+              "period_s": null,
+              "frequency_hz": null,
+              "playback_duration_s": 6.0,
+              "playback_slowdown": 10.0,
+              "pulse_count": 1,
+              "timeline_key_times": [
+                0.0,
+                0.9628333333333333,
+                1.0
+              ],
+              "timeline_states": [
+                false,
+                true,
+                true
+              ],
+              "voltage_min": 1.16481109,
+              "voltage_max": 2.01693557,
+              "threshold_current_a": 0.0001,
+              "current_min_a": 6.01422802e-09,
+              "current_max_a": 0.0107430422,
+              "turn_on_current_a": 0.004297220488536813,
+              "turn_off_current_a": 0.0016114614420938169
+            }
+          }
+        }
+      }
+    ],
+    "final": {
+      "answer": "Il monitor segue la salita della tensione batteria mostrando in sequenza i tre LED: dal caso base a 12 V il LED giallo e acceso stabilmente, mentre con la rampa 9->11->12->14 V tutti e tre i LED diventano attivi almeno una volta. In particolare il rosso mostra un impulso transitorio con duty circa 0.6367, il giallo un impulso transitorio con duty circa 0.3975 e il verde un impulso breve con duty circa 0.0375. Quindi l'indicazione cambia effettivamente nel tempo mentre la tensione aumenta, ma ciascun LED compare come finestra/transizione singola e non come stato periodico o regolare.",
+      "cause": "Il comportamento osservato e coerente con un indicatore a soglie basato su rete di diodi/zener e transistor: a tensione fissa di 12 V il ramo del LED giallo conduce quasi da solo (@dled12_2[id] circa 9.94 mA), mentre il rosso e il verde restano praticamente spenti. Quando la batteria sale con la rampa, i nodi di soglia N004, N011 e N012 cambiano e fanno attraversare ai tre rami le rispettive soglie di conduzione, producendo impulsi transitori su tutti i LED. Non emerge una topologia interrotta; l'evidenza forte e che il circuito indica il passaggio da scarica a carica tramite finestre di accensione successive, non tramite tre stati DC simultanei o temporali regolari.",
+      "verified_correction": ""
+    }
+  }
+}

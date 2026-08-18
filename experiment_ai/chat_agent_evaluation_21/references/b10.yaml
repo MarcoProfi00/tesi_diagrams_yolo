@@ -1,0 +1,165 @@
+schema_version: 1
+circuit_id: "b10"
+review_status: frozen
+circuit_description: |
+  Modello equivalente non ideale di uno switch analogico tra i terminali A e
+  B, comandato simbolicamente dal terminale C. Il ramo ON contiene rON,
+  switch ideale e offset VOS; nello stato OFF restano rOFF, la corrente IOFF
+  e le capacita' parassite CA, CB, CAB, CAC e CBC. IA e IB rappresentano le
+  correnti esterne ai terminali.
+task_type: "interpretazione del livello di uscita di uno switch analogico aperto"
+user_symptom: |
+  Su A leggo 1 V, ma su B leggo quasi zero. E' normale o c'e' qualcosa che non va?
+
+circuit_inventory:
+  component_count: 17
+  node_count: 6
+  component_types:
+    - "Current_Source"
+    - "GND"
+    - "Polarized_Capacitor"
+    - "Resistor"
+    - "Switch"
+    - "Terminal"
+    - "Voltage_Source"
+  analysis_types:
+    - "op"
+    - "tran"
+
+required_evidence:
+  - id: symbolic_testbench_assumptions
+    description: |
+      L'immagine nomina i parametri ma non assegna valori numerici. Il banco
+      assume A=1 V, C=0 V, rON=10 ohm, rOFF=1 Gohm, VOS=1 mV, IOFF=1 pA,
+      IA=0 A, IB=1 nA e tutte le capacita' pari a 5 pF. Sono scelte di test,
+      non caratteristiche lette da un componente reale.
+  - id: topology_matches_equivalent_model
+    description: |
+      La node map coincide con l'immagine: A=N001, B=N002, C=N003; il ramo
+      rON-switch-VOS passa per N004 e N005; rOFF, IOFF e CAB sono tra A e B;
+      CA e CB sono verso massa; CAC e CBC collegano A/B al controllo C. Lo
+      switch e' esplicitamente aperto nella base.
+  - id: open_state_dc_result
+    description: |
+      Il punto di lavoro misura A=N001=1 V, B=N002=1 mV, C=N003=0 V,
+      N004=1 V e N005=2 mV. Con lo switch aperto il ramo a bassa resistenza
+      non conduce; B e' determinato dal solo modello OFF e dal carico IB.
+  - id: exact_b_node_balance
+    description: |
+      In continua le capacita' non conducono e, con il ramo ON aperto,
+      IB = IOFF + (A-B)/rOFF. Quindi
+      B = 1 V - 1 Gohm*(1 nA-1 pA) = 1 mV. Il quasi-zero e' pertanto il
+      risultato atteso delle assunzioni, non un guasto dimostrato.
+  - id: vos_is_not_open_state_cause
+    description: |
+      Con lo switch aperto N005 e' flottante salvo la sorgente VOS: questa
+      impone soltanto N005=B+VOS e non fissa B. La prova indipendente porta
+      VOS da 1 mV a 100 mV: B resta 1 mV mentre N005 passa da 2 mV a 101 mV.
+      Eliminando invece IOFF, B passa esattamente a 0 V.
+  - id: closed_state_validation
+    description: |
+      Chiudendo lo switch, CHAT misura B circa 0.999 V, N005=1 V e N004=1 V;
+      AGENT ottiene lo stesso risultato. Una prova ngspice indipendente
+      conferma B=0.999 V. La differenza A-B e' dominata dal VOS in serie;
+      la caduta su rON e' trascurabile con il carico da 1 nA.
+  - id: transient_is_not_exercised
+    description: |
+      La transitoria base e' piatta perche' sorgenti e stato dello switch sono
+      costanti e il calcolo parte dal punto di lavoro. Essa non valida la
+      risposta delle capacita' parassite; per farlo servirebbe un gradino o
+      una commutazione temporale esplicita.
+
+success_conditions:
+  - id: answer_normal_in_open_state
+    description: |
+      La risposta dice chiaramente che A=1 V e B circa zero sono normali nello
+      stato aperto e con i parametri assunti.
+  - id: correct_dc_causality
+    description: |
+      Il valore di B viene spiegato tramite rOFF, IOFF e IB, oppure almeno come
+      effetto del percorso di perdita e del carico. VOS non viene indicato
+      come sorgente che porta autonomamente B a 1 mV nello stato aperto.
+  - id: switch_test_interpreted_as_state_change
+    description: |
+      La chiusura dello switch e' interpretata come confronto ON/OFF che
+      conferma il modello, non necessariamente come riparazione di un guasto.
+  - id: no_false_transient_claim
+    description: |
+      La transitoria piatta non viene usata per dichiarare validate le cinque
+      capacita' o le prestazioni dinamiche dello switch.
+  - id: assumptions_calibrated
+    description: |
+      La conclusione resta riferita al banco simbolico con valori assunti e
+      non viene generalizzata a uno specifico switch fisico.
+
+acceptable_solutions:
+  - id: direct_open_state_explanation
+    description: |
+      Rispondere senza altri scenari che il comportamento e' normale: il ramo
+      ON e' aperto e il nodo B e' governato dal bilancio tra perdita OFF e IB.
+      L'equazione nodale costituisce gia' una verifica sufficiente del sintomo.
+  - id: close_switch_comparison
+    acceptance: diagnostic_only
+    description: |
+      Chiudere lo switch e verificare che B salga da 1 mV a circa 0.999 V e'
+      un confronto ON/OFF valido, ma cambia la condizione operativa e non prova
+      che lo switch aperto fosse un guasto.
+  - id: parameter_causality_checks
+    acceptance: diagnostic_only
+    description: |
+      Variare separatamente IOFF, IB, rOFF e VOS permette di attribuire il
+      valore di B alla causa corretta. La prova indipendente e' disponibile in
+      validation/b10_dc_causality_test.cir.
+  - id: dynamic_parasitic_test
+    acceptance: optional
+    description: |
+      Se si vogliono valutare le capacita' parassite, applicare un gradino ad
+      A o una commutazione controllata e usare un passo temporale adeguato.
+      Non e' necessario per rispondere al sintomo DC posto dall'utente.
+
+unsupported_conclusions:
+  - |
+    Affermare che VOS da 1 mV porti B a 1 mV quando lo switch e' aperto: VOS
+    agisce tra N005 e B, ma N005 e' altrimenti flottante.
+  - |
+    Dichiarare lo switch guasto o proporne obbligatoriamente la chiusura come
+    riparazione: lo schema rappresenta intenzionalmente lo stato OFF.
+  - |
+    Considerare B quasi zero inspiegabile perche' esiste rOFF: con 1 Gohm il
+    trasferimento e' nell'ordine dei nanoampere e viene bilanciato da IB.
+  - |
+    Dire che la mancata variazione di N004 nello scenario AGENT contraddica la
+    chiusura: N004 e' gia' circa 1 V perche' collegato ad A attraverso rON e
+    A e' imposto da una sorgente ideale.
+  - |
+    Trattare l'assenza di resolved_candidate come incapacita' di rispondere
+    alla domanda. Il sintomo non richiede una correzione: chiede se il livello
+    sia normale, e il punto di lavoro permette di rispondere direttamente.
+  - |
+    Presentare la transitoria piatta come verifica delle capacita' o dei tempi
+    di commutazione: il banco non contiene alcuna eccitazione temporale.
+
+review_notes: |
+  Immagine e values canonici provengono da
+  data/batchPipeline2.0/batchChatAgentEvaluation. La topologia del Graph JSON
+  coincide con il modello equivalente mostrato e non presenta terminali
+  scollegati o associazioni sospette. Il valore di B e' stato verificato sia
+  analiticamente sia con la netlist indipendente
+  validation/b10_dc_causality_test.cir.
+
+  CHAT risponde correttamente che il comportamento e' normale nello stato
+  aperto e lo scenario di chiusura conferma il passaggio a circa 0.999 V.
+  Tuttavia attribuisce erroneamente il piccolo valore di B anche a VOS e
+  propone uno scenario di azzeramento di VOS con aspettativa sbagliata: nello
+  stato aperto B non cambierebbe. La conclusione principale sullo switch e'
+  comunque corretta. La richiesta di una "risoluzione completa" e' superflua,
+  poiche' il comportamento osservato non e' necessariamente un problema.
+
+  AGENT e' piu' diretto e conclude correttamente che il quasi-zero e' normale;
+  esegue un solo confronto ON/OFF e si ferma. Anch'esso attribuisce in parte
+  B=1 mV a VOS, errore causale minore. Inoltre si aspettava senza motivo una
+  variazione di N004: l'aspettativa fallisce, ma non indebolisce il risultato
+  su B. Nel complesso entrambe le modalita' centrano la risposta utente;
+  AGENT e' piu' efficiente, CHAT documenta maggiormente i limiti.
+
+  La scheda e' stata approvata manualmente e congelata.

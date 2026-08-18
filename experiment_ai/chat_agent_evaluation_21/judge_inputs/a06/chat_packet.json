@@ -1,0 +1,515 @@
+{
+  "packet_schema_version": 1,
+  "packet_id": "a06_run_1",
+  "reference": {
+    "schema_version": 1,
+    "circuit_id": "a06",
+    "circuit_description": "Amplificatore a emettitore comune con transistor 2N2222, alimentazione\nda 12 V, partitore di bias da 100 kohm e 47 kohm, resistenza di collettore\nda 6.8 kohm e resistenza di emettitore da 3.9 kohm bypassata da 100 uF.\nL'ingresso passa attraverso 1 kohm e Cc1 da 1 uF; l'uscita N005 è\naccoppiata tramite Cc2 da 10 uF al carico da 10 kohm. Per il transitorio\nè stata assunta una sinusoide da 1 V di picco a 100 Hz.\n",
+    "task_type": "diagnosi e riduzione della distorsione di un amplificatore",
+    "user_symptom": "Il circuito amplifica, ma l’uscita mi sembra troppo distorta o poco pulita. Quale potrebbe essere il problema?\n",
+    "circuit_inventory": {
+      "component_count": 18,
+      "node_count": 9,
+      "component_types": [
+        "Capacitor",
+        "GND",
+        "NPN_Transistor",
+        "Resistor",
+        "Signal_Source",
+        "Terminal"
+      ],
+      "analysis_types": [
+        "op",
+        "tran"
+      ]
+    },
+    "required_evidence": [
+      {
+        "id": "base_bias",
+        "description": "Il punto di lavoro iniziale è plausibile: base N002 circa 3.664 V,\nemettitore N003 circa 3.024 V e collettore N004 circa 6.763 V.\n"
+      },
+      {
+        "id": "base_distortion",
+        "description": "Con l'ingresso assunto di 1 V di picco a 100 Hz, l'uscita N005 è\nfortemente asimmetrica e la THD calcolata sulle prime cinque armoniche\nè circa 83.02 percento.\n"
+      },
+      {
+        "id": "overdrive_test",
+        "description": "La diagnosi deve essere verificata riducendo l'ampiezza d'ingresso e\nconfrontando la THD di N005 a parità di frequenza e circuito.\n"
+      },
+      {
+        "id": "output_preservation",
+        "description": "La riduzione della THD deve mantenere un'uscita fondamentale non nulla\ne un guadagno utile; non è sufficiente ridurre semplicemente tutti i\nsegnali verso zero.\n"
+      }
+    ],
+    "success_conditions": [
+      {
+        "id": "thd_improved",
+        "description": "La THD di N005 si riduce di almeno il 20 percento rispetto alla base.\n"
+      },
+      {
+        "id": "thd_acceptable",
+        "description": "La THD finale di N005 è al massimo circa il 10 percento secondo la\nmetrica adottata dall'esperimento.\n"
+      },
+      {
+        "id": "useful_output_preserved",
+        "description": "La componente fondamentale dell'uscita rimane chiaramente non nulla\ne il relativo guadagno non scende sotto il 25 percento del guadagno\nfondamentale della base.\n"
+      },
+      {
+        "id": "correction_verified",
+        "description": "La modifica viene eseguita con analisi transitoria ngspice conclusa\ncon successo e la THD viene calcolata sul tratto stabile del segnale.\n"
+      },
+      {
+        "id": "conclusion_calibrated",
+        "description": "La conclusione identifica il sovrapilotaggio nella simulazione adottata\ne segnala che ampiezza e frequenza del transitorio derivano da\nassunzioni del values.yaml.\n"
+      }
+    ],
+    "acceptable_solutions": [
+      {
+        "id": "reduce_input_to_20mv",
+        "description": "Ridurre la sorgente sinusoidale da 1 V a 20 mV di picco, mantenendo\nla frequenza a 100 Hz.\n",
+        "verified_reference_values": "THD di N005 da 83.02 a 9.79 percento, guadagno fondamentale circa\n76.98 e componente fondamentale d'uscita circa 3.081 Vpp.\n"
+      },
+      {
+        "id": "equivalent_input_attenuation",
+        "description": "Applicare un'attenuazione equivalente all'ingresso che porti il\nsegnale effettivo vicino a 20 mV di picco e verificare THD non superiore\nal 10 percento con uscita utile preservata.\n"
+      },
+      {
+        "id": "reduce_input_to_100mv",
+        "acceptance": "partial_only",
+        "description": "A 100 mV di picco la THD scende a circa 35.01 percento: conferma\nl'ipotesi di sovrapilotaggio ma non produce ancora un segnale pulito.\n"
+      },
+      {
+        "id": "reduce_input_to_50mv",
+        "acceptance": "partial_only",
+        "description": "A 50 mV di picco la THD scende a circa 22.38 percento con uscita\npreservata: è un miglioramento importante ma resta sopra la soglia\noperativa del 10 percento.\n"
+      }
+    ],
+    "unsupported_conclusions": [
+      "Dichiarare che il problema è risolto usando soltanto ampiezze picco-picco\nsenza misurare la distorsione o controllare la forma d'onda.\n",
+      "Considerare 100 mV o 50 mV una correzione completa: entrambe le prove\nlasciano la THD sopra il 10 percento.\n",
+      "Attribuire la distorsione principalmente a un bias errato sulla sola\nbase della topologia: portare la resistenza inferiore del partitore da\n47 kohm a 100 kohm lascia una THD di circa 75.27 percento.\n",
+      "Affermare che il transistor o i condensatori siano guasti senza evidenze\nspecifiche della simulazione.\n",
+      "Presentare 1 V di picco e 100 Hz come valori sicuramente ricavati\ndall'immagine: sono assunzioni esplicite introdotte per il transitorio.\n",
+      "Generalizzare la soglia THD del 10 percento come limite universale di\nqualità audio: è la soglia operativa scelta per questo esperimento.\n"
+    ]
+  },
+  "rubric": {
+    "score_scale": {
+      "0": "errato o assente",
+      "1": "utile ma incompleto o con limiti rilevanti",
+      "2": "corretto e adeguatamente verificato"
+    },
+    "criteria": [
+      "diagnostic_correctness",
+      "test_quality",
+      "evidence_interpretation",
+      "goal_achievement",
+      "conclusion_quality"
+    ]
+  },
+  "run": {
+    "initial_request": "Il circuito amplifica, ma l’uscita mi sembra troppo distorta o poco pulita. Quale potrebbe essere il problema?",
+    "technical_status": "completed",
+    "base_spice": {
+      "status": "success",
+      "exit_code": 0,
+      "message": "ngspice completed successfully.",
+      "analyses": [
+        "op",
+        "tran"
+      ]
+    },
+    "execution_counts": {
+      "scenarios_proposed": 5,
+      "scenarios_executed": 3,
+      "successful_spice_runs": 3,
+      "failed_spice_runs": 0
+    },
+    "user_followups": {
+      "evidence_policy": "Questi messaggi documentano l'interazione guidata e le istruzioni effettivamente ricevute dalla run. Non sono ground truth: osservazioni e misure riportate dall'utente valgono come evidenza della traiettoria solo se sono compatibili con lo scenario eseguito e con il riferimento tecnico.",
+      "messages": [
+        {
+          "turn_index": 2,
+          "content": "esegui scenario 1"
+        },
+        {
+          "turn_index": 4,
+          "content": "Lo scenario 1 conferma il sovrapilotaggio, ma una valutazione THD sulle ultime tre oscillazioni dà 83,0% nella base run e 35,0% con ingresso 100 mV: miglioramento netto ma uscita ancora troppo distorta. Proponi un unico scenario correttivo riducendo ulteriormente l’ampiezza della sorgente, con analisi tran, qualità THD su N005 e verifica di mantenere un guadagno utile da N006 a N005."
+        },
+        {
+          "turn_index": 6,
+          "content": "esegui ultimo"
+        },
+        {
+          "turn_index": 8,
+          "content": "scenario eseguito"
+        },
+        {
+          "turn_index": 10,
+          "content": "A 50 mV la THD su N005 è ancora 22,4%, pur con guadagno utile. Proponi un unico scenario correttivo a 20 mV, mantenendo analisi tran, confronto N006/N005 e criterio di guadagno. L’obiettivo è portare la THD di N005 sotto il 10%."
+        },
+        {
+          "turn_index": 12,
+          "content": "esegui scenario 5"
+        },
+        {
+          "turn_index": 14,
+          "content": "Lo scenario 5 raggiunge THD 9,79% su N005, rispetto a 83,0% nella base run, e conserva un guadagno fondamentale circa 77×. Fornisci la conclusione finale: causa isolata, correzione verificata, dati prima/dopo e limite della metrica THD calcolata esternamente ai campi automatici. Non proporre altri scenari."
+        }
+      ]
+    },
+    "scenarios": [
+      {
+        "scenario_id": "scenario_1",
+        "title": "Ridurre l’ampiezza della sorgente di ingresso",
+        "hypothesis": "The output distortion may be caused by overdriving the transistor stage with the present input amplitude.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vsignal_source23_1",
+            "value": "SIN(0 100m 100)"
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "v(N006)",
+          "v(N004)",
+          "v(N005)"
+        ],
+        "expect": {
+          "v(N004)": "changed",
+          "v(N005)": "changed"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N006)",
+              "metric": "v(n006).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 1.999999632,
+              "scenario_value": 0.199999999,
+              "delta": -1.7999996329999999,
+              "change": "changed",
+              "expectation": null,
+              "base_details": {
+                "min": -0.999999816,
+                "max": 0.999999816,
+                "mean": 0.00203509394659454,
+                "vpp": 1.999999632,
+                "final": -1.2246468e-15,
+                "abs_peak": 0.999999816
+              },
+              "scenario_details": {
+                "min": -0.0999999995,
+                "max": 0.0999999995,
+                "mean": 8.977517480768592e-05,
+                "vpp": 0.199999999,
+                "final": -1.2246468e-16,
+                "abs_peak": 0.0999999995
+              }
+            },
+            {
+              "quantity": "v(N004)",
+              "metric": "v(n004).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 7.170986879999999,
+              "scenario_value": 6.843207230000001,
+              "delta": -0.3277796499999983,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": 2.94564482,
+                "max": 10.1166317,
+                "mean": 8.084793870409356,
+                "vpp": 7.170986879999999,
+                "final": 10.1129477,
+                "abs_peak": 10.1166317
+              },
+              "scenario_details": {
+                "min": 3.06044296,
+                "max": 9.90365019,
+                "mean": 7.224606231666667,
+                "vpp": 6.843207230000001,
+                "final": 5.61031926,
+                "abs_peak": 9.90365019
+              }
+            },
+            {
+              "quantity": "v(N005)",
+              "metric": "v(n005).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 7.47417467,
+              "scenario_value": 6.9551392100000005,
+              "delta": -0.5190354599999996,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": -4.2926905,
+                "max": 3.18148417,
+                "mean": 1.09695133535731,
+                "vpp": 7.47417467,
+                "final": 2.76984986,
+                "abs_peak": 4.2926905
+              },
+              "scenario_details": {
+                "min": -3.85571627,
+                "max": 3.09942294,
+                "mean": 0.40650892781729414,
+                "vpp": 6.9551392100000005,
+                "final": -1.36734842,
+                "abs_peak": 3.85571627
+              }
+            }
+          ],
+          "comparison_evidence": {},
+          "led_profiles": {}
+        }
+      },
+      {
+        "scenario_id": "scenario_2",
+        "title": "Rafforzare il bias di base riducendo Rresistor22_2",
+        "hypothesis": "The transistor may be biased too close to cutoff because the base bias from VCC is too weak.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Rresistor22_2",
+            "value": "47k"
+          }
+        ],
+        "analysis": "op",
+        "compare": [
+          "v(N002)",
+          "v(N003)",
+          "v(N004)"
+        ],
+        "expect": {
+          "v(N002)": "changed",
+          "v(N004)": "changed"
+        },
+        "executed": false,
+        "execution": null
+      },
+      {
+        "scenario_id": "scenario_3",
+        "title": "Ridurre la degenerazione di emettitore variando Rresistor22_5",
+        "hypothesis": "The emitter network may be setting an unfavorable operating point that contributes to output distortion.",
+        "intent": "diagnostic",
+        "actions": [
+          {
+            "type": "change_component_value",
+            "target": "Rresistor22_5",
+            "value": "1k"
+          }
+        ],
+        "analysis": "op",
+        "compare": [
+          "v(N003)",
+          "v(N004)",
+          "v(N005)"
+        ],
+        "expect": {
+          "v(N003)": "changed",
+          "v(N004)": "changed"
+        },
+        "executed": false,
+        "execution": null
+      },
+      {
+        "scenario_id": "scenario_4",
+        "title": "Ridurre ancora l’ampiezza d’ingresso per cercare una THD più bassa",
+        "hypothesis": "Since scenario_1 reduced distortion without suppressing output transfer, a further reduction of Vsignal_source23_1 to 50 mV may lower THD at N005 while preserving useful gain from N006 to N005.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vsignal_source23_1",
+            "value": "SIN(0 50m 100)"
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "v(N006)",
+          "v(N005)"
+        ],
+        "expect": {
+          "v(N006)": "changed",
+          "v(N005)": "changed"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N006)",
+              "metric": "v(n006).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 1.999999632,
+              "scenario_value": 0.0999845248,
+              "delta": -1.9000151072,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": -0.999999816,
+                "max": 0.999999816,
+                "mean": 0.00203509394659454,
+                "vpp": 1.999999632,
+                "final": -1.2246468e-15,
+                "abs_peak": 0.999999816
+              },
+              "scenario_details": {
+                "min": -0.0499922624,
+                "max": 0.0499922624,
+                "mean": 5.256541397637675e-06,
+                "vpp": 0.0999845248,
+                "final": -6.123234e-17,
+                "abs_peak": 0.0499922624
+              }
+            },
+            {
+              "quantity": "v(N005)",
+              "metric": "v(n005).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 7.47417467,
+              "scenario_value": 6.27377027,
+              "delta": -1.2004044,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": -4.2926905,
+                "max": 3.18148417,
+                "mean": 1.09695133535731,
+                "vpp": 7.47417467,
+                "final": 2.76984986,
+                "abs_peak": 4.2926905
+              },
+              "scenario_details": {
+                "min": -3.62991237,
+                "max": 2.6438579,
+                "mean": 0.08632875838866141,
+                "vpp": 6.27377027,
+                "final": -1.62021803,
+                "abs_peak": 3.62991237
+              }
+            }
+          ],
+          "comparison_evidence": {
+            "gain_comparison": {
+              "input": "v(N006)",
+              "output": "v(N005)",
+              "base_gain": 3.7370880226241963,
+              "scenario_gain": 62.74741298765466,
+              "min_ratio": 5.0,
+              "available": true,
+              "sufficient": true,
+              "relative_change": 15.790456261073885
+            }
+          },
+          "led_profiles": {}
+        }
+      },
+      {
+        "scenario_id": "scenario_5",
+        "title": "Ridurre l’ingresso a 20 mV mantenendo il controllo di guadagno",
+        "hypothesis": "Since scenario_4 kept useful gain from N006 to N005 at 50 mV but the user reports THD on N005 is still 22.4%, reducing Vsignal_source23_1 to 20 mV may further lower distortion at N005 while preserving useful transfer.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "change_source_value",
+            "target": "Vsignal_source23_1",
+            "value": "SIN(0 20m 100)"
+          }
+        ],
+        "analysis": "tran",
+        "compare": [
+          "v(N006)",
+          "v(N005)"
+        ],
+        "expect": {
+          "v(N006)": "changed",
+          "v(N005)": "changed"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "v(N006)",
+              "metric": "v(n006).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 1.999999632,
+              "scenario_value": 0.03999381,
+              "delta": -1.960005822,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": -0.999999816,
+                "max": 0.999999816,
+                "mean": 0.00203509394659454,
+                "vpp": 1.999999632,
+                "final": -1.2246468e-15,
+                "abs_peak": 0.999999816
+              },
+              "scenario_details": {
+                "min": -0.019996905,
+                "max": 0.019996905,
+                "mean": 2.1026165509842037e-06,
+                "vpp": 0.03999381,
+                "final": -2.4492936e-17,
+                "abs_peak": 0.019996905
+              }
+            },
+            {
+              "quantity": "v(N005)",
+              "metric": "v(n005).vpp",
+              "measurement": "tran_vpp",
+              "base_value": 7.47417467,
+              "scenario_value": 3.11524658,
+              "delta": -4.35892809,
+              "change": "changed",
+              "expectation": "changed",
+              "base_details": {
+                "min": -4.2926905,
+                "max": 3.18148417,
+                "mean": 1.09695133535731,
+                "vpp": 7.47417467,
+                "final": 2.76984986,
+                "abs_peak": 4.2926905
+              },
+              "scenario_details": {
+                "min": -1.69147012,
+                "max": 1.42377646,
+                "mean": 0.03290228024076378,
+                "vpp": 3.11524658,
+                "final": -0.852222712,
+                "abs_peak": 1.69147012
+              }
+            }
+          ],
+          "comparison_evidence": {
+            "gain_comparison": {
+              "input": "v(N006)",
+              "output": "v(N005)",
+              "base_gain": 3.7370880226241963,
+              "scenario_gain": 77.8932184755591,
+              "min_ratio": 5.0,
+              "available": true,
+              "sufficient": true,
+              "relative_change": 19.843292425545332
+            }
+          },
+          "led_profiles": {}
+        }
+      }
+    ],
+    "final": {
+      "response": "## **Stato degli scenari eseguiti**\n\n- **Base run**\n  - `ngspice` ha completato correttamente la simulazione (`08_spice_run.json`).\n  - Il circuito estratto è coerente con un singolo stadio BJT `Qnpn_transistor18_1` con uscita su `N005` tramite `Ccapacitor4_3` e carico `Rresistor22_6`.\n  - La sorgente di ingresso base è `Vsignal_source23_1 N006 0 SIN(0 1 100)` nel file `07_netlist.cir`.\n  - In base run, dai confronti scenario, il rapporto di trasferimento su Vpp tra `v(N005)` e `v(N006)` è circa **3.74×** (`7.47417467 / 1.999999632`), quindi con ingresso grande il guadagno utile si degrada fortemente.\n\n- **scenario_1 — Ridurre l’ampiezza della sorgente di ingresso**\n  - Azione eseguita: `Vsignal_source23_1` portata a `SIN(0 100m 100)`.\n  - Esito: `partially_resolved`, ma con etichetta tecnica **“Diagnostic hypothesis confirmed”**.\n  - Evidenza chiave: cambiando solo l’ampiezza d’ingresso cambiano `v(N006)`, `v(N004)` e `v(N005)` (`scenario_1/scenario_comparison.json`).\n  - Interpretazione: il comportamento anomalo dell’uscita dipende dall’ampiezza del pilotaggio; quindi l’ipotesi di **sovrapilotaggio dello stadio** viene confermata.\n\n- **scenario_4 — Ridurre ancora l’ampiezza d’ingresso**\n  - Azione eseguita: `Vsignal_source23_1` portata a `SIN(0 50m 100)`.\n  - Esito: `partially_resolved`.\n  - Dati:\n    - `v(N006)` Vpp = **0.0999845248 V**\n    - `v(N005)` Vpp = **6.27377027 V**\n    - guadagno Vpp = **62.74741298765466×**\n    - soglia richiesta `gain.min_ratio = 5.0`\n  - Interpretazione: il trasferimento utile `N006 -> N005` è confermato e ampiamente sopra soglia.\n\n- **scenario_5 — Ridurre l’ingresso a 20 mV mantenendo il controllo di guadagno**\n  - Azione eseguita: `Vsignal_source23_1` portata a `SIN(0 20m 100)`.\n  - Esito Pipeline: ancora `partially_resolved`.\n  - Dati automatici disponibili:\n    - `v(N006)` Vpp = **0.03999381 V**\n    - `v(N005)` Vpp = **3.11524658 V**\n    - guadagno Vpp = **77.8932184755591×**\n    - soglia richiesta `gain.min_ratio = 5.0`\n  - Dato utente da interpretare insieme allo scenario: **THD su `N005` = 9,79%**, contro **83,0%** della base run.\n  - Interpretazione: questo è il test più forte sul sintomo, perché mostra contemporaneamente:\n    1. una **forte riduzione della distorsione** su `N005`;\n    2. la **conservazione di un guadagno fondamentale elevato**.\n\n## **Ipotesi rafforzate e ipotesi indebolite**\n\n### Ipotesi rafforzate\n- **La causa isolata è il sovrapilotaggio dell’ingresso `Vsignal_source23_1`**, non un’assenza di trasferimento del segnale.\n  - `scenario_1` conferma direttamente l’ipotesi diagnostica: riducendo l’ingresso, l’uscita cambia in modo coerente.\n  - `scenario_4` e `scenario_5` mostrano che, con ingresso ridotto, il cammino utile fino a `N005` non solo esiste, ma ha guadagno molto alto:\n    - scenario_4: **62.75×**\n    - scenario_5: **77.89×**\n  - Quindi il problema principale non è “il segnale non arriva”, ma “con l’ingresso base arriva in modo troppo distorto”.\n\n- **La correzione pratica verificata è la riduzione dell’ampiezza di ingresso**.\n  - Nel caso più favorevole testato, `scenario_5`, il THD esterno riferito su `N005` scende da **83,0%** a **9,79%**.\n  - Questo è compatibile con una forte mitigazione della non linearità osservata in base run.\n\n### Ipotesi indebolite\n- Si indebolisce l’idea che il difetto richieda, con le evidenze attuali, una modifica topologica o un guasto strutturale del circuito estratto.\n  - `ngspice` converge.\n  - `01_graph.json`, `03_node_map.json` e `07_netlist.cir` sono internamente coerenti.\n  - Non ci sono `singleton_nodes`, né warning di emissione, né stderr.\n- Si indebolisce anche l’idea che il solo obiettivo fosse massimizzare ampiezza in uscita:\n  - a 1 V di ingresso il Vpp d’uscita è maggiore in assoluto, ma il trasferimento utile è peggiore e la distorsione esterna riportata è molto alta.\n\n## **Conclusione finale**\n\nLa conclusione più forte supportata dalle evidenze è questa:\n\n- **Causa isolata:** lo stadio viene **sovrapilotato** dalla sorgente `Vsignal_source23_1` nella base run (`SIN(0 1 100)` in `07_netlist.cir`).\n- **Correzione verificata:** **ridurre l’ampiezza dell’ingresso** corregge il problema osservato su `N005`, mantenendo un trasferimento utile elevato.\n\n### Dati prima/dopo più rilevanti\n\n**Base run**\n- `Vsignal_source23_1 = SIN(0 1 100)`\n- `v(N006)` Vpp = **1.999999632 V**\n- `v(N005)` Vpp = **7.47417467 V**\n- guadagno Vpp `N005/N006` = **3.7370880226241963×**\n- THD esterno riferito dall’utente su `N005` = **83,0%**\n\n**scenario_5**\n- `Vsignal_source23_1 = SIN(0 20m 100)`\n- `v(N006)` Vpp = **0.03999381 V**\n- `v(N005)` Vpp = **3.11524658 V**\n- guadagno Vpp `N005/N006` = **77.8932184755591×**\n- THD esterno riferito dall’utente su `N005` = **9,79%**\n\n### Significato diagnostico\nQuesto insieme di dati indica che, quando l’ingresso viene portato a un livello molto più piccolo, l’uscita `N005`:\n- resta chiaramente presente;\n- mantiene un guadagno fondamentale molto alto;\n- mostra una distorsione drasticamente ridotta.\n\nPerciò, **la spiegazione meglio supportata è che la base run è fuori dal regime utile dello stadio, mentre scenario_5 lo riporta in un regime molto più lineare**.\n\nVa anche chiarito un punto importante sullo stato Pipeline: `scenario_5` resta classificato come `partially_resolved` non perché i dati analogici lo smentiscano, ma perché nei campi automatici di `scenario_comparison.json`:\n- `base_thd` = `null`\n- `scenario_thd` = `null`\n- `quality_comparison` = `null`\n\nQuindi l’automazione **non ha potuto certificare** la qualità tramite i suoi campi interni, anche se il dato THD esterno che hai fornito mostra una correzione sostanziale.\n\n## **Cosa non e stato dimostrato**\n\n- **Non è stato dimostrato automaticamente dal runner** che `scenario_5` sia un `resolved_candidate`, perché i campi qualità/THD automatici sono assenti in `scenario_comparison.json`.\n- **La metrica THD citata è esterna ai campi automatici**:\n  - i report scenario mostrano `base_thd: null` e `scenario_thd: null`;\n  - quindi il valore **83,0% -> 9,79%** non è stato validato dal comparatore automatico, ma deve essere trattato come misura esterna aggiuntiva fornita dall’utente.\n- **Non si può concludere da queste sole evidenze** quale sia il massimo livello di ingresso ancora accettabile tra 20 mV e 50 mV con una soglia THD formalmente definita, perché quel criterio non è registrato nei campi qualità automatici.\n- **Non si può nemmeno generalizzare oltre il setup simulato**:\n  - transistor modellato come `2N2222` da assunzione (`manual_assumption`);\n  - frequenza della sorgente fissata a `100 Hz` come nota esplicita in `04_values_bound.json`.\n\n## **Conviene continuare?**\n\nNo, **qui è più corretto fermarsi**.\n\nLe evidenze già eseguite bastano per una conclusione finale utile:\n- la **causa isolata** è il sovrapilotaggio di `Vsignal_source23_1`;\n- la **correzione verificata nei fatti** è la riduzione dell’ingresso, con caso migliore documentato in **scenario_5**;\n- i dati prima/dopo mostrano miglioramento netto della qualità su `N005` e mantenimento di guadagno utile.\n\nL’unico limite residuo non è elettrico ma **metrologico/di reporting**: la THD usata per la conclusione non compare nei campi automatici di `scenario_comparison.json`, quindi la conclusione è forte sul piano diagnostico, ma **la certificazione formale della THD resta esterna al comparatore automatico**.\n\n**Richiede immagine: no**"
+    }
+  }
+}

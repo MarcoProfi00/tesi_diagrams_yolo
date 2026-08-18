@@ -1,0 +1,33 @@
+* Independent validation for b05: AM excitation near the assumed LC resonance
+Vbattery2_1 0 N002 DC 9
+Rbreaker3_1 N003 N004 2k
+Ddiode7_1 N001 N005 D_GENERIC
+Linductor10_1 N001 0 0.00025
+Qnpn_transistor18_1 N007 N006 0 PNP_GENERIC
+Qnpn_transistor18_2 N003 N008 0 PNP_GENERIC
+Cpolarized_capacitor20_1 N001 0 375p
+Cpolarized_capacitor20_2 N005 N006 0.022u
+Cpolarized_capacitor20_3 N007 N008 0.022u
+Cpolarized_capacitor20_4 N003 N004 0.001u
+Rresistor22_1 N006 N004 220k
+Rresistor22_2 N007 N004 4.7k
+Rresistor22_3 N008 N004 220k
+Rswitch_closed N002 N004 1m
+
+* Assumed bench signal: 1 Vpk carrier, 50% AM at 1 kHz, carrier 520 kHz.
+* A 1 kohm series resistance avoids an ideal source directly across the LC tank.
+Bantenna RF_SRC 0 V=sin(2*pi*520k*time)*(1+0.5*sin(2*pi*1k*time))
+Rantenna RF_SRC N001 1k
+Eheadset OUT 0 N003 N004 1
+
+.model D_GENERIC D
+.model PNP_GENERIC PNP
+
+.op
+.tran 50ns 5ms 0 50ns
+.four 1k v(OUT)
+.measure tran vsource_pp PP v(RF_SRC) from=2ms to=5ms
+.measure tran vtank_pp PP v(N001) from=2ms to=5ms
+.measure tran vout_pp PP v(OUT) from=2ms to=5ms
+.measure tran vout_rms RMS v(OUT) from=2ms to=5ms
+.end

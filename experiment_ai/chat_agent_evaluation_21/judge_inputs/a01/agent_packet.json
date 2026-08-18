@@ -1,0 +1,203 @@
+{
+  "packet_schema_version": 1,
+  "packet_id": "a01_run_2",
+  "reference": {
+    "schema_version": 1,
+    "circuit_id": "a01",
+    "circuit_description": "Circuito in continua a 5 V con due rami indipendenti collegati a un\nconnettore a quattro pin. Il ramo del LED comprende una resistenza da\n220 ohm ed è alimentato dal nodo N001. Il ramo della lampada comprende\nuna resistenza da 1 kohm e una lampada modellata come carico resistivo\nda 50 ohm, ma parte dal nodo N002, che nella configurazione base non è\nalimentato. Lo switch collega N003 a massa e non appartiene al percorso\ndi alimentazione della lampada.\n",
+    "task_type": "diagnosi e correzione di un ramo non alimentato",
+    "user_symptom": "Il LED è già acceso, ma la lampada è spenta. Individua la causa ed esegui gli scenari necessari per accendere la lampada mantenendo acceso anche il LED.\n",
+    "circuit_inventory": {
+      "component_count": 9,
+      "node_count": 6,
+      "component_types": [
+        "Connector",
+        "GND",
+        "Lamp",
+        "LED",
+        "Resistor",
+        "Switch"
+      ],
+      "analysis_types": [
+        "op"
+      ]
+    },
+    "required_evidence": [
+      {
+        "id": "base_led_active",
+        "description": "Nella simulazione base il LED è attivo: i(Dled12_1) è circa\n19.4 mA e v(N005) è circa 0.732 V.\n"
+      },
+      {
+        "id": "base_lamp_inactive",
+        "description": "Nella simulazione base il ramo lampada è inattivo: N002 e N004\nsono a 0 V e i(Rlamp13_1) è 0 A.\n"
+      },
+      {
+        "id": "topology_cause",
+        "description": "Il nodo N001 riceve i 5 V della sorgente, mentre N002 non ha un\npercorso verso una sorgente. Lo switch agisce sul diverso nodo N003;\nla sua chiusura non alimenta il ramo lampada.\n"
+      },
+      {
+        "id": "correction_effect",
+        "description": "Una correzione valida deve mostrare con una nuova run SPICE che il\nramo lampada riceve alimentazione e corrente, verificando nello stesso\nscenario che il ramo LED rimanga attivo.\n"
+      }
+    ],
+    "success_conditions": [
+      {
+        "id": "lamp_branch_activated",
+        "description": "La corrente i(Rlamp13_1) passa da 0 A a un valore positivo e le\ntensioni N002 e N004 passano da 0 V a valori coerenti con il circuito.\n"
+      },
+      {
+        "id": "led_preserved",
+        "description": "i(Dled12_1) rimane positiva e non subisce una riduzione significativa\nrispetto ai circa 19.4 mA della base.\n"
+      },
+      {
+        "id": "correction_verified",
+        "description": "La correzione proposta viene realmente eseguita e la run ngspice si\nconclude con successo; non è sufficiente suggerire soltanto una prova.\n"
+      },
+      {
+        "id": "conclusion_calibrated",
+        "description": "La conclusione identifica N002 non alimentato come causa e distingue\nl'attivazione simulata del ramo dalla luminosità fisica della lampada.\n"
+      }
+    ],
+    "acceptable_solutions": [
+      {
+        "id": "bridge_existing_supply",
+        "description": "Collegare il nodo sorgente N001 al nodo N002, per esempio tramite\nfeed_nodes_from_source_node, lasciando invariato il ramo LED.\n",
+        "verified_reference_values": "Con il collegamento N001-N002 tramite 1 milliohm: N002 = 4.999995 V,\nN004 = 0.238095 V, i(Rlamp13_1) = 4.7619 mA e\ni(Dled12_1) = 19.4009 mA.\n"
+      },
+      {
+        "id": "equivalent_supply_to_lamp_branch",
+        "description": "Applicare a N002 un'alimentazione equivalente da 5 V riferita alla\nstessa massa, mantenendo attiva anche la sorgente del ramo LED, e\nverificarne gli effetti con le stesse grandezze.\n"
+      }
+    ],
+    "unsupported_conclusions": [
+      "Attribuire lo spegnimento della lampada allo switch aperto: lo switch\ncollega N003 a massa e la sua chiusura non modifica N002, N004 o la\ncorrente della lampada.\n",
+      "Dichiarare risolto il problema senza misurare sia la corrente della\nlampada sia la permanenza della corrente nel LED dopo la correzione.\n",
+      "Affermare che la lampada riceve la tensione nominale di 5 V o che ha\nraggiunto la luminosità nominale: nello scenario di riferimento ai suoi\ncapi risultano circa 0.238 V a causa della resistenza serie da 1 kohm.\n",
+      "Indicare come causa un guasto del LED, della lampada o delle resistenze\nsenza evidenze prodotte dalla simulazione.\n"
+    ]
+  },
+  "rubric": {
+    "score_scale": {
+      "0": "errato o assente",
+      "1": "utile ma incompleto o con limiti rilevanti",
+      "2": "corretto e adeguatamente verificato"
+    },
+    "criteria": [
+      "diagnostic_correctness",
+      "test_quality",
+      "evidence_interpretation",
+      "goal_achievement",
+      "conclusion_quality"
+    ]
+  },
+  "run": {
+    "initial_request": "Il LED è già acceso, ma la lampada è spenta. Individua la causa ed esegui gli scenari necessari per accendere la lampada mantenendo acceso anche il LED.",
+    "technical_status": "completed",
+    "base_spice": {
+      "status": "success",
+      "exit_code": 0,
+      "message": "ngspice completed successfully.",
+      "analyses": [
+        "op"
+      ]
+    },
+    "execution_counts": {
+      "scenarios_proposed": 1,
+      "scenarios_executed": 1,
+      "successful_spice_runs": 1,
+      "failed_spice_runs": 0
+    },
+    "scenarios": [
+      {
+        "scenario_id": "scenario_1",
+        "title": "Alimenta il ramo lampada dal nodo +5 V già presente",
+        "hypothesis": "Il LED è già acceso perché N001 è alimentato da VVCC, ma il ramo lampada resta isolato perché N002 non è collegato alla stessa alimentazione. Se N002 viene alimentato dal nodo sorgente N001, la lampada dovrebbe accendersi attraverso Rresistor22_1 e il LED dovrebbe restare acceso.",
+        "intent": "correction",
+        "actions": [
+          {
+            "type": "feed_nodes_from_source_node",
+            "source_node": "N001",
+            "target_nodes": [
+              "N002"
+            ]
+          }
+        ],
+        "analysis": "op",
+        "compare": [
+          "i(Rlamp13_1)",
+          "i(Dled12_1)",
+          "v(N004)",
+          "v(N002)"
+        ],
+        "expect": {
+          "i(Rlamp13_1)": "activated",
+          "i(Dled12_1)": "unchanged",
+          "v(N004)": "magnitude_increased",
+          "v(N002)": "magnitude_increased"
+        },
+        "executed": true,
+        "execution": {
+          "spice_status": "success",
+          "spice_exit_code": 0,
+          "quantities": [
+            {
+              "quantity": "i(Rlamp13_1)",
+              "metric": "i(rlamp13_1)",
+              "measurement": "op",
+              "base_value": 0.0,
+              "scenario_value": 0.0047619,
+              "delta": 0.0047619,
+              "change": "activated",
+              "expectation": "activated",
+              "base_details": {},
+              "scenario_details": {}
+            },
+            {
+              "quantity": "i(Dled12_1)",
+              "metric": "i(dled12_1)",
+              "measurement": "op",
+              "base_value": 0.0194009,
+              "scenario_value": 0.0194009,
+              "delta": 0.0,
+              "change": "unchanged",
+              "expectation": "unchanged",
+              "base_details": {},
+              "scenario_details": {}
+            },
+            {
+              "quantity": "v(N004)",
+              "metric": "v(n004)",
+              "measurement": "op",
+              "base_value": 0.0,
+              "scenario_value": 0.238095,
+              "delta": 0.238095,
+              "change": "activated",
+              "expectation": "magnitude_increased",
+              "base_details": {},
+              "scenario_details": {}
+            },
+            {
+              "quantity": "v(N002)",
+              "metric": "v(n002)",
+              "measurement": "op",
+              "base_value": 0.0,
+              "scenario_value": 4.999995,
+              "delta": 4.999995,
+              "change": "activated",
+              "expectation": "magnitude_increased",
+              "base_details": {},
+              "scenario_details": {}
+            }
+          ],
+          "comparison_evidence": {},
+          "led_profiles": {}
+        }
+      }
+    ],
+    "final": {
+      "answer": "La causa è che il ramo della lampada è isolato dall'alimentazione: il +5 V arriva a N001 e accende il LED tramite Rresistor22_2 e Dled12_1, mentre N002 resta a 0 V e quindi la lampada non riceve corrente. Lo scenario verificato che alimenta N002 dal nodo sorgente N001 accende la lampada e lascia acceso il LED.",
+      "cause": "Mancanza di continuità/alimentazione tra il nodo di sorgente +5 V N001 e il nodo N002 del ramo lampada; per questo Rresistor22_1 e Rlamp13_1 restano senza corrente nella base run.",
+      "verified_correction": "Alimentare il nodo N002 del ramo lampada dal nodo +5 V già attivo N001 (scenario verificato con feed_nodes_from_source_node da N001 a N002), così la corrente in i(Rlamp13_1) si attiva mentre i(Dled12_1) resta invariata."
+    }
+  }
+}

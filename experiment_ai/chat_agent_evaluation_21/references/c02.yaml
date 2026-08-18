@@ -1,0 +1,177 @@
+schema_version: 1
+circuit_id: "c02"
+review_status: frozen
+circuit_description: |
+  Multivibratore astabile simmetrico alimentato a 9 V, formato da due BC548
+  con emettitori sul negativo, due LED nei rami di collettore e accoppiamento
+  incrociato tramite C1 e C2. R2 e R3 polarizzano le basi; l'alternanza dei
+  transistor fa lampeggiare L1 e L2 in opposizione.
+task_type: "diagnosi di due LED apparentemente accesi senza alternanza"
+user_symptom: |
+  Ho montato questo circuito per far lampeggiare alternativamente i due LED, ma sembrano restare entrambi accesi senza alternarsi. Quale potrebbe essere il problema?
+
+circuit_inventory:
+  component_count: 11
+  node_count: 8
+  component_types:
+    - "Battery"
+    - "LED"
+    - "NPN_Transistor"
+    - "Polarized_Capacitor"
+    - "Resistor"
+  analysis_types:
+    - "op"
+    - "tran"
+
+required_evidence:
+  - id: explicit_testbench_assumptions
+    description: |
+      Batteria e resistenze sono leggibili nell'immagine. I valori di C1 e C2
+      non sono visibili e vengono assunti entrambi pari a 10 uF; i LED usano
+      un modello rosso tipico. Frequenza e duty simulati dipendono da queste
+      assunzioni e non sono misure del montaggio fisico.
+  - id: topology_matches_image
+    description: |
+      Graph e node map coincidono con lo schema: C1 collega il collettore Q1
+      alla base Q2 e C2 il collettore Q2 alla base Q1, senza nodo nel semplice
+      incrocio centrale; le polarita' positive sono verso i collettori. LED e
+      resistenze da 470 ohm sono in serie tra +9 V e i collettori. Non risultano
+      terminali scollegati o componenti saltati.
+  - id: base_oscillates_in_antiphase
+    description: |
+      La base SPICE non riproduce il sintomo: entrambi i LED lampeggiano con
+      periodo circa 0.5996 s e frequenza circa 1.668 Hz. Analizzando i CSV dopo
+      0.5 s e considerando acceso un LED oltre 5 mA, L1 solo occupa circa il
+      51.1% del tempo, L2 solo il 47.1% ed entrambi insieme soltanto l'1.8%.
+      L'alternanza e' quindi netta e quasi perfettamente complementare.
+  - id: symmetric_startup_is_brief
+    description: |
+      Il punto di lavoro iniziale simmetrico porta entrambi i LED a circa
+      15.16 mA, ma la simmetria numerica si rompe rapidamente: il primo stato
+      esclusivo compare dopo circa 44 ms usando la soglia di 5 mA. Questo breve
+      avvio non spiega due LED continuamente accesi nell'hardware.
+  - id: chat_asymmetric_cap_test
+    description: |
+      CHAT riduce soltanto C1 da 10 uF a 4.7 uF. Il circuito continua a
+      oscillare a circa 2.274 Hz, ma diventa asimmetrico: con soglia 5 mA i due
+      stati esclusivi occupano circa 29.0% e 69.0%, con sovrapposizione circa
+      2.0%. Lo scenario dimostra l'effetto di C1 sul timing, non la causa del
+      sintomo e non una correzione.
+  - id: agent_profile_is_numerically_corrupted
+    description: |
+      AGENT riduce entrambi i condensatori a 1 uF. Nei primi cicli il periodo
+      del CSV e' circa 60 ms, coerente con il circuito; dopo circa 1 s la run
+      sviluppa commutazioni artificiali ogni 3-6 ms e il profiler riporta
+      166.7 Hz. Una verifica indipendente con integrazione Gear e una piccola
+      perturbazione iniziale misura invece periodo 59.91 ms e frequenza
+      16.69 Hz. Il valore automatico di 166.7 Hz e' un artefatto numerico.
+  - id: faster_is_not_more_visible
+    description: |
+      Una frequenza di 1.67 Hz e' chiaramente percepibile come lampeggio. Dieci
+      volte piu' veloce, circa 16.7 Hz, rende l'alternanza meno distinguibile;
+      a 166.7 Hz i LED apparirebbero entrambi quasi continui per persistenza
+      visiva. Ridurre C1 e C2 non puo' quindi essere la correzione dichiarata
+      dall'AGENT per rendere l'alternanza piu' evidente.
+
+success_conditions:
+  - id: symptom_not_reproduced
+    description: |
+      La diagnosi dichiara che il modello simulato funziona e non riproduce i
+      LED stabilmente accesi, invece di inventare una causa certa nel netlist.
+  - id: antiphase_verified
+    description: |
+      Lampeggio e alternanza vengono valutati usando periodo, fase o frazioni
+      temporali delle correnti dei due LED, non soltanto picchi non nulli o
+      l'etichetta generica blinking.
+  - id: physical_hardware_checks
+    description: |
+      Poiche' la simulazione funziona, la risposta indirizza il controllo del
+      montaggio reale: pinout BC548, collegamenti incrociati, polarita' e valori
+      di C1/C2, resistenze da 47 kohm, corti e componenti difettosi.
+  - id: timing_direction_correct
+    description: |
+      La risposta riconosce che ridurre i condensatori aumenta la frequenza e
+      non rende necessariamente piu' visibile l'alternanza. Per rallentare il
+      lampeggio si aumentano simmetricamente C1 e C2.
+  - id: numerical_artifact_rejected
+    description: |
+      Il profilo a 166.7 Hz dello scenario AGENT non viene accettato come
+      prova fisica o come correzione verificata.
+  - id: assumptions_calibrated
+    description: |
+      Si ricorda che 10 uF e' un valore di test non leggibile nell'immagine e
+      che la simulazione non identifica da sola il guasto dell'hardware.
+
+acceptable_solutions:
+  - id: compare_hardware_to_valid_topology
+    description: |
+      Usare la simulazione funzionante come riferimento e verificare sul
+      montaggio pin dei BC548, orientamento dei LED e degli elettrolitici,
+      incrocio collettore-base, continuita' e valori delle quattro resistenze.
+  - id: symmetric_timing_sweep
+    acceptance: diagnostic_only
+    description: |
+      Variare C1 e C2 insieme verifica la legge di temporizzazione. Valori
+      maggiori rallentano entrambi i semiperiodi; valori minori li accelerano.
+      Non e' una riparazione del sintomo se la base gia' alterna correttamente.
+  - id: slight_startup_asymmetry
+    acceptance: simulation_only
+    description: |
+      Una piccola tolleranza o condizione iniziale puo' rendere riproducibile
+      l'avvio numerico senza alterare il funzionamento a regime. Non prova che
+      l'hardware richieda una modifica.
+  - id: increase_both_caps_for_slower_demo
+    acceptance: optional_user_preference
+    description: |
+      Se l'obiettivo fosse soltanto un lampeggio dimostrativo piu' lento, si
+      potrebbero aumentare entrambi i condensatori mantenendoli simmetrici.
+      La base a 1.67 Hz e' comunque gia' visibile.
+
+unsupported_conclusions:
+  - |
+    Affermare che i LED base abbiano ampia sovrapposizione o siano quasi sempre
+    entrambi accesi: sopra 5 mA la sovrapposizione misurata e' circa 1.8%.
+  - |
+    Spiegare l'impressione di contemporaneita' con una frequenza troppo bassa
+    di 1.67 Hz: un lampeggio cosi' lento e' normalmente ben distinguibile.
+  - |
+    Dichiarare risolutiva la riduzione di C1 e C2 a 1 uF: accelera il circuito
+    e rende visivamente meno evidente l'alternanza.
+  - |
+    Usare 166.7 Hz come frequenza fisica verificata dello scenario AGENT: il
+    CSV contiene chatter numerico e la verifica stabile misura 16.69 Hz.
+  - |
+    Considerare picchi LED non nulli, tensioni cambiate e il solo stato
+    blinking sufficienti a dimostrare la risoluzione del sintomo: occorre
+    verificare anche opposizione di fase e percepibilita' temporale.
+  - |
+    Attribuire il problema a C1 soltanto perche' lo scenario CHAT ne modifica
+    frequenza e duty: qualunque componente di temporizzazione produce tali
+    variazioni e la base non manifesta il guasto.
+  - |
+    Trasformare il breve punto iniziale con entrambi i LED accesi in causa del
+    sintomo persistente: lo stato esclusivo inizia entro poche decine di ms.
+
+review_notes: |
+  Immagine e values canonici provengono da
+  data/batchPipeline2.0/batchChatAgentEvaluation. La topologia estratta e'
+  corretta, compreso l'incrocio senza giunzione e la polarita' dei due
+  condensatori. L'analisi indipendente dei CSV quantifica l'alternanza, mentre
+  validation/c02_1u_stable_test.cir controlla lo scenario veloce con un metodo
+  numericamente stabile.
+
+  CHAT riconosce correttamente che il sintomo non e' riprodotto e mantiene lo
+  scenario C1=4.7 uF come test diagnostico, non come soluzione. E' pero' troppo
+  disponibile a spiegare l'impressione visiva con duty significativo,
+  conduzione residua e frequenza di 1.67 Hz: i CSV mostrano invece alternanza
+  netta. Gli scenari proposti su singole resistenze/condensatori sono utili per
+  sensibilita', ma non localizzano un guasto che il modello non presenta.
+
+  AGENT formula una causa e una correzione fisicamente errate. Ridurre entrambi
+  i condensatori aumenta la frequenza da 1.67 a circa 16.69 Hz e non rende il
+  lampeggio piu' evidente. Il resolved_candidate e' un falso positivo dovuto
+  a criteri troppo deboli e a un profilo contaminato da chatter numerico. Il
+  corretto esito AGENT dovrebbe essere: sintomo non riprodotto, controllare il
+  montaggio reale; nessuna correzione verificata nel modello.
+
+  La scheda e' stata approvata manualmente e congelata.

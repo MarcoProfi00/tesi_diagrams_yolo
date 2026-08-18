@@ -279,6 +279,55 @@ def enrich_manual_dc_supplies(
     return enriched
 
 
+def apply_supply_visibility_overrides(
+    components: list[dict[str, Any]],
+    rules: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Nasconde nel viewer gli stimoli numerici marcati esplicitamente.
+
+    La sorgente continua a esistere nella netlist e nel transitorio. L'override
+    riguarda soltanto la sua resa grafica ed evita di mostrare come componente
+    fisico un ausilio di testbench gia' rappresentato dal Graph.
+    """
+    supplies = rules.get("supplies") or {}
+    enriched = [dict(component) for component in components]
+    for supply_name, supply in supplies.items():
+        if not isinstance(supply, dict):
+            continue
+        parameters = supply.get("parameters") if isinstance(supply.get("parameters"), dict) else supply
+        viewer_override = parameters.get("viewer_override")
+        viewer_override = viewer_override if isinstance(viewer_override, dict) else {}
+        if viewer_override.get("hidden") is not True:
+            continue
+
+        expected_name = f"V{supply_name}".lower()
+        supply_nodes = {normalize_node(node) for node in supply.get("nodes") or []}
+        source = next(
+            (
+                item for item in enriched
+                if str(item.get("spice_name") or "").lower() == expected_name
+            ),
+            None,
+        )
+        if source is None and supply_nodes:
+            source = next(
+                (
+                    item for item in enriched
+                    if item.get("kind") == "voltage_source"
+                    and {normalize_node(node) for node in item.get("nodes") or []} == supply_nodes
+                ),
+                None,
+            )
+        if source is None:
+            continue
+
+        source["viewer_hidden"] = True
+        source["viewer_role"] = "hidden_testbench_stimulus"
+        source["parameters"] = dict(parameters)
+        source["supply_name"] = str(supply_name)
+    return enriched
+
+
 def parse_netlist(netlist_path: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[str]]:
     """Estrae componenti, direttive e warning dal file `07_netlist.cir`."""
     components: list[dict[str, Any]] = []
@@ -1772,6 +1821,7 @@ def build_viewer_model(run_dir: Path) -> dict[str, Any]:
     components = enrich_components_with_rules(components, rules)
     components = enrich_bjt_kind_from_spice_models(components, directives)
     components = enrich_manual_dc_supplies(components, rules)
+    components = apply_supply_visibility_overrides(components, rules)
     # Il profiling transitorio deve vedere la classe semantica finale. Applicare
     # gli override dopo il parsing farebbe ancora apparire come LED un normale
     # diodo corretto nel values.yaml.

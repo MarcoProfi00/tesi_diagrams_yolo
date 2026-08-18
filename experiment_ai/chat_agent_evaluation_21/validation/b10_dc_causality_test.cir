@@ -1,0 +1,43 @@
+* b10 - independent DC causality checks for the symbolic switch model
+* Four electrically isolated copies share the documented test assumptions.
+
+* Case 1: canonical open-switch base.
+VA1 A1 0 1
+Roff1 A1 B1 1G
+Ioff1 A1 B1 1p
+Ib1 B1 0 1n
+Vos1 X1 B1 1m
+
+* Case 2: VOS increased by 100x while the switch remains open.
+* B should remain unchanged because X2 is otherwise floating.
+VA2 A2 0 1
+Roff2 A2 B2 1G
+Ioff2 A2 B2 1p
+Ib2 B2 0 1n
+Vos2 X2 B2 100m
+
+* Case 3: remove IOFF with the switch open.
+* Roff current then balances IB exactly at B=0 V.
+VA3 A3 0 1
+Roff3 A3 B3 1G
+Ib3 B3 0 1n
+Vos3 X3 B3 1m
+
+* Case 4: close the main path with rON=10 ohm and VOS=1 mV.
+VA4 A4 0 1
+Ron4 A4 X4 10
+Vos4 X4 B4 1m
+Roff4 A4 B4 1G
+Ioff4 A4 B4 1p
+Ib4 B4 0 1n
+
+.op
+.control
+op
+print v(A1) v(B1) v(X1)
+print v(A2) v(B2) v(X2)
+print v(A3) v(B3) v(X3)
+print v(A4) v(B4) v(X4)
+quit
+.endc
+.end

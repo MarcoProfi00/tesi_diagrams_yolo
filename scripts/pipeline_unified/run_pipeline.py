@@ -185,7 +185,9 @@ def sha256_file(path: Path) -> str:
 def read_manifest(path: Path, workspace_id: str) -> dict[str, Any]:
     """Legge il manifest esistente oppure crea la struttura minima iniziale."""
     if path.exists():
-        with path.open("r", encoding="utf-8") as file_handle:
+        # Alcuni manifest storici sono stati salvati con BOM UTF-8 da editor
+        # Windows. utf-8-sig gestisce sia quei file sia i normali UTF-8.
+        with path.open("r", encoding="utf-8-sig") as file_handle:
             data = json.load(file_handle)
         if not isinstance(data, dict):
             raise ValueError(f"Manifest non valido: {path}")
@@ -560,7 +562,8 @@ def read_json_object(path: Path) -> dict[str, Any]:
     """Legge un oggetto JSON usato per verificare uno stato persistente."""
     if not path.is_file():
         raise FileNotFoundError(f"JSON non trovato: {path}")
-    with path.open("r", encoding="utf-8") as file_handle:
+    # Accetta anche artefatti JSON storici con BOM UTF-8.
+    with path.open("r", encoding="utf-8-sig") as file_handle:
         data = json.load(file_handle)
     if not isinstance(data, dict):
         raise ValueError(f"Il JSON deve contenere un oggetto: {path}")
