@@ -13,7 +13,7 @@ contesto tecnico per un agente basato su un modello linguistico. L'agente non
 si limita quindi a descrivere l'immagine: riceve il sintomo espresso
 dall'utente, formula ipotesi diagnostiche, propone o applica scenari
 controllati, interpreta le misure prodotte da ngspice e restituisce una
-conclusione motivata.
+conclusione motivata..
 
 L'obiettivo principale di questo capitolo è stabilire se l'applicativo, nel
 suo complesso, produca un supporto tecnicamente utile alla diagnosi
