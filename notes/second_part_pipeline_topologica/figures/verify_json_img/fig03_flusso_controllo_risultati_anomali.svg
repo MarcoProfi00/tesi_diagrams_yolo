@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="2020" viewBox="0 0 1800 2020" role="img" aria-labelledby="title desc">
+  <title id="title">Flusso di controllo e gestione dei risultati anomali</title>
+  <desc id="desc">Diagramma decisionale che mostra la conferma diretta dei risultati coerenti e la revisione con eventuale rerun dei risultati dubbi o anomali.</desc>
+
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="7" stdDeviation="9" flood-color="#16324F" flood-opacity="0.13"/>
+    </filter>
+    <marker id="yes-arrow" markerWidth="30" markerHeight="26" refX="25" refY="13" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M2,2 L26,13 L2,24 Z" fill="#4B8C47"/>
+    </marker>
+    <marker id="no-arrow" markerWidth="30" markerHeight="26" refX="25" refY="13" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M2,2 L26,13 L2,24 Z" fill="#C98700"/>
+    </marker>
+    <style>
+      .font { font-family: Arial, Helvetica, sans-serif; }
+      .title { font-size: 48px; font-weight: 700; fill: #16324F; }
+      .subtitle { font-size: 27px; font-weight: 400; fill: #536A7A; }
+      .stage-label { font-size: 22px; font-weight: 700; letter-spacing: 2px; }
+      .box-title { font-size: 32px; font-weight: 700; fill: #16324F; }
+      .body { font-size: 24px; font-weight: 400; fill: #314A5A; }
+      .small { font-size: 22px; font-weight: 400; fill: #536A7A; }
+      .branch-label { font-size: 23px; font-weight: 700; fill: #385B73; }
+      .decision { font-size: 29px; font-weight: 700; fill: #16324F; }
+      .box-blue { fill: #EAF4FB; stroke: #63A3CE; stroke-width: 3; }
+      .box-teal { fill: #EAF7F3; stroke: #69B39A; stroke-width: 3; }
+      .box-green { fill: #EDF7EC; stroke: #7AAF75; stroke-width: 3; }
+      .box-orange { fill: #FFF6E5; stroke: #D8AA4B; stroke-width: 3; }
+      .box-coral { fill: #FCEEEA; stroke: #DC927E; stroke-width: 3; }
+      .decision-box { fill: #F1EEFA; stroke: #9585C2; stroke-width: 4; }
+      .label-blue { fill: #0072B2; }
+      .label-teal { fill: #007B5C; }
+      .label-green { fill: #3F793C; }
+      .label-orange { fill: #A86F00; }
+      .label-coral { fill: #B3442B; }
+      .icon-bg { fill: #FFFFFF; fill-opacity: 0.74; stroke: #FFFFFF; stroke-width: 2; }
+      .icon-line { fill: none; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; }
+      .pipeline-arrow { fill: #385B73; }
+      .yes-line { fill: none; stroke: #4B8C47; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#yes-arrow); }
+      .no-line { fill: none; stroke: #C98700; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; marker-end: url(#no-arrow); }
+      .merge-line { fill: none; stroke: #385B73; stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+  </defs>
+
+  <rect width="1800" height="2020" fill="#F6F8FB"/>
+
+  <g class="font">
+    <text x="900" y="72" text-anchor="middle" class="title">Controllo dei risultati anomali</text>
+    <text x="900" y="120" text-anchor="middle" class="subtitle">Validazione, revisione ed eventuale rerun del judge multimodale</text>
+
+    <!-- Output iniziale -->
+    <g filter="url(#shadow)">
+      <rect x="250" y="165" width="1300" height="220" rx="28" class="box-blue"/>
+    </g>
+    <text x="310" y="224" class="stage-label label-blue">OUTPUT DEL JUDGE</text>
+    <text x="310" y="283" class="box-title">Valutazione strutturata del singolo circuito</text>
+    <text x="310" y="337" class="body">Score, decisione, severità, anomalie e motivazione testuale</text>
+    <circle cx="1415" cy="275" r="67" class="icon-bg"/>
+    <g class="icon-line" stroke="#0072B2">
+      <path d="M1374 220 H1427 L1457 250 V330 H1374 Z"/>
+      <path d="M1427 220 V250 H1457"/>
+      <path d="M1397 270 C1387 270 1387 288 1397 288 C1387 288 1387 306 1397 306"/>
+      <path d="M1435 270 C1445 270 1445 288 1435 288 C1445 288 1445 306 1435 306"/>
+    </g>
+
+    <path d="M892 397 H908 V423 H930 L900 453 L870 423 H892 Z" class="pipeline-arrow"/>
+
+    <!-- Triage -->
+    <g filter="url(#shadow)">
+      <rect x="250" y="465" width="1300" height="220" rx="28" class="box-teal"/>
+    </g>
+    <text x="310" y="524" class="stage-label label-teal">TRIAGE DEL RISULTATO</text>
+    <text x="310" y="583" class="box-title">Controllo congiunto degli indicatori</text>
+    <text x="310" y="637" class="body">Coerenza tra score, errori, decisione ed evidenza visiva</text>
+    <circle cx="1415" cy="575" r="67" class="icon-bg"/>
+    <g class="icon-line" stroke="#008B68">
+      <path d="M1365 525 H1465 L1428 568 V619 L1402 633 V568 Z"/>
+      <path d="M1390 548 L1405 563 L1435 533"/>
+    </g>
+
+    <path d="M892 697 H908 V723 H930 L900 753 L870 723 H892 Z" class="pipeline-arrow"/>
+
+    <!-- Decisione -->
+    <g filter="url(#shadow)">
+      <path d="M900 765 L1090 900 L900 1035 L710 900 Z" class="decision-box"/>
+    </g>
+    <text x="900" y="912" text-anchor="middle" class="decision">Il risultato è coerente?</text>
+
+    <!-- Etichette del bivio -->
+    <rect x="555" y="930" width="94" height="42" rx="21" fill="#EDF7EC" stroke="#7AAF75" stroke-width="2"/>
+    <text x="602" y="959" text-anchor="middle" class="branch-label label-green">SÌ</text>
+    <rect x="1155" y="930" width="104" height="42" rx="21" fill="#FFF6E5" stroke="#D8AA4B" stroke-width="2"/>
+    <text x="1207" y="959" text-anchor="middle" class="branch-label label-orange">NO</text>
+
+    <!-- Rami -->
+    <path d="M710 900 H520 V1190" class="yes-line"/>
+    <path d="M1090 900 H1280 V1085" class="no-line"/>
+
+    <!-- Conferma diretta -->
+    <g filter="url(#shadow)">
+      <rect x="110" y="1210" width="650" height="300" rx="28" class="box-green"/>
+    </g>
+    <text x="165" y="1268" class="stage-label label-green">CONFERMA DIRETTA</text>
+    <text x="165" y="1327" class="box-title">Risultato confermato</text>
+    <text x="165" y="1380" class="body">Nessuna contraddizione rilevante</text>
+    <text x="165" y="1420" class="body">o ambiguità da approfondire</text>
+    <circle cx="670" cy="1360" r="64" class="icon-bg"/>
+    <g class="icon-line" stroke="#4B8C47">
+      <circle cx="670" cy="1360" r="43"/>
+      <path d="M646 1360 L663 1377 L695 1343"/>
+    </g>
+
+    <!-- Revisione manuale -->
+    <g filter="url(#shadow)">
+      <rect x="1040" y="1100" width="650" height="240" rx="28" class="box-orange"/>
+    </g>
+    <text x="1095" y="1158" class="stage-label label-orange">REVISIONE MANUALE</text>
+    <text x="1095" y="1217" class="box-title">Analisi del caso anomalo</text>
+    <text x="1095" y="1270" class="body">Errore, falso positivo o ambiguità</text>
+    <circle cx="1600" cy="1220" r="62" class="icon-bg"/>
+    <g class="icon-line" stroke="#C98700">
+      <circle cx="1583" cy="1203" r="37"/>
+      <path d="M1609 1229 L1640 1260"/>
+      <path d="M1565 1204 L1580 1219 L1603 1191"/>
+    </g>
+
+    <path d="M1357 1352 H1373 V1378 H1395 L1365 1408 L1335 1378 H1357 Z" class="pipeline-arrow"/>
+
+    <!-- Rerun -->
+    <g filter="url(#shadow)">
+      <rect x="1040" y="1420" width="650" height="220" rx="28" class="box-coral"/>
+    </g>
+    <text x="1095" y="1478" class="stage-label label-coral">EVENTUALE RERUN</text>
+    <text x="1095" y="1537" class="box-title">Nuova valutazione motivata</text>
+    <text x="1095" y="1590" class="body">Effort maggiore quando necessario</text>
+    <circle cx="1600" cy="1530" r="62" class="icon-bg"/>
+    <g class="icon-line" stroke="#C94F32">
+      <path d="M1560 1512 A42 42 0 0 1 1628 1498"/>
+      <path d="M1628 1498 L1625 1476 M1628 1498 L1607 1498"/>
+      <path d="M1640 1548 A42 42 0 0 1 1572 1562"/>
+      <path d="M1572 1562 L1575 1584 M1572 1562 L1593 1562"/>
+    </g>
+
+    <!-- Convergenza verso il consolidamento -->
+    <path d="M520 1522 V1665 H900" class="merge-line"/>
+    <path d="M1365 1652 V1665 H900" class="merge-line"/>
+    <path d="M892 1665 H908 V1695 H932 L900 1730 L868 1695 H892 Z" class="pipeline-arrow"/>
+
+    <!-- Esito finale -->
+    <g filter="url(#shadow)">
+      <rect x="250" y="1740" width="1300" height="230" rx="28" class="box-blue"/>
+    </g>
+    <text x="310" y="1799" class="stage-label label-blue">CONSOLIDAMENTO DOCUMENTATO</text>
+    <text x="310" y="1858" class="box-title">Risultato finale tracciabile</text>
+    <text x="310" y="1912" class="body">Output originale conservato  •  scelta motivata  •  dataset finale curato</text>
+    <circle cx="1415" cy="1855" r="67" class="icon-bg"/>
+    <g class="icon-line" stroke="#0072B2">
+      <path d="M1368 1806 H1462 V1902 H1368 Z"/>
+      <path d="M1358 1790 H1472 V1818 H1358 Z"/>
+      <path d="M1390 1856 L1407 1873 L1440 1838"/>
+    </g>
+  </g>
+</svg>
