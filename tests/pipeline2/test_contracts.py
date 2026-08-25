@@ -49,6 +49,7 @@ from viewer_core.model_builder import (  # noqa: E402
     led_current_states_with_hysteresis,
     led_transient_profiles,
     pulsating_load_transient_profiles,
+    resolve_geometry_image_path,
 )
 from viewer_core.component_library import normalize_component_type  # noqa: E402
 from viewer_core.layout_builder import (  # noqa: E402
@@ -76,6 +77,39 @@ class SharedContractTests(unittest.TestCase):
         cls.web_chat = load_numbered_module("09_web_chat.py")
         cls.context_builder = load_numbered_module("10_build_diagnostic_context.py")
         cls.step12 = load_numbered_module("12_controlled_scenarios.py")
+
+    def test_geometry_image_path_is_rebased_to_the_current_pipeline1_run(self) -> None:
+        """Un path storico di un altro PC non entra nel nuovo viewer model."""
+        with isolated_directory("portable_geometry_image") as temporary_root:
+            pipeline1_dir = temporary_root / "outputs" / "pipeline1.0" / "batchA"
+            estimate_path = pipeline1_dir / "03_estimate_terminals" / "a01.json"
+            report_image = pipeline1_dir / "06_graph_report" / "a01" / "a01.png"
+            estimate_path.parent.mkdir(parents=True)
+            report_image.parent.mkdir(parents=True)
+            report_image.write_bytes(b"portable-image")
+
+            resolved = resolve_geometry_image_path(
+                estimate_path,
+                "a01",
+                {
+                    "image_name": "a01.png",
+                    "image_path": r"D:\\vecchio_pc\\tesi_diagrams_yolo\\data\\batchA\\a01.png",
+                },
+            )
+
+            self.assertEqual(resolved, str(report_image.resolve()))
+            self.assertNotIn("vecchio_pc", resolved)
+
+            report_image.unlink()
+            fallback = resolve_geometry_image_path(
+                estimate_path,
+                "a01",
+                {
+                    "image_name": r"cartella\\a01.png",
+                    "image_path": r"D:\\vecchio_pc\\tesi_diagrams_yolo\\data\\batchA\\a01.png",
+                },
+            )
+            self.assertEqual(fallback, "a01.png")
 
     def test_integrated_circuit_viewer_preserves_bbox_and_pin_coordinates(self) -> None:
         """Il simbolo IC usa la bbox Pipeline 1.0 senza riposizionare i pin."""

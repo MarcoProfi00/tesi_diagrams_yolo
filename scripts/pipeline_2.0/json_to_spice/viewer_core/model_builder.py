@@ -1749,6 +1749,41 @@ def build_geometry_component(
     }
 
 
+def resolve_geometry_image_path(
+    estimate_path: Path,
+    circuit_id: str,
+    terminal_estimates: dict[str, Any],
+) -> str | None:
+    """Risolve l'immagine dalla stessa run, senza ereditare path di altri PC."""
+    raw_path = terminal_estimates.get("image_path")
+    image_name = str(terminal_estimates.get("image_name") or "").strip()
+    image_name = image_name.replace("\\", "/").rsplit("/", 1)[-1]
+    if not image_name and raw_path:
+        image_name = str(raw_path).replace("\\", "/").rsplit("/", 1)[-1]
+
+    if image_name:
+        pipeline1_dir = estimate_path.resolve().parent.parent
+        report_image = (
+            pipeline1_dir
+            / "06_graph_report"
+            / circuit_id
+            / image_name
+        )
+        if report_image.is_file():
+            return str(report_image.resolve())
+
+    if raw_path:
+        candidate = Path(str(raw_path)).resolve()
+        try:
+            candidate.relative_to(PROJECT_ROOT.resolve())
+        except ValueError:
+            pass
+        else:
+            if candidate.is_file():
+                return str(candidate)
+    return image_name or None
+
+
 def load_geometry_seed(run_dir: Path, circuit_id: str, node_map: dict[str, Any]) -> dict[str, Any]:
     """Carica la geometria Pipeline 1.0 usata come seme dal layout automatico."""
     # Nei workspace persistenti le sorgenti esplicite hanno priorita: in questo
@@ -1794,7 +1829,11 @@ def load_geometry_seed(run_dir: Path, circuit_id: str, node_map: dict[str, Any])
         "source_files": {"terminal_estimates": str(estimate_path), "terminal_graph": str(graph_path)},
         "image": {
             "id": terminal_estimates.get("image_id") or circuit_id,
-            "path": terminal_estimates.get("image_path"),
+            "path": resolve_geometry_image_path(
+                estimate_path,
+                circuit_id,
+                terminal_estimates,
+            ),
             "width": terminal_estimates.get("image_width"),
             "height": terminal_estimates.get("image_height"),
         },
