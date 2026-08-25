@@ -1,0 +1,66 @@
+circuit_id: a09
+
+components:
+  battery2.1:
+    type: dc
+    value: 9
+    unit: V
+    source: manual_from_image_label
+    label_text: "BAT2 9 V DC"
+
+  fuse8.1:
+    state: closed
+    current_rating: 500
+    current_unit: mA
+    source: manual_from_image_label
+    label_text: "F1 500 mA"
+
+  capacitor4.1:
+    value: 100
+    unit: nF
+    source: manual_from_image_label
+    label_text: "C1 100 nF"
+
+  switch25.1:
+    state: open
+    source: graph_json_state
+    label_text: "SW2"
+
+  resistor22.1:
+    value: 330
+    unit: ohm
+    source: manual_from_image_label
+    label_text: "R3 330R"
+
+  led12.1:
+    model: LED_RED
+    source: manual_assumption
+
+  lamp13.1:
+    equivalent_resistance: 90
+    unit: ohm
+    source: manual_from_image_label
+    label_text: "90 ohm"
+    spice: resistive_load
+
+nodes:
+  connector5.1_pin1:
+    label: BAT_FUSED
+    source: inferred_from_fuse_output
+
+  connector5.1_pin2:
+    label: C1_TOP
+    source: inferred_from_capacitor_branch
+
+  connector5.1_pin3:
+    label: SW2_INPUT
+    source: inferred_from_switch_branch
+
+  connector5.1_pin4:
+    label: PWR_LED_INPUT
+    source: inferred_from_resistor_led_branch
+
+  connector5.1_pin5:
+    label: GND
+    spice_node: 0
+    source: graph_json_gnd

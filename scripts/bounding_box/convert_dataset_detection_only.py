@@ -4,8 +4,10 @@ import shutil
 from pathlib import Path
 import yaml
 
-SOURCE_ROOT = Path("data/rf_yolov7_1024_rgb_v1")
-DEST_ROOT = Path("data/rf_yolo_1024_rgb_v2")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATASETS_ROOT = PROJECT_ROOT / "data" / "datasets"
+SOURCE_ROOT = DATASETS_ROOT / "dataset_v1" / "rf_yolov7_1024_rgb_v1"
+DEST_ROOT = DATASETS_ROOT / "dataset_v2" / "rf_yolo_1024_rgb"
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 

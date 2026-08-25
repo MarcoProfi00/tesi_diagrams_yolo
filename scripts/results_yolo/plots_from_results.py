@@ -5,10 +5,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-BASE_DIR = Path(__file__).resolve().parent.parent
-MD_FILE = BASE_DIR / "notes" / "results_comparison_summary.md"
-OUTPUT_BAR_FILE = BASE_DIR / "notes" / "bar_chart_map5095.png"
-OUTPUT_SCATTER_FILE = BASE_DIR / "notes" / "scatter_precision_recall.png"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+RESULTS_NOTES_DIR = PROJECT_ROOT / "notes" / "first_part_object_detection"
+MD_FILE = RESULTS_NOTES_DIR / "results_comparison_summary.md"
+OUTPUT_BAR_FILE = RESULTS_NOTES_DIR / "bar_chart_map5095.png"
+OUTPUT_SCATTER_FILE = RESULTS_NOTES_DIR / "scatter_precision_recall.png"
 
 START_MARKER = "# 1. Tabella master di tutti gli esperimenti completati"
 END_MARKER = "# 2. Ranking globale per metrica"

@@ -531,13 +531,13 @@ python scripts\pipeline_2.0\run_pipeline2.py --batch <batch> --circuits <circuit
 Con path completo:
 
 ```powershell
-python scripts\pipeline_2.0\run_pipeline2.py --batch <batch> --circuits <circuit> --run-spice --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+python scripts\pipeline_2.0\run_pipeline2.py --batch <batch> --circuits <circuit> --run-spice --ngspice-executable "C:\percorso\ngspice\bin\ngspice_con.exe"
 ```
 
 Con root esperimento:
 
 ```powershell
-python scripts\pipeline_2.0\run_pipeline2.py --batch <batch> --experiment <experiment> --circuits <circuit> --run-spice --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+python scripts\pipeline_2.0\run_pipeline2.py --batch <batch> --experiment <experiment> --circuits <circuit> --run-spice --ngspice-executable "C:\percorso\ngspice\bin\ngspice_con.exe"
 ```
 
 ## Preparare una root esperimento separata
@@ -597,7 +597,7 @@ La variante risolve gli output in
 Experiment 4 espone entrambe le varianti con un solo comando:
 
 ```powershell
-python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experiment experiment4 --circuit a01 --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experiment experiment4 --circuit a01 --ngspice-executable "C:\percorso\ngspice\bin\ngspice_con.exe"
 ```
 
 Lo switch `CHAT` / `AGENT` nella barra superiore cambia l'intero workspace:
@@ -613,13 +613,13 @@ serve un database: lo stato persistente vive nei file di ciascun workspace.
 Con ngspice per eseguire scenari dalla chat:
 
 ```powershell
-python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch <batch> --experiment <experiment> --circuit <circuit> --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch <batch> --experiment <experiment> --circuit <circuit> --ngspice-executable "C:\percorso\ngspice\bin\ngspice_con.exe"
 ```
 
 Per aprire la workspace di Experiment 3 sul circuito pilota `a01`:
 
 ```powershell
-python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experiment experiment3_viewer --circuit a01 --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experiment experiment3_viewer --circuit a01 --ngspice-executable "C:\percorso\ngspice\bin\ngspice_con.exe"
 ```
 
 Nota:
@@ -679,7 +679,7 @@ python scripts\pipeline_2.0\json_to_spice\12_controlled_scenarios.py --scenario-
 Con SPICE:
 
 ```powershell
-python scripts\pipeline_2.0\json_to_spice\12_controlled_scenarios.py --scenario-dir outputs\pipeline2.0\<batch>\<experiment>\<circuit>\scenarios\<scenario_id> --run-spice --ngspice "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+python scripts\pipeline_2.0\json_to_spice\12_controlled_scenarios.py --scenario-dir outputs\pipeline2.0\<batch>\<experiment>\<circuit>\scenarios\<scenario_id> --run-spice --ngspice "C:\percorso\ngspice\bin\ngspice_con.exe"
 ```
 
 ## Flussi d'uso consigliati
@@ -744,13 +744,13 @@ Quando il budget e esaurito:
 Nel nostro ambiente:
 
 ```text
-C:\Users\m.profilo\Spice64\bin\ngspice_con.exe
+C:\percorso\ngspice\bin\ngspice_con.exe
 ```
 
 Verifica veloce:
 
 ```powershell
-& "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe" -v
+& "C:\percorso\ngspice\bin\ngspice_con.exe" -v
 ```
 
 Per la pipeline conviene usare `ngspice_con.exe`, cioe la versione console.

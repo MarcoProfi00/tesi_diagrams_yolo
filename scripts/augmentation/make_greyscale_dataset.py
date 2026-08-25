@@ -6,10 +6,11 @@ import shutil
 # CONFIGURAZIONE
 # =========================================================
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATASET_ROOT = PROJECT_ROOT / "data" / "datasets" / "dataset_v3"
 
-SRC_DATASET = PROJECT_ROOT / "data" / "dataset_v3" / "rf_yolo_1024_rgb"
-DST_DATASET = PROJECT_ROOT / "data" / "dataset_v3" / "rf_yolo_1024_gray"
+SRC_DATASET = DATASET_ROOT / "rf_yolo_1024_rgb"
+DST_DATASET = DATASET_ROOT / "rf_yolo_1024_gray"
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp"}
 

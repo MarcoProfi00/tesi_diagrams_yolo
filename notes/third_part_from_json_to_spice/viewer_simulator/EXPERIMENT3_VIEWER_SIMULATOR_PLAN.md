@@ -323,7 +323,7 @@ a01, a02, a04, a05, a06, a07, a08, a09, a10
 ## Comando Web Chat
 
 ```powershell
-python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experiment experiment3_viewer --circuit a01 --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experiment experiment3_viewer --circuit a01 --ngspice-executable "C:\percorso\ngspice\bin\ngspice_con.exe"
 ```
 
 ## Criteri Di Successo

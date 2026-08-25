@@ -7,9 +7,10 @@ from pathlib import Path
 import cv2
 
 
-DATASET_ROOT = Path("data/dataset_v3/rf_yolo_1024_rgb")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATASET_ROOT = PROJECT_ROOT / "data" / "datasets" / "dataset_v3" / "rf_yolo_1024_rgb"
 SPLIT = "train"
-OUTPUT_DIR = Path("debug/preview_augmented_bboxes_strong_v3")
+OUTPUT_DIR = PROJECT_ROOT / "debug" / "preview_augmented_bboxes_strong_v3"
 NUM_SAMPLES = 100
 SEED = 42
 

@@ -1,0 +1,82 @@
+circuit_id: a08
+
+simulation:
+  analyses: [op, tran]
+  tran:
+    step: 0.5ms
+    stop: 300ms
+
+components:
+  signal_source23.1:
+    type: pulse
+    waveform: square
+    value: 5
+    unit: V
+    low_value: 0
+    high_value: 5
+    delay: 0
+    rise_time: 1ms
+    fall_time: 1ms
+    pulse_width: 50ms
+    period: 100ms
+    frequency: 10
+    frequency_unit: Hz
+    source: manual_assumption_from_image_label
+    label_text: "V2 square 10 Hz"
+    note: "The image shows square 10 Hz but not the amplitude; 0-5 V is assumed for SPICE."
+
+  capacitor4.1:
+    value: 10
+    unit: uf
+    source: manual_from_image_label
+    label_text: "C1 10 uF"
+
+  resistor22.1:
+    value: 10
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R1 10 kOhm"
+
+  resistor22.2:
+    value: 560
+    unit: ohm
+    source: manual_from_image_label
+    label_text: "R6 560 ohm"
+
+  resistor22.3:
+    value: 560
+    unit: ohm
+    source: manual_from_image_label
+    label_text: "R7 560 ohm"
+
+  resistor22.4:
+    value: 68
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R3 68 kOhm"
+
+  npn_transistor18.1:
+    model: 2N3904
+    source: manual_from_image_label
+    label_text: "Q1 2N3904"
+
+  led12.1:
+    model: LED_RED
+    source: manual_from_image_label
+    label_text: "D1 LTL-307EE"
+
+nodes:
+  signal_source23.1_t1:
+    label: IN
+    source: manual_from_image_label
+    label_text: "IN"
+
+  capacitor4.1_t1:
+    label: TRIGGER
+    source: manual_from_image_label
+    label_text: "Trigger"
+
+  led12.1_cathode:
+    label: LED
+    source: manual_from_image_label
+    label_text: "LED"

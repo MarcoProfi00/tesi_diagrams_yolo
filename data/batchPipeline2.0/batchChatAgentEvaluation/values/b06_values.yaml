@@ -1,0 +1,194 @@
+# Valori manuali per b06, radio AM con preamplificatore 2N3904 e LM386.
+# I valori leggibili dall'immagine sono mantenuti separati dalle assunzioni
+# necessarie alla prima base run SPICE.
+
+circuit_id: b06
+
+spice_topology_overlay:
+  terminal_node_overrides:
+    operational_amplifier19.1_in1:
+      # Il Graph non contiene il cursore di R3. Per la base run lo poniamo al
+      # massimo volume: il pin 3 del LM386 riceve il lato alto di R3/C4.
+      # Il Graph JSON sorgente non viene modificato.
+      node: N010
+      source: manual_image_validation_R3_wiper_at_maximum_volume
+
+components:
+  # B1 e' leggibile nello schema.
+  battery2.1:
+    type: dc
+    value: 9
+    unit: V
+    source: manual_from_image_label
+    label_text: "B1 9 V"
+
+  # L1 e' una bobina: la scritta nell'immagine e ambigua ("220uF"), quindi
+  # 220 uH e' un'assunzione coerente con il circuito di sintonia AM.
+  inductor10.1:
+    value: 0.00022
+    unit: H
+    source: manual_assumption_inductor_label_ambiguous_220uH
+    label_text: "L1 assunta: 220 uH"
+    viewer_override:
+      label: L1
+      display_value: 220 uH
+      tooltip: "L1: valore assunto 220 uH dalla label ambigua dell'immagine"
+
+  # C1 e' un condensatore variabile da 365 pF; la base run usa il valore
+  # nominale mostrato, senza simulare la rotazione del condensatore.
+  polarized_capacitor20.1:
+    value: 365
+    unit: pf
+    source: manual_from_image_label
+    label_text: "C1 variabile 365 pF"
+    viewer_override:
+      visual_class: variable_capacitor
+      label: C1
+      display_value: 365 pF
+
+  polarized_capacitor20.2:
+    value: 100
+    unit: nf
+    source: manual_from_image_label
+    label_text: "C2 100 nF"
+    viewer_override:
+      visual_class: capacitor
+      label: C2
+      display_value: 100 nF
+
+  polarized_capacitor20.3:
+    value: 100
+    unit: nf
+    source: manual_from_image_label
+    label_text: "C3 100 nF"
+    viewer_override:
+      visual_class: capacitor
+      label: C3
+      display_value: 100 nF
+
+  polarized_capacitor20.4:
+    value: 100
+    unit: nf
+    source: manual_from_image_label
+    label_text: "C4 100 nF"
+    viewer_override:
+      visual_class: capacitor
+      label: C4
+      display_value: 100 nF
+
+  polarized_capacitor20.5:
+    value: 220
+    unit: uf
+    source: manual_from_image_label
+    label_text: "C5 220 uF"
+
+  polarized_capacitor20.6:
+    value: 100
+    unit: uf
+    source: manual_from_image_label
+    label_text: "C6 100 uF"
+
+  resistor22.1:
+    value: 100
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R1 100 kohm"
+
+  resistor22.2:
+    value: 10
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R2 10 kohm"
+
+  # R3 e' un potenziometro da 10 kohm. L'overlay sopra fissa il cursore al
+  # lato alto per una prima run semplice e riproducibile.
+  resistor22.3:
+    value: 10
+    unit: kohm
+    source: manual_from_image_label_fixed_wiper_at_maximum
+    label_text: "R3 potenziometro 10 kohm; base run al massimo volume"
+    viewer_override:
+      label: R3
+      display_value: 10 kohm
+      label_mode: tooltip
+      tooltip: "R3 potenziometro 10 kohm; cursore base run al massimo volume"
+
+  # AA119 non ha ancora un modello dedicato nel registro: la base run usa il
+  # modello rivelatore generico gia disponibile, senza attribuirgli un part
+  # number diverso.
+  diode7.1:
+    model: D_GENERIC
+    source: manual_image_part_number_with_generic_spice_detector_model
+    label_text: "D1 AA119; modello SPICE rivelatore generico"
+    viewer_override:
+      label: D1
+      display_value: AA119
+      tooltip: "D1 AA119; simulato con modello rivelatore generico"
+
+  npn_transistor18.1:
+    model: 2N3904
+    source: manual_from_image_label
+    label_text: "Q1 2N3904"
+    viewer_override:
+      label: Q1
+      display_value: 2N3904
+
+  # IC1 e' un LM386: il modello generale LM386_SIMPLE verra' definito nel
+  # registro modelli. I cinque nodi seguono i pin visibili 3, 2, 6, 4 e 5.
+  operational_amplifier19.1:
+    model: LM386_SIMPLE
+    source: manual_image_validation_LM386_pin_mapping
+    label_text: "IC1 LM386; equivalente SPICE semplice"
+    viewer_override:
+      visual_class: operational_amplifier
+      label: LM386
+      tooltip: "IC1 LM386; equivalente SPICE lineare semplice"
+    spice_override:
+      emit_as: subcircuit
+      pin_order: [INP, INM, VCC, VEE, OUT]
+      node_refs:
+        INP: operational_amplifier19.1_in1
+        INM: operational_amplifier19.1_in2
+        VCC: operational_amplifier19.1_aux1
+        VEE: operational_amplifier19.1_aux2
+        OUT: operational_amplifier19.1_out
+
+  # Z1 e' riconosciuto come Breaker, ma nell'immagine e' un altoparlante.
+  # 8 ohm e' l'equivalente nominale assunto per il primo banco di prova.
+  breaker3.1:
+    spice_override:
+      emit_as: resistive_load
+      equivalent_resistance: 8
+      resistance_unit: ohm
+      node_order: [t1, t2]
+      semantic_role: speaker_equivalent
+    source: manual_interpretation_Z1_speaker_equivalent
+    label_text: "Z1 altoparlante equivalente: 8 ohm"
+    viewer_override:
+      visual_class: speaker
+      label: Z1 8 ohm
+      tooltip: "Z1 altoparlante; carico SPICE equivalente da 8 ohm"
+
+  switch25.1:
+    state: closed
+    source: graph_json_state_validated_from_image
+    label_text: "S1 chiuso"
+    viewer_override:
+      label: S1
+      label_mode: reference_only
+      tooltip: "S1 chiuso nella base run"
+
+  # L'antenna resta un'interfaccia esterna: la prima base run non le assegna
+  # una sorgente RF. Un segnale verra' introdotto solo in uno scenario mirato.
+  antenna1.1:
+    source: graph_json_external_input
+    label_text: "Antenna esterna; nessuna sorgente RF nella base run"
+    viewer_override:
+      visual_class: antenna
+      label: Antenna
+
+simulation:
+  analyses: [op, tran]
+  tran:
+    step: 1us
+    stop: 5ms

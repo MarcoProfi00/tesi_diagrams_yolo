@@ -1,0 +1,127 @@
+# Valori manuali per c02, multivibratore astabile a due transistor.
+# C1 e C2 non riportano il valore nell'immagine: 10 uF e' un'ipotesi
+# nominale simmetrica, esplicitata per rendere simulabile il circuito.
+
+circuit_id: c02
+
+simulation:
+  analyses: [op, tran]
+  tran:
+    step: 1ms
+    stop: 3s
+
+supplies:
+  VREF_BATTERY_NEGATIVE:
+    # Lo schema non disegna GND: una sorgente ideale da 0 V assegna al polo
+    # negativo della batteria il riferimento SPICE senza alimentare o
+    # modificare elettricamente il circuito.
+    terminal: battery2.1_negative
+    type: dc
+    value: 0
+    unit: V
+    reference: 0
+    source: manual_reference_for_floating_battery_circuit
+    label_text: "Negativo batteria: riferimento SPICE"
+
+components:
+  battery2.1:
+    type: dc
+    value: 9
+    unit: V
+    source: manual_from_image_label
+    label_text: "Batteria 9 V"
+
+  resistor22.1:
+    value: 470
+    unit: ohm
+    source: manual_from_image_label
+    label_text: "R1 470 ohm"
+
+  resistor22.2:
+    value: 47
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R2 47 kohm"
+
+  resistor22.3:
+    value: 47
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R3 47 kohm"
+
+  resistor22.4:
+    value: 470
+    unit: ohm
+    source: manual_from_image_label
+    label_text: "R4 470 ohm"
+
+  polarized_capacitor20.1:
+    value: 10
+    unit: uf
+    source: manual_testbench_assumption
+    label_text: "C1 10 uF nominale (valore non visibile)"
+
+  polarized_capacitor20.2:
+    value: 10
+    unit: uf
+    source: manual_testbench_assumption
+    label_text: "C2 10 uF nominale (valore non visibile)"
+
+  npn_transistor18.1:
+    model: BC548_TYP
+    source: manual_from_image_label
+    label_text: "Q1 BC548"
+    viewer_override:
+      label: Q1
+      display_value: BC548
+
+  npn_transistor18.2:
+    model: BC548_TYP
+    source: manual_from_image_label
+    label_text: "Q2 BC548"
+    viewer_override:
+      label: Q2
+      display_value: BC548
+
+  led12.1:
+    model: LED_RED_TYP
+    source: manual_testbench_assumption
+    label_text: "L1 LED, colore non specificato"
+    viewer_override:
+      label: L1
+      display_value: LED
+
+  led12.2:
+    model: LED_RED_TYP
+    source: manual_testbench_assumption
+    label_text: "L2 LED, colore non specificato"
+    viewer_override:
+      label: L2
+      display_value: LED
+
+nodes:
+  battery2.1_negative:
+    label: GND
+    source: manual_from_battery_reference
+    label_text: "Polo negativo batteria"
+
+  battery2.1_positive:
+    label: VCC
+    source: manual_from_image_label
+    label_text: "+9 V"
+
+  npn_transistor18.1_B:
+    label: Q1_BASE
+    source: inferred_from_validated_graph
+
+  npn_transistor18.2_B:
+    label: Q2_BASE
+    source: inferred_from_validated_graph
+
+  npn_transistor18.1_C:
+    label: Q1_COLLECTOR_L1
+    source: inferred_from_validated_graph
+
+  npn_transistor18.2_C:
+    label: Q2_COLLECTOR_L2
+    source: inferred_from_validated_graph

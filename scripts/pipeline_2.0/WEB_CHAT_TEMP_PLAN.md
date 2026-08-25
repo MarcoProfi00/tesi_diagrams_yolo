@@ -390,7 +390,7 @@ python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch <batch> --exper
 Esempio per Esperimento 2:
 
 ```powershell
-python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experiment experiment2 --circuit a01 --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experiment experiment2 --circuit a01 --ngspice-executable "C:\percorso\ngspice\bin\ngspice_con.exe"
 ```
 
 Quando `--experiment` e presente, la chat legge e scrive in:

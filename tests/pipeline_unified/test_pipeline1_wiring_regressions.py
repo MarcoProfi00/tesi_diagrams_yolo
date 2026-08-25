@@ -336,9 +336,10 @@ class C01RegressionTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         image_path = (
             PROJECT_ROOT
-            / "data"
-            / "batchPipeline2.0"
-            / "batchChatAgentEvaluation"
+            / "experiment_ai"
+            / "verify_json_img"
+            / "batchC1"
+            / "images"
             / "c01.jpg"
         )
         image = cv2.imread(str(image_path))
@@ -520,7 +521,7 @@ class B03TopologyRegressionTests(unittest.TestCase):
             PROJECT_ROOT
             / "outputs"
             / "demo_workspaces"
-            / "demo_batch"
+            / "demo_b03"
             / "pipeline1.0"
             / "04_extract_wires"
             / "b03.json"

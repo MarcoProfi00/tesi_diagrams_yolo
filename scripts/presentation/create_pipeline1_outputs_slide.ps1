@@ -16,11 +16,12 @@ $outputDirectory = [IO.Path]::GetDirectoryName($outputPath)
 [IO.Directory]::CreateDirectory($outputDirectory) | Out-Null
 
 $basePresentation = Join-Path $workspaceRoot "outputs\presentations\tesi_object_detection_diagnosi_ai_risultati_gpt_finale.pptx"
+$pipeline1OutputRoot = Join-Path $workspaceRoot "outputs\demo_workspaces\demo_b03\pipeline1.0"
 $imagePaths = @(
-    (Join-Path $workspaceRoot "outputs\demo_workspaces\demo_batch\pipeline1.0\02_assign_instances\debug_images\b02_instances.jpg"),
-    (Join-Path $workspaceRoot "outputs\demo_workspaces\demo_batch\pipeline1.0\03_estimate_terminals\debug_images\b02_terminals.jpg"),
-    (Join-Path $workspaceRoot "outputs\demo_workspaces\demo_batch\pipeline1.0\04_extract_wires\skeleton\b02_skeleton.png"),
-    (Join-Path $workspaceRoot "outputs\demo_workspaces\demo_batch\pipeline1.0\05_build_terminal_graph\debug_terminal_overlay\b02_terminal_overlay.jpg")
+    (Join-Path $pipeline1OutputRoot "02_assign_instances\debug_images\b02_instances.jpg"),
+    (Join-Path $pipeline1OutputRoot "03_estimate_terminals\debug_images\b02_terminals.jpg"),
+    (Join-Path $pipeline1OutputRoot "04_extract_wires\skeleton\b02_skeleton.png"),
+    (Join-Path $pipeline1OutputRoot "05_build_terminal_graph\debug_terminal_overlay\b02_terminal_overlay.jpg")
 )
 
 foreach ($path in @($basePresentation) + $imagePaths) {

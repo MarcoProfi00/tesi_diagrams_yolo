@@ -1,0 +1,243 @@
+# Valori manuali per ic04, sirena bitonale con due timer NE555.
+# Gli ID provengono dal Graph JSON validato della Pipeline 1.0. Tutti i
+# valori elettrici sono leggibili nello schema. I due NE555 sono simulati con
+# il macromodello ufficiale TI TLC555_6, compatibile per funzione e pinout.
+
+circuit_id: ic04
+
+supplies:
+  VCC_12:
+    # Il simbolo +12 V e' stato classificato come Terminal. La dichiarazione
+    # seguente lo rappresenta come sorgente ideale rispetto alla massa del
+    # Graph, senza alterare la topologia estratta.
+    terminal: terminal26.1_t1
+    type: dc
+    value: 12
+    unit: V
+    reference: 0
+    source: manual_from_image_label
+    label_text: "+12 V DC"
+    viewer_override:
+      visual_class: voltage_source
+      label: VCC
+      display_value: +12 V
+
+components:
+  # Primo astabile, oscillatore lento di modulazione.
+  resistor22.2:
+    value: 68
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R1 68 kohm"
+    viewer_override:
+      label: R1
+      display_value: 68 kohm
+
+  resistor22.1:
+    value: 68
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R2 68 kohm"
+    viewer_override:
+      label: R2
+      display_value: 68 kohm
+
+  # D1 e' un diodo 1N4001, non un LED. Il Graph conserva l'ID prodotto dal
+  # detector, mentre modello e resa grafica sono corretti dichiarativamente.
+  led12.1:
+    model: D_1N4001_TYP
+    source: manual_from_image_label_and_registered_typical_model
+    label_text: "D1 1N4001"
+    viewer_override:
+      visual_class: diode
+      label: D1
+      display_value: 1N4001
+      tooltip: "Diodo 1N4001; modello tipico semplificato registrato per SPICE"
+
+  polarized_capacitor20.1:
+    value: 10
+    unit: uf
+    source: manual_from_image_label
+    label_text: "C1 10 uF polarizzato"
+    viewer_override:
+      label: C1
+      display_value: 10 uF
+
+  polarized_capacitor20.2:
+    value: 10
+    unit: nf
+    source: manual_from_image_label
+    label_text: "C2 10 nF polarizzato"
+    viewer_override:
+      label: C2
+      display_value: 10 nF
+
+  # R5 porta l'uscita dell'oscillatore lento al pin CONTROL del secondo 555.
+  resistor22.3:
+    value: 10
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R5 10 kohm"
+    viewer_override:
+      label: R5
+      display_value: 10 kohm
+
+  # Secondo astabile, oscillatore audio.
+  resistor22.5:
+    value: 8.2
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R3 8.2 kohm"
+    viewer_override:
+      label: R3
+      display_value: 8.2 kohm
+
+  resistor22.4:
+    value: 8.2
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R4 8.2 kohm"
+    viewer_override:
+      label: R4
+      display_value: 8.2 kohm
+
+  polarized_capacitor20.3:
+    value: 100
+    unit: nf
+    source: manual_from_image_label
+    label_text: "C3 100 nF polarizzato"
+    viewer_override:
+      label: C3
+      display_value: 100 nF
+
+  # C4 accoppia in AC l'uscita audio allo speaker; il positivo e' sul pin 3.
+  polarized_capacitor20.4:
+    value: 100
+    unit: uf
+    source: manual_from_image_label
+    label_text: "C4 100 uF polarizzato"
+    viewer_override:
+      label: C4
+      display_value: 100 uF
+
+  integrated_circuit11.1:
+    # Modello PSpice ufficiale TI TLC555/TLC556 Rev. E, SLFJ002E, gia'
+    # registrato e verificato con ngspice. Ordine porte dichiarato da TI:
+    # THRES CONT TRIG RESET OUT DISC VCC GND.
+    model: TLC555_6
+    source: ti_official_slfj002e_pspice_model
+    label_text: "IC1 NE555; modello ufficiale TI TLC555_6 Rev. E"
+    viewer_override:
+      label: IC1
+      display_value: NE555
+      tooltip: "NE555 simulato con il modello ufficiale TI TLC555_6 Rev. E SLFJ002E"
+    spice_override:
+      emit_as: subcircuit
+      pin_order: [THRES, CONT, TRIG, RESET, OUT, DISC, VCC, GND]
+      node_refs:
+        THRES: integrated_circuit11.1_left_2
+        CONT: integrated_circuit11.1_bottom_2
+        TRIG: integrated_circuit11.1_left_3
+        RESET: integrated_circuit11.1_top_1
+        OUT: integrated_circuit11.1_right_1
+        DISC: integrated_circuit11.1_left_1
+        VCC: integrated_circuit11.1_top_2
+        GND: integrated_circuit11.1_bottom_1
+
+  integrated_circuit11.2:
+    # Lo schema sorgente ripete per errore il riferimento IC1. Nel viewer il
+    # secondo componente e' normalizzato a IC2 per distinguerlo dal primo.
+    model: TLC555_6
+    source: ti_official_slfj002e_pspice_model
+    label_text: "Secondo NE555 (IC1 ripetuto nello schema); normalizzato a IC2"
+    viewer_override:
+      label: IC2
+      display_value: NE555
+      tooltip: "Secondo NE555; modello ufficiale TI TLC555_6 Rev. E SLFJ002E"
+    spice_override:
+      emit_as: subcircuit
+      pin_order: [THRES, CONT, TRIG, RESET, OUT, DISC, VCC, GND]
+      node_refs:
+        THRES: integrated_circuit11.2_left_2
+        CONT: integrated_circuit11.2_bottom_2
+        TRIG: integrated_circuit11.2_left_3
+        RESET: integrated_circuit11.2_top_1
+        OUT: integrated_circuit11.2_right_1
+        DISC: integrated_circuit11.2_left_1
+        VCC: integrated_circuit11.2_top_2
+        GND: integrated_circuit11.2_bottom_1
+
+  speaker24.1:
+    # Lo speaker e' rappresentato dal carico resistivo nominale indicato nello
+    # schema. La potenza di 500 mW resta metadato, non modifica l'equivalente.
+    nominal_power: 500
+    power_unit: mW
+    source: manual_from_image_label
+    label_text: "K1 speaker 64 ohm, 500 mW"
+    spice_override:
+      emit_as: resistive_load
+      equivalent_resistance: 64
+      resistance_unit: ohm
+      node_order: [t1, t2]
+      semantic_role: speaker_equivalent
+    viewer_override:
+      visual_class: speaker
+      label: K1
+      display_value: 64 ohm
+      tooltip: "Speaker 64 ohm, 500 mW; equivalente SPICE resistivo"
+
+nodes:
+  terminal26.1_t1:
+    label: VCC_12
+    source: manual_from_image_label
+    label_text: "+12 V DC"
+
+  gnd9.1_t1:
+    label: GND
+    source: graph_json_ground
+
+  integrated_circuit11.1_left_1:
+    label: SLOW_DISCHARGE
+    source: manual_from_validated_graph_pin7
+
+  integrated_circuit11.1_left_2:
+    label: SLOW_TIMING
+    source: manual_from_validated_graph_pins2_6
+
+  integrated_circuit11.1_right_1:
+    label: MODULATOR_OUTPUT
+    source: manual_from_validated_graph_pin3
+
+  integrated_circuit11.1_bottom_2:
+    label: SLOW_CONTROL
+    source: manual_from_validated_graph_pin5
+
+  integrated_circuit11.2_left_1:
+    label: AUDIO_DISCHARGE
+    source: manual_from_validated_graph_pin7
+
+  integrated_circuit11.2_left_2:
+    label: AUDIO_TIMING
+    source: manual_from_validated_graph_pins2_6
+
+  integrated_circuit11.2_bottom_2:
+    label: AUDIO_CONTROL
+    source: manual_from_validated_graph_pin5
+
+  integrated_circuit11.2_right_1:
+    label: AUDIO_OUTPUT
+    source: manual_from_validated_graph_pin3
+
+  speaker24.1_t1:
+    label: SPEAKER_INPUT
+    source: manual_from_validated_graph
+
+simulation:
+  # E' un doppio oscillatore: l'analisi significativa e' il transitorio.
+  # Il periodo ideale del modulatore e' circa 0.94 s; 2 s mostrano due cicli.
+  # Il passo di 50 us risolve anche l'oscillatore audio senza creare un CSV
+  # inutilmente grande. La topologia completa e' stata provata con ngspice.
+  analyses: [tran]
+  tran:
+    step: 50us
+    stop: 2s

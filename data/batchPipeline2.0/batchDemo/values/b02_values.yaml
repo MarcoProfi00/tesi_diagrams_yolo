@@ -1,0 +1,86 @@
+# Valori manuali per il multivibratore astabile b02.
+# Gli ID dei componenti sono quelli del Graph JSON della Pipeline 1.0.
+
+circuit_id: b02
+
+supplies:
+  VCC:
+    # La rail superiore e il nodo comune di entrambi gli anodi LED e delle resistenze di base.
+    terminal: led12.1_anode
+    type: dc
+    value: 5
+    unit: V
+    reference: 0
+    source: manual_from_image_label
+    label_text: "+5V"
+
+components:
+  # R1: ramo LED D1 - collettore Q1.
+  resistor22.1:
+    value: 270
+    unit: ohm
+    source: manual_from_image_label
+    label_text: "R1 270 ohm"
+
+  # R2: dalla rail +5 V alla base di Q1.
+  resistor22.2:
+    value: 2.2
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R2 2.2 kohm"
+
+  # R4: dalla rail +5 V alla base di Q2.
+  resistor22.3:
+    value: 2.2
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R4 2.2 kohm"
+
+  # R3: ramo LED D2 - collettore Q2.
+  resistor22.4:
+    value: 270
+    unit: ohm
+    source: manual_from_image_label
+    label_text: "R3 270 ohm"
+
+  # C1 collega il collettore di Q1 alla base di Q2.
+  polarized_capacitor20.1:
+    value: 47
+    unit: uf
+    source: manual_from_image_label
+    label_text: "C1 47 uF"
+
+  # C2 collega il collettore di Q2 alla base di Q1.
+  polarized_capacitor20.2:
+    value: 47
+    unit: uf
+    source: manual_from_image_label
+    label_text: "C2 47 uF"
+
+  npn_transistor18.1:
+    model: 2N3904
+    source: manual_from_image_label
+    label_text: "Q1 2N3904"
+
+  npn_transistor18.2:
+    model: 2N3904
+    source: manual_from_image_label
+    label_text: "Q2 2N3904"
+
+  led12.1:
+    # L'immagine identifica D1 come LED ma non ne dichiara il colore/modello.
+    model: LED_RED
+    source: manual_spice_generic_led_model
+    label_text: "D1 LED; modello SPICE generico"
+
+  led12.2:
+    # L'immagine identifica D2 come LED ma non ne dichiara il colore/modello.
+    model: LED_RED
+    source: manual_spice_generic_led_model
+    label_text: "D2 LED; modello SPICE generico"
+
+simulation:
+  analyses: [op, tran]
+  tran:
+    step: 1ms
+    stop: 1s

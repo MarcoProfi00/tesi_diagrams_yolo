@@ -643,13 +643,13 @@ Output:
 Comando tipico:
 
 ```powershell
-python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experiment experiment2 --circuit a01 --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experiment experiment2 --circuit a01 --ngspice-executable "C:\percorso\ngspice\bin\ngspice_con.exe"
 ```
 
 Comando per aprire la workspace di Experiment 3 sul circuito pilota `a01`:
 
 ```powershell
-python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experiment experiment3_viewer --circuit a01 --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+python scripts\pipeline_2.0\json_to_spice\09_web_chat.py --batch batchA --experiment experiment3_viewer --circuit a01 --ngspice-executable "C:\percorso\ngspice\bin\ngspice_con.exe"
 ```
 
 Nota:
@@ -998,7 +998,7 @@ scenario_comparison.json
 Comando tipico:
 
 ```powershell
-python scripts\pipeline_2.0\json_to_spice\12_controlled_scenarios.py --scenario-dir outputs\pipeline2.0\batchA\experiment2\a01\scenarios\scenario_1 --run-spice --ngspice "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+python scripts\pipeline_2.0\json_to_spice\12_controlled_scenarios.py --scenario-dir outputs\pipeline2.0\batchA\experiment2\a01\scenarios\scenario_1 --run-spice --ngspice "C:\percorso\ngspice\bin\ngspice_con.exe"
 ```
 
 ## Flussi reali oggi supportati

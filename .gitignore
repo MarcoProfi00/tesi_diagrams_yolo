@@ -14,11 +14,15 @@ __pycache__/
 .vscode/
 
 # Dataset: ignora il contenuto estratto, ma versiona gli archivi sorgente
+# e i batch operativi necessari alle pipeline.
 data/**
 !data/**/
 !data/**/*.zip
 !data/*.yaml
 !data/README.md
+!data/batchPipeline1.0/**
+!data/batchPipeline2.0/**
+data/images/**
 
 # Output e artefatti locali
 #outputs/
@@ -26,30 +30,31 @@ debug/
 
 # Cartella temporanea centrale
 /.tmp/
+/.tmp_*/
 
 # Compatibilita' con vecchi nomi temporanei ancora in circolazione
 /tmp_*
 /outputs/_tmp*
+/outputs/.test_tmp/
+/outputs/demo_workspaces/_tmp*/
 
 # Repo esterni clonati localmente
 repos/
 
 # Modelli e checkpoint
 *.pt
+!outputs/yolo11/exp11b1_yolo11_rgb_aug_strong_v3/weights/best.pt
 *.pth
 *.onnx
 *.engine
 *.ckpt
 
-# Variabili ambiente / segreti
+# Variabili ambiente / segreti / API keys
 .env
 *.env
+.env.*
+!.env.example
 
 # File di sistema
 .DS_Store
 Thumbs.db
-
-# API keys / secrets
-scripts/GPT/.env
-.env
-**/.env

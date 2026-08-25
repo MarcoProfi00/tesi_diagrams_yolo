@@ -7,13 +7,17 @@ giorni diversi, oppure tutte insieme.
 Eseguire sempre i comandi dalla root del progetto:
 
 ```powershell
-cd C:\Users\m.profilo\Desktop\tesi_diagrams_yolo
+Set-Location (git rev-parse --show-toplevel)
 ```
+
+Gli esempi risolvono `ngspice_con.exe` dal `PATH`. Se l'eseguibile non e'
+nel `PATH`, sostituire quel nome con un percorso valido sul proprio PC.
 
 ## Comandi disponibili
 
 | Comando | Cosa esegue | Risultato principale |
 |---|---|---|
+| `preflight` | Controlli in sola lettura | Ambiente, asset e programmi validati |
 | `graph` | Pipeline 1.0, step 01-06 | Graph JSON e sito di controllo |
 | `spice` | Pipeline 2.0, step 01-08 | Netlist, ngspice e risultati SPICE |
 | `webchat` | Viewer e copie web isolate | CHAT e AGENT nello stesso server |
@@ -61,7 +65,7 @@ immagine -> componenti -> istanze -> terminali -> fili -> Graph JSON -> sito web
 ```powershell
 .venv312\Scripts\python.exe -B scripts\pipeline_unified\run_pipeline.py graph `
   --workspace demo_a09 `
-  --input-dir data\batchDemo `
+  --input-dir data\batchPipeline2.0\batchDemo `
   --circuit a09
 ```
 
@@ -70,7 +74,7 @@ immagine -> componenti -> istanze -> terminali -> fili -> Graph JSON -> sito web
 ```powershell
 .venv312\Scripts\python.exe -B scripts\pipeline_unified\run_pipeline.py graph `
   --workspace demo_batch `
-  --input-dir data\batchDemo `
+  --input-dir data\batchPipeline2.0\batchDemo `
   --all
 ```
 
@@ -104,7 +108,7 @@ workspace indicato.
 .venv312\Scripts\python.exe -B scripts\pipeline_unified\run_pipeline.py spice `
   --workspace demo_a09 `
   --circuit a09 `
-  --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+  --ngspice-executable ngspice_con.exe
 ```
 
 ### Tutti i circuiti presenti nel workspace
@@ -113,7 +117,7 @@ workspace indicato.
 .venv312\Scripts\python.exe -B scripts\pipeline_unified\run_pipeline.py spice `
   --workspace demo_batch `
   --all `
-  --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+  --ngspice-executable ngspice_con.exe
 ```
 
 Gli output di ogni circuito vengono salvati in:
@@ -143,7 +147,7 @@ AGENT. Le history e gli scenari delle due modalità rimangono separati.
 .venv312\Scripts\python.exe -B scripts\pipeline_unified\run_pipeline.py webchat `
   --workspace demo_a09 `
   --circuit a09 `
-  --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+  --ngspice-executable ngspice_con.exe
 ```
 
 Il server rimane attivo nel terminale e si arresta con `Ctrl+C`.
@@ -179,11 +183,14 @@ Il comando `all` esegue in ordine:
 
 ```powershell
 .venv312\Scripts\python.exe -B scripts\pipeline_unified\run_pipeline.py all `
-  --workspace demo_a09_all `
-  --input-dir data\batchDemo `
+  --workspace verifica_clone_a09_all `
+  --input-dir data\batchPipeline2.0\batchDemo `
   --circuit a09 `
-  --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+  --ngspice-executable ngspice_con.exe
 ```
+
+Il nome di `--workspace` deve essere nuovo. Per ripetere il controllo scegliere
+un altro nome oppure aggiungere consapevolmente `--force` per rigenerarlo.
 
 ### Flusso completo su tutto il batch
 
@@ -192,10 +199,10 @@ Con `--all` bisogna indicare quale circuito aprire nella webchat al termine:
 ```powershell
 .venv312\Scripts\python.exe -B scripts\pipeline_unified\run_pipeline.py all `
   --workspace demo_batch_all `
-  --input-dir data\batchDemo `
+  --input-dir data\batchPipeline2.0\batchDemo `
   --all `
   --open-circuit a09 `
-  --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+  --ngspice-executable ngspice_con.exe
 ```
 
 Per completare tutte le fasi senza avviare il server, aggiungere:
@@ -214,7 +221,7 @@ collegamento tra le fasi è garantito dal nome `demo_a09`.
 ```powershell
 .venv312\Scripts\python.exe -B scripts\pipeline_unified\run_pipeline.py graph `
   --workspace demo_a09 `
-  --input-dir data\batchDemo `
+  --input-dir data\batchPipeline2.0\batchDemo `
   --circuit a09
 ```
 
@@ -224,7 +231,7 @@ collegamento tra le fasi è garantito dal nome `demo_a09`.
 .venv312\Scripts\python.exe -B scripts\pipeline_unified\run_pipeline.py spice `
   --workspace demo_a09 `
   --circuit a09 `
-  --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+  --ngspice-executable ngspice_con.exe
 ```
 
 ### Terzo momento: aprire CHAT e AGENT
@@ -233,13 +240,19 @@ collegamento tra le fasi è garantito dal nome `demo_a09`.
 .venv312\Scripts\python.exe -B scripts\pipeline_unified\run_pipeline.py webchat `
   --workspace demo_a09 `
   --circuit a09 `
-  --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe"
+  --ngspice-executable ngspice_con.exe
 ```
 
 ## Riprendere o rigenerare una run
 
 Se gli input e gli output sono ancora coerenti, i comandi riutilizzano il
 workspace esistente e saltano le fasi già complete.
+
+I manifest in schema v2 salvano come repo-relative i path interni al progetto.
+I manifest storici con path assoluti vengono risolti automaticamente rispetto
+al clone corrente; anche il vecchio alias `data/batchDemo` viene migrato a
+`data/batchPipeline2.0/batchDemo`. La forma portabile viene salvata al
+successivo aggiornamento del manifest.
 
 Usare `--force` soltanto quando si vuole rigenerare esplicitamente una fase:
 
@@ -254,6 +267,17 @@ esistenti non servano più.
 
 ## Controllare senza eseguire
 
+Prima della prima run su un nuovo PC, eseguire il controllo completo:
+
+```powershell
+.venv312\Scripts\python.exe -B scripts\pipeline_unified\run_pipeline.py preflight
+```
+
+Il comando usa di default `data\batchPipeline2.0\batchDemo` e verifica anche
+checkpoint Git LFS, import, metadati, modelli SPICE, ngspice e Tesseract. Non
+crea workspace. Aggiungere `--require-openai` se si vogliono usare subito anche
+le funzioni AGENT.
+
 `graph`, `spice` e `webchat` supportano `--dry-run`. Il comando controlla
 selezione e prerequisiti senza creare nuovi output.
 
@@ -262,7 +286,7 @@ Esempio per Pipeline 1.0:
 ```powershell
 .venv312\Scripts\python.exe -B scripts\pipeline_unified\run_pipeline.py graph `
   --workspace controllo_demo `
-  --input-dir data\batchDemo `
+  --input-dir data\batchPipeline2.0\batchDemo `
   --circuit a09 `
   --dry-run
 ```
@@ -273,7 +297,7 @@ Esempio per Pipeline 2.0:
 .venv312\Scripts\python.exe -B scripts\pipeline_unified\run_pipeline.py spice `
   --workspace demo_a09 `
   --circuit a09 `
-  --ngspice-executable "C:\Users\m.profilo\Spice64\bin\ngspice_con.exe" `
+  --ngspice-executable ngspice_con.exe `
   --dry-run
 ```
 

@@ -9,7 +9,7 @@ import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-DATASET_ROOT = PROJECT_ROOT / "data" / "dataset_v3" / "rf_yolo_1024_rgb"
+DATASET_ROOT = PROJECT_ROOT / "data" / "datasets" / "dataset_v3" / "rf_yolo_1024_rgb"
 DATA_YAML = DATASET_ROOT / "data.yaml"
 
 METADATA_DIR = PROJECT_ROOT / "metadata"

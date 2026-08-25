@@ -1,0 +1,162 @@
+# Valori manuali per ic01, multivibratore astabile con timer 555 e LED.
+# Gli ID dei componenti provengono dal Graph JSON validato della Pipeline 1.0.
+# Tutti i valori passivi e l'alimentazione sono leggibili nell'immagine.
+
+circuit_id: ic01
+
+supplies:
+  VCC_9:
+    # Il simbolo +9 V è stato classificato come Terminal dalla Pipeline 1.0.
+    # La supply dichiarativa lo trasforma in una sorgente ideale da 9 V verso
+    # il riferimento SPICE, senza modificare il Graph JSON.
+    terminal: terminal26.1_t1
+    type: dc
+    value: 9
+    unit: V
+    reference: 0
+    source: manual_from_image_label
+    label_text: "+9 V DC"
+    viewer_override:
+      visual_class: voltage_source
+      label: +9 V
+      display_value: 9 V DC
+
+components:
+  # R1 collega +9 V al pin 7 DISCHARGE.
+  resistor22.2:
+    value: 1
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R1 1 kohm"
+    viewer_override:
+      label: R1
+      display_value: 1 kohm
+
+  # R2 collega il pin 7 al nodo comune dei pin 2 e 6.
+  resistor22.1:
+    value: 1
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R2 1 kohm"
+    viewer_override:
+      label: R2
+      display_value: 1 kohm
+
+  # R3 limita la corrente tra l'uscita del timer e il LED.
+  resistor22.3:
+    value: 1
+    unit: kohm
+    source: manual_from_image_label
+    label_text: "R3 1 kohm"
+    viewer_override:
+      label: R3
+      display_value: 1 kohm
+
+  # C1 è il condensatore di temporizzazione sul nodo TRIGGER/THRESHOLD.
+  capacitor4.1:
+    value: 1
+    unit: uf
+    source: manual_from_image_label
+    label_text: "C1 1 uF"
+    viewer_override:
+      label: C1
+      display_value: 1 uF
+
+  # C2 filtra il pin 5 CONTROL.
+  capacitor4.2:
+    value: 1
+    unit: uf
+    source: manual_from_image_label
+    label_text: "C2 1 uF"
+    viewer_override:
+      label: C2
+      display_value: 1 uF
+
+  # C3 è il condensatore di disaccoppiamento dell'alimentazione.
+  capacitor4.3:
+    value: 1
+    unit: uf
+    source: manual_from_image_label
+    label_text: "C3 1 uF"
+    viewer_override:
+      label: C3
+      display_value: 1 uF
+
+  led12.1:
+    # L'immagine non specifica colore o part number. Come negli altri casi
+    # senza part number, il testbench assume il LED rosso standard già
+    # disponibile nel registro SPICE.
+    model: LED_RED
+    source: manual_assumption_standard_red_led
+    label_text: "LED rosso standard; part number non specificato"
+    viewer_override:
+      label: LED
+      display_value: red
+      tooltip: "LED rosso standard assunto; part number non indicato nello schema"
+
+  integrated_circuit11.1:
+    # Modello ufficiale TI TLC555/TLC556 PSpice Rev. E, pacchetto SLFJ002E.
+    # La .SUBCKT TLC555_6 è stata verificata autonomamente con ngspice 46
+    # usando la modalità di compatibilità PSpice.
+    model: TLC555_6
+    source: ti_official_slfj002e_pspice_model
+    label_text: "IC1 555 Timer; modello ufficiale TI TLC555_6 Rev. E"
+    viewer_override:
+      label: IC1
+      display_value: TLC555
+      tooltip: "IC1 TLC555; modello ufficiale TI PSpice Rev. E SLFJ002E"
+    spice_override:
+      emit_as: subcircuit
+      # Ordine porte dichiarato da TI:
+      # THRES CONT TRIG RESET OUT DISC VCC GND
+      pin_order: [THRES, CONT, TRIG, RESET, OUT, DISC, VCC, GND]
+      node_refs:
+        THRES: integrated_circuit11.1_left_2
+        CONT: integrated_circuit11.1_right_2
+        TRIG: integrated_circuit11.1_bottom_1
+        RESET: integrated_circuit11.1_top_1
+        OUT: integrated_circuit11.1_right_1
+        DISC: integrated_circuit11.1_left_1
+        VCC: integrated_circuit11.1_top_2
+        GND: integrated_circuit11.1_bottom_2
+
+nodes:
+  terminal26.1_t1:
+    label: VCC_9
+    source: manual_from_image_label
+    label_text: "+9 V"
+
+  gnd9.1_t1:
+    label: GND
+    source: graph_json_ground
+
+  integrated_circuit11.1_right_1:
+    label: TIMER_OUT
+    source: manual_from_validated_graph_pin3
+
+  integrated_circuit11.1_left_1:
+    label: TIMER_DISCHARGE
+    source: manual_from_validated_graph_pin7
+
+  integrated_circuit11.1_left_2:
+    label: TIMER_THRESHOLD
+    source: manual_from_validated_graph_pin6
+
+  integrated_circuit11.1_bottom_1:
+    label: TIMER_TRIGGER
+    source: manual_from_validated_graph_pin2
+
+  integrated_circuit11.1_right_2:
+    label: TIMER_CONTROL
+    source: manual_from_validated_graph_pin5
+
+simulation:
+  # Il macromodello converge e oscilla correttamente in transitorio. Una
+  # analisi .op separata non converge ed è inappropriata per questo oscillatore.
+  analyses: [tran]
+  tran:
+    # Stima ideale astabile: ln(2) * (R1 + 2*R2) * C1 ≈ 2.08 ms.
+    # C2=1 uF sul pin CONTROL produce un assestamento iniziale lento nel
+    # macromodello. A 100 ms il periodo misurato è circa 2.04 ms.
+    step: 5us
+    stop: 100ms

@@ -23,8 +23,8 @@ Output principali:
 - deltas_image_vs_json.csv     delta score per circuito e modello
 - criteria_long.csv            formato lungo per heatmap criterio/modello/circuito
 
-Uso:
-python aggregate_judge_results.py --root "C:\\Users\\m.profilo\\Desktop\\tesi_diagrams_yolo\\experiment_ai\\circuiti_complessi\\batch_v1"
+Uso dalla root del repository:
+python scripts/GPT/aggregate_judge_results.py --root "experiment_ai/circuiti_complessi/batch_v1"
 
 Opzionale:
 python aggregate_judge_results.py --root "...\\batch_v1" --out "...\\batch_v1\\_aggregate"

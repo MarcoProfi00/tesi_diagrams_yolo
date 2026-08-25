@@ -3,7 +3,14 @@ from __future__ import annotations
 from pathlib import Path
 from collections import defaultdict
 
-SOURCE_ROOT = Path("data/rf_yolov7_1024_rgb_v1")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+SOURCE_ROOT = (
+    PROJECT_ROOT
+    / "data"
+    / "datasets"
+    / "dataset_v1"
+    / "rf_yolov7_1024_rgb_v1"
+)
 
 
 def scan_label_file(label_path: Path):

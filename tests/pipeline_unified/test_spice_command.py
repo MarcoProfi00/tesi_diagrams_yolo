@@ -178,6 +178,7 @@ class DemoValuesTests(unittest.TestCase):
                 batch_copy = (
                     PROJECT_ROOT
                     / "data"
+                    / "batchPipeline2.0"
                     / "batchDemo"
                     / "values"
                     / f"{circuit_id}_values.yaml"

@@ -10,8 +10,10 @@ import numpy as np
 import yaml
 
 
-SOURCE_ROOT = Path("data/dataset_v3/rf_yolo_1024_rgb")
-DEST_ROOT = Path("data/dataset_v3/rf_yolo_1024_rgb_aug")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATASET_ROOT = PROJECT_ROOT / "data" / "datasets" / "dataset_v3"
+SOURCE_ROOT = DATASET_ROOT / "rf_yolo_1024_rgb"
+DEST_ROOT = DATASET_ROOT / "rf_yolo_1024_rgb_aug"
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 

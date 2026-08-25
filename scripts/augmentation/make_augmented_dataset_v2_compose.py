@@ -14,8 +14,10 @@ import re
 # =========================
 # CONFIG
 # =========================
-SOURCE_ROOT = Path("data/dataset_v3/rf_yolo_1024_rgb")
-DEST_ROOT = Path("data/dataset_v3/rf_yolo_1024_rgb_aug_compose")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+DATASET_ROOT = PROJECT_ROOT / "data" / "datasets" / "dataset_v3"
+SOURCE_ROOT = DATASET_ROOT / "rf_yolo_1024_rgb"
+DEST_ROOT = DATASET_ROOT / "rf_yolo_1024_rgb_aug_compose"
 
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 

@@ -27,7 +27,7 @@ def all_args(**overrides):
     """Crea gli argomenti minimi di una prova completa su un circuito."""
     values = {
         "workspace": "demo_a09_all",
-        "input_dir": "data/batchDemo",
+        "input_dir": "data/batchPipeline2.0/batchDemo",
         "circuit": "a09",
         "all": False,
         "open_circuit": None,

@@ -26,8 +26,74 @@ PIPELINE2_LAUNCHER_PATH = PROJECT_ROOT / "scripts" / "pipeline_2.0" / "run_pipel
 PIPELINE2_JSON_DIR = PROJECT_ROOT / "scripts" / "pipeline_2.0" / "json_to_spice"
 WEBCHAT_ENTRY_PATH = PIPELINE2_JSON_DIR / "09_web_chat.py"
 WORKSPACES_ROOT = PROJECT_ROOT / "outputs" / "demo_workspaces"
+REQUIRED_DETECTOR_PATH = (
+    PROJECT_ROOT
+    / "outputs"
+    / "yolo11"
+    / "exp11b1_yolo11_rgb_aug_strong_v3"
+    / "weights"
+    / "best.pt"
+)
+REQUIRED_DETECTOR_SHA256 = (
+    "325d619c6e9ee4d992e6eb141d21c0641cbf72e1c0a6e03cc9bdd9ec0b22fe6a"
+)
+EASYOCR_REQUIRED_MODELS_MD5 = {
+    "craft_mlt_25k.pth": "2f8227d2def4037cdb3b34389dcf9ec1",
+    "english_g2.pth": "5864788e1821be9e454ec108d61b887d",
+}
+PREFLIGHT_METADATA_PATHS = (
+    PROJECT_ROOT / "metadata" / "class_terminals_v1.yaml",
+    PROJECT_ROOT / "metadata" / "pipeline2_spice_classes.yaml",
+    PROJECT_ROOT / "metadata" / "pipeline2_spice_models.yaml",
+)
+PREFLIGHT_IMPORTS = (
+    "albumentations",
+    "cv2",
+    "dotenv",
+    "easyocr",
+    "matplotlib",
+    "numpy",
+    "openai",
+    "pandas",
+    "PIL",
+    "pytesseract",
+    "skimage",
+    "torch",
+    "torchvision",
+    "ultralytics",
+    "yaml",
+)
+NGSPICE_CANDIDATES = ("ngspice_con", "ngspice_con.exe", "ngspice", "ngspice.exe")
 SUPPORTED_IMAGE_EXTENSIONS = {".bmp", ".jpeg", ".jpg", ".png", ".tif", ".tiff", ".webp"}
 SAFE_NAME_PATTERN = re.compile(r"^[A-Za-z0-9_.-]+$")
+WINDOWS_ABSOLUTE_PATH_PATTERN = re.compile(r"^(?:[A-Za-z]:[\\/]|\\\\)")
+MANIFEST_SCHEMA_VERSION = 2
+LEGACY_PROJECT_PATH_ANCHORS = (
+    "data",
+    "experiment_ai",
+    "metadata",
+    "notes",
+    "outputs",
+    "scripts",
+    "tests",
+)
+MANIFEST_PATH_KEYS = {
+    "base_output_dir",
+    "diagnostic_context",
+    "graph_json",
+    "input_dir",
+    "log",
+    "output_dir",
+    "report_html",
+    "source_image",
+    "sources",
+    "values_dir",
+    "values_yaml",
+    "viewer_layout",
+    "viewer_model",
+    "viewer_svg",
+    "workspace_image",
+}
 
 PIPELINE1_STEPS = (
     ("01_detect_components", "01_detect_components.py"),
@@ -117,6 +183,98 @@ def resolve_project_path(raw_path: str | Path) -> Path:
     return path.resolve()
 
 
+def _canonical_legacy_relative_path(relative_path: Path) -> Path:
+    """Converte i pochi alias storici noti nel layout canonico corrente."""
+    normalized = relative_path.as_posix()
+    legacy_demo = "data/batchDemo"
+    if normalized == legacy_demo or normalized.startswith(legacy_demo + "/"):
+        suffix = normalized[len(legacy_demo) :].lstrip("/")
+        target = Path("data") / "batchPipeline2.0" / "batchDemo"
+        return target / suffix if suffix else target
+    return Path(normalized)
+
+
+def _legacy_project_relative_path(raw_path: str | Path) -> Path | None:
+    """Recupera la parte interna al progetto da un vecchio path assoluto."""
+    normalized = str(raw_path).replace("\\", "/")
+    parts = [part for part in normalized.split("/") if part]
+    lowered = [part.lower() for part in parts]
+    for anchor in LEGACY_PROJECT_PATH_ANCHORS:
+        try:
+            index = lowered.index(anchor.lower())
+        except ValueError:
+            continue
+        return _canonical_legacy_relative_path(Path(*parts[index:]))
+    return None
+
+
+def resolve_manifest_path(raw_path: str | Path) -> Path:
+    """Risolve sia i path portabili sia quelli assoluti dei manifest storici."""
+    raw_value = str(raw_path)
+    path = Path(raw_value).expanduser()
+    windows_absolute = bool(WINDOWS_ABSOLUTE_PATH_PATTERN.match(raw_value))
+    if not path.is_absolute() and not windows_absolute:
+        relative = _canonical_legacy_relative_path(path)
+        return (PROJECT_ROOT / relative).resolve()
+
+    # Su Linux/macOS pathlib non riconosce un vecchio path assoluto Windows.
+    # In quel caso recuperiamo comunque la porzione interna alla repository.
+    if windows_absolute and not path.is_absolute():
+        legacy_relative = _legacy_project_relative_path(raw_value)
+        if legacy_relative is not None:
+            return (PROJECT_ROOT / legacy_relative).resolve()
+        return path
+
+    resolved = path.resolve()
+    try:
+        current_relative = resolved.relative_to(PROJECT_ROOT.resolve())
+    except ValueError:
+        current_relative = None
+    if current_relative is not None:
+        canonical_relative = _canonical_legacy_relative_path(current_relative)
+        return (PROJECT_ROOT / canonical_relative).resolve()
+    if resolved.exists():
+        return resolved
+
+    legacy_relative = _legacy_project_relative_path(raw_path)
+    if legacy_relative is not None:
+        return (PROJECT_ROOT / legacy_relative).resolve()
+    return resolved
+
+
+def portable_manifest_path(raw_path: str | Path) -> str:
+    """Serializza come path repo-relative tutto cio' che vive nel progetto."""
+    resolved = resolve_manifest_path(raw_path)
+    try:
+        return resolved.relative_to(PROJECT_ROOT.resolve()).as_posix()
+    except ValueError:
+        return str(resolved)
+
+
+def make_manifest_paths_portable(value: Any, key: str | None = None) -> Any:
+    """Normalizza ricorsivamente soltanto i campi che rappresentano path."""
+    if isinstance(value, dict):
+        for child_key, child_value in list(value.items()):
+            if child_key == "artifacts" and isinstance(child_value, dict):
+                value[child_key] = {
+                    name: portable_manifest_path(path_value)
+                    if isinstance(path_value, (str, Path))
+                    else path_value
+                    for name, path_value in child_value.items()
+                }
+            else:
+                value[child_key] = make_manifest_paths_portable(
+                    child_value,
+                    child_key,
+                )
+        return value
+    if key in MANIFEST_PATH_KEYS and isinstance(value, (str, Path)):
+        return portable_manifest_path(value)
+    if isinstance(value, list):
+        return [make_manifest_paths_portable(item) for item in value]
+    return value
+
+
 def workspace_dir(workspace_id: str) -> Path:
     """Restituisce la root isolata associata a una singola esecuzione."""
     safe_workspace_id = require_safe_name("workspace", workspace_id)
@@ -182,6 +340,404 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def md5_file(path: Path) -> str:
+    """Calcola l'MD5 richiesto dai metadati ufficiali dei modelli EasyOCR."""
+    digest = hashlib.md5(usedforsecurity=False)
+    with path.open("rb") as file_handle:
+        for chunk in iter(lambda: file_handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _resolve_executable(
+    requested: str | None,
+    candidates: tuple[str, ...],
+) -> str | None:
+    """Risolve un eseguibile passato come path oppure disponibile nel PATH."""
+    if requested:
+        explicit = Path(requested).expanduser()
+        if explicit.is_file():
+            return str(explicit.resolve())
+        return shutil.which(requested)
+    for candidate in candidates:
+        resolved = shutil.which(candidate)
+        if resolved:
+            return resolved
+    return None
+
+
+def _run_preflight_process(
+    command: list[str],
+    *,
+    timeout: int = 120,
+    environment: dict[str, str] | None = None,
+) -> tuple[bool, str]:
+    """Esegue un controllo esterno senza ereditare output interattivo."""
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=timeout,
+            check=False,
+            env=environment,
+        )
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return False, str(error)
+
+    combined = "\n".join(
+        part.strip() for part in (completed.stdout, completed.stderr) if part.strip()
+    )
+    lines = [line.strip() for line in combined.splitlines() if line.strip()]
+    informative_lines = [line for line in lines if line.strip("*=-_ ")]
+    detail = (
+        informative_lines[0]
+        if informative_lines
+        else (lines[-1] if lines else f"exit {completed.returncode}")
+    )
+    return completed.returncode == 0, detail
+
+
+def _local_openai_key_is_configured() -> bool:
+    """Controlla la presenza della chiave senza leggerla ad alta voce o stamparla."""
+    if os.environ.get("OPENAI_API_KEY", "").strip():
+        return True
+    for env_path in (PROJECT_ROOT / ".env", PROJECT_ROOT / "scripts" / "GPT" / ".env"):
+        if not env_path.is_file():
+            continue
+        for raw_line in env_path.read_text(
+            encoding="utf-8",
+            errors="replace",
+        ).splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            name, value = line.split("=", 1)
+            if name.strip() == "OPENAI_API_KEY" and value.strip().strip("\"'"):
+                return True
+    return False
+
+
+def _configured_easyocr_model_directory() -> Path:
+    """Usa lo stesso override e lo stesso YAML letti dalla Pipeline 1.0."""
+    environment_value = os.environ.get("EASYOCR_MODEL_DIR", "").strip()
+    if environment_value:
+        return resolve_project_path(environment_value)
+
+    yaml_module = importlib.import_module("yaml")
+    metadata = yaml_module.safe_load(
+        PREFLIGHT_METADATA_PATHS[0].read_text(encoding="utf-8-sig")
+    )
+    integrated_circuit = next(
+        (
+            entry
+            for entry in metadata.values()
+            if isinstance(entry, dict) and entry.get("name") == "Integrated_Circuit"
+        ),
+        None,
+    )
+    if integrated_circuit is None:
+        raise ValueError("Configurazione Integrated_Circuit assente dai metadati.")
+    easyocr_config = (
+        ((integrated_circuit.get("ocr") or {}).get("ic_marking") or {}).get(
+            "easyocr_fallback"
+        )
+        or {}
+    )
+    configured = str(easyocr_config.get("model_storage_directory") or ".tmp/easyocr")
+    return resolve_project_path(configured)
+
+
+def _easyocr_cache_status() -> tuple[bool, str]:
+    """Controlla presenza e checksum dei due modelli usati con lingua inglese."""
+    model_directory = _configured_easyocr_model_directory()
+    missing: list[str] = []
+    invalid: list[str] = []
+    for filename, expected_md5 in EASYOCR_REQUIRED_MODELS_MD5.items():
+        model_path = model_directory / filename
+        if not model_path.is_file():
+            missing.append(filename)
+        elif md5_file(model_path) != expected_md5:
+            invalid.append(filename)
+
+    portable_directory = portable_manifest_path(model_directory)
+    if missing or invalid:
+        parts = []
+        if missing:
+            parts.append("mancanti: " + ", ".join(missing))
+        if invalid:
+            parts.append("checksum non valido: " + ", ".join(invalid))
+        return False, f"{portable_directory}; " + "; ".join(parts)
+    return True, f"2 modelli validi in {portable_directory}"
+
+
+def preflight_command(args: argparse.Namespace) -> int:
+    """Verifica in sola lettura tutto cio' che serve al flusso completo."""
+    failures: list[str] = []
+    warnings: list[str] = []
+
+    def report(
+        label: str,
+        ok: bool,
+        detail: str,
+        *,
+        required: bool = True,
+    ) -> None:
+        if ok:
+            marker = "OK"
+        elif required:
+            marker = "ERRORE"
+            failures.append(label)
+        else:
+            marker = "AVVISO"
+            warnings.append(label)
+        print(f"[{marker}] {label}: {detail}")
+
+    python_ok = sys.version_info[:2] == (3, 12)
+    report(
+        "Python",
+        python_ok,
+        f"{sys.version.split()[0]} ({sys.executable})",
+    )
+
+    required_scripts = [
+        *(PIPELINE1_SCRIPTS_DIR / script_name for _, script_name in PIPELINE1_STEPS),
+        PIPELINE2_LAUNCHER_PATH,
+        WEBCHAT_ENTRY_PATH,
+    ]
+    missing_scripts = [
+        path.relative_to(PROJECT_ROOT).as_posix()
+        for path in required_scripts
+        if not path.is_file()
+    ]
+    report(
+        "Script pipeline",
+        not missing_scripts,
+        "tutti presenti" if not missing_scripts else ", ".join(missing_scripts),
+    )
+
+    if not REQUIRED_DETECTOR_PATH.is_file():
+        report(
+            "Checkpoint YOLO",
+            False,
+            f"file assente: {REQUIRED_DETECTOR_PATH.relative_to(PROJECT_ROOT)}",
+        )
+    else:
+        with REQUIRED_DETECTOR_PATH.open("rb") as model_handle:
+            model_header = model_handle.read(160)
+        if model_header.startswith(b"version https://git-lfs.github.com/spec"):
+            report(
+                "Checkpoint YOLO",
+                False,
+                "e' ancora un puntatore Git LFS; eseguire git lfs pull",
+            )
+        else:
+            detector_sha256 = sha256_file(REQUIRED_DETECTOR_PATH)
+            report(
+                "Checkpoint YOLO",
+                detector_sha256 == REQUIRED_DETECTOR_SHA256,
+                (
+                    f"{REQUIRED_DETECTOR_PATH.stat().st_size} byte, "
+                    f"sha256={detector_sha256}"
+                ),
+            )
+
+    missing_metadata = [
+        path.relative_to(PROJECT_ROOT).as_posix()
+        for path in PREFLIGHT_METADATA_PATHS
+        if not path.is_file()
+    ]
+    report(
+        "Metadati",
+        not missing_metadata,
+        "tutti presenti" if not missing_metadata else ", ".join(missing_metadata),
+    )
+
+    import_environment = os.environ.copy()
+    import_environment.setdefault("NO_ALBUMENTATIONS_UPDATE", "1")
+    import_statement = "; ".join(f"import {module}" for module in PREFLIGHT_IMPORTS)
+    imports_ok, imports_detail = _run_preflight_process(
+        [sys.executable, "-B", "-c", import_statement],
+        environment=import_environment,
+    )
+    report(
+        "Import Python",
+        imports_ok,
+        "moduli caricati correttamente" if imports_ok else imports_detail,
+    )
+
+    opencv_check = """
+import cv2
+from importlib.metadata import version
+
+opencv_python = version("opencv-python")
+opencv_headless = version("opencv-python-headless")
+active = cv2.__version__
+active_expected = ".".join(opencv_python.split(".")[:3])
+print(
+    f"opencv-python={opencv_python}, "
+    f"opencv-python-headless={opencv_headless}, cv2={active}"
+)
+raise SystemExit(
+    0 if opencv_python == opencv_headless and active == active_expected else 1
+)
+"""
+    opencv_ok, opencv_detail = _run_preflight_process(
+        [sys.executable, "-B", "-c", opencv_check],
+        environment=import_environment,
+    )
+    report("Build OpenCV", opencv_ok, opencv_detail)
+
+    pip_ok, pip_detail = _run_preflight_process(
+        [sys.executable, "-B", "-m", "pip", "check"]
+    )
+    report("Coerenza pacchetti", pip_ok, pip_detail)
+
+    if not missing_metadata:
+        try:
+            yaml_module = importlib.import_module("yaml")
+            for metadata_path in PREFLIGHT_METADATA_PATHS:
+                metadata = yaml_module.safe_load(
+                    metadata_path.read_text(encoding="utf-8-sig")
+                )
+                if not isinstance(metadata, dict) or not metadata:
+                    raise ValueError(f"YAML vuoto o non valido: {metadata_path.name}")
+
+            pipeline2_module = load_pipeline2_module()
+            models_path = PREFLIGHT_METADATA_PATHS[2]
+            models = pipeline2_module.values.load_simple_yaml(models_path)
+            resolved_models = pipeline2_module.spice_emit.resolve_model_entries(
+                spice_models=models,
+                spice_models_source=models_path,
+            )
+            report(
+                "Modelli SPICE",
+                bool(resolved_models),
+                f"{len(resolved_models)} modelli validati, inclusi file e hash esterni",
+            )
+        except Exception as error:  # noqa: BLE001 - il preflight deve elencare ogni problema.
+            report("Metadati e modelli SPICE", False, str(error))
+
+    input_dir = resolve_project_path(args.input_dir)
+    try:
+        images = discover_images(input_dir)
+        values_dir = input_dir / "values"
+        missing_values = [
+            f"{circuit_id}_values.yaml"
+            for circuit_id in images
+            if not (values_dir / f"{circuit_id}_values.yaml").is_file()
+        ]
+        report(
+            "Batch immagini",
+            True,
+            f"{len(images)} immagini in {portable_manifest_path(input_dir)}",
+        )
+        report(
+            "YAML valori",
+            not missing_values,
+            "uno per ogni immagine" if not missing_values else ", ".join(missing_values),
+        )
+    except (FileNotFoundError, ValueError) as error:
+        report("Batch immagini", False, str(error))
+
+    git_path = shutil.which("git")
+    if git_path is None:
+        report("Git LFS", False, "git non trovato nel PATH")
+    else:
+        lfs_version_ok, lfs_version_detail = _run_preflight_process(
+            [git_path, "lfs", "version"]
+        )
+        if not lfs_version_ok:
+            report("Git LFS", False, lfs_version_detail)
+        else:
+            lfs_ok, lfs_detail = _run_preflight_process(
+                [git_path, "lfs", "fsck"],
+                timeout=180,
+            )
+            report("Git LFS", lfs_ok, lfs_detail)
+
+    ngspice_path = _resolve_executable(args.ngspice_executable, NGSPICE_CANDIDATES)
+    if ngspice_path is None:
+        report("ngspice", False, "eseguibile non trovato")
+    else:
+        ngspice_ok, ngspice_detail = _run_preflight_process([ngspice_path, "-v"])
+        report("ngspice", ngspice_ok, ngspice_detail)
+
+    tesseract_requested = args.tesseract_executable or os.environ.get("TESSERACT_CMD")
+    tesseract_path = _resolve_executable(tesseract_requested, ("tesseract", "tesseract.exe"))
+    if tesseract_path is None:
+        report("Tesseract OCR", False, "eseguibile non trovato")
+    else:
+        tesseract_ok, tesseract_detail = _run_preflight_process(
+            [tesseract_path, "--list-langs"]
+        )
+        if tesseract_ok:
+            try:
+                language_result = subprocess.run(
+                    [tesseract_path, "--list-langs"],
+                    cwd=PROJECT_ROOT,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=30,
+                    check=False,
+                )
+            except (OSError, subprocess.TimeoutExpired) as error:
+                report("Tesseract OCR", False, str(error))
+                language_result = None
+            if language_result is None:
+                languages: set[str] = set()
+            else:
+                languages = {
+                    line.strip()
+                    for line in language_result.stdout.splitlines()
+                    if line.strip() and not line.lower().startswith("list of available")
+                }
+            if language_result is not None:
+                report(
+                    "Tesseract OCR",
+                    "eng" in languages,
+                    f"{tesseract_path}; lingue: {', '.join(sorted(languages)) or 'nessuna'}",
+                )
+        else:
+            report("Tesseract OCR", False, tesseract_detail)
+
+    openai_configured = _local_openai_key_is_configured()
+    report(
+        "OpenAI API key",
+        openai_configured,
+        "configurata" if openai_configured else "non configurata (serve solo alle funzioni AGENT)",
+        required=bool(args.require_openai),
+    )
+
+    try:
+        easyocr_ok, easyocr_detail = _easyocr_cache_status()
+    except Exception as error:  # noqa: BLE001 - il preflight deve restare diagnostico.
+        easyocr_ok, easyocr_detail = False, str(error)
+    report(
+        "Cache EasyOCR",
+        easyocr_ok,
+        easyocr_detail
+        if easyocr_ok
+        else f"{easyocr_detail}; download automatico al primo utilizzo",
+        required=False,
+    )
+
+    print()
+    if failures:
+        print(f"Preflight NON superato: {len(failures)} controllo/i obbligatorio/i falliti.")
+        return 1
+    print(
+        "Preflight superato"
+        + (f" con {len(warnings)} avviso/i." if warnings else ".")
+    )
+    return 0
+
+
 def read_manifest(path: Path, workspace_id: str) -> dict[str, Any]:
     """Legge il manifest esistente oppure crea la struttura minima iniziale."""
     if path.exists():
@@ -191,11 +747,13 @@ def read_manifest(path: Path, workspace_id: str) -> dict[str, Any]:
             data = json.load(file_handle)
         if not isinstance(data, dict):
             raise ValueError(f"Manifest non valido: {path}")
+        make_manifest_paths_portable(data)
+        data["schema_version"] = MANIFEST_SCHEMA_VERSION
         return data
 
     timestamp = current_timestamp()
     return {
-        "schema_version": 1,
+        "schema_version": MANIFEST_SCHEMA_VERSION,
         "workspace_id": workspace_id,
         "created_at": timestamp,
         "updated_at": timestamp,
@@ -206,6 +764,8 @@ def read_manifest(path: Path, workspace_id: str) -> dict[str, Any]:
 def write_manifest(path: Path, manifest: dict[str, Any]) -> None:
     """Aggiorna il manifest con una sostituzione atomica del file precedente."""
     path.parent.mkdir(parents=True, exist_ok=True)
+    make_manifest_paths_portable(manifest)
+    manifest["schema_version"] = MANIFEST_SCHEMA_VERSION
     manifest["updated_at"] = current_timestamp()
     temporary_path = path.with_suffix(path.suffix + ".tmp")
     temporary_path.write_text(
@@ -224,14 +784,14 @@ def record_batch_input(
     resolved_input_dir = source_input_dir.resolve()
     previous_value = manifest.get("input_dir")
     if previous_value:
-        previous_dir = resolve_project_path(str(previous_value))
+        previous_dir = resolve_manifest_path(str(previous_value))
         if previous_dir != resolved_input_dir and not force:
             raise ValueError(
                 "Il workspace appartiene gia' a un'altra cartella batch: "
                 f"{previous_dir}. Usa --force soltanto per sostituirla."
             )
-    manifest["input_dir"] = str(resolved_input_dir)
-    manifest["values_dir"] = str(resolved_input_dir / "values")
+    manifest["input_dir"] = portable_manifest_path(resolved_input_dir)
+    manifest["values_dir"] = portable_manifest_path(resolved_input_dir / "values")
 
 
 def snapshot_images(
@@ -517,13 +1077,13 @@ def resolve_manifest_input_dir(manifest: dict[str, Any]) -> Path:
     """Recupera la cartella batch registrata, anche per manifest meno recenti."""
     configured = manifest.get("input_dir")
     if configured:
-        input_dir = resolve_project_path(str(configured))
+        input_dir = resolve_manifest_path(str(configured))
         if input_dir.is_dir():
             return input_dir
         raise FileNotFoundError(f"Cartella batch registrata non trovata: {input_dir}")
 
     source_parents = {
-        Path(str(circuit.get("source_image"))).resolve().parent
+        resolve_manifest_path(str(circuit.get("source_image"))).parent
         for circuit in (manifest.get("circuits") or {}).values()
         if isinstance(circuit, dict) and circuit.get("source_image")
     }
@@ -580,7 +1140,7 @@ def build_spice_plans(
     input_dir = resolve_manifest_input_dir(manifest)
     configured_values_dir = manifest.get("values_dir")
     values_dir = (
-        resolve_project_path(str(configured_values_dir))
+        resolve_manifest_path(str(configured_values_dir))
         if configured_values_dir
         else input_dir / "values"
     )
@@ -742,7 +1302,7 @@ def web_source_plan(
     workspace_image_value = circuit_state.get("workspace_image")
     if not workspace_image_value:
         raise ValueError(f"Immagine del workspace non registrata per {circuit_id}.")
-    workspace_image = resolve_project_path(str(workspace_image_value))
+    workspace_image = resolve_manifest_path(str(workspace_image_value))
     input_images_root = (workspace_path / "input" / "images").resolve()
     if not path_is_within(workspace_image, input_images_root) or not workspace_image.is_file():
         raise FileNotFoundError(
@@ -769,7 +1329,7 @@ def web_source_plan(
     values_path_value = pipeline2_state.get("values_yaml")
     if not values_path_value:
         raise ValueError(f"YAML dei valori non registrato per {circuit_id}.")
-    values_path = resolve_project_path(str(values_path_value))
+    values_path = resolve_manifest_path(str(values_path_value))
     if not values_path.is_file():
         raise FileNotFoundError(f"YAML dei valori non trovato: {values_path}")
     if pipeline2_state.get("values_sha256") != sha256_file(values_path):
@@ -976,8 +1536,11 @@ def spice_command(args: argparse.Namespace) -> int:
     # Migra in modo trasparente i manifest creati dalla prima versione del
     # comando graph, che registrava le singole immagini ma non la root batch.
     manifest_input_dir = resolve_manifest_input_dir(manifest)
-    manifest.setdefault("input_dir", str(manifest_input_dir))
-    manifest.setdefault("values_dir", str(manifest_input_dir / "values"))
+    manifest.setdefault("input_dir", portable_manifest_path(manifest_input_dir))
+    manifest.setdefault(
+        "values_dir",
+        portable_manifest_path(manifest_input_dir / "values"),
+    )
     write_manifest(manifest_path, manifest)
 
     stale = []
@@ -1332,6 +1895,32 @@ def build_parser() -> argparse.ArgumentParser:
         description="Orchestratore progressivo delle Pipeline 1.0 e 2.0."
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    preflight_parser = subparsers.add_parser(
+        "preflight",
+        help="Controlla ambiente, LFS, modello, input e programmi esterni senza creare output.",
+    )
+    preflight_parser.add_argument(
+        "--input-dir",
+        default="data/batchPipeline2.0/batchDemo",
+        help="Batch da validare per il flusso completo (default: batchDemo canonico).",
+    )
+    preflight_parser.add_argument(
+        "--ngspice-executable",
+        default=None,
+        help="Path o nome di ngspice; se omesso viene cercato nel PATH.",
+    )
+    preflight_parser.add_argument(
+        "--tesseract-executable",
+        default=None,
+        help="Path o nome di Tesseract; precede TESSERACT_CMD e il PATH.",
+    )
+    preflight_parser.add_argument(
+        "--require-openai",
+        action="store_true",
+        help="Considera obbligatoria anche OPENAI_API_KEY per le funzioni AGENT.",
+    )
+    preflight_parser.set_defaults(handler=preflight_command)
 
     graph_parser = subparsers.add_parser(
         "graph",

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 import importlib.util
+import json
 from pathlib import Path
 import shutil
 import subprocess
@@ -186,6 +187,129 @@ class WorkspaceManifestTests(unittest.TestCase):
                 reloaded["circuits"]["demo01"]["pipeline1"]["status"],
                 "pending",
             )
+
+    def test_schema_v2_serializes_project_paths_as_repo_relative(self) -> None:
+        """Un clone in un'altra directory non deve ereditare path del PC origine."""
+        with writable_test_directory() as test_dir:
+            manifest_path = test_dir / "workspace_manifest.json"
+            manifest = {
+                "schema_version": 1,
+                "workspace_id": "portable_test",
+                "input_dir": str(
+                    PROJECT_ROOT / "data" / "batchPipeline2.0" / "batchDemo"
+                ),
+                "circuits": {
+                    "a09": {
+                        "source_image": str(
+                            PROJECT_ROOT
+                            / "data"
+                            / "batchPipeline2.0"
+                            / "batchDemo"
+                            / "a09.jpg"
+                        ),
+                        "pipeline2": {
+                            "artifacts": {
+                                "graph": str(
+                                    PROJECT_ROOT
+                                    / "outputs"
+                                    / "demo_workspaces"
+                                    / "portable_test"
+                                    / "pipeline2.0"
+                                    / "a09"
+                                    / "01_graph.json"
+                                )
+                            }
+                        },
+                    }
+                },
+            }
+
+            self.launcher.write_manifest(manifest_path, manifest)
+            serialized = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+            self.assertEqual(serialized["schema_version"], 2)
+            self.assertEqual(
+                serialized["input_dir"],
+                "data/batchPipeline2.0/batchDemo",
+            )
+            self.assertEqual(
+                serialized["circuits"]["a09"]["source_image"],
+                "data/batchPipeline2.0/batchDemo/a09.jpg",
+            )
+            self.assertEqual(
+                serialized["circuits"]["a09"]["pipeline2"]["artifacts"]["graph"],
+                "outputs/demo_workspaces/portable_test/pipeline2.0/a09/01_graph.json",
+            )
+
+    def test_historical_batch_demo_alias_resolves_to_canonical_directory(self) -> None:
+        """Il vecchio alias relativo continua a trovare il Batch Demo trasferito."""
+        resolved = self.launcher.resolve_manifest_path(
+            "data/batchDemo/values/a09_values.yaml"
+        )
+
+        self.assertEqual(
+            resolved,
+            (
+                PROJECT_ROOT
+                / "data"
+                / "batchPipeline2.0"
+                / "batchDemo"
+                / "values"
+                / "a09_values.yaml"
+            ).resolve(),
+        )
+
+    def test_relative_path_normalization_preserves_leading_dots(self) -> None:
+        """Directory nascoste e parent traversal non perdono caratteri iniziali."""
+        self.assertEqual(
+            self.launcher._canonical_legacy_relative_path(Path(".tmp/easyocr")),
+            Path(".tmp/easyocr"),
+        )
+        self.assertEqual(
+            self.launcher._canonical_legacy_relative_path(Path("../outside")),
+            Path("../outside"),
+        )
+
+    def test_old_windows_absolute_path_is_rebased_to_current_clone(self) -> None:
+        """Un manifest del vecchio PC viene ricondotto alla root del clone attuale."""
+        old_path = (
+            r"R:\old_machine\tesi_diagrams_yolo\data\batchDemo"
+            r"\values\a09_values.yaml"
+        )
+
+        resolved = self.launcher.resolve_manifest_path(old_path)
+
+        self.assertEqual(
+            resolved,
+            (
+                PROJECT_ROOT
+                / "data"
+                / "batchPipeline2.0"
+                / "batchDemo"
+                / "values"
+                / "a09_values.yaml"
+            ).resolve(),
+        )
+
+    def test_absolute_local_legacy_alias_is_canonicalized(self) -> None:
+        """Anche un alias assoluto sotto la root corrente usa il batch canonico."""
+        legacy_path = (
+            PROJECT_ROOT / "data" / "batchDemo" / "values" / "a09_values.yaml"
+        )
+
+        resolved = self.launcher.resolve_manifest_path(legacy_path)
+
+        self.assertEqual(
+            resolved,
+            (
+                PROJECT_ROOT
+                / "data"
+                / "batchPipeline2.0"
+                / "batchDemo"
+                / "values"
+                / "a09_values.yaml"
+            ).resolve(),
+        )
 
 
 if __name__ == "__main__":
