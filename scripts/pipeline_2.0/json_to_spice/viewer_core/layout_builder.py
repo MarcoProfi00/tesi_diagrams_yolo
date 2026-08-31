@@ -9,6 +9,7 @@ leggibili per componenti, nodi e rami a partire dal modello netlist-first.
 from __future__ import annotations
 
 from datetime import datetime
+from decimal import Decimal, localcontext
 import math
 import re
 from pathlib import Path
@@ -491,12 +492,31 @@ def standardize_terminals(
         return ordered
 
     # I componenti multi-terminale mantengono il lato relativo attorno a un ingombro standard.
+    # Evitiamo atan2/sin/cos: le implementazioni libm di Windows e macOS
+    # possono differire di un ULP e rendere instabili gli artefatti JSON.
+    # Decimal proietta lo stesso vettore sull'ellisse in modo riproducibile.
     for terminal in standardized:
         raw_x = float(terminal.get("x") or center_x)
         raw_y = float(terminal.get("y") or center_y)
-        angle = math.atan2(raw_y - center_y, raw_x - center_x)
-        terminal["x"] = center_x + math.cos(angle) * spec["width"] / 2
-        terminal["y"] = center_y + math.sin(angle) * spec["height"] / 2
+        delta_x = raw_x - center_x
+        delta_y = raw_y - center_y
+        with localcontext() as context:
+            context.prec = 50
+            decimal_x = Decimal.from_float(delta_x)
+            decimal_y = Decimal.from_float(delta_y)
+            distance = (decimal_x * decimal_x + decimal_y * decimal_y).sqrt()
+            if distance:
+                terminal["x"] = float(
+                    Decimal.from_float(center_x)
+                    + decimal_x / distance * Decimal.from_float(float(spec["width"]) / 2)
+                )
+                terminal["y"] = float(
+                    Decimal.from_float(center_y)
+                    + decimal_y / distance * Decimal.from_float(float(spec["height"]) / 2)
+                )
+            else:
+                terminal["x"] = center_x + float(spec["width"]) / 2
+                terminal["y"] = center_y
     return standardized
 
 
@@ -2584,5 +2604,4 @@ def write_viewer_layout(run_dir: Path) -> dict[str, Any]:
     layout = build_viewer_layout(run_dir)
     write_json(run_dir / VIEWER_LAYOUT_NAME, layout)
     return layout
-
 

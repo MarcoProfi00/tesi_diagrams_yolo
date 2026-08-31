@@ -40,7 +40,7 @@ from .heuristics_seven_segment import (
 )
 from .heuristics_supply import merge_battery_gate_rail_groups
 from .ids import build_simple_id_map, build_simple_list, build_simple_terminal_graph
-from .io_utils import load_binary_image
+from .io_utils import load_binary_image, resolve_artifact_path
 from .matching import (
     attach_unmatched_analog_meter_terminals,
     attach_unmatched_lateral_terminal_labels,
@@ -80,6 +80,9 @@ def build_terminal_graph_for_image(data: dict):
     # per permettere ad alcune euristiche di riconoscere lo stile grafico.
     wire_extraction = dict(data.get("wire_extraction", {}))
     wire_extraction["image_path"] = data.get("image_path")
+    for key, value in tuple(wire_extraction.items()):
+        if key.endswith("_path") and value:
+            wire_extraction[key] = str(resolve_artifact_path(value))
     skeleton_path = wire_extraction.get("skeleton_path")
 
     if not skeleton_path:

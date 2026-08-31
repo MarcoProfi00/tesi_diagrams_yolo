@@ -29,6 +29,9 @@ VOLATILE_KEYS = {
 ISO_TIMESTAMP_PATTERN = re.compile(
     r"20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:[+-]\d\d:\d\d|Z)?"
 )
+CANONICAL_PATH_PATTERN = re.compile(
+    r"<(?:TEMP|PROJECT)_ROOT>(?:[\\/][^\\/\s<>\"']+)*"
+)
 
 
 def load_baseline() -> dict[str, Any]:
@@ -51,10 +54,30 @@ def load_numbered_module(filename: str, module_name: str | None = None) -> Modul
 def replace_path(text: str, path: Path, replacement: str) -> str:
     """Sostituisce nello stesso modo i path Windows e quelli con slash."""
     raw_path = str(path.resolve())
-    return text.replace(raw_path, replacement).replace(
+    replaced = text.replace(raw_path, replacement).replace(
         raw_path.replace("\\", "/"),
         replacement,
     )
+    return normalize_canonical_paths(replaced)
+
+
+def normalize_canonical_paths(text: str) -> str:
+    """Uniforma i separatori dei soli path sostituiti con marker canonici."""
+    return CANONICAL_PATH_PATTERN.sub(
+        lambda match: match.group(0).replace("/", "\\"),
+        text,
+    )
+
+
+WINDOWS_PROJECT_ROOT_PATTERN = re.compile(
+    r"(?i)^[a-z]:[\\/]+(?:[^\\/]+[\\/]+)*tesi_diagrams_yolo(?=[\\/]|$)"
+)
+
+
+def replace_legacy_project_root(text: str) -> str:
+    """Canonizza un path assoluto appartenente alla vecchia clone Windows."""
+    replaced = WINDOWS_PROJECT_ROOT_PATTERN.sub("<PROJECT_ROOT>", text)
+    return normalize_canonical_paths(replaced)
 
 
 def canonicalize(value: Any, temporary_root: Path | None = None) -> Any:
@@ -86,6 +109,8 @@ def canonicalize(value: Any, temporary_root: Path | None = None) -> Any:
                     "<TEMP_ROOT>",
                 )
         text = replace_path(text, PROJECT_ROOT, "<PROJECT_ROOT>")
+        text = replace_legacy_project_root(text)
+        text = normalize_canonical_paths(text)
         return ISO_TIMESTAMP_PATTERN.sub("<TIMESTAMP>", text)
     return value
 
