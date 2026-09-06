@@ -2,52 +2,60 @@
 
 ## Scopo del documento
 
-Questa è una mappa di lavoro, non una bozza del capitolo. Serve a stabilire:
+Questa è una mappa di lavoro, non una bozza del capitolo. Deve rimanere allineata alla struttura effettivamente adottata nel file `chapter2.tex` e serve a tenere traccia di:
 
-- il filo logico del capitolo;
-- paragrafi e sottoparagrafi;
-- argomenti da approfondire;
-- fonti interne già disponibili;
-- letteratura esterna da verificare;
-- tabelle e figure candidate;
-- confine con i capitoli 3 e 4.
+- filo logico del capitolo;
+- sezioni e sottosezioni effettive;
+- contenuti già scritti;
+- lavori e fonti realmente utilizzati;
+- figure già inserite;
+- argomenti ancora da sviluppare;
+- confine con i Capitoli 3 e 4.
 
 ## Stato della ricognizione bibliografica
 
 - **Data di chiusura provvisoria della ricerca:** 1 settembre 2026.
-- La data dovrà essere aggiornata solo se la stesura o la consegna avverranno molto più avanti.
-- I documenti Word, PowerPoint e Markdown della repository sono materiale di orientamento e ricostruzione del progetto: nella tesi vanno citati i paper, gli standard, i dataset e la documentazione ufficiale originari.
-- Per ogni dato quantitativo usare la versione più recente del paper consultata e annotarne versione/data; non copiare automaticamente i numeri dai vecchi appunti.
-- I preprint molto recenti del 2026 vanno qualificati come tali oppure come lavori accettati, quando la pagina ufficiale lo dichiara.
-- Questa mappa copre tutti i filoni necessari; il lavoro residuo è bibliografico e redazionale, non richiede nuovi esperimenti.
+- I documenti Word, PowerPoint e Markdown della repository sono materiale di orientamento: nella tesi si citano paper, standard, dataset e documentazione ufficiale originari.
+- I risultati quantitativi del progetto sviluppato nella tesi non appartengono a questo capitolo.
+- I preprint molto recenti del 2026 devono essere qualificati come tali quando non esiste una versione pubblicata.
+- La struttura viene mantenuta volutamente compatta, evitando sottosezioni ridondanti.
 
 ## Confine con gli altri capitoli
 
-- **Capitolo 2 - Stato dell'arte:** descrive il problema generale e le soluzioni già presenti in letteratura.
-- **Capitolo 3 - Problema e soluzione proposta:** descrive dataset, addestramento e pipeline sviluppati nella tesi.
-- **Capitolo 4 - Valutazione sperimentale:** contiene metriche YOLO, valutazioni dei graph JSON, benchmark dei modelli e confronto CHAT-AGENT.
+- **Capitolo 2 - Stato dell'arte:** lavori correlati, metodologie disponibili e relativi limiti.
+- **Capitolo 3 - Definizione del problema e soluzione proposta:** dataset, addestramento, pipeline topologica, Graph JSON, conversione a SPICE, agente e interfaccia sviluppati nella tesi.
+- **Capitolo 4 - Valutazione sperimentale:** metriche YOLO, verifica strutturale, benchmark dei modelli, valutazione CHAT/AGENT e risultati finali.
 
-Nel capitolo 2 non inserire i risultati numerici dei nostri esperimenti. Il percorso del progetto viene usato soltanto per ordinare la letteratura:
+Il percorso logico usato per ordinare la letteratura è:
 
-> dataset e annotazioni -> object detection -> estrazione topologica -> graph/netlist/SPICE -> diagnosi AI -> valutazione
+> dataset e annotazioni -> object detection -> ricostruzione topologica -> grafo -> netlist/SPICE -> diagnosi AI -> valutazione
 
-La struttura definitiva viene mantenuta volutamente compatta: **al massimo tre sottosezioni per ciascuna sezione**, accorpando gli argomenti strettamente collegati ed evitando una frammentazione eccessiva dello stato dell'arte.
+## Stato attuale della stesura
+
+- **§2.1 completata**
+- **§2.2 completata**
+- **§2.3 completata**
+- **§2.4 completata**
+- **§2.5 completata**
+- **§2.6 da strutturare e scrivere**
+- **§2.7 da scrivere dopo la §2.6**
 
 ---
 
-## 2.1 Digitalizzazione automatica degli schemi elettrici
+## 2.1 Digitalizzazione automatica dei diagrammi elettrici
+
+**Stato:** completata.
 
 ### 2.1.1 Dal documento grafico alla rappresentazione strutturata
 
-**Contenuti da trattare**
+**Contenuti effettivamente trattati**
 
-- Ruolo di schemi elettrici e wiring diagram in progettazione, manutenzione e troubleshooting.
-- Limiti dell'analisi manuale di documenti raster, scansioni e PDF tecnici.
-- Obiettivo generale della digitalizzazione: trasformare pixel e testo in una rappresentazione strutturata interrogabile.
-- Distinzione tra riconoscere simboli, ricostruire collegamenti e comprendere il comportamento elettrico.
-- Pipeline modulari che separano elementi, testo e relazioni di connessione.
+- Differenza tra semplice acquisizione digitale e vera digitalizzazione dell'informazione circuitale.
+- Passaggio da documento raster a rappresentazione strutturata.
+- Integrazione di elaborazione dell'immagine, riconoscimento di componenti, testo e connessioni.
+- Limiti delle pipeline che riconoscono soltanto gli elementi senza ricostruire le relazioni.
 
-**Lavori principali**
+**Lavori citati**
 
 - C. R. Kelly e J. M. Cole, *Digitizing Images of Electrical-Circuit Schematics*, 2024.
 - S. Mani et al., *Automatic Digitization of Engineering Diagrams Using Deep Learning and Graph Search*, 2020.
@@ -55,332 +63,277 @@ La struttura definitiva viene mantenuta volutamente compatta: **al massimo tre s
 
 ### 2.1.2 Schemi elettrici e diagrammi di cablaggio
 
-**Contenuti da trattare**
+**Contenuti effettivamente trattati**
 
-- Differenze tra schema logico/funzionale e wiring diagram fisico.
-- Simbologia standardizzata rispetto a icone pittoriche o dipendenti dal produttore.
-- Layout logico rispetto a disposizione fisica.
-- Conseguenze per computer vision, OCR ed estrazione dei collegamenti.
-- Esempi di estrazione delle connessioni in diagrammi industriali.
+- Differenza tra schema elettrico e wiring diagram.
+- Simbologia standardizzata e importanza delle convenzioni grafiche.
+- Differenza tra rappresentazione logico-funzionale e disposizione fisica.
+- Conseguenze per riconoscimento automatico e ricostruzione delle connessioni.
 
-**Lavori e fonti principali**
+**Fonti citate**
 
-- A. R. Putra, S. Ha e K.-P. Park, *Automatic Extraction of Cable Connection Information from 2D Drawings for Electrical Outfittings Design in Shipyards*, 2024.
-- [IEC 60617 - Graphical symbols for diagrams](https://std.iec.ch/iec60617).
-- [IEC 61082-1:2014 - Preparation of Documents Used in Electrotechnology](https://webstore.iec.ch/en/publication/4469).
-- [IEEE/ANSI 315-1975](https://standards.ieee.org/ieee/315/515/), solo se utile per discutere varianti di simbologia.
-
-**Materiale interno**
-
-- [Extraction and Recognition of Wiring Diagrams.pptx](<../Teoria_Papers/Extraction and Recognition of Wiring Diagrams.pptx>)
-- [Spiegazione_HighLevel.docx](../Teoria_Papers/Spiegazione_HighLevel.docx)
-- [Costruzione Dataset.docx](<../Teoria_Papers/Costruzione Dataset.docx>)
-- [electronics-14-00833-with-cover.pdf](../Teoria_Papers/Papers/electronics-14-00833-with-cover.pdf)
+- IEC 61082-1:2014.
+- IEC 60617.
+- A. R. Putra et al., *Automatic Extraction of Cable Connection Information from 2D Drawings for Electrical Outfittings Design in Shipyards*, 2024.
 
 **Figura utilizzata**
 
+- `images/chapter2/cao_layered_framework.png`
 - Framework a livelli di Cao et al. per elementi, testo e connessioni.
-
-**Da non anticipare**
-
-- Le classi specifiche del nostro dataset.
-- Le immagini di training e i risultati del detector.
 
 ---
 
 ## 2.2 Dataset e annotazione dei diagrammi elettrici
 
+**Stato:** completata.
+
 ### 2.2.1 Reperimento e costruzione dei dataset
 
-**Contenuti da trattare**
+**Contenuti effettivamente trattati**
 
-- Dataset pubblici, immagini da documentazione tecnica e generazione sintetica.
-- Diagrammi completi rispetto a collezioni di simboli isolati.
-- Differenze tra dataset di schematici regolari, wiring diagram e circuiti disegnati a mano.
-- Problemi di licenza, provenienza, duplicati e domain shift.
-- Separazione corretta tra training, validation e test, evitando leakage tra varianti dello stesso circuito.
+- Dataset pubblici e costruzione di collezioni di diagrammi.
+- Diagrammi completi rispetto a simboli isolati.
+- Differenze tra circuiti disegnati a mano, schematici regolari e dataset analog/mixed-signal.
+- Problemi di varietà, domain shift e separazione corretta tra training, validation e test.
 
-**Dataset/lavori principali**
+**Lavori citati**
 
-- F. Thoma et al., *A Public Ground-Truth Dataset for Handwritten Circuit Diagram Images*, 2021.
-- H. Xu et al., *Image2Net: Datasets, Benchmark and Hybrid Framework to Convert Analog Circuit Diagrams into Netlists*, 2025.
-- Y. Shi et al., *AMSnet 2.0: A Large AMS Database with AI Segmentation for Net Detection*, 2025.
-- A. Roy et al., *JUHCCR-v1: A Database for Hand-Drawn Electrical and Electronics Circuit Component Recognition*, 2025.
+- F. Thoma et al., 2021.
+- H. Xu et al., Image2Net, 2025.
+- Y. Shi et al., AMSnet 2.0, 2025.
+- A. Roy et al., JUHCCR-v1, 2025.
 
 ### 2.2.2 Tassonomia e annotazione dei dati
 
-**Contenuti da trattare**
+**Contenuti effettivamente trattati**
 
-- Definizione e granularità delle classi prima dell'annotazione.
-- Ambiguità tra simboli visivamente simili, class imbalance e classi rare.
-- Bounding box e formati di annotazione come Pascal VOC e YOLO.
-- Limiti delle sole bounding box: non descrivono terminali, orientamento o connessioni.
-- Annotazioni aggiuntive per junction, crossing, orientamento, reti elettriche e netlist.
+- Granularità delle classi.
+- Bounding box e annotazioni strutturali aggiuntive.
+- Orientamento, junction, crossing e informazioni topologiche.
+- Limiti delle annotazioni basate soltanto sulla posizione dei componenti.
 
 ### 2.2.3 Data augmentation e generalizzazione
 
-**Contenuti da trattare**
+**Contenuti effettivamente trattati**
 
 - Trasformazioni geometriche e fotometriche.
-- Utilità rispetto a dataset piccoli, variazioni di scansione/fotografia e classi poco rappresentate.
+- Ruolo della data augmentation in dataset piccoli o eterogenei.
 - Rischio di trasformazioni non plausibili per il dominio circuitale.
-- Augmentation mirata a orientamento, rumore, contrasto, qualità del tratto e sovrapposizioni grafiche.
+- Esempi specifici dalla letteratura.
 
-**Fonti principali**
+**Lavori citati**
 
-- C. Shorten e T. M. Khoshgoftaar, *A Survey on Image Data Augmentation for Deep Learning*, 2019.
-- A. Buslaev et al., *Albumentations: Fast and Flexible Image Augmentations*, 2020.
-- A. Roy et al., JUHCCR-v1, 2025, come esempio specifico del dominio circuitale.
-- Y. Shi et al., AMSnet 2.0, 2025, per perturbazioni grafiche su schematici.
-
-**Materiale interno**
-
-- [Costruzione Dataset.docx](<../Teoria_Papers/Costruzione Dataset.docx>)
-- [data/README.md](../../data/README.md)
-- script in [scripts/augmentation/](../../scripts/augmentation/)
-- archivi versionati in [data/datasets/](../../data/datasets/)
-- [class_summary_global.csv](../../metadata/class_summary_global.csv) e [class_summary_by_split.csv](../../metadata/class_summary_by_split.csv)
+- C. Shorten e T. M. Khoshgoftaar, 2019.
+- A. Buslaev et al., 2020.
+- A. Roy et al., 2025.
+- Y. Shi et al., 2025.
 
 **Figura utilizzata**
 
-- Esempio annotato del dataset di Thoma et al., con bounding box e annotazioni ausiliarie.
-
-**Tabella candidata**
-
-- Confronto sintetico tra dataset della letteratura: dominio, dimensione, classi, tipo di annotazione, disponibilità e limite principale. Valutare se mantenerla o assorbirne le informazioni nella tabella comparativa finale del §2.7.
+- `images/chapter2/thoma_dataset_sample.png`
+- Esempio annotato del dataset di Thoma et al.
 
 ---
 
 ## 2.3 Rilevamento dei componenti elettrici
 
+**Stato:** completata.
+
 ### 2.3.1 Dai metodi tradizionali al deep learning
 
-**Contenuti da trattare**
+**Contenuti effettivamente trattati**
 
-- Template matching, densità dei pixel, descrittori HOG/LBP e classificatori tradizionali.
-- Fragilità rispetto a scala, rumore, stile, deformazioni e somiglianza tra simboli.
-- Passaggio a CNN capaci di apprendere automaticamente le caratteristiche visive.
-- Distinzione tra classificazione di simboli isolati e object detection sull'intero diagramma.
+- Template matching e descrittori progettati manualmente.
+- HOG, LBP e classificatori tradizionali.
+- Passaggio alle CNN.
+- Differenza tra classificazione di simboli isolati e object detection sul diagramma completo.
 
-**Lavori principali**
+**Lavori citati**
 
 - A. Roy et al., JUHCCR-v1, 2025.
-- S. Amraee et al., *Handwritten Logic Circuits Analysis Using the YOLO Network and a New Boundary Tracking Algorithm*, 2022.
-- B. Bohara e H. S. Krishnamoorthy, *Deep Learning-Based Framework for Power Converter Circuit Identification and Analysis*, 2024.
+- S. Amraee et al., 2022.
+- B. Bohara e H. S. Krishnamoorthy, 2024.
 
 ### 2.3.2 Detector one-stage e two-stage
 
-**Contenuti da trattare**
+**Contenuti effettivamente trattati**
 
-- Differenza concettuale tra detector one-stage e two-stage.
-- YOLO come riferimento one-stage e Faster R-CNN come riferimento two-stage.
-- Compromesso tra accuratezza, complessità e velocità di inferenza.
-- Difficoltà del dominio circuitale: simboli piccoli, densi e visivamente simili.
-- Evoluzione della famiglia YOLO solo nella misura necessaria a contestualizzare YOLOv7, YOLOv8 e YOLO11; evitare una rassegna di tutte le versioni.
+- Differenza generale tra architetture one-stage e two-stage.
+- YOLO e Faster R-CNN come riferimenti.
+- Compromesso tra accuratezza, velocità e complessità.
+- Difficoltà specifiche del dominio circuitale.
 
-**Fonti principali**
+**Fonti citate**
 
-- J. Redmon et al., *You Only Look Once: Unified, Real-Time Object Detection*, CVPR 2016.
-- S. Ren et al., *Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks*, NeurIPS 2015.
-- C.-Y. Wang et al., *YOLOv7: Trainable Bag-of-Freebies Sets New State-of-the-Art for Real-Time Object Detectors*, 2022/2023.
-- Documentazione ufficiale Ultralytics per YOLOv8 e YOLO11.
-- S. Amraee et al., 2022, per confronto tra YOLO, Faster R-CNN, RetinaNet e Detectron2 in ambito circuitale.
-- B. Bohara e H. S. Krishnamoorthy, 2024, per confronto YOLOR/YOLOv7/YOLOv8.
+- J. Redmon et al., 2016.
+- S. Ren et al., 2015.
+- S. Amraee et al., 2022.
+- B. Bohara e H. S. Krishnamoorthy, 2024.
 
-**Nota sulle metriche**
+**Nota**
 
-- Precision, recall, F1, IoU e mAP vengono richiamate solo quando necessario nello stato dell'arte.
-- La spiegazione sistematica di mAP@0.5, mAP@0.5:0.95 e delle metriche dei nostri esperimenti appartiene al Capitolo 4.
+- Precision, recall, IoU e mAP vengono soltanto richiamate; la spiegazione sistematica resta nel Capitolo 4.
 
 ### 2.3.3 Riconoscimento dei componenti elettrici nella letteratura
 
-**Contenuti da trattare**
+**Contenuti effettivamente trattati**
 
-- R. R. Rachala e M. R. Panicker: YOLOv5 + riconoscimento dei nodi tramite trasformata di Hough.
-- S. Amraee et al.: detection dei componenti + boundary tracking delle connessioni.
-- B. Bohara e H. S. Krishnamoorthy: detection inserita in una pipeline fino a netlist e simulazione.
-- W. Cao et al.: riconoscimento degli elementi come primo livello di un framework più ampio.
-- Evidenziare che una detection accurata è necessaria ma non sufficiente per la digitalizzazione completa dello schema.
-
-**Materiale interno**
-
-- [Extraction and Recognition of Wiring Diagrams.pptx](<../Teoria_Papers/Extraction and Recognition of Wiring Diagrams.pptx>)
-- [electronics-14-00833-with-cover.pdf](../Teoria_Papers/Papers/electronics-14-00833-with-cover.pdf)
-- [Passi_da_seguire.docx](../Teoria_Papers/DetectionComponents/Passi_da_seguire.docx)
-- risultati YOLO interni soltanto per ricostruire il contesto; numeri e confronto sperimentale rimangono nel Capitolo 4.
+- Detection come primo livello di pipeline più ampie.
+- Rachala e Panicker: component detection + riconoscimento dei nodi.
+- Amraee et al.: detection + boundary tracking.
+- Bohara e Krishnamoorthy: detection fino a netlist e simulazione.
+- Cao et al.: riconoscimento degli elementi in un framework a livelli.
+- Limite centrale: una detection corretta non implica una ricostruzione corretta dell'intero circuito.
 
 **Figura utilizzata**
 
-- C. R. Kelly e J. M. Cole, figura con schema binarizzato/scheletrizzato, componenti rilevati mediante bounding box e fili individuati.
-
-**Da non anticipare**
-
-- Configurazioni `exp01`-`exp12`.
-- Metriche del checkpoint finale.
-- Motivazione sperimentale della scelta del detector sviluppato nella tesi.
+- `images/chapter2/kelly_component_detection.png`
+- Schema binarizzato/scheletrizzato con componenti rilevati e fili individuati.
 
 ---
 
 ## 2.4 Dalla detection alla rappresentazione topologica
 
-### 2.4.1 Estrazione delle informazioni complementari
+**Stato:** completata.
 
-**Contenuti da trattare**
+La struttura effettiva è stata ridotta a **due sottosezioni**. La precedente articolazione in tre parti non viene più utilizzata.
 
-- Perché la bounding box di un componente non è sufficiente per ricostruire il circuito.
-- Separazione tra layer dei componenti, layer testuale e layer delle connessioni.
-- Text detection e text recognition senza trasformare la sezione in una rassegna generale sull'OCR.
-- Testo ruotato, font tecnici, sovrapposizione con i fili e associazione spaziale testo-componente.
-- Localizzazione dei terminali, orientamento, polarità e semantica dei pin.
-- Componenti a due terminali rispetto a componenti multi-terminale.
+### 2.4.1 Estrazione delle informazioni e ricostruzione delle connessioni
 
-**Fonti/lavori da usare**
+**Contenuti effettivamente trattati**
 
-- W. Cao et al., framework layered, 2025.
-- C. R. Kelly e J. M. Cole, 2024.
-- B. Bohara e H. S. Krishnamoorthy, 2024.
-- H. Xu et al., Image2Net, 2025, per orientamento e annotazioni aggiuntive.
-- [Tesseract User Manual](https://tesseract-ocr.github.io/tessdoc/).
-- [EasyOCR](https://github.com/JaidedAI/EasyOCR).
-- Y. Baek et al., *Character Region Awareness for Text Detection*, CVPR 2019, se serve approfondire CRAFT.
+- Limiti delle sole bounding box.
+- Orientamento dei simboli.
+- Localizzazione dei terminali.
+- Informazioni testuali.
+- Segmentazione binaria e separazione delle linee.
+- Connected components e thinning.
+- Ricostruzione dei collegamenti come fase critica per la topologia.
 
-### 2.4.2 Ricostruzione delle connessioni
-
-**Contenuti da trattare**
-
-- Binarizzazione e mascheramento/rimozione di componenti e testo.
-- Operazioni morfologiche, closing, thinning e skeletonization.
-- Hough transform, connected components, line segment detection e wire tracing.
-- Ripristino di linee interrotte o occluse tramite operazioni geometriche o inpainting.
-- Differenza tra giunzioni a T, incroci connessi/non connessi e crossing/bridge.
-- Effetto di un errore locale sulla topologia globale del circuito.
-
-**Lavori principali**
-
-- C. R. Kelly e J. M. Cole, 2024.
-- S. Amraee et al., 2022.
-- W. Cao et al., 2025.
-- B. Bohara e H. S. Krishnamoorthy, 2024.
-- A. R. Putra et al., 2024, per wiring diagram industriali.
-
-### 2.4.3 Dalla connettività al grafo e verifica topologica
-
-**Contenuti da trattare**
-
-- Component graph, terminal graph e net graph.
-- Nodi, componenti, terminali, archi e reti elettriche.
-- Vantaggi di una rappresentazione intermedia modulare e ispezionabile rispetto alla conversione diretta immagine-netlist.
-- Sistemi completi immagine-grafo e approcci basati su graph search, graph attention o instance segmentation.
-- Verifica strutturale tramite confronto delle connessioni, exact match, precision/recall degli archi, Graph Edit Distance e metriche normalizzate.
-- Verifica visuale/multimodale come supporto, distinguendola sempre da una ground truth strutturata.
-
-**Lavori candidati**
+**Lavori citati**
 
 - J. Bayer, L. van Waveren e A. Dengel, *Modular Graph Extraction for Handwritten Circuit Diagram Images*, 2024.
-- J. Bayer et al., *Instance Segmentation Based Graph Extraction for Handwritten Circuit Diagram Images*, 2023.
+- J. Bayer, A. K. Roy e A. Dengel, *Instance Segmentation Based Graph Extraction for Handwritten Circuit Diagram Images*, 2023.
+- W. Hu, X. Zhan e M. Tong, *Parsing Netlists of Integrated Circuits from Images via Graph Attention Network*, 2024.
+
+**Figura utilizzata**
+
+- `images/chapter2/bayer_modular_graph_pipeline.png`
+- Pipeline di Bayer et al. dall'immagine originale alla rettifica delle connessioni.
+
+### 2.4.2 Rappresentazione a grafo e verifica topologica
+
+**Contenuti effettivamente trattati**
+
+- Rappresentazione del circuito mediante nodi e archi.
+- Differenza tra rappresentazioni centrate sui componenti e rappresentazioni a livello di terminale.
+- Costruzione geometrica del grafo.
+- Link prediction come approccio appreso per inferire le connessioni.
+- Uso di Graph Attention Network per la previsione delle relazioni tra terminali.
+- Grafo come livello intermedio ispezionabile prima della netlist.
+- Verifica topologica tramite confronto con una rappresentazione strutturata di riferimento.
+
+**Lavori citati**
+
+- Bayer et al., 2023.
+- Bayer et al., 2024.
+- Hu et al., 2024.
 - H. Xu et al., Image2Net, 2025.
-- W. Cao et al., 2025.
-- C. R. Kelly e J. M. Cole, 2024.
-- S. Mani et al., 2020.
-- W. Hu et al., *Parsing Netlists of Integrated Circuits from Images via Graph Attention Network*, 2023/2024.
-- A. R. Putra et al., 2024.
 
-**Fonti metodologiche per la verifica automatica, da usare solo se necessarie**
+**Figura utilizzata**
 
-- L. Zheng et al., *Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena*, 2023.
-- Y. Liu et al., *G-Eval: NLG Evaluation using GPT-4 with Better Human Alignment*, EMNLP 2023.
-- D. Chen et al., *MLLM-as-a-Judge*, 2024.
-- Un judge automatico non sostituisce automaticamente una ground truth annotata.
+- `images/chapter2/hu_port_link_prediction.png`
+- Flusso di Hu et al. da component detection e localizzazione dei terminali alla link prediction.
 
-**Materiale interno**
+**Da non anticipare**
 
-- [Extraction and Recognition of Wiring Diagrams.pptx](<../Teoria_Papers/Extraction and Recognition of Wiring Diagrams.pptx>)
-- [electronics-14-00833-with-cover.pdf](../Teoria_Papers/Papers/electronics-14-00833-with-cover.pdf)
-- [doc_scripts_1.0/](../second_part_pipeline_topologica/doc_scripts_1.0/) soltanto come materiale tecnico per comprendere i problemi.
-- [RISULTATI_VERIFICA_TOPOLOGICA_GRAPH_JSON.md](../second_part_pipeline_topologica/RISULTATI_VERIFICA_TOPOLOGICA_GRAPH_JSON.md) soltanto per ricostruire il protocollo; risultati nel Capitolo 4.
-- [deep-research-report.md](../third_part_from_json_to_spice/deep-research-report.md)
-
-**Figura candidata**
-
-- Una figura che mostri chiaramente il passaggio da componenti/terminali/connessioni a una rappresentazione a grafo. Evitare di duplicare la pipeline layered già mostrata nel §2.1.
+- Graph JSON specifico della soluzione sviluppata nella tesi.
+- Metriche e risultati della verifica topologica del progetto.
 
 ---
 
-## 2.5 Dal grafo alla netlist e alla simulazione SPICE
+## 2.5 Dalla rappresentazione topologica alla netlist e alla simulazione SPICE
+
+**Stato:** completata.
+
+La struttura effettiva è stata ridotta a **due sottosezioni**. La precedente sottosezione autonoma sui sistemi image-to-netlist è stata assorbita nella trattazione dei lavori correlati.
 
 ### 2.5.1 Dal grafo alla netlist
 
-**Contenuti da trattare**
+**Contenuti effettivamente trattati**
 
-- Differenza tra grafo topologico, Graph JSON, netlist e schematico visuale.
-- Identificatori canonici per componenti, terminali e nodi.
-- Mapping terminale-net e trasformazione delle relazioni topologiche in una descrizione circuitale.
-- Tracciabilità tra rappresentazioni successive e vantaggi di una rappresentazione intermedia strutturata.
-- Netlist completa, netlist parziale e rappresentazione non ancora simulabile.
+- Trasformazione delle relazioni topologiche in associazioni esplicite componente-terminale-nodo.
+- Identificatori e nodi elettrici.
+- Irrilevanza del nome o della numerazione dei nodi quando la connettività rimane equivalente.
+- Approcci recenti image-to-netlist.
+- Ruolo dell'orientamento, dei terminali e della connectivity extraction.
+- Differenza tra netlist strutturalmente ricostruita e netlist già utilizzabile per la simulazione.
 
-### 2.5.2 Simulazione SPICE e completamento semantico
+**Lavori citati**
 
-**Contenuti da trattare**
-
-- Netlist come descrizione dichiarativa di componenti, parametri e nodi.
-- Introduzione essenziale alle analisi `.op`, `.dc`, `.ac` e `.tran`.
-- Modelli primitivi, modelli vendor e sottocircuiti.
-- Ruolo di massa, alimentazioni, valori, parametri e condizioni iniziali.
-- Informazioni mancanti: valori non leggibili, modelli assenti, pin mapping di integrati e uso dei datasheet.
-- Errori sintattici rispetto a errori elettrici/topologici; floating nodes e problemi di convergenza.
-- Una simulazione riuscita non garantisce che il circuito ricostruito coincida con quello originale.
-
-**Fonti primarie**
-
-- [Ngspice documentation](https://ngspice.sourceforge.io/docs.html) e [Ngspice User's Manual](https://ngspice.sourceforge.io/docs/ngspice-manual.pdf).
-- L. W. Nagel e D. O. Pederson, *SPICE (Simulation Program with Integrated Circuit Emphasis)*, UC Berkeley, 1973, solo per l'origine storica.
-
-### 2.5.3 Sistemi image-to-netlist e verifica mediante simulazione
-
-**Aspetti da confrontare**
-
-- Tipologia di input e dominio circuitale.
-- Riconoscimento di componenti, orientamento, testo e valori.
-- Metodo di connectivity inference.
-- Formato e completezza della netlist generata.
-- Presenza di verifica strutturale o simulativa.
-- Dataset, codice e riproducibilità.
-
-**Lavori principali/candidati**
-
+- B. Bohara e H. S. Krishnamoorthy, 2024, come raccordo alla pipeline completa.
+- A. Mathur e R. Achar, *Hand-Drawn Circuit Schematic Digitization and Netlisting Using Machine Learning with Emphasis on Signal Integrity Applications*, 2024.
+- S. Aldowaish et al., *SINA: A Circuit Schematic Image-to-Netlist Generator Using Artificial Intelligence*, DATE 2026.
+- C.-Y. Huang et al., *Netlistify: Transforming Circuit Schematics into Netlists with Deep Learning*, MLCAD 2025.
 - H. Xu et al., Image2Net, 2025.
-- B. Bohara e H. S. Krishnamoorthy, 2024.
-- *Netlistify: Transforming Circuit Schematics into Netlists with Deep Learning*, MLCAD 2025.
-- AMSNet e AMSnet 2.0.
-- S. Aldowaish et al., *SINA: A Fully Automated Circuit Schematic Image to Netlist Generator Using Artificial Intelligence*, preprint 2026.
-- Z. Huang et al., *PCBnet: A Dataset and Automatic Construction of SPICE Netlists from Schematic Images*, preprint/ICLAD 2026.
-- J. Ma et al., *NetlistBench: Evaluating LLM Reliability in SPICE Netlist Recognition and Manipulation*, MLCAD 2026, soprattutto per la valutazione deterministica della struttura.
-- Auto-SPICE / Masala-CHAI solo se la fonte primaria viene verificata e risulta realmente pertinente.
 
-**Materiale interno**
+**Figura utilizzata**
 
-- [deep-research-report.md](../third_part_from_json_to_spice/deep-research-report.md)
-- [Teoria_Integrazione json - Spice.docx](<../third_part_from_json_to_spice/Teoria_Integrazione json - Spice.docx>)
-- [Estensione della pipeline con SPICE a partire dal graph JSON.odt](<../third_part_from_json_to_spice/Estensione della pipeline con SPICE a partire dal graph JSON.odt>)
-- [stato_dell_arte_spice_to_viewer.md](../third_part_from_json_to_spice/viewer_simulator/stato_dell_arte_spice_to_viewer.md)
-- datasheet e README dei modelli in [metadata/spice_models/](../../metadata/spice_models/)
+- `images/chapter2/sina_image_to_netlist.png`
+- Esempio SINA: schema -> componenti -> nodi/connessioni -> netlist finale.
 
-**Figura candidata**
+### 2.5.2 Simulazione SPICE e requisiti di simulabilità
 
-- Pipeline di Bohara e Krishnamoorthy: schema -> detection/OCR -> nodi/connessioni -> netlist -> simulazione. È più adatta qui che nella sezione di sola object detection.
+**Contenuti effettivamente trattati**
+
+- Netlist come ingresso a un simulatore SPICE.
+- Richiamo essenziale alle analisi `.op`, `.dc`, `.ac` e `.tran`.
+- Necessità di valori, parametri, sorgenti, nodo di riferimento, modelli e sottocircuiti.
+- Corretta associazione tra terminali dello schema e pin del modello.
+- Differenza tra correttezza sintattica, simulabilità e correttezza topologica/elettrica.
+- Simulazione come ulteriore verifica, senza considerarla prova sufficiente di equivalenza con lo schema originale.
+- Distinzione tra HSPICE commerciale e ngspice open source mediante nota esplicativa.
+
+**Fonti citate**
+
+- Documentazione e manuale ufficiale ngspice.
+- Mathur e Achar, 2024.
+
+**Figura utilizzata**
+
+- `images/chapter2/mathur_netlist_simulation.png`
+- Schema disegnato a mano -> connessioni/netlist -> simulazione HSPICE.
+
+**Lavori recenti da conservare per le sezioni successive**
+
+- Z. Huang et al., *PCBnet: A Dataset and Automatic Constructing of SPICE Netlists from Schematic Images*, preprint arXiv 2026.
+- PCBnet è particolarmente utile per la §2.6 perché introduce una fase di correzione multi-agent e multimodale basata su conoscenza di dominio.
+
+**Da non anticipare**
+
+- Regole specifiche della conversione Graph JSON -> SPICE sviluppata nella tesi.
+- Modelli SPICE e datasheet effettivamente usati nel progetto.
+- Risultati `.op` e `.tran` ottenuti sperimentalmente.
+- Strategia dell'agente diagnostico.
 
 ---
 
 ## 2.6 Diagnosi circuitale assistita da modelli linguistici
 
+**Stato:** da definire in modo definitivo prima della stesura.
+
+La sezione deve partire dal limite emerso nella §2.5: una simulazione o una netlist corretta non costituiscono ancora una diagnosi. Il passo successivo riguarda l'uso di modelli linguistici e multimodali per interpretare dati strutturati, documentazione tecnica e risultati elettrici.
+
+### Struttura candidata
+
 ### 2.6.1 Modelli linguistici e multimodali per l'analisi circuitale
 
-**Contenuti da trattare**
+**Contenuti da valutare**
 
-- Breve raccordo con diagnosi tradizionale, sistemi esperti e approcci model-based.
-- Ragionamento diretto sull'immagine rispetto a ragionamento su descrizioni testuali o rappresentazioni strutturate.
+- Breve raccordo con diagnosi tradizionale e approcci model-based.
+- Ragionamento diretto sull'immagine rispetto a ragionamento su testo, grafo o netlist.
 - Uso congiunto di schema, netlist, datasheet e risultati elettrici.
-- Limiti dei modelli linguistici: allucinazioni, inferenze non verificabili e dipendenza dal contesto fornito.
+- Limiti di LLM e VLM: allucinazioni, inferenze non verificabili, dipendenza dal contesto.
 
 **Fonte di contesto tradizionale**
 
@@ -388,69 +341,72 @@ La struttura definitiva viene mantenuta volutamente compatta: **al massimo tre s
 
 ### 2.6.2 Grounding mediante dati strutturati e simulazione
 
-**Contenuti da trattare**
+**Contenuti da valutare**
 
-- Graph/netlist come contesto strutturato per il modello.
-- Datasheet e documentazione tecnica come fonti esterne verificabili.
-- Risultati SPICE come evidenza quantitativa per supportare o confutare ipotesi diagnostiche.
-- Differenza tra risposta generata soltanto dal modello e risposta grounded su dati recuperati o prodotti da strumenti.
-- RAG come principio generale di grounding, senza trasformare la sezione in una rassegna NLP.
-- Sistemi e workflow circuitali che includono SPICE nel loop.
+- Grafo e netlist come contesto strutturato.
+- Datasheet e documentazione tecnica come fonti verificabili.
+- Risultati SPICE come evidenza quantitativa.
+- Differenza tra risposta generata soltanto dal modello e risposta grounded su dati o strumenti.
+- RAG come principio generale, senza trasformare la sezione in una rassegna NLP.
+- Workflow circuitali che includono simulatori o strumenti nel loop.
 
-**Fonti metodologiche/circuitali**
+**Fonti candidate da verificare**
 
 - P. Lewis et al., *Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks*, NeurIPS 2020.
 - S. Nau, J. Krummenauer e A. Zimmermann, *Evaluating LLM-based Workflows for Switched-Mode Power Supply Design*, 2025.
-- SPICEAssistant, AMSnet-KG/AMSnet-q e Auto-SPICE solo dopo verifica della fonte primaria.
+- AMSnet-KG.
+- Eventuali lavori SPICEAssistant / Auto-SPICE solo dopo verifica della fonte primaria.
+- PCBnet 2026 per la correzione multi-agent grounded su conoscenza di dominio.
 
 ### 2.6.3 Assistenti, agenti e criteri di valutazione
 
-**Contenuti da trattare**
+**Contenuti da valutare**
 
 - Differenza tra assistente conversazionale e agente tool-using.
-- Pianificazione, selezione di azioni/scenari, esecuzione di simulatori e lettura dei risultati.
-- Stato persistente, budget di strumenti e audit trail.
-- Rischi di azioni non necessarie, errori cumulativi e maggiore variabilità nelle traiettorie agentiche.
-- Criteri di qualità: correttezza tecnica, aderenza alle evidenze, utilità diagnostica, dichiarazione di incertezza e limiti.
-- Confronto qualità/costo/latenza e risposta singola rispetto a traiettoria agente.
-- Judge umano, LLM/VLM judge, rubriche, pairwise evaluation e output strutturati.
-- Threats to validity: prompt, ordine degli input, severità del judge e non determinismo.
+- Pianificazione e selezione di azioni.
+- Esecuzione di strumenti e simulatori.
+- Stato persistente e tracciabilità della traiettoria.
+- Errori cumulativi e maggiore variabilità dei workflow agentici.
+- Criteri di qualità: correttezza tecnica, aderenza alle evidenze, utilità diagnostica, gestione dell'incertezza.
+- Judge umano e LLM/VLM judge.
+- Rubriche, pairwise evaluation e output strutturati.
+- Threats to validity: prompt, ordine degli input, severità del judge, non determinismo.
 
-**Fonti metodologiche**
+**Fonti metodologiche candidate**
 
 - S. Yao et al., *ReAct: Synergizing Reasoning and Acting in Language Models*, 2022/2023.
 - L. Zheng et al., *Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena*, 2023.
 - Y. Liu et al., *G-Eval: NLG Evaluation using GPT-4 with Better Human Alignment*, EMNLP 2023.
 - D. Chen et al., *MLLM-as-a-Judge*, 2024.
 
-**Materiale interno**
+**Materiale interno di orientamento**
 
-- [agente_diagnostico_pipeline2.md](../third_part_from_json_to_spice/agent/agente_diagnostico_pipeline2.md)
-- [README della valutazione CHAT/AGENT](../../experiment_ai/chat_agent_evaluation_21/README.md)
-- [CAPITOLO_RISULTATI.md](../../experiment_ai/chat_agent_evaluation_21/results/CAPITOLO_RISULTATI.md) soltanto per ricostruire il disegno sperimentale; risultati nel Capitolo 4.
-- [RISULTATI_DIAGNOSI_CIRCUITI_COMPLESSI.md](../second_part_pipeline_topologica/RISULTATI_DIAGNOSI_CIRCUITI_COMPLESSI.md) soltanto come riferimento al protocollo e alla terminologia.
+- `third_part_from_json_to_spice/agent/agente_diagnostico_pipeline2.md`
+- `experiment_ai/chat_agent_evaluation_21/README.md`
+- `experiment_ai/chat_agent_evaluation_21/results/CAPITOLO_RISULTATI.md`
+- `second_part_pipeline_topologica/RISULTATI_DIAGNOSI_CIRCUITI_COMPLESSI.md`
 
-**Figura candidata**
+**Nota di stesura**
 
-- Schema concettuale semplice: LLM diretto -> LLM grounded -> agente con strumenti. Inserire solo se aggiunge reale valore esplicativo.
+- Prima di scrivere la §2.6 verificare se mantenere tre sottosezioni oppure accorparle in due, seguendo lo stesso criterio di sintesi adottato nelle §2.4 e §2.5.
 
 ---
 
 ## 2.7 Sintesi critica e posizionamento della tesi
 
+**Stato:** da scrivere dopo la §2.6.
+
 ### 2.7.1 Confronto tra i lavori correlati
 
-**Tabella principale del capitolo**
+Costruire una sola tabella comparativa end-to-end.
 
-Costruire una sola matrice comparativa end-to-end, evitando numerose tabelle parziali se non realmente necessarie.
-
-**Colonne consigliate**
+**Colonne candidate**
 
 - dominio/dataset;
 - component detection;
 - OCR/testo;
 - terminali/orientamento;
-- wire e connectivity extraction;
+- wire/connectivity extraction;
 - rappresentazione a grafo;
 - generazione di netlist;
 - simulazione SPICE;
@@ -459,7 +415,7 @@ Costruire una sola matrice comparativa end-to-end, evitando numerose tabelle par
 - metodo di valutazione;
 - codice/dati disponibili.
 
-**Lavori da rappresentare almeno nella matrice**
+**Lavori da includere almeno**
 
 - Mani et al.
 - Kelly e Cole.
@@ -467,46 +423,59 @@ Costruire una sola matrice comparativa end-to-end, evitando numerose tabelle par
 - Rachala e Panicker.
 - Amraee et al.
 - Bohara e Krishnamoorthy.
-- Modular Graph Extraction / Instance Segmentation Based Graph Extraction.
+- Bayer et al. 2023/2024.
+- Hu et al. 2024.
 - Image2Net.
 - AMSnet 2.0.
+- Mathur e Achar.
 - Netlistify.
-- SINA e PCBnet, qualificati come lavori molto recenti del 2026.
-- Eventuali lavori specifici su diagnosi/agentic workflow soltanto se direttamente confrontabili.
+- SINA.
+- PCBnet, qualificato come preprint 2026.
+- Eventuali lavori specifici su diagnosi e agentic workflow selezionati nella §2.6.
 
 ### 2.7.2 Limiti dello stato dell'arte e spazio per la soluzione proposta
 
-**Limiti ricorrenti da verificare con le fonti durante la stesura**
+**Limiti da sintetizzare**
 
 - Pipeline spesso limitate a un singolo dominio o stile di diagramma.
-- Dataset piccoli, sintetici o difficilmente confrontabili tra lavori differenti.
-- Detection accurata che non implica automaticamente una topologia corretta.
+- Dataset piccoli, sintetici o difficilmente confrontabili.
+- Detection accurata che non implica una topologia corretta.
 - Gestione incompleta di terminali, valori, modelli e circuiti integrati.
 - Metriche e protocolli di valutazione non sempre omogenei.
 - Pochi sistemi integrano in modo tracciabile immagine, rappresentazione strutturata, netlist, simulazione e diagnosi.
-- Validazione ancora limitata di assistenti e agenti su circuiti eterogenei e con evidenze simulabili.
+- Validazione ancora limitata di assistenti e agenti su circuiti eterogenei con evidenze simulabili.
 
 **Paragrafo finale ammesso**
 
 - Un solo raccordo verso il Capitolo 3.
 - Evidenziare il bisogno di una pipeline modulare e verificabile.
-- Sottolineare il ruolo di una rappresentazione strutturata intermedia.
+- Sottolineare il ruolo della rappresentazione strutturata intermedia.
 - Presentare la simulazione come fonte di evidenza e non come semplice output finale.
-- Motivare la successiva analisi di assistente conversazionale e agente con strumenti senza anticiparne i risultati.
+- Motivare l'analisi successiva di assistente conversazionale e agente con strumenti senza anticipare i risultati.
 
 ---
 
-## Piano sintetico delle figure del capitolo
+## Piano aggiornato delle figure del Capitolo 2
 
-Mantenere il capitolo visivamente sobrio: indicativamente 4--5 figure complessive, tutte con funzione esplicativa.
+Le figure effettivamente presenti fino alla §2.5 sono sette:
 
-- **§2.1:** framework layered di Cao et al. -- già selezionato.
-- **§2.2:** esempio annotato del dataset di Thoma et al. -- già selezionato.
-- **§2.3:** esempio di component detection/wire extraction di Kelly e Cole -- già selezionato.
-- **§2.4:** eventuale figura sul passaggio connessioni -> grafo, solo se realmente distinta dalle precedenti.
-- **§2.5:** pipeline completa di Bohara e Krishnamoorthy come candidata principale per netlist/SPICE.
-- **§2.6:** evitare figure decorative; aggiungere uno schema concettuale solo se necessario.
+1. **§2.1** - framework layered di Cao et al.
+2. **§2.2** - esempio annotato del dataset di Thoma et al.
+3. **§2.3** - component detection/wire extraction di Kelly e Cole.
+4. **§2.4.1** - pipeline modulare di Bayer et al.
+5. **§2.4.2** - port localization e link prediction di Hu et al.
+6. **§2.5.1** - pipeline SINA fino alla netlist.
+7. **§2.5.2** - netlist e simulazione HSPICE di Mathur e Achar.
+
+Per la **§2.6** evitare ulteriori figure salvo un reale beneficio esplicativo. Alla fine del capitolo effettuare una revisione visiva complessiva per valutare se mantenere tutte le sette figure.
 
 ## Regola finale di stesura
 
-Ogni sezione deve descrivere il problema, sintetizzare le principali soluzioni disponibili in letteratura, evidenziarne i limiti e preparare il passaggio logico alla sezione successiva. Evitare descrizioni da manuale, dettagli implementativi della soluzione sviluppata e risultati sperimentali propri, che appartengono rispettivamente ai Capitoli 3 e 4.
+Ogni sezione deve:
+
+1. introdurre il problema specifico;
+2. sintetizzare le principali soluzioni presenti in letteratura;
+3. evidenziarne i limiti;
+4. preparare il passaggio logico alla sezione successiva.
+
+Evitare descrizioni da manuale, dettagli implementativi della soluzione sviluppata e risultati sperimentali propri, che appartengono rispettivamente ai Capitoli 3 e 4.
