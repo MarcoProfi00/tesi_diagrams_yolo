@@ -37,8 +37,8 @@ Il percorso logico usato per ordinare la letteratura è:
 - **§2.3 completata**
 - **§2.4 completata**
 - **§2.5 completata**
-- **§2.6 da strutturare e scrivere**
-- **§2.7 da scrivere dopo la §2.6**
+- **§2.6 completata**
+- **§2.7 da scrivere**
 
 ---
 
@@ -304,10 +304,10 @@ La struttura effettiva è stata ridotta a **due sottosezioni**. La precedente so
 - `images/chapter2/mathur_netlist_simulation.png`
 - Schema disegnato a mano -> connessioni/netlist -> simulazione HSPICE.
 
-**Lavori recenti da conservare per le sezioni successive**
+**Raccordo con la §2.6**
 
 - Z. Huang et al., *PCBnet: A Dataset and Automatic Constructing of SPICE Netlists from Schematic Images*, preprint arXiv 2026.
-- PCBnet è particolarmente utile per la §2.6 perché introduce una fase di correzione multi-agent e multimodale basata su conoscenza di dominio.
+- PCBnet è ripreso nella §2.6.2 per la correzione multi-agent e multimodale basata su conoscenza di dominio.
 
 **Da non anticipare**
 
@@ -318,17 +318,17 @@ La struttura effettiva è stata ridotta a **due sottosezioni**. La precedente so
 
 ---
 
-## 2.6 Diagnosi circuitale assistita da modelli linguistici
+## 2.6 Diagnosi circuitale con modelli linguistici
 
-**Stato:** da definire in modo definitivo prima della stesura.
+**Stato:** completata.
 
-La sezione deve partire dal limite emerso nella §2.5: una simulazione o una netlist corretta non costituiscono ancora una diagnosi. Il passo successivo riguarda l'uso di modelli linguistici e multimodali per interpretare dati strutturati, documentazione tecnica e risultati elettrici.
+La sezione parte dal limite emerso nella §2.5: una simulazione o una netlist corretta non costituiscono ancora una diagnosi. Il passo successivo riguarda l'uso di modelli linguistici e multimodali per interpretare dati strutturati, documentazione tecnica e risultati elettrici.
 
-### Struttura candidata
+La struttura definitiva comprende le tre sottosezioni seguenti.
 
 ### 2.6.1 Modelli linguistici e multimodali per l'analisi circuitale
 
-**Contenuti da valutare**
+**Contenuti effettivamente trattati**
 
 - Breve raccordo con diagnosi tradizionale e approcci model-based.
 - Ragionamento diretto sull'immagine rispetto a ragionamento su testo, grafo o netlist.
@@ -341,7 +341,7 @@ La sezione deve partire dal limite emerso nella §2.5: una simulazione o una net
 
 ### 2.6.2 Grounding mediante dati strutturati e simulazione
 
-**Contenuti da valutare**
+**Contenuti effettivamente trattati**
 
 - Grafo e netlist come contesto strutturato.
 - Datasheet e documentazione tecnica come fonti verificabili.
@@ -350,17 +350,39 @@ La sezione deve partire dal limite emerso nella §2.5: una simulazione o una net
 - RAG come principio generale, senza trasformare la sezione in una rassegna NLP.
 - Workflow circuitali che includono simulatori o strumenti nel loop.
 
-**Fonti candidate da verificare**
+**Riferimenti della mappa bibliografica**
 
 - P. Lewis et al., *Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks*, NeurIPS 2020.
-- S. Nau, J. Krummenauer e A. Zimmermann, *Evaluating LLM-based Workflows for Switched-Mode Power Supply Design*, 2025.
+- S. Nau, J. Krummenauer e A. Zimmermann, *Evaluating LLM-based Workflows for Switched-Mode Power Supply Design*; chiave bibliografica adottata: `nau2026smps`.
 - AMSnet-KG.
-- Eventuali lavori SPICEAssistant / Auto-SPICE solo dopo verifica della fonte primaria.
 - PCBnet 2026 per la correzione multi-agent grounded su conoscenza di dominio.
+
+**Figura scelta per la §2.6.2**
+
+- Figura 3 di Nau et al., dedicata ai workflow LLM con recupero di informazioni dal datasheet mediante RAG e feedback della simulazione SPICE.
+- File previsto: `images/chapter2/nau_llm_workflow.png`.
+- Label: `fig:nau-llm-workflow`.
+- Collocazione nel testo: tra il secondo e il terzo paragrafo della §2.6.2, dopo la frase che termina con `...mentre un modello multimodale può essere utilizzato quando l'informazione visiva risulta ancora necessaria \cite{huang2026pcbnet}.` e prima del paragrafo che inizia con «Oltre alle informazioni strutturali e documentali, anche i risultati della simulazione possono essere utilizzati come fonte di evidenza per il modello».
+- Sequenza: dati strutturati e AMSnet-KG -> RAG, datasheet e PCBnet -> figura di Nau -> approfondimento sul feedback SPICE.
+
+**Frase di raccordo**
+
+> Un esempio dell'integrazione tra modello linguistico, recupero di informazioni esterne e simulazione circuitale è riportato in Figura~\ref{fig:nau-llm-workflow}.
+
+**Inserimento e caption concordati**
+
+```latex
+\begin{figure}[!htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{images/chapter2/nau_llm_workflow.png}
+    \caption{Esempio di workflow per l'analisi circuitale assistita da modelli linguistici, nel quale il modello può essere supportato dal recupero di informazioni dal datasheet mediante RAG e dal feedback ottenuto attraverso la simulazione SPICE. Riprodotto da \cite{nau2026smps}.}
+    \label{fig:nau-llm-workflow}
+\end{figure}
+```
 
 ### 2.6.3 Assistenti, agenti e criteri di valutazione
 
-**Contenuti da valutare**
+**Contenuti effettivamente trattati**
 
 - Differenza tra assistente conversazionale e agente tool-using.
 - Pianificazione e selezione di azioni.
@@ -372,7 +394,7 @@ La sezione deve partire dal limite emerso nella §2.5: una simulazione o una net
 - Rubriche, pairwise evaluation e output strutturati.
 - Threats to validity: prompt, ordine degli input, severità del judge, non determinismo.
 
-**Fonti metodologiche candidate**
+**Riferimenti metodologici della mappa bibliografica**
 
 - S. Yao et al., *ReAct: Synergizing Reasoning and Acting in Language Models*, 2022/2023.
 - L. Zheng et al., *Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena*, 2023.
@@ -388,13 +410,14 @@ La sezione deve partire dal limite emerso nella §2.5: una simulazione o una net
 
 **Nota di stesura**
 
-- Prima di scrivere la §2.6 verificare se mantenere tre sottosezioni oppure accorparle in due, seguendo lo stesso criterio di sintesi adottato nelle §2.4 e §2.5.
+- La §2.6 è completata e mantiene tre sottosezioni, con i titoli riportati sopra. La struttura non è più da decidere.
+- La trattazione resta dedicata alla letteratura; implementazione dell'agente e risultati della valutazione del progetto rimangono nei Capitoli 3 e 4.
 
 ---
 
 ## 2.7 Sintesi critica e posizionamento della tesi
 
-**Stato:** da scrivere dopo la §2.6.
+**Stato:** da scrivere. La §2.6 è completata e costituisce il riferimento anche per la sintesi dei lavori su diagnosi e agenti.
 
 ### 2.7.1 Confronto tra i lavori correlati
 
@@ -431,7 +454,7 @@ Costruire una sola tabella comparativa end-to-end.
 - Netlistify.
 - SINA.
 - PCBnet, qualificato come preprint 2026.
-- Eventuali lavori specifici su diagnosi e agentic workflow selezionati nella §2.6.
+- Lavori su diagnosi e agentic workflow trattati nella §2.6 completata.
 
 ### 2.7.2 Limiti dello stato dell'arte e spazio per la soluzione proposta
 
@@ -457,7 +480,7 @@ Costruire una sola tabella comparativa end-to-end.
 
 ## Piano aggiornato delle figure del Capitolo 2
 
-Le figure effettivamente presenti fino alla §2.5 sono sette:
+Il piano aggiornato comprende otto figure: le sette già presenti fino alla §2.5 e la figura scelta per la §2.6.2.
 
 1. **§2.1** - framework layered di Cao et al.
 2. **§2.2** - esempio annotato del dataset di Thoma et al.
@@ -466,8 +489,9 @@ Le figure effettivamente presenti fino alla §2.5 sono sette:
 5. **§2.4.2** - port localization e link prediction di Hu et al.
 6. **§2.5.1** - pipeline SINA fino alla netlist.
 7. **§2.5.2** - netlist e simulazione HSPICE di Mathur e Achar.
+8. **§2.6.2** - Figura 3 di Nau et al.: workflow LLM con RAG sul datasheet e feedback SPICE; file previsto `images/chapter2/nau_llm_workflow.png`, label `fig:nau-llm-workflow`, tra il secondo e il terzo paragrafo.
 
-Per la **§2.6** evitare ulteriori figure salvo un reale beneficio esplicativo. Alla fine del capitolo effettuare una revisione visiva complessiva per valutare se mantenere tutte le sette figure.
+Per la **§2.6** è stata scelta una sola figura, quella di Nau et al. descritta nella §2.6.2. Alla fine del capitolo effettuare una revisione visiva complessiva delle otto figure.
 
 ## Regola finale di stesura
 
