@@ -38,7 +38,9 @@ Il percorso logico usato per ordinare la letteratura è:
 - **§2.4 completata**
 - **§2.5 completata**
 - **§2.6 completata**
-- **§2.7 da scrivere**
+- **§2.7 completata**
+
+**Capitolo 2: stesura completata.** Restano da applicare i ritocchi editoriali emersi dalla revisione del testo e da verificare l'impaginazione nel progetto LaTeX completo.
 
 ---
 
@@ -417,70 +419,31 @@ La struttura definitiva comprende le tre sottosezioni seguenti.
 
 ## 2.7 Sintesi critica e posizionamento della tesi
 
-**Stato:** da scrivere. La §2.6 è completata e costituisce il riferimento anche per la sintesi dei lavori su diagnosi e agenti.
+**Stato:** completata.
 
-### 2.7.1 Confronto tra i lavori correlati
+**Struttura effettiva**
 
-Costruire una sola tabella comparativa end-to-end.
+- Sezione conclusiva breve, articolata in tre paragrafi, senza sottosezioni.
+- La precedente articolazione in §2.7.1 e §2.7.2 e la tabella comparativa end-to-end non sono state adottate.
+- Nessuna figura aggiuntiva e nessuna nuova citazione: la sezione sintetizza i lavori già discussi.
+- Label nel testo LaTeX: `sec:sintesi-stato-arte`.
 
-**Colonne candidate**
+**Contenuti effettivamente trattati**
 
-- dominio/dataset;
-- component detection;
-- OCR/testo;
-- terminali/orientamento;
-- wire/connectivity extraction;
-- rappresentazione a grafo;
-- generazione di netlist;
-- simulazione SPICE;
-- diagnosi AI;
-- agente con strumenti;
-- metodo di valutazione;
-- codice/dati disponibili.
+1. **Sintesi del percorso della letteratura:** digitalizzazione, rilevamento dei componenti, riconoscimento delle informazioni testuali, ricostruzione delle connessioni, grafo, netlist, simulazione e analisi assistita da modelli linguistici.
+2. **Limiti del processo complessivo:** un rilevamento accurato non garantisce connessioni corrette; una netlist simulabile può rappresentare un circuito diverso dall'originale; una risposta plausibile può non essere sostenuta dai dati. Eterogeneità dei diagrammi, informazioni necessarie alla simulazione e protocolli di valutazione motivano verifiche visive, strutturali ed elettriche e la tracciabilità del rapporto tra evidenze e interpretazioni.
+3. **Posizionamento della tesi:** integrazione delle fasi in una pipeline modulare, con una rappresentazione strutturata intermedia ispezionabile e la simulazione come fonte di evidenza per l'analisi assistita. Gli obiettivi progettuali introducono il Capitolo 3, dedicato al problema e alla soluzione proposta, e il Capitolo 4, dedicato alla valutazione sperimentale.
 
-**Lavori da includere almeno**
+**Confine con il Capitolo 3**
 
-- Mani et al.
-- Kelly e Cole.
-- Cao et al.
-- Rachala e Panicker.
-- Amraee et al.
-- Bohara e Krishnamoorthy.
-- Bayer et al. 2023/2024.
-- Hu et al. 2024.
-- Image2Net.
-- AMSnet 2.0.
-- Mathur e Achar.
-- Netlistify.
-- SINA.
-- PCBnet, qualificato come preprint 2026.
-- Lavori su diagnosi e agentic workflow trattati nella §2.6 completata.
-
-### 2.7.2 Limiti dello stato dell'arte e spazio per la soluzione proposta
-
-**Limiti da sintetizzare**
-
-- Pipeline spesso limitate a un singolo dominio o stile di diagramma.
-- Dataset piccoli, sintetici o difficilmente confrontabili.
-- Detection accurata che non implica una topologia corretta.
-- Gestione incompleta di terminali, valori, modelli e circuiti integrati.
-- Metriche e protocolli di valutazione non sempre omogenei.
-- Pochi sistemi integrano in modo tracciabile immagine, rappresentazione strutturata, netlist, simulazione e diagnosi.
-- Validazione ancora limitata di assistenti e agenti su circuiti eterogenei con evidenze simulabili.
-
-**Paragrafo finale ammesso**
-
-- Un solo raccordo verso il Capitolo 3.
-- Evidenziare il bisogno di una pipeline modulare e verificabile.
-- Sottolineare il ruolo della rappresentazione strutturata intermedia.
-- Presentare la simulazione come fonte di evidenza e non come semplice output finale.
-- Motivare l'analisi successiva di assistente conversazionale e agente con strumenti senza anticipare i risultati.
+- Il viewer SVG sviluppato nel progetto e la sua integrazione con il simulatore saranno descritti nel Capitolo 3, insieme all'interfaccia e alle scelte progettuali.
+- La conclusione del Capitolo 2 motiva la soluzione senza anticiparne i dettagli implementativi o i risultati sperimentali.
 
 ---
 
 ## Piano aggiornato delle figure del Capitolo 2
 
-Il piano aggiornato comprende otto figure: le sette già presenti fino alla §2.5 e la figura scelta per la §2.6.2.
+Il capitolo comprende otto figure: sette fino alla §2.5 e la figura di Nau nella §2.6.2. La §2.7 non introduce figure aggiuntive.
 
 1. **§2.1** - framework layered di Cao et al.
 2. **§2.2** - esempio annotato del dataset di Thoma et al.
@@ -491,7 +454,7 @@ Il piano aggiornato comprende otto figure: le sette già presenti fino alla §2.
 7. **§2.5.2** - netlist e simulazione HSPICE di Mathur e Achar.
 8. **§2.6.2** - Figura 3 di Nau et al.: workflow LLM con RAG sul datasheet e feedback SPICE; file previsto `images/chapter2/nau_llm_workflow.png`, label `fig:nau-llm-workflow`, tra il secondo e il terzo paragrafo.
 
-Per la **§2.6** è stata scelta una sola figura, quella di Nau et al. descritta nella §2.6.2. Alla fine del capitolo effettuare una revisione visiva complessiva delle otto figure.
+Per la **§2.6** è stata scelta una sola figura, quella di Nau et al. descritta nella §2.6.2. Con la stesura completata, resta da effettuare una revisione visiva complessiva delle otto figure nel documento compilato.
 
 ## Regola finale di stesura
 
