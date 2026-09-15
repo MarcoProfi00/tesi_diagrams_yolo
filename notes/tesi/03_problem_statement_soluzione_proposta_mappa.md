@@ -162,38 +162,40 @@ L'indice è articolato perché copre l'intero sistema. Per evitare frammentazion
 
 Usare una formalizzazione breve, coerente con il codice. Le formule seguenti sono una **proposta di notazione per la tesi**, non nuovi formati da implementare.
 
-**Detection e annotazioni.** Per un'immagine \(I\), il detector produce
+**Detection e annotazioni.** Per un'immagine $I$, il detector produce
 
-\[
+$$
 D=f_\theta(I)=\{(b_i,k_i,s_i)\}_{i=1}^{m},
-\]
+$$
 
-dove \(b_i\) è la bounding box, \(k_i\) la classe e \(s_i\) la confidenza. Il dataset annotato \(\mathcal D=\{(I_j,Y_j)\}\) contiene classi e bbox di riferimento; la confidenza appartiene alla predizione, non all'annotazione YOLO.
+dove $b_i$ è la bounding box, $k_i$ la classe e $s_i$ la confidenza. Il dataset annotato $\mathcal D=\{(I_j,Y_j)\}$ contiene classi e bbox di riferimento; la confidenza appartiene alla predizione, non all'annotazione YOLO.
 
-**Topologia.** Siano \(C\) l'insieme delle istanze, \(T\) l'insieme dei terminali e \(\pi:T\to C\) la relazione di appartenenza. Il grafo esportato descrive collegamenti esterni fra terminali:
+**Topologia.** Siano $C$ l'insieme delle istanze, $T$ l'insieme dei terminali e $\pi:T\to C$ la relazione di appartenenza. Il grafo esportato descrive collegamenti esterni fra terminali:
 
-\[
+$$
 G_T=(T,E_w).
-\]
+$$
 
 Un arco indica una connessione ricostruita mediante i fili. **Il corpo del resistore, diodo o condensatore non è un filo che unisce i suoi terminali nello stesso nodo.** L'identità del componente e i suoi terminali restano in `components`; l'adiacenza elettrica esterna è in `graph`.
 
-Le componenti connesse del grafo normalizzato definiscono i nodi elettrici candidati. Dopo l'unificazione dei riferimenti di massa si ottiene una mappa \(\nu:T\to N\). Eventuali override dichiarati possono poi produrre una mappa effettiva \(\tilde\nu\), conservando separatamente la topologia estratta e la configurazione usata per SPICE.
+Le componenti connesse del grafo normalizzato definiscono i nodi elettrici candidati. Dopo l'unificazione dei riferimenti di massa si ottiene una mappa $\nu:T\to N$. Eventuali override dichiarati possono poi produrre una mappa effettiva $\tilde\nu$, conservando separatamente la topologia estratta e la configurazione usata per SPICE.
 
 **Modello elettrico.** Una rappresentazione astratta del circuito preparato è
 
-\[
+$$
 \mathcal C=(C,T,N,\pi,\tilde\nu,P,M),
-\]
+$$
 
-con parametri \(P\) e modelli \(M\). Le sorgenti o gli elementi aggiunti dal testbench vanno dichiarati come tali. La netlist \(\mathcal L\) è generata da questa rappresentazione; il simulatore restituisce \(S=\operatorname{Sim}(\mathcal L,A)\), dove \(A\) comprende analisi, stimoli e condizioni iniziali.
+con parametri $P$ e modelli $M$. Le sorgenti o gli elementi aggiunti dal testbench vanno dichiarati come tali. La netlist $\mathcal L$ è generata da questa rappresentazione; il simulatore restituisce $S=\operatorname{Sim}(\mathcal L,A)$, dove $A$ comprende analisi, stimoli e condizioni iniziali.
 
-**Diagnosi.** Data una richiesta \(q\) e un contesto \(K_0\) costruito dagli artefatti di base, il sistema produce ipotesi e, se previste, azioni ammesse \(a_j\). Ciascuno scenario è applicato a una copia della base:
+**Diagnosi.** Data una richiesta $q$ e un contesto $K_0$ costruito dagli artefatti di base, il sistema produce ipotesi e, se previste, azioni ammesse $a_j$. Ciascuno scenario è applicato a una copia della base:
 
-\[
-\mathcal L_j=\operatorname{Apply}(\operatorname{Copy}(\mathcal L_0),a_j),
-\qquad S_j=\operatorname{Sim}(\mathcal L_j,A_j).
-\]
+$$
+\begin{aligned}
+\mathcal L_j &= \operatorname{Apply}(\operatorname{Copy}(\mathcal L_0),a_j), \\
+S_j &= \operatorname{Sim}(\mathcal L_j,A_j).
+\end{aligned}
+$$
 
 La cronologia delle evidenze cresce fra le iterazioni; gli scenari non devono essere descritti come modifiche cumulative alla base quando ripartono da copie indipendenti. La conclusione deve riferirsi a misure disponibili e distinguere osservazione, ipotesi e correzione verificata.
 
