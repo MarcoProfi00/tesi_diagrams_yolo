@@ -53,7 +53,7 @@ Nella §3.8 descrivere la **progettazione degli strumenti di verifica**, mantene
 | Passaggio effettivamente affrontato | Come raccontarlo | Sezione |
 | --- | --- | --- |
 | Raccolta immagini e annotazione bbox con Roboflow | Costruzione della base dati e contratto delle annotazioni. | §3.3.1–3.3.2 |
-| Controllo label, revisioni ed export | Distinguere annotazioni detection, poligoni convertiti e snapshot dei dati. | §3.3.3 |
+| Preprocessing, controllo annotazioni ed export | Resize 1024×1024, verifica delle label, `data.yaml` e split Roboflow 439/126/62 del dataset finale. | §3.3.3 |
 | Grayscale e augmentation di diverso tipo | Motivazioni, trasformazioni immagine–bbox, separazione degli split. | §3.3.4 |
 | YOLOv7, YOLOv8 e YOLO11 sulle varianti | Disegno del confronto e configurazioni comuni. | §3.3.5 |
 | Estrazione/ricontrollo risultati e scelta del modello | Criterio di selezione e identità del checkpoint operativo; risultati nel Capitolo 4. | §3.3.6 |
@@ -319,11 +319,13 @@ Scrivere tre paragrafi:
 
 1. Descrivere tipologia degli schemi e obiettivo della raccolta.
 2. Presentare fonti effettive e varietà del materiale, qualificando i dati non documentati.
-3. Spiegare perché il dataset contiene diagrammi completi e quale informazione deve apprendere il detector.
+3. Definire il dataset finale di **627 immagini** di diagrammi completi e raccordarlo alla tassonomia e all'annotazione della §3.3.2.
 
 **Contenuti e materiali da sviluppare**
 
 Descrivere la raccolta di immagini di schemi completi e il compito per cui è stato costruito il dataset. Spiegare la varietà grafica richiesta: più simboli nella stessa immagine, scale diverse, orientamenti e presenza di testo/fili. Documentare le fonti effettivamente impiegate quando disponibili; le opzioni proposte nei Word non attestano una raccolta realmente eseguita.
+
+**Decisione editoriale:** il dataset di riferimento della tesi è uno solo, quello finale da **627 immagini**. Non organizzare la narrazione per v1/v2/v3 o snapshot storici. Le varianti di preprocessing e augmentation sono condizioni derivate, trattate in §3.3.4; i riscontri sugli archivi dei training restano note di tracciabilità per il Capitolo 4. Qui presentare la raccolta; riservare classi e istanze alla §3.3.2 e la suddivisione train/validation/test alla §3.3.3.
 
 **Materiale:** uno o due schemi rappresentativi della collezione, usati per illustrare il dominio di ingresso.
 
@@ -331,41 +333,64 @@ Descrivere la raccolta di immagini di schemi completi e il compito per cui è st
 
 **Sequenza dei paragrafi di testo**
 
-1. Motivare la tassonomia e raggruppare le classi per famiglie di simboli.
-2. Descrivere il lavoro di annotazione bbox in Roboflow e la sua granularità.
-3. Spiegare export YOLO e corrispondenza fra esempio grafico, class ID e coordinate.
+1. Richiamare brevemente il **supervised learning**: per addestrare il detector, ogni istanza di interesse deve essere associata a una classe e a una regione dell'immagine.
+2. Presentare la tassonomia delle **32 classi**, la distinzione fra classe visuale e modello elettrico/SPICE e le **8.728 istanze annotate**; inserire subito dopo il grafico delle frequenze e un breve commento descrittivo.
+3. Descrivere l'annotazione manuale delle bbox in Roboflow, illustrarla con lo screenshot dell'interfaccia e chiarire il significato della bbox e i limiti dell'annotazione.
+4. Spiegare il formato delle label YOLO con un piccolo esempio reale da recuperare, quindi raccordare alla preparazione e agli split della §3.3.3.
 
 **Contenuti e materiali da sviluppare**
 
-Descrivere le 32 classi e l'annotazione manuale delle bbox in Roboflow, confermata dall'autore. Distinguere classe, singola occorrenza e designator leggibile nello schema. Esplicitare la granularità dell'annotazione: localizzazione dei simboli, non annotazione completa della connettività.
+Limitare il richiamo all'apprendimento supervisionato a due o tre frasi che motivino le annotazioni, senza ripetere la teoria dei detector del Capitolo 2.
 
-Illustrare il contratto YOLO: `class_id x_center y_center width height`, coordinate normalizzate, file label e `data.yaml`. I criteri concreti di inclusione di testo e reofori nelle bbox vanno recuperati dalle note dell'autore; non introdurli come procedura verificata se non documentati.
+La tassonomia descrive il **tipo visuale di simbolo** che il detector deve riconoscere. Distinguere classe, singola occorrenza e designator leggibile nello schema. Le 32 classi non equivalgono a 32 modelli elettrici direttamente simulabili: per esempio, riconoscere un `Integrated_Circuit` non ne determina pinout, parametri o macromodello SPICE. Queste informazioni appartengono alla successiva preparazione elettrica (§3.5).
 
-**Materiali:** immagine annotata, righe YOLO corrispondenti, tavola di classi; mapping completo in appendice.
+I conteggi per tutte le classi sono **già disponibili**, forniti dall'autore e riportati nelle note operative di questa sezione; la loro somma è **8.728 istanze sull'intero dataset**, non il numero di immagini né il solo train. Usare il nome corretto `Transformer`, confermato dall'autore. Una tabella compatta per famiglie è facoltativa se aiuta a spiegare la tassonomia; evitare di duplicare in tesi una tabella di 32 conteggi e il grafico.
+
+**Grafico previsto:** barre orizzontali per le 32 classi, ordinate per frequenza decrescente, con numero di istanze sull'asse orizzontale in **scala lineare** e conteggio alla fine di ogni barra. Collocarlo subito dopo la tassonomia. Commentare soltanto la distribuzione non uniforme: `Resistor` (2.153), `GND` (1.351) e `Terminal` (826) sono frequenti; `Antenna` (8), `Memristor` (14) e `Breaker` (17) sono rare. Gli effetti sulle prestazioni, le metriche e i risultati appartengono al **Capitolo 4**.
+
+**Annotazione manuale:** importazione delle immagini in Roboflow → individuazione del simbolo → disegno manuale della bounding box → assegnazione della classe. Inserire come figura lo **screenshot Roboflow già condiviso dall'autore**, con immagine, bbox e classi visibili. Spiegare brevemente che la bbox è il rettangolo che localizza l'istanza. L'annotazione riguarda la localizzazione dei simboli, non la connettività completa: stima dei terminali, estrazione dei fili e ricostruzione dei nodi spettano alla Pipeline 1.0 (§3.4). I criteri concreti di inclusione di testo e reofori nelle bbox vanno recuperati dalle note dell'autore; non introdurli come procedura verificata se non documentati.
+
+**Rappresentazione YOLO:** a ogni immagine corrisponde un file label `.txt`, con una riga per istanza nel formato:
+
+```text
+class_id x_center y_center width height
+```
+
+`class_id` identifica la classe; `x_center` e `y_center` indicano il centro della bbox, `width` e `height` le sue dimensioni. Le quattro quantità geometriche sono **normalizzate tra 0 e 1** rispetto alle dimensioni dell'immagine: centro orizzontale e larghezza rispetto alla larghezza dell'immagine, centro verticale e altezza rispetto all'altezza. La confidenza non compare nelle annotazioni di riferimento.
+
+**Esempio da recuperare:** estrarre 2–3 righe autentiche dal `.txt` di un'immagine del dataset finale, preferibilmente quella mostrata nello screenshot, verificando il mapping degli ID. Usare un piccolo blocco testuale/verbatim accanto al richiamo all'immagine, senza inventare valori né aggiungere una terza figura autonoma. Il blocco sopra illustra soltanto il formato, non è un'annotazione reale. Rinviare alla §3.3.3 per `data.yaml`, preprocessing e split.
+
+**Materiali:** due figure principali — grafico lineare delle frequenze e screenshot Roboflow — più il breve estratto YOLO da recuperare; eventuale tabella per famiglie e mapping completo in appendice.
 
 ### 3.3.3 Preprocessing, controllo delle annotazioni e organizzazione degli split
 
 **Sequenza dei paragrafi di testo**
 
-1. Descrivere auto-orientamento, ridimensionamento e formato uniforme delle immagini.
-2. Spiegare controlli delle label e conversione delle annotazioni poligonali in bbox.
-3. Presentare train/valid/test e versionamento, distinguendo revisioni locali e Roboflow.
+1. Descrivere il preprocessing in Roboflow: auto-orientamento e resize a **1024×1024**.
+2. Spiegare il controllo delle annotazioni e della coerenza fra immagini, bbox e classi.
+3. Presentare la suddivisione del dataset finale effettuata direttamente in Roboflow: **439 train / 126 valid / 62 test**.
+4. Descrivere l'organizzazione dell'export e il ruolo di `data.yaml`, raccordando alle varianti della §3.3.4.
 
 **Contenuti e materiali da sviluppare**
 
-Spiegare auto-orientamento e resize iniziale 1024×1024 di tipo **Stretch**, controllo delle label e conversione dei poligoni in bbox mediante min/max dei vertici. Descrivere il passaggio realmente eseguito da dataset locale v1 a v2.
+Spiegare auto-orientamento e resize iniziale 1024×1024 di tipo **Stretch**, già documentati negli export, e la corrispondente trasformazione delle bbox. Il preprocessing prepara immagini e annotazioni per il training; la generazione delle varianti e la data augmentation restano in §3.3.4.
 
-Poi presentare train/validation/test e versioni, distinguendo contenuto delle immagini, revisione delle annotazioni e destinazione di ogni split. Non usare indistintamente i numeri del dataset storico e dello snapshot aggiornato.
+Descrivere i controlli sul formato delle label, sulla corrispondenza immagine–file `.txt`, sugli ID di classe e sulla validità delle coordinate normalizzate e delle bbox. Documentare i controlli effettivamente eseguiti, senza attribuire procedure di revisione fra annotatori non confermate. Le utility di conversione di eventuali label poligonali sono un dettaglio tecnico di controllo degli export, non una sequenza narrativa di versioni del dataset; verificare l'esempio finale prima di presentarlo come label detection a cinque campi.
 
-| Snapshot base locale | Immagini train / valid / test | Istanze annotate complessive | Significato |
-| --- | --- | ---: | --- |
-| `dataset_v1` | 440 / 126 / 62 | 8609 | Export iniziale, con alcune annotazioni poligonali. |
-| `dataset_v2` | 440 / 126 / 62 | 8609 | Conversione delle annotazioni al formato detection. |
-| `dataset_v3` | 439 / 126 / 62 | 8709 | Export aggiornato, con modifiche alle annotazioni; 627 immagini totali. |
+Lo split del **solo dataset finale di 627 immagini**, effettuato direttamente in Roboflow, è:
 
-Questa tabella descrive gli **archivi presenti**, non certifica da sola il dataset esatto di ogni training. La corrispondenza della run operativa `exp11b1` con lo snapshot usato richiede un ultimo riscontro, documentato nelle note operative della sezione. Lo snapshot v3 contiene ancora nove righe poligonali: non presentarlo come interamente convertito in detection-only.
+| Split | Immagini | Percentuale |
+| --- | ---: | ---: |
+| Training (`train`) | 439 | 70,0% |
+| Validation (`valid`) | 126 | 20,1% |
+| Test (`test`) | 62 | 9,9% |
+| **Totale** | **627** | **100,0%** |
 
-**Materiali:** figura di un'immagine annotata e poche righe YOLO; tavola di classi raggruppate per famiglia, con mapping completo in appendice. Recuperare l'eventuale schermata Roboflow autentica e i dettagli non documentati della raccolta, senza inventare provenienze o procedure di revisione fra annotatori.
+Spiegare il ruolo dei tre sottoinsiemi: training per l'apprendimento dei parametri, validation per il controllo durante l'addestramento e la selezione del modello, test per la valutazione finale. Le percentuali, arrotondate a una cifra decimale, corrispondono approssimativamente a **70/20/10**. Non introdurre qui metriche o risultati né dedurre dalla sola suddivisione un'indipendenza per fonte non verificata.
+
+Descrivere l'organizzazione dell'export in immagini e label per ogni split. Il file **`data.yaml`** raccoglie i percorsi di train/validation/test e il mapping fra ID e nomi delle 32 classi: citarne la funzione e, se utile, mostrare un estratto minimo verificato, senza riportarlo integralmente. Non ripetere la spiegazione delle singole righe YOLO, già trattata in §3.3.2.
+
+**Materiali:** tabella degli split; riscontro delle impostazioni di preprocessing e del `data.yaml` dell'export finale. Le verifiche sulla provenienza dei dati delle singole run alimentano il Capitolo 4 e non cambiano l'organizzazione narrativa di questa sottosezione.
 
 ### 3.3.4 Generazione delle varianti e data augmentation
 
@@ -378,7 +403,7 @@ Questa tabella descrive gli **archivi presenti**, non certifica da sola il datas
 
 **Contenuti e materiali da sviluppare**
 
-Spiegare la motivazione di ciascuna variante e come vengono aggiornate le bbox. Distinguere revisione del dataset, versione Roboflow e nome della politica di augmentation.
+Spiegare la motivazione di ciascuna variante e come vengono aggiornate le bbox. Le varianti sono condizioni di preprocessing e augmentation del dataset di riferimento; i nomi tecnici delle politiche non introducono una narrazione per revisioni del dataset.
 
 | Variante | Trasformazione principale | Effetto sugli split |
 | --- | --- | --- |
@@ -431,42 +456,57 @@ Spiegare la disponibilità di log e checkpoint e il criterio con cui si individu
 <details>
 <summary>Fonti operative e dettagli verificati per dataset, augmentation e detector</summary>
 
-#### Snapshot e annotazioni
+#### Dataset finale, conteggi e materiali per §3.3.1–§3.3.3
 
-Gli archivi base verificati sono:
+**Riferimento editoriale aggiornato al 16 settembre 2026:** un solo dataset finale di **627 immagini**, **32 classi**, **8.728 istanze annotate** e split Roboflow **439/126/62**. I conteggi seguenti sono stati forniti dall'autore nella conversazione *Struttura Capitolo Tre*; sono il riferimento per il grafico lineare della §3.3.2. L'elenco non definisce l'ordine degli ID YOLO, che va letto nel `data.yaml` dell'export finale.
 
-- `data/datasets/dataset_v1/rf_yolov7_1024_rgb_v1.zip`;
-- `data/datasets/dataset_v2/rf_yolo_1024_rgb.zip`;
-- `data/datasets/dataset_v3/rf_yolo_1024_rgb.zip`.
-
-Nei file interni `README.dataset.txt`, `README.roboflow.txt` e `data.yaml` è documentato il progetto Roboflow `electrical-diagrams-detection`, workspace `marcos-workspace-amrpv`. Gli export dichiarano CC BY 4.0. L'annotazione manuale delle bbox è confermata anche dall'autore nella richiesta che ha avviato questa roadmap.
-
-| Snapshot locale | Versione Roboflow nei metadati | Immagini train/valid/test | Istanze train/valid/test | Formato delle righe label |
-| --- | --- | --- | --- | --- |
-| v1 | 1 | 440 / 126 / 62 | 6134 / 1625 / 850 | 8536 bbox e 73 righe poligonali. |
-| v2 | 1, derivazione locale | 440 / 126 / 62 | 6134 / 1625 / 850 | 8609 righe detection a cinque campi. |
-| v3 | 2 | 439 / 126 / 62 | 6222 / 1634 / 853 | 8700 bbox e 9 righe poligonali. |
-
-Sono state controllate le varianti contenute nei 15 ZIP, non soltanto i conteggi scritti nei report. Le revisioni locali, le versioni Roboflow e la politica `aug_v3 strong` sono tre numerazioni diverse.
-
-Le immagini valid/test delle basi v1 e v3 sono byte-identiche, ma le annotazioni non lo sono: risultano cambiati 29 file label valid e 11 test dopo normalizzazione del suffisso Roboflow nei nomi. Anche i conteggi delle istanze cambiano. «Stesso validation set» richiede quindi una precisazione su immagini e versione delle label.
-
-`metadata/class_summary_global.csv` e `class_summary_by_split.csv` descrivono v3, con 8709 istanze. `scripts/utils/build_class_summary.py` legge la base v3: questi riepiloghi non vanno attribuiti senza spiegazione al benchmark storico descritto con 8609 istanze.
-
-Il detector ha 32 classi, da 0 a 31:
-
-```text
-Analog_Meter, Antenna, Battery, Breaker, Capacitor, Connector,
-Current_Source, Diode, Fuse, GND, Inductor, Integrated_Circuit,
-LED, Lamp, Memristor, Meter, Mosfet, Motor, NPN_Transistor,
-Operational_Amplifier, Polarized_Capacitor, Push_Button, Resistor,
-Signal_Source, Speaker, Switch, Terminal, Thermistor, Transformer,
-Trim_Capacitor, Variable_Resistor, Voltage_Source
-```
+| Classe | Istanze nell'intero dataset |
+| --- | ---: |
+| `Analog_Meter` | 32 |
+| `Antenna` | 8 |
+| `Battery` | 197 |
+| `Breaker` | 17 |
+| `Capacitor` | 651 |
+| `Connector` | 26 |
+| `Current_Source` | 195 |
+| `Diode` | 302 |
+| `Fuse` | 59 |
+| `GND` | 1.351 |
+| `Inductor` | 274 |
+| `Integrated_Circuit` | 92 |
+| `Lamp` | 55 |
+| `LED` | 123 |
+| `Memristor` | 14 |
+| `Meter` | 82 |
+| `Mosfet` | 475 |
+| `Motor` | 29 |
+| `NPN_Transistor` | 497 |
+| `Operational_Amplifier` | 219 |
+| `Polarized_Capacitor` | 364 |
+| `Push_Button` | 25 |
+| `Resistor` | 2.153 |
+| `Signal_Source` | 97 |
+| `Speaker` | 21 |
+| `Switch` | 204 |
+| `Terminal` | 826 |
+| `Thermistor` | 26 |
+| `Transformer` | 34 |
+| `Trim_Capacitor` | 37 |
+| `Variable_Resistor` | 75 |
+| `Voltage_Source` | 168 |
+| **Totale: 32 classi** | **8.728** |
 
 Il supporto successivo di una classe semantica, per esempio `PNP_Transistor` nella pipeline elettrica, non dimostra che fosse una trentatreesima classe addestrata del detector. Verificare separatamente classe YOLO, eventuale rimappatura e supporto SPICE.
 
+**Materiali per la stesura:** usare il grafico a barre orizzontali in scala lineare già scelto e lo screenshot Roboflow già condiviso; predisporre le copie adatte alla tesi. Resta da recuperare il piccolo estratto autentico del file label associato a un'immagine del dataset finale e verificare il relativo mapping in `data.yaml`.
+
+Nei file interni `README.dataset.txt`, `README.roboflow.txt` e `data.yaml` degli export già ispezionati è documentato il progetto Roboflow `electrical-diagrams-detection`, workspace `marcos-workspace-amrpv`. Gli export dichiarano CC BY 4.0. L'annotazione manuale delle bbox è confermata dall'autore.
+
+**Tracciabilità degli archivi, solo come promemoria per il Capitolo 4:** i riepiloghi `metadata/class_summary_global.csv` e `class_summary_by_split.csv` della precedente ricognizione riportano **8.709** istanze, mentre i conteggi finali forniti dall'autore sommano **8.728**. Non usarli come fonte del grafico finale né attribuire i nuovi conteggi a tutti i training senza riscontro. Conservare la distinzione fra fonte dei conteggi finali e dati effettivamente impiegati nelle singole run; la verifica non richiede di ripristinare v1/v2/v3 o tabelle degli snapshot nella narrazione della tesi. Anche le annotazioni di validation/test possono differire fra archivi con immagini uguali.
+
 #### Politiche di augmentation
+
+I conteggi per archivio nella tabella seguente sono un promemoria tecnico per verificare la provenienza delle run nel Capitolo 4, non una struttura da riprodurre nella tesi né una fonte per le 8.728 istanze del dataset finale.
 
 | Politica | Parametri verificati nel codice | Train v1/v2 | Train v3 |
 | --- | --- | ---: | ---: |
@@ -507,7 +547,7 @@ Il checkpoint operativo è [best.pt della run exp11b1](../../outputs/yolo11/exp1
 
 I metadati delle metriche nel checkpoint coincidono con la riga epoch 59 del `results.csv` della run: il confronto consolidato si riferisce a questa versione. I valori numerici sono materia del Capitolo 4. Il PDF detection preliminare usa invece la precedente `exp11b`, che ha una migliore riga diversa: non trasferire automaticamente le conclusioni sui massimi di recall/F1.
 
-**Punto aperto prioritario:** il report consolidato attribuisce al benchmark 628 immagini base e 1625 istanze valid, mentre `exp11b1/args.yaml` indica una directory con il nome dell'export successivo. Il nome della cartella non basta a provarne il contenuto. Recuperare il `data_yolo11.yaml` effettivo, i log della scansione o il manifest/hash dello snapshot impiegato. Fino a quel momento evitare di affermare identità completa dei dati in tutte le run.
+**Punto aperto per la tracciabilità dei training nel Capitolo 4:** il report consolidato attribuisce al benchmark 628 immagini base e 1625 istanze valid, mentre `exp11b1/args.yaml` indica una directory con il nome dell'export successivo. Il nome della cartella non basta a provarne il contenuto. Recuperare il `data_yolo11.yaml` effettivo, i log della scansione o il manifest/hash dello snapshot impiegato. Fino a quel momento evitare di affermare identità completa dei dati in tutte le run.
 
 Ulteriore differenza: il report della run cita Ultralytics 8.4.30, mentre il checkpoint contiene 8.4.33. Una ripresa del training può spiegarlo, ma non è stata accertata come causa; registrare entrambe le evidenze prima della tabella definitiva dell'ambiente.
 
@@ -518,8 +558,9 @@ Non risultano notebook `.ipynb` nel checkout. `README.md` delimita già la ripro
 | Sezione | Script/modulo | Responsabilità da descrivere |
 | --- | --- | --- |
 | 3.3.3 | `scripts/bounding_box/count_box_greather_5.py`, `check_bbox.py` | Ispezione del formato e controllo delle annotazioni. |
-| 3.3.3 | `scripts/bounding_box/convert_dataset_detection_only.py` | Conversione poligono→bbox e conservazione delle annotazioni detection. |
-| 3.3.3 | `scripts/utils/build_class_summary.py`, `unzip_dataset.py`, `zip_dataset.py` | Riepiloghi delle classi e gestione degli archivi; dettagli operativi in appendice. |
+| 3.3.3 | `scripts/bounding_box/convert_dataset_detection_only.py` | Utility per eventuali label poligonali; dettaglio tecnico degli export, senza narrazione delle revisioni. |
+| 3.3.2 | `scripts/utils/build_class_summary.py` | Supporto al controllo dei conteggi; i riepiloghi storici non sostituiscono i 32 conteggi finali forniti dall'autore. |
+| 3.3.3 | `unzip_dataset.py`, `zip_dataset.py` | Gestione degli archivi; dettagli operativi in appendice. |
 | 3.3.4 | `scripts/augmentation/make_greyscale_dataset.py` | Preprocessing grayscale con label preservate. |
 | 3.3.4 | `scripts/augmentation/make_augmented_dataset.py` | Affine lieve, fotometria e rumore. |
 | 3.3.4 | `scripts/augmentation/make_augmented_dataset_v2_compose.py` | Affiancamento, padding e ricomputazione bbox. |
@@ -1249,7 +1290,8 @@ Le label sono proposte, non figure già inserite nel progetto LaTeX. Preferire f
 | ID proposto | Contenuto e funzione | Posizione | Stato/materiale disponibile |
 | --- | --- | --- | --- |
 | `fig:architettura-proposta` | Flusso globale, preparazione detector, dati manuali e ciclo scenari. | §3.2.1 | Bozza Mermaid qui; adattabile `fig01_flusso_applicativo.svg` dei risultati agente. |
-| `fig:dataset-annotazione` | Schema con bbox e corrispondenti righe YOLO. | §3.3.2 | Immagini e label negli ZIP; schermata Roboflow da recuperare se utile. |
+| `fig:dataset-distribuzione-classi` | Barre orizzontali in scala lineare delle 8.728 istanze nelle 32 classi, ordinate per frequenza decrescente. | §3.3.2, dopo la tassonomia | Conteggi disponibili nelle note operative; grafico lineare già scelto, da predisporre per la tesi. |
+| `fig:dataset-annotazione` | Screenshot Roboflow con schema, bbox e classi; breve richiamo al corrispondente formato YOLO. | §3.3.2, dopo la descrizione dell'annotazione manuale | Screenshot già condiviso; recuperare 2–3 righe reali di label per un piccolo estratto testuale, senza terza figura autonoma. |
 | `fig:dataset-varianti` | Stesso campione nelle cinque condizioni, con bbox. | §3.3.4 | Varianti negli archivi; scegliere campioni della stessa revisione. |
 | `fig:pipeline-topologica` | Componenti, terminali, maschera, skeleton e agganci. | §3.4 | Overlay delle run e slide `pipeline_01_06.pptx`; selezionare una run coerente. |
 | `fig:terminali-semantici` | Terminali geometrici e ruoli/pin IC. | §3.4.2–3.4.3 | Overlay/OCR; facoltativa se leggibile dentro la figura precedente. |
@@ -1258,7 +1300,7 @@ Le label sono proposte, non figure già inserite nel progetto LaTeX. Preferire f
 | `fig:viewer-base-scenario` | Vista base/scenario e legenda delle misure/animazioni. | §3.7.2–3.7.3 | SVG nelle run; predisporre una vista adatta alla stampa. |
 | `fig:valutazione-traiettorie` | Riferimento tecnico e summary distinti fino al packet. | §3.8 | Adattare `fig02_processo_valutazione.svg`: correggere «stesso protocollo» alla luce dei due prompt e precisare il significato di indipendenza del riferimento. |
 
-Prevedere **7–9 figure sostanziali**, raggruppando immagini in pannelli leggibili. Evitare una figura per ogni script. Tabelle consigliate: ingressi/uscite e requisiti, varianti dataset, matrice del confronto YOLO senza score, contratti della pipeline, CHAT/AGENT, livelli di valutazione.
+Prevedere **8–10 figure sostanziali**, raggruppando immagini in pannelli leggibili. Evitare una figura per ogni script. Tabelle consigliate: ingressi/uscite e requisiti, split del dataset finale (§3.3.3), eventuale tassonomia per famiglie (§3.3.2, senza duplicare i conteggi del grafico), varianti dataset, matrice del confronto YOLO senza score, contratti della pipeline, CHAT/AGENT, livelli di valutazione.
 
 **Codice e pseudocodice**
 
@@ -1319,9 +1361,9 @@ Per le figure della pipeline usare gli overlay dello stesso workspace, evitando 
 
 ## Ordine operativo della stesura
 
-1. **Fissare il lessico e le fonti.** Consolidare i punti aperti di questa mappa, soprattutto dataset della run `exp11b1`, natura degli interventi manuali e versioni dei judge. Le sezioni indipendenti possono essere scritte subito.
+1. **Fissare il lessico e le fonti.** Usare per §3.3.1–§3.3.3 il dataset finale da 627 immagini, 32 classi e 8.728 istanze; recuperare il piccolo esempio YOLO autentico. Consolidare gli altri punti aperti, soprattutto natura degli interventi manuali e versioni dei judge. La provenienza dei dati della run `exp11b1` resta una verifica per il Capitolo 4 e non blocca la stesura sul dataset finale.
 2. **Scrivere §3.1 e §3.2.** Preparare definizione del problema, tabella dei requisiti e figura di architettura. Sono la base per far controllare al relatore il perimetro del capitolo.
-3. **Scrivere §3.3.** Ricostruire dati, augmentation, training e selezione, con riferimenti ai risultati che saranno discussi nel Capitolo 4.
+3. **Scrivere §3.3.** Seguire raccolta del dataset finale → tassonomia, grafico e annotazione → preprocessing e split → augmentation → training → selezione, con risultati e metriche rinviati al Capitolo 4.
 4. **Scrivere §3.4.** Seguire un caso reale attraverso i sei step, preparare gli overlay e il primo pseudocodice.
 5. **Scrivere §3.5.** Collegare lo stesso caso a node map, YAML e netlist; aggiungere l'esempio IC e il secondo pseudocodice.
 6. **Scrivere §3.6 e §3.7.** Documentare le decisioni, gli scenari, le misure, il viewer e l'integrazione; preparare il terzo pseudocodice e le viste base/scenario.
@@ -1334,8 +1376,8 @@ Questi punti non impediscono la preparazione della roadmap o la scrittura delle 
 
 | Priorità | Punto | Evidenza da recuperare o decisione editoriale |
 | --- | --- | --- |
-| Alta | Dataset esatto di `exp11b1` e comparabilità fra training. | YAML/log di scansione/manifest o hash degli archivi effettivamente impiegati. |
-| Alta | Origine e criteri di annotazione delle immagini. | Note dell'autore su raccolta, bbox, controlli e revisioni; non attribuire automaticamente tutte le fonti suggerite nei Word. |
+| Alta, per il Capitolo 4 | Dataset esatto di `exp11b1` e comparabilità fra training. | YAML/log di scansione/manifest o hash degli archivi effettivamente impiegati; non attribuire automaticamente a tutte le run i conteggi finali 627/8.728. |
+| Alta | Origine delle immagini e dettagli dei controlli sulle annotazioni. | Annotazione manuale in Roboflow confermata; recuperare criteri specifici delle bbox e 2–3 righe YOLO autentiche con immagine e mapping ID. Non attribuire automaticamente tutte le fonti suggerite nei Word. |
 | Alta | Riuso fra training e batch successivi. | Mappa per contenuto/provenienza e split, distinguendo sviluppo, demo e valutazione; non chiamare i batch automaticamente «test mai visto». |
 | Alta | Contributo degli interventi manuali alla simulazione. | Inventario per caso di valori, pin mapping, overlay topologici, equivalenti e testbench. |
 | Alta | Due prompt judge nel corpus finale. | Mantenerli espliciti nel testo e nelle figure; eventuale rivalutazione uniforme sarebbe una nuova attività sperimentale, non svolta qui. |
@@ -1355,7 +1397,8 @@ Il capitolo può sostenere un contributo di integrazione e sviluppo di una pipel
 
 - [ ] Il problema è formalizzato prima della descrizione degli strumenti.
 - [ ] Ogni ingresso manuale e ogni assunzione di simulazione sono espliciti.
-- [ ] Dataset locale v1/v2/v3, versioni Roboflow e `aug_v3` sono distinti.
+- [ ] §3.3.1–§3.3.3 descrivono un solo dataset finale: 627 immagini, 32 classi, 8.728 istanze e split Roboflow 439/126/62, senza struttura narrativa v1/v2/v3 o snapshot storici.
+- [ ] Grafico lineare e screenshot Roboflow sono previsti in §3.3.2; l'esempio YOLO è autentico e verificato; preprocessing, resize 1024×1024 e `data.yaml` sono in §3.3.3.
 - [ ] La run operativa è identificata come `exp11b1`; la provenienza esatta dei suoi dati è qualificata correttamente.
 - [ ] Grayscale e augmentation online sono descritti senza semplificazioni errate.
 - [ ] Terminale, componente e nodo elettrico non vengono usati come sinonimi.
