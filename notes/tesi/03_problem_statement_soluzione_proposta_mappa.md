@@ -44,9 +44,9 @@ La struttura aggiornata prevede **9 sezioni e 33 sottosezioni**. Il dettaglio cr
 | Pipeline topologica | Algoritmi di stima terminali, OCR, maschere, fili, matching, grafo e contratti. | Prestazioni sui batch e analisi delle discrepanze immagine–grafo. |
 | Pipeline SPICE | Binding, modelli, pin mapping, emissione, simulazione e preparazione delle misure. | Valori ottenuti, comportamento osservato e validazione dei casi. |
 | Diagnosi e viewer | Contesto, azioni, cicli CHAT/AGENT, controlli, stato e rappresentazione visuale. | Esiti delle traiettorie, confronto delle modalità e valutazione dei limiti. |
-| Strumenti judge | Architettura dei pacchetti, riferimenti tecnici, contratti e tracciabilità. | Campioni, rubriche complete, configurazioni effettive, calibrazione e punteggi. |
+| Strategia di verifica | Adattamento del paradigma LLM-as-a-Judge ai tre livelli di validazione: topologia, modelli diagnostici e traiettorie CHAT/AGENT. | Campioni, rubriche complete, configurazioni effettive, calibrazione e punteggi. |
 
-Nella §3.8 descrivere la **progettazione degli strumenti di verifica**, mantenendola più breve delle sezioni algoritmiche. I judge appartengono al percorso della tesi e possono essere illustrati come software realizzato; non costituiscono un capitolo sperimentale dentro il Capitolo 3. Le rubriche numeriche e i risultati vengono rinviati al capitolo successivo.
+Nella §3.8 descrivere la **strategia di verifica della soluzione**, mantenendola più breve delle sezioni algoritmiche. La sezione deve spiegare perché sono stati introdotti tre livelli di judge, quali oggetti e riferimenti ricevono e come sono costruiti prompt e output; non deve trasformarsi in un inventario di script o in un capitolo sperimentale. Rubriche numeriche, costi misurati, classifiche e risultati vengono rinviati al capitolo successivo.
 
 ## Ricostruzione del percorso e collocazione nel capitolo
 
@@ -58,11 +58,12 @@ Nella §3.8 descrivere la **progettazione degli strumenti di verifica**, mantene
 | YOLOv7, YOLOv8 e YOLO11 sulle varianti | Disegno del confronto e configurazioni comuni. | §3.3.5 |
 | Estrazione/ricontrollo risultati e scelta del modello | Criterio di selezione e identità del checkpoint operativo; risultati nel Capitolo 4. | §3.3.6 |
 | Prima pipeline e prove su batch progressivi | Algoritmi di ricostruzione e artefatti intermedi; batch come contesto di sviluppo. | §3.4 |
-| Judge immagine–grafo e benchmark diagnostico | Due verifiche diverse: fedeltà strutturale e utilità del grafo per la diagnosi. | Raccordo §3.4.6; strumenti in §3.8.1 |
+| Judge immagine–grafo | Verifica della fedeltà strutturale del Graph JSON rispetto allo schema. | Raccordo §3.4.6; strategia in §3.8.1 |
+| Benchmark diagnostico preliminare | Confronto fra modelli e contesti per individuare un compromesso fra qualità, costo e latenza. | §3.8.2 |
 | Seconda pipeline per la netlist SPICE | Nodi elettrici, valori, modelli, emissione e simulazione. | §3.5 |
 | Assistente e modalità CHAT/AGENT | Contesto, scenari controllati, scelta guidata/autonoma e tracciabilità. | §3.6 |
 | Viewer SVG collegato alle simulazioni | Modello visuale, layout, confronto degli scenari e significato delle animazioni. | §3.7 |
-| Judge delle traiettorie con ground truth | Schede tecniche, summary, pacchetti e valutazione separata delle esecuzioni. | §3.8.2–3.8.3 |
+| Judge delle traiettorie con riferimenti tecnici | Schede tecniche, summary, packet anonimizzati e valutazione separata delle esecuzioni CHAT/AGENT. | §3.8.3 |
 
 Questa è una ricostruzione logica dello sviluppo. Non attribuire date o un ordine cronologico più preciso a esperimenti per i quali non è stato verificato un registro delle esecuzioni.
 
@@ -107,10 +108,10 @@ Questa è una ricostruzione logica dello sviluppo. Non attribuire date o un ordi
        3.7.1 Costruzione del modello visuale e del layout
        3.7.2 Rendering SVG e rappresentazione di tensioni, correnti e transitori
        3.7.3 Interfaccia, confronto degli scenari e workspace unificato
-   3.8 Progettazione degli strumenti di verifica della soluzione
-       3.8.1 Architettura dei judge per grafo e diagnosi preliminari
-       3.8.2 Ground truth tecniche e preparazione delle traiettorie
-       3.8.3 Judge finale e tracciabilità del giudizio
+   3.8 Strategia di verifica della soluzione
+       3.8.1 Verifica della fedeltà della ricostruzione topologica
+       3.8.2 Valutazione preliminare dei modelli diagnostici
+       3.8.3 Valutazione delle traiettorie CHAT e AGENT
    3.9 Sintesi della soluzione e raccordo alla valutazione sperimentale
 ```
 
@@ -1134,73 +1135,52 @@ Non dedicare pagine ai comandi di installazione: dipendenze e procedura operativ
 
 </details>
 
-## 3.8 Progettazione degli strumenti di verifica della soluzione
+## 3.8 Strategia di verifica della soluzione
 
-**Scopo:** completare il percorso includendo i judge e la costruzione delle evidenze di riferimento. Mantenere la sezione contenuta: qui si descrivono gli strumenti sviluppati e ciò che giudicano; setup dettagliati, rubriche numeriche complete e risultati restano nel Capitolo 4.
+**Scopo:** spiegare in modo compatto come il paradigma *LLM-as-a-Judge*, già discusso nel Capitolo 2, è stato adattato a tre domande di validazione differenti. La sezione deve concentrarsi su strategia, prompt, informazioni fornite e forma del giudizio; configurazioni sperimentali complete, risultati, costi misurati e confronti quantitativi restano nel Capitolo 4. Non prevedere una figura: la progressione fra i tre livelli può essere resa chiaramente nel testo.
 
-### 3.8.1 Architettura dei judge per grafo e diagnosi preliminari
+**Introduzione della sezione:** un paragrafo breve che presenti la separazione fra (i) fedeltà della ricostruzione topologica, (ii) selezione preliminare del modello diagnostico e del contesto, (iii) valutazione dell'intera traiettoria CHAT o AGENT. Sottolineare che la separazione serve a non confondere un errore del grafo, una risposta diagnostica debole e un percorso sperimentale non supportato dalle evidenze.
 
-**Sequenza dei paragrafi di testo**
+### 3.8.1 Verifica della fedeltà della ricostruzione topologica
 
-1. Definire gli oggetti distinti dei judge: grafo e risposta diagnostica preliminare.
-2. Descrivere composizione degli input e distinzione fra riferimento e oggetto giudicato.
-3. Spiegare output strutturato e conservazione degli artefatti, rinviando i protocolli sperimentali al Capitolo 4.
-
-**Contenuti e materiali da sviluppare**
-
-| Verifica | Oggetto giudicato | Informazioni di riferimento | Funzione dello strumento |
-| --- | --- | --- | --- |
-| Immagine–Graph JSON | Fedeltà di componenti, terminali e connessioni estratti. | Immagine e vocabolario; non una netlist topologica annotata di riferimento. | Individuare discrepanze fra schema e rappresentazione estratta. |
-| Diagnosi preliminari | Risposta su un sintomo, prima del ciclo con scenari SPICE. | Graph, eventuali estratti datasheet e immagine per il judge. | Giudicare risposte generate da contesti strutturati o multimodali. |
-| CHAT/AGENT | Traiettoria di prove, misure e conclusione. | Scheda tecnica del circuito e artefatti della traiettoria. | Giudicare prove, interpretazione e conclusione della traiettoria. |
-
-Nel primo caso spiegare errori di connessione, net fuse/net split, terminali e semantica. Nel secondo spiegare il confronto JSON+datasheet / JSON+immagine+datasheet. Il judge diagnostico preliminare ricostruisce anche cause attese: non equipararle alle schede tecniche congelate della valutazione finale.
-
-**Script:** `scripts/GPT/verifica_json_img/judge_image_graph.py`; `run_one_json.py`, `run_one_json_image.py`, `run_judge_one_circuit.py`; aggregatori e generatori di grafici. I numeri dei batch non devono essere confusi con le versioni delle pipeline.
-
-### 3.8.2 Ground truth tecniche e preparazione delle traiettorie
+**Domanda:** il Graph JSON rappresenta fedelmente componenti, terminali e collegamenti visibili nell'immagine?
 
 **Sequenza dei paragrafi di testo**
 
-1. Motivare il riferimento tecnico per giudicare una traiettoria con simulazioni.
-2. Descrivere contenuto e costruzione delle schede tecniche.
-3. Spiegare estrazione dei summary, composizione del packet e rimozione degli indizi di verdetto.
+1. Motivare la verifica come controllo della Pipeline 1.0 precedente alla diagnosi: il judge confronta immagine e Graph JSON, usando il vocabolario di classi e terminali soltanto come supporto.
+2. Spiegare i vincoli del prompt e l'output strutturato: non deve giudicare il funzionamento elettrico, la simulabilità o correggere lo schema secondo conoscenza elettronica; deve invece localizzare discrepanze su componenti, pin e soprattutto connessioni, distinguendo errori certi e ambiguità.
 
-**Contenuti e materiali da sviluppare**
+La finalità metodologica è isolare la qualità della rappresentazione strutturata prima che essa diventi contesto per le fasi successive. L'immagine costituisce il riferimento visivo, ma non è disponibile una netlist topologica gold annotata in modo indipendente: il risultato è quindi un giudizio multimodale di fedeltà, non una misura diretta di graph accuracy. Punteggi ed esiti dei casi appartengono al Capitolo 4.
 
-Spiegare separatamente tre oggetti:
+### 3.8.2 Valutazione preliminare dei modelli diagnostici
 
-1. **Scheda tecnica di riferimento:** descrizione del circuito, sintomo, assunzioni del testbench, evidenze richieste, condizioni di successo, soluzioni ammissibili e conclusioni non supportate.
-2. **Summary:** documento che raccoglie ciò che CHAT o AGENT hanno effettivamente fatto, incluse modifiche, misure e conclusione; costituisce l'oggetto da giudicare.
-3. **Packet:** selezione delle informazioni da fornire al judge, con filtraggio delle note di revisione e delle etichette interne che anticiperebbero il verdetto.
-
-Ricostruire la costruzione delle schede: immagine canonica → confronto con Graph e node map → valori/modelli/netlist → log e misure SPICE → verifiche aggiuntive quando necessarie → condizioni di successo e limiti. Le schede sono state compilate anche confrontando le traiettorie: **non definirle ground truth cieche raccolte a priori o misure su hardware**.
-
-La distinzione corretta è fra riferimento tecnico fondato sugli artefatti e affermazioni prodotte dal sistema. I follow-up dell'utente in CHAT sono conservati nel packet come parte dell'interazione, senza diventare automaticamente verità di riferimento.
-
-**Script e dati:** `build_case_summaries.py` per ricavare i summary dai workspace, `build_judge_packets.py` per i pacchetti, `build_dataset.py` per il catalogo descrittivo; directory `references/`, `evaluation/`, `judge_inputs/`.
-
-### 3.8.3 Judge finale e tracciabilità del giudizio
+**Domanda:** quale modello e quale configurazione del contesto offrono il compromesso più adatto fra qualità diagnostica, costo operativo e tempo di risposta?
 
 **Sequenza dei paragrafi di testo**
 
-1. Descrivere invio del packet al judge e contratto della risposta.
-2. Spiegare separazione fra stato tecnico, esito dello scenario e giudizio diagnostico.
-3. Descrivere registrazione della provenienza e passaggio degli artefatti alla valutazione sperimentale.
+1. Presentare il benchmark esplorativo che confronta più modelli in due condizioni informative: `Graph JSON + documentazione tecnica` e `Graph JSON + immagine + documentazione tecnica`.
+2. Descrivere il judge preliminare e la ragione del suo impiego: riceve struttura, immagine, documentazione, sintomo e risposta candidata; mediante un prompt comune valuta comprensione, uso delle fonti, correttezza e priorità delle cause, controlli proposti e affermazioni non supportate.
 
-**Contenuti e materiali da sviluppare**
+Questa fase non serve soltanto a individuare il modello con il punteggio più alto, ma a motivare una scelta operativa sostenibile considerando insieme prestazioni, crediti/costo e latenza. Il judge ricostruisce le cause attese dalle evidenze ricevute e non usa ancora i riferimenti tecnici congelati della valutazione CHAT/AGENT: va quindi presentato come strumento di confronto e selezione preliminare, non come protocollo finale. Modelli confrontati, classifiche, Top-1/Top-3, costi e tempi effettivi restano nel Capitolo 4.
 
-Descrivere il flusso: packet → prompt/rubrica/schema → judge → JSON con criteri, motivazioni, esito ed errori critici → aggregazione. Il giudizio viene assegnato separatamente a ciascuna traiettoria; l'affiancamento CHAT/AGENT avviene dopo.
+### 3.8.3 Valutazione delle traiettorie CHAT e AGENT
 
-I cinque criteri riguardano correttezza diagnostica, qualità delle prove, interpretazione delle evidenze, raggiungimento dell'obiettivo e qualità della conclusione. Il completamento tecnico è ricavato dagli artefatti; il successo semantico non si deduce dal solo successo di ngspice né dalla semplice somma dei punteggi.
+**Domanda:** la traiettoria completa produce prove, interpretazioni e conclusioni tecnicamente corrette rispetto al sintomo?
 
-Registrare modello, configurazione, hash di input/prompt/schema e output. Anonimizzare nomi delle modalità e identificativi riduce alcuni indizi, ma non garantisce che la forma della traiettoria renda indistinguibili CHAT e AGENT.
+**Sequenza dei paragrafi di testo**
+
+1. Spiegare che l'oggetto giudicato non è la sola risposta finale, ma il percorso `sintomo → ipotesi → scenari eseguiti → modifiche → risultati SPICE → interpretazione → conclusione`.
+2. Descrivere in modo unitario la preparazione del riferimento tecnico, del summary e del packet anonimizzato, quindi il prompt, i criteri e la tracciabilità dell'output finale.
+
+Per ogni caso viene predisposto un **riferimento tecnico** contenente comportamento atteso, assunzioni del testbench, evidenze richieste, condizioni di successo, soluzioni ammissibili e conclusioni non supportate. Non definirlo una ground truth cieca raccolta a priori o una misura su hardware: è un insieme di vincoli tecnici costruito controllando gli artefatti del progetto. Il **summary** conserva ciò che CHAT o AGENT hanno realmente fatto; il **packet** combina summary e riferimento, rimuove note o etichette che anticiperebbero il verdetto e anonimizza i riferimenti espliciti alla modalità. I follow-up dell'utente in CHAT restano parte dell'interazione, senza diventare automaticamente verità di riferimento.
+
+Il prompt finale impone di considerare come prove soltanto gli scenari realmente eseguiti, non trattare una run SPICE fallita come conferma, non premiare automaticamente il numero di scenari e distinguere un cambiamento elettrico dalla soluzione effettiva del sintomo. Il judge valuta separatamente ogni traiettoria secondo cinque aspetti: correttezza diagnostica, qualità delle prove, interpretazione delle evidenze, raggiungimento dell'obiettivo e qualità della conclusione. L'affiancamento fra CHAT e AGENT avviene soltanto dopo.
+
+Mantenere distinta la riuscita tecnica dal successo diagnostico: il completamento della simulazione è ricavato dagli artefatti e non garantisce una diagnosi corretta. L'output strutturato conserva criteri, motivazioni, esito ed errori critici; per la tracciabilità vengono registrati modello, configurazione, uso e latenza, oltre agli hash del packet, del prompt e dello schema di risposta. Non affermare che viene salvato l'hash dell'output.
 
 **Promemoria per la stesura del Capitolo 4, da non sviluppare qui:** i 42 risultati ufficiali presenti hanno lo stesso hash dello schema di risposta, ma due hash del prompt, uno per le 21 CHAT e uno per le 21 AGENT. Il confronto disponibile è quindi descrittivo e risente anche della diversa calibrazione. Non scrivere che tutte le traiettorie archiviate sono state giudicate con un unico prompt identico.
 
-**Materiali:** figura `summary + scheda tecnica → packet → judge → esito`; tabella compatta che distingua stato tecnico, etichetta dello scenario ed esito del judge. Rubrica integrale, hash completi, selezione dei rerun e risultati nel Capitolo 4 o in appendice.
-
-**Fonti:** [corpus CHAT/AGENT](../../experiment_ai/chat_agent_evaluation_21/README.md), [rubrica](../../experiment_ai/chat_agent_evaluation_21/protocol/evaluation_rubric.md), [tabelle finali e limiti](../third_part_from_json_to_spice/risultati_agente/RESULTS_TABLES.md), `run_judge.py`.
+**Fonti operative per verificare la stesura, senza trasformarle in un elenco nel testo:** [corpus CHAT/AGENT](../../experiment_ai/chat_agent_evaluation_21/README.md), [rubrica](../../experiment_ai/chat_agent_evaluation_21/protocol/evaluation_rubric.md), [tabelle finali e limiti](../third_part_from_json_to_spice/risultati_agente/RESULTS_TABLES.md), `run_judge.py`.
 
 ---
 
@@ -1262,13 +1242,13 @@ Le schede sono fondate su controllo di immagine, topologia, configurazione, mode
 | Sezione | Script/modulo | Responsabilità da descrivere |
 | --- | --- | --- |
 | 3.8.1 | `scripts/GPT/verifica_json_img/judge_image_graph.py` | Verifica multimodale della fedeltà immagine–grafo. |
-| 3.8.1 | `scripts/GPT/run_one_json.py`, `run_one_json_image.py`, `run_judge_one_circuit.py` | Generazione e valutazione delle diagnosi preliminari. |
-| 3.8.1 | `scripts/GPT/aggregate_judge_results.py`, `make_judge_tables.py`, `make_graph_csvs.py` | Aggregazione degli esperimenti preliminari. |
-| 3.8.2 | `experiment_ai/chat_agent_evaluation_21/build_case_summaries.py` | Estrazione dei summary dai workspace e selezione delle prove, senza giudizio tecnico autonomo. |
-| 3.8.2 | `experiment_ai/chat_agent_evaluation_21/build_judge_packets.py` | `clean_reference`, `clean_scenario`, `clean_user_followups`, anonimizzazione e packet. |
-| 3.8.2 | `experiment_ai/chat_agent_evaluation_21/build_dataset.py` | Catalogo e metriche descrittive del corpus. |
+| 3.8.2 | `scripts/GPT/run_one_json.py`, `run_one_json_image.py`, `run_judge_one_circuit.py` | Generazione e valutazione delle diagnosi preliminari. |
+| 3.8.2 | `scripts/GPT/aggregate_judge_results.py`, `make_judge_tables.py`, `make_graph_csvs.py` | Aggregazione di qualità, costo e latenza del benchmark preliminare. |
+| 3.8.3 | `experiment_ai/chat_agent_evaluation_21/build_case_summaries.py` | Estrazione dei summary dai workspace e selezione delle prove, senza giudizio tecnico autonomo. |
+| 3.8.3 | `experiment_ai/chat_agent_evaluation_21/build_judge_packets.py` | `clean_reference`, `clean_scenario`, `clean_user_followups`, anonimizzazione e packet. |
+| 3.8.3 | `experiment_ai/chat_agent_evaluation_21/build_dataset.py` | Catalogo e metriche descrittive del corpus. |
 | 3.8.3 | `experiment_ai/chat_agent_evaluation_21/run_judge.py`, `protocol/` | Prompt, schema, esecuzione e provenienza del judge finale. |
-| 3.8 / Cap. 4 | `experiment_ai/chat_agent_evaluation_21/build_result_figures.py`, `build_application_flow.py` | Presentazione dei risultati e diagrammi del processo. |
+| Cap. 4 | `experiment_ai/chat_agent_evaluation_21/build_result_figures.py`, `build_application_flow.py` | Presentazione dei risultati e diagrammi del processo sperimentale. |
 
 
 </details>
@@ -1298,9 +1278,8 @@ Le label sono proposte, non figure già inserite nel progetto LaTeX. Preferire f
 | `fig:grafo-nodi-spice` | Gruppo di terminali → nodo → dispositivi SPICE. | §3.5.1 | Da costruire su un esempio reale verificato. |
 | `fig:chat-agent-loop` | Decisione dell'utente rispetto a decisione autonoma; validazione e simulazione condivise. | §3.6 | Da costruire dal controller; evitare due figure quasi identiche. |
 | `fig:viewer-base-scenario` | Vista base/scenario e legenda delle misure/animazioni. | §3.7.2–3.7.3 | SVG nelle run; predisporre una vista adatta alla stampa. |
-| `fig:valutazione-traiettorie` | Riferimento tecnico e summary distinti fino al packet. | §3.8 | Adattare `fig02_processo_valutazione.svg`: correggere «stesso protocollo» alla luce dei due prompt e precisare il significato di indipendenza del riferimento. |
 
-Prevedere **8–10 figure sostanziali**, raggruppando immagini in pannelli leggibili. Evitare una figura per ogni script. Tabelle consigliate: ingressi/uscite e requisiti, split del dataset finale (§3.3.3), eventuale tassonomia per famiglie (§3.3.2, senza duplicare i conteggi del grafico), varianti dataset, matrice del confronto YOLO senza score, contratti della pipeline, CHAT/AGENT, livelli di valutazione.
+Prevedere **7–9 figure sostanziali**, raggruppando immagini in pannelli leggibili. Evitare una figura per ogni script e non inserire una figura nella §3.8: i tre livelli della strategia di verifica sono sufficientemente chiari nel testo. Tabelle consigliate: ingressi/uscite e requisiti, split del dataset finale (§3.3.3), eventuale tassonomia per famiglie (§3.3.2, senza duplicare i conteggi del grafico), varianti dataset, matrice del confronto YOLO senza score, contratti della pipeline, CHAT/AGENT, livelli di valutazione.
 
 **Codice e pseudocodice**
 
@@ -1351,7 +1330,7 @@ I documenti interni servono come fonti di lavoro. Nel testo finale della tesi ci
 Le figure seguenti sono già presenti e pertinenti al metodo:
 
 - [Flusso applicativo](../third_part_from_json_to_spice/risultati_agente/figures/fig01_flusso_applicativo.svg): adattabile alla §3.2, aggiungendo il ramo di preparazione dataset/detector e chiarendo gli ingressi manuali.
-- [Processo di valutazione](../third_part_from_json_to_spice/risultati_agente/figures/fig02_processo_valutazione.svg): adattabile alla §3.8, ma la dicitura «stesso protocollo» per tutte le 42 traiettorie va corretta rispetto ai due prompt. Anche «riferimento indipendente» va spiegato nel senso tecnico sopra delimitato.
+- [Processo di valutazione](../third_part_from_json_to_spice/risultati_agente/figures/fig02_processo_valutazione.svg): materiale operativo utile per controllare il flusso, ma non previsto nella §3.8. Se riutilizzato nel Capitolo 4, correggere «stesso protocollo» alla luce dei due prompt e precisare il significato di indipendenza del riferimento.
 - [Flusso verifica topologica](../second_part_pipeline_topologica/figures/verify_json_img/fig00_flusso_verifica_topologica.svg): utile per lo strumento preliminare, oppure da lasciare al Capitolo 4 se la §3.8 risulta troppo lunga.
 - [Processo diagnosi circuiti complessi](../second_part_pipeline_topologica/figures/circuiti_complessi/fig00_processo_sperimentale.svg): evidenzia la diversa informazione fornita a candidato e judge.
 
