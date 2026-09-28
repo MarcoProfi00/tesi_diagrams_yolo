@@ -1,15 +1,15 @@
-# Capitolo 3 - Problem statement e descrizione della soluzione proposta: mappa concettuale
+# Capitolo 3 - Definizione del problema e soluzione proposta: mappa concettuale
 
 ## Scopo e stato del documento
 
-Questa è la **roadmap per scrivere il Capitolo 3**, non il capitolo già redatto. Traduce la richiesta del relatore — formalizzare le specifiche del problema e descrivere la soluzione proposta — in una struttura di sezioni, sottosezioni, contenuti e materiali da preparare.
+Questa è la **mappa concettuale di riferimento del Capitolo 3**, riallineata alla stesura corrente. Mantiene la struttura delle sezioni, i punti tecnici da preservare e il confine con il Capitolo 4, così da poter essere usata sia come indice ragionato sia come supporto alle revisioni successive.
 
-- **Ricognizione:** 14 settembre 2026, sul checkout locale con ultimo commit iniziale `ff7608cd`.
-- **Stato della stesura del Capitolo 3:** da iniziare; indice e numerazione qui proposti sono provvisori.
+- **Ricognizione iniziale:** 14 settembre 2026, sul checkout locale con ultimo commit iniziale `ff7608cd`; **riallineamento alla stesura del Capitolo 3:** 28 settembre 2026.
+- **Stato della stesura del Capitolo 3:** redatto fino alla §3.9; titoli e numerazione della mappa sono allineati alla versione PDF corrente, salvo correzioni editoriali puntuali.
 - **Riferimento editoriale:** [mappa del Capitolo 2](02_stato_dell_arte_mappa.md), in particolare §2.7 e confine fra Capitoli 3 e 4.
 - **Documento unico di lavoro:** indice, contenuti dei paragrafi, figure, pseudocodice, fonti, script e verifiche sono raccolti in questa mappa.
-- **Revisione dell’indice e della sequenza dei paragrafi:** 15 settembre 2026. Le note operative espandibili accompagnano le sezioni pertinenti; le fonti documentali e i punti aperti sono raccolti in fondo.
-- Non è stato modificato un `chapter3.tex`: questa attività prepara la stesura nel progetto LaTeX.
+- **Revisione dell’indice e della sequenza dei paragrafi:** 28 settembre 2026. Le note operative espandibili accompagnano le sezioni pertinenti; le fonti documentali e i punti aperti sono raccolti in fondo.
+- La mappa è stata confrontata con la versione PDF corrente della tesi fino al Capitolo 3; le eventuali correzioni linguistiche individuate vanno applicate nel sorgente LaTeX.
 
 Il capitolo deve spiegare **che cosa riceve il sistema, quale informazione deve ricostruire, quali condizioni servono per simularla e come questa informazione sostiene la diagnosi**. L'ordine dataset → detector → grafo → SPICE → agente → viewer segue le dipendenze del lavoro svolto. La cronologia serve a motivare le scelte, senza diventare un diario di ogni tentativo.
 
@@ -25,7 +25,7 @@ Nel Capitolo 3 si possono riportare dimensioni del dataset, configurazioni, crit
 
 ## Impostazione dei paragrafi e dei sottoparagrafi
 
-**Titolo del capitolo:** *Problem statement e descrizione della soluzione proposta*.
+**Titolo del capitolo:** *Definizione del problema e soluzione proposta*.
 
 Usiamo due livelli numerati: **sezioni** (`3.1`, `3.2`, …) e **sottosezioni** (`3.3.1`, `3.3.2`, …). Dentro ogni sottosezione, i punti «Sequenza dei paragrafi di testo» indicano l’ordine della futura prosa: non sono ulteriori sottosezioni numerate e non vanno copiati come elenco nel capitolo. Non prevediamo un quarto livello `3.x.y.z`.
 
@@ -70,7 +70,7 @@ Questa è una ricostruzione logica dello sviluppo. Non attribuire date o un ordi
 ## Indice proposto
 
 ```text
-3  Problem statement e descrizione della soluzione proposta
+3  Definizione del problema e soluzione proposta
    3.1 Definizione del problema e specifiche
        3.1.1 Obiettivo, ingressi e uscite
        3.1.2 Formalizzazione delle rappresentazioni e del compito diagnostico
@@ -90,7 +90,7 @@ Questa è una ricostruzione logica dello sviluppo. Non attribuire date o un ordi
        3.4.2 Stima geometrica e identificazione semantica dei terminali
        3.4.3 OCR e gestione dei simboli a più terminali
        3.4.4 Mascheramento dei simboli ed estrazione dei fili
-       3.4.5 Associazione terminale–filo e costruzione del grafo
+       3.4.5 Ricostruzione delle connessioni e costruzione del grafo topologico
        3.4.6 Esportazione del Graph JSON e report di ispezione
    3.5 Pipeline 2.0: dal Graph JSON alla simulazione SPICE
        3.5.1 Normalizzazione e costruzione dei nodi elettrici
@@ -106,8 +106,8 @@ Questa è una ricostruzione logica dello sviluppo. Non attribuire date o un ordi
        3.6.5 Validazione delle azioni, arresto e tracciabilità della diagnosi
    3.7 Viewer SVG e integrazione applicativa
        3.7.1 Costruzione del modello visuale e del layout
-       3.7.2 Rendering SVG e rappresentazione di tensioni, correnti e transitori
-       3.7.3 Interfaccia, confronto degli scenari e workspace unificato
+       3.7.2 Rendering SVG e visualizzazione delle grandezze elettriche
+       3.7.3 Integrazione nel workspace e confronto base–scenario
    3.8 Strategia di verifica della soluzione
        3.8.1 Verifica della fedeltà della ricostruzione topologica
        3.8.2 Valutazione preliminare dei modelli diagnostici
@@ -654,7 +654,7 @@ Non presentare questa fase come estrazione OCR completa di tutti i valori di res
 
 **Materiale:** stessa immagine nei passaggi maschera → binaria filtrata → fili ricuciti → skeleton.
 
-### 3.4.5 Associazione terminale–filo e costruzione del grafo
+### 3.4.5 Ricostruzione delle connessioni e costruzione del grafo topologico
 
 **Sequenza dei paragrafi di testo**
 
@@ -1074,49 +1074,31 @@ Spiegare come geometria dello schema e topologia elettrica vengono mantenute dis
 
 **Materiale:** corrispondenza componente della netlist → modello visuale → simbolo nel layout.
 
-### 3.7.2 Rendering SVG e rappresentazione di tensioni, correnti e transitori
+### 3.7.2 Rendering SVG e visualizzazione delle grandezze elettriche
 
 **Sequenza dei paragrafi di testo**
 
-1. Descrivere rendering SVG, simboli, collegamenti ed etichette.
-2. Spiegare come misure elettriche e profili temporali vengono associati agli elementi visuali.
-3. Precisare il significato qualitativo delle animazioni e presentare la legenda.
+1. Descrivere lo step 15 e il passaggio da modello visuale/layout all'artefatto `15_viewer.svg`.
+2. Spiegare la codifica visuale delle evidenze SPICE: tensione presente, corrente continua, segnale variabile, combinazione DC + transitorio e vincoli di scenario.
+3. Chiarire che le animazioni hanno funzione rappresentativa e che ngspice rimane la sorgente delle grandezze numeriche.
 
 **Contenuti e materiali da sviluppare**
 
-Descrivere `15_render_viewer_svg.py`: rendering di simboli, fili, etichette, misure e differenze base/scenario.
+Il renderer associa ai componenti un vocabolario grafico comune e mantiene vettoriali simboli, testi e collegamenti. Quando sono disponibili dati `.tran`, profili temporali possono essere associati a elementi quali LED e lampade. Il viewer non esegue una nuova simulazione: visualizza in forma più immediata struttura ed evidenze della run già prodotte dalla pipeline.
 
-Il viewer non è un nuovo solutore elettrico: ngspice produce le misure. Il rendering è una rappresentazione derivata che deve rimanere riconducibile ai nodi e dispositivi della run.
+**Materiale nella stesura corrente:** una sola figura rappresentativa del viewer SVG, con legenda degli stati elettrici. Il confronto base–scenario viene spiegato nel testo della sottosezione successiva senza introdurre una seconda figura quasi equivalente.
 
-**Spiegazione necessaria delle animazioni**
-
-- Le classi grafiche di attività dipendono da misure e regole di interpretazione; non ogni segmento di filo possiede una misura indipendente di corrente.
-- Il flusso tratteggiato ha animazioni CSS con tempi fissati: la velocità visuale non misura la corrente, la deriva degli elettroni o la velocità di propagazione.
-- La classificazione dei rami e alcune animazioni sono qualitative. Non attribuire automaticamente al verso del tratteggio un verso fisico misurato per ogni collegamento.
-- Profili LED e altri indicatori temporali possono usare dati transitori e soglie/isteresi specifiche, con fallback nei casi previsti. Distinguere questi dati temporali dalle animazioni decorative di attività.
-- Le figure della tesi devono includere una legenda che separi misura numerica, stato dedotto e rappresentazione visuale.
-
-**Materiali:** vista base e vista scenario dello stesso circuito, con modifiche evidenziate; dettaglio di una misura e, per un caso dinamico, grafico transitorio. Evitare screenshot con testi troppo piccoli.
-
-### 3.7.3 Interfaccia, confronto degli scenari e workspace unificato
+### 3.7.3 Integrazione nel workspace e confronto base–scenario
 
 **Sequenza dei paragrafi di testo**
 
-1. Descrivere il percorso dell’utente fra circuito, modalità e scenari.
-2. Spiegare confronto visuale della base e delle modifiche.
-3. Descrivere integrazione delle fasi, workspace, manifest e sessioni separate.
+1. Spiegare che il viewer è integrato nello stesso workspace usato dalle modalità CHAT e AGENT.
+2. Descrivere la selezione della base run e delle scenario run, ciascuna associata alla propria netlist, ai propri risultati SPICE e al proprio viewer.
+3. Richiamare le funzioni di navigazione e, per le analisi transitorie, la visualizzazione delle tracce utili al confronto con la configurazione di base.
 
 **Contenuti e materiali da sviluppare**
 
-Descrivere selezione circuito/modalità, presentazione dei risultati, accesso agli scenari e visualizzazione delle conclusioni. Poi spiegare l'integrazione tecnica essenziale:
-
-- `graph`, `spice`, `webchat`, `all` e `preflight` nel launcher unico;
-- workspace persistente, immagini della run, manifest e log;
-- cartelle `web/chat/<circuito>` e `web/agent/<circuito>` separate;
-- coerenza fra geometria, netlist e risultati selezionati;
-- ripresa delle fasi e controlli di provenienza degli input.
-
-Non dedicare pagine ai comandi di installazione: dipendenze e procedura operativa completa possono stare in appendice o nel README. I test software di contratti, isolamento e regressioni supportano l'implementazione; non sostituiscono la valutazione scientifica.
+Il confronto non viene ottenuto modificando graficamente l'artefatto della base: ogni scenario produce una run separata e quindi una nuova rappresentazione coerente con la configurazione effettivamente simulata. L'interfaccia rende disponibili zoom, spostamento della vista e ripristino della scala; quando sono presenti dati transitori, le tracce selezionate permettono di collegare direttamente l'azione diagnostica alle variazioni elettriche osservate.
 
 **Fonti:** [piano viewer con implementazione documentata](../third_part_from_json_to_spice/viewer_simulator/EXPERIMENT3_VIEWER_SIMULATOR_PLAN.md), package `viewer_core/`, [launcher](../../scripts/pipeline_unified/README.md), test sotto `tests/pipeline2/` e `tests/pipeline_unified/`.
 
@@ -1255,11 +1237,11 @@ Le schede sono fondate su controllo di immagine, topologia, configurazione, mode
 
 ## 3.9 Sintesi della soluzione e raccordo alla valutazione sperimentale
 
-Chiudere con tre paragrafi brevi, senza nuove sottosezioni:
+Chiudere con **due paragrafi brevi**, senza nuove sottosezioni:
 
-1. Ricomporre la catena: dataset e detector → ricostruzione topologica → parametrizzazione elettrica → simulazione → diagnosi e ispezione.
-2. Esplicitare il contributo implementativo della tesi: integrazione modulare, rappresentazioni intermedie, regole geometriche/semantiche, binding dichiarativo a SPICE, scenari isolati, interazione guidata/autonoma e strumenti di valutazione. YOLO, ngspice e i modelli linguistici sono componenti impiegati; non sono algoritmi nuovi proposti dalla tesi.
-3. Introdurre le verifiche del Capitolo 4: accuratezza del detector, fedeltà del grafo, utilità delle diagnosi, comportamento del circuito simulato e qualità delle traiettorie CHAT/AGENT. Non anticipare un successo complessivo prima di presentare le evidenze.
+1. Ricomporre il percorso complessivo: immagine e detector → Pipeline 1.0 e Graph JSON → Pipeline 2.0 e simulazione SPICE → diagnosi CHAT/AGENT con scenari controllati. Richiamare tracciabilità degli artefatti e separazione fra base run e scenari.
+2. Raccordare direttamente il Capitolo 4 alla stessa decomposizione: valutazione dell'object detection, fedeltà della ricostruzione topologica, capacità diagnostiche dei modelli linguistici e qualità delle traiettorie CHAT/AGENT. Non introdurre nuovi dettagli tecnici né anticipare risultati.
+
 
 ---
 
@@ -1276,10 +1258,10 @@ Le label sono proposte, non figure già inserite nel progetto LaTeX. Preferire f
 | `fig:pipeline-topologica` | Componenti, terminali, maschera, skeleton e agganci. | §3.4 | Overlay delle run e slide `pipeline_01_06.pptx`; selezionare una run coerente. |
 | `fig:terminali-semantici` | Terminali geometrici e ruoli/pin IC. | §3.4.2–3.4.3 | Overlay/OCR; facoltativa se leggibile dentro la figura precedente. |
 | `fig:grafo-nodi-spice` | Gruppo di terminali → nodo → dispositivi SPICE. | §3.5.1 | Da costruire su un esempio reale verificato. |
-| `fig:chat-agent-loop` | Decisione dell'utente rispetto a decisione autonoma; validazione e simulazione condivise. | §3.6 | Da costruire dal controller; evitare due figure quasi identiche. |
-| `fig:viewer-base-scenario` | Vista base/scenario e legenda delle misure/animazioni. | §3.7.2–3.7.3 | SVG nelle run; predisporre una vista adatta alla stampa. |
+| `fig:chat-flow` / `fig:agent-flow` | Due diagrammi distinti: CHAT con scelta esplicita dell'utente e AGENT con ciclo autonomo; validazione ed esecuzione tecnica restano condivise. | §3.6.3–3.6.4 | Nella stesura corrente sono presenti due figure separate. |
+| `fig:viewer-svg-example` | Un viewer SVG rappresentativo con legenda degli stati elettrici. | §3.7.2 | Nella stesura corrente è usata una singola figura; base e scenari vengono confrontati nell'interfaccia descritta in §3.7.3. |
 
-Prevedere **7–9 figure sostanziali**, raggruppando immagini in pannelli leggibili. Evitare una figura per ogni script e non inserire una figura nella §3.8: i tre livelli della strategia di verifica sono sufficientemente chiari nel testo. Tabelle consigliate: ingressi/uscite e requisiti, split del dataset finale (§3.3.3), eventuale tassonomia per famiglie (§3.3.2, senza duplicare i conteggi del grafico), varianti dataset, matrice del confronto YOLO senza score, contratti della pipeline, CHAT/AGENT, livelli di valutazione.
+La stesura corrente comprende **26 figure** nel Capitolo 3, molte delle quali documentano passaggi intermedi delle due pipeline. Non inserire una figura nella §3.8: i tre livelli della strategia di verifica risultano già espliciti nel testo. Nelle revisioni successive privilegiare leggibilità e assenza di ridondanza, senza aggiungere nuove figure se non introducono informazione metodologica distinta.
 
 **Codice e pseudocodice**
 
@@ -1289,15 +1271,19 @@ Prevedere **7–9 figure sostanziali**, raggruppando immagini in pannelli leggib
 - Non inserire file Python interi. I dettagli di helper, soglie e registri completi possono andare in appendice o nel repository.
 - Etichettare sempre un estratto come completo, ridotto o schematico. Gli esempi JSON devono seguire lo schema reale quando sono presentati come artefatti della pipeline.
 
-## Casi guida per una narrazione continua
+## Casi effettivamente utilizzati nella stesura
 
-**Caso principale proposto: `a09`.** Permette di seguire batteria, fusibile, connettore, interruttore, resistore, LED e lampada dall'immagine alla simulazione e alle prove. Usare gli input congelati in `data/batchPipeline2.0/batchChatAgentEvaluation/` e gli artefatti del workspace `outputs/demo_workspaces/chat_agent_evaluation/`, senza mescolare copie con lo stesso identificativo di esperimenti precedenti.
+La versione corrente del Capitolo 3 non segue un unico circuito per tutte le sezioni, ma usa esempi differenti scelti in funzione del passaggio da spiegare:
 
-**Caso dinamico proposto: `b02`.** Utile per spiegare `.tran`, condizioni iniziali, profilo temporale LED e differenza fra circuito ricostruito e comportamento del testbench. La validazione della diagnosi e l'effettivo esito delle due modalità appartengono al Capitolo 4.
+- **`c12`** accompagna diversi esempi della Pipeline 1.0 e il Graph JSON/report di ispezione.
+- **`a04`** mostra l'ordinamento dei terminali del transistor 2N2222 verso la rappresentazione SPICE.
+- **`b06`** è usato per il pin mapping dell'LM386 e l'impiego di una subcircuit.
+- **`a01`** illustra l'emissione della netlist SPICE con strategie di conversione differenti.
+- **`a08`** mostra l'analisi transitoria e la visualizzazione delle tensioni di nodo.
+- **`ic01`** fornisce l'esempio del viewer SVG con circuito integrato e legenda degli stati elettrici.
 
-**Caso IC proposto: `ic02`.** Utile per mostrare pin mapping e macromodello LM1875; usare `batchICChatAgentEvaluation` e workspace `ic_chat_agent_evaluation`. `ic01` è un'alternativa se si preferisce continuità con l'esempio del lampeggio.
+Gli esempi servono a spiegare il metodo e non costituiscono una selezione rappresentativa per stimare le prestazioni. Prima di esportare o sostituire una figura, verificare che gli artefatti utilizzati provengano dalla stessa run.
 
-Questi casi servono a spiegare il metodo; non costituiscono una selezione rappresentativa per stimare le prestazioni. Prima di esportare le figure, verificare che immagine, Graph, YAML, netlist e viewer provengano dalla stessa run.
 
 ## Fonti documentali per scrivere il capitolo
 
@@ -1338,16 +1324,10 @@ Le distribuzioni degli score, gli esiti e i confronti numerici già esportati in
 
 Per le figure della pipeline usare gli overlay dello stesso workspace, evitando di accostare immagini e JSON con identificativo uguale ma provenienza diversa. Per esempio `a09` compare in verifiche storiche, demo e corpus finale: il nome da solo non identifica lo snapshot.
 
-## Ordine operativo della stesura
+## Stato corrente della stesura e prossimi controlli
 
-1. **Fissare il lessico e le fonti.** Usare per §3.3.1–§3.3.3 il dataset finale da 627 immagini, 32 classi e 8.728 istanze; recuperare il piccolo esempio YOLO autentico. Consolidare gli altri punti aperti, soprattutto natura degli interventi manuali e versioni dei judge. La provenienza dei dati della run `exp11b1` resta una verifica per il Capitolo 4 e non blocca la stesura sul dataset finale.
-2. **Scrivere §3.1 e §3.2.** Preparare definizione del problema, tabella dei requisiti e figura di architettura. Sono la base per far controllare al relatore il perimetro del capitolo.
-3. **Scrivere §3.3.** Seguire raccolta del dataset finale → tassonomia, grafico e annotazione → preprocessing e split → augmentation → training → selezione, con risultati e metriche rinviati al Capitolo 4.
-4. **Scrivere §3.4.** Seguire un caso reale attraverso i sei step, preparare gli overlay e il primo pseudocodice.
-5. **Scrivere §3.5.** Collegare lo stesso caso a node map, YAML e netlist; aggiungere l'esempio IC e il secondo pseudocodice.
-6. **Scrivere §3.6 e §3.7.** Documentare le decisioni, gli scenari, le misure, il viewer e l'integrazione; preparare il terzo pseudocodice e le viste base/scenario.
-7. **Scrivere §3.8 e §3.9.** Chiudere il percorso con la preparazione della valutazione e i rinvii al Capitolo 4.
-8. **Revisione trasversale.** Controllare identificativi, formule, contratti, origine delle immagini, coerenza fra figure e codice, duplicazioni col Capitolo 2 e sconfinamenti nei risultati.
+Il Capitolo 3 è ora redatto fino alla §3.9. La mappa non va più interpretata come una sequenza di attività ancora da svolgere, ma come supporto alla revisione tecnica. I controlli residui riguardano soprattutto coerenza terminologica, riferimenti incrociati, corrispondenza fra figure e artefatti e separazione netta fra metodo del Capitolo 3 e risultati del Capitolo 4.
+
 
 ## Punti da verificare prima della stesura definitiva
 
@@ -1378,8 +1358,8 @@ Il capitolo può sostenere un contributo di integrazione e sviluppo di una pipel
 - [ ] Ogni ingresso manuale e ogni assunzione di simulazione sono espliciti.
 - [ ] §3.3.1–§3.3.3 descrivono un solo dataset finale: 627 immagini, 32 classi, 8.728 istanze e split Roboflow 439/126/62, senza struttura narrativa v1/v2/v3 o snapshot storici.
 - [ ] Grafico lineare e screenshot Roboflow sono previsti in §3.3.2; l'esempio YOLO è autentico e verificato; preprocessing, resize 1024×1024 e `data.yaml` sono in §3.3.3.
-- [ ] La run operativa è identificata come `exp11b1`; la provenienza esatta dei suoi dati è qualificata correttamente.
-- [ ] Grayscale e augmentation online sono descritti senza semplificazioni errate.
+- [ ] La §3.3 descrive criteri e protocollo di selezione del detector senza anticipare ranking o risultati quantitativi riservati al Capitolo 4.
+- [ ] Grayscale e augmentation offline sono descritti senza semplificazioni errate.
 - [ ] Terminale, componente e nodo elettrico non vengono usati come sinonimi.
 - [ ] Il Graph JSON illustrato corrisponde al contratto canonico corrente.
 - [ ] Sono distinti topologia estratta, eventuali overlay elettrici e copie scenario.
