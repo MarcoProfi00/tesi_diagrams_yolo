@@ -95,9 +95,10 @@ Usare domande esplicite, richiamabili nella discussione finale.
        4.5.1 Corpus e simulabilità delle configurazioni di base
        4.5.2 Robustezza dell'esecuzione degli scenari
    4.6 Valutazione delle modalità CHAT e AGENT
-       4.6.1 Corpus finale, riferimenti tecnici e protocollo del judge
-       4.6.2 Risultati complessivi e per modalità
-       4.6.3 Analisi dei criteri, degli errori e dei casi rappresentativi
+       4.6.1 Protocollo finale e criteri di valutazione
+       4.6.2 Risultati complessivi delle due modalità
+       4.6.3 Analisi appaiata dei 21 circuiti
+       4.6.4 Criteri, criticità e traiettorie rappresentative
    4.7 Discussione trasversale
        4.7.1 Risposta alle domande sperimentali
        4.7.2 Relazione fra qualità degli stadi e prestazioni complessive
@@ -105,7 +106,7 @@ Usare domande esplicite, richiamabili nella discussione finale.
    4.8 Sintesi dei risultati e raccordo alle conclusioni
 ```
 
-La struttura usa otto sezioni e diciannove sottosezioni. Il benchmark preliminare rimane prima della Pipeline 2.0 perché documenta la fase in cui è stata studiata l'utilità diagnostica del Graph JSON e del contesto multimodale; la valutazione CHAT/AGENT viene invece dopo SPICE perché giudica traiettorie che includono scenari realmente simulati.
+La struttura usa otto sezioni e venti sottosezioni. Il benchmark preliminare rimane prima della Pipeline 2.0 perché documenta la fase in cui è stata studiata l'utilità diagnostica del Graph JSON e del contesto multimodale; la valutazione CHAT/AGENT viene invece dopo SPICE perché giudica traiettorie che includono scenari realmente simulati.
 
 ---
 
@@ -444,25 +445,53 @@ Il tasso del 98,8% descrive la robustezza tecnica dell'orchestrazione nel campio
 
 **RQ5:** le traiettorie complete producono prove, interpretazioni e conclusioni tecnicamente utili?
 
-### 4.6.1 Corpus finale, riferimenti tecnici e protocollo del judge
+### 4.6.1 Protocollo finale e criteri di valutazione
 
 **Setup verificato**
 
 - 21 circuiti × 2 modalità = 42 traiettorie;
-- 21 reference tecniche YAML, 42 summary, 42 packet e 42 risultati ufficiali;
-- tutte le traiettorie dichiarano modello `gpt-5.4`;
-- judge `gpt-5.5`, reasoning `medium`, cinque criteri 0–2, massimo descrittivo 10;
-- esito separato: `success`, `partial_success`, `failure`, `inconclusive`, `technical_failure`;
-- criticità: `false_success`, `unsupported_claim`, `wrong_interpretation`;
-- schema hash comune `2a6c8bb...`; prompt hash CHAT `c73bff5f...`, AGENT `05304a55...`;
+- 21 riferimenti tecnici YAML e, per ciascuna traiettoria, un summary, un packet e un risultato ufficiale del judge: 42 summary, 42 packet e 42 giudizi ufficiali;
+- tutte le traiettorie sono state generate con `gpt-5.4`;
+- il judge finale usa `gpt-5.5` con reasoning `medium`;
 - 20/21 domande iniziali identiche; `b03` adattata mantenendo l'obiettivo tecnico;
 - CHAT contiene 83 turni intermedi dell'utente; AGENT 58 decisioni autonome.
 
-**Definizione da mantenere:** “risultato utile” = successo + successo parziale. Un successo parziale può includere una criticità e richiede supervisione; non è sinonimo di diagnosi corretta e completa.
+**Catena informativa da rendere esplicita**
 
-**Figure di metodo disponibili:** `fig01_flusso_applicativo.svg` e `fig02_processo_valutazione.svg`. La prima potrebbe essere già stata usata/adattata nel Capitolo 3; evitare duplicazioni. La seconda è più pertinente al setup del judge.
+```text
+riferimento tecnico = ciò che deve essere verificato
+summary             = ciò che CHAT/AGENT hanno realmente fatto
+packet              = summary + riferimento e dati forniti al judge
+judge               = valutazione della traiettoria
+```
 
-### 4.6.2 Risultati complessivi e per modalità
+**Cinque criteri, ciascuno da 0 a 2 punti**
+
+1. correttezza diagnostica;
+2. qualità dei test;
+3. interpretazione delle evidenze;
+4. raggiungimento dell'obiettivo;
+5. qualità della conclusione.
+
+La somma produce un punteggio descrittivo su 10. I tre esiti usati nei risultati aggregati vanno definiti prima di presentarne le frequenze:
+
+- `success`: diagnosi e conclusione sostanzialmente corrette, supportate da prove adeguate e coerenti con l'obiettivo;
+- `partial_success`: contributo diagnostico utile ma incompleto, non pienamente verificato o affetto da limiti/criticità che richiedono supervisione;
+- `failure`: traiettoria che non fornisce un risultato diagnostico utile o giunge a una conclusione sostanzialmente errata.
+
+**Definizione da mantenere:** “risultato utile” = `success` + `partial_success`. Un successo parziale può includere una criticità e richiede supervisione; non è sinonimo di diagnosi corretta e completa.
+
+Le tre criticità trasversali sono:
+
+- `false_success`: la traiettoria dichiara risolto un problema che le evidenze non mostrano come risolto;
+- `unsupported_claim`: la conclusione contiene un'affermazione non sostenuta dalle prove eseguite;
+- `wrong_interpretation`: una misura o un risultato di simulazione viene interpretato in modo errato.
+
+Il confronto CHAT–AGENT è **descrittivo**: le modalità non costituiscono un esperimento controllato perfettamente simmetrico, sia per gli interventi dell'utente in CHAT sia per le differenze del protocollo operativo. Nel testo destinato al lettore non riportare hash tecnici; conservarli soltanto negli artefatti di audit e nelle note di riproducibilità.
+
+**Figura prevista:** `fig02_processo_valutazione`, per visualizzare il passaggio da summary e riferimento tecnico al packet e al judge. `fig01_flusso_applicativo` potrebbe essere già stata usata/adattata nel Capitolo 3 e non va duplicata senza necessità.
+
+### 4.6.2 Risultati complessivi delle due modalità
 
 **Tabella principale verificata**
 
@@ -471,6 +500,36 @@ Il tasso del 98,8% descrive la robustezza tecnica dell'orchestrazione nel campio
 | CHAT | 21 | 11 (52,4%) | 10 (47,6%) | 0 | 21 (100,0%) | 7,81 | 8 | 5 (23,8%) |
 | AGENT | 21 | 5 (23,8%) | 15 (71,4%) | 1 (4,8%) | 20 (95,2%) | 6,38 | 6 | 12 (57,1%) |
 | Complessivo | 42 | 16 (38,1%) | 25 (59,5%) | 1 (2,4%) | 41 (97,6%) | 7,10 | 7 | 17 (40,5%) |
+
+**Lettura obbligatoria:** 41/42 risultati utili significa che 41 traiettorie contengono almeno un contributo diagnostico giudicato utile. Non significa 41/42 diagnosi corrette o complete: soltanto 16/42 sono successi pieni e 17/42 presentano almeno una criticità.
+
+**Figura prevista:** `fig03_distribuzione_esiti`, indispensabile per distinguere visivamente successi pieni, successi parziali e fallimento.
+
+**Judge cost:** 295.392 input token, 91.136 cached, 89.511 output di cui 45.412 reasoning; costo stimato totale 3,7522 USD secondo la tariffa dichiarata nel report. Presentarlo come costo del judge finale, separato dal costo di generazione delle traiettorie e dai costi del benchmark preliminare.
+
+### 4.6.3 Analisi appaiata dei 21 circuiti
+
+L'unità di confronto è il circuito: per ciascuno dei 21 casi affiancare la traiettoria CHAT e la traiettoria AGENT usando `table_02_paired_results.csv`. Questa lettura completa gli aggregati della §4.6.2 perché mostra se e quanto la relazione tra i punteggi cambia da circuito a circuito.
+
+**Conteggi descrittivi verificati**
+
+- punteggio CHAT maggiore in 13 circuiti;
+- parità in 5 circuiti;
+- punteggio AGENT maggiore in 3 circuiti.
+
+Non chiamare questi conteggi “vittorie”: indicano soltanto quale punteggio è maggiore nella singola coppia osservata. Non dimostrano una superiorità causale o generale di una modalità, anche perché CHAT include interventi e follow-up dell'utente.
+
+**Tabella prevista nel corpo**
+
+| Circuito | CHAT esito/score | AGENT esito/score | Δ score | Nota sintetica/criticità |
+| --- | --- | --- | ---: | --- |
+| … | … | … | AGENT − CHAT | … |
+
+Specificare nell'intestazione o nella caption che Δ score = AGENT − CHAT. La tabella completa deriva direttamente da `table_02_paired_results.csv`; può essere mantenuta nel corpo se resta leggibile, altrimenti spostata in appendice lasciando nel testo i conteggi 13/5/3 e le coppie più informative.
+
+`fig05_distribuzione_punteggi_totali` resta opzionale: inserirla soltanto se aggiunge informazione rispetto alla tabella appaiata, senza sostituire la lettura per circuito.
+
+### 4.6.4 Criteri, criticità e traiettorie rappresentative
 
 **Punteggi medi per criterio**
 
@@ -482,24 +541,6 @@ Il tasso del 98,8% descrive la robustezza tecnica dell'orchestrazione nel campio
 | Raggiungimento dell'obiettivo | 1,52 | 1,29 | 1,40 |
 | Qualità della conclusione | 1,43 | 0,90 | 1,17 |
 
-**Errori critici**
-
-- `false_success`: CHAT 0, AGENT 1;
-- `unsupported_claim`: CHAT 1, AGENT 10;
-- `wrong_interpretation`: CHAT 5, AGENT 10;
-- le occorrenze non coincidono con il numero di run critiche.
-
-**Figure disponibili**
-
-1. `fig03_distribuzione_esiti` — indispensabile;
-2. `fig04_punteggi_medi_criteri` — mostra chiaramente il punto debole della conclusione AGENT;
-3. `fig05_distribuzione_punteggi_totali` — utile solo se non duplica la tabella appaiata;
-4. costruire eventualmente dal `table_02_paired_results.csv` un grafico appaiato per circuito, mantenendo il confronto descrittivo.
-
-**Judge cost:** 295.392 input token, 91.136 cached, 89.511 output di cui 45.412 reasoning; costo stimato totale 3,7522 USD secondo la tariffa dichiarata nel report. Presentarlo come costo del judge finale, separato dal costo di generazione delle traiettorie e dai costi del benchmark preliminare.
-
-### 4.6.3 Analisi dei criteri, degli errori e dei casi rappresentativi
-
 **Lettura principale**
 
 - la qualità dei test è il criterio più forte di AGENT (1,52/2);
@@ -507,20 +548,31 @@ Il tasso del 98,8% descrive la robustezza tecnica dell'orchestrazione nel campio
 - la fragilità principale non è l'esecuzione degli scenari, ma il passaggio da misura a causalità e conclusione;
 - CHAT beneficia della selezione e dei follow-up dell'utente; non attribuire causalmente l'intero divario alla sola “superiorità” della modalità.
 
-**Casi positivi da raccontare**
+La maggiore fragilità di AGENT emerge soprattutto nell'interpretazione delle evidenze (1,24/2 contro 1,57/2) e nella qualità della conclusione (0,90/2 contro 1,43/2), non nella capacità tecnica di eseguire test.
 
-- `a05` CHAT: sorgente test 5 V su N003; N003 e N001 passano da 0 V a 5 V, localizzando l'ingresso non pilotato;
+**Tabella degli errori critici**
+
+| Criticità | CHAT | AGENT |
+| --- | ---: | ---: |
+| `false_success` | 0 | 1 |
+| `unsupported_claim` | 1 | 10 |
+| `wrong_interpretation` | 5 | 10 |
+
+Le occorrenze non coincidono con il numero di run critiche: una stessa traiettoria può presentare più criticità.
+
+**Figure previste**
+
+1. `fig04_punteggi_medi_criteri`, per rendere immediato il divario su interpretazione e conclusione;
+2. una figura reale del caso `ic01` AGENT, con confronto **base → scenario risolutivo `agent_scenario_3`**, ricavata dagli output transitori effettivi e non da uno schema concettuale; mostrare le grandezze che documentano la regolarizzazione dell'avvio.
+
+**Traiettorie rappresentative da raccontare**
+
 - `a01` AGENT: N002 passa da 0 a circa 5 V, corrente lampada da 0 a 4,76 mA e LED resta a circa 19,40 mA;
-- `ic01` AGENT: tre scenari, ipotesi iniziali scartate e regolarizzazione del transitorio.
-
-**Successi parziali**
-
-- `a02` CHAT: localizzazione utile ma nessuno scenario unico verifica l'intera correzione;
-- `b04` AGENT: scenari pertinenti ma uso della grandezza sbagliata; il transitorio di riferimento mostra corrente media batteria circa 0,164 A a 12 V, 0,678 A a 10 V e 1,281 A a 8 V, con picchi fino a circa 0,985/2,955/4,941 A.
-
-**Fallimento**
-
+- `ic01` AGENT: tre scenari, ipotesi iniziali scartate e regolarizzazione del transitorio; accompagnare il testo con la figura reale base/scenario risolutivo;
+- `b04` AGENT: scenari pertinenti ma uso della grandezza sbagliata; il transitorio di riferimento mostra corrente media batteria circa 0,164 A a 12 V, 0,678 A a 10 V e 1,281 A a 8 V, con picchi fino a circa 0,985/2,955/4,941 A;
 - `c02` AGENT, 2/10: la base alterna già i LED con periodo circa 0,600 s e frequenza 1,668 Hz; la modifica da 10 µF a 1 µF accelera l'alternanza. Il profilo automatico 166,7 Hz è un artefatto, mentre il controllo stabile dà circa 16,69 Hz. La conclusione dichiara una falsa correzione: presenti tutte e tre le criticità.
+
+Come esempi supplementari, se serve bilanciare la narrazione senza appesantirla, conservare `a05` CHAT (sorgente test 5 V su N003; N003 e N001 passano da 0 V a 5 V) e `a02` CHAT (localizzazione utile ma nessuno scenario unico verifica l'intera correzione).
 
 **Cautela:** i valori dei casi vanno sempre ricontrollati nel summary, nella reference e nell'output SPICE della stessa run prima di copiarli nel `.tex`.
 
@@ -608,7 +660,7 @@ Non concludere che il sistema “diagnostica correttamente nel 97,6% dei casi”
 
 ## Piano delle figure
 
-Limitare il corpo del capitolo a circa 10–13 figure sostanziali, spostando heatmap e grafici per singolo batch in appendice. La §4.5 non richiede figure: un eventuale richiamo al viewer o ai casi IC resta testuale.
+Limitare il corpo del capitolo a circa 10–14 figure sostanziali, spostando heatmap e grafici per singolo batch in appendice. La §4.5 non richiede figure: un eventuale richiamo al viewer o ai casi IC resta testuale.
 
 | ID proposto | Contenuto | Sezione | Fonte/stato |
 | --- | --- | --- | --- |
@@ -624,7 +676,10 @@ Limitare il corpo del capitolo a circa 10–13 figure sostanziali, spostando hea
 | `fig:benchmark-costo` | Score vs costo | §4.4.3 | Figure esistenti per batch; nuova figura congiunta preferibile. |
 | `fig:judge-finale` | Summary + reference → packet → judge | §4.6.1 | `fig02_processo_valutazione.svg`. |
 | `fig:esiti-chat-agent` | Distribuzione esiti | §4.6.2 | `fig03_distribuzione_esiti`. |
-| `fig:criteri-chat-agent` | Medie dei cinque criteri | §4.6.2 | `fig04_punteggi_medi_criteri`. |
+| `fig:criteri-chat-agent` | Medie dei cinque criteri | §4.6.4 | `fig04_punteggi_medi_criteri`. |
+| `fig:ic01-base-scenario` | `ic01` AGENT, confronto reale tra transitorio base e scenario risolutivo `agent_scenario_3` | §4.6.4 | Costruire dagli output `08_tran_plot.png` della base e dello scenario; non usare una ricostruzione illustrativa. |
+
+`fig05_distribuzione_punteggi_totali` resta opzionale in §4.6.3 e va esclusa se duplica la tabella appaiata.
 
 **Regole grafiche**
 
@@ -647,10 +702,12 @@ Limitare il corpo del capitolo a circa 10–13 figure sostanziali, spostando hea
 | `tab:benchmark-input` | JSON vs JSON+immagine | Aggregati congiunti. |
 | `tab:pipeline2-indicatori` | Corpus, successi delle basi e successi tecnici degli scenari per modalità | Artefatti finali + `table_01_run_results.csv`. |
 | `tab:chat-agent-summary` | Esiti e punteggi per modalità | `table_03_mode_summary.csv`. |
+| `tab:chat-agent-paired` | Circuito, esito/score CHAT e AGENT, Δ score e nota/criticità | `table_02_paired_results.csv`. |
 | `tab:chat-agent-criteri` | Cinque criteri | `table_04_criteria_summary.csv`. |
+| `tab:chat-agent-errori` | Tre criticità per modalità | Tabelle ufficiali dei risultati finali. |
 | `tab:minacce-validita` | Minaccia, effetto, mitigazione | Sintesi della §4.7.3. |
 
-La tabella completa dei 42 punteggi può essere collocata in appendice; nel corpo usare il riepilogo compatto della Pipeline 2.0, i risultati CHAT/AGENT per criterio e 3–5 casi diagnostici rappresentativi.
+La tabella completa dei 42 punteggi può essere collocata in appendice; nel corpo usare il riepilogo compatto della Pipeline 2.0, la tabella appaiata dei 21 circuiti (o una sua versione compatta), i risultati CHAT/AGENT per criterio, la tabella delle criticità e 3–5 casi diagnostici rappresentativi.
 
 ## Fonti operative per la stesura
 
@@ -721,7 +778,7 @@ La tabella completa dei 42 punteggi può essere collocata in appendice; nel corp
 4. Scrivere §4.3 direttamente dai quattro CSV finali.
 5. Scrivere §4.4 dagli aggregati congiunti, separando qualità e costo.
 6. Scrivere §4.5 come breve ponte tecnico dagli artefatti finali, con al massimo una tabella e senza figure obbligatorie.
-7. Scrivere §4.6 dalle tabelle ufficiali e verificare i casi sul materiale sorgente.
+7. Scrivere §4.6 nell'ordine: protocollo e definizioni; aggregati; analisi appaiata da `table_02_paired_results.csv`; criteri, criticità e casi verificati sul materiale sorgente. Preparare contestualmente la figura reale base/scenario di `ic01` AGENT.
 8. Scrivere §4.7 soltanto dopo avere stabilizzato tutte le sezioni di risultato.
 9. Uniformare decimali, percentuali, nomi dei modelli, label e caption.
 10. Eseguire un audit finale numero → tabella/figura → file sorgente.
@@ -740,9 +797,14 @@ La tabella completa dei 42 punteggi può essere collocata in appendice; nel corp
 - [ ] Viewer e casi IC sono soltanto una nota del corpus; la valutazione diagnostica è rinviata alla §4.6.
 - [ ] Riuscita ngspice, correttezza elettrica e successo diagnostico sono distinti.
 - [ ] Le 42 traiettorie finali sono attribuite a `gpt-5.4` e il judge a `gpt-5.5`.
+- [ ] La §4.6 è articolata in protocollo, risultati aggregati, analisi appaiata e lettura di criteri/casi.
+- [ ] I cinque criteri 0–2, il totale /10 e gli esiti `success`/`partial_success`/`failure` sono definiti prima delle tabelle.
 - [ ] CHAT e AGENT non sono presentati come confronto controllato perfettamente simmetrico.
+- [ ] I conteggi appaiati 13/5/3 sono presentati come punteggio maggiore/parità, non come vittorie.
 - [ ] “Risultato utile” è definito come successo + parziale e non come diagnosi completa.
+- [ ] Il dato 41/42 è descritto come presenza di almeno un contributo utile, non come 41 diagnosi corrette.
 - [ ] Gli errori critici sono discussi insieme ai punteggi, non nascosti dalla media.
+- [ ] `fig02`, `fig03`, `fig04` e la figura reale `ic01` base/scenario sono collocate rispettivamente nelle sottosezioni previste; `fig05` resta opzionale.
 - [ ] Ogni misura di un caso qualitativo proviene dalla stessa run citata.
 - [ ] Figure e tabelle hanno fonte, denominatore e caption coerenti.
 - [ ] Nessun output pilota, archivio o documento temporaneo entra nei risultati canonici.
