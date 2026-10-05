@@ -68,7 +68,7 @@ Usare domande esplicite, richiamabili nella discussione finale.
 | RQ1 | Quale famiglia YOLO e quale variante dei dati offrono il miglior compromesso fra riconoscimento e localizzazione dei simboli? | 15 training, metriche di validation, curve e analisi qualitativa. |
 | RQ2 | Quanto fedelmente la Pipeline 1.0 conserva nel Graph JSON componenti, terminali e collegamenti visibili? | Judge multimodale su 38 circuiti, score/sottoscore, decisioni ed errori. |
 | RQ3 | Quale modello linguistico e quale contesto risultano più adatti alla diagnosi preliminare per qualità, costo e latenza? | 256 risposte: 16 circuiti × 8 modelli × 2 condizioni informative. |
-| RQ4 | La Pipeline 2.0 trasforma i grafi validati in circuiti SPICE eseguibili e in evidenze elettriche utilizzabili? | 21 simulazioni di base, `.op`/`.tran`, 4 casi IC e 81 scenari finali. |
+| RQ4 | La Pipeline 2.0 trasforma i grafi validati in netlist e run SPICE tecnicamente eseguibili? | 21 simulazioni di base, disponibilità degli output `.tran`, 4 casi IC e 81 scenari finali. |
 | RQ5 | Le modalità CHAT e AGENT producono traiettorie diagnostiche utili, supportate dagli scenari eseguiti e dalle misure? | 42 traiettorie, judge finale a cinque criteri, esiti ed errori critici. |
 | RQ6 | Quali errori persistono lungo la catena e quali conclusioni end-to-end sono giustificate? | Discussione trasversale, casi limite e minacce alla validità. |
 
@@ -91,10 +91,9 @@ Usare domande esplicite, richiamabili nella discussione finale.
        4.4.1 Disegno del confronto e modelli valutati
        4.4.2 Qualità diagnostica, Top-1/Top-3 e contributo dell'immagine
        4.4.3 Costo, latenza e scelta operativa
-   4.5 Valutazione della Pipeline 2.0 e delle simulazioni
-       4.5.1 Corpus elettrico, parametrizzazione e criteri di validazione
-       4.5.2 Esecuzione delle simulazioni di base e degli scenari
-       4.5.3 Circuiti integrati, viewer e casi rappresentativi
+   4.5 Verifica tecnica della Pipeline 2.0 e delle simulazioni
+       4.5.1 Corpus e simulabilità delle configurazioni di base
+       4.5.2 Robustezza dell'esecuzione degli scenari
    4.6 Valutazione delle modalità CHAT e AGENT
        4.6.1 Corpus finale, riferimenti tecnici e protocollo del judge
        4.6.2 Risultati complessivi e per modalità
@@ -129,7 +128,7 @@ La struttura usa otto sezioni e diciannove sottosezioni. Il benchmark preliminar
 | Detector | Predizioni su validation per una run | 15 configurazioni | bbox/classi annotate | Precision, recall, F1, mAP. |
 | Pipeline 1.0 | Coppia immagine–Graph JSON | 38 circuiti | immagine + vocabolario terminali | Score 0–100, decisione, errori, usabilità. |
 | Diagnosi preliminare | Risposta modello–circuito–input | 256 risposte | judge con immagine, grafo, sintomo e documentazione | Score 0–21, Top-1/Top-3, errori, costo e latenza. |
-| Pipeline 2.0 | Circuito parametrizzato e run SPICE | 21 basi; 81 scenari finali | reference tecniche e artefatti elettrici | Esito tecnico, misure `.op`/`.tran`, confronti base–scenario. |
+| Pipeline 2.0 | Circuito parametrizzato e run SPICE | 21 basi; 81 scenari finali | reference tecniche e artefatti elettrici | Esito tecnico e disponibilità degli output `.op`/`.tran`. |
 | CHAT/AGENT | Traiettoria completa | 42 run | reference tecnica per circuito | 5 criteri 0–2, esito, criticità. |
 
 **Cautela:** questi campioni si sovrappongono solo in parte. I 38 circuiti topologici, i 16 circuiti del benchmark e i 21 circuiti finali non devono essere descritti come un unico test set invariato dall'immagine alla diagnosi.
@@ -412,79 +411,32 @@ Gli script `make_main_figures.py` e `make_appendix_figures.py` producono attualm
 
 ---
 
-## 4.5 Valutazione della Pipeline 2.0 e delle simulazioni
+## 4.5 Verifica tecnica della Pipeline 2.0 e delle simulazioni
 
-**RQ4:** la Pipeline 2.0 produce circuiti SPICE eseguibili ed evidenze coerenti con i riferimenti tecnici?
+**RQ4:** la Pipeline 2.0 trasforma i grafi parametrizzati in netlist e simulazioni SPICE tecnicamente eseguibili?
 
-Questa sezione è necessaria per non saltare direttamente dal benchmark su JSON alla diagnosi finale. Il repository non contiene però un unico report statistico autonomo della Pipeline 2.0 equivalente ai report YOLO/topologia. La sezione va costruita dagli artefatti finali e dalle reference, senza promuovere automaticamente le roadmap storiche a risultati canonici.
+Questa sezione deve essere un ponte tecnico breve fra il benchmark su Graph JSON e la valutazione diagnostica finale. Non deve ripetere la parametrizzazione, il binding dei modelli o la generazione della netlist già descritti nel Capitolo 3, né anticipare l'analisi delle traiettorie della §4.6. La verifica riguarda la simulabilità osservata nel corpus finale: una run completata da ngspice attesta la riuscita tecnica dell'esecuzione, non la correttezza fisica del modello né quella della diagnosi.
 
-### 4.5.1 Corpus elettrico, parametrizzazione e criteri di validazione
+### 4.5.1 Corpus e simulabilità delle configurazioni di base
 
-**Corpus finale verificato**
+**Risultati da riportare**
 
 - 21 circuiti: 17 senza IC e 4 con IC;
-- 299 componenti e 176 nodi complessivi secondo `dataset/circuits.csv`;
-- analisi dichiarate: 5 casi solo `.op`, 13 `.op|tran`, 3 solo `.tran`;
-- quattro circuiti IC: `ic01` TLC555, `ic02` LM1875, `ic03` LM317, `ic04` due TLC555;
-- per ogni caso: immagine, Graph JSON, `values.yaml`, node map, netlist, run SPICE e reference tecnica; viewer disponibile nelle copie di sessione.
+- 21/21 run SPICE di base concluse con `status: success`;
+- 16/21 configurazioni con output transitorio, coerentemente con i casi che prevedono un'analisi `.tran`.
 
-**Criteri da usare per la validazione**
+I quattro casi con circuiti integrati e la disponibilità del viewer possono essere richiamati in una sola nota descrittiva del corpus, senza una sottosezione o una valutazione autonoma: non è stato svolto uno user study del viewer. Anche in presenza di convergenza e output, i modelli, i valori, il pin mapping, il testbench e gli eventuali override restano assunzioni controllate; il risultato non certifica il comportamento fisico del circuito reale.
 
-1. artefatti completi e tracciabili;
-2. binding di valori e modelli senza parametri mancanti non dichiarati;
-3. netlist emessa e accettata da ngspice;
-4. grandezze necessarie al sintomo presenti in `.op` o `.tran`;
-5. coerenza con reference tecnica e assunzioni del testbench;
-6. distinzione fra Graph sorgente, override dichiarativi e topologia effettivamente simulata.
+### 4.5.2 Robustezza dell'esecuzione degli scenari
 
-**Tabella da produrre prima della stesura:** inventario dei 21 casi con ID, componenti, nodi, analisi, presenza IC, eventuali override/topology overlay, esito base e misure chiave. Generarla da `dataset/circuits.csv`, `values.yaml`, `08_spice_run.json` e reference; non compilare a mano se può essere derivata.
+Nelle traiettorie finali sono stati eseguiti 81 scenari:
 
-### 4.5.2 Esecuzione delle simulazioni di base e degli scenari
+- CHAT: 40/40 run SPICE riuscite;
+- AGENT: 40/41 run SPICE riuscite;
+- totale: 80/81 run riuscite, pari al 98,8%;
+- unico fallimento tecnico: `a08` AGENT, `agent_scenario_2`, con errore `Timestep too small` sul nodo `n003`.
 
-**Numeri verificabili**
-
-- 21/21 `08_spice_run.json` di base nei workspace finali hanno `status: success`;
-- 16/21 basi conservano un output transitorio CSV; il conteggio è coerente con i 13 casi `.op|tran` + 3 casi `.tran`;
-- nelle traiettorie finali sono stati proposti 118 scenari ed eseguiti 81;
-- CHAT: 77 proposti, 40 eseguiti, 40 run SPICE riuscite, 0 fallite;
-- AGENT: 41 proposti, 41 eseguiti, 40 riuscite, 1 fallita;
-- complessivo: 80/81 run scenario riuscite = 98,8%; l'unico errore tecnico è `a08` AGENT, `agent_scenario_2`, interrotto nel transitorio da ngspice con `Timestep too small` sul nodo `n003`.
-
-**Interpretazione:** il 100% delle basi e il 98,8% degli scenari dimostrano robustezza tecnica dell'orchestrazione nel corpus, non correttezza fisica o diagnostica. Il fallimento numerico di `a08/agent_scenario_2` va distinto dall'unico fallimento diagnostico `c02`: nel secondo caso ngspice completa lo scenario, ma il modello interpreta male il risultato.
-
-**Risultati qualitativi da mostrare**
-
-- un caso `.op` con ramo inizialmente non alimentato e variazione di tensione/corrente (`a01` o `a05`);
-- un caso `.tran` con forma d'onda o periodicità (`b02`, `c02` o `ic01`);
-- un caso in cui una simulazione tecnicamente corretta non prova la conclusione diagnostica (`b04` o `c02`).
-
-**Figure/tabelle**
-
-- tabella inventario 21 casi;
-- pannello base–scenario con netlist ridotta, due misure e viewer dello stesso workspace;
-- un solo grafico transitorio leggibile, non una galleria di screenshot;
-- tabella proposta/eseguita/successo tecnico per modalità, rinviando l'esito diagnostico alla §4.6.
-
-### 4.5.3 Circuiti integrati, viewer e casi rappresentativi
-
-**Risultati verificati sui quattro casi IC**
-
-- quattro simulazioni di base completate correttamente;
-- 17 scenari CHAT/AGENT sui casi IC, tutti completati senza errore ngspice;
-- modelli: TI `TLC555_6`, `LM1875_0`, `LM317_TRANS`, con doppia istanza TLC555 in `ic04`;
-- esiti delle otto traiettorie IC: 3 successi, 5 successi parziali, 0 fallimenti; media complessiva 7,13/10, CHAT 7,50, AGENT 6,75. Questi ultimi dati appartengono anche alla §4.6 e qui servono soltanto come raccordo.
-
-**Caso consigliato:** `ic01`, perché collega macromodello, transitorio e prova agentica. Nella traiettoria AGENT la riduzione del condensatore CONTROL da 1 µF a 10 nF produce un profilo periodico con periodo circa 2,096 ms e frequenza circa 477 Hz. Precisare che ciò dimostra la regolarità del modello, non la percezione visiva del LED.
-
-**Viewer:** valutarlo come strumento di ispezione e tracciabilità, non con una metrica estetica. Mostrare che usa misure e differenze base–scenario, ma dichiarare che non è stato condotto uno user study di usabilità.
-
-**Cautele**
-
-- modelli ideali/comportamentali ed equivalenti semplificati per lampade e speaker;
-- PSpice in modalità compatibile ngspice; TLC555 non equivalente in ogni dettaglio a NE555 bipolare;
-- valori, pin mapping, testbench e topology overlay possono essere manuali;
-- nessuna validazione sistematica su hardware reale;
-- una run convergente può contenere artefatti numerici.
+Il tasso del 98,8% descrive la robustezza tecnica dell'orchestrazione nel campione osservato. Non misura la validità dello scenario scelto, la correttezza delle forme d'onda o l'interpretazione diagnostica: questi aspetti appartengono alla §4.6. Se utile alla leggibilità, riportare una sola tabella compatta con consistenza del corpus, successi delle basi e successi degli scenari per modalità. Non è richiesta alcuna figura.
 
 ---
 
@@ -656,7 +608,7 @@ Non concludere che il sistema “diagnostica correttamente nel 97,6% dei casi”
 
 ## Piano delle figure
 
-Limitare il corpo del capitolo a circa 12–15 figure sostanziali, spostando heatmap e grafici per singolo batch in appendice.
+Limitare il corpo del capitolo a circa 10–13 figure sostanziali, spostando heatmap e grafici per singolo batch in appendice. La §4.5 non richiede figure: un eventuale richiamo al viewer o ai casi IC resta testuale.
 
 | ID proposto | Contenuto | Sezione | Fonte/stato |
 | --- | --- | --- | --- |
@@ -670,8 +622,6 @@ Limitare il corpo del capitolo a circa 12–15 figure sostanziali, spostando hea
 | `fig:benchmark-modelli` | Score/Top-1/Top-3 congiunti sui 16 circuiti | §4.4.2 | Da rigenerare sui due aggregati. |
 | `fig:benchmark-immagine` | Delta immagine, con casi opposti | §4.4.2 | Figure per batch esistenti; valutare nuova figura congiunta. |
 | `fig:benchmark-costo` | Score vs costo | §4.4.3 | Figure esistenti per batch; nuova figura congiunta preferibile. |
-| `fig:pipeline2-base-scenario` | Caso `.op` base–scenario con misure/viewer | §4.5.2 | Da comporre da un workspace finale. |
-| `fig:pipeline2-transitorio` | Transitorio reale e misura chiave | §4.5.2–4.5.3 | `08_tran_plot` del caso scelto. |
 | `fig:judge-finale` | Summary + reference → packet → judge | §4.6.1 | `fig02_processo_valutazione.svg`. |
 | `fig:esiti-chat-agent` | Distribuzione esiti | §4.6.2 | `fig03_distribuzione_esiti`. |
 | `fig:criteri-chat-agent` | Medie dei cinque criteri | §4.6.2 | `fig04_punteggi_medi_criteri`. |
@@ -682,7 +632,6 @@ Limitare il corpo del capitolo a circa 12–15 figure sostanziali, spostando hea
 - mantenere palette e terminologia coerenti;
 - ogni figura deve dichiarare fonte, unità, aggregazione e denominatore;
 - non usare grafici del Batch A archiviato o output pilota;
-- non mostrare screenshot di viewer provenienti da una run diversa rispetto alle misure citate;
 - controllare la leggibilità in stampa e non affidare l'informazione al solo colore.
 
 ## Piano delle tabelle
@@ -696,13 +645,12 @@ Limitare il corpo del capitolo a circa 12–15 figure sostanziali, spostando hea
 | `tab:topologia-errori` | Severità e tipologie | Report consolidato/CSV. |
 | `tab:benchmark-modelli` | Otto modelli, qualità/costo/latenza | Aggregati v1+v2. |
 | `tab:benchmark-input` | JSON vs JSON+immagine | Aggregati congiunti. |
-| `tab:pipeline2-inventario` | 21 casi, analisi, IC, override, esito base | Da generare dalle fonti canoniche. |
-| `tab:pipeline2-scenari` | Proposti/eseguiti/successi tecnici | `table_01_run_results.csv`. |
+| `tab:pipeline2-indicatori` | Corpus, successi delle basi e successi tecnici degli scenari per modalità | Artefatti finali + `table_01_run_results.csv`. |
 | `tab:chat-agent-summary` | Esiti e punteggi per modalità | `table_03_mode_summary.csv`. |
 | `tab:chat-agent-criteri` | Cinque criteri | `table_04_criteria_summary.csv`. |
 | `tab:minacce-validita` | Minaccia, effetto, mitigazione | Sintesi della §4.7.3. |
 
-La tabella appaiata dei 21 circuiti e la tabella completa dei 42 punteggi sono utili in appendice; nel corpo usare riepilogo, criteri e 3–5 casi rappresentativi.
+La tabella completa dei 42 punteggi può essere collocata in appendice; nel corpo usare il riepilogo compatto della Pipeline 2.0, i risultati CHAT/AGENT per criterio e 3–5 casi diagnostici rappresentativi.
 
 ## Fonti operative per la stesura
 
@@ -754,26 +702,25 @@ La tabella appaiata dei 21 circuiti e la tabella completa dei 42 punteggi sono u
 2. **Test set object detection:** verificare se esiste una valutazione finale separata sui 62 test; non presentare i risultati di validation come test.
 3. **Per-class metrics:** decidere se includere una tabella delle classi rare; ricavarla dal checkpoint selezionato, non da osservazioni visive soltanto.
 4. **Scatter OD:** lo script mostrato nel repository non dimensiona i punti con la mAP, mentre la caption consolidata lo afferma. Rigenerare/correggere figura o caption.
-5. **Pipeline 2.0:** generare l'inventario canonico dei 21 casi e documentare override/topology overlay per caso.
+5. **Pipeline 2.0:** verificare sugli artefatti finali i conteggi sintetici del corpus, delle run di base e degli output transitori; non costruire un inventario esteso se non serve alla tracciabilità.
 6. **Scenario fallito:** ricontrollare e documentare `a08` AGENT `agent_scenario_2`, terminato con `Timestep too small` su `n003`; non confonderlo con `c02` AGENT, il cui scenario SPICE riuscì ma fu interpretato male.
-7. **Basi e viewer:** selezionare uno stesso workspace canonico per immagine, Graph, YAML, netlist, misure e screenshot.
-8. **Modello diagnostico:** spiegare perché il benchmark seleziona `gpt-5.4-mini` ma il corpus finale usa `gpt-5.4`, se esiste una motivazione documentata; in assenza, limitarsi a dichiarare le configurazioni effettive.
-9. **Judge finale:** mantenere i due hash di prompt e lo stesso hash di schema; non affermare prompt identico tra modalità.
-10. **Costo:** specificare data/tariffa o dichiarare il calcolo come stima storica delle chiamate registrate.
-11. **Reference tecniche:** preferire “riferimenti tecnici controllati” a “ground truth indipendente” se non viene documentato un processo cieco e multi-esperto.
-12. **Numeri dei casi:** ricontrollare tutte le misure qualitative (`a01`, `a05`, `b04`, `c02`, `ic01`) sui JSON/CSV sorgente prima del LaTeX.
-13. **Duplicati dei risultati finali:** scegliere come sorgente editoriale primaria `experiment_ai/chat_agent_evaluation_21/results`; le copie in `notes/.../risultati_agente` devono rimanere allineate ma non vanno contate due volte.
-14. **Numero di figure:** decidere quali grafici congiunti rigenerare per evitare due serie quasi identiche Batch v1/v2.
-15. **Raccordo al Capitolo 5:** concordare se “sviluppi futuri” includerà test end-to-end non supervisionato, gold topologica, repliche multi-seed, più IC e validazione hardware.
+7. **Modello diagnostico:** spiegare perché il benchmark seleziona `gpt-5.4-mini` ma il corpus finale usa `gpt-5.4`, se esiste una motivazione documentata; in assenza, limitarsi a dichiarare le configurazioni effettive.
+8. **Judge finale:** mantenere i due hash di prompt e lo stesso hash di schema; non affermare prompt identico tra modalità.
+9. **Costo:** specificare data/tariffa o dichiarare il calcolo come stima storica delle chiamate registrate.
+10. **Reference tecniche:** preferire “riferimenti tecnici controllati” a “ground truth indipendente” se non viene documentato un processo cieco e multi-esperto.
+11. **Numeri dei casi:** ricontrollare tutte le misure qualitative (`a01`, `a05`, `b04`, `c02`, `ic01`) sui JSON/CSV sorgente prima del LaTeX.
+12. **Duplicati dei risultati finali:** scegliere come sorgente editoriale primaria `experiment_ai/chat_agent_evaluation_21/results`; le copie in `notes/.../risultati_agente` devono rimanere allineate ma non vanno contate due volte.
+13. **Numero di figure:** decidere quali grafici congiunti rigenerare per evitare due serie quasi identiche Batch v1/v2.
+14. **Raccordo al Capitolo 5:** concordare se “sviluppi futuri” includerà test end-to-end non supervisionato, gold topologica, repliche multi-seed, più IC e validazione hardware.
 
 ## Ordine operativo della futura stesura
 
 1. Congelare le tabelle sorgente e risolvere i punti 1–9 sopra.
-2. Generare inventario Pipeline 2.0 e grafici congiunti del benchmark.
+2. Generare i grafici congiunti del benchmark e verificare la tabella compatta degli indicatori della Pipeline 2.0.
 3. Scrivere §4.1 e §4.2 usando i report consolidati.
 4. Scrivere §4.3 direttamente dai quattro CSV finali.
 5. Scrivere §4.4 dagli aggregati congiunti, separando qualità e costo.
-6. Scrivere §4.5 dagli artefatti finali, non dalla roadmap storica.
+6. Scrivere §4.5 come breve ponte tecnico dagli artefatti finali, con al massimo una tabella e senza figure obbligatorie.
 7. Scrivere §4.6 dalle tabelle ufficiali e verificare i casi sul materiale sorgente.
 8. Scrivere §4.7 soltanto dopo avere stabilizzato tutte le sezioni di risultato.
 9. Uniformare decimali, percentuali, nomi dei modelli, label e caption.
@@ -789,7 +736,8 @@ La tabella appaiata dei 21 circuiti e la tabella completa dei 42 punteggi sono u
 - [ ] Lo score topologico non è chiamato accuracy e sono dichiarati i rerun curati.
 - [ ] Il benchmark preliminare distingue JSON da JSON+immagine e judge preliminare da reference finali.
 - [ ] Costi e latenze hanno unità, denominatore e cautela temporale.
-- [ ] La Pipeline 2.0 ha una sezione autonoma con basi, scenari, `.op`/`.tran`, IC e override.
+- [ ] La Pipeline 2.0 ha una sezione breve con due sole sottosezioni: simulabilità delle basi e robustezza degli scenari.
+- [ ] Viewer e casi IC sono soltanto una nota del corpus; la valutazione diagnostica è rinviata alla §4.6.
 - [ ] Riuscita ngspice, correttezza elettrica e successo diagnostico sono distinti.
 - [ ] Le 42 traiettorie finali sono attribuite a `gpt-5.4` e il judge a `gpt-5.5`.
 - [ ] CHAT e AGENT non sono presentati come confronto controllato perfettamente simmetrico.
